@@ -27,6 +27,11 @@ git tag lesson-19
 - `packages/core-tools`（26-27）：`defineTool` schema + `ToolPipeline`（pre/guards/approval/execute/post/finalize/result）
 - `packages/core-scheduler`：`mapLimit` / `runSerial` / `Barrier`（28）
 - `packages/approval`：`ApprovalGate` + 权限预设 read-only/workspace-write/full（30）
+- `packages/llm`（31）：统一词汇表 + `AdapterRegistry` + `assemble`
+- `packages/llm-deepseek`（32）：`DeepSeekAdapter`（reasoning/流式）
+- `packages/core-errors`：错误分类 + 分类重试（33）
+- `packages/core-capability`：能力缝三角色 + `MiniContext`（34）
+- `packages/fs` / `packages/subprocess`：本地与远程 Provider 可切换（35）
 - `apps/cli`：装配以上全部，离线 mock 跑完整回合
 
 ## 运行

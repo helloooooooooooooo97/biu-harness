@@ -3,6 +3,8 @@
  * 注：真实 cordis 依赖在 36-40 课配置阶段接入，目前跑在 mini 内核上。
  */
 import type { AssistantReply, ChatMessage, LlmClient, ToolCall } from '@mini-dsh/llm'
+import type { LlmAdapter, Message, StreamChunk } from '@mini-dsh/llm'
+import { SseParser } from './sse-parser.ts'
 
 const DEFAULT_BASE_URL = 'https://api.deepseek.com'
 const DEFAULT_MODEL = 'deepseek-chat'
@@ -123,5 +125,79 @@ export class MockLlm implements LlmClient {
       throw new Error(`mock 未命中: ${key}`)
     }
     return { content: fixture.content ?? '', toolCalls: fixture.toolCalls ?? [] }
+  }
+}
+
+// ---------- DeepSeekAdapter（第 32 课） ----------
+
+export interface DeepSeekOptions {
+  apiKey?: string
+  baseUrl?: string
+  model?: string
+  fetchImpl?: typeof fetch
+}
+
+export class DeepSeekAdapter implements LlmAdapter {
+  readonly provider = 'deepseek'
+
+  constructor(private readonly options: DeepSeekOptions = {}) {}
+
+  async *stream(messages: Message[], opts: { signal?: AbortSignal } = {}): AsyncGenerator<StreamChunk> {
+    const key = this.options.apiKey ?? process.env.DEEPSEEK_API_KEY
+    if (!key) {
+      if (process.env.MOCK_LLM === '1') {
+        yield { type: 'text', text: '[mock] 流式回复' }
+        yield { type: 'finish', reason: 'stop' }
+        return
+      }
+      throw new Error('缺少 DEEPSEEK_API_KEY。')
+    }
+    if (opts.signal?.aborted) throw new DOMException('已中止', 'AbortError')
+
+    const baseUrl = this.options.baseUrl ?? process.env.DEEPSEEK_BASE_URL ?? DEFAULT_BASE_URL
+    const fetchImpl = this.options.fetchImpl ?? fetch
+    const res = await fetchImpl(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model: this.options.model ?? DEFAULT_MODEL,
+        messages: messages.map((m) => {
+          const text = m.content.filter((b) => b.type === 'text').map((b) => (b.type === 'text' ? b.text : '')).join('')
+          return { role: m.role, content: text }
+        }),
+        stream: true,
+      }),
+      signal: opts.signal,
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`)
+    }
+    if (!res.body) throw new Error('响应没有 body')
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    const parser = new SseParser()
+    try {
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        for (const event of parser.push(decoder.decode(value, { stream: true }))) {
+          if (event.data === '[DONE]') return
+          const json = JSON.parse(event.data) as {
+            choices?: Array<{
+              delta?: { content?: string; reasoning_content?: string }
+              finish_reason?: string
+            }>
+          }
+          const choice = json.choices?.[0]
+          if (choice?.delta?.reasoning_content) yield { type: 'reasoning', text: choice.delta.reasoning_content }
+          if (choice?.delta?.content) yield { type: 'text', text: choice.delta.content }
+          if (choice?.finish_reason) yield { type: 'finish', reason: choice.finish_reason }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
   }
 }

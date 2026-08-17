@@ -73,6 +73,30 @@ importers:
         specifier: ^5.6.0
         version: 5.6.2
 
+  packages/core-capability:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/core-errors:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
   packages/core-scheduler:
     devDependencies:
       '@types/node':
@@ -121,6 +145,18 @@ importers:
         specifier: ^5.6.0
         version: 5.6.2
 
+  packages/fs:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
   packages/llm:
     devDependencies:
       '@types/node':
@@ -138,6 +174,18 @@ importers:
       '@mini-dsh/llm':
         specifier: workspace:*
         version: link:../llm
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/subprocess:
     devDependencies:
       '@types/node':
         specifier: ^22.10.0
