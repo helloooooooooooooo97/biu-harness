@@ -16,13 +16,13 @@ Web UI 里的轨迹不是"另一份记录"——它只是**渲染一份 append-o
 {"seq":3,"time":"...","kind":"step/start","data":{"turn":1,"step":1}}
 {"seq":4,"time":"...","kind":"assistant/chunk","data":{"turn":1,"step":1,"chunk":{"type":"text","text":"我来查看当前目录。"}}}
 {"seq":5,"time":"...","kind":"assistant/chunk","data":{"turn":1,"step":1,"chunk":{"type":"text","text":"请稍等。"}}}
-{"seq":6,"time":"...","kind":"assistant/message","data":{"turn":1,"step":1,"message":{"content":[{"type":"text","text":"我来查看当前目录。请稍等。"},{"type":"tool-call","id":"call_1","name":"bash","arguments":"{\"command\":\"ls\"}"}]}}}
+{"seq":6,"time":"...","kind":"assistant/message","data":{"turn":1,"step":1,"message":{"content":[{"type":"text","text":"我来查看当前目录。请稍等。"},{"type":"tool-call","id":"call_1","name":"bash","arguments":"{\"command\":\"ls\"}"}]},"usage":{"prompt_tokens":120,"completion_tokens":18,"total_tokens":138}}}
 {"seq":7,"time":"...","kind":"tool/call","data":{"turn":1,"step":1,"callId":"call_1","name":"bash","arguments":"{\"command\":\"ls\"}"}}
 {"seq":8,"time":"...","kind":"tool/result","data":{"turn":1,"step":1,"callId":"call_1","message":{"content":[{"type":"text","text":"README.md"}]}}}
 {"seq":9,"time":"...","kind":"step/end","data":{"turn":1,"step":1}}
 {"seq":10,"time":"...","kind":"step/start","data":{"turn":1,"step":2}}
 {"seq":11,"time":"...","kind":"assistant/chunk","data":{"turn":1,"step":2,"chunk":{"type":"text","text":"目录里有 README.md。"}}}
-{"seq":12,"time":"...","kind":"assistant/message","data":{"turn":1,"step":2,"message":{"content":[{"type":"text","text":"目录里有 README.md。"}]}}}
+{"seq":12,"time":"...","kind":"assistant/message","data":{"turn":1,"step":2,"message":{"content":[{"type":"text","text":"目录里有 README.md。"}]},"usage":{"prompt_tokens":138,"completion_tokens":25,"total_tokens":163}}}
 {"seq":13,"time":"...","kind":"step/end","data":{"turn":1,"step":2}}
 {"seq":14,"time":"...","kind":"turn/end","data":{"turn":1,"reason":"completed"}}
 ```
