@@ -9,8 +9,8 @@ const emptyCtx = { variables: {} }
 test('section 按 order 排序并拼接', () => {
   // 验证顺序与内容：tools（100）在 persona（0）之后。
   const prompt = new SystemPromptAssembler()
-  prompt.section({ name: 'persona', order: SECTION_ORDER.PERSONA, text: '你是工程师。' })
   prompt.section({ name: 'tools', order: SECTION_ORDER.TOOL_GUIDANCE, text: '- bash' })
+  prompt.section({ name: 'persona', order: SECTION_ORDER.PERSONA, text: '你是工程师。' })
   const result = prompt.assemble(emptyCtx)
   assert.equal(result, '你是工程师。\n\n- bash')
 })
