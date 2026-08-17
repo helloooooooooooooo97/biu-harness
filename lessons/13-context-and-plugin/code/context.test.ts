@@ -22,6 +22,7 @@ test('重复 provide 抛错', () => {
   assert.throws(() => ctx.provide('a', 2), /服务已存在: a/)
 })
 
+// effect中的函数只会被执行一次，即便多次调用也只会被执行一次
 test('effect 手动卸载器只执行一次', () => {
   // 验证可逆 effect：disposer 重复调用只执行一次清理（防重复卸载）。
   const ctx = new Context()
@@ -57,7 +58,7 @@ test('plugin 加载后 apply 生效，卸载时清理', () => {
 test('重复加载同名插件抛错', () => {
   // 验证插件名唯一性：同名插件二次加载抛错。
   const ctx = new Context()
-  const def = { name: 'x', apply: () => {} }
+  const def = { name: 'x', apply: () => { } }
   ctx.plugin(def)
   assert.throws(() => ctx.plugin(def), /插件已加载: x/)
 })
@@ -87,4 +88,63 @@ test('stop 逆序卸载全部插件并清空服务', () => {
   assert.equal(ctx.has('first'), false)
   assert.equal(ctx.has('second'), false)
   assert.equal(ctx.pluginCount, 0)
+})
+
+test('外部 effect 与插件内 effect 互不干扰：卸载插件不波及外部 effect', () => {
+  // 验证归属：插件 apply 之外注册的 effect 只属于 context，插件卸载不碰它。
+  const ctx = new Context()
+  let externalRan = 0
+  let pluginRan = 0
+  ctx.effect(() => {
+    externalRan += 1
+  })
+  ctx.plugin({
+    name: 'p',
+    apply() {
+      ctx.effect(() => {
+        pluginRan += 1
+      })
+    },
+  })
+  ctx.unload('p')
+  assert.equal(pluginRan, 1)      // 插件自己的 effect 被清理
+  assert.equal(externalRan, 0)    // 外部 effect 没被误清
+  ctx.stop()
+  assert.equal(externalRan, 1)    // 外部 effect 由 stop 清理
+})
+
+test('插件之后注册的外部 effect 不被该插件卸载波及（回归）', () => {
+  // 验证修复：旧实现按"下标区间"清理会把插件之后的 effect 一起扫掉。
+  const ctx = new Context()
+  let externalRan = 0
+  ctx.plugin({
+    name: 'p',
+    apply() {
+      ctx.effect(() => {
+        // 插件内 effect（内容无关，只占位）
+      })
+    },
+  })
+  ctx.effect(() => {
+    externalRan += 1
+  })
+  ctx.unload('p')
+  assert.equal(externalRan, 0)    // 外部 effect 仍在，未被波及
+  ctx.stop()
+  assert.equal(externalRan, 1)    // stop 时才清理
+})
+
+test('stop 先逆序卸载插件，再清理外部 effect', () => {
+  // 验证 stop 的两段式顺序：插件（含其 effect）先，外部 effect 后。
+  const ctx = new Context()
+  const order: string[] = []
+  ctx.effect(() => order.push('external'))
+  ctx.plugin({
+    name: 'p',
+    apply() {
+      ctx.effect(() => order.push('plugin'))
+    },
+  })
+  ctx.stop()
+  assert.deepEqual(order, ['plugin', 'external'])
 })

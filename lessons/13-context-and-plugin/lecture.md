@@ -54,7 +54,27 @@ ctx.plugin({
 
 这就是热重载的地基（第 16 课正式做）：**卸载 = 撤销该插件的一切痕迹，不留悬挂引用**。
 
-## 4. 一切皆插件的最小组装
+## 4. 外部 effect 与插件内 effect
+
+内核里的 effect 分两类，**归属不同、清理边界不同**：
+
+| | 外部 effect | 插件内 effect |
+| --- | --- | --- |
+| 注册时机 | 插件 apply 之外（直接 `ctx.effect()` / `ctx.provide()`） | 插件 apply 执行期间 |
+| 记账 | 只进全局 effects 数组 | 记在该插件名下（`pluginEffects`） |
+| 谁清理 | 手动 disposer 或 `stop()` | 只随该插件 `unload`（逆序 + cleanup） |
+| 卸载别的插件 | 不受影响 | 不受影响 |
+
+关键机制：`plugin()` 在 apply 之前把 `currentPlugin` 指向插件名，**apply 期间所有 `effect()` 调用都记进该插件的账本**；apply 结束恢复。所以：
+
+- `unload('p')` 只清 p 账本里的 effect + p 的 cleanup，**不碰外部 effect、也不碰别的插件**；
+- `stop()` 是两段式：先逆序卸载全部插件（各清各的），再清理残余的外部 effect。
+
+为什么不能混在一起？因为"注册即可逆"承诺的是**精确撤销**：插件 A 卸载时绝不能顺带执行 B 或外部注册的清理函数——那会造成引用悬挂或重复执行。外部 effect 属于 context 本身，只在 context 停止时收尾。
+
+> 实现细节：早期版本用"effect 数组下标区间"划分插件作用域，会把插件之后注册的外部 effect 一起扫掉。本课代码改为显式归属（`currentPlugin` + `pluginEffects` 账本），并配了回归测试。
+
+## 5. 一切皆插件的最小组装
 
 ```ts
 // app.ts
@@ -70,7 +90,7 @@ export function createMiniApp(): Context {
 
 没有"核心业务类"——sections 是插件提供的服务，tools 是插件，prompt 是插件，ui 也是插件。想换提示词？卸载 prompt 换一个。想加工具？`tools.register(...)` 走的是服务接口。
 
-## 5. 与真实 cordis 的对照
+## 6. 与真实 cordis 的对照
 
 真实 `@deepseek-ai/cordis` 的 `ctx` 就是这个 Context 的完整版：`ctx.provide` / `ctx.effect` / `ctx.plugin` 同名同义，服务按 key 取、注册即可逆、插件树按依赖加载。第 18 课换装真实 cordis 时，本课写的代码概念全部直接映射。
 
