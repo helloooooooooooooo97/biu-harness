@@ -1,0 +1,16 @@
+{"seq":1,"time":"2026-08-17T10:00:00.000Z","kind":"turn/start","data":{"turn":1}}
+{"seq":2,"time":"2026-08-17T10:00:01.000Z","kind":"user/message","data":{"role":"user","content":"打招呼并打印工作目录"}}
+{"seq":3,"time":"2026-08-17T10:00:01.100Z","kind":"step/start","data":{"turn":1,"step":1}}
+{"seq":4,"time":"2026-08-17T10:00:02.000Z","kind":"assistant/message","data":{"turn":1,"step":1,"message":{"role":"assistant","content":[{"type":"text","text":"先打招呼。"},{"type":"tool-call","id":"call_1","name":"echo","arguments":"{\"text\":\"hi\"}"}]}}}
+{"seq":5,"time":"2026-08-17T10:00:02.100Z","kind":"tool/call","data":{"turn":1,"step":1,"callId":"call_1","name":"echo","arguments":"{\"text\":\"hi\"}"}}
+{"seq":6,"time":"2026-08-17T10:00:02.500Z","kind":"tool/result","data":{"turn":1,"step":1,"callId":"call_1","message":{"role":"tool","content":[{"type":"text","text":"hi"}]}}}
+{"seq":7,"time":"2026-08-17T10:00:03.000Z","kind":"step/end","data":{"turn":1,"step":1}}
+{"seq":8,"time":"2026-08-17T10:00:03.100Z","kind":"step/start","data":{"turn":1,"step":2}}
+{"seq":9,"time":"2026-08-17T10:00:04.000Z","kind":"assistant/message","data":{"turn":1,"step":2,"message":{"role":"assistant","content":[{"type":"tool-call","id":"call_2","name":"bash","arguments":"{\"command\":\"pwd\"}"}]}}}
+{"seq":10,"time":"2026-08-17T10:00:04.100Z","kind":"tool/call","data":{"turn":1,"step":2,"callId":"call_2","name":"bash","arguments":"{\"command\":\"pwd\"}"}}
+{"seq":11,"time":"2026-08-17T10:00:04.500Z","kind":"tool/result","data":{"turn":1,"step":2,"callId":"call_2","message":{"role":"tool","content":[{"type":"text","text":"/home/user"}]}}}
+{"seq":12,"time":"2026-08-17T10:00:05.000Z","kind":"step/end","data":{"turn":1,"step":2}}
+{"seq":13,"time":"2026-08-17T10:00:05.100Z","kind":"step/start","data":{"turn":1,"step":3}}
+{"seq":14,"time":"2026-08-17T10:00:06.000Z","kind":"assistant/message","data":{"turn":1,"step":3,"message":{"role":"assistant","content":[{"type":"text","text":"你好！当前目录是 /home/user。"}]}}}
+{"seq":15,"time":"2026-08-17T10:00:06.100Z","kind":"step/end","data":{"turn":1,"step":3}}
+{"seq":16,"time":"2026-08-17T10:00:06.200Z","kind":"turn/end","data":{"turn":1,"reason":"completed"}}

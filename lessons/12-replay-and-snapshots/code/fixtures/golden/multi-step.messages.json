@@ -1,0 +1,8 @@
+[
+  { "role": "user", "content": "打招呼并打印工作目录" },
+  { "role": "assistant", "content": "先打招呼。", "toolCalls": [{ "id": "call_1", "name": "echo", "arguments": "{\"text\":\"hi\"}" }] },
+  { "role": "tool", "toolCallId": "call_1", "content": "hi" },
+  { "role": "assistant", "content": "", "toolCalls": [{ "id": "call_2", "name": "bash", "arguments": "{\"command\":\"pwd\"}" }] },
+  { "role": "tool", "toolCallId": "call_2", "content": "/home/user" },
+  { "role": "assistant", "content": "你好！当前目录是 /home/user。" }
+]

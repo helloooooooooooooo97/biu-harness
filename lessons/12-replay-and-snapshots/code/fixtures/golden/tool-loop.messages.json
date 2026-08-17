@@ -1,0 +1,6 @@
+[
+  { "role": "user", "content": "列出文件" },
+  { "role": "assistant", "content": "我来查看。", "toolCalls": [{ "id": "call_1", "name": "bash", "arguments": "{\"command\":\"ls\"}" }] },
+  { "role": "tool", "toolCallId": "call_1", "content": "README.md" },
+  { "role": "assistant", "content": "目录里有 README.md。" }
+]

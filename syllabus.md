@@ -34,7 +34,7 @@
 | 04 | tech-stack-and-roadmap | A | Node 22+/pnpm/TS 环境 + monorepo 骨架脚本 |
 | 05 | vertical-slice-agent | B | agent-v1：最小请求循环 + 测试 |
 | 06 | tool-call-loop | B | agent-v2：tool_call 解析/执行/回填 + 测试 |
-| 07 | streaming-and-stop | B | agent-v3：SSE 流式 + stop reason + 测试 |
+| 07 | streaming-and-stop | B | agent-v3：SSE 流式 + stop reason + 测试 | 
 | 08 | mock-llm-replay | B | mock LLM + 录放 fixtures |
 | 09 | session-event-log | C | append-only 事件流（SessionEventMap 起步） |
 | 10 | derive-messages | C | 从日志重建模型上下文 |

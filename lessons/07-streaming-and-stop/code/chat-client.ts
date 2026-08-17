@@ -31,7 +31,7 @@ const DEFAULT_BASE_URL = 'https://api.deepseek.com'
 const DEFAULT_MODEL = 'deepseek-chat'
 
 export class ChatClient implements StreamingLlmClient {
-  constructor(private readonly options: ChatClientOptions = {}) {}
+  constructor(private readonly options: ChatClientOptions = {}) { }
 
   async *streamChat(messages: ChatMessage[], options: StreamChatOptions = {}): AsyncGenerator<StreamEvent> {
     const key = this.options.apiKey ?? process.env.DEEPSEEK_API_KEY ?? ''
@@ -72,9 +72,10 @@ export class ChatClient implements StreamingLlmClient {
     const decoder = new TextDecoder()
     const parser = new SseParser()
     try {
-      for (;;) {
+      for (; ;) {
         const { done, value } = await reader.read()
         if (done) break
+        // 这里表示的是当parser能切出来一个新的完整的SSE事件时，就会触发这个for循环
         for (const event of parser.push(decoder.decode(value, { stream: true }))) {
           const { events, done: finished } = this.consume(event)
           for (const e of events) yield e

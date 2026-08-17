@@ -1,0 +1,11 @@
+{"seq":1,"time":"2026-08-17T10:00:00.000Z","kind":"turn/start","data":{"turn":1}}
+{"seq":2,"time":"2026-08-17T10:00:01.000Z","kind":"user/message","data":{"role":"user","content":"列出文件"}}
+{"seq":3,"time":"2026-08-17T10:00:01.100Z","kind":"step/start","data":{"turn":1,"step":1}}
+{"seq":4,"time":"2026-08-17T10:00:02.000Z","kind":"assistant/message","data":{"turn":1,"step":1,"message":{"role":"assistant","content":[{"type":"text","text":"我来查看。"},{"type":"tool-call","id":"call_1","name":"bash","arguments":"{\"command\":\"ls\"}"}]}}}
+{"seq":5,"time":"2026-08-17T10:00:02.100Z","kind":"tool/call","data":{"turn":1,"step":1,"callId":"call_1","name":"bash","arguments":"{\"command\":\"ls\"}"}}
+{"seq":6,"time":"2026-08-17T10:00:02.500Z","kind":"tool/result","data":{"turn":1,"step":1,"callId":"call_1","message":{"role":"tool","content":[{"type":"text","text":"README.md"}]}}}
+{"seq":7,"time":"2026-08-17T10:00:03.000Z","kind":"step/end","data":{"turn":1,"step":1}}
+{"seq":8,"time":"2026-08-17T10:00:03.100Z","kind":"step/start","data":{"turn":1,"step":2}}
+{"seq":9,"time":"2026-08-17T10:00:04.000Z","kind":"assistant/message","data":{"turn":1,"step":2,"message":{"role":"assistant","content":[{"type":"text","text":"目录里有 README.md。"}]}}}
+{"seq":10,"time":"2026-08-17T10:00:04.100Z","kind":"step/end","data":{"turn":1,"step":2}}
+{"seq":11,"time":"2026-08-17T10:00:04.200Z","kind":"turn/end","data":{"turn":1,"reason":"completed"}}
