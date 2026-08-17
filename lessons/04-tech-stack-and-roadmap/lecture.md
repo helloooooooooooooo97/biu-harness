@@ -51,17 +51,17 @@ apps/
 
 为什么不用一个包装下？因为 dsh 的架构原则是**可替换**：换工具后端、换 LLM 适配器、换持久化实现，都应该只动一个包。包边界就是未来插件边界（第 13 课正式讲插件模型）。
 
-## 3. scaffold.sh
+## 3. scaffold.ts
 
 生成骨架（默认 `project/`）：
 
 ```bash
-bash code/scaffold.sh
-bash code/scaffold.sh --dir /tmp/my-mini-dsh   # 指定目录
-bash code/scaffold.sh --dry-run                # 只看结构不落盘
+cd code && npm start                          # 默认 ./project
+npm start -- --dir /tmp/my-mini-dsh           # 指定目录
+npm start -- --dry-run                        # 只看结构不落盘
 ```
 
-脚本生成的每个包都有 `package.json` + `src/index.ts` 占位；此时不写实现，只立边界。
+实现是 OOD 的 `MonorepoScaffolder` 类（`run()` / `assertEmpty()` / `writeRootFiles()` / `writePackage()`），每个包都有 `package.json` + `src/index.ts` 占位；此时不写实现，只立边界。
 
 ## 4. git tag 约定
 
@@ -79,7 +79,7 @@ git tag lesson-19
 
 ```bash
 cd lessons/04-tech-stack-and-roadmap/code
-bash scaffold.sh --dir /tmp/lesson04-demo
+npm start -- --dir /tmp/lesson04-demo
 find /tmp/lesson04-demo -maxdepth 2 -type d
 ```
 

@@ -16,7 +16,7 @@ reply = POST /chat/completions { model, messages }
 输出 reply
 ```
 
-这就是本课的 `agent-v1.mjs`。它小到没有状态、没有工具、没有日志——但它是第 06-08 课（工具循环、流式、mock）和第 22-25 课（真正的 turn/step 生命周期）的种子。
+这就是本课的 `AgentV1` 类（`chat-client.ts` + `agent-v1.ts` + `cli.ts`）。它小到没有状态、没有工具、没有日志——但它是第 06-08 课（工具循环、流式、mock）和第 22-25 课（真正的 turn/step 生命周期）的种子。
 
 ## 2. 请求格式
 
@@ -55,20 +55,21 @@ DeepSeek 提供 OpenAI 兼容接口，`POST {base}/chat/completions`：
 
 网络代码不能依赖真实 API 跑测试。本课程的统一做法是**依赖注入**：
 
-```js
-runAgent({ prompt: '你好', fetchImpl: fakeFetch })
+```ts
+const agent = new AgentV1({ fetchImpl: fakeFetch })
+await agent.run('你好')
 ```
 
-`fetchImpl` 默认是全局 `fetch`；测试传一个假实现，返回预先录好的响应。第 08 课会把它升级成完整的 mock LLM 录放服务。
+`ChatClient` 构造器里的 `fetchImpl` 默认是全局 `fetch`；测试传一个假实现，返回预先录好的响应。第 08 课会把它升级成完整的 mock LLM 录放服务。
 
 ## 5. 用法
 
 ```bash
 # 真实调用
-DEEPSEEK_API_KEY=sk-... node agent-v1.mjs --prompt "你好"
+DEEPSEEK_API_KEY=sk-... npm start -- --prompt "你好"
 
 # 无 key 的 mock 演示
-MOCK_LLM=1 node agent-v1.mjs --prompt "你好"
+MOCK_LLM=1 npm start -- --prompt "你好"
 
 # 测试
 npm test
@@ -76,7 +77,7 @@ npm test
 
 ## 6. 与 dsh 的对照
 
-dsh 里这一层分得更细：`packages/llm` 定义消息词汇表（`Message` / `ContentBlock`），`llm-deepseek` 是适配器，`agent-loop` 负责循环。本课把三者压进一个文件，是为了先看见"整体"；第 18 课拆包时，你已经有完整的切片可以拆。
+dsh 里这一层分得更细：`packages/llm` 定义消息词汇表（`Message` / `ContentBlock`），`llm-deepseek` 是适配器，`agent-loop` 负责循环。本课把这三层压成两个类（`ChatClient` 管接口、`AgentV1` 管循环），是为了先看见"整体"；第 18 课拆包时，你已经有完整的切片可以拆。
 
 ## 小结
 

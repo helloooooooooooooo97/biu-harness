@@ -5,9 +5,9 @@
 1. **解析样例**：运行下面三条命令，理解三种输出格式：
 
    ```bash
-   node trace-parser.mjs sample-session.jsonl --summary
-   node trace-parser.mjs sample-session.jsonl --csv
-   node trace-parser.mjs sample-session.jsonl --json
+   npx tsx trace-parser.ts sample-session.jsonl --summary
+   npx tsx trace-parser.ts sample-session.jsonl --csv
+   npx tsx trace-parser.ts sample-session.jsonl --json
    ```
 
 2. **手写日志**：不借助工具，自己写一份 6 行以上的 JSONL 会话日志（至少包含 `turn/start`、`user/message`、`step/start`、`tool/call`、`tool/result`、`turn/end`），存为 `my-session.jsonl`，然后用 parser 解析。

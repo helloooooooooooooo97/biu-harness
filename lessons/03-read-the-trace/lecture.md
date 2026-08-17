@@ -57,17 +57,19 @@ Web UI 里的轨迹不是"另一份记录"——它只是**渲染一份 append-o
 - `tool/call` 记录的是模型**原样输出**的参数 JSON 字符串（不做解析），保证"模型看到了什么"永远可回放。
 - `assistant/chunk` 和 `assistant/message` 同时存在：前者保真、后者供上下文推导使用。
 
-## 3. trace-parser.mjs
+## 3. trace-parser.ts
 
 用法：
 
 ```bash
-node trace-parser.mjs sample-session.jsonl --summary   # 汇总统计
-node trace-parser.mjs sample-session.jsonl --csv       # 拍平为表格
-node trace-parser.mjs sample-session.jsonl --json      # 原始行（含 line 号）
+npx tsx trace-parser.ts sample-session.jsonl --summary # 汇总统计
+npx tsx trace-parser.ts sample-session.jsonl --csv     # 拍平为表格
+npx tsx trace-parser.ts sample-session.jsonl --json    # 原始行（含 line 号）
 ```
 
 `--summary` 输出：turn 数、step 数、工具调用/结果数、assistant 消息数、token 合计。
+
+实现是 OOD 的 `TraceParser` 类：`parse()` 负责逐行解析，`summarize()` / `rows()` / `toCsv()` / `toJson()` 是同一份事件的四种投影——和日志"一份数据、多种消费视图"的思想一致。
 
 ## 4. 从轨迹反推发生了什么
 

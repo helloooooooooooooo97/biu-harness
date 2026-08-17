@@ -69,7 +69,7 @@ dsh 的架构宣言（本课程第 13 课会正式实现它）：
 
 ## 5. 本课代码
 
-`code/api-model-list.mjs`：列出 DeepSeek 可用模型的小脚本（有 API key 时走真实接口，无 key 时输出内置清单）。
+`code/api-model-list.ts`：TS + OOD 版的模型清单客户端（`ModelClient` 类：有 API key 时走真实接口，无 key 时输出内置清单）。
 
 `code/observation-template.md`：观察模板。从第 02 课开始，每个任务都用它记录「模型看到了什么、工具做了什么、token 花了多少」——这是培养轨迹敏感度的第一步。
 
