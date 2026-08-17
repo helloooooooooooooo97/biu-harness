@@ -19,3 +19,6 @@ node tools/verify-lesson.mjs lessons/02-run-dsh-first-task
 - Web UI 能正常打开并完成 3 个任务。
 - 观察模板至少填写 2 份，包含 turn/step 数量与 token 数据。
 - 能回答：一个 step 和一个 turn 的区别是什么？（写在你的笔记里）
+
+turn：用户问了几次
+step：

@@ -21,5 +21,5 @@ node tools/verify-lesson.mjs lessons/03-read-the-trace
 cd lessons/03-read-the-trace/code && npm test
 ```
 
-- 样例日志解析结果与测试断言一致（1 turn、1 step、2 个 assistant/message、1 次 tool/call + 1 次 tool/result）。
+- 样例日志解析结果与测试断言一致（1 turn、2 step、2 个 assistant/message、3 个 assistant/chunk、1 次 tool/call + 1 次 tool/result）。
 - 你手写的 `my-session.jsonl` 能被 parser 正确解析（无 unparsed 行）。

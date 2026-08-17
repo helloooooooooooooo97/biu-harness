@@ -5,18 +5,18 @@ import { parseLog, rows, summarize, toCsv, toJson } from './trace-parser.mjs';
 
 const events = parseLog(readFileSync('./sample-session.jsonl', 'utf8'));
 
-test('解析样例日志得到 11 个事件', () => {
-  assert.equal(events.length, 11);
+test('解析样例日志得到 14 个事件', () => {
+  assert.equal(events.length, 14);
   assert.equal(events[0].kind, 'turn/start');
 });
 
 test('汇总统计与样例一致', () => {
   const s = summarize(events);
   assert.equal(s.turns, 1);
-  assert.equal(s.steps, 1);
+  assert.equal(s.steps, 2);
   assert.equal(s.userMessages, 1);
   assert.equal(s.assistantMessages, 2);
-  assert.equal(s.assistantChunks, 2);
+  assert.equal(s.assistantChunks, 3);
   assert.equal(s.toolCalls, 1);
   assert.equal(s.toolResults, 1);
   assert.deepEqual(s.token, { prompt: 258, completion: 43, total: 301 });

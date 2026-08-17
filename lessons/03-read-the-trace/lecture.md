@@ -14,15 +14,31 @@ Web UI 里的轨迹不是"另一份记录"——它只是**渲染一份 append-o
 {"seq":1,"time":"...","kind":"turn/start","data":{"turn":1}}
 {"seq":2,"time":"...","kind":"user/message","data":{"turn":1,"content":"列出当前目录的文件"}}
 {"seq":3,"time":"...","kind":"step/start","data":{"turn":1,"step":1}}
-{"seq":4,"time":"...","kind":"assistant/chunk","data":{"turn":1,"step":1,"chunk":{"type":"text","text":"我来查看。"}}}
-{"seq":5,"time":"...","kind":"tool/call","data":{"turn":1,"step":1,"name":"bash","arguments":"{\"command\":\"ls\"}"}}
-{"seq":6,"time":"...","kind":"tool/result","data":{"turn":1,"step":1,"message":{"content":[{"type":"text","text":"README.md"}]}}}
-{"seq":7,"time":"...","kind":"assistant/message","data":{"turn":1,"step":1,"message":{"content":[{"type":"text","text":"目录里有 README.md。"}]}}}
-{"seq":8,"time":"...","kind":"step/end","data":{"turn":1,"step":1}}
-{"seq":9,"time":"...","kind":"turn/end","data":{"turn":1,"reason":"completed"}}
+{"seq":4,"time":"...","kind":"assistant/chunk","data":{"turn":1,"step":1,"chunk":{"type":"text","text":"我来查看当前目录。"}}}
+{"seq":5,"time":"...","kind":"assistant/chunk","data":{"turn":1,"step":1,"chunk":{"type":"text","text":"请稍等。"}}}
+{"seq":6,"time":"...","kind":"assistant/message","data":{"turn":1,"step":1,"message":{"content":[{"type":"text","text":"我来查看当前目录。请稍等。"},{"type":"tool-call","id":"call_1","name":"bash","arguments":"{\"command\":\"ls\"}"}]}}}
+{"seq":7,"time":"...","kind":"tool/call","data":{"turn":1,"step":1,"callId":"call_1","name":"bash","arguments":"{\"command\":\"ls\"}"}}
+{"seq":8,"time":"...","kind":"tool/result","data":{"turn":1,"step":1,"callId":"call_1","message":{"content":[{"type":"text","text":"README.md"}]}}}
+{"seq":9,"time":"...","kind":"step/end","data":{"turn":1,"step":1}}
+{"seq":10,"time":"...","kind":"step/start","data":{"turn":1,"step":2}}
+{"seq":11,"time":"...","kind":"assistant/chunk","data":{"turn":1,"step":2,"chunk":{"type":"text","text":"目录里有 README.md。"}}}
+{"seq":12,"time":"...","kind":"assistant/message","data":{"turn":1,"step":2,"message":{"content":[{"type":"text","text":"目录里有 README.md。"}]}}}
+{"seq":13,"time":"...","kind":"step/end","data":{"turn":1,"step":2}}
+{"seq":14,"time":"...","kind":"turn/end","data":{"turn":1,"reason":"completed"}}
 ```
 
 > 这是 dsh 的真实设计：**模型可见即已记录**（model-visible means logged）。任何进入模型请求的内容都能从日志重建——这也是第 09-12 课要亲手实现的。
+
+## 1.5 chunk 与 message：为什么两者都记
+
+注意上面 step 1：模型流式吐了两段文本（`assistant/chunk`），随后 `assistant/message` 把这两段**合并成完整的 content blocks**（文本块 + 工具调用块）。它们不是重复记录，而是同一 step 的两种投影：
+
+| 事件 | 保真什么 | 谁消费 |
+| --- | --- | --- |
+| `assistant/chunk` | 过程：原始流式片段，token 级 | UI 打字机、回放、中断审计 |
+| `assistant/message` | 结果：组装后的完整消息 + usage | `deriveMessages()` 重建上下文（第 10 课） |
+
+规则：**一个 step = 一次模型请求 + 它的工具执行**。所以 step 1 的 message 是「文本 + tool-call」，工具执行完后，loop 发起第二次请求——那是 step 2，而不是在 step 1 里再记一条消息。第 22-23 课会亲手实现这套 turn/step 生命周期。
 
 ## 2. 最小事件词汇表
 
