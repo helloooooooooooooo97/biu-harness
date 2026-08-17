@@ -4,7 +4,8 @@
 
 ## 本课主题
 
-核心服务接口定义
+核心服务接口定义（session/tools/llm/agent/agent-loop）
+
 
 ## 目录导览
 

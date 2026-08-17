@@ -9,3 +9,4 @@
 ```bash
 node tools/verify-lesson.mjs lessons/09-session-event-log
 ```
+

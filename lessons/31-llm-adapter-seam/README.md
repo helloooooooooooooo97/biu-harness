@@ -4,7 +4,8 @@
 
 ## 本课主题
 
-LLM 适配器接缝：消息/流词汇表
+LLM 适配器接缝：Message/ContentBlock/StreamChunk
+
 
 ## 目录导览
 

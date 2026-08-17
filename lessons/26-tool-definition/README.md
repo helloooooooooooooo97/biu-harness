@@ -4,7 +4,8 @@
 
 ## 本课主题
 
-ToolDefinition 与 JSON schema
+defineTool：schema / output / render / 卡片
+
 
 ## 目录导览
 

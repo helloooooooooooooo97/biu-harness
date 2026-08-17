@@ -4,7 +4,8 @@
 
 ## 本课主题
 
-DeepSeek 真实接入（v4-flash/pro、thinking）
+DeepSeek 真实接入（v4、thinking/reasoning block）
+
 
 ## 目录导览
 

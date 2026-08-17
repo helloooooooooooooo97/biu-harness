@@ -4,7 +4,8 @@
 
 ## 本课主题
 
-profile/bundle/patch 分层覆盖
+profile/bundle/patch 分层（dsh.profile / dsh.bundle / --patch）
+
 
 ## 目录导览
 

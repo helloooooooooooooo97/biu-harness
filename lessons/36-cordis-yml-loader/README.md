@@ -4,7 +4,8 @@
 
 ## 本课主题
 
-cordis.yml 与插件树加载
+cordis.yml 与插件树加载（include/group、!!js 表达式）
+
 
 ## 目录导览
 

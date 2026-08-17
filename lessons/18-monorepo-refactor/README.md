@@ -4,7 +4,8 @@
 
 ## 本课主题
 
-垂直切片拆成 pnpm workspace
+垂直切片拆成 pnpm workspace，换装真实 cordis 内核
+
 
 ## 目录导览
 

@@ -4,7 +4,8 @@
 
 ## 本课主题
 
-presets：一套代码多种产品形态
+agent presets：按会话组装能力集 + isolate 隔离域
+
 
 ## 目录导览
 

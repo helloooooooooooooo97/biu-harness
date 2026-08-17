@@ -4,7 +4,8 @@
 
 ## 本课主题
 
-事件类型设计（user/assistant/tool/step/turn）
+事件词汇表：类型化 SessionEventMap 与声明合并
+
 
 ## 目录导览
 

@@ -4,7 +4,8 @@
 
 ## 本课主题
 
-三层能力缝：Definition/Provider/Consumer
+能力缝三角色：Definition/Provider/Consumer
+
 
 ## 目录导览
 

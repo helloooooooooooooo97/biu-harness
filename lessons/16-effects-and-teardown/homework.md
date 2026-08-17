@@ -9,3 +9,4 @@
 ```bash
 node tools/verify-lesson.mjs lessons/16-effects-and-teardown
 ```
+

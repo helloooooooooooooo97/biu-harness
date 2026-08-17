@@ -9,3 +9,4 @@
 ```bash
 node tools/verify-lesson.mjs lessons/37-profiles-bundles-patches
 ```
+

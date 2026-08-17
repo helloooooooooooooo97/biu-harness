@@ -9,3 +9,4 @@
 ```bash
 node tools/verify-lesson.mjs lessons/05-vertical-slice-agent
 ```
+

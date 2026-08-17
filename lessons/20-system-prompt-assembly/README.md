@@ -4,7 +4,8 @@
 
 ## 本课主题
 
-系统提示词：插件注册 section
+系统提示词：PromptSection 顺序约定 + 动态 PromptContext
+
 
 ## 目录导览
 

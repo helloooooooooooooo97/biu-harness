@@ -6,6 +6,7 @@
 
 事件四模式：emit/waterfall/parallel/serial
 
+
 ## 目录导览
 
 - [lecture.md](lecture.md) — 讲义

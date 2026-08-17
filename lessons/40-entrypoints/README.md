@@ -4,7 +4,15 @@
 
 ## 本课主题
 
-headless CLI → Web UI → JSON-RPC/ACP
+headless CLI → Web UI → JSON-RPC/ACP（+ Python SDK）
+
+## 本课涵盖
+
+- dsh CLI：--profile web / headless / plugin
+- Web 应用与前端静态托管
+- JSON-RPC / ACP 入口 + Python SDK
+- 配置转储（--dump-config）
+
 
 ## 目录导览
 

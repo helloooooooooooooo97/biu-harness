@@ -9,3 +9,4 @@
 ```bash
 node tools/verify-lesson.mjs lessons/34-capability-seam-3layers
 ```
+

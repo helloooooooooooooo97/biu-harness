@@ -9,3 +9,4 @@
 ```bash
 node tools/verify-lesson.mjs lessons/30-approval-and-permission
 ```
+

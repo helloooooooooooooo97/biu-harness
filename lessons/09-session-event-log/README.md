@@ -6,6 +6,7 @@
 
 会话日志：append-only 事件流
 
+
 ## 目录导览
 
 - [lecture.md](lecture.md) — 讲义

@@ -4,7 +4,8 @@
 
 ## 本课主题
 
-barrier 与 rolling pool 并行调度
+并行调度与 Code Mode run_code
+
 
 ## 目录导览
 

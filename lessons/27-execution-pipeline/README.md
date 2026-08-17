@@ -4,7 +4,8 @@
 
 ## 本课主题
 
-pre/guards/execute/post/result
+pre/guards/approval/execute/post/finalize/result
+
 
 ## 目录导览
 
