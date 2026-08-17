@@ -23,6 +23,7 @@ test('生成完整 monorepo 骨架', async () => {
       'pnpm-workspace.yaml',
       'tsconfig.base.json',
       'packages/core-session/src/index.ts',
+      'packages/core-session/tsconfig.json',
       'packages/llm-deepseek/src/index.ts',
       'packages/tool-bash/src/index.ts',
       'apps/cli/src/index.ts',

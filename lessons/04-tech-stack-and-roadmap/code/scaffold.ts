@@ -101,12 +101,17 @@ export class MonorepoScaffolder {
       main: 'src/index.ts',
       scripts: { build: 'tsc --noEmit', test: 'node --test' },
     }, null, 2) + '\n')
+    await writeFile(resolve(dir, 'tsconfig.json'), JSON.stringify({
+      extends: '../../tsconfig.base.json',
+      compilerOptions: { noEmit: true },
+      include: ['src'],
+    }, null, 2) + '\n')
     await writeFile(resolve(dir, 'src/index.ts'), `// ${name} 占位实现：第 18 课起逐课填充。\nexport const name = '${name}';\n`)
     await writeFile(resolve(dir, 'README.md'), `# @mini-dsh/${name}\n\nTODO：本包职责与实现，见 syllabus 对应课程。\n`)
   }
 
   private printTree(): void {
-    const branch = (name: string): string => `│   ├── ${name}/{package.json,src/index.ts,README.md}`
+    const branch = (name: string): string => `│   ├── ${name}/{package.json,tsconfig.json,src/index.ts,README.md}`
     console.log(`${this.options.dir}/`)
     console.log('├── package.json')
     console.log('├── pnpm-workspace.yaml')
@@ -116,7 +121,7 @@ export class MonorepoScaffolder {
     console.log('├── packages/')
     for (const p of PACKAGES) console.log(branch(p))
     console.log('└── apps/')
-    for (const a of APPS) console.log(`    ├── ${a}/{package.json,src/index.ts,README.md}`)
+    for (const a of APPS) console.log(`    ├── ${a}/{package.json,tsconfig.json,src/index.ts,README.md}`)
   }
 }
 
