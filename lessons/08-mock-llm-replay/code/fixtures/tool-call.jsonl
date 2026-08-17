@@ -1,0 +1,2 @@
+{"key":"帮我 echo hi","content":"我来执行。","toolCalls":[{"id":"mock-call-1","name":"echo","arguments":"{\"text\":\"hi\"}"}]}
+{"key":"帮我 echo hi","content":"已执行 echo，结果是 hi。","toolCalls":[]}

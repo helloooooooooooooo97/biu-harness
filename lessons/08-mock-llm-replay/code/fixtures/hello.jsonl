@@ -1,0 +1,2 @@
+{"key":"你好","content":"[mock] 你好！这是录制的回复。","toolCalls":[]}
+{"key":"列出当前目录的文件","content":"目录里有 README.md 和 src/。","toolCalls":[]}

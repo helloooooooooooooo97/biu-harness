@@ -8,7 +8,6 @@
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "typeRoots": ["./node_modules/@types"],
     "types": ["node"]
   },
   "include": ["**/*.ts"]

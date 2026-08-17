@@ -1,0 +1,14 @@
+{"seq":1,"time":"2026-08-17T10:00:00.000Z","kind":"turn/start","data":{"turn":1}}
+{"seq":2,"time":"2026-08-17T10:00:01.200Z","kind":"user/message","data":{"turn":1,"role":"user","content":"列出当前目录的文件","source":{"kind":"user"}}}
+{"seq":3,"time":"2026-08-17T10:00:01.300Z","kind":"step/start","data":{"turn":1,"step":1}}
+{"seq":4,"time":"2026-08-17T10:00:02.000Z","kind":"assistant/chunk","data":{"turn":1,"step":1,"chunk":{"type":"text","text":"我来查看当前目录。"}}}
+{"seq":5,"time":"2026-08-17T10:00:02.100Z","kind":"assistant/chunk","data":{"turn":1,"step":1,"chunk":{"type":"text","text":"请稍等。"}}}
+{"seq":6,"time":"2026-08-17T10:00:03.000Z","kind":"assistant/message","data":{"turn":1,"step":1,"message":{"role":"assistant","content":[{"type":"text","text":"我来查看当前目录。请稍等。"},{"type":"tool-call","id":"call_1","name":"bash","arguments":"{\"command\":\"ls -la\"}"}]},"usage":{"prompt_tokens":120,"completion_tokens":18,"total_tokens":138}}}
+{"seq":7,"time":"2026-08-17T10:00:03.100Z","kind":"tool/call","data":{"turn":1,"step":1,"callId":"call_1","name":"bash","arguments":"{\"command\":\"ls -la\"}"}}
+{"seq":8,"time":"2026-08-17T10:00:03.500Z","kind":"tool/result","data":{"turn":1,"step":1,"callId":"call_1","message":{"role":"tool","toolCallId":"call_1","content":[{"type":"text","text":"README.md  package.json  src/"}]}}}
+{"seq":9,"time":"2026-08-17T10:00:04.000Z","kind":"step/end","data":{"turn":1,"step":1}}
+{"seq":10,"time":"2026-08-17T10:00:04.200Z","kind":"step/start","data":{"turn":1,"step":2}}
+{"seq":11,"time":"2026-08-17T10:00:05.000Z","kind":"assistant/chunk","data":{"turn":1,"step":2,"chunk":{"type":"text","text":"当前目录包含 README.md、package.json 和 src/。"}}}
+{"seq":12,"time":"2026-08-17T10:00:05.100Z","kind":"assistant/message","data":{"turn":1,"step":2,"message":{"role":"assistant","content":[{"type":"text","text":"当前目录包含 README.md、package.json 和 src/。"}]},"usage":{"prompt_tokens":138,"completion_tokens":25,"total_tokens":163}}}
+{"seq":13,"time":"2026-08-17T10:00:05.200Z","kind":"step/end","data":{"turn":1,"step":2}}
+{"seq":14,"time":"2026-08-17T10:00:05.300Z","kind":"turn/end","data":{"turn":1,"reason":"completed"}}
