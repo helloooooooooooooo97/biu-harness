@@ -4,7 +4,12 @@ import { AgentV2 } from './agent-v2.ts'
 import { EchoTool, type Tool } from './tool.ts'
 import { echoCall, fakeFetchSequence } from './test-utils.ts'
 
+// 本文件测 AgentV2（工具调用循环）：
+//   ① 正常循环；② 工具失败兜底；③ 未知工具兜底；④ 单步结束；⑤ 端到端 wire 格式；⑥ maxSteps 护栏。
+// 假 fetch 用"响应队列"模拟多轮请求：每次 fetch 消费下一条预设响应。
+
 test('正常工具循环：调用工具 → 回填 → 最终回复', async () => {
+  // 黄金路径：第 1 次响应要工具、第 2 次最终回答；断言 messages 完整流动（user→assistant→tool→assistant）且 steps=2。
   const fetchImpl = fakeFetchSequence([
     { choices: [{ message: echoCall('call_1', '{"text":"hi"}') }] },
     { choices: [{ message: { role: 'assistant', content: '完成。' } }] },
@@ -25,6 +30,7 @@ test('正常工具循环：调用工具 → 回填 → 最终回复', async () =
 })
 
 test('工具执行失败返回错误文本而不是抛异常', async () => {
+  // 验证失败兜底：工具抛异常变成 tool 结果文本（"错误: ..."），循环不中断、模型仍能继续回答。
   const failTool: Tool = {
     name: 'boom',
     description: '总是失败',
@@ -52,6 +58,7 @@ test('工具执行失败返回错误文本而不是抛异常', async () => {
 })
 
 test('未知工具同样回填错误文本', async () => {
+  // 验证未知工具名也被接住并回填"未知工具: xxx"，而不是让循环崩溃。
   const fetchImpl = fakeFetchSequence([
     {
       choices: [{
@@ -70,6 +77,7 @@ test('未知工具同样回填错误文本', async () => {
 })
 
 test('没有 tool_calls 时单步结束', async () => {
+  // 验证终止条件：模型不要工具时循环立刻结束（steps=1、messages 只有 2 条）。
   const fetchImpl = fakeFetchSequence([
     { choices: [{ message: { role: 'assistant', content: '直接回答。' } }] },
   ])
@@ -80,6 +88,7 @@ test('没有 tool_calls 时单步结束', async () => {
 })
 
 test('wire 格式：assistant 带 tool_calls，tool 带 tool_call_id', async () => {
+  // 端到端抓包：第 1 次请求只有 user；第 2 次请求 messages[1] 带 tool_calls、messages[2] 带 tool_call_id。
   const bodies: unknown[] = []
   const fetchImpl: typeof fetch = async (input, init) => {
     bodies.push(JSON.parse(String(init?.body)))
@@ -100,6 +109,7 @@ test('wire 格式：assistant 带 tool_calls，tool 带 tool_call_id', async () 
 })
 
 test('maxSteps 超限抛错', async () => {
+  // 死循环护栏：模型永远要工具时，达到 maxSteps 必须抛错而不是无限烧请求。
   const fetchImpl = fakeFetchSequence([
     { choices: [{ message: echoCall('c1', '{"text":"a"}') }] },
     { choices: [{ message: echoCall('c2', '{"text":"b"}') }] },

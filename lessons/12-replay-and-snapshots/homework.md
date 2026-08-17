@@ -1,20 +1,18 @@
 # 12-replay-and-snapshots 作业
 
-> TODO：填写作业要求与验收标准。
-
 ## 作业
+
+1. **跑测试**：`cd code && npm test`，确认两个 golden（tool-loop、multi-step）都通过，理解 `篡改日志后 golden 校验失败` 的含义。
+2. **写自己的 golden**：在 `fixtures/golden/` 下新建 `review-task.jsonl`（一个 turn：2 次工具调用 + 最终回答）和对应的 `review-task.messages.json`，在测试里用 `loadGolden` + `verifyGolden` 验证通过。
+3. **验证完整性**：把 `review-task.jsonl` 里某条事件的 `seq` 改成重复值，写一个测试断言 `assertContiguous` 抛错。
+4. **回答问题**：为什么快照/重放必须"无损"？如果 `replay` 悄悄丢掉某条事件，会破坏哪些下游（至少举两个）？
 
 ## 验收标准
 
 ```bash
 node tools/verify-lesson.mjs lessons/12-replay-and-snapshots
+cd lessons/12-replay-and-snapshots/code && npm test
 ```
 
-## 扩展课时/作业（可选）
-
-> 生产级补强，不影响主课验收。
-
-- 任务：session 落盘抽象（JSONL/SQLite，对应 ctx.sessionPersistence seam）。验收：kill -9 后重启进程能从日志恢复 session 继续。
-- 任务：checkpoint/resume：从日志重建上下文并继续新 step。验收：恢复后的 derive-messages 与崩溃前一致。
-- 任务：golden 更新流程：变更需显式命令更新并留 diff。验收：提供 update-golden 命令并纳入 CI。
-
+- 原有 7 个测试 + 你新增的 golden 测试全过。
+- `npx tsc --noEmit` 无错误。

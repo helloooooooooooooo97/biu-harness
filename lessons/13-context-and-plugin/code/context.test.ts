@@ -2,7 +2,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { Context } from './context.ts'
 
+// 本文件测 mini-Cordis 内核 Context：① 服务注册；② 重复 provide；③ effect 卸载器；④ 插件作用域；⑤ 同名插件；⑥ stop 逆序。
+
 test('provide/get/has 基本服务注册', () => {
+  // 验证 provide 注册后 get/has 可用，disposer 调用后服务被移除、get 抛"缺少服务"。
   const ctx = new Context()
   const off = ctx.provide('greeting', 'hello')
   assert.equal(ctx.get<string>('greeting'), 'hello')
@@ -13,12 +16,14 @@ test('provide/get/has 基本服务注册', () => {
 })
 
 test('重复 provide 抛错', () => {
+  // 验证服务名唯一性：同 key 二次 provide 抛错，避免静默覆盖。
   const ctx = new Context()
   ctx.provide('a', 1)
   assert.throws(() => ctx.provide('a', 2), /服务已存在: a/)
 })
 
 test('effect 手动卸载器只执行一次', () => {
+  // 验证可逆 effect：disposer 重复调用只执行一次清理（防重复卸载）。
   const ctx = new Context()
   let ran = 0
   const off = ctx.effect(() => {
@@ -30,6 +35,7 @@ test('effect 手动卸载器只执行一次', () => {
 })
 
 test('plugin 加载后 apply 生效，卸载时清理', () => {
+  // 验证插件作用域：apply 里注册的 effect 在卸载时先逆序执行，再执行返回的 cleanup。
   const ctx = new Context()
   const values: string[] = []
   const unload = ctx.plugin({
@@ -49,6 +55,7 @@ test('plugin 加载后 apply 生效，卸载时清理', () => {
 })
 
 test('重复加载同名插件抛错', () => {
+  // 验证插件名唯一性：同名插件二次加载抛错。
   const ctx = new Context()
   const def = { name: 'x', apply: () => {} }
   ctx.plugin(def)
@@ -56,6 +63,7 @@ test('重复加载同名插件抛错', () => {
 })
 
 test('stop 逆序卸载全部插件并清空服务', () => {
+  // 验证整体停机：后加载的插件先卸载（cleanup 顺序 second → first），服务全部消失。
   const ctx = new Context()
   const order: string[] = []
   ctx.plugin({

@@ -3,7 +3,12 @@ import assert from 'node:assert/strict'
 import { AgentV1 } from './agent-v1.ts'
 import type { ChatMessage } from './chat-client.ts'
 
+// 本文件测 AgentV1（最小 agent loop）：
+//   ① 正常往返（reply + messages 结构）；② 请求体格式（URL/model/history 顺序）。
+// 网络全部通过注入的假 fetch 隔离，不发起真实请求。
+
 function fakeFetch(response: unknown): typeof fetch {
+  // 假 fetch：不管收到什么请求，都返回预设的 JSON 响应。
   return async () => ({
     ok: true,
     status: 200,
@@ -17,6 +22,7 @@ function fakeFetch(response: unknown): typeof fetch {
 }
 
 test('AgentV1.run 返回 reply 并追加 assistant 消息', async () => {
+  // 黄金路径：假响应 content 应成为 reply，且 messages = [user, assistant]。
   const fetchImpl = fakeFetch({
     choices: [{ message: { role: 'assistant', content: '你好，我是 DeepSeek。' } }],
   })
@@ -29,6 +35,7 @@ test('AgentV1.run 返回 reply 并追加 assistant 消息', async () => {
 })
 
 test('请求体包含 model 与完整 messages（含 history）', async () => {
+  // 验证发出去的请求：URL 是 /chat/completions、model 正确、history 在前、新 prompt 在后。
   let captured: { url: string; init: RequestInit } | undefined
   const fetchImpl: typeof fetch = async (input, init) => {
     captured = { url: String(input), init: init ?? {} }

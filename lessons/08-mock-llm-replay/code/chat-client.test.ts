@@ -2,7 +2,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { ChatClient, toWire } from './chat-client.ts'
 
+// 本文件测真实实现 ChatClient 自己的契约：① toWire 序列化；② tool_calls 解析。
+
 test('toWire 把内部消息正确序列化', () => {
+  // 验证内部格式 → wire 格式：toolCalls → tool_calls、toolCallId → tool_call_id。
   const wire = toWire([
     { role: 'user', content: 'hi' },
     { role: 'assistant', content: '', toolCalls: [{ id: 'c1', name: 'echo', arguments: '{}' }] },
@@ -15,6 +18,7 @@ test('toWire 把内部消息正确序列化', () => {
 })
 
 test('ChatClient 解析 tool_calls（fake fetch）', async () => {
+  // 验证真实实现的响应解析：tool_calls 转成内部 ToolCall（name 等字段）。
   const fetchImpl = async (): Promise<Response> => ({
     ok: true,
     status: 200,

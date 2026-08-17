@@ -2,7 +2,11 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { ChatClient } from './chat-client.ts'
 
+// 本文件测 ChatClient（LLM 传输层）：
+//   ① 缺 key 报错；② MOCK_LLM 分支；③ HTTP 4xx 错误路径。不测 AgentV1（见 agent-v1.test.ts）。
+
 test('缺少 key 且未开 mock 时报错', async () => {
+  // 环境隔离：删掉 DEEPSEEK_API_KEY 和 MOCK_LLM 后，chat() 必须以含"缺少 DEEPSEEK_API_KEY"的错误拒绝。
   const oldKey = process.env.DEEPSEEK_API_KEY
   const oldMock = process.env.MOCK_LLM
   delete process.env.DEEPSEEK_API_KEY
@@ -20,6 +24,7 @@ test('缺少 key 且未开 mock 时报错', async () => {
 })
 
 test('MOCK_LLM=1 时无 key 也能返回 mock 回复', async () => {
+  // 验证 mock 分支：MOCK_LLM=1 时无 key 也返回含 "mock" 的文本，且不发网络请求。
   const oldKey = process.env.DEEPSEEK_API_KEY
   const oldMock = process.env.MOCK_LLM
   delete process.env.DEEPSEEK_API_KEY
@@ -36,6 +41,7 @@ test('MOCK_LLM=1 时无 key 也能返回 mock 回复', async () => {
 })
 
 test('API 4xx 抛出带状态码的错误', async () => {
+  // 验证错误路径：假 fetch 返回 401，chat() 必须抛 /HTTP 401/，不能把错误响应当成功解析。
   const fetchImpl = async (): Promise<Response> => ({
     ok: false,
     status: 401,
