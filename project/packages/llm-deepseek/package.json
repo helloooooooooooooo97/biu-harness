@@ -1,0 +1,14 @@
+{
+  "name": "@mini-dsh/llm-deepseek",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "dependencies": {
+    "@deepseek-ai/cordis": "0.1.0-rc.5"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "node --test"
+  }
+}
