@@ -1,0 +1,8 @@
+{
+  "name": "lesson-01-harness-what-and-why",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test *.test.mjs"
+  }
+}

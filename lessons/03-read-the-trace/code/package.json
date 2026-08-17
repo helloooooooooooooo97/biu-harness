@@ -1,0 +1,8 @@
+{
+  "name": "lesson-03-read-the-trace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test *.test.mjs"
+  }
+}

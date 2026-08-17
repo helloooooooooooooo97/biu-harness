@@ -6,7 +6,7 @@
  *   node tools/verify-lesson.mjs 05
  */
 import { existsSync } from 'node:fs';
-import { access, stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { join, resolve } from 'node:path';
 
@@ -53,7 +53,7 @@ async function main() {
     console.log('ℹ 本课尚无 package.json，跳过测试。');
     return;
   }
-  const pkgJson = JSON.parse((await import('node:fs/promises')).readFileSync(pkg, 'utf8'));
+  const pkgJson = JSON.parse(await readFile(pkg, 'utf8'));
   if (!pkgJson.scripts?.test) {
     console.log('ℹ 本课未定义 test script，跳过测试。');
     return;

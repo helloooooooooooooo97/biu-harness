@@ -1,0 +1,8 @@
+{
+  "name": "lesson-05-vertical-slice-agent",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test *.test.mjs"
+  }
+}

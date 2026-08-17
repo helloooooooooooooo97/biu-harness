@@ -1,0 +1,8 @@
+{
+  "name": "lesson-04-tech-stack-and-roadmap",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test *.test.mjs"
+  }
+}
