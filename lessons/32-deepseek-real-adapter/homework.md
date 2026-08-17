@@ -1,20 +1,18 @@
 # 32-deepseek-real-adapter 作业
 
-> TODO：填写作业要求与验收标准。
-
 ## 作业
+
+1. **跑测试**：`cd code && npm test`，理解 reasoning/文本/tool_calls 的映射。
+2. **真实跑通**（有 key）：`DEEPSEEK_API_KEY=sk-... node demo.mjs "1+1=?"`（或写个小脚本用 `stream` + `assemble`），观察 `finish_reason` 与回复。
+3. **thinking 模型**：把 `model` 配成 `deepseek-reasoner`，跑一个需要推理的问题，断言 `assemble` 结果里出现 `reasoning` block。
+4. **tool_calls 分片**：写测试——两条 `tool-call-delta` 分片（一条带 name、一条只带 arguments 增量），`assemble` 后 arguments 完整拼接。
+5. **回答问题**：为什么 `reasoning_content` 要单独成块而不是并进 text？（提示：展示与计费的区别。）
 
 ## 验收标准
 
 ```bash
 node tools/verify-lesson.mjs lessons/32-deepseek-real-adapter
+cd lessons/32-deepseek-real-adapter/code && npm test
 ```
 
-## 扩展课时/作业（可选）
-
-> 生产级补强，不影响主课验收。
-
-- 任务：模型路由：便宜模型做初判/路由，贵模型做终答。验收：同一任务可配置路由策略并观察 token 成本差异。
-- 任务：供应商故障切换：主模型 5xx 时自动降级备用模型并记录遥测。验收：故障注入下请求成功且遥测含 fallback 标记。
-- 任务：thinking 模式：reasoning block 单独计数与展示。验收：轨迹中 reasoning 与回答 token 分开统计。
-
+- 原有测试 + 你新增的 1 个测试全过；`npx tsc --noEmit` 无错误。
