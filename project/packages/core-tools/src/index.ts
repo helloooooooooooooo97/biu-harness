@@ -53,3 +53,6 @@ export class BashTool implements ToolDefinition {
     return `${stdout}${stderr}`.trim() || '(无输出)'
   }
 }
+
+export * from './define-tool.ts'
+export * from './pipeline.ts'

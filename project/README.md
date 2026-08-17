@@ -24,6 +24,9 @@ git tag lesson-19
 - `packages/core-tools`：`ToolRegistryService` + `MemoryTools` / Echo / Bash（06/19）
 - `packages/core-system-prompt`：`SystemPromptAssembler`（20）
 - `packages/core-agent-loop`：`StepRunner` / `TurnRunner` / `Inbox` / `Agent` / `PreStepBus`（22-25）
+- `packages/core-tools`（26-27）：`defineTool` schema + `ToolPipeline`（pre/guards/approval/execute/post/finalize/result）
+- `packages/core-scheduler`：`mapLimit` / `runSerial` / `Barrier`（28）
+- `packages/approval`：`ApprovalGate` + 权限预设 read-only/workspace-write/full（30）
 - `apps/cli`：装配以上全部，离线 mock 跑完整回合
 
 ## 运行
