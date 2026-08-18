@@ -7,5 +7,8 @@
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
   }
 }

@@ -9,6 +9,32 @@ test('evalJs 求值 js: 表达式', () => {
   assert.equal(evalJs('plain', {}), 'plain')
 })
 
+test('parseEntries 支持 YAML 配置（含注释与布尔）', () => {
+  const entries = parseEntries(`
+# mini-dsh 插件树
+entries:
+  - id: t
+    name: tools
+  - id: t-echo
+    name: tool-echo
+    enabled: false
+  - id: llm
+    name: llm-mock
+    config:
+      model: deepseek-chat
+`)
+  assert.deepEqual(entries.map((e) => [e.id, e.name, e.enabled]), [
+    ['t', 'tools', undefined],
+    ['t-echo', 'tool-echo', false],
+    ['llm', 'llm-mock', undefined],
+  ])
+  assert.equal((entries[2].config as Record<string, unknown>).model, 'deepseek-chat')
+})
+
+test('parseEntries 非法文本同时报 JSON/YAML 错误', () => {
+  assert.throws(() => parseEntries('{{{{'), /配置解析失败/)
+})
+
 test('expandIncludes 展开 include 并求值 config', () => {
   const files = new Map([['base.json', '{"entries":[{"id":"t","name":"tools"}]}']])
   const entries = expandIncludes(

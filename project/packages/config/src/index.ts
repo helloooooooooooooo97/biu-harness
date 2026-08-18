@@ -1,4 +1,5 @@
-/** 配置驱动加载：entries + include + js: 表达式（第 36 课）。 */
+/** 配置驱动加载：entries + include + js: 表达式（第 36 课），JSON 与 YAML 双格式。 */
+import { parse as parseYaml } from 'yaml'
 
 export interface ConfigEntry {
   id: string
@@ -13,7 +14,7 @@ export interface PluginDef {
 }
 
 export function parseEntries(text: string): ConfigEntry[] {
-  const data = JSON.parse(text) as { entries?: unknown }
+  const data = parseConfigText(text)
   if (!Array.isArray(data.entries)) throw new Error('配置必须是 { "entries": [...] }')
   const seen = new Set<string>()
   return data.entries.map((raw) => {
@@ -23,6 +24,19 @@ export function parseEntries(text: string): ConfigEntry[] {
     seen.add(entry.id)
     return { id: entry.id, name: entry.name, enabled: entry.enabled, config: entry.config }
   })
+}
+
+/** 先按 JSON 解析，失败再按 YAML 解析（YAML 可手写注释，适合人维护）。 */
+function parseConfigText(text: string): { entries?: unknown } {
+  try {
+    return JSON.parse(text) as { entries?: unknown }
+  } catch {
+    try {
+      return parseYaml(text) as { entries?: unknown }
+    } catch {
+      throw new Error('配置解析失败：既不是合法 JSON，也不是合法 YAML')
+    }
+  }
 }
 
 export function evalJs(value: unknown, ctx: Record<string, unknown>): unknown {

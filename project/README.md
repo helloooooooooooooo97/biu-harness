@@ -16,7 +16,7 @@ git tag lesson-19
 
 > 第 18 课之前本目录保持为空。
 
-## 当前状态（第 25 课）
+## 当前状态（第 53 课）
 
 - `packages/llm`：LLM 词汇表与 `LlmClient` 接口（19）
 - `packages/llm-deepseek`：`ChatClient` 真实传输 + `MockLlm` 录放（05/08/19）
@@ -50,20 +50,53 @@ git tag lesson-19
 - `packages/publish`：插件清单/打包/发布（51）
 - `packages/benchmark`：同任务多跑统计（53）
 - `apps/cli`：装配以上全部，离线 mock 跑完整回合
+- `apps/cli/plugins/*`：**插件目录**——每个插件一个文件夹，`index.ts` 导出 `plugin`；
+  加载器扫目录动态 `import()`，`install(name)` 的本质就是 import 这个文件夹
+- `config.yaml` / `config.json`：声明插件树（id + name + enabled + config）
 
 ## 运行
 
 ```bash
 pnpm install
 pnpm -r test
-pnpm --filter @mini-dsh/cli start "帮我 echo hi"          # headless
+pnpm --filter @mini-dsh/cli start "帮我 echo hi"          # headless（默认插件树）
+pnpm --filter @mini-dsh/cli start -- --config config.yaml "帮我 echo hi"  # 从 YAML 配置装载
+pnpm --filter @mini-dsh/cli start -- --watch config.yaml  # 双热更新：改配置或改插件文件都即热重载
 pnpm --filter @mini-dsh/cli start -- --rpc               # JSON-RPC（stdin 行协议）
 pnpm --filter @mini-dsh/cli start -- --benchmark "任务" 5 # 稳定性压测
 ```
 
-CLI 是**串起来的整体**：配置驱动加载（config/profiles）→ 插件装载服务 → 带遥测/取消/守卫/压缩的 loop → Skills → headless + JSON-RPC 入口 → 子代理/workflow → benchmark。
+CLI 是**串起来的整体**：配置驱动加载（JSON/YAML，`@mini-dsh/config`）→ cordis 插件树
+（`apps/cli/plugins/` 目录扫描 + 动态 import）→ 带遥测/取消/守卫/压缩的 loop → Skills →
+headless + JSON-RPC 入口 → 子代理/workflow → benchmark。
 
-> 说明：`@deepseek-ai/cordis` 真实框架待配置阶段接入；当前跑在 mini 内核 + mock LLM 上，全程离线可测。
+## 插件安装与热更新（dsh 对齐）
+
+一切皆插件，插件即目录：
+
+```text
+apps/cli/plugins/
+  registry/tools/index.ts         # 注册类插件：provide 空容器（register→disposer 契约）
+  registry/skills/index.ts
+  registry/presets/index.ts
+  registry/subagents/index.ts
+  registry/prompt/index.ts
+  session/index.ts            # 注册表插件：ctx.provide 服务（自动清理）
+  tool-echo/index.ts          # 贡献插件：inject 注册表 + apply 返回 register() 的 disposer
+  agent-loop/index.ts
+  my-new-plugin/index.ts      # 加一个文件夹 = 加一个可安装插件
+```
+
+插件目录支持一层分组：注册类插件（提供 `register() → disposer` 容器的服务）放在
+`registry/` 下，其它插件平铺；加载器递归扫描，分组只影响组织，不影响插件名。
+
+- `CordisPluginManager.install(name)`：无注册表命中时经 resolver 动态 `import()` 插件目录；
+- `remove(id)` / `reload(id)`：fiber.dispose() 逆序撤销 effect；
+- `reloadPlugin(name)`：带 `?t=` 破 import 缓存重新加载单个插件并重挂（改代码即热更新）；
+- `applyConfig(entries)`：配置 diff（改名/禁用/删除 → 卸载，新增 → 挂载）；
+- `--watch`：同时轮询配置文件和插件目录 mtime，改哪一个就热更新哪一个。
+
+全程基于真实 `@deepseek-ai/cordis` 4.0.1，离线 mock LLM 可测。
 
 ## 课程 tag
 

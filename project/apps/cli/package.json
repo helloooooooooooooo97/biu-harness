@@ -5,6 +5,7 @@
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
     "@mini-dsh/benchmark": "workspace:*",
     "@mini-dsh/cancellation": "workspace:*",
     "@mini-dsh/compaction": "workspace:*",

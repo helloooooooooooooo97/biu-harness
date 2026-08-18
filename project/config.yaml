@@ -1,0 +1,49 @@
+# mini-dsh 示例配置（YAML 版，等价于 config.json）
+# 运行：pnpm --filter @mini-dsh/cli start --watch config.yaml
+entries:
+  - id: s
+    name: session
+  - id: tel
+    name: telemetry
+  - id: cn
+    name: cancellation
+  - id: cp
+    name: compaction
+  - id: g
+    name: guard
+  - id: sk
+    name: skills
+  - id: sk-cs
+    name: skill-code-style
+  - id: pr
+    name: presets
+  - id: pr-coding
+    name: preset-coding
+  - id: llm
+    name: llm-mock
+  - id: t
+    name: tools
+  - id: t-echo
+    name: tool-echo
+  - id: t-skill
+    name: tool-skill
+  - id: t-write
+    name: tool-write-file
+  - id: p
+    name: prompt
+  - id: p-id
+    name: prompt-identity
+  - id: p-tools
+    name: prompt-tools
+  - id: sa
+    name: subagents
+  - id: sa-ip
+    name: subagent-inprocess
+  - id: wf
+    name: workflow
+  - id: loop
+    name: agent-loop
+  - id: h
+    name: headless
+  - id: rpc
+    name: rpc
