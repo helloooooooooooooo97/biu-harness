@@ -1,20 +1,18 @@
 # 40-entrypoints 作业
 
-> TODO：填写作业要求与验收标准。
-
 ## 作业
+
+1. **跑测试**：`cd code && npm test`。
+2. **headless**：写测试——`HeadlessRunner.run('hi')` 返回最终回答（注入 mock llm）。
+3. **JSON-RPC 成功**：写测试——`handleLine('{"id":1,"method":"run","params":{"prompt":"hi"}}')` 返回带 `result` 的响应。
+4. **JSON-RPC 错误**：写测试——未知方法返回 `error` 且带同一 `id`；非法 JSON 返回解析错误。
+5. **回答问题**：为什么入口要共享同一个 loop 而不是各自实现一遍？（提示：行为一致 + 可测试。）
 
 ## 验收标准
 
 ```bash
 node tools/verify-lesson.mjs lessons/40-entrypoints
+cd lessons/40-entrypoints/code && npm test
 ```
 
-## 扩展课时/作业（可选）
-
-> 生产级补强，不影响主课验收。
-
-- 任务：CLI 打包为可安装二进制（esbuild/bun build）并 npm 发布。验收：npm i -g 后可直接运行 dsh 命令。
-- 任务：Docker 镜像 + daemon 化运行。验收：docker run 启动服务，配置与日志走挂载卷。
-- 任务：配置发现三级：全局/用户/项目，优先级明确。验收：三处配置合并结果符合优先级约定。
-
+- 原有测试 + 你新增的 2 个测试全过；`npx tsc --noEmit` 无错误。

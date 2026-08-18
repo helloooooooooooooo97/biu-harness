@@ -1,20 +1,18 @@
 # 44-workspace-guard 作业
 
-> TODO：填写作业要求与验收标准。
-
 ## 作业
+
+1. **跑测试**：`cd code && npm test`。
+2. **逃逸拒绝**：写测试——`/work/../etc/passwd` 在 read-only 下也被拒（路径规范化）。
+3. **写权限**：写测试——workspace-write 允许工作区内写、拒绝工作区外写；read-only 拒绝一切写。
+4. **guardFs 集成**：写测试——用 `guardFs` 包一个内存 fs，工作区内写成功、区外抛"越界"。
+5. **回答问题**：为什么守卫要放在 seam（Provider 和 Consumer 之间）而不是写死在 Consumer 里？（提示：可替换策略。）
 
 ## 验收标准
 
 ```bash
 node tools/verify-lesson.mjs lessons/44-workspace-guard
+cd lessons/44-workspace-guard/code && npm test
 ```
 
-## 扩展课时/作业（可选）
-
-> 生产级补强，不影响主课验收。
-
-- 任务：prompt injection 缓解：工具结果标记为不可信内容并隔离。验收：注入测试不改变系统指令、不泄露凭据。
-- 任务：日志/轨迹脱敏：API key、文件内容等敏感字段打码。验收：轨迹与日志中无明文密钥。
-- 任务：沙箱执行后端（容器）与网络出口控制、操作审计。验收：沙箱内命令无法访问工作区外路径并留审计记录。
-
+- 原有测试 + 你新增的 2 个测试全过；`npx tsc --noEmit` 无错误。
