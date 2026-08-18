@@ -25,6 +25,9 @@ importers:
       '@mini-dsh/core-agent-loop':
         specifier: workspace:*
         version: link:../../packages/core-agent-loop
+      '@mini-dsh/core-capability':
+        specifier: workspace:*
+        version: link:../../packages/core-capability
       '@mini-dsh/core-session':
         specifier: workspace:*
         version: link:../../packages/core-session

@@ -13,6 +13,7 @@
     "@mini-dsh/core-system-prompt": "workspace:*",
     "@mini-dsh/core-tools": "workspace:*",
     "@mini-dsh/credentials": "workspace:*",
+    "@mini-dsh/core-capability": "workspace:*",
     "@mini-dsh/entrypoints": "workspace:*",
     "@mini-dsh/guard": "workspace:*",
     "@mini-dsh/llm": "workspace:*",

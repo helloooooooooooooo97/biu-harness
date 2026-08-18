@@ -42,6 +42,7 @@ export interface PluginDef {
 
 export interface PluginContext {
   provide(key: string, impl: unknown): () => void
+  mount(provider: ServiceProvider): () => void
   get<T>(key: string): T
 }
 
@@ -71,6 +72,10 @@ export class MiniContext {
     return this.services.has(key)
   }
 
+  mount(provider: ServiceProvider): () => void {
+    return this.provide(provider.definition.key, provider.create())
+  }
+
   plugin(def: PluginDef): () => void {
     if (this.plugins.has(def.name)) throw new Error(`插件已加载: ${def.name}`)
     const previous = this.currentPlugin
@@ -85,6 +90,10 @@ export class MiniContext {
     }
     this.plugins.set(def.name, def)
     return unload
+  }
+
+  pluginNames(): string[] {
+    return [...this.plugins.keys()]
   }
 }
 
@@ -161,5 +170,9 @@ export class CapabilityContext {
     }
     this.plugins.set(def.name, def)
     return unload
+  }
+
+  pluginNames(): string[] {
+    return [...this.plugins.keys()]
   }
 }
