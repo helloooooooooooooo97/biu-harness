@@ -36,5 +36,5 @@ test('listPluginFiles 返回插件目录 mtime 快照（供 watchPlugins 轮询�
 })
 
 test('未知插件目录抛错', async () => {
-  await assert.rejects(() => loadPluginModule('ghost-plugin'), /插件目录不存在/)
+  await assert.rejects(() => loadPluginModule('ghost-plugin'), /插件文件不存在/)
 })

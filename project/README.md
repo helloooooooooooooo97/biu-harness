@@ -50,8 +50,8 @@ git tag lesson-19
 - `packages/publish`：插件清单/打包/发布（51）
 - `packages/benchmark`：同任务多跑统计（53）
 - `apps/cli`：装配以上全部，离线 mock 跑完整回合
-- `apps/cli/plugins/*`：**插件目录**——每个插件一个文件夹，`index.ts` 导出 `plugin`；
-  加载器扫目录动态 `import()`，`install(name)` 的本质就是 import 这个文件夹
+- `apps/cli/plugins/`：**插件目录**——每个插件一个 `.ts` 文件，导出 `plugin`；
+  加载器扫文件动态 `import()`，`install(name)` 的本质就是 import 这个文件
 - `config.yaml` / `config.json`：声明插件树（id + name + enabled + config）
 
 ## 运行
@@ -76,19 +76,25 @@ headless + JSON-RPC 入口 → 子代理/workflow → benchmark。
 
 ```text
 apps/cli/plugins/
-  registry/tools/index.ts         # 注册类插件：provide 空容器（register→disposer 契约）
-  registry/skills/index.ts
-  registry/presets/index.ts
-  registry/subagents/index.ts
-  registry/prompt/index.ts
-  session/index.ts            # 注册表插件：ctx.provide 服务（自动清理）
-  tool-echo/index.ts          # 贡献插件：inject 注册表 + apply 返回 register() 的 disposer
-  agent-loop/index.ts
-  my-new-plugin/index.ts      # 加一个文件夹 = 加一个可安装插件
+  registry/tools.ts              # 注册类：provide 空容器（register→disposer 契约）
+  registry/skills.ts
+  contributors/tool-echo.ts      # 贡献类：inject 注册表 + apply 返回 disposer
+  contributors/preset-coding.ts
+  infrastructure/session.ts      # 基础设施：提供普通服务
+  infrastructure/llm-mock.ts
+  orchestration/agent-loop.ts    # 编排/入口：组合下层服务
+  orchestration/rpc.ts
+  my-new-plugin.ts               # 加一个文件 = 加一个可安装插件
 ```
 
-插件目录支持一层分组：注册类插件（提供 `register() → disposer` 容器的服务）放在
-`registry/` 下，其它插件平铺；加载器递归扫描，分组只影响组织，不影响插件名。
+插件按四类分文件夹，一个文件 = 一个插件：
+
+- `registry/`：注册类——提供 `register() → disposer` 容器的服务；
+- `contributors/`：贡献类——`inject` 注册表 + apply 返回 disposer；
+- `infrastructure/`：基础设施——提供普通服务（会话/遥测/取消/守卫/模型等）；
+- `orchestration/`：编排/入口——组合下层服务的 agent loop、headless、RPC、workflow。
+
+加载器递归扫描，分组只影响组织，不影响插件名；插件名 = 文件名（去掉 `.ts`）。
 
 - `CordisPluginManager.install(name)`：无注册表命中时经 resolver 动态 `import()` 插件目录；
 - `remove(id)` / `reload(id)`：fiber.dispose() 逆序撤销 effect；
