@@ -28,3 +28,7 @@ git submodule update --remote --merge deepseek-harness
 - 包与插件：`deepseek-harness/packages/`
 - CLI：`deepseek-harness/apps/cli/`
 - 文档：`deepseek-harness/docs/`
+
+## 分析笔记
+
+- [dsh 框架问题与心智负担分析](docs/dsh-framework-problems-and-cognitive-load.md)
