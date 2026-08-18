@@ -32,6 +32,23 @@ git tag lesson-19
 - `packages/core-errors`：错误分类 + 分类重试（33）
 - `packages/core-capability`：能力缝三角色 + `MiniContext`（34）
 - `packages/fs` / `packages/subprocess`：本地与远程 Provider 可切换（35）
+- `packages/config`：entries/include/`js:` 表达式 + 插件树装载（36）
+- `packages/profiles`：bundle → profile → patch 分层（37）
+- `packages/credentials`：环境分层 + 凭据 + 脱敏（38）
+- `packages/presets`：agent presets + isolate 隔离域（39）
+- `packages/entrypoints`：headless + JSON-RPC 入口（40）
+- `packages/skills`：技能注册表 + 文件系统 provider + skill 工具（41）
+- `packages/ui-slots`：keyed renderer + 客户端 HMR（42）
+- `packages/dynamic`：动态插件 define/run/stop/undefine（43）
+- `packages/guard`：工作区边界 + 读写权限（44）
+- `packages/cancellation`：取消令牌 + 进程树清理（45）
+- `packages/compaction`：压力检测 + 裁剪 + 摘要（46）
+- `packages/receipts`：消息回执状态机（47）
+- `packages/telemetry`：遥测 + token 记账 + 成本（48）
+- `packages/subagent`：子代理能力缝（inprocess/ACP）（49）
+- `packages/workflow`：DAG 编排 + 工作区锁（50）
+- `packages/publish`：插件清单/打包/发布（51）
+- `packages/benchmark`：同任务多跑统计（53）
 - `apps/cli`：装配以上全部，离线 mock 跑完整回合
 
 ## 运行

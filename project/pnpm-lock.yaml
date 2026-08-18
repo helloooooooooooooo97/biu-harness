@@ -51,6 +51,54 @@ importers:
         specifier: ^5.6.0
         version: 5.6.2
 
+  packages/benchmark:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/cancellation:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/compaction:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/config:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
   packages/core-agent-loop:
     dependencies:
       '@mini-dsh/core-session':
@@ -145,7 +193,55 @@ importers:
         specifier: ^5.6.0
         version: 5.6.2
 
+  packages/credentials:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/dynamic:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/entrypoints:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
   packages/fs:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/guard:
     devDependencies:
       '@types/node':
         specifier: ^22.10.0
@@ -185,7 +281,123 @@ importers:
         specifier: ^5.6.0
         version: 5.6.2
 
+  packages/presets:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/profiles:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/publish:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/receipts:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/skills:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/subagent:
+    dependencies:
+      '@mini-dsh/llm':
+        specifier: workspace:*
+        version: link:../llm
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
   packages/subprocess:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/telemetry:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/ui-slots:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.6.0
+        version: 5.6.2
+
+  packages/workflow:
+    dependencies:
+      '@mini-dsh/subagent':
+        specifier: workspace:*
+        version: link:../subagent
     devDependencies:
       '@types/node':
         specifier: ^22.10.0
