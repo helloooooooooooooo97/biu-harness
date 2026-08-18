@@ -32,3 +32,4 @@ git submodule update --remote --merge deepseek-harness
 ## 分析笔记
 
 - [dsh 框架问题与心智负担分析](docs/dsh-framework-problems-and-cognitive-load.md)
+- [dsh 面向对象设计（OOD）分析](docs/dsh-ood-analysis.md)
