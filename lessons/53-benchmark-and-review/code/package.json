@@ -1,0 +1,13 @@
+{
+  "name": "lesson-53-benchmark-and-review",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "tsx --test *.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -1,19 +1,18 @@
 # 53-benchmark-and-review 作业
 
-> TODO：填写作业要求与验收标准。
-
 ## 作业
+
+1. **跑测试**：`cd code && npm test`。
+2. **稳定性**：写测试——同一任务跑 10 次（2 次失败），`report` 的成功率是 0.8。
+3. **耗时统计**：写测试——report 的 avgDuration 与 median 正确。
+4. **真实对照**：用你的 mini-dsh 与官方 dsh 跑同一个任务，填复盘模板（做得好的/差距/原因/下一步）。
+5. **收官总结**：写一篇 200 字以上的学习总结：你现在能做什么、还差什么。
 
 ## 验收标准
 
 ```bash
 node tools/verify-lesson.mjs lessons/53-benchmark-and-review
+cd lessons/53-benchmark-and-review/code && npm test
 ```
 
-## 扩展课时/作业（可选）
-
-> 生产级补强，不影响主课验收。
-
-- 任务：稳定性压测：同任务跑 100 次，统计成功率/超时率/成本中位数。验收：产出稳定性报告。
-- 任务：用 mini-dsh 完成 2-3 个真实任务（编码/自动化）。验收：真实任务结果与官方 dsh 对照表。
-
+- benchmark 测试通过；复盘与总结写在你的笔记里。

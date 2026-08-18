@@ -1,19 +1,18 @@
 # 51-publish-plugin 作业
 
-> TODO：填写作业要求与验收标准。
-
 ## 作业
+
+1. **跑测试**：`cd code && npm test`。
+2. **清单校验**：写测试——缺 name/version 抛错；带 dsh.bundle.patch 的合法。
+3. **打包**：写测试——pack 后文件集包含 package.json 与入口。
+4. **版本冲突**：写测试——发布同 name 更新版本抛错；不同 name 或更旧版本（按语义）允许。
+5. **回答问题**：为什么发布要检测版本冲突？（提示：消费者依赖确定性。）
 
 ## 验收标准
 
 ```bash
 node tools/verify-lesson.mjs lessons/51-publish-plugin
+cd lessons/51-publish-plugin/code && npm test
 ```
 
-## 扩展课时/作业（可选）
-
-> 生产级补强，不影响主课验收。
-
-- 任务：插件版本解析（semver）、依赖锁定、加载冲突检测。验收：同一插件两个版本可共存或可回滚。
-- 任务：发布前自动验证：验收脚本接入发布流程。验收：CI 在发布前跑插件测试与验收脚本。
-
+- 原有测试 + 你新增的 2 个测试全过；`npx tsc --noEmit` 无错误。
