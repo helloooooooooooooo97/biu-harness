@@ -42,7 +42,7 @@ export class CordisPluginManager {
     if (entry.enabled === false) throw new Error(`已禁用: ${entry.id}`)
     const def = this.registry.get(entry.name)
     if (!def) throw new Error(`未知插件: ${entry.name}`)
-    const fiber = this.ctx.plugin(def)
+    const fiber = this.ctx.plugin(def, entry.config)
     this.fibers.set(entry.id, fiber)
     this.entries.set(entry.id, entry)
     return fiber

@@ -27,3 +27,4 @@ export class AcpProviderMock implements SubagentProvider {
     return { id: `acp-${nextId}`, result: Promise.resolve(`${this.canned}（${prompt.slice(0, 10)}…）`) }
   }
 }
+

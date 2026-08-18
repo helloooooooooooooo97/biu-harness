@@ -1,0 +1,12 @@
+# mini-dsh web surface（对应 dsh 的 --profile web）
+# 运行：pnpm --filter @mini-dsh/cli start -- --web config.web.yaml
+entries:
+  - id: fs
+    name: frontend-static
+  - id: wr
+    name: web-runtime
+    config:
+      host: 127.0.0.1
+      port: 3210
+  - id: ch
+    name: client-hmr

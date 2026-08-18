@@ -13,7 +13,11 @@ test('loadAllPlugins 扫描 plugins/ 目录得到完整注册表', async () => {
   for (const name of ['tools', 'skills', 'presets', 'subagents', 'prompt']) {
     assert.ok(all.has(name), `缺少注册类插件 ${name}`)
   }
-  assert.equal(all.size, 24)
+  // web 表面 bundle（frontend-static / web-runtime / client-hmr）
+  for (const name of ['frontend-static', 'web-runtime', 'client-hmr']) {
+    assert.ok(all.has(name), `缺少 web 插件 ${name}`)
+  }
+  assert.equal(all.size, 27)
 })
 
 test('loadPluginModule 按目录 import() 单个插件模块', async () => {

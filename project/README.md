@@ -62,8 +62,10 @@ pnpm -r test
 pnpm --filter @mini-dsh/cli start "帮我 echo hi"          # headless（默认插件树）
 pnpm --filter @mini-dsh/cli start -- --config config.yaml "帮我 echo hi"  # 从 YAML 配置装载
 pnpm --filter @mini-dsh/cli start -- --watch config.yaml  # 双热更新：改配置或改插件文件都即热重载
+pnpm --filter @mini-dsh/cli start -- --web config.web.yaml  # web surface（dsh --profile web 对照）
 pnpm --filter @mini-dsh/cli start -- --rpc               # JSON-RPC（stdin 行协议）
 pnpm --filter @mini-dsh/cli start -- --benchmark "任务" 5 # 稳定性压测
+node apps/cli/web/build.mjs                              # 模拟 client 重新构建（SSE 触发前端自更新）
 ```
 
 CLI 是**串起来的整体**：配置驱动加载（JSON/YAML，`@mini-dsh/config`）→ cordis 插件树
@@ -84,6 +86,9 @@ apps/cli/plugins/
   infrastructure/llm-mock.ts
   orchestration/agent-loop.ts    # 编排/入口：组合下层服务
   orchestration/rpc.ts
+  orchestration/web-runtime.ts   # web surface：HTTP + SSE（/hmr）
+  orchestration/frontend-static.ts
+  orchestration/client-hmr.ts
   my-new-plugin.ts               # 加一个文件 = 加一个可安装插件
 ```
 
@@ -95,6 +100,24 @@ apps/cli/plugins/
 - `orchestration/`：编排/入口——组合下层服务的 agent loop、headless、RPC、workflow。
 
 加载器递归扫描，分组只影响组织，不影响插件名；插件名 = 文件名（去掉 `.ts`）。
+
+## Web surface 与自指热更新（dsh 对照）
+
+`config.web.yaml` 对应 dsh 的 `--profile web`：`frontend-static`（静态文件 owner）、
+`web-runtime`（HTTP server：`/` 页面、`/client.js` bundle、`/hmr` SSE 事件流）、
+`client-hmr`（始终在线的重载链）。自指闭环：
+
+```text
+node build.mjs（重写 client bundle/version）
+  → client-hmr 轮询检测到变化
+  → SSE 推 {type:"reload", version}
+  → 浏览器 fiber dispose() 旧实例 → import('/client.js?v='+version) 加载新实例
+```
+
+前端 bundle（`apps/cli/web/client.js`）本身就是带 `mount/dispose` 的 fiber，HMR
+receiver 永远在线——即使页面没有其他任何插件也能被热更新，这是 dsh 的设计精髓。
+host 侧同理：`--web` 模式同时 watch 配置与插件目录，改 web 插件文件由
+`watchPlugins` 直接重载。
 
 - `CordisPluginManager.install(name)`：无注册表命中时经 resolver 动态 `import()` 插件目录；
 - `remove(id)` / `reload(id)`：fiber.dispose() 逆序撤销 effect；

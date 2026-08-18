@@ -74,6 +74,29 @@ if (isMain) {
       console.log(`== 插件树 ==\n${app.pluginNames().join(', ')}\n（监听 ${file} 与 plugins/ 目录，改动即热更新）`)
       app.pluginManager.watchConfig(() => readFileSync(file, 'utf8'))
       app.pluginManager.watchPlugins(() => listPluginFiles())
+    }).catch((err: unknown) => {
+      console.error(`✘ ${err instanceof Error ? err.message : String(err)}`)
+      process.exitCode = 1
+    })
+  } else if (args[0] === '--web' && args[1]) {
+    const file = args[1]
+    const app = boot(readFileSync(file, 'utf8'))
+    app.ready().then(async () => {
+      const web = app.ctx.get('webRuntime') as { url(): string; port(): number } | undefined
+      if (!web) {
+        console.error(`✘ 配置缺少 web-runtime 插件: ${file}`)
+        process.exitCode = 1
+        return
+      }
+      for (let i = 0; i < 50 && web.port() === 0; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+      console.log(`== web surface ==\n${app.pluginNames().join(', ')}\n${web.url()}\n（监听 ${file} 与 plugins/，client bundle 变化经 SSE 热更新）`)
+      app.pluginManager.watchConfig(() => readFileSync(file, 'utf8'))
+      app.pluginManager.watchPlugins(() => listPluginFiles())
+    }).catch((err: unknown) => {
+      console.error(`✘ ${err instanceof Error ? err.message : String(err)}`)
+      process.exitCode = 1
     })
   } else {
     runCli(boot(), args)
