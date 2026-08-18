@@ -5,12 +5,24 @@
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
+    "@mini-dsh/benchmark": "workspace:*",
+    "@mini-dsh/cancellation": "workspace:*",
+    "@mini-dsh/compaction": "workspace:*",
     "@mini-dsh/core-agent-loop": "workspace:*",
     "@mini-dsh/core-session": "workspace:*",
     "@mini-dsh/core-system-prompt": "workspace:*",
     "@mini-dsh/core-tools": "workspace:*",
+    "@mini-dsh/credentials": "workspace:*",
+    "@mini-dsh/entrypoints": "workspace:*",
+    "@mini-dsh/guard": "workspace:*",
     "@mini-dsh/llm": "workspace:*",
-    "@mini-dsh/llm-deepseek": "workspace:*"
+    "@mini-dsh/llm-deepseek": "workspace:*",
+    "@mini-dsh/config": "workspace:*",
+    "@mini-dsh/presets": "workspace:*",
+    "@mini-dsh/skills": "workspace:*",
+    "@mini-dsh/subagent": "workspace:*",
+    "@mini-dsh/telemetry": "workspace:*",
+    "@mini-dsh/workflow": "workspace:*"
   },
   "scripts": {
     "build": "tsc --noEmit",

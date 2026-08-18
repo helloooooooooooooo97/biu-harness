@@ -56,10 +56,14 @@ git tag lesson-19
 ```bash
 pnpm install
 pnpm -r test
-pnpm --filter @mini-dsh/cli start "帮我 echo hi"
+pnpm --filter @mini-dsh/cli start "帮我 echo hi"          # headless
+pnpm --filter @mini-dsh/cli start -- --rpc               # JSON-RPC（stdin 行协议）
+pnpm --filter @mini-dsh/cli start -- --benchmark "任务" 5 # 稳定性压测
 ```
 
-> 说明：`@deepseek-ai/cordis` 真实框架在 36-40 课（配置/入口）阶段接入；当前跑在 mini 内核 + mock LLM 上，全程离线可测。
+CLI 是**串起来的整体**：配置驱动加载（config/profiles）→ 插件装载服务 → 带遥测/取消/守卫/压缩的 loop → Skills → headless + JSON-RPC 入口 → 子代理/workflow → benchmark。
+
+> 说明：`@deepseek-ai/cordis` 真实框架待配置阶段接入；当前跑在 mini 内核 + mock LLM 上，全程离线可测。
 
 ## 课程 tag
 

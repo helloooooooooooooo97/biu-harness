@@ -10,6 +10,18 @@ importers:
 
   apps/cli:
     dependencies:
+      '@mini-dsh/benchmark':
+        specifier: workspace:*
+        version: link:../../packages/benchmark
+      '@mini-dsh/cancellation':
+        specifier: workspace:*
+        version: link:../../packages/cancellation
+      '@mini-dsh/compaction':
+        specifier: workspace:*
+        version: link:../../packages/compaction
+      '@mini-dsh/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@mini-dsh/core-agent-loop':
         specifier: workspace:*
         version: link:../../packages/core-agent-loop
@@ -22,12 +34,36 @@ importers:
       '@mini-dsh/core-tools':
         specifier: workspace:*
         version: link:../../packages/core-tools
+      '@mini-dsh/credentials':
+        specifier: workspace:*
+        version: link:../../packages/credentials
+      '@mini-dsh/entrypoints':
+        specifier: workspace:*
+        version: link:../../packages/entrypoints
+      '@mini-dsh/guard':
+        specifier: workspace:*
+        version: link:../../packages/guard
       '@mini-dsh/llm':
         specifier: workspace:*
         version: link:../../packages/llm
       '@mini-dsh/llm-deepseek':
         specifier: workspace:*
         version: link:../../packages/llm-deepseek
+      '@mini-dsh/presets':
+        specifier: workspace:*
+        version: link:../../packages/presets
+      '@mini-dsh/skills':
+        specifier: workspace:*
+        version: link:../../packages/skills
+      '@mini-dsh/subagent':
+        specifier: workspace:*
+        version: link:../../packages/subagent
+      '@mini-dsh/telemetry':
+        specifier: workspace:*
+        version: link:../../packages/telemetry
+      '@mini-dsh/workflow':
+        specifier: workspace:*
+        version: link:../../packages/workflow
     devDependencies:
       '@types/node':
         specifier: ^22.10.0

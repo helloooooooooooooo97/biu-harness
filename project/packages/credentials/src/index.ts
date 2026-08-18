@@ -32,6 +32,10 @@ export class CredentialsStore {
   has(name: string): boolean {
     return this.data.has(name)
   }
+
+  all(): Array<[string, string]> {
+    return [...this.data.entries()]
+  }
 }
 
 export function redactSecrets(text: string, secrets: Iterable<string>): string {
