@@ -17,6 +17,7 @@ Consumer（消费者）：只用 Definition 的代码（"谁用"）
 ```
 
 ```ts
+
 const definition = { key: 'llm', description: '模型调用' }
 class DeepSeekProvider implements ServiceProvider { ... }   // Provider
 class LoopConsumer { constructor(private llm: LlmClient) {} } // Consumer 只认接口
@@ -49,7 +50,31 @@ ctx.plugin(loopPluginV2)
 
 验证方式：`ctx.get('tools')` / `ctx.get('agentLoop')` 按 key 取，`unload` 后服务消失。**"没有特权核心"从口号变成代码**：loop、工具、提示词、服务都是插件。
 
-## 4. 与 dsh 的对照
+## 4. 一体化：插件装载能力
+
+第 2 节的 `CapabilityRegistry`（能力层）和第 3 节的 `MiniContext`（组装层）是**拆开看**的两个职责。真实 dsh 里它们是一体的：**插件装载能力，能力保证可替换**。`CapabilityContext` 把两者合并：
+
+```ts
+const ctx = new CapabilityContext()
+ctx.plugin({
+  name: 'llm',
+  apply(c) {
+    c.mount({                                   // 能力缝：definition + create
+      definition: { key: 'llm', description: '模型调用' },
+      create: () => new DeepSeek(),
+    })
+  },
+})
+ctx.get('llm')   // 消费者按 key 取，懒创建 + 缓存
+```
+
+一体化后的三个保证：
+
+- **懒创建 + 缓存**：`create()` 只跑一次（能力缝的寻址层）；
+- **归属追踪**：插件卸载时清掉它 mount/provide 的一切（组装层的生命周期）；
+- **可替换**：换 Provider = 卸载旧插件 + 挂新插件，消费者 `get(key)` 无感。
+
+## 5. 与 dsh 的对照
 
 dsh 的 fs/subprocess/llm/subagent 全部是能力缝：定义在 spine 包、Provider 各自成包、Consumer 是工具/loop。本课的 `CapabilityRegistry` + `MiniContext` 是它的教学版。
 
