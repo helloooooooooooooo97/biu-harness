@@ -28,6 +28,7 @@ test('ui-hub mounts hello and chat from snapshot', async () => {
   ctx.slots.fill('root', Dummy, {
     children: {
       stage: { kind: 'list' },
+      rail: { kind: 'list' },
       composer: { kind: 'single' },
       settings: { kind: 'list' },
     },
@@ -39,7 +40,7 @@ test('ui-hub mounts hello and chat from snapshot', async () => {
   })
   await ctx.plugin(uiHub)
   await new Promise((resolve) => setTimeout(resolve, 50))
-  assert.equal(ctx.slots.list('stage').some((item) => item.id === 'hello'), true)
+  assert.equal(ctx.slots.list('rail').some((item) => item.id === 'hello'), true)
   assert.equal(ctx.slots.list('composer').some((item) => item.id === 'chat'), true)
   assert.equal(ctx.slots.list('settings').some((item) => item.id === 'chat-config'), true)
 })

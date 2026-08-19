@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { Context } from 'cordis'
-import * as http from './plugins/infrastructure/http.ts'
+import * as http from './plugins/registry/http.ts'
 import * as pages from './plugins/registry/pages.ts'
 import * as hub from './plugins/orchestration/hub.ts'
 

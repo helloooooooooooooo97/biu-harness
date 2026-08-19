@@ -17,9 +17,9 @@ function HelloCard(_props: SlotProps) {
   }
 
   return (
-    <article className="max-w-[90%] space-y-2 rounded-2xl bg-[#2d2e30] px-4 py-3">
+    <article className="space-y-2 rounded-2xl bg-[#2d2e30] px-3 py-3">
       <h2 className="text-sm font-medium">问候</h2>
-      <p className="text-sm leading-6 text-[#9aa0a6]">卡片里直接 fetch /api/greet；host 卸 greeter 后 ui-hub 会撤掉本卡。</p>
+      <p className="text-xs leading-5 text-[#9aa0a6]">fetch /api/greet；关掉问候服务后本卡会卸掉。</p>
       <form className="flex gap-2" onSubmit={onSubmit}>
         <input
           className="min-w-0 flex-1 rounded-xl border border-[#3c4043] bg-[#1b1c1d] px-3 py-2 text-sm outline-none"
@@ -37,5 +37,5 @@ function HelloCard(_props: SlotProps) {
 }
 
 export function apply(ctx: Context) {
-  ctx.slots.inject('stage', () => ctx.slots.fill('stage', HelloCard, { key: 'hello', order: 10 }))
+  ctx.slots.inject('rail', () => ctx.slots.fill('rail', HelloCard, { key: 'hello', order: 10 }))
 }

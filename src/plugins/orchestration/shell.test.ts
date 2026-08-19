@@ -12,6 +12,8 @@ test('declares sidebar, stage, composer, log, routes', async () => {
   await ctx.plugin(snapshot)
   await ctx.plugin(shell)
   assert.equal(ctx.slots.specOf('sidebar')?.kind, 'single')
+  assert.equal(ctx.slots.specOf('clock')?.kind, 'single')
+  assert.equal(ctx.slots.specOf('rail')?.kind, 'list')
   assert.equal(ctx.slots.specOf('stage')?.kind, 'list')
   assert.equal(ctx.slots.specOf('composer')?.kind, 'single')
   assert.equal(ctx.slots.specOf('settings')?.kind, 'list')

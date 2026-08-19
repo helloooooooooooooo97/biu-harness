@@ -96,3 +96,6 @@ export const inject = ['http', 'pages']
 export function apply(ctx: Context) {
   new HubService(ctx)
 }
+
+
+

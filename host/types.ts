@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import type { HttpService } from './plugins/infrastructure/http.ts'
+import type { HttpService } from './plugins/registry/http.ts'
 import type { PagesService } from './plugins/registry/pages.ts'
 import type { HubService } from './plugins/orchestration/hub.ts'
 import type { GreetService } from './plugins/contributors/greeter.ts'

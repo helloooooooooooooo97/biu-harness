@@ -2,7 +2,7 @@ import type { Context } from 'cordis'
 import '../../types.ts'
 
 export const name = 'dashboard'
-export const inject = ['http', 'pages', 'hub']
+export const inject = ['http', 'hub']
 
 export function apply(ctx: Context) {
   ctx.http.route('GET', '/api/snapshot', (route) => {

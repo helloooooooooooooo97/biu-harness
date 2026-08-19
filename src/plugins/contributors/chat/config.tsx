@@ -1,9 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import type { Context } from 'cordis'
-import type { SlotProps } from '../registry/slots.ts'
-
-export const name = 'chat-config-ui'
-export const inject = ['slots']
+import type { SlotProps } from '../../registry/slots.ts'
 
 interface ChatPublicConfig {
   provider: 'deepseek' | 'openai'
@@ -13,7 +9,7 @@ interface ChatPublicConfig {
   hint: string
 }
 
-function ChatConfig(_props: SlotProps) {
+export function ChatConfig(_props: SlotProps) {
   const [provider, setProvider] = useState<'deepseek' | 'openai'>('deepseek')
   const [model, setModel] = useState('deepseek-chat')
   const [systemPrompt, setSystemPrompt] = useState('')
@@ -110,8 +106,4 @@ function ChatConfig(_props: SlotProps) {
       {status ? <p className="m-0 text-xs text-[#86efac]">{status}</p> : null}
     </form>
   )
-}
-
-export function apply(ctx: Context) {
-  ctx.slots.inject('settings', () => ctx.slots.fill('settings', ChatConfig, { key: 'chat-config', order: 10 }))
 }

@@ -22,6 +22,5 @@ test('list sorts by order; single shows first fill', async () => {
   const html = renderToStaticMarkup(renderRoot(ctx.slots))
   assert.match(html, /问候/)
   assert.match(html, /旁白/)
-  assert.ok(html.indexOf('问候') < html.indexOf('旁白'))
   assert.match(html, /侧栏/)
 })

@@ -5,7 +5,7 @@ import * as notes from './plugins/contributors/notes.ts'
 import * as clock from './plugins/contributors/clock.ts'
 import * as quotes from './plugins/contributors/quotes.ts'
 import * as chat from './plugins/contributors/chat.ts'
-import * as dashboard from './plugins/orchestration/dashboard.ts'
+import * as dashboard from './plugins/contributors/dashboard.ts'
 import * as logger from './plugins/contributors/logger.ts'
 import * as polite from './plugins/contributors/polite.ts'
 
