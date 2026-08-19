@@ -4,22 +4,30 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -k \"npm:dev:host\" \"npm:dev:web\"",
+    "dev:host": "tsx watch host/index.ts",
+    "dev:web": "vite",
     "build": "vite build",
-    "preview": "vite preview",
+    "start": "tsx host/index.ts",
     "test": "vitest run"
   },
   "dependencies": {
     "cordis": "4.0.0-rc.8",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.2.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.2.0",
     "jsdom": "^29.1.1",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vite": "^7.1.2",
     "vitest": "^4.1.11"

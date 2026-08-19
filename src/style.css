@@ -1,66 +1,55 @@
-:root {
-  color: #e8eef8;
-  background: #12161e;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
 }
 
 body {
   margin: 0;
+  color: #e8eaed;
+  background: #1b1c1d;
+  font-family: var(--font-sans);
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: 16rem 1fr;
-  grid-template-rows: auto 1fr;
-  min-height: 100vh;
+.toggle {
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.2rem;
+  height: 1.2rem;
+  border: 0;
+  border-radius: 999px;
+  background: #3c4043;
+  cursor: pointer;
 }
 
-.top {
-  grid-column: 1 / -1;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #2a3344;
+.toggle::after {
+  content: "";
+  position: absolute;
+  top: 0.15rem;
+  left: 0.16rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 999px;
+  background: #e8eaed;
+  transition: transform 0.16s ease;
 }
 
-.top h1 {
-  margin: 0 0 0.35rem;
-  font-size: 1.25rem;
+.toggle[aria-checked='true'] {
+  background: #4d6bfe;
 }
 
-.top p,
-.side p,
-.card p {
-  margin: 0;
-  color: #9aa8bd;
-  font-size: 0.9rem;
-  line-height: 1.5;
+.toggle[aria-checked='true']::after {
+  transform: translateX(0.95rem);
 }
 
-.side {
-  padding: 1.25rem;
-  border-right: 1px solid #2a3344;
-  background: #161c26;
-}
-
-.side h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
-}
-
-.stage {
-  padding: 1.25rem;
-  display: grid;
-  gap: 0.75rem;
-  align-content: start;
-}
-
-.card {
-  padding: 1rem 1.1rem;
-  border: 1px solid #2a3344;
-  border-radius: 10px;
-  background: #1a212c;
-}
-
-.card h2 {
-  margin: 0 0 0.4rem;
-  font-size: 1rem;
+.toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

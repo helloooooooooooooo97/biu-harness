@@ -4,14 +4,16 @@ import { Context } from 'cordis'
 import '../../types.ts'
 import * as slots from '../registry/slots.ts'
 import * as snapshot from '../infrastructure/snapshot.ts'
-import * as nav from './nav.tsx'
+import * as chat from './chat.tsx'
 import * as shell from '../orchestration/shell.tsx'
 
-test('fills sidebar', async () => {
+test('fills composer after shell opens it', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
   await ctx.plugin(snapshot)
-  await ctx.plugin(nav)
+  await ctx.plugin(chat)
+  assert.equal(ctx.slots.list('composer').length, 0)
   await ctx.plugin(shell)
-  assert.equal(ctx.slots.list('sidebar')[0]?.id, 'nav')
+  assert.equal(ctx.slots.list('composer')[0]?.id, 'chat')
+  assert.equal(ctx.slots.list('stage').some((item) => item.id === 'chat-thread'), true)
 })

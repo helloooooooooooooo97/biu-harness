@@ -4,9 +4,16 @@ import { act } from 'react'
 
 test('boots into #app', async () => {
   document.body.innerHTML = '<div id="app"></div>'
+  globalThis.fetch = (async () => new Response(JSON.stringify({
+    plugins: [],
+    pages: [],
+    routes: [],
+    events: [],
+    services: [],
+  }))) as typeof fetch
   await act(async () => {
     await import('./main.tsx')
   })
-  assert.match(document.body.innerHTML, /问候/)
   assert.match(document.body.innerHTML, /hmr-dev/)
+  assert.match(document.body.innerHTML, /设置/)
 })
