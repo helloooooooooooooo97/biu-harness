@@ -20,10 +20,8 @@ function RoutesPanel(props: SlotProps) {
 }
 
 export function apply(ctx: Context) {
-  ctx.slots.inject('routes', () =>
-    ctx.slots.fill('routes', RoutesPanel, {
-      key: 'routes',
-      props: () => ({ useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService) }),
-    }),
-  )
+  ctx.slots.place('routes', RoutesPanel, {
+    key: 'routes',
+    props: () => ({ useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService) }),
+  })
 }

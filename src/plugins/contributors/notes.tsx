@@ -60,5 +60,5 @@ function NotesCard(_props: SlotProps) {
 }
 
 export function apply(ctx: Context) {
-  ctx.slots.inject('rail', () => ctx.slots.fill('rail', NotesCard, { key: 'notes', order: 15 }))
+  ctx.slots.place('rail', NotesCard, { key: 'notes', order: 15 })
 }

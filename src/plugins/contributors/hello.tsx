@@ -37,5 +37,5 @@ function HelloCard(_props: SlotProps) {
 }
 
 export function apply(ctx: Context) {
-  ctx.slots.inject('rail', () => ctx.slots.fill('rail', HelloCard, { key: 'hello', order: 10 }))
+  ctx.slots.place('rail', HelloCard, { key: 'hello', order: 10 })
 }

@@ -47,9 +47,14 @@ export class SlotsService extends Service {
     super(ctx, 'slots')
   }
 
+  /** 未打开的缝会先 inject，打开后再 fill。 */
+  place(slotName: string, Component: ComponentType<SlotProps>, options: FillOptions = {}) {
+    return this.inject(slotName, () => this.fill(slotName, Component, options))
+  }
+
   fill(slotName: string, Component: ComponentType<SlotProps>, options: FillOptions = {}) {
     if (!this.declared.has(slotName)) {
-      throw new Error(`fill undeclared slot "${slotName}" — wait with ctx.slots.inject`)
+      throw new Error(`fill undeclared slot "${slotName}" — use ctx.slots.place`)
     }
     return this.ctx.effect(() => {
       const id = options.key ?? `${slotName}:${Component.displayName ?? Component.name ?? 'anon'}`

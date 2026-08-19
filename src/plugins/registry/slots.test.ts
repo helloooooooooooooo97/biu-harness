@@ -17,9 +17,9 @@ test('undeclared fill throws', async () => {
   assert.throws(() => ctx.slots.fill('stage', Dummy))
 })
 
-test('inject waits for open; close clears fills', async () => {
+test('place waits for open; close clears fills', async () => {
   const ctx = await boot()
-  ctx.slots.inject('stage', () => ctx.slots.fill('stage', Dummy, { key: 'c' }))
+  ctx.slots.place('stage', Dummy, { key: 'c' })
   assert.equal(ctx.slots.list('stage').length, 0)
   const shell = await ctx.plugin({
     inject: ['slots'],

@@ -20,10 +20,8 @@ function EventLog(props: SlotProps) {
 }
 
 export function apply(ctx: Context) {
-  ctx.slots.inject('log', () =>
-    ctx.slots.fill('log', EventLog, {
-      key: 'event-log',
-      props: () => ({ useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService) }),
-    }),
-  )
+  ctx.slots.place('log', EventLog, {
+    key: 'event-log',
+    props: () => ({ useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService) }),
+  })
 }

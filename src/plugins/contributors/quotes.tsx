@@ -14,5 +14,5 @@ function QuotesCard(_props: SlotProps) {
 }
 
 export function apply(ctx: Context) {
-  ctx.slots.inject('stage', () => ctx.slots.fill('stage', QuotesCard, { key: 'quotes', order: 25 }))
+  ctx.slots.place('stage', QuotesCard, { key: 'quotes', order: 25 })
 }

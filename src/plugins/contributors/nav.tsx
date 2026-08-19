@@ -14,5 +14,5 @@ function Nav(_props: SlotProps) {
 }
 
 export function apply(ctx: Context) {
-  ctx.slots.inject('sidebar', () => ctx.slots.fill('sidebar', Nav, { key: 'nav' }))
+  ctx.slots.place('sidebar', Nav, { key: 'nav' })
 }

@@ -36,13 +36,11 @@ function PluginTree(props: SlotProps) {
 }
 
 export function apply(ctx: Context) {
-  ctx.slots.inject('sidebar', () =>
-    ctx.slots.fill('sidebar', PluginTree, {
-      key: 'plugin-tree',
-      props: () => ({
-        useSnapshot: bindSnapshot(ctx.snapshot),
-        setEnabled: (id: string, enabled: boolean) => ctx.snapshot.setEnabled(id, enabled),
-      }),
+  ctx.slots.place('sidebar', PluginTree, {
+    key: 'plugin-tree',
+    props: () => ({
+      useSnapshot: bindSnapshot(ctx.snapshot),
+      setEnabled: (id: string, enabled: boolean) => ctx.snapshot.setEnabled(id, enabled),
     }),
-  )
+  })
 }

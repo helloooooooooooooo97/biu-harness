@@ -23,10 +23,8 @@ function ClockBadge(props: SlotProps) {
 }
 
 export function apply(ctx: Context) {
-  ctx.slots.inject('clock', () =>
-    ctx.slots.fill('clock', ClockBadge, {
-      key: 'clock',
-      props: () => ({ useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService) }),
-    }),
-  )
+  ctx.slots.place('clock', ClockBadge, {
+    key: 'clock',
+    props: () => ({ useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService) }),
+  })
 }
