@@ -2,10 +2,10 @@ import type { Context } from 'cordis'
 import '../../types.ts'
 
 export const name = 'clock'
-export const inject = ['http', 'pages']
+export const inject = ['http', 'hub']
 
 export function apply(ctx: Context) {
-  ctx.pages.register({
+  ctx.hub.register({
     id: 'clock',
     title: '心跳',
     subtitle: '定时器包在 ctx.effect 里',

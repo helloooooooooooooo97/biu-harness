@@ -1,32 +1,31 @@
-import { useState, useSyncExternalStore, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import type { SlotProps } from '../../registry/slots.ts'
-import { emit, getMessages, getPending, pushMessage, setPending, subscribe } from './store.ts'
+import { useChatStore } from './store.ts'
 
 export function ChatComposer(_props: SlotProps) {
   const [input, setInput] = useState('')
-  const busy = useSyncExternalStore(subscribe, getPending, getPending)
+  const busy = useChatStore((state) => state.pending)
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     const content = input.trim()
-    if (!content || getPending()) return
+    const store = useChatStore.getState()
+    if (!content || store.pending) return
     setInput('')
-    pushMessage({ role: 'user', content })
-    setPending(true)
-    emit()
+    store.pushMessage({ role: 'user', content })
+    store.setPending(true)
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ messages: getMessages() }),
+        body: JSON.stringify({ messages: useChatStore.getState().messages }),
       })
       const data = await res.json()
-      pushMessage({ role: 'assistant', content: data.text || data.error || '请求失败' })
+      useChatStore.getState().pushMessage({ role: 'assistant', content: data.text || data.error || '请求失败' })
     } catch (error) {
-      pushMessage({ role: 'assistant', content: String(error) })
+      useChatStore.getState().pushMessage({ role: 'assistant', content: String(error) })
     } finally {
-      setPending(false)
-      emit()
+      useChatStore.getState().setPending(false)
     }
   }
 

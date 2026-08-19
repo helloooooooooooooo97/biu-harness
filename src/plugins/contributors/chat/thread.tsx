@@ -1,10 +1,9 @@
-import { useSyncExternalStore } from 'react'
 import type { SlotProps } from '../../registry/slots.ts'
-import { getMessages, getPending, subscribe } from './store.ts'
+import { useChatStore } from './store.ts'
 
 export function ChatThread(_props: SlotProps) {
-  const list = useSyncExternalStore(subscribe, getMessages, getMessages)
-  const busy = useSyncExternalStore(subscribe, getPending, getPending)
+  const list = useChatStore((state) => state.messages)
+  const busy = useChatStore((state) => state.pending)
   return (
     <div className="flex flex-col gap-4">
       {list.map((item, index) => (

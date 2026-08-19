@@ -2,8 +2,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { Context } from 'cordis'
 import * as http from './plugins/registry/http.ts'
-import * as pages from './plugins/registry/pages.ts'
-import * as hub from './plugins/orchestration/hub.ts'
+import * as hub from './plugins/registry/hub.ts'
 
 const publicDir = join(dirname(fileURLToPath(import.meta.url)), '../public')
 const port = Number(process.env.PORT ?? 3141)
@@ -20,5 +19,4 @@ ctx.on('http/ready', ({ port: ready }) => {
   ctx.logger('boot').info(`api http://127.0.0.1:${ready}  ·  ui http://127.0.0.1:5173`)
 })
 ctx.plugin(http, { port, publicDir })
-ctx.plugin(pages)
 ctx.plugin(hub)

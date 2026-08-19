@@ -15,7 +15,8 @@
     "cordis": "4.0.0-rc.8",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -3,6 +3,7 @@ import { extname, join } from 'node:path'
 import { readFile } from 'node:fs/promises'
 import { Service, type Context } from 'cordis'
 import { WebSocketServer, type WebSocket } from 'ws'
+import { HUB_CHANGE } from '../registry/hub.ts'
 import type { Method, RouteContext, RouteHandler } from '../../types.ts'
 
 interface Route {
@@ -24,11 +25,11 @@ function compile(pattern: string) {
   const keys: string[] = []
   const regexp = new RegExp(
     '^' +
-      pattern.replace(/:([A-Za-z0-9_]+)/g, (_, key) => {
-        keys.push(key)
-        return '([^/]+)'
-      }) +
-      '$',
+    pattern.replace(/:([A-Za-z0-9_]+)/g, (_, key) => {
+      keys.push(key)
+      return '([^/]+)'
+    }) +
+    '$',
   )
   return { keys, regexp }
 }
@@ -84,11 +85,11 @@ export class HttpService extends Service {
       const { keys, regexp } = compile(pattern)
       const item: Route = { method, pattern, keys, regexp, handler }
       this.routes.push(item)
-      this.ctx.emit('hub/change')
+      this.ctx.emit(HUB_CHANGE)
       return () => {
         const i = this.routes.indexOf(item)
         if (i >= 0) this.routes.splice(i, 1)
-        this.ctx.emit('hub/change')
+        this.ctx.emit(HUB_CHANGE)
       }
     }, `http.route ${method} ${pattern}`)
   }

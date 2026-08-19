@@ -5,7 +5,7 @@ import '../../../types.ts'
 import * as slots from '../../registry/slots.ts'
 import * as snapshot from '../../infrastructure/snapshot.ts'
 import * as chat from './index.ts'
-import * as shell from '../../orchestration/shell.tsx'
+import * as shell from '../shell.tsx'
 
 test('one plugin fills thread, composer and settings', async () => {
   const ctx = new Context()

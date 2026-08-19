@@ -5,7 +5,7 @@ import '../../types.ts'
 import * as slots from '../registry/slots.ts'
 import * as snapshot from '../infrastructure/snapshot.ts'
 import * as hello from './hello.tsx'
-import * as shell from '../orchestration/shell.tsx'
+import * as shell from './shell.tsx'
 
 test('fills rail after shell opens it', async () => {
   const ctx = new Context()

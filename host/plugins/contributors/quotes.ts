@@ -2,10 +2,10 @@ import type { Context } from 'cordis'
 import '../../types.ts'
 
 export const name = 'quotes'
-export const inject = ['notes', 'pages']
+export const inject = ['notes', 'hub']
 
 export function apply(ctx: Context) {
-  ctx.pages.register({
+  ctx.hub.register({
     id: 'quotes',
     title: '旁白',
     subtitle: '挂在 notes/filter 上',

@@ -6,7 +6,7 @@ import '../../types.ts'
 import * as slots from '../registry/slots.ts'
 import * as snapshot from '../infrastructure/snapshot.ts'
 import * as reactHost from './react-host.ts'
-import * as shell from './shell.tsx'
+import * as shell from '../contributors/shell.tsx'
 
 test('paints shell into el', async () => {
   const el = document.createElement('div')

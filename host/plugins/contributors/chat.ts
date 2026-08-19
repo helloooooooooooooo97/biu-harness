@@ -84,11 +84,11 @@ export class ChatService extends Service {
 }
 
 export const name = 'chat'
-export const inject = ['http', 'pages']
+export const inject = ['http', 'hub']
 
 export function apply(ctx: Context) {
   const chat = new ChatService(ctx)
-  ctx.pages.register({
+  ctx.hub.register({
     id: 'chat',
     title: '对话',
     subtitle: 'POST /api/chat',

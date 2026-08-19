@@ -29,11 +29,11 @@ export class NotesService extends Service {
 }
 
 export const name = 'notes'
-export const inject = ['http', 'pages']
+export const inject = ['http', 'hub']
 
 export function apply(ctx: Context) {
   const notes = new NotesService(ctx)
-  ctx.pages.register({
+  ctx.hub.register({
     id: 'notes',
     title: '便签',
     subtitle: '路由随插件卸载自动撤销',

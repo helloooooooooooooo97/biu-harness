@@ -1,5 +1,10 @@
 import { Service, type Context, type Fiber, type Plugin } from 'cordis'
 import { catalog, type CatalogEntry } from '../../catalog.ts'
+import type { PageSpec } from '../../types.ts'
+
+export const HUB_CHANGE = 'hub/change' as const
+export const HUB_CHANNEL_SNAPSHOT = 'snapshot' as const
+export const HUB_CHANNEL_EVENT = 'event' as const
 
 const STATE = ['pending', 'loading', 'active', 'failed', 'disposed', 'unloading']
 
@@ -10,6 +15,7 @@ interface ForkRecord {
 
 export class HubService extends Service {
   private forks = new Map<string, ForkRecord>()
+  private pages: PageSpec[] = []
   private events: Array<{ ts: number; mode: string; name: string; args: unknown[] }> = []
   private seq = 0
 
@@ -19,21 +25,31 @@ export class HubService extends Service {
       if (name.startsWith('internal/')) return
       this.events.unshift({ ts: Date.now(), mode, name, args: clone(args) })
       this.events.splice(80)
-      ctx.http?.broadcast('event', this.events[0])
+      ctx.http?.broadcast(HUB_CHANNEL_EVENT, this.events[0])
     })
     ctx.on('internal/status', () => {
-      ctx.http?.broadcast('snapshot', this.snapshot())
+      ctx.http?.broadcast(HUB_CHANNEL_SNAPSHOT, this.snapshot())
     })
-    ctx.on('hub/change', () => {
-      ctx.http?.broadcast('snapshot', this.snapshot())
+    ctx.on(HUB_CHANGE, () => {
+      ctx.http?.broadcast(HUB_CHANNEL_SNAPSHOT, this.snapshot())
     })
-    ctx.on('pages/update', () => {
-      ctx.http?.broadcast('snapshot', this.snapshot())
-    })
+    // 自动挂载所有的插件
     for (const entry of catalog) {
       this.forks.set(entry.id, { entry })
       if (entry.enabled) this.mount(entry.id)
     }
+  }
+
+  // 在hub注册对应的插件
+  register(page: PageSpec) {
+    return this.ctx.effect(() => {
+      this.pages.push(page)
+      this.ctx.emit(HUB_CHANGE)
+      return () => {
+        this.pages = this.pages.filter((item) => item !== page)
+        this.ctx.emit(HUB_CHANGE)
+      }
+    }, `hub.registerPage ${page.id}`)
   }
 
   snapshot() {
@@ -50,10 +66,10 @@ export class HubService extends Service {
     return {
       seq: ++this.seq,
       plugins,
-      pages: this.ctx.pages?.list() ?? [],
+      pages: [...this.pages],
       routes: this.ctx.http?.listRoutes() ?? [],
       events: this.events,
-      services: ['http', 'pages', 'hub', 'greet', 'notes', 'chat'].filter((name) => Boolean(this.ctx.get(name))),
+      services: ['http', 'hub', 'greet', 'notes', 'chat'].filter((name) => Boolean(this.ctx.get(name))),
     }
   }
 
@@ -63,7 +79,7 @@ export class HubService extends Service {
     if (!record.entry.togglable) throw new Error(`${id} 是核心层，不能卸载`)
     if (enabled) await this.mount(id)
     else await this.unmount(id)
-    this.ctx.emit('hub/change')
+    this.ctx.emit(HUB_CHANGE)
     return this.snapshot()
   }
 
@@ -91,11 +107,8 @@ function clone(value: unknown): unknown[] {
 }
 
 export const name = 'hub'
-export const inject = ['http', 'pages']
+export const inject = ['http']
 
 export function apply(ctx: Context) {
   new HubService(ctx)
 }
-
-
-
