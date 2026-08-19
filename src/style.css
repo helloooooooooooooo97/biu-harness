@@ -6,22 +6,61 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
+}
+
+.layout {
   display: grid;
-  place-items: center;
+  grid-template-columns: 16rem 1fr;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
 }
 
-main {
-  max-width: 36rem;
-  padding: 2rem;
+.top {
+  grid-column: 1 / -1;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #2a3344;
 }
 
-h1 {
-  margin: 0 0 0.5rem;
-  font-size: 1.5rem;
+.top h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.25rem;
 }
 
-p {
+.top p,
+.side p,
+.card p {
   margin: 0;
   color: #9aa8bd;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.side {
+  padding: 1.25rem;
+  border-right: 1px solid #2a3344;
+  background: #161c26;
+}
+
+.side h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.stage {
+  padding: 1.25rem;
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.card {
+  padding: 1rem 1.1rem;
+  border: 1px solid #2a3344;
+  border-radius: 10px;
+  background: #1a212c;
+}
+
+.card h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
 }

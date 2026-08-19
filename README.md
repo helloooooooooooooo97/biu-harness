@@ -1,6 +1,6 @@
 # hmr-dev
 
-干净分支上的空项目，基于 Vite + TypeScript。
+Cordis + 解耦插槽：壳用 `renderSlot(name)` 开口，插件用 `slots.fill(name, Component)` 填缝。
 
 ```bash
 npm install

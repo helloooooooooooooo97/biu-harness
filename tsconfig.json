@@ -1,4 +1,5 @@
 {
+  "compileOnSave": false,
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022", "DOM"],
@@ -7,7 +8,10 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "isolatedModules": true
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "types": ["node", "vite/client", "vitest/globals"]
   },
   "include": ["src"]
 }
