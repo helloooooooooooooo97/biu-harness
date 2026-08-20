@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, writeFile, access } from 'node:fs/promises'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, normalize, relative, resolve } from 'node:path'
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
@@ -18,7 +18,7 @@ export class FsService extends Service {
     this.defaultRoot = resolve(defaultRoot)
   }
 
-  /** 当前生效工作区：已绑定并同步的 session 项目，否则默认 `.workspace`。 */
+  /** 当前生效工作区：Session 已绑定 host 路径则为该目录，否则默认 `.workspace`。 */
   get root() {
     return this.effectiveRoot()
   }
@@ -30,14 +30,9 @@ export class FsService extends Service {
   sessionProjectRoot() {
     const sessionId = currentSessionId()
     if (!sessionId) return null
-    const record = this.ctx.sessions?.peek?.(sessionId)
-    if (!record?.project) return null
-    if (!this.ctx.sessionProjects?.isSynced(sessionId)) {
-      throw new Error(
-        `session 已绑定项目「${record.project.name}」，但浏览器尚未同步文件到 host。请在前端重新 Open folder，或先发送一条消息触发同步。`,
-      )
-    }
-    return this.ctx.sessionProjects.rootOf(sessionId)
+    const sessions = this.ctx.get('sessions') as { peek?: (id: string) => { project?: { path?: string } } | undefined } | undefined
+    const path = sessions?.peek?.(sessionId)?.project?.path
+    return path ? resolve(path) : null
   }
 
   resolve(rel: string) {
@@ -62,10 +57,6 @@ export class FsService extends Service {
     await mkdir(dirname(path), { recursive: true })
     this.ctx.emit('fs/write', rel)
     await writeFile(path, content, 'utf8')
-    const sessionId = currentSessionId()
-    if (sessionId && this.ctx.sessions?.peek?.(sessionId)?.project) {
-      this.ctx.http?.broadcast('project/write', { sessionId, path: String(rel), content: String(content) })
-    }
     return { ok: true, path: rel }
   }
 
@@ -73,12 +64,6 @@ export class FsService extends Service {
     const path = this.resolve(rel)
     this.ctx.emit('fs/list', rel)
     return readdir(path)
-  }
-
-  async ensureReadable() {
-    const root = this.effectiveRoot()
-    await access(root)
-    return root
   }
 }
 
@@ -91,13 +76,13 @@ export function apply(ctx: Context, config: { root?: string } = {}) {
   void mkdir(root, { recursive: true })
   ctx.tools.register({
     name: 'fs_read',
-    description: '读取工作区内文件（若 Session 已绑定项目，则为该项目）',
+    description: '读取工作区内文件（若 Session 已绑定项目路径，则为该目录）',
     parameters: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] },
     execute: (args) => fs.read(String(args.path)),
   })
   ctx.tools.register({
     name: 'fs_write',
-    description: '写入工作区内文件（若 Session 已绑定项目，则为该项目）',
+    description: '写入工作区内文件（若 Session 已绑定项目路径，则为该目录）',
     parameters: {
       type: 'object',
       properties: { path: { type: 'string' }, content: { type: 'string' } },
@@ -107,7 +92,7 @@ export function apply(ctx: Context, config: { root?: string } = {}) {
   })
   ctx.tools.register({
     name: 'fs_list',
-    description: '列出工作区目录（若 Session 已绑定项目，则为该项目）',
+    description: '列出工作区目录（若 Session 已绑定项目路径，则为该目录）',
     parameters: { type: 'object', properties: { path: { type: 'string' } } },
     execute: (args) => fs.list(String(args.path || '.')),
   })
@@ -116,5 +101,15 @@ export function apply(ctx: Context, config: { root?: string } = {}) {
     description: STR_REPLACE_EDITOR_DESCRIPTION,
     parameters: { ...STR_REPLACE_EDITOR_PARAMETERS },
     execute: (args) => runStrReplaceEditor(fs, args),
+  })
+
+  ctx.inject(['systemPrompt', 'sessions'], (inner) => {
+    inner.systemPrompt.register('session.project', () => {
+      const sessionId = currentSessionId()
+      if (!sessionId) return ''
+      const project = inner.sessions.peek(sessionId)?.project
+      if (!project?.path) return ''
+      return `当前 Session 绑定 host 工作区「${project.name}」：${project.path}。bash / 文件工具直接读写该目录（对齐 dsh workspace cwd）。`
+    })
   })
 }

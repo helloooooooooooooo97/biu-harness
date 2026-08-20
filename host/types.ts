@@ -15,7 +15,6 @@ import type { SessionsService } from './plugins/core/sessions.ts'
 import type { SessionEvent } from './plugins/core/session-types.ts'
 import type { SessionStoreService } from './plugins/storage/session-store.ts'
 import type { SystemPromptService } from './plugins/core/system-prompt.ts'
-import type { SessionProjectsService } from './plugins/seams/session-projects.ts'
 import type { FsService } from './plugins/seams/fs.ts'
 import type { SubprocessService } from './plugins/seams/subprocess.ts'
 import type { SandboxService } from './plugins/seams/sandbox.ts'
@@ -63,7 +62,6 @@ declare module 'cordis' {
     sessions: SessionsService
     systemPrompt: SystemPromptService
     fs: FsService
-    sessionProjects: SessionProjectsService
     subprocess: SubprocessService
     sandbox: SandboxService
     shell: ShellService

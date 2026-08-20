@@ -155,7 +155,7 @@ export class ChatService extends Service {
 }
 
 export const name = 'chat'
-export const inject = ['http', 'hub', 'agents', 'sessions', 'systemPrompt', 'tools', 'sessionProjects']
+export const inject = ['http', 'hub', 'agents', 'sessions', 'systemPrompt', 'tools']
 
 export function apply(ctx: Context) {
   const chat = new ChatService(ctx)
@@ -220,40 +220,18 @@ export function apply(ctx: Context) {
     })
   })
   ctx.http.route('PUT', '/api/sessions/:id/project', async (route) => {
-    const payload = (await route.json()) as { name?: string | null }
+    const payload = (await route.json()) as { path?: string | null; name?: string | null }
     try {
-      if (payload.name == null || payload.name === '') {
+      // path 优先；兼容旧客户端误传 name=null 解绑
+      const rawPath = payload.path !== undefined ? payload.path : payload.name
+      if (rawPath == null || rawPath === '') {
         await ctx.sessions.setProject(route.params.id, null)
         return route.send(200, { ok: true, project: null })
       }
-      const project = await ctx.sessions.setProject(route.params.id, { name: String(payload.name).slice(0, 200) })
+      const project = await ctx.sessions.setProject(route.params.id, { path: String(rawPath) })
       route.send(200, { ok: true, project })
     } catch (error) {
-      route.send(404, { error: String(error) })
-    }
-  })
-  ctx.http.route('PUT', '/api/sessions/:id/project/sync', async (route) => {
-    const payload = (await route.json()) as { files?: Array<{ path?: string; content?: string }> }
-    const files = Array.isArray(payload?.files)
-      ? payload.files.map((item) => ({ path: String(item.path ?? ''), content: String(item.content ?? '') }))
-      : []
-    try {
-      await ctx.sessions.require(route.params.id)
-      const result = await ctx.sessionProjects.sync(route.params.id, files)
-      route.send(200, { ok: true, written: result.written })
-    } catch (error) {
       route.send(400, { error: String(error) })
-    }
-  })
-  ctx.http.route('GET', '/api/sessions/:id/project/sync', async (route) => {
-    try {
-      const record = await ctx.sessions.require(route.params.id)
-      route.send(200, {
-        project: record.project ?? null,
-        synced: ctx.sessionProjects.isSynced(route.params.id),
-      })
-    } catch (error) {
-      route.send(404, { error: String(error) })
     }
   })
   ctx.http.route('POST', '/api/sessions/:id/fork', async (route) => {
