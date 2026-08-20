@@ -19,6 +19,13 @@ export function parseAppPath(pathname: string): AppRoute {
   }
 }
 
+/** 已知应用 path（未知则 Navigate 回 `/`，且不拆 Shell）。 */
+export function isKnownAppPath(pathname: string): boolean {
+  const path = normalizePath(pathname)
+  if (path === '/' || path === '/workspace') return true
+  return /^\/s\/[^/]+(?:\/(chat|trajectory))?$/.test(path)
+}
+
 export function buildAppPath(route: AppRoute): string {
   if (route.kind === 'home') return '/'
   if (route.kind === 'module') return route.moduleId === 'workspace' ? '/workspace' : '/'

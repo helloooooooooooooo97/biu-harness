@@ -1,6 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, useLocation } from 'react-router-dom'
 import { SlotEvent, type SlotEntry, type SlotKind, type SlotsService } from '../registry/slots.ts'
+import { isKnownAppPath } from './session-route.ts'
 
 function Outlet({ slots, name, kind }: { slots: SlotsService; name: string; kind?: SlotKind }) {
   useSyncExternalStore(
@@ -37,17 +38,19 @@ function AppShell({ slots }: { slots: SlotsService }) {
   return <Outlet slots={slots} name="root" kind="single" />
 }
 
+/** 单壳常驻：路由变化不卸载 Shell，避免 Chat/Trajectory/模块切换整树重挂。 */
+function Root({ slots }: { slots: SlotsService }) {
+  const location = useLocation()
+  if (!isKnownAppPath(location.pathname)) {
+    return <Navigate to="/" replace />
+  }
+  return <AppShell slots={slots} />
+}
+
 export function renderRoot(slots: SlotsService): ReactNode {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<AppShell slots={slots} />} />
-        <Route path="/workspace" element={<AppShell slots={slots} />} />
-        <Route path="/s/:sessionId" element={<AppShell slots={slots} />} />
-        <Route path="/s/:sessionId/chat" element={<AppShell slots={slots} />} />
-        <Route path="/s/:sessionId/trajectory" element={<AppShell slots={slots} />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Root slots={slots} />
     </BrowserRouter>
   )
 }
