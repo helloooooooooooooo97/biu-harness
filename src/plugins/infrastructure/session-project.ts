@@ -20,6 +20,12 @@ export type SessionEvent = {
         totalTokens?: number
         cacheReadTokens?: number
       }
+      request?: Array<{
+        role: string
+        content?: string | null
+        tool_calls?: Array<{ id: string; type: string; function: { name: string; arguments: string } }>
+        tool_call_id?: string
+      }>
     }
   | { type: 'assistant/chunk'; text: string }
   | { type: 'tool/call'; id: string; name: string; arguments: string }
