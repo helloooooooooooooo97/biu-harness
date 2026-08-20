@@ -16,6 +16,6 @@ export function apply(ctx: Context) {
   })
   ctx.slots.place('stage', ChatThread, { key: 'chat-thread', order: 1, props })
   ctx.slots.place('composer', ChatComposer, { key: 'chat', order: 10, props })
-  ctx.slots.place('rail', ApprovalsRail, { key: 'approvals', order: 5, props })
+  ctx.slots.place('dock', ApprovalsRail, { key: 'approvals', order: 5, props })
   ctx.slots.place('settings', ChatConfig, { key: 'chat-config', order: 10 })
 }

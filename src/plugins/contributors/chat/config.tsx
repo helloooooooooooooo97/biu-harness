@@ -48,20 +48,23 @@ export function ChatConfig(_props: SlotProps) {
     setHint(data.hint)
     setConfigured(data.configured)
     setApiKey('')
-    setStatus('已保存到 host（不回传完整 Key）')
+    setStatus('Saved on host (full key never returned)')
   }
 
+  const field =
+    'mt-1 w-full rounded-[12px] border border-[var(--dsw-border)] bg-white px-2 py-2 text-sm text-[var(--dsw-label)] outline-none'
+
   return (
-    <form className="space-y-3 rounded-xl border border-[#3c4043] bg-[#2d2e30] px-3 py-3" onSubmit={onSubmit}>
-      <h3 className="m-0 text-sm font-medium">助手</h3>
-      <p className="m-0 text-xs leading-5 text-[#9aa0a6]">
-        Key 只存在 Node 进程里。留空 Key 表示沿用已有配置。
-        {configured ? ` 当前 ${hint}` : ' 尚未配置 Key。'}
+    <form className="space-y-3 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-3" onSubmit={onSubmit}>
+      <h3 className="m-0 text-sm font-medium">Assistant</h3>
+      <p className="m-0 text-xs leading-5 text-[var(--dsw-label-3)]">
+        Keys live in the Node host. Leave blank to keep the current key.
+        {configured ? ` Current ${hint}` : ' No key yet.'}
       </p>
-      <label className="block text-xs text-[#9aa0a6]">
-        服务
+      <label className="block text-xs text-[var(--dsw-label-3)]">
+        Provider
         <select
-          className="mt-1 w-full rounded-lg border border-[#3c4043] bg-[#1b1c1d] px-2 py-2 text-sm text-[#e8eaed]"
+          className={field}
           value={provider}
           onChange={(event) => {
             const next = event.target.value as 'deepseek' | 'openai'
@@ -73,37 +76,29 @@ export function ChatConfig(_props: SlotProps) {
           <option value="openai">OpenAI</option>
         </select>
       </label>
-      <label className="block text-xs text-[#9aa0a6]">
-        模型
-        <input
-          className="mt-1 w-full rounded-lg border border-[#3c4043] bg-[#1b1c1d] px-2 py-2 text-sm text-[#e8eaed] outline-none"
-          value={model}
-          onChange={(event) => setModel(event.target.value)}
-        />
+      <label className="block text-xs text-[var(--dsw-label-3)]">
+        Model
+        <input className={field} value={model} onChange={(event) => setModel(event.target.value)} />
       </label>
-      <label className="block text-xs text-[#9aa0a6]">
+      <label className="block text-xs text-[var(--dsw-label-3)]">
         API Key
         <input
-          className="mt-1 w-full rounded-lg border border-[#3c4043] bg-[#1b1c1d] px-2 py-2 text-sm text-[#e8eaed] outline-none"
+          className={field}
           type="password"
           autoComplete="off"
-          placeholder={configured ? '已配置，输入则覆盖' : 'sk-…'}
+          placeholder={configured ? 'Configured — type to overwrite' : 'sk-…'}
           value={apiKey}
           onChange={(event) => setApiKey(event.target.value)}
         />
       </label>
-      <label className="block text-xs text-[#9aa0a6]">
-        人设
-        <textarea
-          className="mt-1 min-h-20 w-full rounded-lg border border-[#3c4043] bg-[#1b1c1d] px-2 py-2 text-sm text-[#e8eaed] outline-none"
-          value={systemPrompt}
-          onChange={(event) => setSystemPrompt(event.target.value)}
-        />
+      <label className="block text-xs text-[var(--dsw-label-3)]">
+        System prompt
+        <textarea className={`${field} min-h-20`} value={systemPrompt} onChange={(event) => setSystemPrompt(event.target.value)} />
       </label>
-      <button className="rounded-lg bg-[#4d6bfe] px-3 py-2 text-sm text-white" type="submit">
-        保存
+      <button className="rounded-[12px] px-3 py-2 text-sm text-white" style={{ background: 'var(--dsw-business)' }} type="submit">
+        Save
       </button>
-      {status ? <p className="m-0 text-xs text-[#86efac]">{status}</p> : null}
+      {status ? <p className="m-0 text-xs text-[var(--dsw-ok)]">{status}</p> : null}
     </form>
   )
 }

@@ -9,10 +9,10 @@ function EventLog(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
   const events = useSnapshot((state: Snapshot) => state.events)
   return (
-    <ol className="m-0 max-h-48 list-none overflow-y-auto p-0 font-mono text-xs text-[#9aa0a6]">
+    <ol className="m-0 max-h-48 list-none overflow-y-auto p-0 font-mono text-xs text-[var(--dsw-label-3)]">
       {(events || []).map((item, index) => (
-        <li className="border-b border-[#3c4043] py-1.5 last:border-0" key={`${item.ts}-${index}`}>
-          <span className="text-[#80868b]">{item.mode}</span> {item.name}
+        <li className="border-b border-[var(--dsw-border)] py-1.5 last:border-0" key={`${item.ts}-${index}`}>
+          <span className="text-[var(--dsw-label-3)]">{item.mode}</span> {item.name}
         </li>
       ))}
     </ol>

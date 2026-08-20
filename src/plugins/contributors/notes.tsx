@@ -36,22 +36,26 @@ function NotesCard(_props: SlotProps) {
   }
 
   return (
-    <article className="space-y-2 rounded-2xl bg-[#2d2e30] px-3 py-3">
-      <h2 className="text-sm font-medium">便签</h2>
-      <p className="text-xs leading-5 text-[#9aa0a6]">POST /api/notes；关掉便签后本卡会卸掉。</p>
+    <article className="space-y-2 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-3">
+      <h2 className="text-sm font-medium">Notes demo</h2>
+      <p className="text-xs leading-5 text-[var(--dsw-label-3)]">POST /api/notes — unloads with notes plugin.</p>
       <form className="flex gap-2" onSubmit={onSubmit}>
         <input
-          className="min-w-0 flex-1 rounded-xl border border-[#3c4043] bg-[#1b1c1d] px-3 py-2 text-sm outline-none"
+          className="min-w-0 flex-1 rounded-[12px] border border-[var(--dsw-border)] px-3 py-2 text-sm outline-none"
           value={body}
           onChange={(event) => setBody(event.target.value)}
-          placeholder="写一条便签"
+          placeholder="Write a note"
         />
-        <button className="rounded-xl bg-[#4d6bfe] px-3 py-2 text-sm text-white" type="submit">
-          记下
+        <button
+          className="rounded-[12px] px-3 py-2 text-sm text-white"
+          style={{ background: 'var(--dsw-business)' }}
+          type="submit"
+        >
+          Save
         </button>
       </form>
       {notes.map((note) => (
-        <div className="rounded-lg bg-[#1b1c1d] px-3 py-2 font-mono text-xs text-[#c4c7c5]" key={note.id}>
+        <div className="rounded-[8px] bg-[var(--dsw-sidebar)] px-3 py-2 font-mono text-xs text-[var(--dsw-label-2)]" key={note.id}>
           {note.body}
         </div>
       ))}
@@ -60,5 +64,5 @@ function NotesCard(_props: SlotProps) {
 }
 
 export function apply(ctx: Context) {
-  ctx.slots.place('rail', NotesCard, { key: 'notes', order: 15 })
+  ctx.slots.place('demos', NotesCard, { key: 'notes', order: 15 })
 }

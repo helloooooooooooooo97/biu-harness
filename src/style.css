@@ -1,8 +1,32 @@
 @import "tailwindcss";
 
+/* Lean DSH tokens — mirrored from deepseek-harness ui-theme (light) */
+:root {
+  --dsw-bg: rgb(255, 255, 255);
+  --dsw-sidebar: rgb(249, 250, 251);
+  --dsw-label: rgb(15, 17, 21);
+  --dsw-label-2: rgb(82, 88, 102);
+  --dsw-label-3: rgb(120, 126, 140);
+  --dsw-border: rgba(0, 0, 0, 0.1);
+  --dsw-bubble: rgb(237, 243, 254);
+  --dsw-business: rgb(65, 118, 230);
+  --dsw-business-soft: rgb(237, 243, 254);
+  --dsw-input: rgb(255, 255, 255);
+  --dsw-tool: rgb(249, 250, 251);
+  --dsw-danger: rgb(220, 80, 80);
+  --dsw-ok: rgb(34, 140, 90);
+  --dsw-radius-bubble: 22px;
+  --dsw-radius-card: 12px;
+  --dsw-shadow-lv2: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --dsw-chat-width: 748px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+
 @theme {
-  --font-sans: "IBM Plex Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
 html,
@@ -13,9 +37,10 @@ body,
 
 body {
   margin: 0;
-  color: #e8eaed;
-  background: #1b1c1d;
+  color: var(--dsw-label);
+  background: var(--dsw-bg);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 .toggle {
@@ -25,7 +50,7 @@ body {
   height: 1.2rem;
   border: 0;
   border-radius: 999px;
-  background: #3c4043;
+  background: rgba(0, 0, 0, 0.12);
   cursor: pointer;
 }
 
@@ -37,12 +62,12 @@ body {
   width: 0.9rem;
   height: 0.9rem;
   border-radius: 999px;
-  background: #e8eaed;
+  background: #fff;
   transition: transform 0.16s ease;
 }
 
 .toggle[aria-checked='true'] {
-  background: #4d6bfe;
+  background: var(--dsw-business);
 }
 
 .toggle[aria-checked='true']::after {
@@ -52,4 +77,22 @@ body {
 .toggle:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+@keyframes dsw-swim {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.dsw-fish-swim {
+  animation: dsw-swim 2.4s ease-in-out infinite;
+}
+
+.dsw-hero-glow {
+  background: radial-gradient(ellipse at center, rgba(65, 118, 230, 0.16), transparent 70%);
 }

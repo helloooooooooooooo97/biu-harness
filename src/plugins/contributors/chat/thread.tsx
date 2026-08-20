@@ -1,24 +1,36 @@
+import { useState } from 'react'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import type { ChatNode } from '../../infrastructure/session-project.ts'
+import { FishLogo } from '../brand.tsx'
 
-function ToolCard({ node }: { node: Extract<ChatNode, { kind: 'tool' }> }) {
+function ToolRow({ node }: { node: Extract<ChatNode, { kind: 'tool' }> }) {
+  const [open, setOpen] = useState(false)
+  const summary = node.result?.detail?.slice(0, 80) || node.arguments.slice(0, 80) || '…'
   return (
-    <div className="mr-6 self-stretch rounded-xl border border-[#3c4043] bg-[#18191a] px-3 py-2 text-xs">
-      <div className="mb-1 flex items-center gap-2 text-[#c4c7c5]">
-        <span className="rounded bg-[#2d2e30] px-1.5 py-0.5 font-mono text-[10px] tracking-wide uppercase">tool</span>
-        <span className="font-medium text-[#e8eaed]">{node.name}</span>
+    <div className="w-full max-w-[var(--dsw-chat-width)] self-stretch">
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 rounded-[12px] px-2 py-1.5 text-left text-[13px] hover:bg-black/[0.03]"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span className="grid size-4 place-items-center text-[10px] text-[var(--dsw-label-3)]">{open ? '▾' : '▸'}</span>
+        <span className="font-medium">{node.name}</span>
+        <span className="text-[var(--dsw-label-3)]">·</span>
+        <span className="min-w-0 flex-1 truncate text-[var(--dsw-label-3)]">{summary}</span>
         {node.result ? (
-          <span className={node.result.ok ? 'text-[#86efac]' : 'text-[#fca5a5]'}>{node.result.ok ? 'ok' : 'fail'}</span>
+          <span className={node.result.ok ? 'text-[var(--dsw-ok)]' : 'text-[var(--dsw-danger)]'}>
+            {node.result.ok ? 'ok' : 'fail'}
+          </span>
         ) : (
-          <span className="text-[#9aa0a6]">running…</span>
+          <span className="text-[var(--dsw-label-3)]">running</span>
         )}
-      </div>
-      {node.arguments ? (
-        <pre className="mb-1 overflow-x-auto whitespace-pre-wrap text-[#9aa0a6]">{node.arguments}</pre>
-      ) : null}
-      {node.result?.detail ? (
-        <pre className="overflow-x-auto whitespace-pre-wrap text-[#e8eaed]">{node.result.detail}</pre>
+      </button>
+      {open ? (
+        <div className="mt-1 space-y-2 rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] p-3 font-mono text-xs">
+          {node.arguments ? <pre className="whitespace-pre-wrap text-[var(--dsw-label-2)]">{node.arguments}</pre> : null}
+          {node.result?.detail ? <pre className="whitespace-pre-wrap">{node.result.detail}</pre> : null}
+        </div>
       ) : null}
     </div>
   )
@@ -27,22 +39,49 @@ function ToolCard({ node }: { node: Extract<ChatNode, { kind: 'tool' }> }) {
 function NodeView({ node }: { node: ChatNode }) {
   if (node.kind === 'user') {
     return (
-      <div className="ml-10 self-end rounded-2xl bg-[#4d6bfe] px-4 py-3 text-sm text-white">
-        {node.kindTag === 'inject' ? <div className="mb-1 text-[10px] opacity-80">inject</div> : null}
-        {node.text}
+      <div className="flex w-full justify-end">
+        <div
+          className="max-w-[525px] px-4 py-3 text-[15px] leading-6 text-[var(--dsw-label)]"
+          style={{ background: 'var(--dsw-bubble)', borderRadius: 'var(--dsw-radius-bubble)' }}
+        >
+          {node.kindTag === 'inject' ? <div className="mb-1 text-[10px] text-[var(--dsw-label-3)]">inject</div> : null}
+          {node.text}
+        </div>
       </div>
     )
   }
   if (node.kind === 'assistant') {
     return (
-      <div className="mr-10 self-start rounded-2xl bg-[#2d2e30] px-4 py-3 text-sm leading-6">
+      <div className="w-full max-w-[var(--dsw-chat-width)] self-start text-[15px] leading-7 text-[var(--dsw-label)]">
         {node.text || (node.streaming ? '…' : '')}
-        {node.streaming ? <span className="ml-1 inline-block animate-pulse text-[#9aa0a6]">▍</span> : null}
+        {node.streaming ? <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span> : null}
       </div>
     )
   }
-  if (node.kind === 'tool') return <ToolCard node={node} />
-  return <div className="self-center text-xs text-[#9aa0a6]">{node.text}</div>
+  if (node.kind === 'tool') return <ToolRow node={node} />
+  return <div className="self-center text-xs text-[var(--dsw-label-3)]">{node.text}</div>
+}
+
+function EmptyHero() {
+  return (
+    <div className="relative flex flex-1 flex-col items-center justify-center px-4 py-16">
+      <div className="dsw-hero-glow pointer-events-none absolute inset-0" />
+      <div className="relative z-[1] flex flex-col items-center gap-3 text-center">
+        <span className="dsw-fish-swim text-[var(--dsw-label)]">
+          <FishLogo size={34} />
+        </span>
+        <div className="flex items-center gap-2">
+          <h2 className="text-2xl font-semibold tracking-tight">How can I help you?</h2>
+          <span className="rounded-full bg-black/5 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-[var(--dsw-label-3)]">
+            PREVIEW
+          </span>
+        </div>
+        <p className="max-w-md text-sm text-[var(--dsw-label-3)]">
+          对话由 append-only session 投影，经 agents 驱动。Everything is a plugin.
+        </p>
+      </div>
+    </div>
+  )
 }
 
 export function ChatThread(props: SlotProps) {
@@ -52,29 +91,24 @@ export function ChatThread(props: SlotProps) {
   const agentStatus = useSessionView((state) => state.agentStatus)
   const agentStep = useSessionView((state) => state.agentStep)
   const error = useSessionView((state) => state.error)
-  const sessionId = useSessionView((state) => state.sessionId)
+
+  if (nodes.length === 0 && !pending) return <EmptyHero />
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 text-xs text-[#9aa0a6]">
+    <div className="mx-auto flex w-full max-w-[var(--dsw-chat-width)] flex-col gap-4">
+      <div className="flex items-center gap-2 text-xs text-[var(--dsw-label-3)]">
         <span
-          className={`size-2 rounded-full ${agentStatus === 'running' ? 'bg-[#86efac]' : 'bg-[#5f6368]'}`}
+          className={`size-2 rounded-full ${agentStatus === 'running' ? 'bg-[var(--dsw-ok)]' : 'bg-black/20'}`}
           aria-hidden
         />
-        <span>{agentStatus === 'running' ? `agent running${agentStep != null ? ` · step ${agentStep}` : ''}` : 'agent idle'}</span>
-        {sessionId ? <span className="font-mono text-[10px] opacity-70">{sessionId.slice(0, 8)}</span> : null}
+        <span>{agentStatus === 'running' ? `Running${agentStep != null ? ` · step ${agentStep}` : ''}` : 'Idle'}</span>
       </div>
-      {nodes.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#3c4043] px-4 py-8 text-center text-sm text-[#9aa0a6]">
-          对话由 append-only session 投影。发送一条消息开始。
-        </div>
-      ) : (
-        nodes.map((node) => <NodeView key={node.id} node={node} />)
-      )}
-      {pending && agentStatus === 'running' ? (
-        <div className="mr-10 self-start text-sm text-[#9aa0a6]">turn in progress…</div>
+      {nodes.map((node) => (
+        <NodeView key={node.id} node={node} />
+      ))}
+      {error ? (
+        <div className="rounded-[12px] bg-red-50 px-3 py-2 text-sm text-[var(--dsw-danger)]">{error}</div>
       ) : null}
-      {error ? <div className="self-stretch rounded-xl bg-[#3f1d1d] px-3 py-2 text-sm text-[#fca5a5]">{error}</div> : null}
     </div>
   )
 }
