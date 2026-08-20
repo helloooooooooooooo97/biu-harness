@@ -1,14 +1,17 @@
 import { Service, type Context } from 'cordis'
+import { basename, isAbsolute, resolve } from 'node:path'
+import { realpath, stat } from 'node:fs/promises'
 import '../../types.ts'
 import { assistantContentForApi, type LlmMessage } from '../orchestration/llm.ts'
 import {
   SESSION_FORMAT_VERSION,
   type SessionEvent,
   type SessionEventBody,
+  type SessionProject,
   type SessionRecord,
 } from './session-types.ts'
 
-export type { SessionEvent, SessionEventBody, SessionRecord }
+export type { SessionEvent, SessionEventBody, SessionProject, SessionRecord }
 export { SESSION_FORMAT_VERSION }
 
 export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
@@ -58,6 +61,11 @@ export class SessionsService extends Service {
     return record
   }
 
+  /** 同步读缓存（Agent 工具解析会话项目根时用）。 */
+  peek(id: string) {
+    return this.cache.get(id)
+  }
+
   async get(id: string) {
     const hit = this.cache.get(id)
     if (hit) return hit
@@ -93,9 +101,22 @@ export class SessionsService extends Service {
       id: childId,
       version: source.version,
       events: source.events.map((event) => ({ ...event })),
+      ...(source.project ? { project: { ...source.project } } : {}),
     }
     await this.persist(record)
     return record
+  }
+
+  async setProject(id: string, project: { path: string } | null) {
+    const record = await this.require(id)
+    if (!project) {
+      delete record.project
+      await this.persist(record)
+      return undefined
+    }
+    record.project = await resolveHostProject(project.path)
+    await this.persist(record)
+    return record.project
   }
 
   list() {
@@ -111,6 +132,22 @@ export class SessionsService extends Service {
     this.cache.set(record.id, record)
     await this.ctx.sessionStore.save(record)
   }
+}
+
+async function resolveHostProject(input: string): Promise<SessionProject> {
+  const raw = String(input || '').trim()
+  if (!raw) throw new Error('project path is required')
+  const abs = resolve(raw)
+  if (!isAbsolute(abs)) throw new Error('project path must be absolute')
+  let real: string
+  try {
+    real = await realpath(abs)
+  } catch {
+    throw new Error(`project path does not exist: ${abs}`)
+  }
+  const info = await stat(real)
+  if (!info.isDirectory()) throw new Error(`project path is not a directory: ${real}`)
+  return { name: basename(real) || real, path: real, boundAt: Date.now() }
 }
 
 export const name = 'sessions'

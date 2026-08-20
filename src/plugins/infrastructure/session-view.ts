@@ -20,6 +20,7 @@ export interface SessionListItem {
   title: string
   eventCount: number
   updatedAt: number
+  project?: { name: string; path?: string; boundAt: number }
 }
 
 export type ConversationView = 'chat' | 'trajectory'
@@ -38,6 +39,7 @@ export interface SessionViewState {
   pending: boolean
   approvalMode: ApprovalMode
   approvals: ApprovalItem[]
+  project?: { name: string; path?: string; boundAt: number }
   error?: string
 }
 
@@ -81,6 +83,10 @@ export class SessionViewService extends Service {
 
   /** URL → 状态：只由路由层调用，不回写 URL */
   async applyRoute(route: AppRoute) {
+    if (route.kind === 'module') {
+      // 其它模块不碰 agent session 投影，切回 Agent 时会话仍在。
+      return
+    }
     if (route.kind === 'home') {
       if (!this.value.sessionId && this.value.view === 'chat') return
       this.replace({
@@ -92,6 +98,7 @@ export class SessionViewService extends Service {
         focusCallId: undefined,
         pending: false,
         agentStatus: 'idle',
+        project: undefined,
         error: undefined,
       })
       return
@@ -211,19 +218,32 @@ export class SessionViewService extends Service {
   async load(sessionId: string) {
     const res = await fetch(`/api/sessions/${sessionId}`)
     if (!res.ok) throw new Error(`加载 session 失败：${res.status}`)
-    const body = (await res.json()) as { id: string; events: SessionEvent[] }
+    const body = (await res.json()) as {
+      id: string
+      events: SessionEvent[]
+      project?: { name: string; path?: string; boundAt: number }
+    }
     const events = Array.isArray(body.events) ? body.events : []
     this.replace({
       sessionId: body.id,
       events,
       nodes: projectNodes(events),
       trajectory: projectTrajectory(events),
+      project: body.project,
       error: undefined,
       pending: false,
       agentStatus: 'idle',
     })
     await this.refreshSessions()
     await this.refreshApprovals()
+  }
+
+  setProjectMeta(project?: { name: string; path?: string; boundAt: number }) {
+    this.replace({ project })
+    const sessions = this.value.sessions.map((item) =>
+      item.id === this.value.sessionId ? { ...item, project } : item,
+    )
+    this.replace({ sessions })
   }
 
   async forkCurrent() {
@@ -260,6 +280,7 @@ export class SessionViewService extends Service {
       agentStatus: 'idle',
       view: 'chat',
       focusCallId: undefined,
+      project: undefined,
       error: undefined,
     })
   }

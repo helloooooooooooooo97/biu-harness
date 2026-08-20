@@ -50,3 +50,26 @@ test('guard can deny before execute', async () => {
   ctx.tools.guard((req) => ({ ...req, deny: 'denied: boom' }))
   await assert.rejects(() => ctx.tools.invoke('boom'), /denied: boom/)
 })
+
+test('minimal mode only exposes bash and str_replace_editor', async () => {
+  const ctx = new Context()
+  await ctx.plugin(tools)
+  for (const name of ['bash', 'str_replace_editor', 'fs_read', 'fs_write']) {
+    ctx.tools.register({
+      name,
+      description: name,
+      parameters: { type: 'object', properties: {} },
+      execute: () => name,
+    })
+  }
+  assert.deepEqual(ctx.tools.names().sort(), ['bash', 'fs_read', 'fs_write', 'str_replace_editor'])
+  ctx.tools.setMode('minimal')
+  assert.equal(ctx.tools.getMode(), 'minimal')
+  assert.deepEqual(ctx.tools.names().sort(), ['bash', 'str_replace_editor'])
+  assert.deepEqual(
+    ctx.tools.schemas().map((item) => item.function.name).sort(),
+    ['bash', 'str_replace_editor'],
+  )
+  assert.equal(await ctx.tools.invoke('bash'), 'bash')
+  await assert.rejects(() => ctx.tools.invoke('fs_read'), /not available in minimal mode/)
+})

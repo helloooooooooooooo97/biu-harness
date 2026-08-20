@@ -42,6 +42,7 @@ export function renderRoot(slots: SlotsService): ReactNode {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<AppShell slots={slots} />} />
+        <Route path="/workspace" element={<AppShell slots={slots} />} />
         <Route path="/s/:sessionId" element={<AppShell slots={slots} />} />
         <Route path="/s/:sessionId/chat" element={<AppShell slots={slots} />} />
         <Route path="/s/:sessionId/trajectory" element={<AppShell slots={slots} />} />

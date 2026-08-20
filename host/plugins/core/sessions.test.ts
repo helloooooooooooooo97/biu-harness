@@ -1,6 +1,6 @@
-import { mkdtemp } from 'node:fs/promises'
+import { mkdtemp, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { Context } from 'cordis'
@@ -75,6 +75,22 @@ test('fork copies the append-only log into a child session', async () => {
   assert.equal(ctx.sessions.deriveMessages(child.id).some((item) => item.content === 'keep'), true)
   await ctx.sessions.append(child.id, { type: 'assistant/message', text: 'child-only' })
   assert.equal((await ctx.sessions.require(parent.id)).events.some((item) => item.type === 'assistant/message'), false)
+})
+
+test('setProject binds host absolute path and clears it', async () => {
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  const record = await ctx.sessions.create()
+  const dir = await mkdtemp(join(tmpdir(), 'cordis-proj-'))
+  const project = await ctx.sessions.setProject(record.id, { path: dir })
+  assert.equal(project?.name, basename(dir))
+  assert.equal(project?.path, await realpath(dir))
+  assert.equal((await ctx.sessions.require(record.id)).project?.path, project?.path)
+  const child = await ctx.sessions.fork(record.id)
+  assert.equal(child.project?.path, project?.path)
+  assert.equal(await ctx.sessions.setProject(record.id, null), undefined)
+  assert.equal((await ctx.sessions.require(record.id)).project, undefined)
 })
 
 test('delete removes session from store and cache', async () => {

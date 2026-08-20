@@ -4,6 +4,7 @@ import './style.css'
 import * as slots from './plugins/registry/slots.ts'
 import * as snapshot from './plugins/infrastructure/snapshot.ts'
 import * as sessionView from './plugins/infrastructure/session-view.ts'
+import * as projectView from './plugins/infrastructure/project-view.ts'
 import * as reactHost from './plugins/infrastructure/react-host.ts'
 import * as shell from './plugins/contributors/shell.tsx'
 import * as pluginTree from './plugins/contributors/plugin-tree.tsx'
@@ -17,6 +18,7 @@ if (!el) throw new Error('#app missing')
 const ctx = new Context()
 ctx.plugin(slots)
 ctx.plugin(sessionView)
+ctx.plugin(projectView)
 ctx.plugin(snapshot)
 ctx.plugin(reactHost, { el })
 ctx.plugin(shell)

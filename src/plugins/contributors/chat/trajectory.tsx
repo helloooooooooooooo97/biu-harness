@@ -3,7 +3,9 @@ import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import {
   formatTrajectoryUsage,
+  projectRequestMessages,
   sumTrajectoryUsage,
+  type DerivedMessage,
   type SessionEvent,
   type TrajectoryRow,
   type TrajectoryUsage,
@@ -207,17 +209,18 @@ export function TrajectoryView(props: SlotProps) {
               Close
             </button>
           </div>
-          <EventDetailBody event={selected} />
+          <EventDetailBody event={selected} events={events} />
         </aside>
       ) : null}
     </div>
   )
 }
 
-function EventDetailBody({ event }: { event: SessionEvent }) {
-  const fields = detailFields(event)
+function EventDetailBody({ event, events }: { event: SessionEvent; events: SessionEvent[] }) {
+  const fields = detailFields(event, events)
   const usage = event.type === 'assistant/message' ? event.usage : undefined
-  const request = event.type === 'assistant/message' ? event.request : undefined
+  const request =
+    event.type === 'assistant/message' ? projectRequestMessages(events, event.seq) : undefined
   return (
     <div className="traj-detail-body">
       <dl className="traj-detail-meta">
@@ -237,18 +240,7 @@ function EventDetailBody({ event }: { event: SessionEvent }) {
         ))}
       </dl>
       {usage ? <UsageCard usage={usage} /> : null}
-      {event.type === 'assistant/message' ? (
-        request?.length ? (
-          <RequestPanel messages={request} />
-        ) : (
-          <section className="traj-io-card traj-io-card-missing" aria-label="LLM request missing">
-            <div className="traj-io-card-title">Request · messages</div>
-            <p className="traj-io-missing">
-              本条没有 request 快照。请发一条新消息后再点对应的 assistant/message（旧会话不会回填）。
-            </p>
-          </section>
-        )
-      ) : null}
+      {request ? <RequestPanel messages={request} /> : null}
       {event.type === 'assistant/message' ? (
         <ResponsePanel event={event} />
       ) : (
@@ -258,14 +250,10 @@ function EventDetailBody({ event }: { event: SessionEvent }) {
   )
 }
 
-function RequestPanel({
-  messages,
-}: {
-  messages: NonNullable<Extract<SessionEvent, { type: 'assistant/message' }>['request']>
-}) {
+function RequestPanel({ messages }: { messages: DerivedMessage[] }) {
   return (
     <section className="traj-io-card" aria-label="LLM request">
-      <div className="traj-io-card-title">Request · messages ({messages.length})</div>
+      <div className="traj-io-card-title">Request · derived ({messages.length})</div>
       <div className="traj-io-list">
         {messages.map((message, index) => (
           <article key={`${message.role}-${index}`} className="traj-io-msg">
@@ -305,7 +293,7 @@ function ResponsePanel({ event }: { event: Extract<SessionEvent, { type: 'assist
   )
 }
 
-function detailFields(event: SessionEvent): Array<{ label: string; value: string }> {
+function detailFields(event: SessionEvent, events: SessionEvent[]): Array<{ label: string; value: string }> {
   if (event.type === 'user/message' || event.type === 'assistant/chunk' || event.type === 'system/prompt') {
     return [
       ...(event.type === 'user/message' && event.kind ? [{ label: 'kind', value: event.kind }] : []),
@@ -315,7 +303,8 @@ function detailFields(event: SessionEvent): Array<{ label: string; value: string
   if (event.type === 'assistant/message') {
     const rows = [{ label: 'text', value: `${event.text.length} chars` }]
     if (event.tool_calls?.length) rows.push({ label: 'tool_calls', value: String(event.tool_calls.length) })
-    if (event.request?.length) rows.push({ label: 'request', value: `${event.request.length} messages` })
+    const requestCount = projectRequestMessages(events, event.seq).length
+    rows.push({ label: 'request', value: `${requestCount} messages (derived)` })
     return rows
   }
   if (event.type === 'tool/call') {

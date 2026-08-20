@@ -2,14 +2,6 @@ export const SESSION_FORMAT_VERSION = 1
 
 export type InboxKind = 'wake' | 'inject'
 
-/** 某次 llm.chat 的请求快照（挂在 assistant/message 上，不参与 deriveMessages）。 */
-export interface SessionRequestMessage {
-  role: string
-  content?: string | null
-  tool_calls?: Array<{ id: string; type: string; function: { name: string; arguments: string } }>
-  tool_call_id?: string
-}
-
 /** 写入 append 的正文（不含 seq/ts）；与 SessionEvent 判别联合一一对应。 */
 export type SessionEventBody =
   | { type: 'session/open'; version: number }
@@ -29,8 +21,6 @@ export type SessionEventBody =
         totalTokens?: number
         cacheReadTokens?: number
       }
-      /** 本步发起 llm.chat 时的 messages 快照 */
-      request?: SessionRequestMessage[]
     }
   | { type: 'assistant/chunk'; text: string }
   | { type: 'tool/call'; id: string; name: string; arguments: string }
@@ -41,10 +31,18 @@ export type SessionEvent = SessionEventBody & {
   ts: number
 }
 
+/** 对齐 dsh workspace：Session 绑定 host 本机绝对路径，Agent 工具直接以此为 cwd。 */
+export interface SessionProject {
+  name: string
+  path: string
+  boundAt: number
+}
+
 export interface SessionRecord {
   id: string
   version: number
   events: SessionEvent[]
+  project?: SessionProject
 }
 
 export interface SessionStore {

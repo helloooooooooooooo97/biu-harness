@@ -16,13 +16,17 @@
 10. **Web：session/event 投影对话** — 浏览器不持能力；线程从 append-only 日志投影 user / assistant / tool 节点；LLM SSE 增量 `assistant/chunk` 经 WS 实时投影。
 11. **Web：agents 驱动输入** — 发送走 `/api/sessions/:id/messages`，可取消；WS 收 `session` / `agent` / `approval`。
 12. **Web：审批可观察** — hold 待批出现在 composer dock，允许/拒绝回调 host。
-13. **Web 壳对标 dsh 观感** — 左栏 Wordmark+HARNESS / New Session；中栏 Chat hero + 浅蓝气泡 + 胶囊 composer；演示插件进 Settings modal（对照官方 `ui-layout` / `ui-sidebar` / `ui-conversation`，不搬整包）。
-14. **Web：可恢复会话列表 + 真 New Session / Fork** — `GET /api/sessions` 列出会话；侧栏切换 `load`；Fork 走 `POST /api/sessions/:id/fork`。
-15. **Web：Trajectory 事件账本** — Chat/Trajectory 可切换；`projectTrajectory` 从 append-only 日志投影；点击行打开事件详情；`assistant/message` 详情展示本步 `request`（当时发给模型的 messages）与 response；工具行可 `inspectCall` 跳到对应 seq 并高亮；provider `usage` 写入事件并显示。
+13. **Web 壳对标 dsh 观感** — 最左 **VS Code 式 Activity Bar**（纯图标切换 Agent / Workspace…）；Agent 下再挂 Side Bar（Sessions）+ Chat / Trajectory；演示插件进 Settings modal。
+14. **Web：可恢复会话列表 + 真 New Session / Fork** — `GET /api/sessions` 列出会话；Agent 侧栏切换 `load`；Fork 走 `POST /api/sessions/:id/fork`。
+15. **Web：Trajectory 事件账本** — Chat/Trajectory 可切换；`projectTrajectory` 从 append-only 日志投影；点击行打开事件详情；`assistant/message` 详情用 `deriveMessages(seq 前缀)` 投影本步 request（不另持久化 messages 快照）与 response；工具行可 `inspectCall` 跳到对应 seq 并高亮；provider `usage` 写入事件并显示。
 16. **Web：Chat Markdown** — 用户/助手气泡用 `react-markdown` + `remark-gfm` 渲染。
 17. **Web：审批 mode + 重水合** — `auto`/`hold` 可切换；启动与 `load` 时 `GET /api/approvals` 恢复 pending，不只依赖 WS。
 18. **Web：运行中 Steer/inject** — agent 忙时输入仍可用，`kind: 'inject'` 入队，不搬完整 QueueDock。
-19. **Web：React Router（单向）** — `/` · `/s/:id` · `/s/:id/trajectory`；URL → `applyRoute`；跳转只用 `Link`/`navigate`，无双向 bridge。
+19. **Web：React Router（单向）** — `/` · `/s/:id` · `/s/:id/trajectory` · `/workspace`；URL → `applyRoute`；跳转只用 `Link`/`navigate`，无双向 bridge。
+20. **Web：Activity Bar 模块切换** — Agent 仅为其中一个视图；切到 Workspace 等其它页不卸载 session 投影，切回 Agent 会话仍在；Settings 挂在 Activity Bar 底部。
+21. **Web：Session 绑定本地项目文件夹** — Agent Chat 右侧 Project 面板 `Open folder`（File System Access API）；文件夹名写入 session.project，句柄按 sessionId 存 IndexedDB；可浏览/编辑/保存文本文件。
+22. **Agent mode（Standard / Minimal）** — Settings 可选；`minimal` 对齐 dsh：模型侧只暴露 `bash` + `str_replace_editor`（view/create/str_replace/insert）；模式写入 `.cordis/chat-config.json`，`tools.schemas()` / `names()` / `invoke` 统一过滤。
+23. **Session 绑定 host 工作区（对齐 dsh）** — Project 点 Open folder 弹出系统选目录对话框并自动绑定；该 Session 的 bash / str_replace_editor 直接以该目录为 cwd。
 
 ## 功能级差异（相对官方 client，优点对齐后）
 
@@ -31,8 +35,10 @@
 | 会话列表 / New / Fork | 有 | 有 | 已对齐（瘦） |
 | Chat 事件投影 | 有 | ConversationNode | 已对齐（瘦投影） |
 | Trajectory 账本 + inspect | 有 | ui-trajectory | 已对齐（无虚表） |
-| 审批 dock + mode | 有 | Permission + ApprovalPanel | 已对齐（瘦） |
+| 审批 dock + mode | 有 | Permission + QueuePanel | 已对齐（瘦） |
 | 运行中 inject | 有 | steer/queue | 已对齐（无队列编辑 UI） |
+| Agent Minimal 双工具 | 有 | minimal preset | 已对齐（瘦：工具过滤 + editor，无 profile 叠层） |
+| Session 绑定项目可读 | 有（host 绝对路径 cwd） | workspace cwd | 已对齐（瘦：路径绑定，工具直读写） |
 | Trajectory 虚表/搜索 | 无 | 有 | **不吸收** |
 | Workspace dock | 无 | ui-workspace | **不吸收** |
 | Goals / Plan / Attachments | 无 | 对应 ui-* | 需 host 域；暂不吸收 |

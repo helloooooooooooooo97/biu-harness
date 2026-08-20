@@ -1,10 +1,22 @@
-import { useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import type { ChatNode } from '../../infrastructure/session-project.ts'
 import { FishLogo } from '../brand.tsx'
 import { MarkdownBody } from './markdown.tsx'
+
+const NEAR_BOTTOM_PX = 96
+
+function findScrollParent(el: HTMLElement | null): HTMLElement | null {
+  let node = el?.parentElement ?? null
+  while (node) {
+    const { overflowY } = getComputedStyle(node)
+    if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') return node
+    node = node.parentElement
+  }
+  return null
+}
 
 function ToolRow({
   node,
@@ -94,7 +106,7 @@ function EmptyHero() {
           </span>
         </div>
         <p className="max-w-md text-sm text-[var(--dsw-label-3)]">
-          对话由 append-only session 投影，经 agents 驱动。Everything is a plugin.
+          对话由 append-only session 投影。右侧 Project 可为本 Session 打开本地文件夹并编辑文件。
         </p>
       </div>
     </div>
@@ -111,6 +123,34 @@ export function ChatThread(props: SlotProps) {
   const agentStep = useSessionView((state) => state.agentStep)
   const sessionId = useSessionView((state) => state.sessionId)
   const error = useSessionView((state) => state.error)
+  const endRef = useRef<HTMLDivElement>(null)
+  const stickToBottomRef = useRef(true)
+
+  useEffect(() => {
+    stickToBottomRef.current = true
+  }, [sessionId])
+
+  useEffect(() => {
+    if (pending) stickToBottomRef.current = true
+  }, [pending])
+
+  useEffect(() => {
+    const end = endRef.current
+    const parent = findScrollParent(end)
+    if (!parent) return
+    const onScroll = () => {
+      const distance = parent.scrollHeight - parent.scrollTop - parent.clientHeight
+      stickToBottomRef.current = distance <= NEAR_BOTTOM_PX
+    }
+    onScroll()
+    parent.addEventListener('scroll', onScroll, { passive: true })
+    return () => parent.removeEventListener('scroll', onScroll)
+  }, [sessionId, nodes.length])
+
+  useLayoutEffect(() => {
+    if (!stickToBottomRef.current) return
+    endRef.current?.scrollIntoView({ block: 'end' })
+  }, [nodes, pending, error, agentStatus, agentStep])
 
   if (nodes.length === 0 && !pending && !error) return <EmptyHero />
 
@@ -136,6 +176,7 @@ export function ChatThread(props: SlotProps) {
       {error ? (
         <div className="rounded-[12px] bg-red-50 px-3 py-2 text-sm text-[var(--dsw-danger)]">{error}</div>
       ) : null}
+      <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
     </div>
   )
 }

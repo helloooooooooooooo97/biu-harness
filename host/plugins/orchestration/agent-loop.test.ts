@@ -54,8 +54,6 @@ test('loop appends multiple assistant/chunk deltas from onDelta', async () => {
   )
   const message = (await ctx.sessions.require(sessionId)).events.find((event) => event.type === 'assistant/message')
   assert.equal(message?.type === 'assistant/message' && message.usage?.inputTokens, 1)
-  assert.equal(message?.type === 'assistant/message' && message.request?.[0]?.role, 'system')
-  assert.equal(message?.type === 'assistant/message' && message.request?.some((item) => item.role === 'user' && item.content === 'hi'), true)
 })
 
 test('loop invokes tools then asks the model again', async () => {

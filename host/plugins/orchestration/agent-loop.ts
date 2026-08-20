@@ -2,6 +2,7 @@ import { Service, type Context } from 'cordis'
 import '../../types.ts'
 import type { AssistantReply, ChatOptions, LlmClient, LlmConfig, LlmMessage } from './llm.ts'
 import type { InboxKind } from '../core/session-types.ts'
+import { runWithSession } from '../core/session-scope.ts'
 
 export interface AgentTurn {
   text: string
@@ -28,25 +29,6 @@ export type AgentLoopFactory = (config: LlmConfig, sessionId: string, signal: Ab
 
 const MAX_STEPS = 8
 
-/** 本步 llm.chat 的 messages 快照（只存盘/展示，不回灌 derive）。 */
-function snapshotRequest(messages: LlmMessage[]) {
-  return messages.map((item) => ({
-    role: item.role,
-    ...(item.content !== undefined ? { content: item.content } : {}),
-    ...(item.tool_calls ? { tool_calls: item.tool_calls } : {}),
-    ...(item.tool_call_id ? { tool_call_id: item.tool_call_id } : {}),
-  }))
-}
-
-function stringify(value: unknown) {
-  if (typeof value === 'string') return value
-  try {
-    return JSON.stringify(value)
-  } catch {
-    return String(value)
-  }
-}
-
 export class AgentLoop implements AgentRunner {
   constructor(
     private ctx: Context,
@@ -57,6 +39,10 @@ export class AgentLoop implements AgentRunner {
   ) {}
 
   async run(claimed: ClaimedInput[]): Promise<AgentTurn> {
+    return runWithSession(this.sessionId, () => this.runInSession(claimed))
+  }
+
+  private async runInSession(claimed: ClaimedInput[]): Promise<AgentTurn> {
     const session = this.ctx.sessions
     const turn = session.deriveMessages(this.sessionId).filter((item) => item.role === 'user').length + 1
     await session.append(this.sessionId, { type: 'turn/start', turn })
@@ -92,7 +78,6 @@ export class AgentLoop implements AgentRunner {
       await session.append(this.sessionId, { type: 'step/start', turn, step })
 
       const messages = session.deriveMessages(this.sessionId)
-      const request = snapshotRequest(messages)
       let reply: AssistantReply
       try {
         reply = await this.llm.chat(messages, this.ctx.tools.schemas(), this.signal, {
@@ -108,7 +93,7 @@ export class AgentLoop implements AgentRunner {
         }
         const detail = String(error)
         const text = `模型调用失败：${detail}`
-        await session.append(this.sessionId, { type: 'assistant/message', text, request })
+        await session.append(this.sessionId, { type: 'assistant/message', text })
         await session.append(this.sessionId, { type: 'step/end', turn, step })
         await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'llm-error' })
         this.ctx.emit('agent/status', { status: 'idle' })
@@ -120,7 +105,6 @@ export class AgentLoop implements AgentRunner {
         await session.append(this.sessionId, {
           type: 'assistant/message',
           text: final,
-          request,
           ...(reply.usage ? { usage: reply.usage } : {}),
         })
         await session.append(this.sessionId, { type: 'step/end', turn, step })
@@ -133,7 +117,6 @@ export class AgentLoop implements AgentRunner {
         type: 'assistant/message',
         text: reply.content ?? '',
         tool_calls: reply.toolCalls,
-        request,
         ...(reply.usage ? { usage: reply.usage } : {}),
       })
 
@@ -195,6 +178,15 @@ export class AgentLoopService extends Service {
           },
         }
     return new AgentLoop(this.ctx, llm, sessionId, signal)
+  }
+}
+
+function stringify(value: unknown) {
+  if (typeof value === 'string') return value
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
   }
 }
 
