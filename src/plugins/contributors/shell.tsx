@@ -28,7 +28,6 @@ function Shell(props: SlotProps) {
             >
               {live ? '实时' : '连接中'}
             </span>
-            {props.renderSlot('clock')}
             <button
               type="button"
               className="grid size-9 place-items-center rounded-full text-[#e8eaed] hover:bg-[#2d2e30]"
@@ -103,7 +102,6 @@ export function apply(ctx: Context) {
   ctx.slots.fill('root', Shell, {
     children: {
       sidebar: { kind: 'single' },
-      clock: { kind: 'single' },
       rail: { kind: 'list' },
       stage: { kind: 'list' },
       composer: { kind: 'single' },

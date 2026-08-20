@@ -4,7 +4,7 @@ import { act } from 'react'
 import { Context } from 'cordis'
 import '../../types.ts'
 import * as slots from '../registry/slots.ts'
-import * as snapshot from '../infrastructure/snapshot.ts'
+import * as snapshot from './snapshot.ts'
 import * as reactHost from './react-host.ts'
 import * as shell from '../contributors/shell.tsx'
 

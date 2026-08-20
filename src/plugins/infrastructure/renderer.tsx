@@ -1,6 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from 'react'
 import { SlotEvent, type SlotEntry, type SlotKind, type SlotsService } from '../registry/slots.ts'
 
+// 触发响应式更新的入口
 function Outlet({ slots, name, kind }: { slots: SlotsService; name: string; kind?: SlotKind }) {
   useSyncExternalStore(
     (fn) => slots.subscribe(name, SlotEvent.Entries, fn),
