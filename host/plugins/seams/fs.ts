@@ -1,7 +1,12 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
-import { dirname, join, normalize, relative, resolve } from 'node:path'
+import { dirname, isAbsolute, join, normalize, relative, resolve } from 'node:path'
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
+import {
+  STR_REPLACE_EDITOR_DESCRIPTION,
+  STR_REPLACE_EDITOR_PARAMETERS,
+  runStrReplaceEditor,
+} from './str-replace-editor.ts'
 
 export class FsService extends Service {
   constructor(
@@ -13,9 +18,12 @@ export class FsService extends Service {
   }
 
   resolve(rel: string) {
-    const full = resolve(this.root, rel)
+    const input = String(rel)
+    const full = isAbsolute(input) ? resolve(input) : resolve(this.root, input)
     const relToRoot = relative(this.root, full)
-    if (relToRoot.startsWith('..') || normalize(rel).startsWith('..')) throw new Error('path escapes workspace')
+    if (relToRoot.startsWith('..') || (!isAbsolute(input) && normalize(input).startsWith('..'))) {
+      throw new Error('path escapes workspace')
+    }
     return full
   }
 
@@ -68,5 +76,11 @@ export function apply(ctx: Context, config: { root?: string } = {}) {
     description: '列出工作区目录',
     parameters: { type: 'object', properties: { path: { type: 'string' } } },
     execute: (args) => fs.list(String(args.path || '.')),
+  })
+  ctx.tools.register({
+    name: 'str_replace_editor',
+    description: STR_REPLACE_EDITOR_DESCRIPTION,
+    parameters: { ...STR_REPLACE_EDITOR_PARAMETERS },
+    execute: (args) => runStrReplaceEditor(fs, args),
   })
 }

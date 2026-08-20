@@ -1,21 +1,27 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import type { SlotProps } from '../../registry/slots.ts'
 
+type AgentMode = 'standard' | 'minimal'
+
 interface ChatPublicConfig {
   provider: 'deepseek' | 'openai'
   model: string
   systemPrompt: string
+  agentMode: AgentMode
   configured: boolean
   hint: string
+  tools?: string[]
 }
 
 export function ChatConfig(_props: SlotProps) {
   const [provider, setProvider] = useState<'deepseek' | 'openai'>('deepseek')
   const [model, setModel] = useState('deepseek-chat')
   const [systemPrompt, setSystemPrompt] = useState('')
+  const [agentMode, setAgentMode] = useState<AgentMode>('standard')
   const [apiKey, setApiKey] = useState('')
   const [hint, setHint] = useState('')
   const [configured, setConfigured] = useState(false)
+  const [tools, setTools] = useState<string[]>([])
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
 
@@ -25,8 +31,10 @@ export function ChatConfig(_props: SlotProps) {
     setProvider(data.provider)
     setModel(data.model)
     setSystemPrompt(data.systemPrompt)
+    setAgentMode(data.agentMode === 'minimal' ? 'minimal' : 'standard')
     setHint(data.hint)
     setConfigured(data.configured)
+    setTools(Array.isArray(data.tools) ? data.tools : [])
   }
 
   useEffect(() => {
@@ -48,6 +56,7 @@ export function ChatConfig(_props: SlotProps) {
         provider,
         model,
         systemPrompt,
+        agentMode,
         ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
       }),
     })
@@ -58,6 +67,8 @@ export function ChatConfig(_props: SlotProps) {
     const data = (await res.json()) as ChatPublicConfig
     setHint(data.hint)
     setConfigured(data.configured)
+    setAgentMode(data.agentMode === 'minimal' ? 'minimal' : 'standard')
+    setTools(Array.isArray(data.tools) ? data.tools : [])
     setApiKey('')
     setStatus(
       data.configured
@@ -99,6 +110,23 @@ export function ChatConfig(_props: SlotProps) {
         Model
         <input className={field} value={model} onChange={(event) => setModel(event.target.value)} />
       </label>
+      <label className="block text-xs text-[var(--dsw-label-3)]">
+        Agent mode
+        <select
+          className={field}
+          value={agentMode}
+          onChange={(event) => setAgentMode(event.target.value as AgentMode)}
+          data-testid="agent-mode"
+        >
+          <option value="standard">Standard — 全部已注册工具</option>
+          <option value="minimal">Minimal — 对齐 dsh：仅 bash + str_replace_editor</option>
+        </select>
+      </label>
+      {tools.length ? (
+        <p className="m-0 text-xs leading-5 text-[var(--dsw-label-3)]">
+          当前对模型可见工具：{tools.join(', ')}
+        </p>
+      ) : null}
       <label className="block text-xs text-[var(--dsw-label-3)]">
         API Key
         <input

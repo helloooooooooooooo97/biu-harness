@@ -51,7 +51,7 @@ export class ApprovalsService extends Service {
 }
 
 function sensitive(name: string) {
-  return /^(fs_write|bash|job_start|terminal_write|lsp_start|subagent_spawn|mcp_add_stdio)$/.test(name)
+  return /^(fs_write|str_replace_editor|bash|job_start|terminal_write|lsp_start|subagent_spawn|mcp_add_stdio)$/.test(name)
 }
 
 export const name = 'approvals'

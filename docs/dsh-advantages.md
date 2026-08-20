@@ -25,6 +25,7 @@
 19. **Web：React Router（单向）** — `/` · `/s/:id` · `/s/:id/trajectory` · `/workspace`；URL → `applyRoute`；跳转只用 `Link`/`navigate`，无双向 bridge。
 20. **Web：Activity Bar 模块切换** — Agent 仅为其中一个视图；切到 Workspace 等其它页不卸载 session 投影，切回 Agent 会话仍在；Settings 挂在 Activity Bar 底部。
 21. **Web：Session 绑定本地项目文件夹** — Agent Chat 右侧 Project 面板 `Open folder`（File System Access API）；文件夹名写入 session.project，句柄按 sessionId 存 IndexedDB；可浏览/编辑/保存文本文件。
+22. **Agent mode（Standard / Minimal）** — Settings 可选；`minimal` 对齐 dsh：模型侧只暴露 `bash` + `str_replace_editor`（view/create/str_replace/insert）；模式写入 `.cordis/chat-config.json`，`tools.schemas()` / `names()` / `invoke` 统一过滤。
 
 ## 功能级差异（相对官方 client，优点对齐后）
 
@@ -33,8 +34,9 @@
 | 会话列表 / New / Fork | 有 | 有 | 已对齐（瘦） |
 | Chat 事件投影 | 有 | ConversationNode | 已对齐（瘦投影） |
 | Trajectory 账本 + inspect | 有 | ui-trajectory | 已对齐（无虚表） |
-| 审批 dock + mode | 有 | Permission + ApprovalPanel | 已对齐（瘦） |
+| 审批 dock + mode | 有 | Permission + QueuePanel | 已对齐（瘦） |
 | 运行中 inject | 有 | steer/queue | 已对齐（无队列编辑 UI） |
+| Agent Minimal 双工具 | 有 | minimal preset | 已对齐（瘦：工具过滤 + editor，无 profile 叠层） |
 | Trajectory 虚表/搜索 | 无 | 有 | **不吸收** |
 | Workspace dock | 无 | ui-workspace | **不吸收** |
 | Goals / Plan / Attachments | 无 | 对应 ui-* | 需 host 域；暂不吸收 |
