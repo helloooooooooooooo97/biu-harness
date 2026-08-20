@@ -120,8 +120,14 @@ function Shell(props: SlotProps) {
             ) : null}
           </button>
         </header>
-        <div className="mx-auto flex w-full max-w-[calc(var(--dsw-chat-width)+32px)] flex-1 flex-col px-4 pb-4">
-          <div className="flex flex-1 flex-col overflow-y-auto py-4">
+        <div
+          className={
+            view === 'chat'
+              ? 'mx-auto flex w-full max-w-[calc(var(--dsw-chat-width)+32px)] flex-1 flex-col px-4 pb-4'
+              : 'flex min-h-0 w-full flex-1 flex-col'
+          }
+        >
+          <div className={`flex flex-1 flex-col overflow-y-auto ${view === 'chat' ? 'py-4' : ''}`}>
             {view === 'chat' ? props.renderSlot('stage') : props.renderSlot('trajectory')}
           </div>
           {view === 'chat' ? (
