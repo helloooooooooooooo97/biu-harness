@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import {
@@ -91,7 +91,7 @@ function UsageCard({ usage, label = 'Token usage' }: { usage: TrajectoryUsage; l
   )
 }
 
-export function TrajectoryView(props: SlotProps) {
+export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const rows = useSessionView((state) => state.trajectory)
   const events = useSessionView((state) => state.events)
@@ -214,7 +214,7 @@ export function TrajectoryView(props: SlotProps) {
       ) : null}
     </div>
   )
-}
+})
 
 function EventDetailBody({ event, events }: { event: SessionEvent; events: SessionEvent[] }) {
   const fields = detailFields(event, events)

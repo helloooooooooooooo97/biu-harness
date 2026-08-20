@@ -288,9 +288,15 @@ function Shell(props: SlotProps) {
               )}
             </NavLink>
           </header>
-          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+          <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+            {/*
+              不用 display:none：大 Markdown DOM 被隐藏后再显示会重算布局（数百 ms longtask）。
+              absolute + visibility 保活布局，Chat↔Trajectory 只切可见性。
+            */}
             <div
-              className={`min-h-0 flex-1 overflow-hidden ${view === 'chat' ? 'flex' : 'hidden'}`}
+              className={`absolute inset-0 min-h-0 overflow-hidden ${
+                view === 'chat' ? 'z-[1] flex' : 'pointer-events-none invisible z-0 flex'
+              }`}
               aria-hidden={view !== 'chat'}
             >
               <div className="mx-auto flex min-h-0 w-full max-w-[calc(var(--dsw-chat-width)+32px)] flex-1 flex-col overflow-hidden px-4 pb-4">
@@ -307,7 +313,9 @@ function Shell(props: SlotProps) {
               </aside>
             </div>
             <div
-              className={`min-h-0 flex-1 overflow-hidden ${view === 'trajectory' ? 'flex flex-col' : 'hidden'}`}
+              className={`absolute inset-0 min-h-0 overflow-hidden ${
+                view === 'trajectory' ? 'z-[1] flex flex-col' : 'pointer-events-none invisible z-0 flex flex-col'
+              }`}
               aria-hidden={view !== 'trajectory'}
             >
               {props.renderSlot('trajectory')}
@@ -385,6 +393,13 @@ function Shell(props: SlotProps) {
 }
 
 export function apply(ctx: Context) {
+  const shellProps = {
+    useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService),
+    useSessionView: bindSessionView(ctx.sessionView as SessionViewService),
+    sessionView: ctx.sessionView as SessionViewService,
+    projectView: ctx.projectView as ProjectViewService,
+    useProjectView: bindProjectView(ctx.projectView as ProjectViewService),
+  }
   ctx.slots.fill('root', Shell, {
     children: {
       sidebar: { kind: 'single' },
@@ -398,12 +413,6 @@ export function apply(ctx: Context) {
       log: { kind: 'single' },
       routes: { kind: 'single' },
     },
-    props: () => ({
-      useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService),
-      useSessionView: bindSessionView(ctx.sessionView as SessionViewService),
-      sessionView: ctx.sessionView as SessionViewService,
-      projectView: ctx.projectView as ProjectViewService,
-      useProjectView: bindProjectView(ctx.projectView as ProjectViewService),
-    }),
+    props: () => shellProps,
   })
 }

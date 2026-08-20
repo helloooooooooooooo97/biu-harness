@@ -15,12 +15,14 @@ export const inject = ['slots', 'sessionView', 'projectView']
 export function apply(ctx: Context) {
   const view = ctx.sessionView as SessionViewService
   const project = ctx.projectView as ProjectViewService
-  const props = () => ({
+  // 稳定 props：避免 Shell 重绘时 bind* 新函数打穿 memo（重 Markdown 切换卡顿）
+  const slotProps = {
     useSessionView: bindSessionView(view),
     sessionView: view,
     useProjectView: bindProjectView(project),
     projectView: project,
-  })
+  }
+  const props = () => slotProps
   ctx.slots.place('stage', ChatThread, { key: 'chat-thread', order: 1, props })
   ctx.slots.place('trajectory', TrajectoryView, { key: 'trajectory', order: 1, props })
   ctx.slots.place('project', SessionProjectPanel, { key: 'session-project', order: 1, props })
