@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import {
@@ -36,12 +36,34 @@ function formatTok(n: number) {
   return n.toLocaleString('en-US')
 }
 
+function cacheHitPct(usage: TrajectoryUsage): number | null {
+  if (!usage.inputTokens || !usage.cacheReadTokens) return null
+  return Math.min(100, Math.round((usage.cacheReadTokens / usage.inputTokens) * 100))
+}
+
+/** Input 包成胶囊；缓存命中用进度背景铺在 Input 上。 */
 function UsageInline({ usage, empty = '—' }: { usage?: TrajectoryUsage; empty?: string }) {
   if (!usage) return <span className="traj-usage-empty">{empty}</span>
+  const pct = cacheHitPct(usage)
+  const inStyle: CSSProperties | undefined =
+    pct != null
+      ? {
+          backgroundImage: `linear-gradient(90deg, rgba(34, 140, 90, 0.28) 0%, rgba(34, 140, 90, 0.28) ${pct}%, rgba(15, 17, 21, 0.06) ${pct}%, rgba(15, 17, 21, 0.06) 100%)`,
+        }
+      : undefined
   return (
     <span className="traj-usage" title={formatTrajectoryUsage(usage)}>
-      <span className="traj-usage-in" title="input tokens">
-        {formatTok(usage.inputTokens)}
+      <span
+        className={`traj-usage-in-wrap${pct != null ? ' has-cache' : ''}`}
+        style={inStyle}
+        title={
+          pct != null
+            ? `input ${formatTok(usage.inputTokens)} · cache hit ${pct}% (${formatTok(usage.cacheReadTokens!)})`
+            : `input ${formatTok(usage.inputTokens)}`
+        }
+      >
+        <span className="traj-usage-in">{formatTok(usage.inputTokens)}</span>
+        {pct != null ? <span className="traj-usage-cache-pct">{pct}%</span> : null}
       </span>
       <span className="traj-usage-arrow" aria-hidden>
         →
@@ -49,28 +71,29 @@ function UsageInline({ usage, empty = '—' }: { usage?: TrajectoryUsage; empty?
       <span className="traj-usage-out" title="output tokens">
         {formatTok(usage.outputTokens)}
       </span>
-      {usage.cacheReadTokens ? (
-        <span className="traj-usage-cache" title="cache read tokens">
-          c{formatTok(usage.cacheReadTokens)}
-        </span>
-      ) : null}
     </span>
   )
 }
 
 function UsageCard({ usage, label = 'Token usage' }: { usage: TrajectoryUsage; label?: string }) {
   const total = usage.totalTokens ?? usage.inputTokens + usage.outputTokens
-  const cacheRatio =
-    usage.inputTokens > 0 && usage.cacheReadTokens
-      ? Math.min(100, Math.round((usage.cacheReadTokens / usage.inputTokens) * 100))
-      : null
+  const pct = cacheHitPct(usage)
+  const inStyle: CSSProperties | undefined =
+    pct != null
+      ? {
+          backgroundImage: `linear-gradient(90deg, rgba(34, 140, 90, 0.22) 0%, rgba(34, 140, 90, 0.22) ${pct}%, rgba(15, 17, 21, 0.04) ${pct}%, rgba(15, 17, 21, 0.04) 100%)`,
+        }
+      : undefined
   return (
     <section className="traj-usage-card" aria-label={label}>
       <div className="traj-usage-card-title">{label}</div>
       <div className="traj-usage-grid">
-        <div className="traj-usage-stat traj-usage-stat-in">
-          <span>Input</span>
+        <div className="traj-usage-stat traj-usage-stat-in" style={inStyle}>
+          <span>Input{pct != null ? ` · cache ${pct}%` : ''}</span>
           <strong>{formatTok(usage.inputTokens)}</strong>
+          {usage.cacheReadTokens ? (
+            <em className="traj-usage-stat-sub">cache {formatTok(usage.cacheReadTokens)}</em>
+          ) : null}
         </div>
         <div className="traj-usage-stat traj-usage-stat-out">
           <span>Output</span>
@@ -80,14 +103,16 @@ function UsageCard({ usage, label = 'Token usage' }: { usage: TrajectoryUsage; l
           <span>Total</span>
           <strong>{formatTok(total)}</strong>
         </div>
-        {usage.cacheReadTokens != null && usage.cacheReadTokens > 0 ? (
-          <div className="traj-usage-stat traj-usage-stat-cache">
-            <span>Cache read{cacheRatio != null ? ` · ${cacheRatio}%` : ''}</span>
-            <strong>{formatTok(usage.cacheReadTokens)}</strong>
-          </div>
-        ) : null}
       </div>
     </section>
+  )
+}
+
+function FoldCaret({ open }: { open: boolean }) {
+  return (
+    <span className={`traj-caret${open ? ' is-open' : ''}`} aria-hidden>
+      ▸
+    </span>
   )
 }
 
@@ -98,6 +123,10 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   const focusCallId = useSessionView((state) => state.focusCallId)
   const sessionId = useSessionView((state) => state.sessionId)
   const [selectedSeq, setSelectedSeq] = useState<number | null>(null)
+  /** turn key → collapsed */
+  const [collapsedTurns, setCollapsedTurns] = useState<Record<string, boolean>>({})
+  /** `${turn}:${step}` → collapsed */
+  const [collapsedSteps, setCollapsedSteps] = useState<Record<string, boolean>>({})
 
   const groups = useMemo(() => groupByTurn(rows), [rows])
   const cumulative = useMemo(() => sumTrajectoryUsage(events), [events])
@@ -158,43 +187,81 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
         </div>
 
         <div className="traj-list" role="rowgroup">
-          {groups.map((group) => (
-            <div key={group.key} className="traj-group">
-              <div className="traj-group-bar">
-                <span>{group.turn == null ? 'meta' : `Turn ${group.turn}`}</span>
-                <span>{group.rows.length}</span>
+          {groups.map((group) => {
+            const turnKey = group.key
+            const turnCollapsed = Boolean(collapsedTurns[turnKey])
+            const visibleRows = turnCollapsed
+              ? []
+              : filterCollapsedSteps(group.rows, group.turn, collapsedSteps)
+            return (
+              <div key={group.key} className={`traj-group${turnCollapsed ? ' is-collapsed' : ''}`}>
+                <button
+                  type="button"
+                  className="traj-group-bar"
+                  aria-expanded={!turnCollapsed}
+                  onClick={() =>
+                    setCollapsedTurns((prev) => ({ ...prev, [turnKey]: !prev[turnKey] }))
+                  }
+                >
+                  <span className="traj-group-bar-left">
+                    <FoldCaret open={!turnCollapsed} />
+                    <span>{group.turn == null ? 'meta' : `Turn ${group.turn}`}</span>
+                  </span>
+                  <span>{group.rows.length}</span>
+                </button>
+                {visibleRows.map((row) => {
+                  const focused = Boolean(focusCallId && row.callId === focusCallId) || selectedSeq === row.seq
+                  const tone = toneOf(row.type)
+                  const isStepStart = row.type === 'step/start'
+                  const stepKey =
+                    isStepStart && row.turn != null && row.step != null ? `${row.turn}:${row.step}` : null
+                  const stepCollapsed = stepKey ? Boolean(collapsedSteps[stepKey]) : false
+                  return (
+                    <div key={row.id} className="traj-row-wrap">
+                      {isStepStart && stepKey ? (
+                        <button
+                          type="button"
+                          className="traj-step-fold"
+                          aria-expanded={!stepCollapsed}
+                          aria-label={stepCollapsed ? 'Expand step' : 'Collapse step'}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setCollapsedSteps((prev) => ({ ...prev, [stepKey]: !prev[stepKey] }))
+                          }}
+                        >
+                          <FoldCaret open={!stepCollapsed} />
+                        </button>
+                      ) : (
+                        <span className="traj-step-fold-spacer" aria-hidden />
+                      )}
+                      <button
+                        type="button"
+                        id={row.callId ? `traj-call-${row.callId}` : undefined}
+                        role="row"
+                        className={`traj-row traj-depth-${row.depth}${focused ? ' traj-row-focus' : ''}${
+                          row.type === 'assistant/message' ? ' traj-row-assistant' : ''
+                        }`}
+                        onClick={() => setSelectedSeq(row.seq)}
+                      >
+                        <span className="traj-col-seq">{row.seq}</span>
+                        <span className="traj-col-type">
+                          <span className={toneClass[tone]} title={row.type}>
+                            {row.type}
+                          </span>
+                        </span>
+                        <span className="traj-col-summary" title={row.summary}>
+                          {row.summary}
+                        </span>
+                        <span className="traj-col-usage">
+                          <UsageInline usage={row.usage} />
+                        </span>
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
-              {group.rows.map((row) => {
-                const focused = Boolean(focusCallId && row.callId === focusCallId) || selectedSeq === row.seq
-                const tone = toneOf(row.type)
-                return (
-                  <button
-                    key={row.id}
-                    type="button"
-                    id={row.callId ? `traj-call-${row.callId}` : undefined}
-                    role="row"
-                    className={`traj-row traj-depth-${row.depth}${focused ? ' traj-row-focus' : ''}${
-                      row.type === 'assistant/message' ? ' traj-row-assistant' : ''
-                    }`}
-                    onClick={() => setSelectedSeq(row.seq)}
-                  >
-                    <span className="traj-col-seq">{row.seq}</span>
-                    <span className="traj-col-type">
-                      <span className={toneClass[tone]} title={row.type}>
-                        {row.type}
-                      </span>
-                    </span>
-                    <span className="traj-col-summary" title={row.summary}>
-                      {row.summary}
-                    </span>
-                    <span className="traj-col-usage">
-                      <UsageInline usage={row.usage} />
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -215,6 +282,30 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
     </div>
   )
 })
+
+/** 折叠的 step：隐藏 step/start 之后到对应 step/end（含）之间的行，start 行本身保留。 */
+function filterCollapsedSteps(
+  rows: TrajectoryRow[],
+  turn: number | null,
+  collapsedSteps: Record<string, boolean>,
+): TrajectoryRow[] {
+  const out: TrajectoryRow[] = []
+  let hiding: string | null = null
+  for (const row of rows) {
+    if (hiding) {
+      if (row.type === 'step/end' && turn != null && row.step != null && `${turn}:${row.step}` === hiding) {
+        hiding = null
+      }
+      continue
+    }
+    out.push(row)
+    if (row.type === 'step/start' && turn != null && row.step != null) {
+      const key = `${turn}:${row.step}`
+      if (collapsedSteps[key]) hiding = key
+    }
+  }
+  return out
+}
 
 function EventDetailBody({ event, events }: { event: SessionEvent; events: SessionEvent[] }) {
   const fields = detailFields(event, events)

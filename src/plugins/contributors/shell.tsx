@@ -104,8 +104,8 @@ function WorkspaceModule() {
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
       <h1 className="text-xl font-semibold tracking-tight text-[var(--dsw-label)]">Workspace</h1>
       <p className="max-w-md text-sm leading-6 text-[var(--dsw-label-3)]">
-        本地项目文件夹绑定在 <strong className="font-semibold text-[var(--dsw-label-2)]">Agent Session</strong>{' '}
-        上：进入 Agent → 打开/新建 Session → 右侧 Project 面板 Open folder。每个 Session 对应一个文件夹。
+        项目绑定在 Agent 顶栏右侧的 <strong className="font-semibold text-[var(--dsw-label-2)]">Bind project</strong>{' '}
+        ：选目录后作为该 Session 的 cwd。无需单独大面板。
       </p>
     </div>
   )
@@ -287,6 +287,7 @@ function Shell(props: SlotProps) {
                 </>
               )}
             </NavLink>
+            <div className="ml-auto flex min-w-0 items-center">{props.renderSlot('project')}</div>
           </header>
           <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             {/*
@@ -308,9 +309,6 @@ function Shell(props: SlotProps) {
                   {props.renderSlot('composer')}
                 </div>
               </div>
-              <aside className="project-pane hidden min-h-0 w-[min(420px,42vw)] shrink-0 flex-col border-l border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] md:flex">
-                {props.renderSlot('project')}
-              </aside>
             </div>
             <div
               className={`absolute inset-0 min-h-0 overflow-hidden ${
