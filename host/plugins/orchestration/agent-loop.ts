@@ -1,6 +1,6 @@
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
-import type { AssistantReply, LlmClient, LlmConfig } from './llm.ts'
+import type { AssistantReply, LlmClient, LlmConfig, LlmMessage } from './llm.ts'
 import type { InboxKind } from '../core/session-types.ts'
 
 export interface AgentTurn {
@@ -152,7 +152,7 @@ export class AgentLoopService extends Service {
     const llm = config.apiKey
       ? this.ctx.llm.forConfig(config)
       : {
-          chat: async (messages) => {
+          chat: async (messages: LlmMessage[]) => {
             const last = [...messages].reverse().find((item) => item.role === 'user')?.content
             return { content: `未配置 API Key，本地回声：${last ?? ''}`, toolCalls: [] }
           },
