@@ -382,6 +382,13 @@ body {
   text-transform: uppercase;
 }
 
+.traj-io-missing {
+  margin: 0;
+  color: var(--dsw-label-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .traj-io-list {
   display: flex;
   flex-direction: column;
