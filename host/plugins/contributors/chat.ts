@@ -172,6 +172,7 @@ export function apply(ctx: Context) {
         eventCount: record.events.length,
         title,
         updatedAt: record.events.at(-1)?.ts ?? 0,
+        ...(record.project ? { project: record.project } : {}),
       })
     }
     items.sort((a, b) => b.updatedAt - a.updatedAt)
@@ -180,7 +181,26 @@ export function apply(ctx: Context) {
   ctx.http.route('GET', '/api/sessions/:id', async (route) => {
     const record = await ctx.sessions.get(route.params.id)
     if (!record) return route.send(404, { error: 'unknown session' })
-    route.send(200, { id: record.id, version: record.version, events: record.events, messages: ctx.sessions.deriveMessages(record.id) })
+    route.send(200, {
+      id: record.id,
+      version: record.version,
+      events: record.events,
+      messages: ctx.sessions.deriveMessages(record.id),
+      ...(record.project ? { project: record.project } : {}),
+    })
+  })
+  ctx.http.route('PUT', '/api/sessions/:id/project', async (route) => {
+    const payload = (await route.json()) as { name?: string | null }
+    try {
+      if (payload.name == null || payload.name === '') {
+        await ctx.sessions.setProject(route.params.id, null)
+        return route.send(200, { ok: true, project: null })
+      }
+      const project = await ctx.sessions.setProject(route.params.id, { name: String(payload.name).slice(0, 200) })
+      route.send(200, { ok: true, project })
+    } catch (error) {
+      route.send(404, { error: String(error) })
+    }
   })
   ctx.http.route('POST', '/api/sessions/:id/fork', async (route) => {
     try {

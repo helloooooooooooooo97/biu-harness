@@ -4,6 +4,7 @@ import type { Context } from 'cordis'
 import type { SlotProps } from '../registry/slots.ts'
 import { bindSnapshot, type Snapshot, type SnapshotService } from '../infrastructure/snapshot.ts'
 import { bindSessionView, type SessionViewService } from '../infrastructure/session-view.ts'
+import { bindProjectView, type ProjectViewService } from '../infrastructure/project-view.ts'
 import { parseAppPath } from '../infrastructure/session-route.ts'
 import {
   APP_MODULES,
@@ -13,7 +14,7 @@ import {
 import { BrandWordmark, FishLogo } from './brand.tsx'
 
 export const name = 'shell'
-export const inject = ['slots', 'snapshot', 'sessionView']
+export const inject = ['slots', 'snapshot', 'sessionView', 'projectView']
 
 function ModuleIcon({ id }: { id: AppModuleId }) {
   if (id === 'workspace') {
@@ -103,7 +104,8 @@ function WorkspaceModule() {
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
       <h1 className="text-xl font-semibold tracking-tight text-[var(--dsw-label)]">Workspace</h1>
       <p className="max-w-md text-sm leading-6 text-[var(--dsw-label-3)]">
-        占位模块：后续可挂项目文件、上下文与其它工作台能力。左侧模块轨里，Agent 只是其中一个入口。
+        本地项目文件夹绑定在 <strong className="font-semibold text-[var(--dsw-label-2)]">Agent Session</strong>{' '}
+        上：进入 Agent → 打开/新建 Session → 右侧 Project 面板 Open folder。每个 Session 对应一个文件夹。
       </p>
     </div>
   )
@@ -113,12 +115,14 @@ function Shell(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
+  const projectView = props.projectView as ProjectViewService
   const navigate = useNavigate()
   const location = useLocation()
   const snap = useSnapshot((state: Snapshot) => state)
   const live = snap.plugins.some((plugin) => plugin.enabled)
   const sessions = useSessionView((state) => state.sessions)
   const sessionId = useSessionView((state) => state.sessionId)
+  const project = useSessionView((state) => state.project)
   const view = useSessionView((state) => state.view)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const activeModule = moduleIdFromPath(location.pathname)
@@ -135,6 +139,20 @@ function Shell(props: SlotProps) {
   useEffect(() => {
     void sessionView.refreshSessions()
   }, [sessionView])
+
+  useEffect(() => {
+    void projectView.attachSession(sessionId, project)
+  }, [sessionId, project, projectView])
+
+  useEffect(() => {
+    const unsub = projectView.subscribe(() => {
+      const state = projectView.get()
+      if (state.sessionId && state.sessionId === sessionView.get().sessionId) {
+        sessionView.setProjectMeta(state.project)
+      }
+    })
+    return unsub
+  }, [projectView, sessionView])
 
   return (
     <div
@@ -199,6 +217,7 @@ function Shell(props: SlotProps) {
                       <div className="truncate font-medium">{item.title}</div>
                       <div className="mt-0.5 font-mono text-[10px] opacity-70">
                         {item.id.slice(0, 8)} · {item.eventCount} events
+                        {item.project ? ` · ${item.project.name}` : ''}
                       </div>
                     </Link>
                     <button
@@ -265,25 +284,28 @@ function Shell(props: SlotProps) {
             <div
               className={
                 view === 'chat'
-                  ? 'mx-auto flex min-h-0 w-full max-w-[calc(var(--dsw-chat-width)+32px)] flex-1 flex-col overflow-hidden px-4 pb-4'
+                  ? 'flex min-h-0 w-full flex-1 flex-col overflow-hidden'
                   : 'flex min-h-0 w-full flex-1 flex-col overflow-hidden'
               }
             >
-              <div
-                className={
-                  view === 'chat'
-                    ? 'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain py-4'
-                    : 'flex min-h-0 flex-1 flex-col overflow-hidden'
-                }
-              >
-                {view === 'chat' ? props.renderSlot('stage') : props.renderSlot('trajectory')}
-              </div>
               {view === 'chat' ? (
-                <div className="shrink-0 space-y-2 bg-[var(--dsw-bg)] pt-1 pb-3">
-                  {props.renderSlot('dock')}
-                  {props.renderSlot('composer')}
+                <div className="flex min-h-0 flex-1 overflow-hidden">
+                  <div className="mx-auto flex min-h-0 w-full max-w-[calc(var(--dsw-chat-width)+32px)] flex-1 flex-col overflow-hidden px-4 pb-4">
+                    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain py-4">
+                      {props.renderSlot('stage')}
+                    </div>
+                    <div className="shrink-0 space-y-2 bg-[var(--dsw-bg)] pt-1 pb-3">
+                      {props.renderSlot('dock')}
+                      {props.renderSlot('composer')}
+                    </div>
+                  </div>
+                  <aside className="project-pane hidden min-h-0 w-[min(420px,42vw)] shrink-0 flex-col border-l border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] md:flex">
+                    {props.renderSlot('project')}
+                  </aside>
                 </div>
-              ) : null}
+              ) : (
+                props.renderSlot('trajectory')
+              )}
             </div>
           </>
         ) : (
@@ -361,6 +383,7 @@ export function apply(ctx: Context) {
       dock: { kind: 'list' },
       stage: { kind: 'list' },
       trajectory: { kind: 'list' },
+      project: { kind: 'single' },
       composer: { kind: 'single' },
       settings: { kind: 'list' },
       log: { kind: 'single' },
@@ -370,6 +393,8 @@ export function apply(ctx: Context) {
       useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService),
       useSessionView: bindSessionView(ctx.sessionView as SessionViewService),
       sessionView: ctx.sessionView as SessionViewService,
+      projectView: ctx.projectView as ProjectViewService,
+      useProjectView: bindProjectView(ctx.projectView as ProjectViewService),
     }),
   })
 }

@@ -35,6 +35,8 @@ export interface SessionRecord {
   id: string
   version: number
   events: SessionEvent[]
+  /** 本 session 绑定的本地项目文件夹名（句柄在浏览器 IndexedDB）。 */
+  project?: { name: string; boundAt: number }
 }
 
 export interface SessionStore {

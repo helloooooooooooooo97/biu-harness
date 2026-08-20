@@ -106,7 +106,7 @@ function EmptyHero() {
           </span>
         </div>
         <p className="max-w-md text-sm text-[var(--dsw-label-3)]">
-          对话由 append-only session 投影，经 agents 驱动。Everything is a plugin.
+          对话由 append-only session 投影。右侧 Project 可为本 Session 打开本地文件夹并编辑文件。
         </p>
       </div>
     </div>

@@ -77,6 +77,20 @@ test('fork copies the append-only log into a child session', async () => {
   assert.equal((await ctx.sessions.require(parent.id)).events.some((item) => item.type === 'assistant/message'), false)
 })
 
+test('setProject binds and clears session project folder name', async () => {
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  const record = await ctx.sessions.create()
+  const project = await ctx.sessions.setProject(record.id, { name: 'demo-app' })
+  assert.equal(project?.name, 'demo-app')
+  assert.equal((await ctx.sessions.require(record.id)).project?.name, 'demo-app')
+  const child = await ctx.sessions.fork(record.id)
+  assert.equal(child.project?.name, 'demo-app')
+  assert.equal(await ctx.sessions.setProject(record.id, null), undefined)
+  assert.equal((await ctx.sessions.require(record.id)).project, undefined)
+})
+
 test('delete removes session from store and cache', async () => {
   const ctx = new Context()
   await ctx.plugin(sessionStore, { driver: 'memory' })
