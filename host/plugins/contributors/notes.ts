@@ -29,10 +29,30 @@ export class NotesService extends Service {
 }
 
 export const name = 'notes'
-export const inject = ['http', 'hub']
+export const inject = ['http', 'hub', 'tools']
 
 export function apply(ctx: Context) {
   const notes = new NotesService(ctx)
+  ctx.tools.register({
+    name: 'notes_list',
+    description: '列出当前便签',
+    parameters: { type: 'object', properties: {} },
+    execute: () => notes.list(),
+  })
+  ctx.tools.register({
+    name: 'notes_add',
+    description: '新增一条便签',
+    parameters: {
+      type: 'object',
+      properties: { body: { type: 'string', description: '正文' } },
+      required: ['body'],
+    },
+    execute: (args) => {
+      const body = String(args.body ?? '').trim()
+      if (!body) throw new Error('empty')
+      return notes.add(body)
+    },
+  })
   ctx.hub.register({
     id: 'notes',
     title: '便签',

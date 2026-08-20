@@ -46,7 +46,7 @@ export const catalog: CatalogEntry[] = [
     id: 'chat',
     name: '对话',
     layer: 'capability',
-    blurb: 'ctx.chat + POST /api/chat。',
+    blurb: 'ctx.chat → session + ctx.agents。',
     plugin: chat,
     inject: chat.inject,
     togglable: true,

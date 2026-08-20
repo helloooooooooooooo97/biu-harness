@@ -69,7 +69,12 @@ export class HubService extends Service {
       pages: [...this.pages],
       routes: this.ctx.http?.listRoutes() ?? [],
       events: this.events,
-      services: ['http', 'hub', 'greet', 'notes', 'chat'].filter((name) => Boolean(this.ctx.get(name))),
+      tools: this.ctx.tools?.names() ?? [],
+      services: [
+        'http', 'hub', 'tools', 'llm', 'agentLoop', 'agents', 'approvals',
+        'sessionStore', 'sessions', 'systemPrompt', 'fs', 'subprocess', 'sandbox',
+        'jobs', 'mcp', 'terminals', 'lsp', 'subagents', 'greet', 'notes', 'chat',
+      ].filter((name) => Boolean(this.ctx.get(name))),
     }
   }
 

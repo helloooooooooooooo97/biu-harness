@@ -2,9 +2,16 @@ import type { Context } from 'cordis'
 import '../../types.ts'
 
 export const name = 'clock'
-export const inject = ['http', 'hub']
+export const inject = ['http', 'hub', 'tools']
 
 export function apply(ctx: Context) {
+  let lastIso = new Date().toISOString()
+  ctx.tools.register({
+    name: 'clock_now',
+    description: '读取最近一次心跳时间',
+    parameters: { type: 'object', properties: {} },
+    execute: () => lastIso,
+  })
   ctx.hub.register({
     id: 'clock',
     title: '心跳',
@@ -15,6 +22,7 @@ export function apply(ctx: Context) {
   ctx.effect(() => {
     const tick = () => {
       const iso = new Date().toISOString()
+      lastIso = iso
       ctx.emit('clock/tick', iso)
       ctx.http.broadcast('clock', { iso })
     }

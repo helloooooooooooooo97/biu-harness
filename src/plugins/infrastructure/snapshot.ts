@@ -18,6 +18,7 @@ export interface Snapshot {
   pages: Array<{ id: string; title: string; plugin: string }>
   routes: Array<{ method: string; pattern: string }>
   events: Array<{ ts: number; mode: string; name: string; args: unknown[] }>
+  tools?: string[]
   services: string[]
   clockIso?: string
 }

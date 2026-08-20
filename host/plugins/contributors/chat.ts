@@ -1,10 +1,8 @@
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
+import type { ChatMessage } from './chat-types.ts'
 
-export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant'
-  content: string
-}
+export type { ChatMessage }
 
 export type ChatProvider = 'deepseek' | 'openai'
 
@@ -21,7 +19,7 @@ function defaults(): ChatConfig {
     provider: deepseek || !process.env.OPENAI_API_KEY ? 'deepseek' : 'openai',
     apiKey: process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '',
     model: process.env.CHAT_MODEL || (deepseek || !process.env.OPENAI_API_KEY ? 'deepseek-chat' : 'gpt-4o-mini'),
-    systemPrompt: '你是 hmr-dev 控制台里的助手，回答简洁。',
+    systemPrompt: '你是控制台里的助手。需要时调用当前已注册的 tools；插件卸载后对应 tool 会消失。回答简洁。',
   }
 }
 
@@ -36,6 +34,8 @@ export class ChatService extends Service {
 
   constructor(ctx: Context) {
     super(ctx, 'chat')
+    ctx.systemPrompt.register('chat.persona', () => this.config.systemPrompt)
+    this.syncLlm()
   }
 
   publicView() {
@@ -53,45 +53,36 @@ export class ChatService extends Service {
     if (typeof next.model === 'string' && next.model.trim()) this.config.model = next.model.trim()
     if (typeof next.systemPrompt === 'string') this.config.systemPrompt = next.systemPrompt
     if (typeof next.apiKey === 'string' && next.apiKey.trim()) this.config.apiKey = next.apiKey.trim()
+    this.syncLlm()
     return this.publicView()
   }
 
-  async complete(messages: ChatMessage[]) {
+  async complete(messages: ChatMessage[], sessionId?: string) {
+    this.syncLlm()
     const last = messages.filter((item) => item.role === 'user').at(-1)?.content?.trim() ?? ''
-    if (!last) return '请先输入内容。'
-    if (!this.config.apiKey) {
-      return `未配置 API Key，本地回声：${last}`
-    }
-    const url =
-      this.config.provider === 'deepseek'
-        ? 'https://api.deepseek.com/chat/completions'
-        : 'https://api.openai.com/v1/chat/completions'
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${this.config.apiKey}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: this.config.model,
-        messages: [{ role: 'system', content: this.config.systemPrompt }, ...messages],
-      }),
+    const agent = await this.ctx.agents.create(sessionId)
+    const result = await agent.send(last)
+    return { text: result.text, sessionId: agent.sessionId, steps: result.steps }
+  }
+
+  private syncLlm() {
+    this.ctx.agents.configure({
+      provider: this.config.provider,
+      apiKey: this.config.apiKey,
+      model: this.config.model,
     })
-    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } }
-    if (!res.ok) throw new Error(data.error?.message || `chat http ${res.status}`)
-    return data.choices?.[0]?.message?.content?.trim() || '（空回复）'
   }
 }
 
 export const name = 'chat'
-export const inject = ['http', 'hub']
+export const inject = ['http', 'hub', 'agents', 'sessions', 'systemPrompt']
 
 export function apply(ctx: Context) {
   const chat = new ChatService(ctx)
   ctx.hub.register({
     id: 'chat',
     title: '对话',
-    subtitle: 'POST /api/chat',
+    subtitle: 'session + ctx.agents',
     plugin: 'chat',
     kind: 'chat',
   })
@@ -108,11 +99,41 @@ export function apply(ctx: Context) {
     }>
     route.send(200, chat.patch(payload ?? {}))
   })
-  ctx.http.route('POST', '/api/chat', async (route) => {
-    const payload = (await route.json()) as { messages?: ChatMessage[] }
-    const messages = Array.isArray(payload?.messages) ? payload.messages : []
+  ctx.http.route('POST', '/api/sessions', async (route) => {
+    const record = await ctx.sessions.create()
+    route.send(201, { id: record.id, version: record.version })
+  })
+  ctx.http.route('GET', '/api/sessions/:id', async (route) => {
+    const record = await ctx.sessions.get(route.params.id)
+    if (!record) return route.send(404, { error: 'unknown session' })
+    route.send(200, { id: record.id, version: record.version, events: record.events, messages: ctx.sessions.deriveMessages(record.id) })
+  })
+  ctx.http.route('POST', '/api/sessions/:id/messages', async (route) => {
+    const payload = (await route.json()) as { text?: string; kind?: 'wake' | 'inject' }
+    const agent = await ctx.agents.create(route.params.id)
+    chat.patch({})
+    if (payload.kind === 'inject') {
+      agent.inject(payload.text ?? '')
+      return route.send(200, { sessionId: agent.sessionId, queued: true })
+    }
     try {
-      route.send(200, { text: await chat.complete(messages) })
+      const turn = await agent.send(payload.text ?? '')
+      route.send(200, { sessionId: agent.sessionId, text: turn.text, steps: turn.steps })
+    } catch (error) {
+      route.send(500, { error: String(error) })
+    }
+  })
+  ctx.http.route('POST', '/api/sessions/:id/cancel', (route) => {
+    ctx.agents.get(route.params.id)?.cancel()
+    route.send(200, { ok: true })
+  })
+  ctx.http.route('POST', '/api/chat', async (route) => {
+    const payload = (await route.json()) as { messages?: ChatMessage[]; sessionId?: string; text?: string }
+    const messages = Array.isArray(payload?.messages)
+      ? payload.messages
+      : [{ role: 'user' as const, content: payload.text ?? '' }]
+    try {
+      route.send(200, await chat.complete(messages, payload.sessionId))
     } catch (error) {
       route.send(500, { error: String(error) })
     }

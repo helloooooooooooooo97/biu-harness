@@ -13,11 +13,21 @@ export class GreetService extends Service {
 }
 
 export const name = 'greeter'
-export const inject = ['http', 'hub']
+export const inject = ['http', 'hub', 'tools']
 
 export function apply(ctx: Context) {
   // ctx.provide: 注意这里的ctx是这个fiber的ctx，而不是别的ctx，所以当这个插件注销的时候，只会逆序注销这个插件的ctx
   const greet = new GreetService(ctx)
+
+  ctx.tools.register({
+    name: 'greet',
+    description: '用问候服务生成一句话',
+    parameters: {
+      type: 'object',
+      properties: { name: { type: 'string', description: '称呼' } },
+    },
+    execute: (args) => greet.say(String(args.name || '访客')),
+  })
 
   // ctx.effect()
   ctx.hub.register({
