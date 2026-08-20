@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
@@ -91,6 +91,8 @@ function NodeView({ node, onInspect }: { node: ChatNode; onInspect: (callId: str
   return <div className="self-center text-xs text-[var(--dsw-label-3)]">{node.text}</div>
 }
 
+const NodeViewMemo = memo(NodeView)
+
 function EmptyHero() {
   return (
     <div className="relative flex flex-1 flex-col items-center justify-center px-4 py-16">
@@ -113,7 +115,7 @@ function EmptyHero() {
   )
 }
 
-export function ChatThread(props: SlotProps) {
+export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
   const navigate = useNavigate()
@@ -125,6 +127,14 @@ export function ChatThread(props: SlotProps) {
   const error = useSessionView((state) => state.error)
   const endRef = useRef<HTMLDivElement>(null)
   const stickToBottomRef = useRef(true)
+
+  const onInspect = useCallback(
+    (callId: string) => {
+      sessionView.inspectCall(callId)
+      if (sessionId) navigate(`/s/${sessionId}/trajectory`)
+    },
+    [sessionView, sessionId, navigate],
+  )
 
   useEffect(() => {
     stickToBottomRef.current = true
@@ -164,14 +174,7 @@ export function ChatThread(props: SlotProps) {
         <span>{agentStatus === 'running' ? `Running${agentStep != null ? ` · step ${agentStep}` : ''}` : 'Idle'}</span>
       </div>
       {nodes.map((node) => (
-        <NodeView
-          key={node.id}
-          node={node}
-          onInspect={(callId) => {
-            sessionView.inspectCall(callId)
-            if (sessionId) navigate(`/s/${sessionId}/trajectory`)
-          }}
-        />
+        <NodeViewMemo key={node.id} node={node} onInspect={onInspect} />
       ))}
       {error ? (
         <div className="rounded-[12px] bg-red-50 px-3 py-2 text-sm text-[var(--dsw-danger)]">{error}</div>
@@ -179,7 +182,7 @@ export function ChatThread(props: SlotProps) {
       <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
     </div>
   )
-}
+})
 
 export function chatThreadProps(view: SessionViewService) {
   return { useSessionView: bindSessionView(view) }

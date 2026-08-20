@@ -1,4 +1,4 @@
-import { useSyncExternalStore, type ReactNode } from 'react'
+import { useCallback, useSyncExternalStore, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, useLocation } from 'react-router-dom'
 import { SlotEvent, type SlotEntry, type SlotKind, type SlotsService } from '../registry/slots.ts'
 import { isKnownAppPath } from './session-route.ts'
@@ -25,13 +25,13 @@ function Outlet({ slots, name, kind }: { slots: SlotsService; name: string; kind
 }
 
 function EntryView({ slots, entry }: { slots: SlotsService; entry: SlotEntry }) {
+  // props() 须返回稳定对象；renderSlot 稳定后 memo 子树才不会在路由切换时被打穿
   const extra = entry.props?.() ?? {}
-  return (
-    <entry.Component
-      {...extra}
-      renderSlot={(name, options) => <Outlet slots={slots} name={name} kind={options?.kind} />}
-    />
+  const renderSlot = useCallback(
+    (name: string, options?: { kind?: SlotKind }) => <Outlet slots={slots} name={name} kind={options?.kind} />,
+    [slots],
   )
+  return <entry.Component {...extra} renderSlot={renderSlot} />
 }
 
 function AppShell({ slots }: { slots: SlotsService }) {
