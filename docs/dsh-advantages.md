@@ -16,13 +16,14 @@
 10. **Web：session/event 投影对话** — 浏览器不持能力；线程从 append-only 日志投影 user / assistant / tool 节点；LLM SSE 增量 `assistant/chunk` 经 WS 实时投影。
 11. **Web：agents 驱动输入** — 发送走 `/api/sessions/:id/messages`，可取消；WS 收 `session` / `agent` / `approval`。
 12. **Web：审批可观察** — hold 待批出现在 composer dock，允许/拒绝回调 host。
-13. **Web 壳对标 dsh 观感** — 左栏 Wordmark+HARNESS / New Session；中栏 Chat hero + 浅蓝气泡 + 胶囊 composer；演示插件进 Settings modal（对照官方 `ui-layout` / `ui-sidebar` / `ui-conversation`，不搬整包）。
-14. **Web：可恢复会话列表 + 真 New Session / Fork** — `GET /api/sessions` 列出会话；侧栏切换 `load`；Fork 走 `POST /api/sessions/:id/fork`。
+13. **Web 壳对标 dsh 观感** — 最左 **VS Code 式 Activity Bar**（纯图标切换 Agent / Workspace…）；Agent 下再挂 Side Bar（Sessions）+ Chat / Trajectory；演示插件进 Settings modal。
+14. **Web：可恢复会话列表 + 真 New Session / Fork** — `GET /api/sessions` 列出会话；Agent 侧栏切换 `load`；Fork 走 `POST /api/sessions/:id/fork`。
 15. **Web：Trajectory 事件账本** — Chat/Trajectory 可切换；`projectTrajectory` 从 append-only 日志投影；点击行打开事件详情；`assistant/message` 详情用 `deriveMessages(seq 前缀)` 投影本步 request（不另持久化 messages 快照）与 response；工具行可 `inspectCall` 跳到对应 seq 并高亮；provider `usage` 写入事件并显示。
 16. **Web：Chat Markdown** — 用户/助手气泡用 `react-markdown` + `remark-gfm` 渲染。
 17. **Web：审批 mode + 重水合** — `auto`/`hold` 可切换；启动与 `load` 时 `GET /api/approvals` 恢复 pending，不只依赖 WS。
 18. **Web：运行中 Steer/inject** — agent 忙时输入仍可用，`kind: 'inject'` 入队，不搬完整 QueueDock。
-19. **Web：React Router（单向）** — `/` · `/s/:id` · `/s/:id/trajectory`；URL → `applyRoute`；跳转只用 `Link`/`navigate`，无双向 bridge。
+19. **Web：React Router（单向）** — `/` · `/s/:id` · `/s/:id/trajectory` · `/workspace`；URL → `applyRoute`；跳转只用 `Link`/`navigate`，无双向 bridge。
+20. **Web：Activity Bar 模块切换** — Agent 仅为其中一个视图；切到 Workspace 等其它页不卸载 session 投影，切回 Agent 会话仍在；Settings 挂在 Activity Bar 底部。
 
 ## 功能级差异（相对官方 client，优点对齐后）
 
