@@ -21,6 +21,7 @@ function Shell(props: SlotProps) {
               h
             </span>
             <h1 className="text-base font-medium tracking-wide">hmr-dev</h1>
+            <span className="text-xs text-[#9aa0a6]">session → UI</span>
           </div>
           <div className="flex items-center gap-2">
             <span

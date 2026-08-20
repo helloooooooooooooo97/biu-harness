@@ -2,7 +2,7 @@
 
 Cordis 插槽壳 + host 控制台。前端按 registry / contributors / orchestration / infrastructure 分插件；host 同类目录提供 `/api` 与 snapshot。
 
-对标 DeepSeek Harness 时只吸收其优点，见 [`docs/dsh-advantages.md`](docs/dsh-advantages.md)。
+对标 DeepSeek Harness 时只吸收其优点，见 [`docs/dsh-advantages.md`](docs/dsh-advantages.md)。对话主舞台由 **session/event 投影**，经 **agents** 发送，rail 承接审批。
 
 ```bash
 make          # 或 make dev：host + Vite
