@@ -68,6 +68,16 @@ export class HttpService extends Service {
         socket.on('close', () => this.sockets.delete(socket))
       })
       ctx.on('session/event', (payload) => this.broadcast('session', payload))
+      server.on('error', (error: NodeJS.ErrnoException) => {
+        if (error.code === 'EADDRINUSE') {
+          ctx.logger('http').error(
+            `端口 ${config.port} 已被占用。请先结束旧进程：make stop  或  lsof -ti:${config.port} | xargs kill`,
+          )
+        } else {
+          ctx.logger('http').error(error)
+        }
+        process.exit(1)
+      })
       server.listen(config.port, () => {
         ctx.emit('http/ready', { port: config.port })
         ctx.logger('http').info(`listening on http://127.0.0.1:${config.port}`)
