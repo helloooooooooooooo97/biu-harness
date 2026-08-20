@@ -10,14 +10,12 @@ export interface SessionProjectMeta {
 export interface ProjectViewState {
   sessionId: string | null
   project?: SessionProjectMeta
-  pathInput: string
   busy: boolean
   error?: string
 }
 
 const empty: ProjectViewState = {
   sessionId: null,
-  pathInput: '',
   busy: false,
 }
 
@@ -45,31 +43,32 @@ export class ProjectViewService extends Service {
     this.replace({
       sessionId,
       project: bound,
-      pathInput: bound?.path ?? '',
       busy: false,
       error: undefined,
     })
   }
 
-  setPathInput(pathInput: string) {
-    this.replace({ pathInput })
-  }
-
-  /** 对齐 dsh：把 host 本机绝对路径绑到 Session，Agent 工具直接以此为 cwd。 */
-  async bindHostPath(sessionId: string, path = this.value.pathInput) {
+  /**
+   * 对齐 dsh Choose workspace：host 弹出系统选目录对话框，选中后自动绑定为 Session cwd。
+   */
+  async openFolderForSession(sessionId: string) {
     this.replace({ busy: true, error: undefined })
     try {
-      const res = await fetch(`/api/sessions/${sessionId}/project`, {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ path: path.trim() }),
-      })
-      const body = (await res.json()) as { project?: SessionProjectMeta; error?: string }
-      if (!res.ok) throw new Error(body.error || `绑定失败：${res.status}`)
+      const res = await fetch(`/api/sessions/${sessionId}/project/pick`, { method: 'POST' })
+      const body = (await res.json()) as {
+        ok?: boolean
+        cancelled?: boolean
+        project?: SessionProjectMeta
+        error?: string
+      }
+      if (body.cancelled) {
+        this.replace({ busy: false, error: undefined })
+        return undefined
+      }
+      if (!res.ok || !body.project) throw new Error(body.error || `打开文件夹失败：${res.status}`)
       this.replace({
         sessionId,
         project: body.project,
-        pathInput: body.project?.path ?? path.trim(),
         busy: false,
         error: undefined,
       })

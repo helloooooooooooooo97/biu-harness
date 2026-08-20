@@ -234,6 +234,21 @@ export function apply(ctx: Context) {
       route.send(400, { error: String(error) })
     }
   })
+  ctx.http.route('POST', '/api/sessions/:id/project/pick', async (route) => {
+    try {
+      await ctx.sessions.require(route.params.id)
+      const { pickHostDirectory } = await import('../seams/workspace-pick.ts')
+      const current = (await ctx.sessions.get(route.params.id))?.project?.path
+      const path = await pickHostDirectory(current)
+      const project = await ctx.sessions.setProject(route.params.id, { path })
+      route.send(200, { ok: true, project })
+    } catch (error) {
+      const name = error instanceof Error ? error.name : ''
+      if (name === 'DirectoryPickCancelled') return route.send(200, { ok: false, cancelled: true })
+      if (name === 'DirectoryPickUnavailable') return route.send(501, { error: String(error) })
+      route.send(400, { error: String(error) })
+    }
+  })
   ctx.http.route('POST', '/api/sessions/:id/fork', async (route) => {
     try {
       const child = await ctx.sessions.fork(route.params.id)
