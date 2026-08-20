@@ -47,3 +47,23 @@ test('projectTrajectory keeps seq ledger and tool callIds for inspect', () => {
   assert.equal(call?.turn, 1)
   assert.match(call?.summary ?? '', /bash/)
 })
+
+test('projectTrajectory indents step boundaries and in-step events', () => {
+  const rows = projectTrajectory([
+    { type: 'turn/start', turn: 1, seq: 1, ts: 1 },
+    { type: 'user/message', text: 'hi', seq: 2, ts: 2 },
+    { type: 'step/start', turn: 1, step: 0, seq: 3, ts: 3 },
+    { type: 'assistant/message', text: 'ok', seq: 4, ts: 4 },
+    { type: 'tool/call', id: 't1', name: 'bash', arguments: '{}', seq: 5, ts: 5 },
+    { type: 'step/end', turn: 1, step: 0, seq: 6, ts: 6 },
+    { type: 'turn/end', turn: 1, reason: 'complete', seq: 7, ts: 7 },
+  ])
+  const byType = Object.fromEntries(rows.map((row) => [row.type, row]))
+  assert.equal(byType['turn/start']?.depth, 0)
+  assert.equal(byType['user/message']?.depth, 0)
+  assert.equal(byType['step/start']?.depth, 1)
+  assert.equal(byType['assistant/message']?.depth, 2)
+  assert.equal(byType['tool/call']?.depth, 2)
+  assert.equal(byType['step/end']?.depth, 1)
+  assert.equal(byType['turn/end']?.depth, 0)
+})

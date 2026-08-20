@@ -100,6 +100,9 @@ export interface TrajectoryRow {
   id: string
   seq: number
   turn: number | null
+  step: number | null
+  /** 0=turn 级，1=step 边界，2=step 内事件 */
+  depth: 0 | 1 | 2
   type: SessionEvent['type']
   summary: string
   callId?: string
@@ -107,10 +110,21 @@ export interface TrajectoryRow {
 
 export function projectTrajectory(events: SessionEvent[]): TrajectoryRow[] {
   let turn: number | null = null
+  let step: number | null = null
+  let inStep = false
   const rows: TrajectoryRow[] = []
   for (const event of events) {
-    if (event.type === 'turn/start') turn = event.turn
+    if (event.type === 'turn/start') {
+      turn = event.turn
+      step = null
+      inStep = false
+    }
     if (event.type === 'session/open') continue
+    if (event.type === 'step/start') {
+      step = event.step
+      inStep = true
+    }
+
     let summary: string = event.type
     let callId: string | undefined
     if (event.type === 'user/message' || event.type === 'assistant/message' || event.type === 'assistant/chunk' || event.type === 'system/prompt') {
@@ -126,15 +140,34 @@ export function projectTrajectory(events: SessionEvent[]): TrajectoryRow[] {
     } else if (event.type === 'step/start' || event.type === 'step/end') {
       summary = `step ${event.step}`
     }
+
+    const depth: 0 | 1 | 2 =
+      event.type === 'step/start' || event.type === 'step/end'
+        ? 1
+        : inStep && event.type !== 'turn/end'
+          ? 2
+          : 0
+
     rows.push({
       id: `tr-${event.seq}`,
       seq: event.seq,
       turn,
+      step: event.type === 'step/start' || event.type === 'step/end' || inStep ? step : null,
+      depth,
       type: event.type,
       summary,
       callId,
     })
-    if (event.type === 'turn/end') turn = null
+
+    if (event.type === 'step/end') {
+      inStep = false
+      step = null
+    }
+    if (event.type === 'turn/end') {
+      turn = null
+      step = null
+      inStep = false
+    }
   }
   return rows
 }
