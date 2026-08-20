@@ -166,7 +166,14 @@ export class HttpService extends Service {
         res.end(JSON.stringify({ error: 'not found — 对应插件可能已卸载' }))
         return
       }
-      res.writeHead(404).end('not found')
+      // SPA fallback：前端 History 路由（/s/:id…）回落到 index.html
+      try {
+        const data = await readFile(join(this.config.publicDir, 'index.html'))
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+        res.end(data)
+      } catch {
+        res.writeHead(404).end('not found')
+      }
     }
   }
 }

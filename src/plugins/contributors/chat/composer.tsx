@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 
@@ -7,6 +8,8 @@ export function ChatComposer(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const pending = useSessionView((state) => state.pending)
   const sessionView = props.sessionView as SessionViewService
+  const navigate = useNavigate()
+  const location = useLocation()
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -15,6 +18,8 @@ export function ChatComposer(props: SlotProps) {
     setInput('')
     try {
       await sessionView.send(content, pending ? 'inject' : 'wake')
+      const id = sessionView.get().sessionId
+      if (id && !location.pathname.startsWith(`/s/${id}`)) navigate(`/s/${id}`)
     } catch {
       /* error 已写入 sessionView */
     }

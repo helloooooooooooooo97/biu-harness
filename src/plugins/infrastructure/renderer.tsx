@@ -1,7 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { SlotEvent, type SlotEntry, type SlotKind, type SlotsService } from '../registry/slots.ts'
 
-// 触发响应式更新的入口
 function Outlet({ slots, name, kind }: { slots: SlotsService; name: string; kind?: SlotKind }) {
   useSyncExternalStore(
     (fn) => slots.subscribe(name, SlotEvent.Entries, fn),
@@ -33,6 +33,20 @@ function EntryView({ slots, entry }: { slots: SlotsService; entry: SlotEntry }) 
   )
 }
 
-export function renderRoot(slots: SlotsService): ReactNode {
+function AppShell({ slots }: { slots: SlotsService }) {
   return <Outlet slots={slots} name="root" kind="single" />
+}
+
+export function renderRoot(slots: SlotsService): ReactNode {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<AppShell slots={slots} />} />
+        <Route path="/s/:sessionId" element={<AppShell slots={slots} />} />
+        <Route path="/s/:sessionId/chat" element={<AppShell slots={slots} />} />
+        <Route path="/s/:sessionId/trajectory" element={<AppShell slots={slots} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  )
 }

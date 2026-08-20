@@ -7,6 +7,7 @@ import {
   type SessionEvent,
   type TrajectoryRow,
 } from './session-project.ts'
+import type { AppRoute } from './session-route.ts'
 
 export interface ApprovalItem {
   id: string
@@ -76,6 +77,47 @@ export class SessionViewService extends Service {
 
   inspectCall(callId: string) {
     this.replace({ view: 'trajectory', focusCallId: callId })
+  }
+
+  /** URL → 状态：只由路由层调用，不回写 URL */
+  async applyRoute(route: AppRoute) {
+    if (route.kind === 'home') {
+      if (!this.value.sessionId && this.value.view === 'chat') return
+      this.replace({
+        sessionId: null,
+        events: [],
+        nodes: [],
+        trajectory: [],
+        view: 'chat',
+        focusCallId: undefined,
+        pending: false,
+        agentStatus: 'idle',
+        error: undefined,
+      })
+      return
+    }
+    if (this.value.sessionId !== route.sessionId) {
+      try {
+        await this.load(route.sessionId)
+      } catch (error) {
+        this.replace({
+          error: String(error),
+          sessionId: null,
+          events: [],
+          nodes: [],
+          trajectory: [],
+          view: 'chat',
+          focusCallId: undefined,
+        })
+        throw error
+      }
+    }
+    if (this.value.view !== route.view) {
+      this.replace({
+        view: route.view,
+        focusCallId: route.view === 'chat' ? undefined : this.value.focusCallId,
+      })
+    }
   }
 
   ingest(sessionId: string, event: SessionEvent) {

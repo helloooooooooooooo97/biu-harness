@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
 import type { SlotProps } from '../registry/slots.ts'
 import { bindSnapshot, type Snapshot, type SnapshotService } from '../infrastructure/snapshot.ts'
 import { bindSessionView, type SessionViewService } from '../infrastructure/session-view.ts'
+import { parseAppPath } from '../infrastructure/session-route.ts'
 import { BrandWordmark, FishLogo } from './brand.tsx'
 
 export const name = 'shell'
@@ -12,12 +14,22 @@ function Shell(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
+  const navigate = useNavigate()
+  const location = useLocation()
   const snap = useSnapshot((state: Snapshot) => state)
   const live = snap.plugins.some((plugin) => plugin.enabled)
   const sessions = useSessionView((state) => state.sessions)
   const sessionId = useSessionView((state) => state.sessionId)
   const view = useSessionView((state) => state.view)
   const [settingsOpen, setSettingsOpen] = useState(false)
+
+  // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
+  useEffect(() => {
+    const route = parseAppPath(location.pathname)
+    void sessionView.applyRoute(route).catch(() => {
+      if (location.pathname !== '/') navigate('/', { replace: true })
+    })
+  }, [location.pathname, navigate, sessionView])
 
   useEffect(() => {
     void sessionView.refreshSessions()
@@ -33,7 +45,9 @@ function Shell(props: SlotProps) {
           <button
             type="button"
             className="flex w-full items-center justify-center gap-2 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-2 text-sm font-medium hover:bg-[var(--dsw-business-soft)]"
-            onClick={() => void sessionView.newSession()}
+            onClick={() => {
+              void sessionView.newSession().then((id) => navigate(`/s/${id}`))
+            }}
           >
             <span className="text-lg leading-none">+</span>
             New Session
@@ -46,7 +60,9 @@ function Shell(props: SlotProps) {
               <button
                 type="button"
                 className="text-[11px] text-[var(--dsw-business)] hover:underline"
-                onClick={() => void sessionView.forkCurrent()}
+                onClick={() => {
+                  void sessionView.forkCurrent().then((id) => navigate(`/s/${id}`))
+                }}
               >
                 Fork
               </button>
@@ -64,25 +80,30 @@ function Shell(props: SlotProps) {
                     active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-black/[0.03]'
                   }`}
                 >
-                  <button
-                    type="button"
+                  <Link
+                    to={`/s/${item.id}${view === 'trajectory' ? '/trajectory' : ''}`}
                     className="min-w-0 flex-1 px-3 py-2 text-left text-sm"
-                    onClick={() => void sessionView.load(item.id)}
                   >
                     <div className="truncate font-medium">{item.title}</div>
                     <div className="mt-0.5 font-mono text-[10px] opacity-70">
                       {item.id.slice(0, 8)} · {item.eventCount} events
                     </div>
-                  </button>
+                  </Link>
                   <button
                     type="button"
                     className="shrink-0 px-2 text-[var(--dsw-label-3)] opacity-0 transition-opacity hover:text-[var(--dsw-danger)] group-hover:opacity-100 focus:opacity-100"
                     aria-label={`Delete session ${item.title}`}
                     title="Delete"
                     onClick={(event) => {
+                      event.preventDefault()
                       event.stopPropagation()
                       if (!window.confirm(`Delete session “${item.title}”?`)) return
-                      void sessionView.deleteSession(item.id)
+                      const wasActive = item.id === sessionId
+                      void sessionView.deleteSession(item.id).then(() => {
+                        if (!wasActive) return
+                        const next = sessionView.get().sessionId
+                        navigate(next ? `/s/${next}` : '/')
+                      })
                     }}
                   >
                     <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -120,24 +141,33 @@ function Shell(props: SlotProps) {
 
       <main className="flex min-w-0 flex-col">
         <header className="flex h-12 items-center gap-4 border-b border-[var(--dsw-border)] px-6">
-          <button
-            type="button"
-            className={`relative pb-3 pt-3 text-[13px] font-medium ${view === 'chat' ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`}
-            onClick={() => sessionView.setView('chat')}
+          <NavLink
+            to={sessionId ? `/s/${sessionId}` : '/'}
+            end
+            className={({ isActive }) =>
+              `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
+            }
           >
-            Chat
-            {view === 'chat' ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
-          </button>
-          <button
-            type="button"
-            className={`relative pb-3 pt-3 text-[13px] font-medium ${view === 'trajectory' ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`}
-            onClick={() => sessionView.setView('trajectory')}
+            {({ isActive }) => (
+              <>
+                Chat
+                {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
+              </>
+            )}
+          </NavLink>
+          <NavLink
+            to={sessionId ? `/s/${sessionId}/trajectory` : '/'}
+            className={({ isActive }) =>
+              `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
+            }
           >
-            Trajectory
-            {view === 'trajectory' ? (
-              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" />
-            ) : null}
-          </button>
+            {({ isActive }) => (
+              <>
+                Trajectory
+                {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
+              </>
+            )}
+          </NavLink>
         </header>
         <div
           className={

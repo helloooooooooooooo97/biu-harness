@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import type { ChatNode } from '../../infrastructure/session-project.ts'
@@ -102,10 +103,12 @@ function EmptyHero() {
 export function ChatThread(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
+  const navigate = useNavigate()
   const nodes = useSessionView((state) => state.nodes)
   const pending = useSessionView((state) => state.pending)
   const agentStatus = useSessionView((state) => state.agentStatus)
   const agentStep = useSessionView((state) => state.agentStep)
+  const sessionId = useSessionView((state) => state.sessionId)
   const error = useSessionView((state) => state.error)
 
   if (nodes.length === 0 && !pending) return <EmptyHero />
@@ -120,7 +123,14 @@ export function ChatThread(props: SlotProps) {
         <span>{agentStatus === 'running' ? `Running${agentStep != null ? ` · step ${agentStep}` : ''}` : 'Idle'}</span>
       </div>
       {nodes.map((node) => (
-        <NodeView key={node.id} node={node} onInspect={(callId) => sessionView.inspectCall(callId)} />
+        <NodeView
+          key={node.id}
+          node={node}
+          onInspect={(callId) => {
+            sessionView.inspectCall(callId)
+            if (sessionId) navigate(`/s/${sessionId}/trajectory`)
+          }}
+        />
       ))}
       {error ? (
         <div className="rounded-[12px] bg-red-50 px-3 py-2 text-sm text-[var(--dsw-danger)]">{error}</div>

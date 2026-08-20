@@ -15,6 +15,7 @@
     "cordis": "4.0.0-rc.8",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-router-dom": "^7.18.2",
     "ws": "^8.18.3",
     "zustand": "^5.0.15"
   },
