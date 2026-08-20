@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Service, type Context } from 'cordis'
-import '../../../types.ts'
+import '../../types.ts'
 import { SESSION_FORMAT_VERSION, type SessionRecord, type SessionStore } from '../core/session-types.ts'
 
 export class MemorySessionStore implements SessionStore {

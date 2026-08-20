@@ -67,6 +67,7 @@ export class HttpService extends Service {
         socket.send(JSON.stringify({ type: 'hello', payload: { ok: true } }))
         socket.on('close', () => this.sockets.delete(socket))
       })
+      ctx.on('session/event', (payload) => this.broadcast('session', payload))
       server.listen(config.port, () => {
         ctx.emit('http/ready', { port: config.port })
         ctx.logger('http').info(`listening on http://127.0.0.1:${config.port}`)

@@ -68,7 +68,6 @@ export class SessionsService extends Service {
     record.events.push(event)
     await this.persist(record)
     this.ctx.emit('session/event', { sessionId: id, event })
-    this.ctx.http?.broadcast('session', { sessionId: id, event })
     return event
   }
 

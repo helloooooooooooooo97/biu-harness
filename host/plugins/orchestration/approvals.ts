@@ -42,15 +42,15 @@ export const inject = ['tools', 'http']
 
 export function apply(ctx: Context) {
   const approvals = new ApprovalsService(ctx)
-  ctx.http?.route('GET', '/api/approvals', (route) => {
+  ctx.http.route('GET', '/api/approvals', (route) => {
     route.send(200, { mode: approvals.mode, pending: approvals.list() })
   })
-  ctx.http?.route('POST', '/api/approvals/mode', async (route) => {
+  ctx.http.route('POST', '/api/approvals/mode', async (route) => {
     const payload = (await route.json()) as { mode?: 'auto' | 'hold' }
     if (payload.mode === 'auto' || payload.mode === 'hold') approvals.mode = payload.mode
     route.send(200, { mode: approvals.mode })
   })
-  ctx.http?.route('POST', '/api/approvals/:id', async (route) => {
+  ctx.http.route('POST', '/api/approvals/:id', async (route) => {
     const payload = (await route.json()) as { allow?: boolean }
     try {
       route.send(200, approvals.decide(route.params.id, Boolean(payload.allow)))

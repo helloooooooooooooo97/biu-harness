@@ -33,8 +33,8 @@ export class AgentsService extends Service {
   }
 
   async create(sessionId?: string): Promise<AgentHandle> {
-    const session = sessionId ? await this.ctx.sessions.get(sessionId) : undefined
-    const id = session?.id ?? (await this.ctx.sessions.create()).id
+    const id = sessionId ?? (await this.ctx.sessions.create()).id
+    if (!(await this.ctx.sessions.get(id))) await this.ctx.sessions.create(id)
     const existing = this.lives.get(id)
     if (existing) return existing.handle
 
@@ -59,14 +59,6 @@ export class AgentsService extends Service {
       send: async (text: string) => {
         const trimmed = text.trim()
         if (!trimmed) return { text: '请先输入内容。', steps: [] }
-        if (!this.llm.apiKey) {
-          await this.ctx.sessions.append(id, { type: 'turn/start', turn: 0 })
-          await this.ctx.sessions.append(id, { type: 'user/message', text: trimmed, kind: 'wake' })
-          const echo = `未配置 API Key，本地回声：${trimmed}`
-          await this.ctx.sessions.append(id, { type: 'assistant/message', text: echo })
-          await this.ctx.sessions.append(id, { type: 'turn/end', turn: 0, reason: 'echo' })
-          return { text: echo, steps: [] }
-        }
         live.inbox.push({ kind: 'wake', text: trimmed })
         if (live.running) await live.running
         let result: AgentTurn = { text: '', steps: [] }

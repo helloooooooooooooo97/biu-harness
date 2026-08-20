@@ -1,6 +1,6 @@
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
-import type { LlmClient, LlmConfig } from './llm.ts'
+import type { AssistantReply, LlmClient, LlmConfig } from './llm.ts'
 import type { InboxKind } from '../core/session-types.ts'
 
 export interface AgentTurn {
@@ -37,7 +37,6 @@ export class AgentLoop {
 
     let req: PreStepReq = { sessionId: this.sessionId, messages: claimed }
     req = this.ctx.waterfall('agent/pre-step', req, () => req)
-    this.ctx.emit('agent/pre-step', req)
     if (req.reject) {
       await session.append(this.sessionId, { type: 'turn/end', turn, reason: req.reject })
       this.ctx.emit('agent/status', { status: 'idle' })
@@ -65,7 +64,16 @@ export class AgentLoop {
       await session.append(this.sessionId, { type: 'step/start', turn, step })
 
       const messages = session.deriveMessages(this.sessionId)
-      const reply = await this.llm.chat(messages, this.ctx.tools.schemas(), this.signal)
+      let reply: AssistantReply
+      try {
+        reply = await this.llm.chat(messages, this.ctx.tools.schemas(), this.signal)
+      } catch (error) {
+        if (this.signal.aborted) {
+          await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'cancelled' })
+          throw new Error('cancelled')
+        }
+        throw error
+      }
       if (reply.content) {
         await session.append(this.sessionId, { type: 'assistant/chunk', text: reply.content })
       }
@@ -120,7 +128,15 @@ export class AgentLoopService extends Service {
   }
 
   create(config: LlmConfig, sessionId: string, signal: AbortSignal) {
-    return new AgentLoop(this.ctx, this.ctx.llm.forConfig(config), sessionId, signal)
+    const llm = config.apiKey
+      ? this.ctx.llm.forConfig(config)
+      : {
+          chat: async (messages) => {
+            const last = [...messages].reverse().find((item) => item.role === 'user')?.content
+            return { content: `未配置 API Key，本地回声：${last ?? ''}`, toolCalls: [] }
+          },
+        }
+    return new AgentLoop(this.ctx, llm, sessionId, signal)
   }
 }
 

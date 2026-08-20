@@ -21,6 +21,8 @@ export interface Snapshot {
   tools?: string[]
   services: string[]
   clockIso?: string
+  lastSessionId?: string
+  lastSessionEvent?: string
 }
 
 const empty: Snapshot = { seq: 0, plugins: [], pages: [], routes: [], events: [], services: [] }
@@ -79,6 +81,10 @@ export class SnapshotService extends Service {
           })
         }
         if (parsed.type === 'clock') this.replace({ clockIso: (parsed.payload as { iso: string }).iso })
+        if (parsed.type === 'session') {
+          const detail = parsed.payload as { sessionId?: string; event?: { type: string; text?: string } }
+          this.replace({ lastSessionId: detail.sessionId, lastSessionEvent: detail.event?.type })
+        }
       }
       ws.onclose = () => {
         if (import.meta.env.MODE === 'test') return

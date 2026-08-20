@@ -17,7 +17,7 @@ export class TerminalService extends Service {
 
   open() {
     const id = crypto.randomUUID().slice(0, 8)
-    const child = spawn('/bin/sh', ['-i'], {
+    const child = spawn('/bin/sh', [], {
       cwd: this.ctx.sandbox.wrap({ argv: ['/bin/sh'] }).cwd,
       env: this.ctx.sandbox.wrap({ argv: ['/bin/sh'] }).env,
       stdio: ['pipe', 'pipe', 'pipe'],

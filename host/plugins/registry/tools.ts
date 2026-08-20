@@ -64,7 +64,6 @@ export class ToolsService extends Service {
     let req: ToolRequest = { name, args }
     for (const guard of this.guards) req = await guard(req)
     req = this.ctx.waterfall('tools/pre-execute', req, () => req)
-    this.ctx.emit('tools/pre-execute', req)
     if (req.deny) {
       this.ctx.emit('tools/post-execute', { name, ok: false, detail: req.deny })
       throw new Error(req.deny)

@@ -77,3 +77,53 @@ test('missing tool is a step failure, not a crash', async () => {
   assert.match(turn.steps[0]?.detail ?? '', /unknown tool: gone/)
   assert.equal(turn.text, '没有这个工具')
 })
+
+test('cancelled signal stops the turn', async () => {
+  const { ctx, sessionId } = await spine()
+  const abort = new AbortController()
+  const llm: LlmClient = {
+    chat: async () => {
+      abort.abort()
+      throw new DOMException('aborted', 'AbortError')
+    },
+  }
+  const loop = new AgentLoop(ctx, llm, sessionId, abort.signal)
+  await assert.rejects(() => loop.run([{ kind: 'wake', text: 'x' }]), /cancelled|AbortError|aborted/i)
+})
+
+test('pre-step reject writes a turn with no step', async () => {
+  const { ctx, sessionId } = await spine()
+  ctx.on('agent/pre-step', (req, next) => ({ ...next(), reject: 'blocked' }))
+  const loop = new AgentLoop(ctx, new ScriptedLlm([{ content: 'no', toolCalls: [] }]), sessionId, new AbortController().signal)
+  const turn = await loop.run([{ kind: 'wake', text: 'x' }])
+  assert.equal(turn.text, 'blocked')
+  const types = (await ctx.sessions.require(sessionId)).events.map((item) => item.type)
+  assert.equal(types.includes('step/start'), false)
+  assert.equal(types.includes('turn/end'), true)
+})
+
+test('inject is admitted in the same turn as the wake', async () => {
+  const { ctx, sessionId } = await spine()
+  const loop = new AgentLoop(ctx, new ScriptedLlm([{ content: 'ok', toolCalls: [] }]), sessionId, new AbortController().signal)
+  await loop.run([
+    { kind: 'inject', text: 'note' },
+    { kind: 'wake', text: 'hi' },
+  ])
+  const users = ctx.sessions.deriveMessages(sessionId).filter((item) => item.role === 'user').map((item) => item.content)
+  assert.deepEqual(users, ['note', 'hi'])
+})
+
+test('abort closes the turn as cancelled', async () => {
+  const { ctx, sessionId } = await spine()
+  const ac = new AbortController()
+  const llm: LlmClient = {
+    async chat() {
+      ac.abort()
+      throw new DOMException('aborted', 'AbortError')
+    },
+  }
+  const loop = new AgentLoop(ctx, llm, sessionId, ac.signal)
+  await assert.rejects(() => loop.run([{ kind: 'wake', text: 'x' }]), /cancelled/)
+  const types = (await ctx.sessions.require(sessionId)).events.map((item) => item.type)
+  assert.equal(types.includes('turn/end'), true)
+})

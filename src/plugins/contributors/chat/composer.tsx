@@ -15,12 +15,21 @@ export function ChatComposer(_props: SlotProps) {
     store.pushMessage({ role: 'user', content })
     store.setPending(true)
     try {
+      let sessionId = store.sessionId
+      if (!sessionId) {
+        const created = await fetch('/api/sessions', { method: 'POST' })
+        const body = (await created.json()) as { id?: string }
+        if (!body.id) throw new Error('无法创建 session')
+        sessionId = body.id
+        useChatStore.getState().setSessionId(sessionId)
+      }
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ messages: useChatStore.getState().messages }),
+        body: JSON.stringify({ sessionId, text: content }),
       })
       const data = await res.json()
+      if (data.sessionId) useChatStore.getState().setSessionId(data.sessionId)
       useChatStore.getState().pushMessage({ role: 'assistant', content: data.text || data.error || '请求失败' })
     } catch (error) {
       useChatStore.getState().pushMessage({ role: 'assistant', content: String(error) })
