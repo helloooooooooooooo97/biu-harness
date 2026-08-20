@@ -6,13 +6,14 @@ import * as slots from '../registry/slots.ts'
 import * as snapshot from '../infrastructure/snapshot.ts'
 import * as shell from './shell.tsx'
 
-test('declares sidebar, stage, composer, log, routes', async () => {
+test('declares dsh-like sidebar, demos, dock, stage, composer', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
   await ctx.plugin(snapshot)
   await ctx.plugin(shell)
   assert.equal(ctx.slots.specOf('sidebar')?.kind, 'single')
-  assert.equal(ctx.slots.specOf('rail')?.kind, 'list')
+  assert.equal(ctx.slots.specOf('demos')?.kind, 'list')
+  assert.equal(ctx.slots.specOf('dock')?.kind, 'list')
   assert.equal(ctx.slots.specOf('stage')?.kind, 'list')
   assert.equal(ctx.slots.specOf('composer')?.kind, 'single')
   assert.equal(ctx.slots.specOf('settings')?.kind, 'list')

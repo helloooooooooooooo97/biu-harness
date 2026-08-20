@@ -21,44 +21,49 @@ export function ChatComposer(props: SlotProps) {
   }
 
   return (
-    <div className="space-y-2">
-      <form
-        className="flex items-end gap-2 rounded-[28px] border border-[#3c4043] bg-[#2d2e30] px-4 py-2 shadow-lg"
-        onSubmit={onSubmit}
-      >
-        <textarea
-          className="max-h-40 min-h-11 flex-1 resize-none bg-transparent py-2.5 text-sm text-[#e8eaed] outline-none placeholder:text-[#9aa0a6]"
-          value={input}
-          rows={1}
-          disabled={pending}
-          placeholder="发给助手（写入 session，经 agents 驱动）…"
-          aria-label="对话输入"
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-              event.preventDefault()
-              event.currentTarget.form?.requestSubmit()
-            }
-          }}
-        />
+    <form
+      className="mx-auto w-full max-w-[calc(var(--dsw-chat-width)+32px)] border border-[var(--dsw-border)] bg-[var(--dsw-input)]"
+      style={{ borderRadius: 'var(--dsw-radius-bubble)', boxShadow: 'var(--dsw-shadow-lv2)' }}
+      onSubmit={onSubmit}
+    >
+      <textarea
+        className="max-h-40 min-h-[52px] w-full resize-none bg-transparent px-4 pt-3.5 pb-2 text-[15px] text-[var(--dsw-label)] outline-none placeholder:text-[var(--dsw-label-3)]"
+        value={input}
+        rows={1}
+        disabled={pending}
+        placeholder="Message DeepSeek Harness…"
+        aria-label="对话输入"
+        onChange={(event) => setInput(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault()
+            event.currentTarget.form?.requestSubmit()
+          }
+        }}
+      />
+      <div className="flex items-center justify-end gap-2 px-3 pb-3">
         {pending ? (
           <button
-            className="mb-0.5 rounded-full border border-[#5f6368] px-3 py-2 text-xs text-[#e8eaed] hover:bg-[#3c4043]"
+            className="rounded-full border border-[var(--dsw-border)] px-3 py-1.5 text-xs text-[var(--dsw-label-2)] hover:bg-black/5"
             type="button"
             onClick={() => void sessionView.cancel()}
           >
-            取消
+            Cancel
           </button>
         ) : (
           <button
-            className="mb-0.5 rounded-full bg-[#4d6bfe] px-3 py-2 text-xs font-medium text-white hover:bg-[#6280ff] disabled:opacity-50"
+            className="grid size-8 place-items-center rounded-full text-white disabled:opacity-40"
+            style={{ background: 'var(--dsw-business)' }}
             type="submit"
             disabled={!input.trim()}
+            aria-label="Send"
           >
-            发送
+            <svg viewBox="0 0 24 24" className="size-4" fill="currentColor">
+              <path d="M3.4 20.6 21 12 3.4 3.4 3 10.3 15 12 3 13.7z" />
+            </svg>
           </button>
         )}
-      </form>
-    </div>
+      </div>
+    </form>
   )
 }

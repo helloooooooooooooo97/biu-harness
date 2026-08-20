@@ -15,8 +15,9 @@
 9. **MCP / terminal 可编排面** — list/call/addStdio/remove；terminal open/write/read/close。
 10. **Web：session/event 投影对话** — 浏览器不持能力；线程从 append-only 日志投影 user / assistant / tool 节点。
 11. **Web：agents 驱动输入** — 发送走 `/api/sessions/:id/messages`，可取消；WS 收 `session` / `agent` / `approval`。
-12. **Web：审批可观察** — hold 待批出现在 rail，允许/拒绝回调 host。
+12. **Web：审批可观察** — hold 待批出现在 composer dock，允许/拒绝回调 host。
+13. **Web 壳对标 dsh 观感** — 左栏 Wordmark+HARNESS / New Session；中栏 Chat hero + 浅蓝气泡 + 胶囊 composer；演示插件进 Settings modal（对照官方 `ui-layout` / `ui-sidebar` / `ui-conversation`，不搬整包）。
 
 ## 刻意不吸收
 
-多层 profile/bundle/patch、巨型 ToolRuntime、符号后门调度、仓库级 verify 矩阵、完整 ConversationNode 引擎 / `__DSH_BOOT__` 动态 client 包。扩展继续用薄 Service + 单测证明。
+多层 profile/bundle/patch、巨型 ToolRuntime、符号后门调度、仓库级 verify 矩阵、完整 ConversationNode 引擎 / `__DSH_BOOT__` 动态 client 包 / Trajectory 虚表。扩展继续用薄 Service + 单测证明。

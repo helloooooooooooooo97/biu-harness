@@ -6,13 +6,13 @@ export const inject = ['slots']
 
 function QuotesCard(_props: SlotProps) {
   return (
-    <article className="space-y-2 rounded-2xl bg-[#2d2e30] px-3 py-3">
-      <h2 className="mb-1 text-sm font-medium">旁白</h2>
-      <p className="text-sm leading-6 text-[#9aa0a6]">打开后再写便签，会经过 notes/filter。</p>
+    <article className="space-y-2 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-3">
+      <h2 className="mb-1 text-sm font-medium">Quotes demo</h2>
+      <p className="text-sm leading-6 text-[var(--dsw-label-3)]">When enabled, notes pass through notes/filter.</p>
     </article>
   )
 }
 
 export function apply(ctx: Context) {
-  ctx.slots.place('rail', QuotesCard, { key: 'quotes', order: 25 })
+  ctx.slots.place('demos', QuotesCard, { key: 'quotes', order: 25 })
 }

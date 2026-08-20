@@ -6,37 +6,34 @@ export function ApprovalsRail(props: SlotProps) {
   const sessionView = props.sessionView as SessionViewService
   const approvals = useSessionView((state) => state.approvals)
 
-  if (!approvals.length) {
-    return (
-      <div className="rounded-xl border border-[#3c4043] bg-[#18191a] p-3 text-xs text-[#9aa0a6]">
-        无待审批工具。hold 模式下敏感工具会出现在这里。
-      </div>
-    )
-  }
+  if (!approvals.length) return null
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-xs font-semibold tracking-widest text-[#9aa0a6] uppercase">审批</h3>
+    <div className="mx-auto w-full max-w-[calc(var(--dsw-chat-width)+32px)] space-y-2">
       {approvals.map((item) => (
-        <div key={item.id} className="rounded-xl border border-[#5b4636] bg-[#2a2118] p-3 text-xs text-[#e8eaed]">
-          <div className="mb-1 font-medium">{item.name}</div>
-          <pre className="mb-2 max-h-24 overflow-auto whitespace-pre-wrap text-[#c4c7c5]">
+        <div
+          key={item.id}
+          className="rounded-[12px] border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-[var(--dsw-label)]"
+        >
+          <div className="mb-1 font-medium">Approval · {item.name}</div>
+          <pre className="mb-2 max-h-20 overflow-auto whitespace-pre-wrap text-[var(--dsw-label-2)]">
             {JSON.stringify(item.args, null, 2)}
           </pre>
           <div className="flex gap-2">
             <button
               type="button"
-              className="rounded-full bg-[#4d6bfe] px-3 py-1 text-[11px] text-white"
+              className="rounded-full px-3 py-1 text-[11px] text-white"
+              style={{ background: 'var(--dsw-business)' }}
               onClick={() => void sessionView.decideApproval(item.id, true)}
             >
-              允许
+              Allow
             </button>
             <button
               type="button"
-              className="rounded-full border border-[#5f6368] px-3 py-1 text-[11px]"
+              className="rounded-full border border-[var(--dsw-border)] px-3 py-1 text-[11px]"
               onClick={() => void sessionView.decideApproval(item.id, false)}
             >
-              拒绝
+              Deny
             </button>
           </div>
         </div>

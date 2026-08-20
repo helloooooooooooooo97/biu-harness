@@ -14,6 +14,7 @@ test('boots into #app', async () => {
   await act(async () => {
     await import('./main.tsx')
   })
-  assert.match(document.body.innerHTML, /hmr-dev/)
-  assert.match(document.body.innerHTML, /设置/)
+  assert.match(document.body.innerHTML, /deepseek/i)
+  assert.match(document.body.innerHTML, /HARNESS/)
+  assert.match(document.body.innerHTML, /Settings|New Session/)
 })
