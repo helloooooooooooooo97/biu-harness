@@ -21,7 +21,30 @@ test('append-only log projects model history; version is 1', async () => {
   assert.deepEqual(deriveMessages((await ctx.sessions.require(record.id)).events), [
     { role: 'system', content: 'sys' },
     { role: 'user', content: 'hi' },
-    { role: 'assistant', content: 'yo', tool_calls: undefined },
+    { role: 'assistant', content: 'yo' },
+  ])
+})
+
+test('tool_calls assistant uses null content for API history', async () => {
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  const record = await ctx.sessions.create()
+  await ctx.sessions.append(record.id, { type: 'user/message', text: 'run', kind: 'wake' })
+  await ctx.sessions.append(record.id, {
+    type: 'assistant/message',
+    text: '',
+    tool_calls: [{ id: '1', name: 'clock_now', arguments: '{}' }],
+  })
+  await ctx.sessions.append(record.id, { type: 'tool/result', id: '1', name: 'clock_now', ok: true, detail: 'now' })
+  assert.deepEqual(deriveMessages((await ctx.sessions.require(record.id)).events), [
+    { role: 'user', content: 'run' },
+    {
+      role: 'assistant',
+      content: null,
+      tool_calls: [{ id: '1', type: 'function', function: { name: 'clock_now', arguments: '{}' } }],
+    },
+    { role: 'tool', tool_call_id: '1', content: 'now' },
   ])
 })
 

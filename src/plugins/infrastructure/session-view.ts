@@ -137,8 +137,12 @@ export class SessionViewService extends Service {
   }
 
   setAgentStatus(status: 'idle' | 'running', step?: number) {
-    this.replace({ agentStatus: status, agentStep: step, pending: status === 'running' || this.value.pending })
-    if (status === 'idle') this.replace({ pending: false })
+    // pending 由 send()/cancel() 拥有；WS 的 idle 不能提前清掉，否则会像「agent 没响应」
+    if (status === 'running') {
+      this.replace({ agentStatus: 'running', agentStep: step, pending: true })
+      return
+    }
+    this.replace({ agentStatus: 'idle', agentStep: step })
   }
 
   upsertApproval(item: ApprovalItem) {
@@ -284,11 +288,19 @@ export class SessionViewService extends Service {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ text: content }),
       })
-      const data = (await res.json()) as { error?: string; sessionId?: string }
+      const data = (await res.json()) as { error?: string; sessionId?: string; text?: string }
       if (!res.ok) throw new Error(data.error || `发送失败：${res.status}`)
       if (data.sessionId && data.sessionId !== sessionId) await this.load(data.sessionId)
       else await this.load(sessionId)
+      if (typeof data.text === 'string' && data.text.startsWith('模型调用失败：')) {
+        this.replace({ error: data.text })
+      }
     } catch (error) {
+      try {
+        await this.load(sessionId)
+      } catch {
+        /* 加载失败时仍展示下方 error */
+      }
       this.replace({ error: String(error), pending: false, agentStatus: 'idle' })
       throw error
     } finally {
