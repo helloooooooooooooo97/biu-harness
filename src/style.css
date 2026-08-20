@@ -98,6 +98,81 @@ body {
   background: radial-gradient(ellipse at center, rgba(65, 118, 230, 0.16), transparent 70%);
 }
 
+/* App shell — module rail + optional agent session sidebar */
+.app-shell {
+  display: grid;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--dsw-bg);
+  color: var(--dsw-label);
+}
+
+.app-shell-agent {
+  grid-template-columns: 72px 280px minmax(0, 1fr);
+}
+
+.app-shell-module {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.app-module-rail {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  border-right: 1px solid var(--dsw-border);
+  background: #f3f4f6;
+  padding: 12px 8px;
+}
+
+.app-module-brand {
+  display: grid;
+  height: 40px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--dsw-label);
+}
+
+.app-module-brand:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.app-module-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.app-module-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border-radius: 12px;
+  padding: 10px 4px 8px;
+  color: var(--dsw-label-3);
+  text-decoration: none;
+}
+
+.app-module-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--dsw-label-2);
+}
+
+.app-module-item.is-active {
+  background: var(--dsw-business-soft);
+  color: var(--dsw-business);
+}
+
+.app-module-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
 /* Trajectory — compact profiler-style ledger (full bleed, no outer card) */
 .traj-root {
   display: flex;

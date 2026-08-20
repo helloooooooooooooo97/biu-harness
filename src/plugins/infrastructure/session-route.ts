@@ -1,12 +1,14 @@
-/** `/` | `/s/:id` | `/s/:id/trajectory`（`/chat` 可省略） */
+/** `/` | `/s/:id` | `/s/:id/trajectory` | `/workspace` */
 export type RouteView = 'chat' | 'trajectory'
 
 export type AppRoute =
   | { kind: 'home' }
   | { kind: 'session'; sessionId: string; view: RouteView }
+  | { kind: 'module'; moduleId: 'workspace' }
 
 export function parseAppPath(pathname: string): AppRoute {
   const path = normalizePath(pathname)
+  if (path === '/workspace') return { kind: 'module', moduleId: 'workspace' }
   if (path === '/') return { kind: 'home' }
   const match = path.match(/^\/s\/([^/]+)(?:\/(chat|trajectory))?$/)
   if (!match?.[1]) return { kind: 'home' }
@@ -19,6 +21,7 @@ export function parseAppPath(pathname: string): AppRoute {
 
 export function buildAppPath(route: AppRoute): string {
   if (route.kind === 'home') return '/'
+  if (route.kind === 'module') return route.moduleId === 'workspace' ? '/workspace' : '/'
   if (route.view === 'trajectory') return `/s/${encodeURIComponent(route.sessionId)}/trajectory`
   return `/s/${encodeURIComponent(route.sessionId)}`
 }

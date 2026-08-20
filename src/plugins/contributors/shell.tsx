@@ -5,10 +5,74 @@ import type { SlotProps } from '../registry/slots.ts'
 import { bindSnapshot, type Snapshot, type SnapshotService } from '../infrastructure/snapshot.ts'
 import { bindSessionView, type SessionViewService } from '../infrastructure/session-view.ts'
 import { parseAppPath } from '../infrastructure/session-route.ts'
+import {
+  APP_MODULES,
+  moduleIdFromPath,
+  type AppModuleId,
+} from '../infrastructure/app-modules.ts'
 import { BrandWordmark, FishLogo } from './brand.tsx'
 
 export const name = 'shell'
 export const inject = ['slots', 'snapshot', 'sessionView']
+
+function ModuleIcon({ id }: { id: AppModuleId }) {
+  if (id === 'workspace') {
+    return (
+      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 7.5h16M4 12h16M4 16.5h10" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 4.5h10a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2z" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 9h8M8 13h5M7 5h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3.5L9 19v-3H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"
+      />
+    </svg>
+  )
+}
+
+function ModuleRail({ active, agentHref }: { active: AppModuleId; agentHref: string }) {
+  return (
+    <nav className="app-module-rail" aria-label="App modules">
+      <Link to={agentHref} className="app-module-brand" title="HARNESS" aria-label="Home">
+        <FishLogo size={20} />
+      </Link>
+      <div className="app-module-list">
+        {APP_MODULES.map((module) => {
+          const to = module.id === 'agent' ? agentHref : module.path
+          const isActive = module.id === active
+          return (
+            <Link
+              key={module.id}
+              to={to}
+              className={`app-module-item${isActive ? ' is-active' : ''}`}
+              title={module.description}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              <ModuleIcon id={module.id} />
+              <span className="app-module-label">{module.label}</span>
+            </Link>
+          )
+        })}
+      </div>
+    </nav>
+  )
+}
+
+function WorkspaceModule() {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
+      <h1 className="text-xl font-semibold tracking-tight text-[var(--dsw-label)]">Workspace</h1>
+      <p className="max-w-md text-sm leading-6 text-[var(--dsw-label-3)]">
+        占位模块：后续可挂项目文件、上下文与其它工作台能力。左侧模块轨里，Agent 只是其中一个入口。
+      </p>
+    </div>
+  )
+}
 
 function Shell(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
@@ -22,6 +86,8 @@ function Shell(props: SlotProps) {
   const sessionId = useSessionView((state) => state.sessionId)
   const view = useSessionView((state) => state.view)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const activeModule = moduleIdFromPath(location.pathname)
+  const agentHref = sessionId ? `/s/${sessionId}${view === 'trajectory' ? '/trajectory' : ''}` : '/'
 
   // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
   useEffect(() => {
@@ -36,162 +102,178 @@ function Shell(props: SlotProps) {
   }, [sessionView])
 
   return (
-    <div className="grid h-screen grid-cols-[280px_minmax(0,1fr)] overflow-hidden bg-[var(--dsw-bg)] text-[var(--dsw-label)]">
-      <aside className="flex min-h-0 flex-col overflow-hidden border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
-        <div className="flex shrink-0 items-center justify-between px-4 pt-4 pb-3">
-          <BrandWordmark />
-        </div>
-        <div className="shrink-0 px-3 pb-3">
-          <button
-            type="button"
-            className="flex w-full items-center justify-center gap-2 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-2 text-sm font-medium hover:bg-[var(--dsw-business-soft)]"
-            onClick={() => {
-              void sessionView.newSession().then((id) => navigate(`/s/${id}`))
-            }}
-          >
-            <span className="text-lg leading-none">+</span>
-            New Session
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3">
-          <div className="mb-2 flex items-center justify-between px-1">
-            <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Sessions</span>
-            {sessionId ? (
-              <button
-                type="button"
-                className="text-[11px] text-[var(--dsw-business)] hover:underline"
-                onClick={() => {
-                  void sessionView.forkCurrent().then((id) => navigate(`/s/${id}`))
-                }}
-              >
-                Fork
-              </button>
-            ) : null}
+    <div
+      className={`app-shell${activeModule === 'agent' ? ' app-shell-agent' : ' app-shell-module'}`}
+    >
+      <ModuleRail active={activeModule} agentHref={agentHref} />
+
+      {activeModule === 'agent' ? (
+        <aside className="flex min-h-0 flex-col overflow-hidden border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
+          <div className="flex shrink-0 flex-col gap-2 px-4 pt-4 pb-2">
+            <BrandWordmark />
+            <div>
+              <div className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Module</div>
+              <div className="mt-0.5 text-[15px] font-semibold tracking-tight">Agent</div>
+            </div>
           </div>
-          {sessions.length === 0 ? (
-            <p className="px-1 text-[11px] leading-4 text-[var(--dsw-label-3)]">No sessions yet. Send a message or create one.</p>
-          ) : (
-            sessions.map((item) => {
-              const active = item.id === sessionId
-              return (
-                <div
-                  key={item.id}
-                  className={`group mb-1 flex w-full items-stretch rounded-[12px] ${
-                    active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-black/[0.03]'
-                  }`}
+          <div className="shrink-0 px-3 pb-3">
+            <button
+              type="button"
+              className="flex w-full items-center justify-center gap-2 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-2 text-sm font-medium hover:bg-[var(--dsw-business-soft)]"
+              onClick={() => {
+                void sessionView.newSession().then((id) => navigate(`/s/${id}`))
+              }}
+            >
+              <span className="text-lg leading-none">+</span>
+              New Session
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3">
+            <div className="mb-2 flex items-center justify-between px-1">
+              <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Sessions</span>
+              {sessionId ? (
+                <button
+                  type="button"
+                  className="text-[11px] text-[var(--dsw-business)] hover:underline"
+                  onClick={() => {
+                    void sessionView.forkCurrent().then((id) => navigate(`/s/${id}`))
+                  }}
                 >
-                  <Link
-                    to={`/s/${item.id}${view === 'trajectory' ? '/trajectory' : ''}`}
-                    className="min-w-0 flex-1 px-3 py-2 text-left text-sm"
+                  Fork
+                </button>
+              ) : null}
+            </div>
+            {sessions.length === 0 ? (
+              <p className="px-1 text-[11px] leading-4 text-[var(--dsw-label-3)]">No sessions yet. Send a message or create one.</p>
+            ) : (
+              sessions.map((item) => {
+                const active = item.id === sessionId
+                return (
+                  <div
+                    key={item.id}
+                    className={`group mb-1 flex w-full items-stretch rounded-[12px] ${
+                      active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-black/[0.03]'
+                    }`}
                   >
-                    <div className="truncate font-medium">{item.title}</div>
-                    <div className="mt-0.5 font-mono text-[10px] opacity-70">
-                      {item.id.slice(0, 8)} · {item.eventCount} events
-                    </div>
-                  </Link>
-                  <button
-                    type="button"
-                    className="shrink-0 px-2 text-[var(--dsw-label-3)] opacity-0 transition-opacity hover:text-[var(--dsw-danger)] group-hover:opacity-100 focus:opacity-100"
-                    aria-label={`Delete session ${item.title}`}
-                    title="Delete"
-                    onClick={(event) => {
-                      event.preventDefault()
-                      event.stopPropagation()
-                      if (!window.confirm(`Delete session “${item.title}”?`)) return
-                      const wasActive = item.id === sessionId
-                      void sessionView.deleteSession(item.id).then(() => {
-                        if (!wasActive) return
-                        const next = sessionView.get().sessionId
-                        navigate(next ? `/s/${next}` : '/')
-                      })
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M10 7V5h4v2m-6 3v8m4-8v8m-7-11 1 14h10l1-14" />
-                    </svg>
-                  </button>
-                </div>
-              )
-            })
-          )}
-        </div>
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-[var(--dsw-border)] px-3 py-3">
-          <span
-            className={`rounded-full px-2 py-0.5 text-[11px] ${live ? 'bg-emerald-50 text-emerald-700' : 'bg-black/5 text-[var(--dsw-label-3)]'}`}
-          >
-            {live ? 'Live' : 'Connecting'}
-          </span>
-          <button
-            type="button"
-            className="grid size-9 place-items-center rounded-full text-[var(--dsw-label-2)] hover:bg-black/5"
-            aria-label="Settings"
-            onClick={() => setSettingsOpen(true)}
-          >
-            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M10.3 3.2a1.8 1.8 0 0 1 3.4 0l.2 1a1.8 1.8 0 0 0 2.5 1.1l.9-.5a1.8 1.8 0 0 1 2.5 2.5l-.5.9a1.8 1.8 0 0 0 1.1 2.5l1 .2a1.8 1.8 0 0 1 0 3.4l-1 .2a1.8 1.8 0 0 0-1.1 2.5l.5.9a1.8 1.8 0 0 1-2.5 2.5l-.9-.5a1.8 1.8 0 0 0-2.5 1.1l-.2 1a1.8 1.8 0 0 1-3.4 0l-.2-1a1.8 1.8 0 0 0-2.5-1.1l-.9.5a1.8 1.8 0 0 1-2.5-2.5l.5-.9a1.8 1.8 0 0 0-1.1-2.5l-1-.2a1.8 1.8 0 0 1 0-3.4l1-.2a1.8 1.8 0 0 0 1.1-2.5l-.5-.9a1.8 1.8 0 0 1 2.5-2.5l.9.5a1.8 1.8 0 0 0 2.5-1.1z"
-              />
-              <circle cx="12" cy="12" r="2.4" />
-            </svg>
-          </button>
-        </div>
-      </aside>
+                    <Link
+                      to={`/s/${item.id}${view === 'trajectory' ? '/trajectory' : ''}`}
+                      className="min-w-0 flex-1 px-3 py-2 text-left text-sm"
+                    >
+                      <div className="truncate font-medium">{item.title}</div>
+                      <div className="mt-0.5 font-mono text-[10px] opacity-70">
+                        {item.id.slice(0, 8)} · {item.eventCount} events
+                      </div>
+                    </Link>
+                    <button
+                      type="button"
+                      className="shrink-0 px-2 text-[var(--dsw-label-3)] opacity-0 transition-opacity hover:text-[var(--dsw-danger)] group-hover:opacity-100 focus:opacity-100"
+                      aria-label={`Delete session ${item.title}`}
+                      title="Delete"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        if (!window.confirm(`Delete session “${item.title}”?`)) return
+                        const wasActive = item.id === sessionId
+                        void sessionView.deleteSession(item.id).then(() => {
+                          if (!wasActive) return
+                          const next = sessionView.get().sessionId
+                          navigate(next ? `/s/${next}` : '/')
+                        })
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M10 7V5h4v2m-6 3v8m4-8v8m-7-11 1 14h10l1-14" />
+                      </svg>
+                    </button>
+                  </div>
+                )
+              })
+            )}
+          </div>
+          <div className="flex shrink-0 items-center justify-between gap-2 border-t border-[var(--dsw-border)] px-3 py-3">
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] ${live ? 'bg-emerald-50 text-emerald-700' : 'bg-black/5 text-[var(--dsw-label-3)]'}`}
+            >
+              {live ? 'Live' : 'Connecting'}
+            </span>
+            <button
+              type="button"
+              className="grid size-9 place-items-center rounded-full text-[var(--dsw-label-2)] hover:bg-black/5"
+              aria-label="Settings"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M10.3 3.2a1.8 1.8 0 0 1 3.4 0l.2 1a1.8 1.8 0 0 0 2.5 1.1l.9-.5a1.8 1.8 0 0 1 2.5 2.5l-.5.9a1.8 1.8 0 0 0 1.1 2.5l1 .2a1.8 1.8 0 0 1 0 3.4l-1 .2a1.8 1.8 0 0 0-1.1 2.5l.5.9a1.8 1.8 0 0 1-2.5 2.5l-.9-.5a1.8 1.8 0 0 0-2.5 1.1l-.2 1a1.8 1.8 0 0 1-3.4 0l-.2-1a1.8 1.8 0 0 0-2.5-1.1l-.9.5a1.8 1.8 0 0 1-2.5-2.5l.5-.9a1.8 1.8 0 0 0-1.1-2.5l-1-.2a1.8 1.8 0 0 1 0-3.4l1-.2a1.8 1.8 0 0 0 1.1-2.5l-.5-.9a1.8 1.8 0 0 1 2.5-2.5l.9.5a1.8 1.8 0 0 0 2.5-1.1z"
+                />
+                <circle cx="12" cy="12" r="2.4" />
+              </svg>
+            </button>
+          </div>
+        </aside>
+      ) : null}
 
       <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-        <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[var(--dsw-border)] px-6">
-          <NavLink
-            to={sessionId ? `/s/${sessionId}` : '/'}
-            end
-            className={({ isActive }) =>
-              `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                Chat
-                {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
-              </>
-            )}
-          </NavLink>
-          <NavLink
-            to={sessionId ? `/s/${sessionId}/trajectory` : '/'}
-            className={({ isActive }) =>
-              `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                Trajectory
-                {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
-              </>
-            )}
-          </NavLink>
-        </header>
-        <div
-          className={
-            view === 'chat'
-              ? 'mx-auto flex min-h-0 w-full max-w-[calc(var(--dsw-chat-width)+32px)] flex-1 flex-col overflow-hidden px-4 pb-4'
-              : 'flex min-h-0 w-full flex-1 flex-col overflow-hidden'
-          }
-        >
-          <div
-            className={
-              view === 'chat'
-                ? 'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain py-4'
-                : 'flex min-h-0 flex-1 flex-col overflow-hidden'
-            }
-          >
-            {view === 'chat' ? props.renderSlot('stage') : props.renderSlot('trajectory')}
-          </div>
-          {view === 'chat' ? (
-            <div className="shrink-0 space-y-2 bg-[var(--dsw-bg)] pt-1 pb-3">
-              {props.renderSlot('dock')}
-              {props.renderSlot('composer')}
+        {activeModule === 'agent' ? (
+          <>
+            <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[var(--dsw-border)] px-6">
+              <NavLink
+                to={sessionId ? `/s/${sessionId}` : '/'}
+                end
+                className={({ isActive }) =>
+                  `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    Chat
+                    {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
+                  </>
+                )}
+              </NavLink>
+              <NavLink
+                to={sessionId ? `/s/${sessionId}/trajectory` : '/'}
+                className={({ isActive }) =>
+                  `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    Trajectory
+                    {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
+                  </>
+                )}
+              </NavLink>
+            </header>
+            <div
+              className={
+                view === 'chat'
+                  ? 'mx-auto flex min-h-0 w-full max-w-[calc(var(--dsw-chat-width)+32px)] flex-1 flex-col overflow-hidden px-4 pb-4'
+                  : 'flex min-h-0 w-full flex-1 flex-col overflow-hidden'
+              }
+            >
+              <div
+                className={
+                  view === 'chat'
+                    ? 'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain py-4'
+                    : 'flex min-h-0 flex-1 flex-col overflow-hidden'
+                }
+              >
+                {view === 'chat' ? props.renderSlot('stage') : props.renderSlot('trajectory')}
+              </div>
+              {view === 'chat' ? (
+                <div className="shrink-0 space-y-2 bg-[var(--dsw-bg)] pt-1 pb-3">
+                  {props.renderSlot('dock')}
+                  {props.renderSlot('composer')}
+                </div>
+              ) : null}
             </div>
-          ) : null}
-        </div>
+          </>
+        ) : (
+          <WorkspaceModule />
+        )}
       </main>
 
       <div

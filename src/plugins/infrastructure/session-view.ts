@@ -81,6 +81,10 @@ export class SessionViewService extends Service {
 
   /** URL → 状态：只由路由层调用，不回写 URL */
   async applyRoute(route: AppRoute) {
+    if (route.kind === 'module') {
+      // 其它模块不碰 agent session 投影，切回 Agent 时会话仍在。
+      return
+    }
     if (route.kind === 'home') {
       if (!this.value.sessionId && this.value.view === 'chat') return
       this.replace({
