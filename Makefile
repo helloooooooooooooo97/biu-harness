@@ -1,4 +1,4 @@
-.PHONY: dev host web test install stop
+.PHONY: dev host web test install stop restart
 
 # 默认：装依赖并同时起 host(:3141) + Vite(:5173)
 dev: install
@@ -20,6 +20,11 @@ stop:
 	  if [ -n "$$pids" ]; then echo "kill :$$p -> $$pids"; kill $$pids 2>/dev/null || true; \
 	  else echo ":$$p free"; fi; \
 	done
+
+# 先停再启（等端口释放后再 dev）
+restart: stop
+	@sleep 0.5
+	@$(MAKE) --no-print-directory dev
 
 test:
 	npm test
