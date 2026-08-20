@@ -90,7 +90,6 @@ export function TrajectoryView(props: SlotProps) {
                     key={row.id}
                     id={row.callId ? `traj-call-${row.callId}` : undefined}
                     className={`traj-row traj-depth-${row.depth}${focused ? ' traj-row-focus' : ''}`}
-                    style={{ ['--traj-depth' as string]: row.depth }}
                   >
                     <span className="traj-seq">{row.seq}</span>
                     <span className={toneClass[tone]} title={row.type}>

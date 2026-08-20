@@ -190,8 +190,7 @@ body {
   align-items: center;
   gap: 10px;
   min-height: 38px;
-  margin-left: calc(var(--traj-depth, 0) * 18px);
-  width: calc(100% - var(--traj-depth, 0) * 18px);
+  box-sizing: border-box;
   padding: 0 10px 0 12px;
   border: 1px solid var(--dsw-border);
   border-radius: 10px;
@@ -199,13 +198,22 @@ body {
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.traj-depth-0 {
+  margin-left: 0;
+  width: 100%;
+}
+
 .traj-depth-1 {
+  margin-left: 20px;
+  width: calc(100% - 20px);
   border-left: 2px solid rgba(65, 118, 230, 0.28);
   background: color-mix(in srgb, var(--dsw-tool) 70%, white);
 }
 
 .traj-depth-2 {
-  border-left: 2px solid rgba(65, 118, 230, 0.45);
+  margin-left: 44px;
+  width: calc(100% - 44px);
+  border-left: 2px solid rgba(65, 118, 230, 0.5);
   background: #fff;
 }
 
