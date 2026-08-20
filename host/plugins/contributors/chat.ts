@@ -3,16 +3,19 @@ import { join } from 'node:path'
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
 import type { ChatMessage } from './chat-types.ts'
+import type { AgentToolMode } from '../registry/tools.ts'
 
 export type { ChatMessage }
 
 export type ChatProvider = 'deepseek' | 'openai'
+export type { AgentToolMode }
 
 interface ChatConfig {
   provider: ChatProvider
   apiKey: string
   model: string
   systemPrompt: string
+  agentMode: AgentToolMode
 }
 
 function configPath() {
@@ -26,6 +29,7 @@ function defaults(): ChatConfig {
     apiKey: process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '',
     model: process.env.CHAT_MODEL || (deepseek || !process.env.OPENAI_API_KEY ? 'deepseek-chat' : 'gpt-4o-mini'),
     systemPrompt: '你是控制台里的助手。需要时调用当前已注册的 tools；插件卸载后对应 tool 会消失。回答简洁。',
+    agentMode: 'standard',
   }
 }
 
@@ -53,6 +57,7 @@ function writePersisted(config: ChatConfig) {
         provider: config.provider,
         model: config.model,
         systemPrompt: config.systemPrompt,
+        agentMode: config.agentMode,
         apiKey: config.apiKey,
       },
       null,
@@ -62,6 +67,10 @@ function writePersisted(config: ChatConfig) {
   )
 }
 
+function parseAgentMode(value: unknown, fallback: AgentToolMode): AgentToolMode {
+  return value === 'minimal' || value === 'standard' ? value : fallback
+}
+
 function mergePersisted(base: ChatConfig, saved: Partial<ChatConfig> | null): ChatConfig {
   if (!saved) return base
   const envKey = Boolean(process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY)
@@ -69,6 +78,7 @@ function mergePersisted(base: ChatConfig, saved: Partial<ChatConfig> | null): Ch
     provider: saved.provider === 'openai' || saved.provider === 'deepseek' ? saved.provider : base.provider,
     model: !process.env.CHAT_MODEL && typeof saved.model === 'string' && saved.model.trim() ? saved.model.trim() : base.model,
     systemPrompt: typeof saved.systemPrompt === 'string' ? saved.systemPrompt : base.systemPrompt,
+    agentMode: parseAgentMode(saved.agentMode, base.agentMode),
     apiKey: !envKey && typeof saved.apiKey === 'string' && saved.apiKey.trim() ? saved.apiKey.trim() : base.apiKey,
   }
 }
@@ -80,6 +90,7 @@ export class ChatService extends Service {
     super(ctx, 'chat')
     ctx.systemPrompt.register('chat.persona', () => this.config.systemPrompt)
     this.syncLlm()
+    this.syncToolsMode()
   }
 
   publicView() {
@@ -87,17 +98,30 @@ export class ChatService extends Service {
       provider: this.config.provider,
       model: this.config.model,
       systemPrompt: this.config.systemPrompt,
+      agentMode: this.config.agentMode,
       configured: Boolean(this.config.apiKey),
       hint: hint(this.config.apiKey),
+      tools: this.ctx.tools.names(),
     }
   }
 
-  patch(next: Partial<{ provider: ChatProvider; apiKey: string; model: string; systemPrompt: string }>, opts?: { persist?: boolean }) {
+  patch(
+    next: Partial<{
+      provider: ChatProvider
+      apiKey: string
+      model: string
+      systemPrompt: string
+      agentMode: AgentToolMode
+    }>,
+    opts?: { persist?: boolean },
+  ) {
     if (next.provider) this.config.provider = next.provider
     if (typeof next.model === 'string' && next.model.trim()) this.config.model = next.model.trim()
     if (typeof next.systemPrompt === 'string') this.config.systemPrompt = next.systemPrompt
     if (typeof next.apiKey === 'string' && next.apiKey.trim()) this.config.apiKey = next.apiKey.trim()
+    if (next.agentMode === 'standard' || next.agentMode === 'minimal') this.config.agentMode = next.agentMode
     this.syncLlm()
+    this.syncToolsMode()
     if (opts?.persist !== false) {
       try {
         writePersisted(this.config)
@@ -110,6 +134,7 @@ export class ChatService extends Service {
 
   async complete(messages: ChatMessage[], sessionId?: string) {
     this.syncLlm()
+    this.syncToolsMode()
     const last = messages.filter((item) => item.role === 'user').at(-1)?.content?.trim() ?? ''
     const agent = await this.ctx.agents.create(sessionId)
     const result = await agent.send(last)
@@ -123,10 +148,14 @@ export class ChatService extends Service {
       model: this.config.model,
     })
   }
+
+  private syncToolsMode() {
+    this.ctx.tools.setMode(this.config.agentMode)
+  }
 }
 
 export const name = 'chat'
-export const inject = ['http', 'hub', 'agents', 'sessions', 'systemPrompt']
+export const inject = ['http', 'hub', 'agents', 'sessions', 'systemPrompt', 'tools']
 
 export function apply(ctx: Context) {
   const chat = new ChatService(ctx)
@@ -147,6 +176,7 @@ export function apply(ctx: Context) {
       apiKey: string
       model: string
       systemPrompt: string
+      agentMode: AgentToolMode
     }>
     route.send(200, chat.patch(payload ?? {}))
   })

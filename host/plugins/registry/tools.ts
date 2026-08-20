@@ -16,12 +16,34 @@ export interface ToolRequest {
 
 export type ToolGuard = (req: ToolRequest) => ToolRequest | Promise<ToolRequest>
 
+/** 对齐 dsh：standard 暴露全部已注册工具；minimal 仅 bash + str_replace_editor。 */
+export type AgentToolMode = 'standard' | 'minimal'
+
+export const MINIMAL_TOOL_NAMES = ['bash', 'str_replace_editor'] as const
+
 export class ToolsService extends Service {
   private tools = new Map<string, ToolSpec>()
   private guards: ToolGuard[] = []
+  private mode: AgentToolMode = 'standard'
 
   constructor(ctx: Context) {
     super(ctx, 'tools')
+  }
+
+  getMode() {
+    return this.mode
+  }
+
+  setMode(mode: AgentToolMode) {
+    if (mode !== 'standard' && mode !== 'minimal') throw new Error(`unknown agent tool mode: ${mode}`)
+    if (this.mode === mode) return
+    this.mode = mode
+    this.ctx.emit('hub/change')
+  }
+
+  private visible(name: string) {
+    if (this.mode === 'standard') return true
+    return (MINIMAL_TOOL_NAMES as readonly string[]).includes(name)
   }
 
   register(spec: ToolSpec) {
@@ -46,21 +68,26 @@ export class ToolsService extends Service {
   }
 
   schemas() {
-    return [...this.tools.values()].map((tool) => ({
-      type: 'function' as const,
-      function: {
-        name: tool.name,
-        description: tool.description,
-        parameters: tool.parameters,
-      },
-    }))
+    return [...this.tools.values()]
+      .filter((tool) => this.visible(tool.name))
+      .map((tool) => ({
+        type: 'function' as const,
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.parameters,
+        },
+      }))
   }
 
   names() {
-    return [...this.tools.keys()]
+    return [...this.tools.keys()].filter((name) => this.visible(name))
   }
 
   async invoke(name: string, args: Record<string, unknown> = {}, signal: AbortSignal = new AbortController().signal) {
+    if (!this.visible(name)) {
+      throw new Error(`tool not available in ${this.mode} mode: ${name}`)
+    }
     let req: ToolRequest = { name, args }
     for (const guard of this.guards) req = await guard(req)
     req = this.ctx.waterfall('tools/pre-execute', req, () => req)
