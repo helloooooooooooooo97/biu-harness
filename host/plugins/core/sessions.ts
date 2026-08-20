@@ -93,9 +93,21 @@ export class SessionsService extends Service {
       id: childId,
       version: source.version,
       events: source.events.map((event) => ({ ...event })),
+      ...(source.project ? { project: { ...source.project } } : {}),
     }
     await this.persist(record)
     return record
+  }
+
+  async setProject(id: string, project: { name: string } | null) {
+    const record = await this.require(id)
+    if (project) {
+      record.project = { name: project.name, boundAt: Date.now() }
+    } else {
+      delete record.project
+    }
+    await this.persist(record)
+    return record.project
   }
 
   list() {

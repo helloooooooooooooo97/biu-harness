@@ -210,6 +210,122 @@ body {
   border: 0;
 }
 
+/* Session-bound local project panel (Agent chat) */
+.project-pane {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .project-pane {
+    display: flex;
+  }
+}
+
+.project-panel {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.project-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--dsw-border);
+  padding: 12px 12px 10px;
+}
+
+.project-panel-hint,
+.project-panel-error,
+.project-panel-empty {
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.project-panel-hint {
+  color: var(--dsw-label-3);
+}
+
+.project-panel-error {
+  color: var(--dsw-danger);
+}
+
+.project-panel-body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.project-tree {
+  max-height: 40%;
+  overflow: auto;
+  border-bottom: 1px solid var(--dsw-border);
+  padding: 6px 0;
+}
+
+.project-tree-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  padding: 4px 10px 4px 8px;
+  color: var(--dsw-label-2);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.project-tree-row:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.project-tree-row.is-active {
+  background: var(--dsw-business-soft);
+  color: var(--dsw-business);
+}
+
+.project-tree-icon {
+  width: 12px;
+  color: var(--dsw-label-3);
+  font-size: 10px;
+}
+
+.project-editor {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.project-editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--dsw-border);
+  padding: 6px 10px;
+}
+
+.project-editor-textarea {
+  min-height: 0;
+  flex: 1;
+  resize: none;
+  border: 0;
+  background: #fff;
+  padding: 10px 12px;
+  color: var(--dsw-label);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  outline: none;
+}
+
 /* Trajectory — compact profiler-style ledger (full bleed, no outer card) */
 .traj-root {
   display: flex;
