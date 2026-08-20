@@ -366,6 +366,101 @@ body {
   color: var(--dsw-ok);
 }
 
+.traj-io-card {
+  border: 1px solid var(--dsw-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.traj-io-card-title {
+  margin-bottom: 8px;
+  color: var(--dsw-label-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.traj-io-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.traj-io-msg {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(15, 17, 21, 0.02);
+}
+
+.traj-io-msg-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.traj-io-role {
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.traj-io-role-system {
+  color: var(--dsw-label-2);
+  background: rgba(15, 17, 21, 0.06);
+}
+
+.traj-io-role-user {
+  color: var(--dsw-ok);
+  background: rgba(34, 140, 90, 0.12);
+}
+
+.traj-io-role-assistant {
+  color: var(--dsw-business);
+  background: var(--dsw-business-soft);
+}
+
+.traj-io-role-tool {
+  color: rgb(180, 110, 20);
+  background: rgba(180, 110, 20, 0.12);
+}
+
+.traj-io-meta {
+  color: var(--dsw-label-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.traj-io-msg-body {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px;
+  color: var(--dsw-label);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.traj-io-msg-tools {
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+  color: var(--dsw-label-2);
+}
+
+.traj-io-msg-empty {
+  color: var(--dsw-label-3);
+  font-style: italic;
+}
+
 .traj-row-assistant .traj-col-summary {
   color: var(--dsw-label);
   font-weight: 500;

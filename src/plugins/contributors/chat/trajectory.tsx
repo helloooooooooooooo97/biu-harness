@@ -217,6 +217,7 @@ export function TrajectoryView(props: SlotProps) {
 function EventDetailBody({ event }: { event: SessionEvent }) {
   const fields = detailFields(event)
   const usage = event.type === 'assistant/message' ? event.usage : undefined
+  const request = event.type === 'assistant/message' ? event.request : undefined
   return (
     <div className="traj-detail-body">
       <dl className="traj-detail-meta">
@@ -236,15 +237,61 @@ function EventDetailBody({ event }: { event: SessionEvent }) {
         ))}
       </dl>
       {usage ? <UsageCard usage={usage} /> : null}
-      <pre className="traj-detail-json">{JSON.stringify(omitUsage(event), null, 2)}</pre>
+      {request?.length ? <RequestPanel messages={request} /> : null}
+      {event.type === 'assistant/message' ? (
+        <ResponsePanel event={event} />
+      ) : (
+        <pre className="traj-detail-json">{JSON.stringify(event, null, 2)}</pre>
+      )}
     </div>
   )
 }
 
-function omitUsage(event: SessionEvent): SessionEvent | Record<string, unknown> {
-  if (event.type !== 'assistant/message' || !event.usage) return event
-  const { usage: _usage, ...rest } = event
-  return rest
+function RequestPanel({
+  messages,
+}: {
+  messages: NonNullable<Extract<SessionEvent, { type: 'assistant/message' }>['request']>
+}) {
+  return (
+    <section className="traj-io-card" aria-label="LLM request">
+      <div className="traj-io-card-title">Request · messages ({messages.length})</div>
+      <div className="traj-io-list">
+        {messages.map((message, index) => (
+          <article key={`${message.role}-${index}`} className="traj-io-msg">
+            <header className="traj-io-msg-head">
+              <span className={`traj-io-role traj-io-role-${message.role}`}>{message.role}</span>
+              {message.tool_call_id ? <span className="traj-io-meta">#{message.tool_call_id}</span> : null}
+              {message.tool_calls?.length ? (
+                <span className="traj-io-meta">{message.tool_calls.length} tool_calls</span>
+              ) : null}
+            </header>
+            {message.content ? <pre className="traj-io-msg-body">{message.content}</pre> : null}
+            {message.tool_calls?.length ? (
+              <pre className="traj-io-msg-body traj-io-msg-tools">
+                {JSON.stringify(message.tool_calls, null, 2)}
+              </pre>
+            ) : null}
+            {!message.content && !message.tool_calls?.length ? (
+              <pre className="traj-io-msg-body traj-io-msg-empty">(empty content)</pre>
+            ) : null}
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ResponsePanel({ event }: { event: Extract<SessionEvent, { type: 'assistant/message' }> }) {
+  return (
+    <section className="traj-io-card" aria-label="LLM response">
+      <div className="traj-io-card-title">Response · assistant/message</div>
+      {event.text ? <pre className="traj-io-msg-body">{event.text}</pre> : null}
+      {event.tool_calls?.length ? (
+        <pre className="traj-io-msg-body traj-io-msg-tools">{JSON.stringify(event.tool_calls, null, 2)}</pre>
+      ) : null}
+      {!event.text && !event.tool_calls?.length ? <pre className="traj-io-msg-body traj-io-msg-empty">(empty)</pre> : null}
+    </section>
+  )
 }
 
 function detailFields(event: SessionEvent): Array<{ label: string; value: string }> {
@@ -257,6 +304,7 @@ function detailFields(event: SessionEvent): Array<{ label: string; value: string
   if (event.type === 'assistant/message') {
     const rows = [{ label: 'text', value: `${event.text.length} chars` }]
     if (event.tool_calls?.length) rows.push({ label: 'tool_calls', value: String(event.tool_calls.length) })
+    if (event.request?.length) rows.push({ label: 'request', value: `${event.request.length} messages` })
     return rows
   }
   if (event.type === 'tool/call') {
