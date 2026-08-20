@@ -32,7 +32,8 @@
 html,
 body,
 #app {
-  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
@@ -103,7 +104,9 @@ body {
   flex: 1;
   flex-direction: column;
   min-height: 0;
+  height: 100%;
   width: 100%;
+  overflow: hidden;
   background: var(--dsw-bg);
   font-family: var(--font-mono);
   font-size: 11px;
@@ -112,6 +115,7 @@ body {
 
 .traj-meta {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 6px;
   height: 28px;
@@ -140,6 +144,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 2;
+  flex-shrink: 0;
   height: 24px;
   border-bottom: 1px solid var(--dsw-border);
   background: var(--dsw-sidebar);
@@ -152,7 +157,10 @@ body {
 
 .traj-list {
   flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .traj-group-bar {

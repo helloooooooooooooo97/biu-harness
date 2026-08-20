@@ -36,12 +36,12 @@ function Shell(props: SlotProps) {
   }, [sessionView])
 
   return (
-    <div className="grid min-h-screen grid-cols-[280px_minmax(0,1fr)] bg-[var(--dsw-bg)] text-[var(--dsw-label)]">
-      <aside className="flex flex-col border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
-        <div className="flex items-center justify-between px-4 pt-4 pb-3">
+    <div className="grid h-screen grid-cols-[280px_minmax(0,1fr)] overflow-hidden bg-[var(--dsw-bg)] text-[var(--dsw-label)]">
+      <aside className="flex min-h-0 flex-col overflow-hidden border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
+        <div className="flex shrink-0 items-center justify-between px-4 pt-4 pb-3">
           <BrandWordmark />
         </div>
-        <div className="px-3 pb-3">
+        <div className="shrink-0 px-3 pb-3">
           <button
             type="button"
             className="flex w-full items-center justify-center gap-2 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-2 text-sm font-medium hover:bg-[var(--dsw-business-soft)]"
@@ -53,7 +53,7 @@ function Shell(props: SlotProps) {
             New Session
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-3">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3">
           <div className="mb-2 flex items-center justify-between px-1">
             <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Sessions</span>
             {sessionId ? (
@@ -115,7 +115,7 @@ function Shell(props: SlotProps) {
             })
           )}
         </div>
-        <div className="flex items-center justify-between gap-2 border-t border-[var(--dsw-border)] px-3 py-3">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-[var(--dsw-border)] px-3 py-3">
           <span
             className={`rounded-full px-2 py-0.5 text-[11px] ${live ? 'bg-emerald-50 text-emerald-700' : 'bg-black/5 text-[var(--dsw-label-3)]'}`}
           >
@@ -139,8 +139,8 @@ function Shell(props: SlotProps) {
         </div>
       </aside>
 
-      <main className="flex min-w-0 flex-col">
-        <header className="flex h-12 items-center gap-4 border-b border-[var(--dsw-border)] px-6">
+      <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+        <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[var(--dsw-border)] px-6">
           <NavLink
             to={sessionId ? `/s/${sessionId}` : '/'}
             end
@@ -172,15 +172,21 @@ function Shell(props: SlotProps) {
         <div
           className={
             view === 'chat'
-              ? 'mx-auto flex w-full max-w-[calc(var(--dsw-chat-width)+32px)] flex-1 flex-col px-4 pb-4'
-              : 'flex min-h-0 w-full flex-1 flex-col'
+              ? 'mx-auto flex min-h-0 w-full max-w-[calc(var(--dsw-chat-width)+32px)] flex-1 flex-col overflow-hidden px-4 pb-4'
+              : 'flex min-h-0 w-full flex-1 flex-col overflow-hidden'
           }
         >
-          <div className={`flex flex-1 flex-col overflow-y-auto ${view === 'chat' ? 'py-4' : ''}`}>
+          <div
+            className={
+              view === 'chat'
+                ? 'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain py-4'
+                : 'flex min-h-0 flex-1 flex-col overflow-hidden'
+            }
+          >
             {view === 'chat' ? props.renderSlot('stage') : props.renderSlot('trajectory')}
           </div>
           {view === 'chat' ? (
-            <div className="sticky bottom-0 space-y-2 bg-[var(--dsw-bg)] pt-1 pb-3">
+            <div className="shrink-0 space-y-2 bg-[var(--dsw-bg)] pt-1 pb-3">
               {props.renderSlot('dock')}
               {props.renderSlot('composer')}
             </div>
