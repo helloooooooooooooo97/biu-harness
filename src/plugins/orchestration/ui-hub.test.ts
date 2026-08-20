@@ -4,6 +4,7 @@ import { Context } from 'cordis'
 import '../../types.ts'
 import * as slots from '../registry/slots.ts'
 import * as snapshot from '../infrastructure/snapshot.ts'
+import * as sessionView from '../infrastructure/session-view.ts'
 import * as uiHub from './ui-hub.ts'
 
 const Dummy = () => null
@@ -24,6 +25,7 @@ function plugin(id: string, enabled: boolean) {
 test('ui-hub mounts hello and chat from snapshot', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
+  await ctx.plugin(sessionView)
   await ctx.plugin(snapshot)
   ctx.slots.fill('root', Dummy, {
     children: {

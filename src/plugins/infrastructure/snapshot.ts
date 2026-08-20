@@ -82,8 +82,28 @@ export class SnapshotService extends Service {
         }
         if (parsed.type === 'clock') this.replace({ clockIso: (parsed.payload as { iso: string }).iso })
         if (parsed.type === 'session') {
-          const detail = parsed.payload as { sessionId?: string; event?: { type: string; text?: string } }
-          this.replace({ lastSessionId: detail.sessionId, lastSessionEvent: detail.event?.type })
+          const detail = parsed.payload as { sessionId?: string; event?: SessionEventLike }
+          if (detail.sessionId && detail.event && typeof detail.event.seq === 'number') {
+            this.replace({ lastSessionId: detail.sessionId, lastSessionEvent: detail.event.type })
+            const view = this.ctx.get('sessionView') as
+              | { ingest: (sessionId: string, event: SessionEventLike) => void }
+              | undefined
+            view?.ingest(detail.sessionId, detail.event)
+          }
+        }
+        if (parsed.type === 'approval') {
+          const item = parsed.payload as { id: string; name: string; args: Record<string, unknown> }
+          const view = this.ctx.get('sessionView') as
+            | { upsertApproval: (item: { id: string; name: string; args: Record<string, unknown> }) => void }
+            | undefined
+          view?.upsertApproval(item)
+        }
+        if (parsed.type === 'agent') {
+          const status = parsed.payload as { status: 'idle' | 'running'; step?: number }
+          const view = this.ctx.get('sessionView') as
+            | { setAgentStatus: (status: 'idle' | 'running', step?: number) => void }
+            | undefined
+          view?.setAgentStatus(status.status, status.step)
         }
       }
       ws.onclose = () => {
@@ -95,6 +115,8 @@ export class SnapshotService extends Service {
     }
   }
 }
+
+type SessionEventLike = { type: string; seq: number; ts: number; [key: string]: unknown }
 
 export function bindSnapshot(source: SnapshotService) {
   return function useSnapshot<S>(sel: (state: Snapshot) => S): S {
