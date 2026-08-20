@@ -35,13 +35,23 @@ function ModuleIcon({ id }: { id: AppModuleId }) {
   )
 }
 
-function ModuleRail({ active, agentHref }: { active: AppModuleId; agentHref: string }) {
+function ModuleRail({
+  active,
+  agentHref,
+  live,
+  onSettings,
+}: {
+  active: AppModuleId
+  agentHref: string
+  live: boolean
+  onSettings: () => void
+}) {
   return (
-    <nav className="app-module-rail" aria-label="App modules">
-      <Link to={agentHref} className="app-module-brand" title="HARNESS" aria-label="Home">
-        <FishLogo size={20} />
+    <nav className="app-activity-bar" aria-label="Activity bar">
+      <Link to={agentHref} className="app-activity-brand" title="HARNESS" aria-label="Home">
+        <FishLogo size={18} />
       </Link>
-      <div className="app-module-list">
+      <div className="app-activity-list">
         {APP_MODULES.map((module) => {
           const to = module.id === 'agent' ? agentHref : module.path
           const isActive = module.id === active
@@ -49,15 +59,40 @@ function ModuleRail({ active, agentHref }: { active: AppModuleId; agentHref: str
             <Link
               key={module.id}
               to={to}
-              className={`app-module-item${isActive ? ' is-active' : ''}`}
-              title={module.description}
+              className={`app-activity-item${isActive ? ' is-active' : ''}`}
+              title={module.label}
+              aria-label={module.label}
               aria-current={isActive ? 'page' : undefined}
             >
+              <span className="app-activity-indicator" aria-hidden />
               <ModuleIcon id={module.id} />
-              <span className="app-module-label">{module.label}</span>
+              <span className="sr-only">{module.label}</span>
             </Link>
           )
         })}
+      </div>
+      <div className="app-activity-footer">
+        <span
+          className={`app-activity-live${live ? ' is-live' : ''}`}
+          title={live ? 'Live' : 'Connecting'}
+          aria-label={live ? 'Live' : 'Connecting'}
+        />
+        <button
+          type="button"
+          className="app-activity-item app-activity-settings"
+          title="Settings"
+          aria-label="Settings"
+          onClick={onSettings}
+        >
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M10.3 3.2a1.8 1.8 0 0 1 3.4 0l.2 1a1.8 1.8 0 0 0 2.5 1.1l.9-.5a1.8 1.8 0 0 1 2.5 2.5l-.5.9a1.8 1.8 0 0 0 1.1 2.5l1 .2a1.8 1.8 0 0 1 0 3.4l-1 .2a1.8 1.8 0 0 0-1.1 2.5l.5.9a1.8 1.8 0 0 1-2.5 2.5l-.9-.5a1.8 1.8 0 0 0-2.5 1.1l-.2 1a1.8 1.8 0 0 1-3.4 0l-.2-1a1.8 1.8 0 0 0-2.5-1.1l-.9.5a1.8 1.8 0 0 1-2.5-2.5l.5-.9a1.8 1.8 0 0 0-1.1-2.5l-1-.2a1.8 1.8 0 0 1 0-3.4l1-.2a1.8 1.8 0 0 0 1.1-2.5l-.5-.9a1.8 1.8 0 0 1 2.5-2.5l.9.5a1.8 1.8 0 0 0 2.5-1.1z"
+            />
+            <circle cx="12" cy="12" r="2.4" />
+          </svg>
+        </button>
       </div>
     </nav>
   )
@@ -105,16 +140,18 @@ function Shell(props: SlotProps) {
     <div
       className={`app-shell${activeModule === 'agent' ? ' app-shell-agent' : ' app-shell-module'}`}
     >
-      <ModuleRail active={activeModule} agentHref={agentHref} />
+      <ModuleRail
+        active={activeModule}
+        agentHref={agentHref}
+        live={live}
+        onSettings={() => setSettingsOpen(true)}
+      />
 
       {activeModule === 'agent' ? (
-        <aside className="flex min-h-0 flex-col overflow-hidden border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
+        <aside className="app-side-bar flex min-h-0 flex-col overflow-hidden border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
           <div className="flex shrink-0 flex-col gap-2 px-4 pt-4 pb-2">
             <BrandWordmark />
-            <div>
-              <div className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Module</div>
-              <div className="mt-0.5 text-[15px] font-semibold tracking-tight">Agent</div>
-            </div>
+            <div className="text-[13px] font-semibold tracking-tight">Agent</div>
           </div>
           <div className="shrink-0 px-3 pb-3">
             <button
@@ -189,28 +226,6 @@ function Shell(props: SlotProps) {
                 )
               })
             )}
-          </div>
-          <div className="flex shrink-0 items-center justify-between gap-2 border-t border-[var(--dsw-border)] px-3 py-3">
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] ${live ? 'bg-emerald-50 text-emerald-700' : 'bg-black/5 text-[var(--dsw-label-3)]'}`}
-            >
-              {live ? 'Live' : 'Connecting'}
-            </span>
-            <button
-              type="button"
-              className="grid size-9 place-items-center rounded-full text-[var(--dsw-label-2)] hover:bg-black/5"
-              aria-label="Settings"
-              onClick={() => setSettingsOpen(true)}
-            >
-              <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M10.3 3.2a1.8 1.8 0 0 1 3.4 0l.2 1a1.8 1.8 0 0 0 2.5 1.1l.9-.5a1.8 1.8 0 0 1 2.5 2.5l-.5.9a1.8 1.8 0 0 0 1.1 2.5l1 .2a1.8 1.8 0 0 1 0 3.4l-1 .2a1.8 1.8 0 0 0-1.1 2.5l.5.9a1.8 1.8 0 0 1-2.5 2.5l-.9-.5a1.8 1.8 0 0 0-2.5 1.1l-.2 1a1.8 1.8 0 0 1-3.4 0l-.2-1a1.8 1.8 0 0 0-2.5-1.1l-.9.5a1.8 1.8 0 0 1-2.5-2.5l.5-.9a1.8 1.8 0 0 0-1.1-2.5l-1-.2a1.8 1.8 0 0 1 0-3.4l1-.2a1.8 1.8 0 0 0 1.1-2.5l-.5-.9a1.8 1.8 0 0 1 2.5-2.5l.9.5a1.8 1.8 0 0 0 2.5-1.1z"
-                />
-                <circle cx="12" cy="12" r="2.4" />
-              </svg>
-            </button>
           </div>
         </aside>
       ) : null}
