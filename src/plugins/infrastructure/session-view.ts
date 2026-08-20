@@ -1,6 +1,12 @@
 import { useSyncExternalStore } from 'react'
 import { Service, type Context } from 'cordis'
-import { projectNodes, type ChatNode, type SessionEvent } from './session-project.ts'
+import {
+  projectNodes,
+  projectTrajectory,
+  type ChatNode,
+  type SessionEvent,
+  type TrajectoryRow,
+} from './session-project.ts'
 
 export interface ApprovalItem {
   id: string
@@ -8,10 +14,23 @@ export interface ApprovalItem {
   args: Record<string, unknown>
 }
 
+export interface SessionListItem {
+  id: string
+  title: string
+  eventCount: number
+  updatedAt: number
+}
+
+export type ConversationView = 'chat' | 'trajectory'
+
 export interface SessionViewState {
   sessionId: string | null
   events: SessionEvent[]
   nodes: ChatNode[]
+  trajectory: TrajectoryRow[]
+  sessions: SessionListItem[]
+  view: ConversationView
+  focusCallId?: string
   agentStatus: 'idle' | 'running'
   agentStep?: number
   pending: boolean
@@ -23,6 +42,9 @@ const empty: SessionViewState = {
   sessionId: null,
   events: [],
   nodes: [],
+  trajectory: [],
+  sessions: [],
+  view: 'chat',
   agentStatus: 'idle',
   pending: false,
   approvals: [],
@@ -34,6 +56,7 @@ export class SessionViewService extends Service {
 
   constructor(ctx: Context) {
     super(ctx, 'sessionView')
+    void this.refreshSessions()
   }
 
   subscribe = (listener: () => void) => {
@@ -43,15 +66,28 @@ export class SessionViewService extends Service {
 
   get = () => this.value
 
+  setView(view: ConversationView) {
+    this.replace({ view, focusCallId: view === 'chat' ? undefined : this.value.focusCallId })
+  }
+
+  inspectCall(callId: string) {
+    this.replace({ view: 'trajectory', focusCallId: callId })
+  }
+
   ingest(sessionId: string, event: SessionEvent) {
-    if (this.value.sessionId && this.value.sessionId !== sessionId) return
+    if (this.value.sessionId && this.value.sessionId !== sessionId) {
+      void this.refreshSessions()
+      return
+    }
     const events = upsertEvent(this.value.sessionId === sessionId ? this.value.events : [], event)
     this.replace({
       sessionId,
       events,
       nodes: projectNodes(events),
+      trajectory: projectTrajectory(events),
       error: undefined,
     })
+    void this.refreshSessions()
   }
 
   setAgentStatus(status: 'idle' | 'running', step?: number) {
@@ -68,13 +104,30 @@ export class SessionViewService extends Service {
     this.replace({ approvals: this.value.approvals.filter((row) => row.id !== id) })
   }
 
-  async ensureSession() {
-    if (this.value.sessionId) return this.value.sessionId
+  async refreshSessions() {
+    try {
+      const res = await fetch('/api/sessions')
+      if (!res.ok) return
+      const body = (await res.json()) as { sessions?: SessionListItem[] }
+      this.replace({ sessions: Array.isArray(body.sessions) ? body.sessions : [] })
+    } catch {
+      /* host 未就绪时忽略 */
+    }
+  }
+
+  async newSession() {
     const res = await fetch('/api/sessions', { method: 'POST' })
     const body = (await res.json()) as { id?: string }
     if (!body.id) throw new Error('无法创建 session')
     await this.load(body.id)
+    this.replace({ view: 'chat', focusCallId: undefined, approvals: [] })
+    await this.refreshSessions()
     return body.id
+  }
+
+  async ensureSession() {
+    if (this.value.sessionId) return this.value.sessionId
+    return this.newSession()
   }
 
   async load(sessionId: string) {
@@ -86,10 +139,24 @@ export class SessionViewService extends Service {
       sessionId: body.id,
       events,
       nodes: projectNodes(events),
+      trajectory: projectTrajectory(events),
       error: undefined,
       pending: false,
       agentStatus: 'idle',
+      approvals: [],
     })
+    await this.refreshSessions()
+  }
+
+  async forkCurrent() {
+    const sessionId = this.value.sessionId
+    if (!sessionId) throw new Error('no session')
+    const res = await fetch(`/api/sessions/${sessionId}/fork`, { method: 'POST' })
+    const body = (await res.json()) as { id?: string; error?: string }
+    if (!res.ok || !body.id) throw new Error(body.error || 'fork failed')
+    await this.load(body.id)
+    this.replace({ view: 'chat' })
+    return body.id
   }
 
   async send(text: string) {

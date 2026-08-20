@@ -103,10 +103,41 @@ export function apply(ctx: Context) {
     const record = await ctx.sessions.create()
     route.send(201, { id: record.id, version: record.version })
   })
+  ctx.http.route('GET', '/api/sessions', async (route) => {
+    const ids = await ctx.sessions.list()
+    const items = []
+    for (const id of ids) {
+      const record = await ctx.sessions.get(id)
+      if (!record) continue
+      const users = record.events.filter((event) => event.type === 'user/message')
+      const lastUser = users.at(-1)
+      const title =
+        lastUser && 'text' in lastUser && typeof lastUser.text === 'string'
+          ? lastUser.text.slice(0, 48) || id.slice(0, 8)
+          : id.slice(0, 8)
+      items.push({
+        id,
+        version: record.version,
+        eventCount: record.events.length,
+        title,
+        updatedAt: record.events.at(-1)?.ts ?? 0,
+      })
+    }
+    items.sort((a, b) => b.updatedAt - a.updatedAt)
+    route.send(200, { sessions: items })
+  })
   ctx.http.route('GET', '/api/sessions/:id', async (route) => {
     const record = await ctx.sessions.get(route.params.id)
     if (!record) return route.send(404, { error: 'unknown session' })
     route.send(200, { id: record.id, version: record.version, events: record.events, messages: ctx.sessions.deriveMessages(record.id) })
+  })
+  ctx.http.route('POST', '/api/sessions/:id/fork', async (route) => {
+    try {
+      const child = await ctx.sessions.fork(route.params.id)
+      route.send(201, { id: child.id, version: child.version, parentId: route.params.id })
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
   })
   ctx.http.route('POST', '/api/sessions/:id/messages', async (route) => {
     const payload = (await route.json()) as { text?: string; kind?: 'wake' | 'inject' }

@@ -94,3 +94,47 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
   }
   return nodes
 }
+
+/** Lean Trajectory 行：官方 ui-trajectory 的瘦投影，不搬虚表/搜索索引。 */
+export interface TrajectoryRow {
+  id: string
+  seq: number
+  turn: number | null
+  type: SessionEvent['type']
+  summary: string
+  callId?: string
+}
+
+export function projectTrajectory(events: SessionEvent[]): TrajectoryRow[] {
+  let turn: number | null = null
+  const rows: TrajectoryRow[] = []
+  for (const event of events) {
+    if (event.type === 'turn/start') turn = event.turn
+    if (event.type === 'session/open') continue
+    let summary: string = event.type
+    let callId: string | undefined
+    if (event.type === 'user/message' || event.type === 'assistant/message' || event.type === 'assistant/chunk' || event.type === 'system/prompt') {
+      summary = event.text.slice(0, 120)
+    } else if (event.type === 'tool/call') {
+      callId = event.id
+      summary = `${event.name}(${event.arguments.slice(0, 80)})`
+    } else if (event.type === 'tool/result') {
+      callId = event.id
+      summary = `${event.name} → ${event.ok ? 'ok' : 'fail'}: ${event.detail.slice(0, 80)}`
+    } else if (event.type === 'turn/end') {
+      summary = `end · ${event.reason}`
+    } else if (event.type === 'step/start' || event.type === 'step/end') {
+      summary = `step ${event.step}`
+    }
+    rows.push({
+      id: `tr-${event.seq}`,
+      seq: event.seq,
+      turn,
+      type: event.type,
+      summary,
+      callId,
+    })
+    if (event.type === 'turn/end') turn = null
+  }
+  return rows
+}
