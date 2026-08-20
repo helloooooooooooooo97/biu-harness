@@ -128,7 +128,7 @@ body {
 .traj-head,
 .traj-row {
   display: grid;
-  grid-template-columns: 44px 148px minmax(0, 1fr);
+  grid-template-columns: 44px 148px minmax(0, 1fr) 88px;
   align-items: center;
   column-gap: 8px;
   box-sizing: border-box;
@@ -224,6 +224,21 @@ body {
   color: var(--dsw-label);
 }
 
+.traj-col-usage {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  color: var(--dsw-label-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.traj-row-assistant .traj-col-summary {
+  color: var(--dsw-label);
+  font-weight: 500;
+}
+
 .traj-tag {
   display: inline-flex;
   align-items: center;
@@ -300,7 +315,7 @@ body {
 @media (max-width: 720px) {
   .traj-head,
   .traj-row {
-    grid-template-columns: 36px 120px minmax(0, 1fr);
+    grid-template-columns: 36px 110px minmax(0, 1fr) 64px;
     padding: 0 8px;
   }
 

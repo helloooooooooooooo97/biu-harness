@@ -1,7 +1,11 @@
 import { useEffect, useMemo } from 'react'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
-import type { TrajectoryRow } from '../../infrastructure/session-project.ts'
+import {
+  formatTrajectoryUsage,
+  sumTrajectoryUsage,
+  type TrajectoryRow,
+} from '../../infrastructure/session-project.ts'
 
 type TagTone = 'user' | 'assistant' | 'tool' | 'system' | 'turn' | 'step'
 
@@ -27,10 +31,12 @@ const toneClass: Record<TagTone, string> = {
 export function TrajectoryView(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const rows = useSessionView((state) => state.trajectory)
+  const events = useSessionView((state) => state.events)
   const focusCallId = useSessionView((state) => state.focusCallId)
   const sessionId = useSessionView((state) => state.sessionId)
 
   const groups = useMemo(() => groupByTurn(rows), [rows])
+  const cumulative = useMemo(() => sumTrajectoryUsage(events), [events])
 
   useEffect(() => {
     if (!focusCallId) return
@@ -61,12 +67,17 @@ export function TrajectoryView(props: SlotProps) {
         <span>{rows.length} events</span>
         <span className="traj-meta-sep">·</span>
         <span>{groups.length} turns</span>
+        <span className="traj-meta-sep">·</span>
+        <span title="Sum of assistant/message usage in this session">
+          usage {cumulative ? formatTrajectoryUsage(cumulative) : '—'}
+        </span>
       </div>
 
       <div className="traj-head" role="row">
         <span className="traj-col-seq">#</span>
         <span className="traj-col-type">type</span>
         <span className="traj-col-summary">summary</span>
+        <span className="traj-col-usage">usage</span>
       </div>
 
       <div className="traj-list" role="rowgroup">
@@ -79,12 +90,15 @@ export function TrajectoryView(props: SlotProps) {
             {group.rows.map((row) => {
               const focused = Boolean(focusCallId && row.callId === focusCallId)
               const tone = toneOf(row.type)
+              const usageText = formatTrajectoryUsage(row.usage)
               return (
                 <div
                   key={row.id}
                   id={row.callId ? `traj-call-${row.callId}` : undefined}
                   role="row"
-                  className={`traj-row traj-depth-${row.depth}${focused ? ' traj-row-focus' : ''}`}
+                  className={`traj-row traj-depth-${row.depth}${focused ? ' traj-row-focus' : ''}${
+                    row.type === 'assistant/message' ? ' traj-row-assistant' : ''
+                  }`}
                 >
                   <span className="traj-col-seq">{row.seq}</span>
                   <span className="traj-col-type">
@@ -94,6 +108,9 @@ export function TrajectoryView(props: SlotProps) {
                   </span>
                   <span className="traj-col-summary" title={row.summary}>
                     {row.summary}
+                  </span>
+                  <span className="traj-col-usage" title={usageText || undefined}>
+                    {usageText || '—'}
                   </span>
                 </div>
               )

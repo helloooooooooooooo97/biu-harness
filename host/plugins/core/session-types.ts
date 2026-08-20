@@ -11,7 +11,17 @@ export type SessionEventBody =
   | { type: 'step/end'; turn: number; step: number }
   | { type: 'system/prompt'; text: string }
   | { type: 'user/message'; text: string; kind: InboxKind }
-  | { type: 'assistant/message'; text: string; tool_calls?: Array<{ id: string; name: string; arguments: string }> }
+  | {
+      type: 'assistant/message'
+      text: string
+      tool_calls?: Array<{ id: string; name: string; arguments: string }>
+      usage?: {
+        inputTokens: number
+        outputTokens: number
+        totalTokens?: number
+        cacheReadTokens?: number
+      }
+    }
   | { type: 'assistant/chunk'; text: string }
   | { type: 'tool/call'; id: string; name: string; arguments: string }
   | { type: 'tool/result'; id: string; name: string; ok: boolean; detail: string }

@@ -10,7 +10,17 @@ export type SessionEvent = {
   | { type: 'step/end'; turn: number; step: number }
   | { type: 'system/prompt'; text: string }
   | { type: 'user/message'; text: string; kind?: string }
-  | { type: 'assistant/message'; text: string; tool_calls?: Array<{ id: string; name: string; arguments: string }> }
+  | {
+      type: 'assistant/message'
+      text: string
+      tool_calls?: Array<{ id: string; name: string; arguments: string }>
+      usage?: {
+        inputTokens: number
+        outputTokens: number
+        totalTokens?: number
+        cacheReadTokens?: number
+      }
+    }
   | { type: 'assistant/chunk'; text: string }
   | { type: 'tool/call'; id: string; name: string; arguments: string }
   | { type: 'tool/result'; id: string; name: string; ok: boolean; detail: string }
@@ -96,6 +106,13 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
 }
 
 /** Lean Trajectory 行：官方 ui-trajectory 的瘦投影，不搬虚表/搜索索引。 */
+export interface TrajectoryUsage {
+  inputTokens: number
+  outputTokens: number
+  totalTokens?: number
+  cacheReadTokens?: number
+}
+
 export interface TrajectoryRow {
   id: string
   seq: number
@@ -105,7 +122,48 @@ export interface TrajectoryRow {
   depth: 0 | 1 | 2
   type: SessionEvent['type']
   summary: string
+  usage?: TrajectoryUsage
   callId?: string
+}
+
+export function formatTrajectoryUsage(usage: TrajectoryUsage | undefined): string {
+  if (!usage) return ''
+  const parts = [`${usage.inputTokens}→${usage.outputTokens}`]
+  if (usage.cacheReadTokens) parts.push(`c${usage.cacheReadTokens}`)
+  return parts.join(' ')
+}
+
+export function sumTrajectoryUsage(events: SessionEvent[]): TrajectoryUsage | undefined {
+  let input = 0
+  let output = 0
+  let total = 0
+  let cache = 0
+  let hit = false
+  for (const event of events) {
+    if (event.type !== 'assistant/message' || !event.usage) continue
+    hit = true
+    input += event.usage.inputTokens
+    output += event.usage.outputTokens
+    total += event.usage.totalTokens ?? event.usage.inputTokens + event.usage.outputTokens
+    cache += event.usage.cacheReadTokens ?? 0
+  }
+  if (!hit) return undefined
+  return {
+    inputTokens: input,
+    outputTokens: output,
+    totalTokens: total,
+    ...(cache ? { cacheReadTokens: cache } : {}),
+  }
+}
+
+function assistantSummary(event: Extract<SessionEvent, { type: 'assistant/message' }>): string {
+  const tools = event.tool_calls?.length ?? 0
+  if (event.text.trim()) return event.text.slice(0, 160)
+  if (tools) {
+    const names = event.tool_calls!.map((call) => call.name).join(', ')
+    return `→ ${tools} tool call${tools > 1 ? 's' : ''}: ${names}`
+  }
+  return '(empty assistant message)'
 }
 
 export function projectTrajectory(events: SessionEvent[]): TrajectoryRow[] {
@@ -127,8 +185,12 @@ export function projectTrajectory(events: SessionEvent[]): TrajectoryRow[] {
 
     let summary: string = event.type
     let callId: string | undefined
-    if (event.type === 'user/message' || event.type === 'assistant/message' || event.type === 'assistant/chunk' || event.type === 'system/prompt') {
-      summary = event.text.slice(0, 120)
+    let usage: TrajectoryUsage | undefined
+    if (event.type === 'assistant/message') {
+      summary = assistantSummary(event)
+      usage = event.usage
+    } else if (event.type === 'user/message' || event.type === 'assistant/chunk' || event.type === 'system/prompt') {
+      summary = event.text.slice(0, 160)
     } else if (event.type === 'tool/call') {
       callId = event.id
       summary = `${event.name}(${event.arguments.slice(0, 80)})`
@@ -156,6 +218,7 @@ export function projectTrajectory(events: SessionEvent[]): TrajectoryRow[] {
       depth,
       type: event.type,
       summary,
+      usage,
       callId,
     })
 

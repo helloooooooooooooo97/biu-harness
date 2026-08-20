@@ -1,6 +1,12 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { projectNodes, projectTrajectory, type SessionEvent } from './session-project.ts'
+import {
+  formatTrajectoryUsage,
+  projectNodes,
+  projectTrajectory,
+  sumTrajectoryUsage,
+  type SessionEvent,
+} from './session-project.ts'
 
 test('projects user, streaming assistant, tool call/result from session events', () => {
   const events: SessionEvent[] = [
@@ -66,4 +72,36 @@ test('projectTrajectory indents step boundaries and in-step events', () => {
   assert.equal(byType['tool/call']?.depth, 2)
   assert.equal(byType['step/end']?.depth, 1)
   assert.equal(byType['turn/end']?.depth, 0)
+})
+
+test('assistant/message with empty text still has a visible tool_calls summary and usage', () => {
+  const events: SessionEvent[] = [
+    {
+      type: 'assistant/message',
+      text: '',
+      tool_calls: [{ id: '1', name: 'clock_now', arguments: '{}' }],
+      usage: { inputTokens: 11, outputTokens: 3 },
+      seq: 1,
+      ts: 1,
+    },
+    {
+      type: 'assistant/message',
+      text: '现在是下午',
+      usage: { inputTokens: 20, outputTokens: 8, cacheReadTokens: 4 },
+      seq: 2,
+      ts: 2,
+    },
+  ]
+  const rows = projectTrajectory(events)
+  assert.match(rows[0]?.summary ?? '', /tool call/)
+  assert.match(rows[0]?.summary ?? '', /clock_now/)
+  assert.deepEqual(rows[0]?.usage, { inputTokens: 11, outputTokens: 3 })
+  assert.equal(rows[1]?.summary, '现在是下午')
+  assert.equal(formatTrajectoryUsage(rows[1]?.usage), '20→8 c4')
+  assert.deepEqual(sumTrajectoryUsage(events), {
+    inputTokens: 31,
+    outputTokens: 11,
+    totalTokens: 42,
+    cacheReadTokens: 4,
+  })
 })
