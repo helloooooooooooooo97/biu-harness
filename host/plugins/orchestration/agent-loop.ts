@@ -73,7 +73,6 @@ export class AgentLoop implements AgentRunner {
       await session.append(this.sessionId, { type: 'step/start', turn, step })
 
       const messages = session.deriveMessages(this.sessionId)
-      const request = snapshotRequest(messages)
       let reply: AssistantReply
       try {
         reply = await this.llm.chat(messages, this.ctx.tools.schemas(), this.signal, {
@@ -89,7 +88,7 @@ export class AgentLoop implements AgentRunner {
         }
         const detail = String(error)
         const text = `模型调用失败：${detail}`
-        await session.append(this.sessionId, { type: 'assistant/message', text, request })
+        await session.append(this.sessionId, { type: 'assistant/message', text })
         await session.append(this.sessionId, { type: 'step/end', turn, step })
         await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'llm-error' })
         this.ctx.emit('agent/status', { status: 'idle' })
@@ -101,7 +100,6 @@ export class AgentLoop implements AgentRunner {
         await session.append(this.sessionId, {
           type: 'assistant/message',
           text: final,
-          request,
           ...(reply.usage ? { usage: reply.usage } : {}),
         })
         await session.append(this.sessionId, { type: 'step/end', turn, step })
@@ -114,7 +112,6 @@ export class AgentLoop implements AgentRunner {
         type: 'assistant/message',
         text: reply.content ?? '',
         tool_calls: reply.toolCalls,
-        request,
         ...(reply.usage ? { usage: reply.usage } : {}),
       })
 
@@ -186,15 +183,6 @@ function stringify(value: unknown) {
   } catch {
     return String(value)
   }
-}
-
-function snapshotRequest(messages: LlmMessage[]) {
-  return messages.map((item) => ({
-    role: item.role,
-    ...(item.content !== undefined ? { content: item.content } : {}),
-    ...(item.tool_calls ? { tool_calls: item.tool_calls } : {}),
-    ...(item.tool_call_id ? { tool_call_id: item.tool_call_id } : {}),
-  }))
 }
 
 export const name = 'agent-loop'

@@ -20,12 +20,6 @@ export type SessionEvent = {
         totalTokens?: number
         cacheReadTokens?: number
       }
-      request?: Array<{
-        role: string
-        content?: string | null
-        tool_calls?: Array<{ id: string; type: string; function: { name: string; arguments: string } }>
-        tool_call_id?: string
-      }>
     }
   | { type: 'assistant/chunk'; text: string }
   | { type: 'tool/call'; id: string; name: string; arguments: string }
@@ -45,6 +39,54 @@ export type ChatNode =
       result?: { ok: boolean; detail: string }
     }
   | { id: string; kind: 'turn'; text: string }
+
+/** 与 host deriveMessages 对齐：从事件日志投影模型可见 messages。 */
+export interface DerivedMessage {
+  role: string
+  content?: string | null
+  tool_calls?: Array<{ id: string; type: string; function: { name: string; arguments: string } }>
+  tool_call_id?: string
+}
+
+function assistantContentForApi(text: string | undefined | null, hasToolCalls: boolean): string | null {
+  if (hasToolCalls && !text) return null
+  return text ?? null
+}
+
+export function deriveMessages(events: SessionEvent[]): DerivedMessage[] {
+  let system = ''
+  const messages: DerivedMessage[] = []
+  for (const event of events) {
+    if (event.type === 'system/prompt') {
+      system = event.text
+    } else if (event.type === 'user/message') {
+      messages.push({ role: 'user', content: event.text })
+    } else if (event.type === 'assistant/message') {
+      const hasToolCalls = Boolean(event.tool_calls?.length)
+      messages.push({
+        role: 'assistant',
+        content: assistantContentForApi(event.text, hasToolCalls),
+        ...(hasToolCalls
+          ? {
+              tool_calls: event.tool_calls!.map((call) => ({
+                id: call.id,
+                type: 'function',
+                function: { name: call.name, arguments: call.arguments },
+              })),
+            }
+          : {}),
+      })
+    } else if (event.type === 'tool/result') {
+      messages.push({ role: 'tool', tool_call_id: event.id, content: event.detail })
+    }
+  }
+  return system ? [{ role: 'system', content: system }, ...messages] : messages
+}
+
+/** 某条 assistant/message 发起 llm.chat 时的 request = 其 seq 之前的事件投影。 */
+export function projectRequestMessages(events: SessionEvent[], assistantSeq: number): DerivedMessage[] {
+  return deriveMessages(events.filter((event) => event.seq < assistantSeq))
+}
 
 export function projectNodes(events: SessionEvent[]): ChatNode[] {
   const nodes: ChatNode[] = []
