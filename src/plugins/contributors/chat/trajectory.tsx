@@ -15,11 +15,6 @@ function toneOf(type: TrajectoryRow['type']): TagTone {
   return 'system'
 }
 
-function shortType(type: TrajectoryRow['type']) {
-  const parts = type.split('/')
-  return parts[parts.length - 1] || type
-}
-
 const toneClass: Record<TagTone, string> = {
   user: 'traj-tag traj-tag-user',
   assistant: 'traj-tag traj-tag-assistant',
@@ -94,7 +89,7 @@ export function TrajectoryView(props: SlotProps) {
                   <span className="traj-col-seq">{row.seq}</span>
                   <span className="traj-col-type">
                     <span className={toneClass[tone]} title={row.type}>
-                      {shortType(row.type)}
+                      {row.type}
                     </span>
                   </span>
                   <span className="traj-col-summary" title={row.summary}>
