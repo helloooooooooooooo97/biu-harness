@@ -61,48 +61,49 @@ export function TrajectoryView(props: SlotProps) {
   }
 
   return (
-    <div className="traj-panel mx-auto w-full max-w-[var(--dsw-chat-width)]">
-      <header className="traj-toolbar">
-        <div>
-          <div className="traj-toolbar-title">Trajectory</div>
-          <div className="traj-toolbar-sub">append-only session ledger</div>
-        </div>
-        <div className="traj-toolbar-meta">
-          <span>{rows.length} events</span>
-          <span>·</span>
-          <span>{groups.length} turns</span>
-        </div>
-      </header>
+    <div className="traj-root">
+      <div className="traj-meta">
+        <span>{rows.length} events</span>
+        <span className="traj-meta-sep">·</span>
+        <span>{groups.length} turns</span>
+      </div>
 
-      <div className="traj-scroll">
+      <div className="traj-head" role="row">
+        <span className="traj-col-seq">#</span>
+        <span className="traj-col-type">type</span>
+        <span className="traj-col-summary">summary</span>
+      </div>
+
+      <div className="traj-list" role="rowgroup">
         {groups.map((group) => (
-          <section key={group.key} className="traj-turn">
-            <div className="traj-turn-head">
-              <span className="traj-turn-badge">{group.turn == null ? 'meta' : `turn ${group.turn}`}</span>
-              <span className="traj-turn-count">{group.rows.length} steps</span>
+          <div key={group.key} className="traj-group">
+            <div className="traj-group-bar">
+              <span>{group.turn == null ? 'meta' : `Turn ${group.turn}`}</span>
+              <span>{group.rows.length}</span>
             </div>
-            <div className="traj-turn-body">
-              {group.rows.map((row) => {
-                const focused = Boolean(focusCallId && row.callId === focusCallId)
-                const tone = toneOf(row.type)
-                return (
-                  <div
-                    key={row.id}
-                    id={row.callId ? `traj-call-${row.callId}` : undefined}
-                    className={`traj-row traj-depth-${row.depth}${focused ? ' traj-row-focus' : ''}`}
-                  >
-                    <span className="traj-seq">{row.seq}</span>
+            {group.rows.map((row) => {
+              const focused = Boolean(focusCallId && row.callId === focusCallId)
+              const tone = toneOf(row.type)
+              return (
+                <div
+                  key={row.id}
+                  id={row.callId ? `traj-call-${row.callId}` : undefined}
+                  role="row"
+                  className={`traj-row traj-depth-${row.depth}${focused ? ' traj-row-focus' : ''}`}
+                >
+                  <span className="traj-col-seq">{row.seq}</span>
+                  <span className="traj-col-type">
                     <span className={toneClass[tone]} title={row.type}>
                       {shortType(row.type)}
                     </span>
-                    <span className="traj-summary" title={row.summary}>
-                      {row.summary}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </section>
+                  </span>
+                  <span className="traj-col-summary" title={row.summary}>
+                    {row.summary}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
         ))}
       </div>
     </div>
