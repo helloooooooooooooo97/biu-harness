@@ -1,3 +1,5 @@
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
 import type { ChatMessage } from './chat-types.ts'
@@ -11,6 +13,10 @@ interface ChatConfig {
   apiKey: string
   model: string
   systemPrompt: string
+}
+
+function configPath() {
+  return join(process.cwd(), '.cordis', 'chat-config.json')
 }
 
 function defaults(): ChatConfig {
@@ -29,8 +35,46 @@ function hint(key: string) {
   return `${key.slice(0, 3)}…${key.slice(-4)}`
 }
 
+function readPersisted(): Partial<ChatConfig> | null {
+  try {
+    return JSON.parse(readFileSync(configPath(), 'utf8')) as Partial<ChatConfig>
+  } catch {
+    return null
+  }
+}
+
+function writePersisted(config: ChatConfig) {
+  const dir = join(process.cwd(), '.cordis')
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(
+    configPath(),
+    `${JSON.stringify(
+      {
+        provider: config.provider,
+        model: config.model,
+        systemPrompt: config.systemPrompt,
+        apiKey: config.apiKey,
+      },
+      null,
+      2,
+    )}\n`,
+    'utf8',
+  )
+}
+
+function mergePersisted(base: ChatConfig, saved: Partial<ChatConfig> | null): ChatConfig {
+  if (!saved) return base
+  const envKey = Boolean(process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY)
+  return {
+    provider: saved.provider === 'openai' || saved.provider === 'deepseek' ? saved.provider : base.provider,
+    model: !process.env.CHAT_MODEL && typeof saved.model === 'string' && saved.model.trim() ? saved.model.trim() : base.model,
+    systemPrompt: typeof saved.systemPrompt === 'string' ? saved.systemPrompt : base.systemPrompt,
+    apiKey: !envKey && typeof saved.apiKey === 'string' && saved.apiKey.trim() ? saved.apiKey.trim() : base.apiKey,
+  }
+}
+
 export class ChatService extends Service {
-  private config = defaults()
+  private config = mergePersisted(defaults(), readPersisted())
 
   constructor(ctx: Context) {
     super(ctx, 'chat')
@@ -48,12 +92,19 @@ export class ChatService extends Service {
     }
   }
 
-  patch(next: Partial<{ provider: ChatProvider; apiKey: string; model: string; systemPrompt: string }>) {
+  patch(next: Partial<{ provider: ChatProvider; apiKey: string; model: string; systemPrompt: string }>, opts?: { persist?: boolean }) {
     if (next.provider) this.config.provider = next.provider
     if (typeof next.model === 'string' && next.model.trim()) this.config.model = next.model.trim()
     if (typeof next.systemPrompt === 'string') this.config.systemPrompt = next.systemPrompt
     if (typeof next.apiKey === 'string' && next.apiKey.trim()) this.config.apiKey = next.apiKey.trim()
     this.syncLlm()
+    if (opts?.persist !== false) {
+      try {
+        writePersisted(this.config)
+      } catch (error) {
+        console.warn('[chat] failed to persist config', error)
+      }
+    }
     return this.publicView()
   }
 
@@ -149,7 +200,8 @@ export function apply(ctx: Context) {
   ctx.http.route('POST', '/api/sessions/:id/messages', async (route) => {
     const payload = (await route.json()) as { text?: string; kind?: 'wake' | 'inject' }
     const agent = await ctx.agents.create(route.params.id)
-    chat.patch({})
+    // re-sync in-memory LLM without rewriting disk
+    chat.patch({}, { persist: false })
     if (payload.kind === 'inject') {
       agent.inject(payload.text ?? '')
       return route.send(200, { sessionId: agent.sessionId, queued: true })
