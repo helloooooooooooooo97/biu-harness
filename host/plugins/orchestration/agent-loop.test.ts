@@ -12,9 +12,15 @@ import type { AssistantReply, LlmClient, LlmMessage } from './llm.ts'
 class ScriptedLlm implements LlmClient {
   constructor(private replies: AssistantReply[]) {}
 
-  async chat(_messages: LlmMessage[]): Promise<AssistantReply> {
+  async chat(
+    _messages: LlmMessage[],
+    _tools?: unknown[],
+    _signal?: AbortSignal,
+    options?: { onDelta?: (text: string) => void | Promise<void> },
+  ): Promise<AssistantReply> {
     const next = this.replies.shift()
     if (!next) throw new Error('unexpected extra llm.chat')
+    if (next.content) await options?.onDelta?.(next.content)
     return next
   }
 }
@@ -29,12 +35,25 @@ async function spine() {
   return { ctx, sessionId: session.id }
 }
 
-test('loop returns text when model does not call tools', async () => {
+test('loop appends multiple assistant/chunk deltas from onDelta', async () => {
   const { ctx, sessionId } = await spine()
-  const loop = new AgentLoop(ctx, new ScriptedLlm([{ content: '你好', toolCalls: [] }]), sessionId, new AbortController().signal)
+  const llm: LlmClient = {
+    async chat(_messages, _tools, _signal, options) {
+      await options?.onDelta?.('Hel')
+      await options?.onDelta?.('lo')
+      return { content: 'Hello', toolCalls: [], usage: { inputTokens: 1, outputTokens: 1 } }
+    },
+  }
+  const loop = new AgentLoop(ctx, llm, sessionId, new AbortController().signal)
   const turn = await loop.run([{ kind: 'wake', text: 'hi' }])
-  assert.deepEqual(turn, { text: '你好', steps: [] } satisfies AgentTurn)
-  assert.equal(ctx.sessions.deriveMessages(sessionId).at(-1)?.content, '你好')
+  assert.equal(turn.text, 'Hello')
+  const chunks = (await ctx.sessions.require(sessionId)).events.filter((event) => event.type === 'assistant/chunk')
+  assert.deepEqual(
+    chunks.map((event) => (event.type === 'assistant/chunk' ? event.text : '')),
+    ['Hel', 'lo'],
+  )
+  const message = (await ctx.sessions.require(sessionId)).events.find((event) => event.type === 'assistant/message')
+  assert.equal(message?.type === 'assistant/message' && message.usage?.inputTokens, 1)
 })
 
 test('loop invokes tools then asks the model again', async () => {

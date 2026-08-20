@@ -13,7 +13,7 @@
 7. **事件分流雏形** — session / agent / capability 三域；不引入完整配置操作系统。
 8. **Subagent 组合** — 默认空会话；`inherit` 时 `sessions.fork`。
 9. **MCP / terminal 可编排面** — list/call/addStdio/remove；terminal open/write/read/close。
-10. **Web：session/event 投影对话** — 浏览器不持能力；线程从 append-only 日志投影 user / assistant / tool 节点。
+10. **Web：session/event 投影对话** — 浏览器不持能力；线程从 append-only 日志投影 user / assistant / tool 节点；LLM SSE 增量 `assistant/chunk` 经 WS 实时投影。
 11. **Web：agents 驱动输入** — 发送走 `/api/sessions/:id/messages`，可取消；WS 收 `session` / `agent` / `approval`。
 12. **Web：审批可观察** — hold 待批出现在 composer dock，允许/拒绝回调 host。
 13. **Web 壳对标 dsh 观感** — 左栏 Wordmark+HARNESS / New Session；中栏 Chat hero + 浅蓝气泡 + 胶囊 composer；演示插件进 Settings modal（对照官方 `ui-layout` / `ui-sidebar` / `ui-conversation`，不搬整包）。

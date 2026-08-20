@@ -1,6 +1,6 @@
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
-import type { AssistantReply, LlmClient, LlmConfig, LlmMessage } from './llm.ts'
+import type { AssistantReply, ChatOptions, LlmClient, LlmConfig, LlmMessage } from './llm.ts'
 import type { InboxKind } from '../core/session-types.ts'
 
 export interface AgentTurn {
@@ -75,7 +75,11 @@ export class AgentLoop implements AgentRunner {
       const messages = session.deriveMessages(this.sessionId)
       let reply: AssistantReply
       try {
-        reply = await this.llm.chat(messages, this.ctx.tools.schemas(), this.signal)
+        reply = await this.llm.chat(messages, this.ctx.tools.schemas(), this.signal, {
+          onDelta: async (text) => {
+            if (text) await session.append(this.sessionId, { type: 'assistant/chunk', text })
+          },
+        })
       } catch (error) {
         if (this.signal.aborted) {
           await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'cancelled' })
@@ -89,9 +93,6 @@ export class AgentLoop implements AgentRunner {
         await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'llm-error' })
         this.ctx.emit('agent/status', { status: 'idle' })
         return { text, steps }
-      }
-      if (reply.content) {
-        await session.append(this.sessionId, { type: 'assistant/chunk', text: reply.content })
       }
 
       if (!reply.toolCalls.length) {
@@ -164,9 +165,11 @@ export class AgentLoopService extends Service {
     const llm = config.apiKey
       ? this.ctx.llm.forConfig(config)
       : {
-          chat: async (messages: LlmMessage[]) => {
+          chat: async (messages: LlmMessage[], _tools?: unknown[], _signal?: AbortSignal, options?: ChatOptions) => {
             const last = [...messages].reverse().find((item) => item.role === 'user')?.content
-            return { content: `未配置 API Key，本地回声：${last ?? ''}`, toolCalls: [] }
+            const text = `未配置 API Key，本地回声：${last ?? ''}`
+            await options?.onDelta?.(text)
+            return { content: text, toolCalls: [] }
           },
         }
     return new AgentLoop(this.ctx, llm, sessionId, signal)
