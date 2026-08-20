@@ -28,6 +28,7 @@ test('persistent terminal open/write/read/close', async () => {
     if (output.includes('term-ok')) break
     await new Promise((resolve) => setTimeout(resolve, 30))
   }
-  ctx.terminals.close(opened.id)
+  const closed = (await ctx.tools.invoke('terminal_close', { id: opened.id })) as { closed: boolean }
+  assert.equal(closed.closed, true)
   assert.match(output, /term-ok/)
 })

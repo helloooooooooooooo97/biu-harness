@@ -18,6 +18,7 @@ import type { SystemPromptService } from './plugins/core/system-prompt.ts'
 import type { FsService } from './plugins/seams/fs.ts'
 import type { SubprocessService } from './plugins/seams/subprocess.ts'
 import type { SandboxService } from './plugins/seams/sandbox.ts'
+import type { ShellService } from './plugins/seams/shell.ts'
 import type { JobsService } from './plugins/seams/jobs.ts'
 import type { McpService } from './plugins/seams/mcp.ts'
 import type { TerminalService } from './plugins/seams/terminal.ts'
@@ -63,6 +64,7 @@ declare module 'cordis' {
     fs: FsService
     subprocess: SubprocessService
     sandbox: SandboxService
+    shell: ShellService
     jobs: JobsService
     mcp: McpService
     terminals: TerminalService

@@ -40,3 +40,16 @@ test('json session store round-trips versioned records', async () => {
   assert.equal(loaded?.id, record.id)
   assert.equal(loaded?.events.some((item) => item.type === 'user/message'), true)
 })
+
+test('fork copies the append-only log into a child session', async () => {
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  const parent = await ctx.sessions.create()
+  await ctx.sessions.append(parent.id, { type: 'user/message', text: 'keep', kind: 'wake' })
+  const child = await ctx.sessions.fork(parent.id)
+  assert.notEqual(child.id, parent.id)
+  assert.equal(ctx.sessions.deriveMessages(child.id).some((item) => item.content === 'keep'), true)
+  await ctx.sessions.append(child.id, { type: 'assistant/message', text: 'child-only' })
+  assert.equal((await ctx.sessions.require(parent.id)).events.some((item) => item.type === 'assistant/message'), false)
+})

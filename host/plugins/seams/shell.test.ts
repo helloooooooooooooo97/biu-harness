@@ -39,3 +39,10 @@ test('bash and jobs run inside sandbox', async () => {
   }
   assert.match(collected?.result?.stdout ?? '', /job/)
 })
+
+test('shell seam runner can be swapped without changing the bash tool', async () => {
+  const ctx = await runtime()
+  ctx.shell.setRunner(async () => ({ code: 0, stdout: 'swapped\n', stderr: '' }))
+  const bash = (await ctx.tools.invoke('bash', { command: 'ignored' })) as { stdout: string }
+  assert.match(bash.stdout, /swapped/)
+})

@@ -1,16 +1,26 @@
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
 
+export interface SpawnOptions {
+  prompt: string
+  /** true：fork 父会话日志；默认空会话隔离。 */
+  inherit?: boolean
+  parentSessionId?: string
+}
+
 export class SubagentsService extends Service {
   constructor(ctx: Context) {
     super(ctx, 'subagents')
   }
 
-  async spawn(prompt: string) {
-    const child = await this.ctx.sessions.create()
+  async spawn(options: SpawnOptions | string) {
+    const opts: SpawnOptions = typeof options === 'string' ? { prompt: options } : options
+    const child = opts.inherit && opts.parentSessionId
+      ? await this.ctx.sessions.fork(opts.parentSessionId)
+      : await this.ctx.sessions.create()
     const agent = await this.ctx.agents.create(child.id)
-    const turn = await agent.send(prompt)
-    return { sessionId: child.id, text: turn.text, steps: turn.steps }
+    const turn = await agent.send(opts.prompt)
+    return { sessionId: child.id, text: turn.text, steps: turn.steps, inherited: Boolean(opts.inherit) }
   }
 }
 
@@ -21,12 +31,21 @@ export function apply(ctx: Context) {
   const subagents = new SubagentsService(ctx)
   ctx.tools.register({
     name: 'subagent_spawn',
-    description: '在独立 session 中跑一个子 agent，返回其最终文本',
+    description: '在独立 session 中跑一个子 agent；inherit=true 时 fork 父会话上下文',
     parameters: {
       type: 'object',
-      properties: { prompt: { type: 'string' } },
+      properties: {
+        prompt: { type: 'string' },
+        inherit: { type: 'boolean' },
+        parentSessionId: { type: 'string' },
+      },
       required: ['prompt'],
     },
-    execute: (args) => subagents.spawn(String(args.prompt)),
+    execute: (args) =>
+      subagents.spawn({
+        prompt: String(args.prompt),
+        inherit: Boolean(args.inherit),
+        parentSessionId: args.parentSessionId ? String(args.parentSessionId) : undefined,
+      }),
   })
 }
