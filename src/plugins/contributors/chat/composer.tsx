@@ -11,10 +11,10 @@ export function ChatComposer(props: SlotProps) {
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     const content = input.trim()
-    if (!content || pending) return
+    if (!content) return
     setInput('')
     try {
-      await sessionView.send(content)
+      await sessionView.send(content, pending ? 'inject' : 'wake')
     } catch {
       /* error 已写入 sessionView */
     }
@@ -30,8 +30,7 @@ export function ChatComposer(props: SlotProps) {
         className="max-h-40 min-h-[52px] w-full resize-none bg-transparent px-4 pt-3.5 pb-2 text-[15px] text-[var(--dsw-label)] outline-none placeholder:text-[var(--dsw-label-3)]"
         value={input}
         rows={1}
-        disabled={pending}
-        placeholder="Message DeepSeek Harness…"
+        placeholder={pending ? 'Steer while running…' : 'Message DeepSeek Harness…'}
         aria-label="对话输入"
         onChange={(event) => setInput(event.target.value)}
         onKeyDown={(event) => {
@@ -43,13 +42,23 @@ export function ChatComposer(props: SlotProps) {
       />
       <div className="flex items-center justify-end gap-2 px-3 pb-3">
         {pending ? (
-          <button
-            className="rounded-full border border-[var(--dsw-border)] px-3 py-1.5 text-xs text-[var(--dsw-label-2)] hover:bg-black/5"
-            type="button"
-            onClick={() => void sessionView.cancel()}
-          >
-            Cancel
-          </button>
+          <>
+            <button
+              className="rounded-full border border-[var(--dsw-border)] px-3 py-1.5 text-xs text-[var(--dsw-label-2)] hover:bg-black/5"
+              type="button"
+              onClick={() => void sessionView.cancel()}
+            >
+              Cancel
+            </button>
+            <button
+              className="rounded-full px-3 py-1.5 text-xs text-white disabled:opacity-40"
+              style={{ background: 'var(--dsw-business)' }}
+              type="submit"
+              disabled={!input.trim()}
+            >
+              Steer
+            </button>
+          </>
         ) : (
           <button
             className="grid size-8 place-items-center rounded-full text-white disabled:opacity-40"

@@ -19,6 +19,22 @@
 13. **Web 壳对标 dsh 观感** — 左栏 Wordmark+HARNESS / New Session；中栏 Chat hero + 浅蓝气泡 + 胶囊 composer；演示插件进 Settings modal（对照官方 `ui-layout` / `ui-sidebar` / `ui-conversation`，不搬整包）。
 14. **Web：可恢复会话列表 + 真 New Session / Fork** — `GET /api/sessions` 列出会话；侧栏切换 `load`；Fork 走 `POST /api/sessions/:id/fork`。
 15. **Web：Trajectory 事件账本** — Chat/Trajectory 可切换；`projectTrajectory` 从 append-only 日志投影；工具行可 `inspectCall` 跳到对应 seq 并高亮。
+16. **Web：审批 mode + 重水合** — `auto`/`hold` 可切换；启动与 `load` 时 `GET /api/approvals` 恢复 pending，不只依赖 WS。
+17. **Web：运行中 Steer/inject** — agent 忙时输入仍可用，`kind: 'inject'` 入队，不搬完整 QueueDock。
+
+## 功能级差异（相对官方 client，优点对齐后）
+
+| 能力 | 本仓 | 官方 | 策略 |
+|---|---|---|---|
+| 会话列表 / New / Fork | 有 | 有 | 已对齐（瘦） |
+| Chat 事件投影 | 有 | ConversationNode | 已对齐（瘦投影） |
+| Trajectory 账本 + inspect | 有 | ui-trajectory | 已对齐（无虚表） |
+| 审批 dock + mode | 有 | Permission + ApprovalPanel | 已对齐（瘦） |
+| 运行中 inject | 有 | steer/queue | 已对齐（无队列编辑 UI） |
+| Trajectory 虚表/搜索 | 无 | 有 | **不吸收** |
+| Workspace dock | 无 | ui-workspace | **不吸收** |
+| Goals / Plan / Attachments | 无 | 对应 ui-* | 需 host 域；暂不吸收 |
+| Jobs / Subagent 导航 | host 有、Web 薄 | ui-jobs / ui-subagent | 后续可选薄面 |
 
 ## 刻意不吸收
 

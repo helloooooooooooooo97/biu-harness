@@ -22,6 +22,7 @@ export interface SessionListItem {
 }
 
 export type ConversationView = 'chat' | 'trajectory'
+export type ApprovalMode = 'auto' | 'hold'
 
 export interface SessionViewState {
   sessionId: string | null
@@ -34,6 +35,7 @@ export interface SessionViewState {
   agentStatus: 'idle' | 'running'
   agentStep?: number
   pending: boolean
+  approvalMode: ApprovalMode
   approvals: ApprovalItem[]
   error?: string
 }
@@ -47,6 +49,7 @@ const empty: SessionViewState = {
   view: 'chat',
   agentStatus: 'idle',
   pending: false,
+  approvalMode: 'auto',
   approvals: [],
 }
 
@@ -57,6 +60,7 @@ export class SessionViewService extends Service {
   constructor(ctx: Context) {
     super(ctx, 'sessionView')
     void this.refreshSessions()
+    void this.refreshApprovals()
   }
 
   subscribe = (listener: () => void) => {
@@ -115,12 +119,40 @@ export class SessionViewService extends Service {
     }
   }
 
+  async refreshApprovals() {
+    try {
+      const res = await fetch('/api/approvals')
+      if (!res.ok) return
+      const body = (await res.json()) as {
+        mode?: ApprovalMode
+        pending?: ApprovalItem[]
+      }
+      this.replace({
+        approvalMode: body.mode === 'hold' ? 'hold' : 'auto',
+        approvals: Array.isArray(body.pending) ? body.pending : [],
+      })
+    } catch {
+      /* host 未就绪时忽略 */
+    }
+  }
+
+  async setApprovalMode(mode: ApprovalMode) {
+    const res = await fetch('/api/approvals/mode', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ mode }),
+    })
+    const body = (await res.json()) as { mode?: ApprovalMode }
+    if (!res.ok) throw new Error('failed to set approval mode')
+    this.replace({ approvalMode: body.mode === 'hold' ? 'hold' : 'auto' })
+  }
+
   async newSession() {
     const res = await fetch('/api/sessions', { method: 'POST' })
     const body = (await res.json()) as { id?: string }
     if (!body.id) throw new Error('无法创建 session')
     await this.load(body.id)
-    this.replace({ view: 'chat', focusCallId: undefined, approvals: [] })
+    this.replace({ view: 'chat', focusCallId: undefined })
     await this.refreshSessions()
     return body.id
   }
@@ -143,9 +175,9 @@ export class SessionViewService extends Service {
       error: undefined,
       pending: false,
       agentStatus: 'idle',
-      approvals: [],
     })
     await this.refreshSessions()
+    await this.refreshApprovals()
   }
 
   async forkCurrent() {
@@ -159,10 +191,23 @@ export class SessionViewService extends Service {
     return body.id
   }
 
-  async send(text: string) {
+  async send(text: string, kind: 'wake' | 'inject' = 'wake') {
     const content = text.trim()
     if (!content) return
     const sessionId = await this.ensureSession()
+    if (kind === 'inject') {
+      const res = await fetch(`/api/sessions/${sessionId}/messages`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: content, kind: 'inject' }),
+      })
+      const data = (await res.json()) as { error?: string }
+      if (!res.ok) {
+        this.replace({ error: data.error || `注入失败：${res.status}` })
+        throw new Error(data.error || `注入失败：${res.status}`)
+      }
+      return
+    }
     this.replace({ pending: true, agentStatus: 'running', error: undefined })
     try {
       const res = await fetch(`/api/sessions/${sessionId}/messages`, {

@@ -5,11 +5,29 @@ export function ApprovalsRail(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
   const approvals = useSessionView((state) => state.approvals)
-
-  if (!approvals.length) return null
+  const approvalMode = useSessionView((state) => state.approvalMode)
 
   return (
     <div className="mx-auto w-full max-w-[calc(var(--dsw-chat-width)+32px)] space-y-2">
+      <div className="flex items-center justify-between gap-2 px-1 text-[11px] text-[var(--dsw-label-3)]">
+        <span>Tool approvals</span>
+        <div className="flex overflow-hidden rounded-full border border-[var(--dsw-border)]">
+          {(['auto', 'hold'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              className={`px-2.5 py-1 capitalize ${
+                approvalMode === mode
+                  ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
+                  : 'hover:bg-black/[0.03]'
+              }`}
+              onClick={() => void sessionView.setApprovalMode(mode)}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+      </div>
       {approvals.map((item) => (
         <div
           key={item.id}
