@@ -18,7 +18,7 @@
 12. **Web：审批可观察** — hold 待批出现在 composer dock，允许/拒绝回调 host。
 13. **Web 壳对标 dsh 观感** — 最左 **VS Code 式 Activity Bar**（纯图标切换 Agent / Workspace…）；Agent 下再挂 Side Bar（Sessions）+ Chat / Trajectory；演示插件进 Settings modal。
 14. **Web：可恢复会话列表 + 真 New Session / Fork** — `GET /api/sessions` 列出会话；Agent 侧栏切换 `load`；Fork 走 `POST /api/sessions/:id/fork`。
-15. **Web：Trajectory 事件账本** — Chat/Trajectory 可切换；`projectTrajectory` 从 append-only 日志投影；点击行打开事件详情；`assistant/message` 详情用 `deriveMessages(seq 前缀)` 投影本步 request（不另持久化 messages 快照）与 response；工具行可 `inspectCall` 跳到对应 seq 并高亮；provider `usage` 写入事件并显示。
+15. **Web：Trajectory 事件账本** — Chat/Trajectory 可切换；`projectTrajectory` 从日志投影结构化行（**跳过** `assistant/chunk`，对齐 dsh：chunk 只服务 Chat 流式，message 为权威）；点击行打开事件详情；`assistant/message` 详情用 `deriveMessages(seq 前缀)` 投影本步 request；工具行可 `inspectCall`；`usage` 写入事件并显示。客户端 `compactSessionEvents` / ingest 合并连续 chunk，避免轨道与重渲染被 delta 淹没。
 16. **Web：Chat Markdown** — 用户/助手气泡用 `react-markdown` + `remark-gfm` 渲染。
 17. **Web：审批 mode + 重水合** — `auto`/`hold` 可切换；启动与 `load` 时 `GET /api/approvals` 恢复 pending，不只依赖 WS。
 18. **Web：运行中 Steer/inject** — agent 忙时输入仍可用，`kind: 'inject'` 入队，不搬完整 QueueDock。

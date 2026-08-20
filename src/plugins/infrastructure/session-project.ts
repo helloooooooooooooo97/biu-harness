@@ -214,6 +214,38 @@ function assistantSummary(event: Extract<SessionEvent, { type: 'assistant/messag
   return '(empty assistant message)'
 }
 
+/**
+ * 前端事件压缩（对齐 dsh：chunk 仅服务流式投影，不膨胀 UI 账本）。
+ * - 连续 `assistant/chunk` 合并为一条
+ * - 已被同段 `assistant/message` 覆盖的 chunk 丢弃（message 为权威全文）
+ * 不改 host append-only 落盘；仅瘦客户端内存视图。
+ */
+export function compactSessionEvents(events: SessionEvent[]): SessionEvent[] {
+  const coalesced: SessionEvent[] = []
+  for (const event of events) {
+    if (event.type === 'assistant/chunk') {
+      const prev = coalesced.at(-1)
+      if (prev?.type === 'assistant/chunk') {
+        coalesced[coalesced.length - 1] = {
+          ...prev,
+          text: prev.text + event.text,
+          ts: event.ts,
+        }
+        continue
+      }
+    }
+    coalesced.push(event)
+  }
+  const out: SessionEvent[] = []
+  for (let i = 0; i < coalesced.length; i++) {
+    const event = coalesced[i]!
+    const next = coalesced[i + 1]
+    if (event.type === 'assistant/chunk' && next?.type === 'assistant/message') continue
+    out.push(event)
+  }
+  return out
+}
+
 export function projectTrajectory(events: SessionEvent[]): TrajectoryRow[] {
   let turn: number | null = null
   let step: number | null = null
@@ -225,7 +257,8 @@ export function projectTrajectory(events: SessionEvent[]): TrajectoryRow[] {
       step = null
       inStep = false
     }
-    if (event.type === 'session/open') continue
+    // 与 dsh ConversationNode / deriveMessages 一致：chunk 不进轨迹行（流式只在 Chat 合并）
+    if (event.type === 'session/open' || event.type === 'assistant/chunk') continue
     if (event.type === 'step/start') {
       step = event.step
       inStep = true
@@ -237,7 +270,7 @@ export function projectTrajectory(events: SessionEvent[]): TrajectoryRow[] {
     if (event.type === 'assistant/message') {
       summary = assistantSummary(event)
       usage = event.usage
-    } else if (event.type === 'user/message' || event.type === 'assistant/chunk' || event.type === 'system/prompt') {
+    } else if (event.type === 'user/message' || event.type === 'system/prompt') {
       summary = event.text.slice(0, 160)
     } else if (event.type === 'tool/call') {
       callId = event.id

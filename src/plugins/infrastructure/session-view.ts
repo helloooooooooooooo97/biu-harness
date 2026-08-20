@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { Service, type Context } from 'cordis'
 import {
+  compactSessionEvents,
   projectNodes,
   projectTrajectory,
   type ChatNode,
@@ -140,7 +141,8 @@ export class SessionViewService extends Service {
       trajectory: projectTrajectory(events),
       error: undefined,
     })
-    void this.refreshSessions()
+    // chunk 高频；列表刷新留给 turn/message/tool 等结构化事件
+    if (event.type !== 'assistant/chunk') void this.refreshSessions()
   }
 
   setAgentStatus(status: 'idle' | 'running', step?: number) {
@@ -223,7 +225,7 @@ export class SessionViewService extends Service {
       events: SessionEvent[]
       project?: { name: string; path?: string; boundAt: number }
     }
-    const events = Array.isArray(body.events) ? body.events : []
+    const events = compactSessionEvents(Array.isArray(body.events) ? body.events : [])
     this.replace({
       sessionId: body.id,
       events,
@@ -353,6 +355,22 @@ export class SessionViewService extends Service {
 
 function upsertEvent(events: SessionEvent[], event: SessionEvent) {
   if (events.some((item) => item.seq === event.seq)) return events
+  if (event.type === 'assistant/chunk') {
+    const last = events.at(-1)
+    if (last?.type === 'assistant/chunk') {
+      // 合并连续 delta，保持首条 chunk 的 seq（Chat 流式节点 id 稳定）
+      return [
+        ...events.slice(0, -1),
+        { ...last, text: last.text + event.text, ts: event.ts },
+      ]
+    }
+  }
+  if (event.type === 'assistant/message') {
+    const last = events.at(-1)
+    if (last?.type === 'assistant/chunk') {
+      return [...events.slice(0, -1), event]
+    }
+  }
   return [...events, event].sort((a, b) => a.seq - b.seq)
 }
 
