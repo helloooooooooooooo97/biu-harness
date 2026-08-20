@@ -25,13 +25,13 @@ export class HubService extends Service {
       if (name.startsWith('internal/')) return
       this.events.unshift({ ts: Date.now(), mode, name, args: clone(args) })
       this.events.splice(80)
-      ctx.http?.broadcast(HUB_CHANNEL_EVENT, this.events[0])
+      ctx.http.broadcast(HUB_CHANNEL_EVENT, this.events[0])
     })
     ctx.on('internal/status', () => {
-      ctx.http?.broadcast(HUB_CHANNEL_SNAPSHOT, this.snapshot())
+      ctx.http.broadcast(HUB_CHANNEL_SNAPSHOT, this.snapshot())
     })
     ctx.on(HUB_CHANGE, () => {
-      ctx.http?.broadcast(HUB_CHANNEL_SNAPSHOT, this.snapshot())
+      ctx.http.broadcast(HUB_CHANNEL_SNAPSHOT, this.snapshot())
     })
     // 自动挂载所有的插件
     for (const entry of catalog) {
@@ -67,13 +67,13 @@ export class HubService extends Service {
       seq: ++this.seq,
       plugins,
       pages: [...this.pages],
-      routes: this.ctx.http?.listRoutes() ?? [],
+      routes: this.ctx.http.listRoutes(),
       events: this.events,
-      tools: this.ctx.tools?.names() ?? [],
+      tools: this.ctx.tools.names(),
       services: [
         'http', 'hub', 'tools', 'llm', 'agentLoop', 'agents', 'approvals',
         'sessionStore', 'sessions', 'systemPrompt', 'fs', 'subprocess', 'sandbox',
-        'jobs', 'mcp', 'terminals', 'lsp', 'subagents', 'greet', 'notes', 'chat',
+        'shell', 'jobs', 'mcp', 'terminals', 'lsp', 'subagents', 'greet', 'notes', 'chat',
       ].filter((name) => Boolean(this.ctx.get(name))),
     }
   }
@@ -112,7 +112,7 @@ function clone(value: unknown): unknown[] {
 }
 
 export const name = 'hub'
-export const inject = ['http']
+export const inject = ['http', 'tools']
 
 export function apply(ctx: Context) {
   new HubService(ctx)
