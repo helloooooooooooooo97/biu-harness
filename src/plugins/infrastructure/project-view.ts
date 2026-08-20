@@ -8,6 +8,7 @@ import {
   pickDirectory,
   readTextFile,
   saveSessionDirHandle,
+  syncProjectFiles,
   writeTextFile,
   type DirEntry,
   type FsDirHandle,
@@ -22,6 +23,8 @@ export interface ProjectViewState {
   sessionId: string | null
   project?: SessionProjectMeta
   handleReady: boolean
+  synced: boolean
+  syncNote?: string
   entries: DirEntry[]
   expanded: string[]
   children: Record<string, DirEntry[]>
@@ -35,6 +38,7 @@ export interface ProjectViewState {
 const empty: ProjectViewState = {
   sessionId: null,
   handleReady: false,
+  synced: false,
   entries: [],
   expanded: [],
   children: {},
@@ -96,6 +100,7 @@ export class ProjectViewService extends Service {
         content: '',
         dirty: false,
       })
+      await this.syncToHost()
     } catch (error) {
       this.replace({ busy: false, handleReady: false, error: String(error) })
     }
@@ -127,12 +132,47 @@ export class ProjectViewService extends Service {
         dirty: false,
         busy: false,
         error: undefined,
+        synced: false,
       })
+      await this.syncToHost()
       return this.value.project
     } catch (error) {
       const message = error instanceof DOMException && error.name === 'AbortError' ? undefined : String(error)
       this.replace({ busy: false, error: message })
       throw error
+    }
+  }
+
+  /** 把浏览器绑定目录同步到 host，供 Agent 工具读取。 */
+  async syncToHost() {
+    const sessionId = this.value.sessionId
+    if (!sessionId || !this.root) return { written: 0, total: 0 }
+    this.replace({ busy: true, error: undefined })
+    try {
+      const result = await syncProjectFiles(sessionId, this.root)
+      this.replace({
+        busy: false,
+        synced: true,
+        syncNote: `已同步 ${result.written} 个文本文件到 Agent 工作区`,
+        error: undefined,
+      })
+      return result
+    } catch (error) {
+      this.replace({ busy: false, synced: false, error: String(error) })
+      throw error
+    }
+  }
+
+  /** Agent 在 host 改写后，写回本机绑定目录。 */
+  async applyHostWrite(sessionId: string, path: string, content: string) {
+    if (!this.root || this.value.sessionId !== sessionId) return
+    try {
+      await writeTextFile(this.root, path, content)
+      if (this.value.openPath === path) {
+        this.replace({ content, dirty: false })
+      }
+    } catch (error) {
+      this.replace({ error: `写回本机失败：${String(error)}` })
     }
   }
 

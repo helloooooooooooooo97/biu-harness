@@ -98,6 +98,15 @@ export class SnapshotService extends Service {
             | undefined
           view?.upsertApproval(item)
         }
+        if (parsed.type === 'project/write') {
+          const item = parsed.payload as { sessionId?: string; path?: string; content?: string }
+          if (item.sessionId && item.path != null && item.content != null) {
+            const project = this.ctx.get('projectView') as
+              | { applyHostWrite: (sessionId: string, path: string, content: string) => Promise<void> }
+              | undefined
+            void project?.applyHostWrite(item.sessionId, item.path, item.content)
+          }
+        }
         if (parsed.type === 'agent') {
           const status = parsed.payload as { status: 'idle' | 'running'; step?: number }
           const view = this.ctx.get('sessionView') as

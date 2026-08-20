@@ -155,7 +155,7 @@ export class ChatService extends Service {
 }
 
 export const name = 'chat'
-export const inject = ['http', 'hub', 'agents', 'sessions', 'systemPrompt', 'tools']
+export const inject = ['http', 'hub', 'agents', 'sessions', 'systemPrompt', 'tools', 'sessionProjects']
 
 export function apply(ctx: Context) {
   const chat = new ChatService(ctx)
@@ -228,6 +228,30 @@ export function apply(ctx: Context) {
       }
       const project = await ctx.sessions.setProject(route.params.id, { name: String(payload.name).slice(0, 200) })
       route.send(200, { ok: true, project })
+    } catch (error) {
+      route.send(404, { error: String(error) })
+    }
+  })
+  ctx.http.route('PUT', '/api/sessions/:id/project/sync', async (route) => {
+    const payload = (await route.json()) as { files?: Array<{ path?: string; content?: string }> }
+    const files = Array.isArray(payload?.files)
+      ? payload.files.map((item) => ({ path: String(item.path ?? ''), content: String(item.content ?? '') }))
+      : []
+    try {
+      await ctx.sessions.require(route.params.id)
+      const result = await ctx.sessionProjects.sync(route.params.id, files)
+      route.send(200, { ok: true, written: result.written })
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
+  })
+  ctx.http.route('GET', '/api/sessions/:id/project/sync', async (route) => {
+    try {
+      const record = await ctx.sessions.require(route.params.id)
+      route.send(200, {
+        project: record.project ?? null,
+        synced: ctx.sessionProjects.isSynced(route.params.id),
+      })
     } catch (error) {
       route.send(404, { error: String(error) })
     }

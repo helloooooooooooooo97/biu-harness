@@ -8,6 +8,7 @@ import * as tools from './plugins/registry/tools.ts'
 import * as systemPrompt from './plugins/core/system-prompt.ts'
 import * as llm from './plugins/orchestration/llm.ts'
 import * as fs from './plugins/seams/fs.ts'
+import * as sessionProjects from './plugins/seams/session-projects.ts'
 import * as sandbox from './plugins/seams/sandbox.ts'
 import * as subprocess from './plugins/seams/subprocess.ts'
 import * as shell from './plugins/seams/shell.ts'
@@ -44,6 +45,7 @@ async function boot() {
   await ctx.plugin(tools)
   await ctx.plugin(systemPrompt)
   await ctx.plugin(llm)
+  await ctx.plugin(sessionProjects)
   await ctx.plugin(fs)
   await ctx.plugin(sandbox)
   await ctx.plugin(subprocess)

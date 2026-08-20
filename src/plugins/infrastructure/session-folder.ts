@@ -122,9 +122,82 @@ export async function writeTextFile(root: FsDirHandle, filePath: string, text: s
   const parts = filePath.split('/').filter(Boolean)
   const name = parts.pop()
   if (!name) throw new Error('empty path')
-  const dir = await resolveDir(root, parts.join('/'))
+  let dir = root
+  for (const part of parts) {
+    dir = await dir.getDirectoryHandle(part, { create: true })
+  }
   const handle = await dir.getFileHandle(name, { create: true })
   const writable = await handle.createWritable()
   await writable.write(text)
   await writable.close()
+}
+
+const IGNORE_DIRS = new Set([
+  '.git',
+  'node_modules',
+  'dist',
+  'build',
+  '.next',
+  'coverage',
+  '.venv',
+  'venv',
+  '__pycache__',
+  '.cordis',
+  '.workspace',
+])
+
+const IGNORE_NAMES = new Set(['.DS_Store'])
+
+const MAX_FILE_BYTES = 512 * 1024
+const MAX_FILES = 2_000
+
+function looksBinary(name: string) {
+  return /\.(png|jpe?g|gif|webp|ico|pdf|zip|gz|tar|bz2|xz|7z|woff2?|ttf|eot|mp4|mp3|wasm|exe|dll|so|dylib|bin)$/i.test(
+    name,
+  )
+}
+
+/** 收集绑定文件夹内文本文件，供同步到 host 会话工作区。 */
+export async function collectTextFiles(
+  root: FsDirHandle,
+  options?: { maxFiles?: number; maxBytes?: number },
+): Promise<Array<{ path: string; content: string }>> {
+  const maxFiles = options?.maxFiles ?? MAX_FILES
+  const maxBytes = options?.maxBytes ?? MAX_FILE_BYTES
+  const out: Array<{ path: string; content: string }> = []
+
+  async function walk(dir: FsDirHandle, prefix: string) {
+    for await (const entry of dir.values()) {
+      if (IGNORE_NAMES.has(entry.name)) continue
+      const path = prefix ? `${prefix}/${entry.name}` : entry.name
+      if (entry.kind === 'directory') {
+        if (IGNORE_DIRS.has(entry.name)) continue
+        await walk(entry, path)
+        continue
+      }
+      if (looksBinary(entry.name)) continue
+      if (out.length >= maxFiles) throw new Error(`项目文件过多（>${maxFiles}），请缩小目录或排除 node_modules`)
+      const file = await entry.getFile()
+      if (file.size > maxBytes) continue
+      const content = await file.text()
+      // skip obvious binary payloads without extension
+      if (content.includes('\u0000')) continue
+      out.push({ path, content })
+    }
+  }
+
+  await walk(root, '')
+  return out
+}
+
+export async function syncProjectFiles(sessionId: string, root: FsDirHandle) {
+  const files = await collectTextFiles(root)
+  const res = await fetch(`/api/sessions/${sessionId}/project/sync`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ files }),
+  })
+  const body = (await res.json()) as { ok?: boolean; written?: number; error?: string }
+  if (!res.ok) throw new Error(body.error || `同步失败：${res.status}`)
+  return { written: body.written ?? files.length, total: files.length }
 }

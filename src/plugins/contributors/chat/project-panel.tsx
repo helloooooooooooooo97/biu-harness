@@ -65,6 +65,8 @@ export function SessionProjectPanel(props: SlotProps) {
   const sessionId = useProjectView((state) => state.sessionId)
   const project = useProjectView((state) => state.project)
   const handleReady = useProjectView((state) => state.handleReady)
+  const synced = useProjectView((state) => state.synced)
+  const syncNote = useProjectView((state) => state.syncNote)
   const entries = useProjectView((state) => state.entries)
   const expanded = useProjectView((state) => state.expanded)
   const children = useProjectView((state) => state.children)
@@ -111,6 +113,17 @@ export function SessionProjectPanel(props: SlotProps) {
           >
             {project ? 'Rebind' : 'Open folder'}
           </button>
+          {project && handleReady ? (
+            <button
+              type="button"
+              className="rounded-[8px] px-2 py-1 text-[11px] text-[var(--dsw-label-3)] hover:bg-black/5"
+              disabled={busy}
+              title="把本机文件夹同步到 Agent 工作区"
+              onClick={() => void projectView.syncToHost().catch(() => undefined)}
+            >
+              Sync
+            </button>
+          ) : null}
         </div>
       </header>
 
@@ -118,11 +131,16 @@ export function SessionProjectPanel(props: SlotProps) {
         <p className="project-panel-hint">需要 Chromium 系浏览器的 File System Access API 才能打开本地文件夹。</p>
       ) : null}
       {error ? <p className="project-panel-error">{error}</p> : null}
+      {project && handleReady ? (
+        <p className="project-panel-hint">
+          {synced ? syncNote || '已同步到 Agent 工作区' : '尚未同步：Agent 还读不到本机文件，请 Sync 或发送消息自动同步。'}
+        </p>
+      ) : null}
 
       {!project ? (
         <div className="project-panel-empty">
           <p className="text-sm leading-6 text-[var(--dsw-label-2)]">
-            为本 Session 打开一个本地文件夹，即可浏览与编辑文件。每个 Session 绑定一个项目目录。
+            为本 Session 打开一个本地文件夹，即可浏览与编辑；同步后 Agent（bash / 文件工具）也能读写该项目。
           </p>
         </div>
       ) : !handleReady ? (

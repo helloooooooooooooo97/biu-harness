@@ -72,7 +72,7 @@ export class HubService extends Service {
       tools: this.ctx.tools.names(),
       services: [
         'http', 'hub', 'tools', 'llm', 'agentLoop', 'agents', 'approvals',
-        'sessionStore', 'sessions', 'systemPrompt', 'fs', 'subprocess', 'sandbox',
+        'sessionStore', 'sessions', 'systemPrompt', 'sessionProjects', 'fs', 'subprocess', 'sandbox',
         'shell', 'jobs', 'mcp', 'terminals', 'lsp', 'subagents', 'greet', 'notes', 'chat',
       ].filter((name) => Boolean(this.ctx.get(name))),
     }

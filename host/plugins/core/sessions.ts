@@ -58,6 +58,11 @@ export class SessionsService extends Service {
     return record
   }
 
+  /** 同步读缓存（Agent 工具解析会话项目根时用）。 */
+  peek(id: string) {
+    return this.cache.get(id)
+  }
+
   async get(id: string) {
     const hit = this.cache.get(id)
     if (hit) return hit
@@ -105,6 +110,7 @@ export class SessionsService extends Service {
       record.project = { name: project.name, boundAt: Date.now() }
     } else {
       delete record.project
+      await this.ctx.sessionProjects?.clear?.(id)
     }
     await this.persist(record)
     return record.project
@@ -116,6 +122,7 @@ export class SessionsService extends Service {
 
   async delete(id: string) {
     this.cache.delete(id)
+    await this.ctx.sessionProjects?.clear?.(id)
     return this.ctx.sessionStore.delete(id)
   }
 

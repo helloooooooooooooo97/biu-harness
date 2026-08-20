@@ -304,6 +304,12 @@ export class SessionViewService extends Service {
     }
     this.replace({ pending: true, agentStatus: 'running', error: undefined })
     try {
+      const projectView = this.ctx.get('projectView') as
+        | { get: () => { handleReady?: boolean; project?: unknown }; syncToHost: () => Promise<unknown> }
+        | undefined
+      if (projectView?.get().project && projectView.get().handleReady) {
+        await projectView.syncToHost()
+      }
       const res = await fetch(`/api/sessions/${sessionId}/messages`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
