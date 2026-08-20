@@ -237,7 +237,18 @@ function EventDetailBody({ event }: { event: SessionEvent }) {
         ))}
       </dl>
       {usage ? <UsageCard usage={usage} /> : null}
-      {request?.length ? <RequestPanel messages={request} /> : null}
+      {event.type === 'assistant/message' ? (
+        request?.length ? (
+          <RequestPanel messages={request} />
+        ) : (
+          <section className="traj-io-card traj-io-card-missing" aria-label="LLM request missing">
+            <div className="traj-io-card-title">Request · messages</div>
+            <p className="traj-io-missing">
+              本条没有 request 快照。请发一条新消息后再点对应的 assistant/message（旧会话不会回填）。
+            </p>
+          </section>
+        )
+      ) : null}
       {event.type === 'assistant/message' ? (
         <ResponsePanel event={event} />
       ) : (
