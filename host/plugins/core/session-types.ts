@@ -31,4 +31,5 @@ export interface SessionStore {
   load(id: string): Promise<SessionRecord | undefined>
   save(record: SessionRecord): Promise<void>
   list(): Promise<string[]>
+  delete(id: string): Promise<boolean>
 }

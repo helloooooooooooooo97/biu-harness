@@ -139,6 +139,13 @@ export function apply(ctx: Context) {
       route.send(400, { error: String(error) })
     }
   })
+  ctx.http.route('DELETE', '/api/sessions/:id', async (route) => {
+    const id = route.params.id
+    ctx.agents.get(id)?.dispose()
+    const ok = await ctx.sessions.delete(id)
+    if (!ok) return route.send(404, { error: 'unknown session' })
+    route.send(200, { ok: true, id })
+  })
   ctx.http.route('POST', '/api/sessions/:id/messages', async (route) => {
     const payload = (await route.json()) as { text?: string; kind?: 'wake' | 'inject' }
     const agent = await ctx.agents.create(route.params.id)
