@@ -6,6 +6,7 @@ import {
   sumTrajectoryUsage,
   type SessionEvent,
   type TrajectoryRow,
+  type TrajectoryUsage,
 } from '../../infrastructure/session-project.ts'
 
 type TagTone = 'user' | 'assistant' | 'tool' | 'system' | 'turn' | 'step'
@@ -27,6 +28,65 @@ const toneClass: Record<TagTone, string> = {
   system: 'traj-tag traj-tag-system',
   turn: 'traj-tag traj-tag-turn',
   step: 'traj-tag traj-tag-step',
+}
+
+function formatTok(n: number) {
+  return n.toLocaleString('en-US')
+}
+
+function UsageInline({ usage, empty = '—' }: { usage?: TrajectoryUsage; empty?: string }) {
+  if (!usage) return <span className="traj-usage-empty">{empty}</span>
+  return (
+    <span className="traj-usage" title={formatTrajectoryUsage(usage)}>
+      <span className="traj-usage-in" title="input tokens">
+        {formatTok(usage.inputTokens)}
+      </span>
+      <span className="traj-usage-arrow" aria-hidden>
+        →
+      </span>
+      <span className="traj-usage-out" title="output tokens">
+        {formatTok(usage.outputTokens)}
+      </span>
+      {usage.cacheReadTokens ? (
+        <span className="traj-usage-cache" title="cache read tokens">
+          c{formatTok(usage.cacheReadTokens)}
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
+function UsageCard({ usage, label = 'Token usage' }: { usage: TrajectoryUsage; label?: string }) {
+  const total = usage.totalTokens ?? usage.inputTokens + usage.outputTokens
+  const cacheRatio =
+    usage.inputTokens > 0 && usage.cacheReadTokens
+      ? Math.min(100, Math.round((usage.cacheReadTokens / usage.inputTokens) * 100))
+      : null
+  return (
+    <section className="traj-usage-card" aria-label={label}>
+      <div className="traj-usage-card-title">{label}</div>
+      <div className="traj-usage-grid">
+        <div className="traj-usage-stat traj-usage-stat-in">
+          <span>Input</span>
+          <strong>{formatTok(usage.inputTokens)}</strong>
+        </div>
+        <div className="traj-usage-stat traj-usage-stat-out">
+          <span>Output</span>
+          <strong>{formatTok(usage.outputTokens)}</strong>
+        </div>
+        <div className="traj-usage-stat">
+          <span>Total</span>
+          <strong>{formatTok(total)}</strong>
+        </div>
+        {usage.cacheReadTokens != null && usage.cacheReadTokens > 0 ? (
+          <div className="traj-usage-stat traj-usage-stat-cache">
+            <span>Cache read{cacheRatio != null ? ` · ${cacheRatio}%` : ''}</span>
+            <strong>{formatTok(usage.cacheReadTokens)}</strong>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  )
 }
 
 export function TrajectoryView(props: SlotProps) {
@@ -82,8 +142,9 @@ export function TrajectoryView(props: SlotProps) {
           <span className="traj-meta-sep">·</span>
           <span>{groups.length} turns</span>
           <span className="traj-meta-sep">·</span>
-          <span title="Sum of assistant/message usage in this session">
-            usage {cumulative ? formatTrajectoryUsage(cumulative) : '—'}
+          <span className="traj-meta-usage" title="Sum of assistant/message usage in this session">
+            <span className="traj-meta-usage-label">usage</span>
+            <UsageInline usage={cumulative} />
           </span>
         </div>
 
@@ -104,7 +165,6 @@ export function TrajectoryView(props: SlotProps) {
               {group.rows.map((row) => {
                 const focused = Boolean(focusCallId && row.callId === focusCallId) || selectedSeq === row.seq
                 const tone = toneOf(row.type)
-                const usageText = formatTrajectoryUsage(row.usage)
                 return (
                   <button
                     key={row.id}
@@ -125,8 +185,8 @@ export function TrajectoryView(props: SlotProps) {
                     <span className="traj-col-summary" title={row.summary}>
                       {row.summary}
                     </span>
-                    <span className="traj-col-usage" title={usageText || undefined}>
-                      {usageText || '—'}
+                    <span className="traj-col-usage">
+                      <UsageInline usage={row.usage} />
                     </span>
                   </button>
                 )
@@ -156,6 +216,7 @@ export function TrajectoryView(props: SlotProps) {
 
 function EventDetailBody({ event }: { event: SessionEvent }) {
   const fields = detailFields(event)
+  const usage = event.type === 'assistant/message' ? event.usage : undefined
   return (
     <div className="traj-detail-body">
       <dl className="traj-detail-meta">
@@ -174,9 +235,16 @@ function EventDetailBody({ event }: { event: SessionEvent }) {
           </div>
         ))}
       </dl>
-      <pre className="traj-detail-json">{JSON.stringify(event, null, 2)}</pre>
+      {usage ? <UsageCard usage={usage} /> : null}
+      <pre className="traj-detail-json">{JSON.stringify(omitUsage(event), null, 2)}</pre>
     </div>
   )
+}
+
+function omitUsage(event: SessionEvent): SessionEvent | Record<string, unknown> {
+  if (event.type !== 'assistant/message' || !event.usage) return event
+  const { usage: _usage, ...rest } = event
+  return rest
 }
 
 function detailFields(event: SessionEvent): Array<{ label: string; value: string }> {
@@ -189,12 +257,6 @@ function detailFields(event: SessionEvent): Array<{ label: string; value: string
   if (event.type === 'assistant/message') {
     const rows = [{ label: 'text', value: `${event.text.length} chars` }]
     if (event.tool_calls?.length) rows.push({ label: 'tool_calls', value: String(event.tool_calls.length) })
-    if (event.usage) {
-      rows.push({
-        label: 'usage',
-        value: formatTrajectoryUsage(event.usage) || '—',
-      })
-    }
     return rows
   }
   if (event.type === 'tool/call') {
