@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
@@ -17,6 +17,10 @@ export class MemorySessionStore implements SessionStore {
 
   async list() {
     return [...this.records.keys()]
+  }
+
+  async delete(id: string) {
+    return this.records.delete(id)
   }
 }
 
@@ -55,6 +59,16 @@ export class JsonSessionStore implements SessionStore {
       throw error
     }
   }
+
+  async delete(id: string) {
+    try {
+      await unlink(this.file(id))
+      return true
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+      throw error
+    }
+  }
 }
 
 export class SessionStoreService extends Service implements SessionStore {
@@ -75,6 +89,10 @@ export class SessionStoreService extends Service implements SessionStore {
 
   list() {
     return this.inner.list()
+  }
+
+  delete(id: string) {
+    return this.inner.delete(id)
   }
 }
 

@@ -233,6 +233,33 @@ export class SessionViewService extends Service {
     return body.id
   }
 
+  async deleteSession(id: string) {
+    const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' })
+    const body = (await res.json()) as { ok?: boolean; error?: string }
+    if (!res.ok) throw new Error(body.error || `删除失败：${res.status}`)
+    const wasActive = this.value.sessionId === id
+    await this.refreshSessions()
+    if (!wasActive) return
+    const next = this.value.sessions[0]?.id
+    if (next) {
+      await this.load(next)
+      this.replace({ view: 'chat', focusCallId: undefined })
+      return
+    }
+    this.replace({
+      sessionId: null,
+      events: [],
+      nodes: [],
+      trajectory: [],
+      approvals: [],
+      pending: false,
+      agentStatus: 'idle',
+      view: 'chat',
+      focusCallId: undefined,
+      error: undefined,
+    })
+  }
+
   async send(text: string, kind: 'wake' | 'inject' = 'wake') {
     const content = text.trim()
     if (!content) return

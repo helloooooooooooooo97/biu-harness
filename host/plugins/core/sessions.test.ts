@@ -53,3 +53,14 @@ test('fork copies the append-only log into a child session', async () => {
   await ctx.sessions.append(child.id, { type: 'assistant/message', text: 'child-only' })
   assert.equal((await ctx.sessions.require(parent.id)).events.some((item) => item.type === 'assistant/message'), false)
 })
+
+test('delete removes session from store and cache', async () => {
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  const record = await ctx.sessions.create()
+  assert.equal(await ctx.sessions.delete(record.id), true)
+  assert.equal(await ctx.sessions.get(record.id), undefined)
+  assert.equal((await ctx.sessions.list()).includes(record.id), false)
+  assert.equal(await ctx.sessions.delete(record.id), false)
+})

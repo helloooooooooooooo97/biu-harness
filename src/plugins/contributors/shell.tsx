@@ -74,18 +74,43 @@ function Shell(props: SlotProps) {
             sessions.map((item) => {
               const active = item.id === sessionId
               return (
-                <Link
+                <div
                   key={item.id}
-                  to={`/s/${item.id}${view === 'trajectory' ? '/trajectory' : ''}`}
-                  className={`mb-1 block w-full rounded-[12px] px-3 py-2 text-left text-sm ${
+                  className={`group mb-1 flex w-full items-stretch rounded-[12px] ${
                     active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-black/[0.03]'
                   }`}
                 >
-                  <div className="truncate font-medium">{item.title}</div>
-                  <div className="mt-0.5 font-mono text-[10px] opacity-70">
-                    {item.id.slice(0, 8)} · {item.eventCount} events
-                  </div>
-                </Link>
+                  <Link
+                    to={`/s/${item.id}${view === 'trajectory' ? '/trajectory' : ''}`}
+                    className="min-w-0 flex-1 px-3 py-2 text-left text-sm"
+                  >
+                    <div className="truncate font-medium">{item.title}</div>
+                    <div className="mt-0.5 font-mono text-[10px] opacity-70">
+                      {item.id.slice(0, 8)} · {item.eventCount} events
+                    </div>
+                  </Link>
+                  <button
+                    type="button"
+                    className="shrink-0 px-2 text-[var(--dsw-label-3)] opacity-0 transition-opacity hover:text-[var(--dsw-danger)] group-hover:opacity-100 focus:opacity-100"
+                    aria-label={`Delete session ${item.title}`}
+                    title="Delete"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      if (!window.confirm(`Delete session “${item.title}”?`)) return
+                      const wasActive = item.id === sessionId
+                      void sessionView.deleteSession(item.id).then(() => {
+                        if (!wasActive) return
+                        const next = sessionView.get().sessionId
+                        navigate(next ? `/s/${next}` : '/')
+                      })
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M10 7V5h4v2m-6 3v8m4-8v8m-7-11 1 14h10l1-14" />
+                    </svg>
+                  </button>
+                </div>
               )
             })
           )}
