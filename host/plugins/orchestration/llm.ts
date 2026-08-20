@@ -14,6 +14,12 @@ export interface LlmMessage {
   tool_call_id?: string
 }
 
+/** OpenAI/DeepSeek：带 tool_calls 时 content 宜为 null，空字符串可能导致后续回合拒答。 */
+export function assistantContentForApi(text: string | undefined | null, hasToolCalls: boolean): string | null {
+  if (hasToolCalls && !text) return null
+  return text ?? null
+}
+
 export interface ToolCall {
   id: string
   name: string

@@ -79,9 +79,16 @@ export class AgentLoop implements AgentRunner {
       } catch (error) {
         if (this.signal.aborted) {
           await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'cancelled' })
+          this.ctx.emit('agent/status', { status: 'idle' })
           throw new Error('cancelled')
         }
-        throw error
+        const detail = String(error)
+        const text = `模型调用失败：${detail}`
+        await session.append(this.sessionId, { type: 'assistant/message', text })
+        await session.append(this.sessionId, { type: 'step/end', turn, step })
+        await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'llm-error' })
+        this.ctx.emit('agent/status', { status: 'idle' })
+        return { text, steps }
       }
       if (reply.content) {
         await session.append(this.sessionId, { type: 'assistant/chunk', text: reply.content })

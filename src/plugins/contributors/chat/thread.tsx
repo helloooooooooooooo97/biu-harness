@@ -111,7 +111,7 @@ export function ChatThread(props: SlotProps) {
   const sessionId = useSessionView((state) => state.sessionId)
   const error = useSessionView((state) => state.error)
 
-  if (nodes.length === 0 && !pending) return <EmptyHero />
+  if (nodes.length === 0 && !pending && !error) return <EmptyHero />
 
   return (
     <div className="mx-auto flex w-full max-w-[var(--dsw-chat-width)] flex-col gap-4">

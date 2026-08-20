@@ -120,7 +120,10 @@ export class HttpService extends Service {
   private async dispatch(req: IncomingMessage, res: ServerResponse) {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
     const method = (req.method ?? 'GET').toUpperCase() as Method
-    const match = [...this.routes].reverse().find((route) => route.method === method && route.regexp.test(url.pathname))
+    // 静态段优先于 :param，避免 `/api/approvals/mode` 被 `/api/approvals/:id` 吃掉
+    const match = this.routes
+      .filter((route) => route.method === method && route.regexp.test(url.pathname))
+      .sort((a, b) => a.keys.length - b.keys.length || b.pattern.length - a.pattern.length)[0]
     if (match) {
       const result = url.pathname.match(match.regexp)
       const params: Record<string, string> = {}

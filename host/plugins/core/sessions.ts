@@ -1,6 +1,6 @@
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
-import type { LlmMessage } from '../orchestration/llm.ts'
+import { assistantContentForApi, type LlmMessage } from '../orchestration/llm.ts'
 import {
   SESSION_FORMAT_VERSION,
   type SessionEvent,
@@ -20,14 +20,19 @@ export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
     } else if (event.type === 'user/message') {
       messages.push({ role: 'user', content: event.text })
     } else if (event.type === 'assistant/message') {
+      const hasToolCalls = Boolean(event.tool_calls?.length)
       messages.push({
         role: 'assistant',
-        content: event.text,
-        tool_calls: event.tool_calls?.map((call) => ({
-          id: call.id,
-          type: 'function',
-          function: { name: call.name, arguments: call.arguments },
-        })),
+        content: assistantContentForApi(event.text, hasToolCalls),
+        ...(hasToolCalls
+          ? {
+              tool_calls: event.tool_calls!.map((call) => ({
+                id: call.id,
+                type: 'function',
+                function: { name: call.name, arguments: call.arguments },
+              })),
+            }
+          : {}),
       })
     } else if (event.type === 'tool/result') {
       messages.push({ role: 'tool', tool_call_id: event.id, content: event.detail })
