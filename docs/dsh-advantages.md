@@ -21,7 +21,7 @@
 15. **Web：Trajectory 事件账本** — Chat/Trajectory 可切换；`projectTrajectory` 从 append-only 日志投影；工具行可 `inspectCall` 跳到对应 seq 并高亮。
 16. **Web：审批 mode + 重水合** — `auto`/`hold` 可切换；启动与 `load` 时 `GET /api/approvals` 恢复 pending，不只依赖 WS。
 17. **Web：运行中 Steer/inject** — agent 忙时输入仍可用，`kind: 'inject'` 入队，不搬完整 QueueDock。
-18. **Web：History 路由** — `/` · `/s/:id` · `/s/:id/trajectory` 与 `sessionView` 双向同步；不引入 React Router。
+18. **Web：React Router** — `/` · `/s/:id` · `/s/:id/trajectory`；`BrowserRouter` + `SessionRouteBridge` 与 `sessionView` 同步。
 
 ## 功能级差异（相对官方 client，优点对齐后）
 

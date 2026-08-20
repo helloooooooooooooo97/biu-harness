@@ -7,7 +7,7 @@ import {
   type SessionEvent,
   type TrajectoryRow,
 } from './session-project.ts'
-import { buildAppPath, parseAppPath, routeFromState } from './session-route.ts'
+import type { AppRoute } from './session-route.ts'
 
 export interface ApprovalItem {
   id: string
@@ -57,19 +57,13 @@ const empty: SessionViewState = {
 export class SessionViewService extends Service {
   private value: SessionViewState = empty
   private listeners = new Set<() => void>()
-  /** popstate / hydrate 期间禁止再 push，避免循环 */
-  private suppressUrl = false
+  /** React Router bridge 正在把 URL 写入 state 时置位，避免回写导航打架 */
+  private routeApplying = false
 
   constructor(ctx: Context) {
     super(ctx, 'sessionView')
     void this.refreshSessions()
     void this.refreshApprovals()
-    if (typeof window !== 'undefined') {
-      window.addEventListener('popstate', () => {
-        void this.hydrateFromLocation({ replace: true })
-      })
-      void this.hydrateFromLocation({ replace: true })
-    }
   }
 
   subscribe = (listener: () => void) => {
@@ -79,14 +73,65 @@ export class SessionViewService extends Service {
 
   get = () => this.value
 
+  isRouteApplying() {
+    return this.routeApplying
+  }
+
+  beginRouteApply() {
+    this.routeApplying = true
+  }
+
+  endRouteApply() {
+    this.routeApplying = false
+  }
+
   setView(view: ConversationView) {
     this.replace({ view, focusCallId: view === 'chat' ? undefined : this.value.focusCallId })
-    this.syncUrl()
   }
 
   inspectCall(callId: string) {
     this.replace({ view: 'trajectory', focusCallId: callId })
-    this.syncUrl()
+  }
+
+  /** 由 React Router bridge 调用：URL → 会话状态 */
+  async applyRoute(route: AppRoute) {
+    if (route.kind === 'home') {
+      if (!this.value.sessionId && this.value.view === 'chat') return
+      this.replace({
+        sessionId: null,
+        events: [],
+        nodes: [],
+        trajectory: [],
+        view: 'chat',
+        focusCallId: undefined,
+        pending: false,
+        agentStatus: 'idle',
+        error: undefined,
+      })
+      return
+    }
+    if (this.value.sessionId !== route.sessionId) {
+      try {
+        await this.load(route.sessionId)
+      } catch (error) {
+        this.replace({
+          error: String(error),
+          sessionId: null,
+          events: [],
+          nodes: [],
+          trajectory: [],
+          view: 'chat',
+          focusCallId: undefined,
+        })
+        throw error
+      }
+    }
+    if (this.value.view !== route.view) {
+      this.replace({
+        view: route.view,
+        focusCallId: route.view === 'chat' ? undefined : this.value.focusCallId,
+      })
+    }
   }
 
   ingest(sessionId: string, event: SessionEvent) {
@@ -94,7 +139,6 @@ export class SessionViewService extends Service {
       void this.refreshSessions()
       return
     }
-    const becameActive = this.value.sessionId !== sessionId
     const events = upsertEvent(this.value.sessionId === sessionId ? this.value.events : [], event)
     this.replace({
       sessionId,
@@ -103,7 +147,6 @@ export class SessionViewService extends Service {
       trajectory: projectTrajectory(events),
       error: undefined,
     })
-    if (becameActive) this.syncUrl()
     void this.refreshSessions()
   }
 
@@ -166,7 +209,6 @@ export class SessionViewService extends Service {
     if (!body.id) throw new Error('无法创建 session')
     await this.load(body.id)
     this.replace({ view: 'chat', focusCallId: undefined })
-    this.syncUrl()
     await this.refreshSessions()
     return body.id
   }
@@ -190,7 +232,6 @@ export class SessionViewService extends Service {
       pending: false,
       agentStatus: 'idle',
     })
-    this.syncUrl()
     await this.refreshSessions()
     await this.refreshApprovals()
   }
@@ -203,45 +244,7 @@ export class SessionViewService extends Service {
     if (!res.ok || !body.id) throw new Error(body.error || 'fork failed')
     await this.load(body.id)
     this.replace({ view: 'chat' })
-    this.syncUrl()
     return body.id
-  }
-
-  async hydrateFromLocation(options: { replace?: boolean } = {}) {
-    if (typeof window === 'undefined') return
-    const route = parseAppPath(window.location.pathname)
-    this.suppressUrl = true
-    try {
-      if (route.kind === 'home') {
-        if (this.value.sessionId) {
-          this.replace({
-            sessionId: null,
-            events: [],
-            nodes: [],
-            trajectory: [],
-            view: 'chat',
-            focusCallId: undefined,
-            pending: false,
-            agentStatus: 'idle',
-            error: undefined,
-          })
-        }
-        return
-      }
-      if (this.value.sessionId !== route.sessionId) await this.load(route.sessionId)
-      if (this.value.view !== route.view) {
-        this.replace({ view: route.view, focusCallId: route.view === 'chat' ? undefined : this.value.focusCallId })
-      }
-    } catch (error) {
-      this.replace({ error: String(error), sessionId: null, events: [], nodes: [], trajectory: [], view: 'chat' })
-      if (options.replace !== false) {
-        window.history.replaceState(null, '', '/')
-      }
-    } finally {
-      this.suppressUrl = false
-      if (options.replace) this.replaceUrl()
-      else this.syncUrl()
-    }
   }
 
   async send(text: string, kind: 'wake' | 'inject' = 'wake') {
@@ -294,20 +297,6 @@ export class SessionViewService extends Service {
       body: JSON.stringify({ allow }),
     })
     this.removeApproval(id)
-  }
-
-  private syncUrl() {
-    if (this.suppressUrl || typeof window === 'undefined') return
-    const path = buildAppPath(routeFromState(this.value.sessionId, this.value.view))
-    if (window.location.pathname === path) return
-    window.history.pushState({ sessionId: this.value.sessionId, view: this.value.view }, '', path)
-  }
-
-  private replaceUrl() {
-    if (typeof window === 'undefined') return
-    const path = buildAppPath(routeFromState(this.value.sessionId, this.value.view))
-    if (window.location.pathname === path) return
-    window.history.replaceState({ sessionId: this.value.sessionId, view: this.value.view }, '', path)
   }
 
   private replace(patch: Partial<SessionViewState>) {

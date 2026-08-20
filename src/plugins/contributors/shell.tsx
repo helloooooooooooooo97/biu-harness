@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
 import type { SlotProps } from '../registry/slots.ts'
 import { bindSnapshot, type Snapshot, type SnapshotService } from '../infrastructure/snapshot.ts'
 import { bindSessionView, type SessionViewService } from '../infrastructure/session-view.ts'
+import { SessionRouteBridge } from '../infrastructure/session-route-bridge.tsx'
 import { BrandWordmark, FishLogo } from './brand.tsx'
 
 export const name = 'shell'
@@ -12,6 +14,7 @@ function Shell(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
+  const navigate = useNavigate()
   const snap = useSnapshot((state: Snapshot) => state)
   const live = snap.plugins.some((plugin) => plugin.enabled)
   const sessions = useSessionView((state) => state.sessions)
@@ -25,6 +28,7 @@ function Shell(props: SlotProps) {
 
   return (
     <div className="grid min-h-screen grid-cols-[280px_minmax(0,1fr)] bg-[var(--dsw-bg)] text-[var(--dsw-label)]">
+      <SessionRouteBridge sessionView={sessionView} />
       <aside className="flex flex-col border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
           <BrandWordmark />
@@ -33,7 +37,9 @@ function Shell(props: SlotProps) {
           <button
             type="button"
             className="flex w-full items-center justify-center gap-2 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-2 text-sm font-medium hover:bg-[var(--dsw-business-soft)]"
-            onClick={() => void sessionView.newSession()}
+            onClick={() => {
+              void sessionView.newSession().then((id) => navigate(`/s/${id}`))
+            }}
           >
             <span className="text-lg leading-none">+</span>
             New Session
@@ -46,7 +52,9 @@ function Shell(props: SlotProps) {
               <button
                 type="button"
                 className="text-[11px] text-[var(--dsw-business)] hover:underline"
-                onClick={() => void sessionView.forkCurrent()}
+                onClick={() => {
+                  void sessionView.forkCurrent().then((id) => navigate(`/s/${id}`))
+                }}
               >
                 Fork
               </button>
@@ -58,19 +66,18 @@ function Shell(props: SlotProps) {
             sessions.map((item) => {
               const active = item.id === sessionId
               return (
-                <button
+                <Link
                   key={item.id}
-                  type="button"
-                  className={`mb-1 w-full rounded-[12px] px-3 py-2 text-left text-sm ${
+                  to={`/s/${item.id}${view === 'trajectory' ? '/trajectory' : ''}`}
+                  className={`mb-1 block w-full rounded-[12px] px-3 py-2 text-left text-sm ${
                     active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-black/[0.03]'
                   }`}
-                  onClick={() => void sessionView.load(item.id)}
                 >
                   <div className="truncate font-medium">{item.title}</div>
                   <div className="mt-0.5 font-mono text-[10px] opacity-70">
                     {item.id.slice(0, 8)} · {item.eventCount} events
                   </div>
-                </button>
+                </Link>
               )
             })
           )}
@@ -101,24 +108,37 @@ function Shell(props: SlotProps) {
 
       <main className="flex min-w-0 flex-col">
         <header className="flex h-12 items-center gap-4 border-b border-[var(--dsw-border)] px-6">
-          <button
-            type="button"
-            className={`relative pb-3 pt-3 text-[13px] font-medium ${view === 'chat' ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`}
-            onClick={() => sessionView.setView('chat')}
+          <NavLink
+            to={sessionId ? `/s/${sessionId}` : '/'}
+            end
+            className={({ isActive }) =>
+              `relative pb-3 pt-3 text-[13px] font-medium ${isActive || view === 'chat' ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
+            }
           >
-            Chat
-            {view === 'chat' ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
-          </button>
-          <button
-            type="button"
-            className={`relative pb-3 pt-3 text-[13px] font-medium ${view === 'trajectory' ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`}
-            onClick={() => sessionView.setView('trajectory')}
+            {({ isActive }) => (
+              <>
+                Chat
+                {isActive || view === 'chat' ? (
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" />
+                ) : null}
+              </>
+            )}
+          </NavLink>
+          <NavLink
+            to={sessionId ? `/s/${sessionId}/trajectory` : '/'}
+            className={({ isActive }) =>
+              `relative pb-3 pt-3 text-[13px] font-medium ${isActive || view === 'trajectory' ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
+            }
           >
-            Trajectory
-            {view === 'trajectory' ? (
-              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" />
-            ) : null}
-          </button>
+            {({ isActive }) => (
+              <>
+                Trajectory
+                {isActive || view === 'trajectory' ? (
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" />
+                ) : null}
+              </>
+            )}
+          </NavLink>
         </header>
         <div
           className={
