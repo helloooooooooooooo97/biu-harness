@@ -90,6 +90,70 @@ test('inspectCall switches to trajectory with focus', async () => {
   assert.equal(view.get().focusCallId, 'c1')
 })
 
+test('ingest coalesces consecutive chunks and omits them from trajectory', async () => {
+  mockFetch({
+    '/api/sessions': () => ({ sessions: [] }),
+    '/api/approvals': () => ({ mode: 'auto', pending: [] }),
+  })
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  view.ingest('s1', { type: 'session/open', version: 1, seq: 0, ts: 1 })
+  view.ingest('s1', { type: 'user/message', text: 'hi', seq: 1, ts: 2 })
+  view.ingest('s1', { type: 'assistant/chunk', text: 'hel', seq: 2, ts: 3 })
+  view.ingest('s1', { type: 'assistant/chunk', text: 'lo', seq: 3, ts: 4 })
+  assert.equal(view.get().events.filter((event) => event.type === 'assistant/chunk').length, 1)
+  assert.equal(
+    view.get().events.find((event) => event.type === 'assistant/chunk')?.type === 'assistant/chunk' &&
+      (view.get().events.find((event) => event.type === 'assistant/chunk') as { text: string }).text,
+    'hello',
+  )
+  assert.equal(view.get().trajectory.some((row) => row.type === 'assistant/chunk'), false)
+  const assistant = view.get().nodes.find((node) => node.kind === 'assistant')
+  assert.equal(assistant?.kind === 'assistant' && assistant.text, 'hello')
+  assert.equal(assistant?.kind === 'assistant' && assistant.streaming, true)
+
+  view.ingest('s1', { type: 'assistant/message', text: 'hello', seq: 4, ts: 5 })
+  assert.equal(view.get().events.some((event) => event.type === 'assistant/chunk'), false)
+  assert.equal(view.get().trajectory.some((row) => row.type === 'assistant/message'), true)
+})
+
+test('load compacts historical chunks from host log', async () => {
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.match(/\/api\/sessions\/s1$/)) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 's1',
+          events: [
+            { type: 'session/open', version: 1, seq: 0, ts: 1 },
+            { type: 'user/message', text: 'hi', seq: 1, ts: 2 },
+            { type: 'assistant/chunk', text: 'a', seq: 2, ts: 3 },
+            { type: 'assistant/chunk', text: 'b', seq: 3, ts: 4 },
+            { type: 'assistant/message', text: 'ab', seq: 4, ts: 5 },
+          ],
+        }),
+      } as Response
+    }
+    if (url.includes('/api/sessions')) {
+      return { ok: true, status: 200, json: async () => ({ sessions: [] }) } as Response
+    }
+    if (url.includes('/api/approvals')) {
+      return { ok: true, status: 200, json: async () => ({ mode: 'auto', pending: [] }) } as Response
+    }
+    return { ok: false, status: 404, json: async () => ({}) } as Response
+  }) as typeof fetch
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  await view.load('s1')
+  assert.equal(view.get().events.some((event) => event.type === 'assistant/chunk'), false)
+  assert.equal(view.get().trajectory.some((row) => row.type === 'assistant/chunk'), false)
+  assert.equal(view.get().nodes.some((node) => node.kind === 'assistant' && node.text === 'ab'), true)
+})
+
 test('deleteSession clears active session when list empty', async () => {
   const calls: Array<{ url: string; method?: string }> = []
   let sessions: Array<{ id: string; title: string; eventCount: number; updatedAt: number }> = [

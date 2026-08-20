@@ -1,6 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import {
+  compactSessionEvents,
   formatTrajectoryUsage,
   projectNodes,
   projectRequestMessages,
@@ -36,6 +37,35 @@ test('turn/end non-complete becomes a status row', () => {
   ])
   assert.equal(nodes[0]?.kind, 'turn')
   assert.match(nodes[0]?.kind === 'turn' ? nodes[0].text : '', /cancelled/)
+})
+
+test('projectTrajectory skips assistant/chunk (dsh-style; message is authoritative)', () => {
+  const rows = projectTrajectory([
+    { type: 'turn/start', turn: 1, seq: 1, ts: 1 },
+    { type: 'user/message', text: 'hi', seq: 2, ts: 2 },
+    { type: 'assistant/chunk', text: 'hel', seq: 3, ts: 3 },
+    { type: 'assistant/chunk', text: 'lo', seq: 4, ts: 4 },
+    { type: 'assistant/message', text: 'hello', seq: 5, ts: 5 },
+    { type: 'turn/end', turn: 1, reason: 'complete', seq: 6, ts: 6 },
+  ])
+  assert.equal(rows.some((row) => row.type === 'assistant/chunk'), false)
+  assert.equal(rows.filter((row) => row.type === 'assistant/message').length, 1)
+  assert.equal(rows.find((row) => row.type === 'assistant/message')?.summary, 'hello')
+})
+
+test('compactSessionEvents coalesces chunks and drops ones superseded by message', () => {
+  const compacted = compactSessionEvents([
+    { type: 'user/message', text: 'hi', seq: 1, ts: 1 },
+    { type: 'assistant/chunk', text: 'a', seq: 2, ts: 2 },
+    { type: 'assistant/chunk', text: 'b', seq: 3, ts: 3 },
+    { type: 'assistant/message', text: 'ab', seq: 4, ts: 4 },
+    { type: 'assistant/chunk', text: 'partial', seq: 5, ts: 5 },
+  ])
+  assert.deepEqual(
+    compacted.map((event) => event.type),
+    ['user/message', 'assistant/message', 'assistant/chunk'],
+  )
+  assert.equal(compacted[2]?.type === 'assistant/chunk' && compacted[2].text, 'partial')
 })
 
 test('projectTrajectory keeps seq ledger and tool callIds for inspect', () => {
