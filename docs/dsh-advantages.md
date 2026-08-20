@@ -26,7 +26,7 @@
 20. **Web：Activity Bar 模块切换** — Agent 仅为其中一个视图；切到 Workspace 等其它页不卸载 session 投影，切回 Agent 会话仍在；Settings 挂在 Activity Bar 底部。
 21. **Web：Session 绑定本地项目文件夹** — Agent Chat 右侧 Project 面板 `Open folder`（File System Access API）；文件夹名写入 session.project，句柄按 sessionId 存 IndexedDB；可浏览/编辑/保存文本文件。
 22. **Agent mode（Standard / Minimal）** — Settings 可选；`minimal` 对齐 dsh：模型侧只暴露 `bash` + `str_replace_editor`（view/create/str_replace/insert）；模式写入 `.cordis/chat-config.json`，`tools.schemas()` / `names()` / `invoke` 统一过滤。
-23. **Session 绑定 host 工作区路径（对齐 dsh）** — Project 面板填写本机绝对路径；该 Session 的 bash / str_replace_editor 直接以该目录为 cwd，无浏览器文件同步。
+23. **Session 绑定 host 工作区（对齐 dsh）** — Project 点 Open folder 弹出系统选目录对话框并自动绑定；该 Session 的 bash / str_replace_editor 直接以该目录为 cwd。
 
 ## 功能级差异（相对官方 client，优点对齐后）
 

@@ -1,20 +1,19 @@
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindProjectView, type ProjectViewService } from '../../infrastructure/project-view.ts'
 
-/** Session 绑定 host 本机路径（对齐 dsh workspace）：Agent 工具直接读写该目录。 */
+/** Session 绑定 host 工作区：点 Open folder 弹出系统目录框并自动绑定（对齐 dsh）。 */
 export function SessionProjectPanel(props: SlotProps) {
   const useProjectView = props.useProjectView as ReturnType<typeof bindProjectView>
   const projectView = props.projectView as ProjectViewService
   const sessionId = useProjectView((state) => state.sessionId)
   const project = useProjectView((state) => state.project)
-  const pathInput = useProjectView((state) => state.pathInput)
   const busy = useProjectView((state) => state.busy)
   const error = useProjectView((state) => state.error)
 
   if (!sessionId) {
     return (
       <div className="project-panel project-panel-empty">
-        <p className="text-sm text-[var(--dsw-label-3)]">先创建或打开一个 Session，再绑定 host 工作区路径。</p>
+        <p className="text-sm text-[var(--dsw-label-3)]">先创建或打开一个 Session，再选择工作区文件夹。</p>
       </div>
     )
   }
@@ -42,40 +41,27 @@ export function SessionProjectPanel(props: SlotProps) {
           <button
             type="button"
             className="rounded-[8px] bg-[var(--dsw-business)] px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-50"
-            disabled={busy || !pathInput.trim()}
-            onClick={() => void projectView.bindHostPath(sessionId).catch(() => undefined)}
+            disabled={busy}
+            onClick={() => void projectView.openFolderForSession(sessionId).catch(() => undefined)}
           >
-            {project ? 'Rebind' : 'Bind'}
+            {project ? 'Rebind' : 'Open folder'}
           </button>
         </div>
       </header>
 
       <p className="project-panel-hint">
-        填写 <strong>跑 host 的机器</strong>上的绝对路径（与 dsh Choose workspace 相同）。绑定后本 Session 的
-        bash / str_replace_editor 直接读写该目录，无需浏览器同步。
+        点击 Open folder，在系统对话框里选目录即自动绑定。之后本 Session 的 bash / str_replace_editor 直接读写该目录。
       </p>
-
-      <label className="block px-3 pb-2 text-[11px] text-[var(--dsw-label-3)]">
-        Host path
-        <input
-          className="mt-1 w-full rounded-[8px] border border-[var(--dsw-border)] bg-white px-2 py-1.5 text-sm text-[var(--dsw-label)] outline-none"
-          value={pathInput}
-          placeholder="/absolute/path/to/project"
-          disabled={busy}
-          onChange={(event) => projectView.setPathInput(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && pathInput.trim()) {
-              void projectView.bindHostPath(sessionId).catch(() => undefined)
-            }
-          }}
-        />
-      </label>
 
       {project?.path ? (
         <p className="project-panel-hint truncate" title={project.path}>
           当前 cwd：{project.path}
         </p>
-      ) : null}
+      ) : (
+        <div className="project-panel-empty">
+          <p className="text-sm leading-6 text-[var(--dsw-label-2)]">尚未绑定工作区。选择一个本机项目文件夹开始。</p>
+        </div>
+      )}
       {error ? <p className="project-panel-error">{error}</p> : null}
     </div>
   )
