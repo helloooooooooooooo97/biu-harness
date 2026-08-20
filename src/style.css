@@ -128,7 +128,7 @@ body {
 .traj-head,
 .traj-row {
   display: grid;
-  grid-template-columns: 44px 88px minmax(0, 1fr);
+  grid-template-columns: 44px 148px minmax(0, 1fr);
   align-items: center;
   column-gap: 8px;
   box-sizing: border-box;
@@ -300,7 +300,7 @@ body {
 @media (max-width: 720px) {
   .traj-head,
   .traj-row {
-    grid-template-columns: 36px 72px minmax(0, 1fr);
+    grid-template-columns: 36px 120px minmax(0, 1fr);
     padding: 0 8px;
   }
 
