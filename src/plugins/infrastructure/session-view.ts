@@ -57,8 +57,6 @@ const empty: SessionViewState = {
 export class SessionViewService extends Service {
   private value: SessionViewState = empty
   private listeners = new Set<() => void>()
-  /** React Router bridge 正在把 URL 写入 state 时置位，避免回写导航打架 */
-  private routeApplying = false
 
   constructor(ctx: Context) {
     super(ctx, 'sessionView')
@@ -73,18 +71,6 @@ export class SessionViewService extends Service {
 
   get = () => this.value
 
-  isRouteApplying() {
-    return this.routeApplying
-  }
-
-  beginRouteApply() {
-    this.routeApplying = true
-  }
-
-  endRouteApply() {
-    this.routeApplying = false
-  }
-
   setView(view: ConversationView) {
     this.replace({ view, focusCallId: view === 'chat' ? undefined : this.value.focusCallId })
   }
@@ -93,7 +79,7 @@ export class SessionViewService extends Service {
     this.replace({ view: 'trajectory', focusCallId: callId })
   }
 
-  /** 由 React Router bridge 调用：URL → 会话状态 */
+  /** URL → 状态：只由路由层调用，不回写 URL */
   async applyRoute(route: AppRoute) {
     if (route.kind === 'home') {
       if (!this.value.sessionId && this.value.view === 'chat') return

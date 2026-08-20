@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
 import type { SlotProps } from '../registry/slots.ts'
 import { bindSnapshot, type Snapshot, type SnapshotService } from '../infrastructure/snapshot.ts'
 import { bindSessionView, type SessionViewService } from '../infrastructure/session-view.ts'
-import { SessionRouteBridge } from '../infrastructure/session-route-bridge.tsx'
+import { parseAppPath } from '../infrastructure/session-route.ts'
 import { BrandWordmark, FishLogo } from './brand.tsx'
 
 export const name = 'shell'
@@ -15,6 +15,7 @@ function Shell(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
   const navigate = useNavigate()
+  const location = useLocation()
   const snap = useSnapshot((state: Snapshot) => state)
   const live = snap.plugins.some((plugin) => plugin.enabled)
   const sessions = useSessionView((state) => state.sessions)
@@ -22,13 +23,20 @@ function Shell(props: SlotProps) {
   const view = useSessionView((state) => state.view)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
+  // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
+  useEffect(() => {
+    const route = parseAppPath(location.pathname)
+    void sessionView.applyRoute(route).catch(() => {
+      if (location.pathname !== '/') navigate('/', { replace: true })
+    })
+  }, [location.pathname, navigate, sessionView])
+
   useEffect(() => {
     void sessionView.refreshSessions()
   }, [sessionView])
 
   return (
     <div className="grid min-h-screen grid-cols-[280px_minmax(0,1fr)] bg-[var(--dsw-bg)] text-[var(--dsw-label)]">
-      <SessionRouteBridge sessionView={sessionView} />
       <aside className="flex flex-col border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
           <BrandWordmark />
@@ -112,30 +120,26 @@ function Shell(props: SlotProps) {
             to={sessionId ? `/s/${sessionId}` : '/'}
             end
             className={({ isActive }) =>
-              `relative pb-3 pt-3 text-[13px] font-medium ${isActive || view === 'chat' ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
+              `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
             }
           >
             {({ isActive }) => (
               <>
                 Chat
-                {isActive || view === 'chat' ? (
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" />
-                ) : null}
+                {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
               </>
             )}
           </NavLink>
           <NavLink
             to={sessionId ? `/s/${sessionId}/trajectory` : '/'}
             className={({ isActive }) =>
-              `relative pb-3 pt-3 text-[13px] font-medium ${isActive || view === 'trajectory' ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
+              `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
             }
           >
             {({ isActive }) => (
               <>
                 Trajectory
-                {isActive || view === 'trajectory' ? (
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" />
-                ) : null}
+                {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
               </>
             )}
           </NavLink>
