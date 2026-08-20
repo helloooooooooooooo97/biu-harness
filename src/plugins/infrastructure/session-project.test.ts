@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   formatTrajectoryUsage,
   projectNodes,
+  projectRequestMessages,
   projectTrajectory,
   sumTrajectoryUsage,
   type SessionEvent,
@@ -104,4 +105,22 @@ test('assistant/message with empty text still has a visible tool_calls summary a
     totalTokens: 42,
     cacheReadTokens: 4,
   })
+})
+
+test('projectRequestMessages derives llm.chat input from event prefix', () => {
+  const events: SessionEvent[] = [
+    { type: 'session/open', version: 1, seq: 0, ts: 1 },
+    { type: 'turn/start', turn: 1, seq: 1, ts: 2 },
+    { type: 'user/message', text: 'hi', kind: 'wake', seq: 2, ts: 3 },
+    { type: 'system/prompt', text: 'you are helpful', seq: 3, ts: 4 },
+    { type: 'step/start', turn: 1, step: 0, seq: 4, ts: 5 },
+    { type: 'assistant/message', text: 'hello', seq: 5, ts: 6 },
+  ]
+  const request = projectRequestMessages(events, 5)
+  assert.deepEqual(
+    request.map((item) => item.role),
+    ['system', 'user'],
+  )
+  assert.equal(request[0]?.content, 'you are helpful')
+  assert.equal(request[1]?.content, 'hi')
 })
