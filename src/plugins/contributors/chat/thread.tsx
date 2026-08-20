@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import type { ChatNode } from '../../infrastructure/session-project.ts'
@@ -7,6 +8,10 @@ import { FishLogo } from '../brand.tsx'
 import { MarkdownBody } from './markdown.tsx'
 
 const NEAR_BOTTOM_PX = 96
+const ROW_GAP_PX = 16
+const ESTIMATE_ROW_PX = 160
+/** 消息很少时全量渲染更简单，也避免虚表测量抖动 */
+const VIRTUALIZE_AFTER = 12
 
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
   let node = el?.parentElement ?? null
@@ -115,6 +120,24 @@ function EmptyHero() {
   )
 }
 
+function StatusRow({
+  agentStatus,
+  agentStep,
+}: {
+  agentStatus: 'idle' | 'running'
+  agentStep?: number
+}) {
+  return (
+    <div className="mb-4 flex items-center gap-2 text-xs text-[var(--dsw-label-3)]">
+      <span
+        className={`size-2 rounded-full ${agentStatus === 'running' ? 'bg-[var(--dsw-ok)]' : 'bg-black/20'}`}
+        aria-hidden
+      />
+      <span>{agentStatus === 'running' ? `Running${agentStep != null ? ` · step ${agentStep}` : ''}` : 'Idle'}</span>
+    </div>
+  )
+}
+
 export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
@@ -125,8 +148,12 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const agentStep = useSessionView((state) => state.agentStep)
   const sessionId = useSessionView((state) => state.sessionId)
   const error = useSessionView((state) => state.error)
-  const endRef = useRef<HTMLDivElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLElement | null>(null)
   const stickToBottomRef = useRef(true)
+  const [scrollEpoch, setScrollEpoch] = useState(0)
+
+  const virtualize = nodes.length >= VIRTUALIZE_AFTER
 
   const onInspect = useCallback(
     (callId: string) => {
@@ -135,6 +162,23 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     },
     [sessionView, sessionId, navigate],
   )
+
+  useLayoutEffect(() => {
+    const parent = findScrollParent(rootRef.current)
+    if (parent && parent !== scrollRef.current) {
+      scrollRef.current = parent
+      setScrollEpoch((value) => value + 1)
+    }
+  })
+
+  const virtualizer = useVirtualizer({
+    count: virtualize ? nodes.length : 0,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ESTIMATE_ROW_PX,
+    overscan: 4,
+    gap: ROW_GAP_PX,
+    getItemKey: (index) => nodes[index]?.id ?? index,
+  })
 
   useEffect(() => {
     stickToBottomRef.current = true
@@ -145,8 +189,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   }, [pending])
 
   useEffect(() => {
-    const end = endRef.current
-    const parent = findScrollParent(end)
+    const parent = scrollRef.current
     if (!parent) return
     const onScroll = () => {
       const distance = parent.scrollHeight - parent.scrollTop - parent.clientHeight
@@ -155,31 +198,51 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     onScroll()
     parent.addEventListener('scroll', onScroll, { passive: true })
     return () => parent.removeEventListener('scroll', onScroll)
-  }, [sessionId, nodes.length])
+  }, [sessionId, scrollEpoch, virtualize])
 
   useLayoutEffect(() => {
-    if (!stickToBottomRef.current) return
-    endRef.current?.scrollIntoView({ block: 'end' })
-  }, [nodes, pending, error, agentStatus, agentStep])
+    if (!stickToBottomRef.current || nodes.length === 0) return
+    if (virtualize) {
+      virtualizer.scrollToIndex(nodes.length - 1, { align: 'end' })
+      return
+    }
+    const parent = scrollRef.current
+    if (parent) parent.scrollTop = parent.scrollHeight
+  }, [nodes, pending, error, agentStatus, agentStep, virtualize, virtualizer])
 
   if (nodes.length === 0 && !pending && !error) return <EmptyHero />
 
   return (
-    <div className="mx-auto flex w-full max-w-[var(--dsw-chat-width)] flex-col gap-4">
-      <div className="flex items-center gap-2 text-xs text-[var(--dsw-label-3)]">
-        <span
-          className={`size-2 rounded-full ${agentStatus === 'running' ? 'bg-[var(--dsw-ok)]' : 'bg-black/20'}`}
-          aria-hidden
-        />
-        <span>{agentStatus === 'running' ? `Running${agentStep != null ? ` · step ${agentStep}` : ''}` : 'Idle'}</span>
-      </div>
-      {nodes.map((node) => (
-        <NodeViewMemo key={node.id} node={node} onInspect={onInspect} />
-      ))}
+    <div ref={rootRef} className="mx-auto w-full max-w-[var(--dsw-chat-width)]" data-chat-virtual={virtualize ? '1' : '0'}>
+      <StatusRow agentStatus={agentStatus} agentStep={agentStep} />
+      {virtualize ? (
+        <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+          {virtualizer.getVirtualItems().map((item) => {
+            const node = nodes[item.index]
+            if (!node) return null
+            return (
+              <div
+                key={item.key}
+                data-index={item.index}
+                ref={virtualizer.measureElement}
+                className="absolute top-0 left-0 w-full"
+                style={{ transform: `translateY(${item.start}px)` }}
+              >
+                <NodeViewMemo node={node} onInspect={onInspect} />
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {nodes.map((node) => (
+            <NodeViewMemo key={node.id} node={node} onInspect={onInspect} />
+          ))}
+        </div>
+      )}
       {error ? (
-        <div className="rounded-[12px] bg-red-50 px-3 py-2 text-sm text-[var(--dsw-danger)]">{error}</div>
+        <div className="mt-4 rounded-[12px] bg-red-50 px-3 py-2 text-sm text-[var(--dsw-danger)]">{error}</div>
       ) : null}
-      <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
     </div>
   )
 })

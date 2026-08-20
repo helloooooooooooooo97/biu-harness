@@ -19,7 +19,7 @@
 13. **Web 壳对标 dsh 观感** — 最左 **VS Code 式 Activity Bar**（纯图标切换 Agent / Workspace…）；Agent 下再挂 Side Bar（Sessions）+ Chat / Trajectory；演示插件进 Settings modal。
 14. **Web：可恢复会话列表 + 真 New Session / Fork** — `GET /api/sessions` 列出会话；Agent 侧栏切换 `load`；Fork 走 `POST /api/sessions/:id/fork`。
 15. **Web：Trajectory 事件账本** — Chat/Trajectory 可切换；`projectTrajectory` 从日志投影结构化行（**跳过** `assistant/chunk`，对齐 dsh：chunk 只服务 Chat 流式，message 为权威）；点击行打开事件详情；`assistant/message` 详情用 `deriveMessages(seq 前缀)` 投影本步 request；工具行可 `inspectCall`；`usage` 写入事件并显示。客户端 `compactSessionEvents` / ingest 合并连续 chunk，避免轨道与重渲染被 delta 淹没。
-16. **Web：Chat Markdown** — 用户/助手气泡用 `react-markdown` + `remark-gfm` 渲染。
+16. **Web：Chat Markdown** — 用户/助手气泡用 `react-markdown` + `remark-gfm` 渲染；消息较多时 `@tanstack/react-virtual` 只挂载可视区附近行（变高 `measureElement`），避免长对话全量 Markdown DOM。
 17. **Web：审批 mode + 重水合** — `auto`/`hold` 可切换；启动与 `load` 时 `GET /api/approvals` 恢复 pending，不只依赖 WS。
 18. **Web：运行中 Steer/inject** — agent 忙时输入仍可用，`kind: 'inject'` 入队，不搬完整 QueueDock。
 19. **Web：React Router（单向）** — `/` · `/s/:id` · `/s/:id/trajectory` · `/workspace`；URL → `applyRoute`；跳转只用 `Link`/`navigate`，无双向 bridge。**单壳常驻**：路由变化不卸载 `AppShell`；Agent/Workspace 与 Chat/Trajectory 用保活叠层（`visibility`，避免 `display:none` 丢掉大 Markdown 布局）；slot props / `renderSlot` 稳定 + Chat/Markdown `memo`，避免切换时重解析。
@@ -33,7 +33,7 @@
 | 能力 | 本仓 | 官方 | 策略 |
 |---|---|---|---|
 | 会话列表 / New / Fork | 有 | 有 | 已对齐（瘦） |
-| Chat 事件投影 | 有 | ConversationNode | 已对齐（瘦投影） |
+| Chat 事件投影 | 有 | ConversationNode | 已对齐（瘦投影；长列表虚表） |
 | Trajectory 账本 + inspect | 有 | ui-trajectory | 已对齐（无虚表） |
 | 审批 dock + mode | 有 | Permission + QueuePanel | 已对齐（瘦） |
 | 运行中 inject | 有 | steer/queue | 已对齐（无队列编辑 UI） |
