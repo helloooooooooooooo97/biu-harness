@@ -4,28 +4,43 @@ import { bindSessionView, type SessionViewService } from '../../infrastructure/s
 import type { ChatNode } from '../../infrastructure/session-project.ts'
 import { FishLogo } from '../brand.tsx'
 
-function ToolRow({ node }: { node: Extract<ChatNode, { kind: 'tool' }> }) {
+function ToolRow({
+  node,
+  onInspect,
+}: {
+  node: Extract<ChatNode, { kind: 'tool' }>
+  onInspect: (callId: string) => void
+}) {
   const [open, setOpen] = useState(false)
   const summary = node.result?.detail?.slice(0, 80) || node.arguments.slice(0, 80) || '…'
   return (
     <div className="w-full max-w-[var(--dsw-chat-width)] self-stretch">
-      <button
-        type="button"
-        className="flex w-full items-center gap-2 rounded-[12px] px-2 py-1.5 text-left text-[13px] hover:bg-black/[0.03]"
-        onClick={() => setOpen((value) => !value)}
-      >
-        <span className="grid size-4 place-items-center text-[10px] text-[var(--dsw-label-3)]">{open ? '▾' : '▸'}</span>
-        <span className="font-medium">{node.name}</span>
-        <span className="text-[var(--dsw-label-3)]">·</span>
-        <span className="min-w-0 flex-1 truncate text-[var(--dsw-label-3)]">{summary}</span>
-        {node.result ? (
-          <span className={node.result.ok ? 'text-[var(--dsw-ok)]' : 'text-[var(--dsw-danger)]'}>
-            {node.result.ok ? 'ok' : 'fail'}
-          </span>
-        ) : (
-          <span className="text-[var(--dsw-label-3)]">running</span>
-        )}
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-[12px] px-2 py-1.5 text-left text-[13px] hover:bg-black/[0.03]"
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span className="grid size-4 place-items-center text-[10px] text-[var(--dsw-label-3)]">{open ? '▾' : '▸'}</span>
+          <span className="font-medium">{node.name}</span>
+          <span className="text-[var(--dsw-label-3)]">·</span>
+          <span className="min-w-0 flex-1 truncate text-[var(--dsw-label-3)]">{summary}</span>
+          {node.result ? (
+            <span className={node.result.ok ? 'text-[var(--dsw-ok)]' : 'text-[var(--dsw-danger)]'}>
+              {node.result.ok ? 'ok' : 'fail'}
+            </span>
+          ) : (
+            <span className="text-[var(--dsw-label-3)]">running</span>
+          )}
+        </button>
+        <button
+          type="button"
+          className="shrink-0 rounded-[8px] px-2 py-1 text-[11px] text-[var(--dsw-business)] hover:bg-[var(--dsw-business-soft)]"
+          onClick={() => onInspect(node.callId)}
+        >
+          Trajectory
+        </button>
+      </div>
       {open ? (
         <div className="mt-1 space-y-2 rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] p-3 font-mono text-xs">
           {node.arguments ? <pre className="whitespace-pre-wrap text-[var(--dsw-label-2)]">{node.arguments}</pre> : null}
@@ -36,7 +51,7 @@ function ToolRow({ node }: { node: Extract<ChatNode, { kind: 'tool' }> }) {
   )
 }
 
-function NodeView({ node }: { node: ChatNode }) {
+function NodeView({ node, onInspect }: { node: ChatNode; onInspect: (callId: string) => void }) {
   if (node.kind === 'user') {
     return (
       <div className="flex w-full justify-end">
@@ -58,7 +73,7 @@ function NodeView({ node }: { node: ChatNode }) {
       </div>
     )
   }
-  if (node.kind === 'tool') return <ToolRow node={node} />
+  if (node.kind === 'tool') return <ToolRow node={node} onInspect={onInspect} />
   return <div className="self-center text-xs text-[var(--dsw-label-3)]">{node.text}</div>
 }
 
@@ -86,6 +101,7 @@ function EmptyHero() {
 
 export function ChatThread(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
+  const sessionView = props.sessionView as SessionViewService
   const nodes = useSessionView((state) => state.nodes)
   const pending = useSessionView((state) => state.pending)
   const agentStatus = useSessionView((state) => state.agentStatus)
@@ -104,7 +120,7 @@ export function ChatThread(props: SlotProps) {
         <span>{agentStatus === 'running' ? `Running${agentStep != null ? ` · step ${agentStep}` : ''}` : 'Idle'}</span>
       </div>
       {nodes.map((node) => (
-        <NodeView key={node.id} node={node} />
+        <NodeView key={node.id} node={node} onInspect={(callId) => sessionView.inspectCall(callId)} />
       ))}
       {error ? (
         <div className="rounded-[12px] bg-red-50 px-3 py-2 text-sm text-[var(--dsw-danger)]">{error}</div>

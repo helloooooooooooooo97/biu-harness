@@ -1,22 +1,30 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Context } from 'cordis'
 import type { SlotProps } from '../registry/slots.ts'
 import { bindSnapshot, type Snapshot, type SnapshotService } from '../infrastructure/snapshot.ts'
+import { bindSessionView, type SessionViewService } from '../infrastructure/session-view.ts'
 import { BrandWordmark, FishLogo } from './brand.tsx'
 
 export const name = 'shell'
-export const inject = ['slots', 'snapshot']
+export const inject = ['slots', 'snapshot', 'sessionView']
 
 function Shell(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
+  const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
+  const sessionView = props.sessionView as SessionViewService
   const snap = useSnapshot((state: Snapshot) => state)
   const live = snap.plugins.some((plugin) => plugin.enabled)
+  const sessions = useSessionView((state) => state.sessions)
+  const sessionId = useSessionView((state) => state.sessionId)
+  const view = useSessionView((state) => state.view)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const sessionHint = snap.lastSessionId?.slice(0, 8)
+
+  useEffect(() => {
+    void sessionView.refreshSessions()
+  }, [sessionView])
 
   return (
     <div className="grid min-h-screen grid-cols-[280px_minmax(0,1fr)] bg-[var(--dsw-bg)] text-[var(--dsw-label)]">
-      {/* Left sidebar — DSH: brand / new session / list / settings */}
       <aside className="flex flex-col border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
           <BrandWordmark />
@@ -25,25 +33,47 @@ function Shell(props: SlotProps) {
           <button
             type="button"
             className="flex w-full items-center justify-center gap-2 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-2 text-sm font-medium hover:bg-[var(--dsw-business-soft)]"
-            onClick={() => location.reload()}
+            onClick={() => void sessionView.newSession()}
           >
             <span className="text-lg leading-none">+</span>
             New Session
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-3">
-          <div className="mb-2 px-1 text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">
-            Sessions
+          <div className="mb-2 flex items-center justify-between px-1">
+            <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Sessions</span>
+            {sessionId ? (
+              <button
+                type="button"
+                className="text-[11px] text-[var(--dsw-business)] hover:underline"
+                onClick={() => void sessionView.forkCurrent()}
+              >
+                Fork
+              </button>
+            ) : null}
           </div>
-          <button
-            type="button"
-            className="mb-1 w-full rounded-[12px] bg-[var(--dsw-business-soft)] px-3 py-2 text-left text-sm text-[var(--dsw-business)]"
-          >
-            {sessionHint ? `session ${sessionHint}` : 'Current session'}
-          </button>
-          <p className="px-1 text-[11px] leading-4 text-[var(--dsw-label-3)]">
-            会话列表由 session log 投影；此处为 lean 占位。
-          </p>
+          {sessions.length === 0 ? (
+            <p className="px-1 text-[11px] leading-4 text-[var(--dsw-label-3)]">No sessions yet. Send a message or create one.</p>
+          ) : (
+            sessions.map((item) => {
+              const active = item.id === sessionId
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`mb-1 w-full rounded-[12px] px-3 py-2 text-left text-sm ${
+                    active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-black/[0.03]'
+                  }`}
+                  onClick={() => void sessionView.load(item.id)}
+                >
+                  <div className="truncate font-medium">{item.title}</div>
+                  <div className="mt-0.5 font-mono text-[10px] opacity-70">
+                    {item.id.slice(0, 8)} · {item.eventCount} events
+                  </div>
+                </button>
+              )
+            })
+          )}
         </div>
         <div className="flex items-center justify-between gap-2 border-t border-[var(--dsw-border)] px-3 py-3">
           <span
@@ -69,25 +99,40 @@ function Shell(props: SlotProps) {
         </div>
       </aside>
 
-      {/* Center conversation */}
       <main className="flex min-w-0 flex-col">
         <header className="flex h-12 items-center gap-4 border-b border-[var(--dsw-border)] px-6">
-          <div className="relative pb-3 pt-3 text-[13px] font-medium text-[var(--dsw-business)]">
+          <button
+            type="button"
+            className={`relative pb-3 pt-3 text-[13px] font-medium ${view === 'chat' ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`}
+            onClick={() => sessionView.setView('chat')}
+          >
             Chat
-            <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" />
-          </div>
-          <div className="pb-3 pt-3 text-[13px] font-medium text-[var(--dsw-label-3)]">Trajectory</div>
+            {view === 'chat' ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
+          </button>
+          <button
+            type="button"
+            className={`relative pb-3 pt-3 text-[13px] font-medium ${view === 'trajectory' ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`}
+            onClick={() => sessionView.setView('trajectory')}
+          >
+            Trajectory
+            {view === 'trajectory' ? (
+              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" />
+            ) : null}
+          </button>
         </header>
         <div className="mx-auto flex w-full max-w-[calc(var(--dsw-chat-width)+32px)] flex-1 flex-col px-4 pb-4">
-          <div className="flex flex-1 flex-col overflow-y-auto py-4">{props.renderSlot('stage')}</div>
-          <div className="sticky bottom-0 space-y-2 bg-[var(--dsw-bg)] pt-1 pb-3">
-            {props.renderSlot('dock')}
-            {props.renderSlot('composer')}
+          <div className="flex flex-1 flex-col overflow-y-auto py-4">
+            {view === 'chat' ? props.renderSlot('stage') : props.renderSlot('trajectory')}
           </div>
+          {view === 'chat' ? (
+            <div className="sticky bottom-0 space-y-2 bg-[var(--dsw-bg)] pt-1 pb-3">
+              {props.renderSlot('dock')}
+              {props.renderSlot('composer')}
+            </div>
+          ) : null}
         </div>
       </main>
 
-      {/* Settings modal — DSH uses centered panel; demos + plugins live here */}
       <div
         className={`fixed inset-0 z-20 flex items-center justify-center bg-black/40 ${settingsOpen ? '' : 'hidden'}`}
         onClick={() => setSettingsOpen(false)}
@@ -157,11 +202,16 @@ export function apply(ctx: Context) {
       demos: { kind: 'list' },
       dock: { kind: 'list' },
       stage: { kind: 'list' },
+      trajectory: { kind: 'list' },
       composer: { kind: 'single' },
       settings: { kind: 'list' },
       log: { kind: 'single' },
       routes: { kind: 'single' },
     },
-    props: () => ({ useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService) }),
+    props: () => ({
+      useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService),
+      useSessionView: bindSessionView(ctx.sessionView as SessionViewService),
+      sessionView: ctx.sessionView as SessionViewService,
+    }),
   })
 }

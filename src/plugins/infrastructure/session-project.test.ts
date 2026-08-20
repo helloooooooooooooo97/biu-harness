@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { projectNodes, type SessionEvent } from './session-project.ts'
+import { projectNodes, projectTrajectory, type SessionEvent } from './session-project.ts'
 
 test('projects user, streaming assistant, tool call/result from session events', () => {
   const events: SessionEvent[] = [
@@ -29,4 +29,21 @@ test('turn/end non-complete becomes a status row', () => {
   ])
   assert.equal(nodes[0]?.kind, 'turn')
   assert.match(nodes[0]?.kind === 'turn' ? nodes[0].text : '', /cancelled/)
+})
+
+test('projectTrajectory keeps seq ledger and tool callIds for inspect', () => {
+  const events: SessionEvent[] = [
+    { type: 'session/open', version: 1, seq: 0, ts: 1 },
+    { type: 'turn/start', turn: 1, seq: 1, ts: 2 },
+    { type: 'user/message', text: 'run bash', seq: 2, ts: 3 },
+    { type: 'tool/call', id: 'c1', name: 'bash', arguments: '{"command":"ls"}', seq: 3, ts: 4 },
+    { type: 'tool/result', id: 'c1', name: 'bash', ok: true, detail: 'ok', seq: 4, ts: 5 },
+    { type: 'turn/end', turn: 1, reason: 'complete', seq: 5, ts: 6 },
+  ]
+  const rows = projectTrajectory(events)
+  assert.equal(rows.some((row) => row.type === 'session/open'), false)
+  const call = rows.find((row) => row.type === 'tool/call')
+  assert.equal(call?.callId, 'c1')
+  assert.equal(call?.turn, 1)
+  assert.match(call?.summary ?? '', /bash/)
 })

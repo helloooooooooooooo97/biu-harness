@@ -1,6 +1,12 @@
 import { useSyncExternalStore } from 'react'
 import { Service, type Context } from 'cordis'
-import { projectNodes, type ChatNode, type SessionEvent } from './session-project.ts'
+import {
+  projectNodes,
+  projectTrajectory,
+  type ChatNode,
+  type SessionEvent,
+  type TrajectoryRow,
+} from './session-project.ts'
 
 export interface ApprovalItem {
   id: string
@@ -8,13 +14,28 @@ export interface ApprovalItem {
   args: Record<string, unknown>
 }
 
+export interface SessionListItem {
+  id: string
+  title: string
+  eventCount: number
+  updatedAt: number
+}
+
+export type ConversationView = 'chat' | 'trajectory'
+export type ApprovalMode = 'auto' | 'hold'
+
 export interface SessionViewState {
   sessionId: string | null
   events: SessionEvent[]
   nodes: ChatNode[]
+  trajectory: TrajectoryRow[]
+  sessions: SessionListItem[]
+  view: ConversationView
+  focusCallId?: string
   agentStatus: 'idle' | 'running'
   agentStep?: number
   pending: boolean
+  approvalMode: ApprovalMode
   approvals: ApprovalItem[]
   error?: string
 }
@@ -23,8 +44,12 @@ const empty: SessionViewState = {
   sessionId: null,
   events: [],
   nodes: [],
+  trajectory: [],
+  sessions: [],
+  view: 'chat',
   agentStatus: 'idle',
   pending: false,
+  approvalMode: 'auto',
   approvals: [],
 }
 
@@ -34,6 +59,8 @@ export class SessionViewService extends Service {
 
   constructor(ctx: Context) {
     super(ctx, 'sessionView')
+    void this.refreshSessions()
+    void this.refreshApprovals()
   }
 
   subscribe = (listener: () => void) => {
@@ -43,15 +70,28 @@ export class SessionViewService extends Service {
 
   get = () => this.value
 
+  setView(view: ConversationView) {
+    this.replace({ view, focusCallId: view === 'chat' ? undefined : this.value.focusCallId })
+  }
+
+  inspectCall(callId: string) {
+    this.replace({ view: 'trajectory', focusCallId: callId })
+  }
+
   ingest(sessionId: string, event: SessionEvent) {
-    if (this.value.sessionId && this.value.sessionId !== sessionId) return
+    if (this.value.sessionId && this.value.sessionId !== sessionId) {
+      void this.refreshSessions()
+      return
+    }
     const events = upsertEvent(this.value.sessionId === sessionId ? this.value.events : [], event)
     this.replace({
       sessionId,
       events,
       nodes: projectNodes(events),
+      trajectory: projectTrajectory(events),
       error: undefined,
     })
+    void this.refreshSessions()
   }
 
   setAgentStatus(status: 'idle' | 'running', step?: number) {
@@ -68,13 +108,58 @@ export class SessionViewService extends Service {
     this.replace({ approvals: this.value.approvals.filter((row) => row.id !== id) })
   }
 
-  async ensureSession() {
-    if (this.value.sessionId) return this.value.sessionId
+  async refreshSessions() {
+    try {
+      const res = await fetch('/api/sessions')
+      if (!res.ok) return
+      const body = (await res.json()) as { sessions?: SessionListItem[] }
+      this.replace({ sessions: Array.isArray(body.sessions) ? body.sessions : [] })
+    } catch {
+      /* host 未就绪时忽略 */
+    }
+  }
+
+  async refreshApprovals() {
+    try {
+      const res = await fetch('/api/approvals')
+      if (!res.ok) return
+      const body = (await res.json()) as {
+        mode?: ApprovalMode
+        pending?: ApprovalItem[]
+      }
+      this.replace({
+        approvalMode: body.mode === 'hold' ? 'hold' : 'auto',
+        approvals: Array.isArray(body.pending) ? body.pending : [],
+      })
+    } catch {
+      /* host 未就绪时忽略 */
+    }
+  }
+
+  async setApprovalMode(mode: ApprovalMode) {
+    const res = await fetch('/api/approvals/mode', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ mode }),
+    })
+    const body = (await res.json()) as { mode?: ApprovalMode }
+    if (!res.ok) throw new Error('failed to set approval mode')
+    this.replace({ approvalMode: body.mode === 'hold' ? 'hold' : 'auto' })
+  }
+
+  async newSession() {
     const res = await fetch('/api/sessions', { method: 'POST' })
     const body = (await res.json()) as { id?: string }
     if (!body.id) throw new Error('无法创建 session')
     await this.load(body.id)
+    this.replace({ view: 'chat', focusCallId: undefined })
+    await this.refreshSessions()
     return body.id
+  }
+
+  async ensureSession() {
+    if (this.value.sessionId) return this.value.sessionId
+    return this.newSession()
   }
 
   async load(sessionId: string) {
@@ -86,16 +171,43 @@ export class SessionViewService extends Service {
       sessionId: body.id,
       events,
       nodes: projectNodes(events),
+      trajectory: projectTrajectory(events),
       error: undefined,
       pending: false,
       agentStatus: 'idle',
     })
+    await this.refreshSessions()
+    await this.refreshApprovals()
   }
 
-  async send(text: string) {
+  async forkCurrent() {
+    const sessionId = this.value.sessionId
+    if (!sessionId) throw new Error('no session')
+    const res = await fetch(`/api/sessions/${sessionId}/fork`, { method: 'POST' })
+    const body = (await res.json()) as { id?: string; error?: string }
+    if (!res.ok || !body.id) throw new Error(body.error || 'fork failed')
+    await this.load(body.id)
+    this.replace({ view: 'chat' })
+    return body.id
+  }
+
+  async send(text: string, kind: 'wake' | 'inject' = 'wake') {
     const content = text.trim()
     if (!content) return
     const sessionId = await this.ensureSession()
+    if (kind === 'inject') {
+      const res = await fetch(`/api/sessions/${sessionId}/messages`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: content, kind: 'inject' }),
+      })
+      const data = (await res.json()) as { error?: string }
+      if (!res.ok) {
+        this.replace({ error: data.error || `注入失败：${res.status}` })
+        throw new Error(data.error || `注入失败：${res.status}`)
+      }
+      return
+    }
     this.replace({ pending: true, agentStatus: 'running', error: undefined })
     try {
       const res = await fetch(`/api/sessions/${sessionId}/messages`, {

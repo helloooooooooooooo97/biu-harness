@@ -8,7 +8,7 @@ import * as sessionView from '../../infrastructure/session-view.ts'
 import * as chat from './index.ts'
 import * as shell from '../shell.tsx'
 
-test('one plugin fills thread, composer, approvals dock and settings', async () => {
+test('one plugin fills thread, trajectory, composer, approvals dock and settings', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
   await ctx.plugin(sessionView)
@@ -18,6 +18,7 @@ test('one plugin fills thread, composer, approvals dock and settings', async () 
   await ctx.plugin(shell)
   assert.equal(ctx.slots.list('composer')[0]?.id, 'chat')
   assert.equal(ctx.slots.list('stage').some((item) => item.id === 'chat-thread'), true)
+  assert.equal(ctx.slots.list('trajectory').some((item) => item.id === 'trajectory'), true)
   assert.equal(ctx.slots.list('dock').some((item) => item.id === 'approvals'), true)
   assert.equal(ctx.slots.list('settings')[0]?.id, 'chat-config')
 })
