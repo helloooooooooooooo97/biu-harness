@@ -6,6 +6,7 @@ interface McpServer {
   id: string
   tools: Array<{ name: string; description: string; inputSchema?: unknown }>
   call(name: string, args: Record<string, unknown>): Promise<unknown>
+  dispose?(): void
 }
 
 class InProcessEcho implements McpServer {
@@ -38,6 +39,12 @@ class StdioMcp implements McpServer {
 
   async call(name: string, args: Record<string, unknown>) {
     return this.rpc('tools/call', { name, arguments: args })
+  }
+
+  dispose() {
+    for (const resolve of this.pending.values()) resolve(undefined)
+    this.pending.clear()
+    this.child.kill('SIGTERM')
   }
 
   private rpc(method: string, params: unknown) {
@@ -75,19 +82,37 @@ export class McpService extends Service {
   constructor(ctx: Context) {
     super(ctx, 'mcp')
     this.servers.set('echo', new InProcessEcho())
+    ctx.effect(() => () => {
+      for (const server of this.servers.values()) server.dispose?.()
+      this.servers.clear()
+    }, 'mcp.dispose-all')
   }
 
   async addStdio(id: string, command: string, args: string[]) {
+    if (this.servers.has(id)) throw new Error(`mcp server already registered: ${id}`)
     const server = new StdioMcp(id, command, args)
     await server.init()
     this.servers.set(id, server)
     return this.listTools()
   }
 
+  remove(id: string) {
+    const server = this.servers.get(id)
+    if (!server) throw new Error(`unknown mcp server: ${id}`)
+    if (id === 'echo') throw new Error('cannot remove built-in echo server')
+    server.dispose?.()
+    this.servers.delete(id)
+    return { id, removed: true }
+  }
+
   listTools() {
     return [...this.servers.values()].flatMap((server) =>
       server.tools.map((tool) => ({ server: server.id, ...tool })),
     )
+  }
+
+  listServers() {
+    return [...this.servers.keys()]
   }
 
   async call(serverId: string, name: string, args: Record<string, unknown>) {
@@ -122,5 +147,30 @@ export function apply(ctx: Context) {
     },
     execute: (args) =>
       mcp.call(String(args.server), String(args.name), (args.arguments as Record<string, unknown>) ?? {}),
+  })
+  ctx.tools.register({
+    name: 'mcp_add_stdio',
+    description: '挂载 stdio MCP 服务（command + args）',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        command: { type: 'string' },
+        args: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['id', 'command'],
+    },
+    execute: (args) =>
+      mcp.addStdio(String(args.id), String(args.command), Array.isArray(args.args) ? args.args.map(String) : []),
+  })
+  ctx.tools.register({
+    name: 'mcp_remove',
+    description: '卸载已挂载的 stdio MCP 服务并杀掉进程',
+    parameters: {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+    },
+    execute: (args) => mcp.remove(String(args.id)),
   })
 }

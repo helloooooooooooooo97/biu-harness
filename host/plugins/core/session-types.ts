@@ -2,10 +2,8 @@ export const SESSION_FORMAT_VERSION = 1
 
 export type InboxKind = 'wake' | 'inject'
 
-export type SessionEvent = {
-  seq: number
-  ts: number
-} & (
+/** 写入 append 的正文（不含 seq/ts）；与 SessionEvent 判别联合一一对应。 */
+export type SessionEventBody =
   | { type: 'session/open'; version: number }
   | { type: 'turn/start'; turn: number }
   | { type: 'turn/end'; turn: number; reason: string }
@@ -17,7 +15,11 @@ export type SessionEvent = {
   | { type: 'assistant/chunk'; text: string }
   | { type: 'tool/call'; id: string; name: string; arguments: string }
   | { type: 'tool/result'; id: string; name: string; ok: boolean; detail: string }
-)
+
+export type SessionEvent = SessionEventBody & {
+  seq: number
+  ts: number
+}
 
 export interface SessionRecord {
   id: string

@@ -1,6 +1,6 @@
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
-import type { AssistantReply, LlmClient, LlmConfig } from './llm.ts'
+import type { AssistantReply, LlmClient, LlmConfig, LlmMessage } from './llm.ts'
 import type { InboxKind } from '../core/session-types.ts'
 
 export interface AgentTurn {
@@ -19,9 +19,16 @@ export interface PreStepReq {
   reject?: string
 }
 
+/** 可替换的 turn 驱动；agents 只依赖此薄接口。 */
+export interface AgentRunner {
+  run(claimed: ClaimedInput[]): Promise<AgentTurn>
+}
+
+export type AgentLoopFactory = (config: LlmConfig, sessionId: string, signal: AbortSignal) => AgentRunner
+
 const MAX_STEPS = 8
 
-export class AgentLoop {
+export class AgentLoop implements AgentRunner {
   constructor(
     private ctx: Context,
     private llm: LlmClient,
@@ -51,6 +58,9 @@ export class AgentLoop {
       await session.append(this.sessionId, { type: 'user/message', text: item.text, kind: item.kind })
     }
 
+    // 分段 prompt 只在 turn 开头写入一次，避免每 step 污染权威日志；derive 取最后一条 system/prompt。
+    await session.append(this.sessionId, { type: 'system/prompt', text: this.ctx.systemPrompt.assemble() })
+
     const steps: AgentTurn['steps'] = []
     let final = '（空回复）'
 
@@ -60,7 +70,6 @@ export class AgentLoop {
         throw new Error('cancelled')
       }
       this.ctx.emit('agent/status', { status: 'running', step })
-      await session.append(this.sessionId, { type: 'system/prompt', text: this.ctx.systemPrompt.assemble() })
       await session.append(this.sessionId, { type: 'step/start', turn, step })
 
       const messages = session.deriveMessages(this.sessionId)
@@ -123,15 +132,27 @@ export class AgentLoop {
 }
 
 export class AgentLoopService extends Service {
+  private factory: AgentLoopFactory
+
   constructor(ctx: Context) {
     super(ctx, 'agentLoop')
+    this.factory = (config, sessionId, signal) => this.defaultCreate(config, sessionId, signal)
   }
 
-  create(config: LlmConfig, sessionId: string, signal: AbortSignal) {
+  /** 换策略（回声 / 真模型 / 评测）而不改 agents 句柄与 inbox。 */
+  setFactory(factory: AgentLoopFactory) {
+    this.factory = factory
+  }
+
+  create(config: LlmConfig, sessionId: string, signal: AbortSignal): AgentRunner {
+    return this.factory(config, sessionId, signal)
+  }
+
+  private defaultCreate(config: LlmConfig, sessionId: string, signal: AbortSignal): AgentRunner {
     const llm = config.apiKey
       ? this.ctx.llm.forConfig(config)
       : {
-          chat: async (messages) => {
+          chat: async (messages: LlmMessage[]) => {
             const last = [...messages].reverse().find((item) => item.role === 'user')?.content
             return { content: `未配置 API Key，本地回声：${last ?? ''}`, toolCalls: [] }
           },

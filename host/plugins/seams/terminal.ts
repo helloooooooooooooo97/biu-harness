@@ -82,4 +82,10 @@ export function apply(ctx: Context) {
     parameters: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
     execute: (args) => terminals.read(String(args.id)),
   })
+  ctx.tools.register({
+    name: 'terminal_close',
+    description: '关闭持久 shell',
+    parameters: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+    execute: (args) => terminals.close(String(args.id)),
+  })
 }

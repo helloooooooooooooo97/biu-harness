@@ -11,7 +11,7 @@ import * as agentLoop from '../orchestration/agent-loop.ts'
 import * as agents from '../orchestration/agents.ts'
 import * as subagents from './subagents.ts'
 
-test('in-process subagent uses its own session', async () => {
+async function spine() {
   const ctx = new Context()
   await ctx.plugin(sessionStore, { driver: 'memory' })
   await ctx.plugin(sessions)
@@ -22,8 +22,31 @@ test('in-process subagent uses its own session', async () => {
   await ctx.plugin(agents)
   await ctx.plugin(subagents)
   ctx.agents.configure({ provider: 'deepseek', apiKey: '', model: 'x' })
+  return ctx
+}
+
+test('in-process subagent uses its own session', async () => {
+  const ctx = await spine()
   const result = (await ctx.tools.invoke('subagent_spawn', { prompt: 'child' })) as { sessionId: string; text: string }
   assert.match(result.text, /child/)
   const parent = await ctx.sessions.create()
   assert.notEqual(result.sessionId, parent.id)
+})
+
+test('inherit forks parent log into the child session', async () => {
+  const ctx = await spine()
+  const parent = await ctx.sessions.create()
+  await ctx.sessions.append(parent.id, { type: 'user/message', text: 'parent-note', kind: 'wake' })
+  const result = (await ctx.tools.invoke('subagent_spawn', {
+    prompt: 'child',
+    inherit: true,
+    parentSessionId: parent.id,
+  })) as { sessionId: string; inherited: boolean }
+  assert.equal(result.inherited, true)
+  const users = ctx.sessions
+    .deriveMessages(result.sessionId)
+    .filter((item) => item.role === 'user')
+    .map((item) => item.content)
+  assert.equal(users.includes('parent-note'), true)
+  assert.equal(users.includes('child'), true)
 })

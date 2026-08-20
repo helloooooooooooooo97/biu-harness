@@ -1,9 +1,14 @@
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
 import type { LlmMessage } from '../orchestration/llm.ts'
-import { SESSION_FORMAT_VERSION, type SessionEvent, type SessionRecord } from './session-types.ts'
+import {
+  SESSION_FORMAT_VERSION,
+  type SessionEvent,
+  type SessionEventBody,
+  type SessionRecord,
+} from './session-types.ts'
 
-export type { SessionEvent, SessionRecord }
+export type { SessionEvent, SessionEventBody, SessionRecord }
 export { SESSION_FORMAT_VERSION }
 
 export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
@@ -38,7 +43,7 @@ export class SessionsService extends Service {
     super(ctx, 'sessions')
   }
 
-  async create(id = crypto.randomUUID()) {
+  async create(id: string = crypto.randomUUID()) {
     const record: SessionRecord = {
       id,
       version: SESSION_FORMAT_VERSION,
@@ -62,9 +67,9 @@ export class SessionsService extends Service {
     return record
   }
 
-  async append(id: string, body: Omit<SessionEvent, 'seq' | 'ts'>) {
+  async append(id: string, body: SessionEventBody) {
     const record = await this.require(id)
-    const event = { ...body, seq: record.events.length, ts: Date.now() } as SessionEvent
+    const event: SessionEvent = { ...body, seq: record.events.length, ts: Date.now() }
     record.events.push(event)
     await this.persist(record)
     this.ctx.emit('session/event', { sessionId: id, event })
@@ -77,7 +82,7 @@ export class SessionsService extends Service {
     return deriveMessages(record.events)
   }
 
-  async fork(sourceId: string, childId = crypto.randomUUID()) {
+  async fork(sourceId: string, childId: string = crypto.randomUUID()) {
     const source = await this.require(sourceId)
     const record: SessionRecord = {
       id: childId,
