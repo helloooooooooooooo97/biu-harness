@@ -31,12 +31,18 @@ export type SessionEvent = SessionEventBody & {
   ts: number
 }
 
+/** 对齐 dsh workspace：Session 绑定 host 本机绝对路径，Agent 工具直接以此为 cwd。 */
+export interface SessionProject {
+  name: string
+  path: string
+  boundAt: number
+}
+
 export interface SessionRecord {
   id: string
   version: number
   events: SessionEvent[]
-  /** 本 session 绑定的本地项目文件夹名（句柄在浏览器 IndexedDB）。 */
-  project?: { name: string; boundAt: number }
+  project?: SessionProject
 }
 
 export interface SessionStore {

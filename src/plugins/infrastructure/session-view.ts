@@ -20,7 +20,7 @@ export interface SessionListItem {
   title: string
   eventCount: number
   updatedAt: number
-  project?: { name: string; boundAt: number }
+  project?: { name: string; path?: string; boundAt: number }
 }
 
 export type ConversationView = 'chat' | 'trajectory'
@@ -39,7 +39,7 @@ export interface SessionViewState {
   pending: boolean
   approvalMode: ApprovalMode
   approvals: ApprovalItem[]
-  project?: { name: string; boundAt: number }
+  project?: { name: string; path?: string; boundAt: number }
   error?: string
 }
 
@@ -221,7 +221,7 @@ export class SessionViewService extends Service {
     const body = (await res.json()) as {
       id: string
       events: SessionEvent[]
-      project?: { name: string; boundAt: number }
+      project?: { name: string; path?: string; boundAt: number }
     }
     const events = Array.isArray(body.events) ? body.events : []
     this.replace({
@@ -238,7 +238,7 @@ export class SessionViewService extends Service {
     await this.refreshApprovals()
   }
 
-  setProjectMeta(project?: { name: string; boundAt: number }) {
+  setProjectMeta(project?: { name: string; path?: string; boundAt: number }) {
     this.replace({ project })
     const sessions = this.value.sessions.map((item) =>
       item.id === this.value.sessionId ? { ...item, project } : item,

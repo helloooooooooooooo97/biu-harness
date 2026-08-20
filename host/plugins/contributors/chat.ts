@@ -220,16 +220,18 @@ export function apply(ctx: Context) {
     })
   })
   ctx.http.route('PUT', '/api/sessions/:id/project', async (route) => {
-    const payload = (await route.json()) as { name?: string | null }
+    const payload = (await route.json()) as { path?: string | null; name?: string | null }
     try {
-      if (payload.name == null || payload.name === '') {
+      // path 优先；兼容旧客户端误传 name=null 解绑
+      const rawPath = payload.path !== undefined ? payload.path : payload.name
+      if (rawPath == null || rawPath === '') {
         await ctx.sessions.setProject(route.params.id, null)
         return route.send(200, { ok: true, project: null })
       }
-      const project = await ctx.sessions.setProject(route.params.id, { name: String(payload.name).slice(0, 200) })
+      const project = await ctx.sessions.setProject(route.params.id, { path: String(rawPath) })
       route.send(200, { ok: true, project })
     } catch (error) {
-      route.send(404, { error: String(error) })
+      route.send(400, { error: String(error) })
     }
   })
   ctx.http.route('POST', '/api/sessions/:id/fork', async (route) => {

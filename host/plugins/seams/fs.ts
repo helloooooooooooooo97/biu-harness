@@ -2,6 +2,7 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, normalize, relative, resolve } from 'node:path'
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
+import { currentSessionId } from '../core/session-scope.ts'
 import {
   STR_REPLACE_EDITOR_DESCRIPTION,
   STR_REPLACE_EDITOR_PARAMETERS,
@@ -11,16 +12,34 @@ import {
 export class FsService extends Service {
   constructor(
     ctx: Context,
-    public root: string,
+    public defaultRoot: string,
   ) {
     super(ctx, 'fs')
-    this.root = resolve(root)
+    this.defaultRoot = resolve(defaultRoot)
+  }
+
+  /** 当前生效工作区：Session 已绑定 host 路径则为该目录，否则默认 `.workspace`。 */
+  get root() {
+    return this.effectiveRoot()
+  }
+
+  effectiveRoot() {
+    return this.sessionProjectRoot() ?? this.defaultRoot
+  }
+
+  sessionProjectRoot() {
+    const sessionId = currentSessionId()
+    if (!sessionId) return null
+    const sessions = this.ctx.get('sessions') as { peek?: (id: string) => { project?: { path?: string } } | undefined } | undefined
+    const path = sessions?.peek?.(sessionId)?.project?.path
+    return path ? resolve(path) : null
   }
 
   resolve(rel: string) {
+    const root = this.effectiveRoot()
     const input = String(rel)
-    const full = isAbsolute(input) ? resolve(input) : resolve(this.root, input)
-    const relToRoot = relative(this.root, full)
+    const full = isAbsolute(input) ? resolve(input) : resolve(root, input)
+    const relToRoot = relative(root, full)
     if (relToRoot.startsWith('..') || (!isAbsolute(input) && normalize(input).startsWith('..'))) {
       throw new Error('path escapes workspace')
     }
@@ -57,13 +76,13 @@ export function apply(ctx: Context, config: { root?: string } = {}) {
   void mkdir(root, { recursive: true })
   ctx.tools.register({
     name: 'fs_read',
-    description: '读取工作区内文件',
+    description: '读取工作区内文件（若 Session 已绑定项目路径，则为该目录）',
     parameters: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] },
     execute: (args) => fs.read(String(args.path)),
   })
   ctx.tools.register({
     name: 'fs_write',
-    description: '写入工作区内文件',
+    description: '写入工作区内文件（若 Session 已绑定项目路径，则为该目录）',
     parameters: {
       type: 'object',
       properties: { path: { type: 'string' }, content: { type: 'string' } },
@@ -73,7 +92,7 @@ export function apply(ctx: Context, config: { root?: string } = {}) {
   })
   ctx.tools.register({
     name: 'fs_list',
-    description: '列出工作区目录',
+    description: '列出工作区目录（若 Session 已绑定项目路径，则为该目录）',
     parameters: { type: 'object', properties: { path: { type: 'string' } } },
     execute: (args) => fs.list(String(args.path || '.')),
   })
@@ -82,5 +101,15 @@ export function apply(ctx: Context, config: { root?: string } = {}) {
     description: STR_REPLACE_EDITOR_DESCRIPTION,
     parameters: { ...STR_REPLACE_EDITOR_PARAMETERS },
     execute: (args) => runStrReplaceEditor(fs, args),
+  })
+
+  ctx.inject(['systemPrompt', 'sessions'], (inner) => {
+    inner.systemPrompt.register('session.project', () => {
+      const sessionId = currentSessionId()
+      if (!sessionId) return ''
+      const project = inner.sessions.peek(sessionId)?.project
+      if (!project?.path) return ''
+      return `当前 Session 绑定 host 工作区「${project.name}」：${project.path}。bash / 文件工具直接读写该目录（对齐 dsh workspace cwd）。`
+    })
   })
 }

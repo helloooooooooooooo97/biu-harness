@@ -1,52 +1,29 @@
 import { useSyncExternalStore } from 'react'
 import { Service, type Context } from 'cordis'
-import {
-  canPickDirectory,
-  deleteSessionDirHandle,
-  listDirectory,
-  loadSessionDirHandle,
-  pickDirectory,
-  readTextFile,
-  saveSessionDirHandle,
-  writeTextFile,
-  type DirEntry,
-  type FsDirHandle,
-} from './session-folder.ts'
 
 export interface SessionProjectMeta {
   name: string
+  path: string
   boundAt: number
 }
 
 export interface ProjectViewState {
   sessionId: string | null
   project?: SessionProjectMeta
-  handleReady: boolean
-  entries: DirEntry[]
-  expanded: string[]
-  children: Record<string, DirEntry[]>
-  openPath?: string
-  content: string
-  dirty: boolean
+  pathInput: string
   busy: boolean
   error?: string
 }
 
 const empty: ProjectViewState = {
   sessionId: null,
-  handleReady: false,
-  entries: [],
-  expanded: [],
-  children: {},
-  content: '',
-  dirty: false,
+  pathInput: '',
   busy: false,
 }
 
 export class ProjectViewService extends Service {
   private value: ProjectViewState = empty
   private listeners = new Set<() => void>()
-  private root: FsDirHandle | null = null
 
   constructor(ctx: Context) {
     super(ctx, 'projectView')
@@ -59,79 +36,46 @@ export class ProjectViewService extends Service {
 
   get = () => this.value
 
-  /** 跟随当前 chat session；切换时加载绑定与句柄。 */
-  async attachSession(sessionId: string | null, project?: SessionProjectMeta) {
-    if (this.value.sessionId === sessionId && this.value.project?.name === project?.name && this.root) {
-      this.replace({ project, error: undefined })
-      return
-    }
-    this.root = null
+  /** 跟随当前 chat session。 */
+  async attachSession(sessionId: string | null, project?: { name: string; path?: string; boundAt: number }) {
+    const bound =
+      project?.path
+        ? { name: project.name, path: project.path, boundAt: project.boundAt }
+        : undefined
     this.replace({
-      ...empty,
       sessionId,
-      project,
-      busy: Boolean(sessionId && project),
+      project: bound,
+      pathInput: bound?.path ?? '',
+      busy: false,
+      error: undefined,
     })
-    if (!sessionId || !project) return
-    try {
-      const handle = await loadSessionDirHandle(sessionId)
-      if (!handle) {
-        this.replace({
-          busy: false,
-          handleReady: false,
-          error: '浏览器尚未授权该文件夹，请重新 Open folder',
-        })
-        return
-      }
-      this.root = handle
-      const entries = await listDirectory(handle)
-      this.replace({
-        handleReady: true,
-        entries,
-        busy: false,
-        error: undefined,
-        expanded: [],
-        children: {},
-        openPath: undefined,
-        content: '',
-        dirty: false,
-      })
-    } catch (error) {
-      this.replace({ busy: false, handleReady: false, error: String(error) })
-    }
   }
 
-  async openFolderForSession(sessionId: string) {
+  setPathInput(pathInput: string) {
+    this.replace({ pathInput })
+  }
+
+  /** 对齐 dsh：把 host 本机绝对路径绑到 Session，Agent 工具直接以此为 cwd。 */
+  async bindHostPath(sessionId: string, path = this.value.pathInput) {
     this.replace({ busy: true, error: undefined })
     try {
-      const handle = await pickDirectory()
-      await saveSessionDirHandle(sessionId, handle)
       const res = await fetch(`/api/sessions/${sessionId}/project`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name: handle.name }),
+        body: JSON.stringify({ path: path.trim() }),
       })
       const body = (await res.json()) as { project?: SessionProjectMeta; error?: string }
       if (!res.ok) throw new Error(body.error || `绑定失败：${res.status}`)
-      this.root = handle
-      const entries = await listDirectory(handle)
       this.replace({
         sessionId,
-        project: body.project ?? { name: handle.name, boundAt: Date.now() },
-        handleReady: true,
-        entries,
-        expanded: [],
-        children: {},
-        openPath: undefined,
-        content: '',
-        dirty: false,
+        project: body.project,
+        pathInput: body.project?.path ?? path.trim(),
         busy: false,
         error: undefined,
       })
       return this.value.project
     } catch (error) {
-      const message = error instanceof DOMException && error.name === 'AbortError' ? undefined : String(error)
-      this.replace({ busy: false, error: message })
+      this.replace({ busy: false, error: String(error) })
       throw error
     }
   }
@@ -141,75 +85,15 @@ export class ProjectViewService extends Service {
     if (!sessionId) return
     this.replace({ busy: true, error: undefined })
     try {
-      await deleteSessionDirHandle(sessionId)
       await fetch(`/api/sessions/${sessionId}/project`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name: null }),
+        body: JSON.stringify({ path: null }),
       })
-      this.root = null
       this.replace({ ...empty, sessionId, busy: false })
     } catch (error) {
       this.replace({ busy: false, error: String(error) })
     }
-  }
-
-  async toggleDir(path: string) {
-    if (!this.root) return
-    const expanded = new Set(this.value.expanded)
-    if (expanded.has(path)) {
-      expanded.delete(path)
-      this.replace({ expanded: [...expanded] })
-      return
-    }
-    expanded.add(path)
-    if (!this.value.children[path]) {
-      try {
-        const parts = path.split('/')
-        let dir = this.root
-        for (const part of parts) dir = await dir.getDirectoryHandle(part)
-        const rows = await listDirectory(dir, path)
-        this.replace({ expanded: [...expanded], children: { ...this.value.children, [path]: rows } })
-        return
-      } catch (error) {
-        this.replace({ error: String(error) })
-        return
-      }
-    }
-    this.replace({ expanded: [...expanded] })
-  }
-
-  async openFile(path: string) {
-    if (!this.root) return
-    if (this.value.dirty && this.value.openPath && this.value.openPath !== path) {
-      if (!window.confirm('当前文件未保存，切换将丢弃修改。继续？')) return
-    }
-    this.replace({ busy: true, error: undefined })
-    try {
-      const content = await readTextFile(this.root, path)
-      this.replace({ openPath: path, content, dirty: false, busy: false })
-    } catch (error) {
-      this.replace({ busy: false, error: String(error) })
-    }
-  }
-
-  setContent(content: string) {
-    this.replace({ content, dirty: true })
-  }
-
-  async save() {
-    if (!this.root || !this.value.openPath) return
-    this.replace({ busy: true, error: undefined })
-    try {
-      await writeTextFile(this.root, this.value.openPath, this.value.content)
-      this.replace({ dirty: false, busy: false })
-    } catch (error) {
-      this.replace({ busy: false, error: String(error) })
-    }
-  }
-
-  supported() {
-    return canPickDirectory()
   }
 
   private replace(patch: Partial<ProjectViewState>) {

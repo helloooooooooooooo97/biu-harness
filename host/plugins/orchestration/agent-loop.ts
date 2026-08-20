@@ -2,6 +2,7 @@ import { Service, type Context } from 'cordis'
 import '../../types.ts'
 import type { AssistantReply, ChatOptions, LlmClient, LlmConfig, LlmMessage } from './llm.ts'
 import type { InboxKind } from '../core/session-types.ts'
+import { runWithSession } from '../core/session-scope.ts'
 
 export interface AgentTurn {
   text: string
@@ -38,6 +39,10 @@ export class AgentLoop implements AgentRunner {
   ) {}
 
   async run(claimed: ClaimedInput[]): Promise<AgentTurn> {
+    return runWithSession(this.sessionId, () => this.runInSession(claimed))
+  }
+
+  private async runInSession(claimed: ClaimedInput[]): Promise<AgentTurn> {
     const session = this.ctx.sessions
     const turn = session.deriveMessages(this.sessionId).filter((item) => item.role === 'user').length + 1
     await session.append(this.sessionId, { type: 'turn/start', turn })
