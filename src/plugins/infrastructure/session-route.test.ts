@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { buildAppPath, parseAppPath, routeFromState } from './session-route.ts'
+import { buildAppPath, isKnownAppPath, parseAppPath, routeFromState } from './session-route.ts'
 
 test('parseAppPath covers home, session chat, trajectory, and workspace module', () => {
   assert.deepEqual(parseAppPath('/'), { kind: 'home' })
@@ -14,6 +14,16 @@ test('parseAppPath covers home, session chat, trajectory, and workspace module',
   })
   assert.deepEqual(parseAppPath('/workspace'), { kind: 'module', moduleId: 'workspace' })
   assert.deepEqual(parseAppPath('/unknown'), { kind: 'home' })
+})
+
+test('isKnownAppPath accepts app surfaces and rejects noise', () => {
+  assert.equal(isKnownAppPath('/'), true)
+  assert.equal(isKnownAppPath('/workspace'), true)
+  assert.equal(isKnownAppPath('/s/abc'), true)
+  assert.equal(isKnownAppPath('/s/abc/chat'), true)
+  assert.equal(isKnownAppPath('/s/abc/trajectory'), true)
+  assert.equal(isKnownAppPath('/unknown'), false)
+  assert.equal(isKnownAppPath('/s/abc/extra'), false)
 })
 
 test('buildAppPath round-trips with parseAppPath', () => {

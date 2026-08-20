@@ -118,8 +118,7 @@ function Shell(props: SlotProps) {
   const projectView = props.projectView as ProjectViewService
   const navigate = useNavigate()
   const location = useLocation()
-  const snap = useSnapshot((state: Snapshot) => state)
-  const live = snap.plugins.some((plugin) => plugin.enabled)
+  const live = useSnapshot((state: Snapshot) => state.plugins.some((plugin) => plugin.enabled))
   const sessions = useSessionView((state) => state.sessions)
   const sessionId = useSessionView((state) => state.sessionId)
   const project = useSessionView((state) => state.project)
@@ -151,7 +150,9 @@ function Shell(props: SlotProps) {
         sessionView.setProjectMeta(state.project)
       }
     })
-    return unsub
+    return () => {
+      unsub()
+    }
   }, [projectView, sessionView])
 
   return (
@@ -165,152 +166,160 @@ function Shell(props: SlotProps) {
         onSettings={() => setSettingsOpen(true)}
       />
 
-      {activeModule === 'agent' ? (
-        <aside className="app-side-bar flex min-h-0 flex-col overflow-hidden border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
-          <div className="flex shrink-0 flex-col gap-2 px-4 pt-4 pb-2">
-            <BrandWordmark />
-            <div className="text-[13px] font-semibold tracking-tight">Agent</div>
+      {/* 模块切换用 hidden 保活，避免卸载重挂导致路由体感慢 */}
+      <aside
+        className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] ${
+          activeModule === 'agent' ? 'flex' : 'hidden'
+        }`}
+        aria-hidden={activeModule !== 'agent'}
+      >
+        <div className="flex shrink-0 flex-col gap-2 px-4 pt-4 pb-2">
+          <BrandWordmark />
+          <div className="text-[13px] font-semibold tracking-tight">Agent</div>
+        </div>
+        <div className="shrink-0 px-3 pb-3">
+          <button
+            type="button"
+            className="flex w-full items-center justify-center gap-2 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-2 text-sm font-medium hover:bg-[var(--dsw-business-soft)]"
+            onClick={() => {
+              void sessionView.newSession().then((id) => navigate(`/s/${id}`))
+            }}
+          >
+            <span className="text-lg leading-none">+</span>
+            New Session
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Sessions</span>
+            {sessionId ? (
+              <button
+                type="button"
+                className="text-[11px] text-[var(--dsw-business)] hover:underline"
+                onClick={() => {
+                  void sessionView.forkCurrent().then((id) => navigate(`/s/${id}`))
+                }}
+              >
+                Fork
+              </button>
+            ) : null}
           </div>
-          <div className="shrink-0 px-3 pb-3">
-            <button
-              type="button"
-              className="flex w-full items-center justify-center gap-2 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-2 text-sm font-medium hover:bg-[var(--dsw-business-soft)]"
-              onClick={() => {
-                void sessionView.newSession().then((id) => navigate(`/s/${id}`))
-              }}
-            >
-              <span className="text-lg leading-none">+</span>
-              New Session
-            </button>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3">
-            <div className="mb-2 flex items-center justify-between px-1">
-              <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Sessions</span>
-              {sessionId ? (
-                <button
-                  type="button"
-                  className="text-[11px] text-[var(--dsw-business)] hover:underline"
-                  onClick={() => {
-                    void sessionView.forkCurrent().then((id) => navigate(`/s/${id}`))
-                  }}
+          {sessions.length === 0 ? (
+            <p className="px-1 text-[11px] leading-4 text-[var(--dsw-label-3)]">No sessions yet. Send a message or create one.</p>
+          ) : (
+            sessions.map((item) => {
+              const active = item.id === sessionId
+              return (
+                <div
+                  key={item.id}
+                  className={`group mb-1 flex w-full items-stretch rounded-[12px] ${
+                    active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-black/[0.03]'
+                  }`}
                 >
-                  Fork
-                </button>
-              ) : null}
-            </div>
-            {sessions.length === 0 ? (
-              <p className="px-1 text-[11px] leading-4 text-[var(--dsw-label-3)]">No sessions yet. Send a message or create one.</p>
-            ) : (
-              sessions.map((item) => {
-                const active = item.id === sessionId
-                return (
-                  <div
-                    key={item.id}
-                    className={`group mb-1 flex w-full items-stretch rounded-[12px] ${
-                      active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-black/[0.03]'
-                    }`}
+                  <Link
+                    to={`/s/${item.id}${view === 'trajectory' ? '/trajectory' : ''}`}
+                    className="min-w-0 flex-1 px-3 py-2 text-left text-sm"
                   >
-                    <Link
-                      to={`/s/${item.id}${view === 'trajectory' ? '/trajectory' : ''}`}
-                      className="min-w-0 flex-1 px-3 py-2 text-left text-sm"
-                    >
-                      <div className="truncate font-medium">{item.title}</div>
-                      <div className="mt-0.5 font-mono text-[10px] opacity-70">
-                        {item.id.slice(0, 8)} · {item.eventCount} events
-                        {item.project ? ` · ${item.project.name}` : ''}
-                      </div>
-                    </Link>
-                    <button
-                      type="button"
-                      className="shrink-0 px-2 text-[var(--dsw-label-3)] opacity-0 transition-opacity hover:text-[var(--dsw-danger)] group-hover:opacity-100 focus:opacity-100"
-                      aria-label={`Delete session ${item.title}`}
-                      title="Delete"
-                      onClick={(event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        if (!window.confirm(`Delete session “${item.title}”?`)) return
-                        const wasActive = item.id === sessionId
-                        void sessionView.deleteSession(item.id).then(() => {
-                          if (!wasActive) return
-                          const next = sessionView.get().sessionId
-                          navigate(next ? `/s/${next}` : '/')
-                        })
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M10 7V5h4v2m-6 3v8m4-8v8m-7-11 1 14h10l1-14" />
-                      </svg>
-                    </button>
-                  </div>
-                )
-              })
-            )}
-          </div>
-        </aside>
-      ) : null}
+                    <div className="truncate font-medium">{item.title}</div>
+                    <div className="mt-0.5 font-mono text-[10px] opacity-70">
+                      {item.id.slice(0, 8)} · {item.eventCount} events
+                      {item.project ? ` · ${item.project.name}` : ''}
+                    </div>
+                  </Link>
+                  <button
+                    type="button"
+                    className="shrink-0 px-2 text-[var(--dsw-label-3)] opacity-0 transition-opacity hover:text-[var(--dsw-danger)] group-hover:opacity-100 focus:opacity-100"
+                    aria-label={`Delete session ${item.title}`}
+                    title="Delete"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      if (!window.confirm(`Delete session “${item.title}”?`)) return
+                      const wasActive = item.id === sessionId
+                      void sessionView.deleteSession(item.id).then(() => {
+                        if (!wasActive) return
+                        const next = sessionView.get().sessionId
+                        navigate(next ? `/s/${next}` : '/')
+                      })
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M10 7V5h4v2m-6 3v8m4-8v8m-7-11 1 14h10l1-14" />
+                    </svg>
+                  </button>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </aside>
 
       <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-        {activeModule === 'agent' ? (
-          <>
-            <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[var(--dsw-border)] px-6">
-              <NavLink
-                to={sessionId ? `/s/${sessionId}` : '/'}
-                end
-                className={({ isActive }) =>
-                  `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    Chat
-                    {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
-                  </>
-                )}
-              </NavLink>
-              <NavLink
-                to={sessionId ? `/s/${sessionId}/trajectory` : '/'}
-                className={({ isActive }) =>
-                  `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    Trajectory
-                    {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
-                  </>
-                )}
-              </NavLink>
-            </header>
-            <div
-              className={
-                view === 'chat'
-                  ? 'flex min-h-0 w-full flex-1 flex-col overflow-hidden'
-                  : 'flex min-h-0 w-full flex-1 flex-col overflow-hidden'
+        <div
+          className={`min-h-0 min-w-0 flex-col overflow-hidden ${activeModule === 'agent' ? 'flex flex-1' : 'hidden'}`}
+          aria-hidden={activeModule !== 'agent'}
+        >
+          <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[var(--dsw-border)] px-6">
+            <NavLink
+              to={sessionId ? `/s/${sessionId}` : '/'}
+              end
+              className={({ isActive }) =>
+                `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
               }
             >
-              {view === 'chat' ? (
-                <div className="flex min-h-0 flex-1 overflow-hidden">
-                  <div className="mx-auto flex min-h-0 w-full max-w-[calc(var(--dsw-chat-width)+32px)] flex-1 flex-col overflow-hidden px-4 pb-4">
-                    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain py-4">
-                      {props.renderSlot('stage')}
-                    </div>
-                    <div className="shrink-0 space-y-2 bg-[var(--dsw-bg)] pt-1 pb-3">
-                      {props.renderSlot('dock')}
-                      {props.renderSlot('composer')}
-                    </div>
-                  </div>
-                  <aside className="project-pane hidden min-h-0 w-[min(420px,42vw)] shrink-0 flex-col border-l border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] md:flex">
-                    {props.renderSlot('project')}
-                  </aside>
-                </div>
-              ) : (
-                props.renderSlot('trajectory')
+              {({ isActive }) => (
+                <>
+                  Chat
+                  {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
+                </>
               )}
+            </NavLink>
+            <NavLink
+              to={sessionId ? `/s/${sessionId}/trajectory` : '/'}
+              className={({ isActive }) =>
+                `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  Trajectory
+                  {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
+                </>
+              )}
+            </NavLink>
+          </header>
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+            <div
+              className={`min-h-0 flex-1 overflow-hidden ${view === 'chat' ? 'flex' : 'hidden'}`}
+              aria-hidden={view !== 'chat'}
+            >
+              <div className="mx-auto flex min-h-0 w-full max-w-[calc(var(--dsw-chat-width)+32px)] flex-1 flex-col overflow-hidden px-4 pb-4">
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain py-4">
+                  {props.renderSlot('stage')}
+                </div>
+                <div className="shrink-0 space-y-2 bg-[var(--dsw-bg)] pt-1 pb-3">
+                  {props.renderSlot('dock')}
+                  {props.renderSlot('composer')}
+                </div>
+              </div>
+              <aside className="project-pane hidden min-h-0 w-[min(420px,42vw)] shrink-0 flex-col border-l border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] md:flex">
+                {props.renderSlot('project')}
+              </aside>
             </div>
-          </>
-        ) : (
+            <div
+              className={`min-h-0 flex-1 overflow-hidden ${view === 'trajectory' ? 'flex flex-col' : 'hidden'}`}
+              aria-hidden={view !== 'trajectory'}
+            >
+              {props.renderSlot('trajectory')}
+            </div>
+          </div>
+        </div>
+        <div
+          className={activeModule === 'workspace' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}
+          aria-hidden={activeModule !== 'workspace'}
+        >
           <WorkspaceModule />
-        )}
+        </div>
       </main>
 
       <div
