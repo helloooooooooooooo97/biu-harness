@@ -96,7 +96,11 @@ export class AgentLoop implements AgentRunner {
 
       if (!reply.toolCalls.length) {
         final = reply.content?.trim() || '（空回复）'
-        await session.append(this.sessionId, { type: 'assistant/message', text: final })
+        await session.append(this.sessionId, {
+          type: 'assistant/message',
+          text: final,
+          ...(reply.usage ? { usage: reply.usage } : {}),
+        })
         await session.append(this.sessionId, { type: 'step/end', turn, step })
         await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'complete' })
         this.ctx.emit('agent/status', { status: 'idle', step })
@@ -107,6 +111,7 @@ export class AgentLoop implements AgentRunner {
         type: 'assistant/message',
         text: reply.content ?? '',
         tool_calls: reply.toolCalls,
+        ...(reply.usage ? { usage: reply.usage } : {}),
       })
 
       for (const call of reply.toolCalls) {

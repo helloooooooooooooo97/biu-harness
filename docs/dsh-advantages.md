@@ -18,7 +18,7 @@
 12. **Web：审批可观察** — hold 待批出现在 composer dock，允许/拒绝回调 host。
 13. **Web 壳对标 dsh 观感** — 左栏 Wordmark+HARNESS / New Session；中栏 Chat hero + 浅蓝气泡 + 胶囊 composer；演示插件进 Settings modal（对照官方 `ui-layout` / `ui-sidebar` / `ui-conversation`，不搬整包）。
 14. **Web：可恢复会话列表 + 真 New Session / Fork** — `GET /api/sessions` 列出会话；侧栏切换 `load`；Fork 走 `POST /api/sessions/:id/fork`。
-15. **Web：Trajectory 事件账本** — Chat/Trajectory 可切换；`projectTrajectory` 从 append-only 日志投影；工具行可 `inspectCall` 跳到对应 seq 并高亮。
+15. **Web：Trajectory 事件账本** — Chat/Trajectory 可切换；`projectTrajectory` 从 append-only 日志投影；工具行可 `inspectCall` 跳到对应 seq 并高亮；`assistant/message` 摘要可见（含空 content 的 tool_calls）；provider `usage` 写入事件并显示。
 16. **Web：审批 mode + 重水合** — `auto`/`hold` 可切换；启动与 `load` 时 `GET /api/approvals` 恢复 pending，不只依赖 WS。
 17. **Web：运行中 Steer/inject** — agent 忙时输入仍可用，`kind: 'inject'` 入队，不搬完整 QueueDock。
 18. **Web：React Router（单向）** — `/` · `/s/:id` · `/s/:id/trajectory`；URL → `applyRoute`；跳转只用 `Link`/`navigate`，无双向 bridge。
