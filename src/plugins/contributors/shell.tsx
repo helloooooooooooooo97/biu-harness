@@ -58,19 +58,38 @@ function Shell(props: SlotProps) {
             sessions.map((item) => {
               const active = item.id === sessionId
               return (
-                <button
+                <div
                   key={item.id}
-                  type="button"
-                  className={`mb-1 w-full rounded-[12px] px-3 py-2 text-left text-sm ${
+                  className={`group mb-1 flex w-full items-stretch rounded-[12px] ${
                     active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-black/[0.03]'
                   }`}
-                  onClick={() => void sessionView.load(item.id)}
                 >
-                  <div className="truncate font-medium">{item.title}</div>
-                  <div className="mt-0.5 font-mono text-[10px] opacity-70">
-                    {item.id.slice(0, 8)} · {item.eventCount} events
-                  </div>
-                </button>
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 px-3 py-2 text-left text-sm"
+                    onClick={() => void sessionView.load(item.id)}
+                  >
+                    <div className="truncate font-medium">{item.title}</div>
+                    <div className="mt-0.5 font-mono text-[10px] opacity-70">
+                      {item.id.slice(0, 8)} · {item.eventCount} events
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className="shrink-0 px-2 text-[var(--dsw-label-3)] opacity-0 transition-opacity hover:text-[var(--dsw-danger)] group-hover:opacity-100 focus:opacity-100"
+                    aria-label={`Delete session ${item.title}`}
+                    title="Delete"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      if (!window.confirm(`Delete session “${item.title}”?`)) return
+                      void sessionView.deleteSession(item.id)
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M10 7V5h4v2m-6 3v8m4-8v8m-7-11 1 14h10l1-14" />
+                    </svg>
+                  </button>
+                </div>
               )
             })
           )}

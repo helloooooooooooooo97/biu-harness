@@ -89,3 +89,37 @@ test('inspectCall switches to trajectory with focus', async () => {
   assert.equal(view.get().view, 'trajectory')
   assert.equal(view.get().focusCallId, 'c1')
 })
+
+test('deleteSession clears active session when list empty', async () => {
+  const calls: Array<{ url: string; method?: string }> = []
+  let sessions: Array<{ id: string; title: string; eventCount: number; updatedAt: number }> = [
+    { id: 's1', title: 'ping', eventCount: 2, updatedAt: 1 },
+  ]
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input)
+    const method = init?.method ?? 'GET'
+    calls.push({ url, method })
+    if (url.endsWith('/api/sessions') && method === 'GET') {
+      return { ok: true, status: 200, json: async () => ({ sessions }) } as Response
+    }
+    if (url.includes('/api/sessions/s1') && method === 'DELETE') {
+      sessions = []
+      return { ok: true, status: 200, json: async () => ({ ok: true, id: 's1' }) } as Response
+    }
+    if (url.includes('/api/approvals')) {
+      return { ok: true, status: 200, json: async () => ({ mode: 'auto', pending: [] }) } as Response
+    }
+    return { ok: false, status: 404, json: async () => ({}) } as Response
+  }) as typeof fetch
+
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  view.ingest('s1', { type: 'session/open', version: 1, seq: 0, ts: 1 })
+  await view.refreshSessions()
+  assert.equal(view.get().sessions.length, 1)
+  await view.deleteSession('s1')
+  assert.equal(calls.some((call) => call.method === 'DELETE'), true)
+  assert.equal(view.get().sessionId, null)
+  assert.equal(view.get().sessions.length, 0)
+})

@@ -97,6 +97,11 @@ export class SessionsService extends Service {
     return this.ctx.sessionStore.list()
   }
 
+  async delete(id: string) {
+    this.cache.delete(id)
+    return this.ctx.sessionStore.delete(id)
+  }
+
   private async persist(record: SessionRecord) {
     this.cache.set(record.id, record)
     await this.ctx.sessionStore.save(record)
