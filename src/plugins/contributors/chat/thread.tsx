@@ -4,6 +4,7 @@ import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import type { ChatNode } from '../../infrastructure/session-project.ts'
 import { FishLogo } from '../brand.tsx'
+import { MarkdownBody } from './markdown.tsx'
 
 function ToolRow({
   node,
@@ -61,7 +62,7 @@ function NodeView({ node, onInspect }: { node: ChatNode; onInspect: (callId: str
           style={{ background: 'var(--dsw-bubble)', borderRadius: 'var(--dsw-radius-bubble)' }}
         >
           {node.kindTag === 'inject' ? <div className="mb-1 text-[10px] text-[var(--dsw-label-3)]">inject</div> : null}
-          {node.text}
+          <MarkdownBody text={node.text} />
         </div>
       </div>
     )
@@ -69,7 +70,7 @@ function NodeView({ node, onInspect }: { node: ChatNode; onInspect: (callId: str
   if (node.kind === 'assistant') {
     return (
       <div className="w-full max-w-[var(--dsw-chat-width)] self-start text-[15px] leading-7 text-[var(--dsw-label)]">
-        {node.text || (node.streaming ? '…' : '')}
+        {node.text ? <MarkdownBody text={node.text} /> : node.streaming ? '…' : null}
         {node.streaming ? <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span> : null}
       </div>
     )
