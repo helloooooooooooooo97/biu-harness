@@ -40,8 +40,18 @@ export interface AssistantReply {
   usage?: LlmUsage
 }
 
+export interface ChatOptions {
+  /** 文本 delta；agent-loop 用来即时 append `assistant/chunk`。 */
+  onDelta?: (text: string) => void | Promise<void>
+}
+
 export interface LlmClient {
-  chat(messages: LlmMessage[], tools: unknown[], signal?: AbortSignal): Promise<AssistantReply>
+  chat(
+    messages: LlmMessage[],
+    tools?: unknown[],
+    signal?: AbortSignal,
+    options?: ChatOptions,
+  ): Promise<AssistantReply>
 }
 
 export function parseProviderUsage(raw: unknown): LlmUsage | undefined {
@@ -73,15 +83,134 @@ export function formatUsage(usage: LlmUsage | undefined): string {
   return parts.join(' · ')
 }
 
+interface StreamToolAcc {
+  id: string
+  name: string
+  arguments: string
+}
+
+/** 解析 OpenAI/DeepSeek chat.completions SSE；`[DONE]` 结束。不引入 eventsource-parser。 */
+export async function consumeChatCompletionSse(
+  stream: ReadableStream<Uint8Array>,
+  options: {
+    onDelta?: (text: string) => void | Promise<void>
+    signal?: AbortSignal
+  } = {},
+): Promise<AssistantReply> {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let content = ''
+  let usage: LlmUsage | undefined
+  const tools = new Map<number, StreamToolAcc>()
+  let sawDone = false
+
+  const onAbort = () => {
+    void reader.cancel().catch(() => undefined)
+  }
+  options.signal?.addEventListener('abort', onAbort, { once: true })
+
+  try {
+    while (true) {
+      if (options.signal?.aborted) throw new Error('cancelled')
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split(/\r?\n/)
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        const payload = sseDataLine(line)
+        if (payload === undefined) continue
+        if (payload === '[DONE]') {
+          sawDone = true
+          break
+        }
+        let chunk: {
+          choices?: Array<{
+            delta?: {
+              content?: string | null
+              tool_calls?: Array<{
+                index?: number
+                id?: string
+                function?: { name?: string; arguments?: string }
+              }>
+            }
+          }>
+          usage?: unknown
+          error?: { message?: string }
+        }
+        try {
+          chunk = JSON.parse(payload) as typeof chunk
+        } catch {
+          continue
+        }
+        if (chunk.error?.message) throw new Error(chunk.error.message)
+        const delta = chunk.choices?.[0]?.delta
+        const text = delta?.content
+        if (typeof text === 'string' && text.length) {
+          content += text
+          await options.onDelta?.(text)
+        }
+        for (const call of delta?.tool_calls ?? []) {
+          const index = typeof call.index === 'number' ? call.index : 0
+          const acc = tools.get(index) ?? { id: '', name: '', arguments: '' }
+          if (call.id) acc.id = call.id
+          if (call.function?.name) acc.name = call.function.name
+          if (typeof call.function?.arguments === 'string') acc.arguments += call.function.arguments
+          tools.set(index, acc)
+        }
+        const nextUsage = parseProviderUsage(chunk.usage)
+        if (nextUsage) usage = nextUsage
+      }
+      if (sawDone) break
+    }
+  } finally {
+    options.signal?.removeEventListener('abort', onAbort)
+    reader.releaseLock()
+  }
+
+  if (options.signal?.aborted) throw new Error('cancelled')
+
+  const toolCalls: ToolCall[] = [...tools.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([, call]) => ({
+      id: call.id || `call_${Math.random().toString(36).slice(2, 10)}`,
+      name: call.name,
+      arguments: call.arguments || '{}',
+    }))
+    .filter((call) => call.name)
+
+  return {
+    content: content || null,
+    toolCalls,
+    ...(usage ? { usage } : {}),
+  }
+}
+
+function sseDataLine(line: string): string | undefined {
+  if (!line.startsWith('data:')) return undefined
+  return line.slice(5).replace(/^ /, '')
+}
+
 export class OpenAiCompatLlm implements LlmClient {
   constructor(private config: LlmConfig) {}
 
-  async chat(messages: LlmMessage[], tools: unknown[], signal?: AbortSignal): Promise<AssistantReply> {
+  async chat(
+    messages: LlmMessage[],
+    tools: unknown[] = [],
+    signal?: AbortSignal,
+    options?: ChatOptions,
+  ): Promise<AssistantReply> {
     const url =
       this.config.provider === 'deepseek'
         ? 'https://api.deepseek.com/chat/completions'
         : 'https://api.openai.com/v1/chat/completions'
-    const body: Record<string, unknown> = { model: this.config.model, messages }
+    const body: Record<string, unknown> = {
+      model: this.config.model,
+      messages,
+      stream: true,
+      stream_options: { include_usage: true },
+    }
     if (tools.length) {
       body.tools = tools
       body.tool_choice = 'auto'
@@ -91,30 +220,24 @@ export class OpenAiCompatLlm implements LlmClient {
       headers: {
         authorization: `Bearer ${this.config.apiKey}`,
         'content-type': 'application/json',
+        accept: 'text/event-stream',
       },
       body: JSON.stringify(body),
       signal,
     })
-    const data = (await res.json()) as {
-      choices?: Array<{ message?: LlmMessage }>
-      usage?: unknown
-      error?: { message?: string }
+    if (!res.ok) {
+      let detail = `llm http ${res.status}`
+      try {
+        const err = (await res.json()) as { error?: { message?: string } }
+        if (err.error?.message) detail = err.error.message
+      } catch {
+        /* ignore */
+      }
+      throw new Error(detail)
     }
-    if (!res.ok) throw new Error(data.error?.message || `llm http ${res.status}`)
-    const message = data.choices?.[0]?.message
-    this.ctxEmitChunk(message?.content)
-    return {
-      content: message?.content ?? null,
-      toolCalls: (message?.tool_calls ?? []).map((call) => ({
-        id: call.id,
-        name: call.function.name,
-        arguments: call.function.arguments,
-      })),
-      usage: parseProviderUsage(data.usage),
-    }
+    if (!res.body) throw new Error('llm stream missing body')
+    return consumeChatCompletionSse(res.body, { onDelta: options?.onDelta, signal })
   }
-
-  private ctxEmitChunk(_text: string | null | undefined) {}
 }
 
 export class LlmService extends Service {
@@ -126,10 +249,14 @@ export class LlmService extends Service {
     const ctx = this.ctx
     const client = new OpenAiCompatLlm(config)
     return {
-      chat: async (messages, tools, signal) => {
+      chat: async (messages, tools = [], signal, options) => {
         ctx.emit('llm/request', { model: config.model })
-        const reply = await client.chat(messages, tools, signal)
-        if (reply.content) ctx.emit('llm/stream', { text: reply.content })
+        const reply = await client.chat(messages, tools, signal, {
+          onDelta: async (text) => {
+            ctx.emit('llm/stream', { text })
+            await options?.onDelta?.(text)
+          },
+        })
         return reply
       },
     }
