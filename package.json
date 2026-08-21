@@ -7,6 +7,9 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "node scripts/link-cordis-plugins.mjs",
+    "predev": "node scripts/link-cordis-plugins.mjs",
+    "prestart": "node scripts/link-cordis-plugins.mjs",
     "dev": "concurrently -k \"npm:dev:host\" \"npm:dev:web\"",
     "dev:host": "tsx watch host/index.ts",
     "dev:web": "vite",
@@ -15,8 +18,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hmr/greeter-host": "*",
-    "@hmr/greeter-ui": "*",
     "@tanstack/react-virtual": "^3.14.10",
     "cordis": "4.0.0-rc.8",
     "react": "^19.1.1",

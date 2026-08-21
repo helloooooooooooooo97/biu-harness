@@ -3,17 +3,13 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { cordisPluginsVite, linkConfiguredPackages } from './host/cordis-plugins.ts'
 
 const root = dirname(fileURLToPath(import.meta.url))
+linkConfiguredPackages(root)
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      '@hmr/greeter-host': join(root, 'packages/greeter-host/src/index.ts'),
-      '@hmr/greeter-ui': join(root, 'packages/greeter-ui/src/index.tsx'),
-    },
-  },
+  plugins: [react(), tailwindcss(), cordisPluginsVite(root)],
   appType: 'spa',
   server: {
     port: 5173,

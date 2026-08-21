@@ -82,7 +82,7 @@ export class HubService extends Service {
       services: [
         'http', 'hub', 'tools', 'llm', 'agentLoop', 'agents', 'approvals',
         'sessionStore', 'sessions', 'systemPrompt', 'fs', 'subprocess', 'sandbox',
-        'shell', 'jobs', 'mcp', 'terminals', 'lsp', 'subagents', 'greet', 'notes', 'chat',
+        'shell', 'jobs', 'mcp', 'terminals', 'lsp', 'subagents', 'notes', 'chat',
       ].filter((name) => Boolean(this.ctx.get(name))),
     }
   }

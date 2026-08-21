@@ -8,7 +8,6 @@ import type { AgentLoopService } from './plugins/orchestration/agent-loop.ts'
 import type { PreStepReq } from './plugins/orchestration/agent-loop.ts'
 import type { AgentsService } from './plugins/orchestration/agents.ts'
 import type { ApprovalsService } from './plugins/orchestration/approvals.ts'
-import type { GreetService } from '@hmr/greeter-host'
 import type { NotesService } from './plugins/contributors/notes.ts'
 import type { ChatService } from './plugins/contributors/chat.ts'
 import type { SessionsService } from './plugins/core/sessions.ts'
@@ -55,7 +54,6 @@ declare module 'cordis' {
     agentLoop: AgentLoopService
     agents: AgentsService
     approvals: ApprovalsService
-    greet: GreetService
     notes: NotesService
     chat: ChatService
     sessionStore: SessionStoreService

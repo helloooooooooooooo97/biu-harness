@@ -3,9 +3,9 @@ import * as notes from '../contributors/notes.tsx'
 import * as clock from '../contributors/clock.tsx'
 import * as quotes from '../contributors/quotes.tsx'
 import * as chat from '../contributors/chat/index.ts'
-import { uiPackageLoaders } from './ui-packages.ts'
+import { uiPackageLoaders } from 'virtual:cordis-ui-loaders'
 
-/** 仍留在主仓的内置 UI 插件（未拆包）。 */
+/** 仍留在主仓的内置 UI 插件（未拆包）。外部 UI 只来自 virtual:cordis-ui-loaders（由配置生成）。 */
 const builtinUi: Record<string, Plugin> = {
   notes,
   clock,
@@ -23,7 +23,10 @@ export function apply(ctx: Context) {
 
   async function resolvePlugin(id: string, ui?: string): Promise<Plugin | undefined> {
     if (builtinUi[id]) return builtinUi[id]
-    if (ui && uiPackageLoaders[ui]) return uiPackageLoaders[ui]!()
+    if (ui) {
+      const loader = uiPackageLoaders[ui]
+      if (loader) return loader()
+    }
     return undefined
   }
 
