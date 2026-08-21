@@ -79,10 +79,11 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
         aria-label="对话输入"
         onChange={(event) => scheduleCanSubmit(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault()
-            event.currentTarget.form?.requestSubmit()
-          }
+          if (event.key !== 'Enter' || event.shiftKey) return
+          // 中文等 IME 组字确认用的 Enter，不要当成发送
+          if (event.nativeEvent.isComposing || event.keyCode === 229) return
+          event.preventDefault()
+          event.currentTarget.form?.requestSubmit()
         }}
       />
       <div className="flex items-center justify-end gap-2 px-3 pb-3">
