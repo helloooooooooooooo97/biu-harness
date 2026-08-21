@@ -47,7 +47,7 @@ function NotesCard(_props: SlotProps) {
           placeholder="Write a note"
         />
         <button
-          className="rounded-[12px] px-3 py-2 text-sm text-white"
+          className="rounded-[12px] px-3 py-2 text-sm text-[var(--dsw-bg)]"
           style={{ background: 'var(--dsw-business)' }}
           type="submit"
         >
