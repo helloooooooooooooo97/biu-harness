@@ -53,13 +53,9 @@ function formatTok(n: number) {
   return n.toLocaleString('en-US')
 }
 
-const STEP_LABELS = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
-
 function stepLabel(step: number) {
-  // event.step 从 0 起；展示用 Step 一 / Step 1
-  const ordinal = step + 1
-  if (ordinal >= 1 && ordinal <= STEP_LABELS.length) return `Step ${STEP_LABELS[ordinal - 1]}`
-  return `Step ${ordinal}`
+  // event.step 从 0 起；展示用 Step 1 / Step 2
+  return `Step ${step + 1}`
 }
 
 function StepBar({ stat }: { stat: ChatStepStat }) {
