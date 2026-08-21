@@ -4,7 +4,7 @@ import { bindSessionView, type SessionViewService } from '../../infrastructure/s
 import {
   formatTrajectoryUsage,
   projectRequestMessages,
-  sumTrajectoryUsage,
+  sumTrajectoryRowUsage,
   type DerivedMessage,
   type SessionEvent,
   type TrajectoryRow,
@@ -118,8 +118,8 @@ function FoldCaret({ open }: { open: boolean }) {
 
 export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
+  const sessionView = props.sessionView as SessionViewService
   const rows = useSessionView((state) => state.trajectory)
-  const events = useSessionView((state) => state.events)
   const focusCallId = useSessionView((state) => state.focusCallId)
   const sessionId = useSessionView((state) => state.sessionId)
   const [selectedSeq, setSelectedSeq] = useState<number | null>(null)
@@ -129,11 +129,12 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   const [collapsedSteps, setCollapsedSteps] = useState<Record<string, boolean>>({})
 
   const groups = useMemo(() => groupByTurn(rows), [rows])
-  const cumulative = useMemo(() => sumTrajectoryUsage(events), [events])
-  const selected = useMemo(
-    () => (selectedSeq == null ? undefined : events.find((event) => event.seq === selectedSeq)),
-    [events, selectedSeq],
-  )
+  // 不要订阅 events：chunk 流式时 events 每帧变，会拖垮隐藏的 Trajectory 与输入框
+  const cumulative = useMemo(() => sumTrajectoryRowUsage(rows), [rows])
+  const selected = useMemo(() => {
+    if (selectedSeq == null) return undefined
+    return sessionView.get().events.find((event) => event.seq === selectedSeq)
+  }, [selectedSeq, rows, sessionView])
 
   useEffect(() => {
     if (!focusCallId) return
@@ -144,8 +145,8 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
 
   useEffect(() => {
     if (selectedSeq == null) return
-    if (!events.some((event) => event.seq === selectedSeq)) setSelectedSeq(null)
-  }, [events, selectedSeq])
+    if (!sessionView.get().events.some((event) => event.seq === selectedSeq)) setSelectedSeq(null)
+  }, [selectedSeq, rows, sessionView])
 
   if (!sessionId) {
     return (
@@ -276,7 +277,7 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
               Close
             </button>
           </div>
-          <EventDetailBody event={selected} events={events} />
+          <EventDetailBody event={selected} events={sessionView.get().events} />
         </aside>
       ) : null}
     </div>

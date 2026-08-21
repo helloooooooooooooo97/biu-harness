@@ -1,9 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { memo, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 
-export function ChatComposer(props: SlotProps) {
+export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   const [input, setInput] = useState('')
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const pending = useSessionView((state) => state.pending)
@@ -80,4 +80,4 @@ export function ChatComposer(props: SlotProps) {
       </div>
     </form>
   )
-}
+})

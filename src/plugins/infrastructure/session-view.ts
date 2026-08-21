@@ -133,6 +133,11 @@ export class SessionViewService extends Service {
       void this.refreshSessions()
       return
     }
+    if (event.type === 'assistant/chunk') {
+      this.ingestChunk(sessionId, event)
+      return
+    }
+    this.flushChunkFrame()
     const events = upsertEvent(this.value.sessionId === sessionId ? this.value.events : [], event)
     this.replace({
       sessionId,
@@ -141,8 +146,47 @@ export class SessionViewService extends Service {
       trajectory: projectTrajectory(events),
       error: undefined,
     })
-    // chunk 高频；列表刷新留给 turn/message/tool 等结构化事件
-    if (event.type !== 'assistant/chunk') void this.refreshSessions()
+    void this.refreshSessions()
+  }
+
+  /** chunk 高频：合并进 events/nodes，但 Trajectory 引用保持不变；通知合并到每帧一次。 */
+  private ingestChunk(sessionId: string, event: Extract<SessionEvent, { type: 'assistant/chunk' }>) {
+    const events = upsertEvent(this.value.sessionId === sessionId ? this.value.events : [], event)
+    const chunk = events.at(-1)
+    const nodes =
+      chunk?.type === 'assistant/chunk'
+        ? patchStreamingNodes(this.value.nodes, chunk)
+        : projectNodes(events)
+    this.value = {
+      ...this.value,
+      sessionId,
+      events,
+      nodes,
+      error: undefined,
+    }
+    this.scheduleChunkNotify()
+  }
+
+  private chunkRaf: number | null = null
+
+  private scheduleChunkNotify() {
+    if (this.chunkRaf != null) return
+    const schedule =
+      typeof requestAnimationFrame === 'function'
+        ? requestAnimationFrame
+        : (cb: FrameRequestCallback) => setTimeout(() => cb(Date.now()), 0) as unknown as number
+    this.chunkRaf = schedule(() => {
+      this.chunkRaf = null
+      for (const fn of this.listeners) fn()
+    }) as number
+  }
+
+  private flushChunkFrame() {
+    if (this.chunkRaf == null) return
+    if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(this.chunkRaf)
+    else clearTimeout(this.chunkRaf)
+    this.chunkRaf = null
+    for (const fn of this.listeners) fn()
   }
 
   setAgentStatus(status: 'idle' | 'running', step?: number) {
@@ -372,6 +416,20 @@ function upsertEvent(events: SessionEvent[], event: SessionEvent) {
     }
   }
   return [...events, event].sort((a, b) => a.seq - b.seq)
+}
+
+/** 流式 chunk：只补丁最后一条 streaming assistant，避免每 delta 全量 projectNodes。 */
+function patchStreamingNodes(
+  nodes: ChatNode[],
+  chunk: Extract<SessionEvent, { type: 'assistant/chunk' }>,
+): ChatNode[] {
+  const last = nodes.at(-1)
+  if (last?.kind === 'assistant' && last.streaming) {
+    // coalesced chunk.text 已是累计全文
+    if (last.text === chunk.text) return nodes
+    return [...nodes.slice(0, -1), { ...last, text: chunk.text, streaming: true }]
+  }
+  return [...nodes, { id: `a-${chunk.seq}`, kind: 'assistant', text: chunk.text, streaming: true }]
 }
 
 export function bindSessionView(source: SessionViewService) {
