@@ -22,7 +22,7 @@ export function BrandWordmark() {
     <div className="flex items-center gap-2 text-[var(--dsw-label)]">
       <FishLogo size={22} />
       <span className="text-[15px] font-semibold tracking-tight">deepseek</span>
-      <span className="rounded-[6px] bg-[var(--dsw-label)] px-1.5 py-[2px] text-[10px] font-semibold tracking-wider text-white">
+      <span className="rounded-[6px] bg-[var(--dsw-business)] px-1.5 py-[2px] text-[10px] font-semibold tracking-wider text-white">
         HARNESS
       </span>
     </div>
