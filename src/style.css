@@ -1365,6 +1365,50 @@ body {
   line-height: 1.7;
 }
 
+.chat-step-bar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 30px;
+  margin: 2px 0;
+  border: 1px solid var(--dsw-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--dsw-sidebar) 88%, var(--dsw-business-soft));
+  padding: 0 12px;
+}
+
+.chat-step-bar-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--dsw-label-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.chat-step-bar-title {
+  color: var(--dsw-business);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.chat-step-bar-sep {
+  opacity: 0.45;
+}
+
+.chat-step-bar-stat {
+  color: var(--dsw-label-2);
+  white-space: nowrap;
+}
+
+.chat-step-bar-muted {
+  color: var(--dsw-label-3);
+}
+
 .chat-reply-bar {
   display: flex;
   height: 30px;
@@ -1958,20 +2002,21 @@ body {
   border: 1px solid var(--dsw-border);
   border-radius: 12px;
   background: var(--dsw-surface);
-  text-decoration: none;
   color: inherit;
 }
 
-.tool-artifact:hover {
-  border-color: color-mix(in srgb, var(--dsw-business) 45%, var(--dsw-border));
+.tool-artifact .ant-image {
+  display: block;
+  width: 100%;
+  background: color-mix(in srgb, var(--dsw-sidebar) 88%, #000);
 }
 
+.tool-artifact .ant-image-img,
 .tool-artifact-img {
   display: block;
   width: 100%;
   max-height: 220px;
   object-fit: contain;
-  background: color-mix(in srgb, var(--dsw-sidebar) 88%, #000);
 }
 
 .tool-artifact-caption {

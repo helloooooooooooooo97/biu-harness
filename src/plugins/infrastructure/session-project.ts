@@ -41,6 +41,7 @@ export type ChatToolPart = {
   name: string
   arguments: string
   result?: { ok: boolean; detail: string }
+  step?: number
 }
 
 export type ChatAssistantPart = {
@@ -48,9 +49,20 @@ export type ChatAssistantPart = {
   kind: 'assistant'
   text: string
   streaming?: boolean
+  step?: number
 }
 
 export type ChatReplyPart = ChatAssistantPart | ChatToolPart
+
+/** 单步摘要：横条展示用。 */
+export type ChatStepStat = {
+  step: number
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens?: number
+  toolCount: number
+  messageChars: number
+}
 
 export type ChatNode =
   | { id: string; kind: 'user'; text: string; kindTag?: string }
@@ -62,6 +74,7 @@ export type ChatNode =
       copyText: string
       turn?: number
       stepCount?: number
+      steps?: ChatStepStat[]
       usage?: TrajectoryUsage
       durationMs?: number
       streaming?: boolean
@@ -121,6 +134,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
   const nodes: ChatNode[] = []
   let turnStartTs: number | undefined
   let currentTurn: number | undefined
+  let currentStep: number | undefined
   let reply: {
     id: string
     parts: ChatReplyPart[]
@@ -129,7 +143,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     usage: { input: number; output: number; total: number; cache: number; hit: boolean }
     streaming: boolean
     turn?: number
-    steps: Set<number>
+    steps: Map<number, ChatStepStat>
   } | null = null
 
   function ensureReply(seq: number) {
@@ -141,11 +155,26 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
         tools: new Map(),
         usage: { input: 0, output: 0, total: 0, cache: 0, hit: false },
         streaming: false,
-        steps: new Set(),
+        steps: new Map(),
         ...(currentTurn != null ? { turn: currentTurn } : {}),
       }
     }
     return reply
+  }
+
+  function ensureStepStat(step: number): ChatStepStat {
+    const r = reply!
+    const existing = r.steps.get(step)
+    if (existing) return existing
+    const next: ChatStepStat = {
+      step,
+      inputTokens: 0,
+      outputTokens: 0,
+      toolCount: 0,
+      messageChars: 0,
+    }
+    r.steps.set(step, next)
+    return next
   }
 
   function addUsage(usage: NonNullable<Extract<SessionEvent, { type: 'assistant/message' }>['usage']>) {
@@ -156,11 +185,20 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     r.usage.output += usage.outputTokens
     r.usage.total += usage.totalTokens ?? usage.inputTokens + usage.outputTokens
     r.usage.cache += usage.cacheReadTokens ?? 0
+    if (currentStep != null) {
+      const stat = ensureStepStat(currentStep)
+      stat.inputTokens += usage.inputTokens
+      stat.outputTokens += usage.outputTokens
+      if (usage.cacheReadTokens) {
+        stat.cacheReadTokens = (stat.cacheReadTokens ?? 0) + usage.cacheReadTokens
+      }
+    }
   }
 
   function flushReply(endTs?: number, finished = false) {
     if (!reply || reply.parts.length === 0) {
       reply = null
+      currentStep = undefined
       return
     }
     const copyText = reply.parts
@@ -178,19 +216,21 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       : undefined
     const durationMs =
       finished && turnStartTs != null && endTs != null ? Math.max(0, endTs - turnStartTs) : undefined
+    const steps = [...reply.steps.values()].sort((a, b) => a.step - b.step)
     nodes.push({
       id: reply.id,
       kind: 'reply',
       parts: reply.parts,
       copyText,
       ...(reply.turn != null ? { turn: reply.turn } : {}),
-      ...(reply.steps.size ? { stepCount: reply.steps.size } : {}),
+      ...(steps.length ? { stepCount: steps.length, steps } : {}),
       ...(usage ? { usage } : {}),
       ...(durationMs != null ? { durationMs } : {}),
       streaming: reply.streaming && !finished,
       finished,
     })
     reply = null
+    currentStep = undefined
   }
 
   for (const event of events) {
@@ -198,8 +238,13 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       flushReply()
       turnStartTs = event.ts
       currentTurn = event.turn
+      currentStep = undefined
     } else if (event.type === 'step/start') {
-      ensureReply(event.seq).steps.add(event.step)
+      currentStep = event.step
+      ensureReply(event.seq)
+      ensureStepStat(event.step)
+    } else if (event.type === 'step/end') {
+      if (currentStep === event.step) currentStep = undefined
     } else if (event.type === 'user/message') {
       flushReply()
       nodes.push({ id: `u-${event.seq}`, kind: 'user', text: event.text, kindTag: event.kind })
@@ -209,36 +254,63 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
         const idx = r.parts.findIndex((part) => part.id === r.streamingId)
         const current = idx >= 0 ? r.parts[idx] : undefined
         if (current?.kind === 'assistant') {
-          r.parts[idx] = { ...current, text: current.text + event.text, streaming: true }
+          r.parts[idx] = {
+            ...current,
+            text: current.text + event.text,
+            streaming: true,
+            ...(currentStep != null ? { step: currentStep } : {}),
+          }
         }
       } else {
         r.streamingId = `a-${event.seq}`
-        r.parts.push({ id: r.streamingId, kind: 'assistant', text: event.text, streaming: true })
+        r.parts.push({
+          id: r.streamingId,
+          kind: 'assistant',
+          text: event.text,
+          streaming: true,
+          ...(currentStep != null ? { step: currentStep } : {}),
+        })
       }
       r.streaming = true
     } else if (event.type === 'assistant/message') {
       const r = ensureReply(event.seq)
       if (event.usage) addUsage(event.usage)
+      if (currentStep != null) {
+        ensureStepStat(currentStep).messageChars += event.text?.length ?? 0
+      }
       if (r.streamingId) {
         const idx = r.parts.findIndex((part) => part.id === r.streamingId)
         if (idx >= 0 && r.parts[idx]?.kind === 'assistant') {
-          r.parts[idx] = { id: r.streamingId, kind: 'assistant', text: event.text, streaming: false }
+          r.parts[idx] = {
+            id: r.streamingId,
+            kind: 'assistant',
+            text: event.text,
+            streaming: false,
+            ...(currentStep != null ? { step: currentStep } : {}),
+          }
         }
         r.streamingId = null
         r.streaming = false
       } else if (event.text || !event.tool_calls?.length) {
-        r.parts.push({ id: `a-${event.seq}`, kind: 'assistant', text: event.text })
+        r.parts.push({
+          id: `a-${event.seq}`,
+          kind: 'assistant',
+          text: event.text,
+          ...(currentStep != null ? { step: currentStep } : {}),
+        })
       }
     } else if (event.type === 'tool/call') {
       const r = ensureReply(event.seq)
       r.streamingId = null
       r.streaming = false
+      if (currentStep != null) ensureStepStat(currentStep).toolCount += 1
       const part: ChatToolPart = {
         id: `t-${event.id}`,
         kind: 'tool',
         callId: event.id,
         name: event.name,
         arguments: event.arguments,
+        ...(currentStep != null ? { step: currentStep } : {}),
       }
       r.tools.set(event.id, part)
       r.parts.push(part)
@@ -251,6 +323,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
         const idx = r.parts.findIndex((part) => part.id === existing.id)
         if (idx >= 0) r.parts[idx] = next
       } else {
+        if (currentStep != null) ensureStepStat(currentStep).toolCount += 1
         const part: ChatToolPart = {
           id: `t-${event.id}`,
           kind: 'tool',
@@ -258,6 +331,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
           name: event.name,
           arguments: '',
           result: { ok: event.ok, detail: event.detail },
+          ...(currentStep != null ? { step: currentStep } : {}),
         }
         r.tools.set(event.id, part)
         r.parts.push(part)
@@ -266,6 +340,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       flushReply(event.ts, true)
       turnStartTs = undefined
       currentTurn = undefined
+      currentStep = undefined
       if (event.reason && event.reason !== 'complete') {
         nodes.push({ id: `turn-${event.seq}`, kind: 'turn', text: `回合结束：${event.reason}` })
       }

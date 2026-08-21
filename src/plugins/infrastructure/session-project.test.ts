@@ -98,6 +98,49 @@ test('reply counts distinct steps in a turn', () => {
   assert.equal(reply.stepCount, 2)
 })
 
+test('reply projects per-step token/tool/message stats', () => {
+  const nodes = projectNodes([
+    { type: 'turn/start', turn: 1, seq: 1, ts: 1000 },
+    { type: 'user/message', text: 'hi', kind: 'wake', seq: 2, ts: 1100 },
+    { type: 'step/start', turn: 1, step: 0, seq: 3, ts: 1200 },
+    {
+      type: 'assistant/message',
+      text: 'hello',
+      tool_calls: [{ id: 'c1', name: 'bash', arguments: '{}' }],
+      usage: { inputTokens: 10, outputTokens: 4 },
+      seq: 4,
+      ts: 1300,
+    },
+    { type: 'tool/call', id: 'c1', name: 'bash', arguments: '{}', seq: 5, ts: 1400 },
+    { type: 'tool/result', id: 'c1', name: 'bash', ok: true, detail: 'ok', seq: 6, ts: 1500 },
+    { type: 'step/end', turn: 1, step: 0, seq: 7, ts: 1600 },
+    { type: 'step/start', turn: 1, step: 1, seq: 8, ts: 1700 },
+    { type: 'assistant/message', text: 'done!', usage: { inputTokens: 3, outputTokens: 2 }, seq: 9, ts: 1800 },
+    { type: 'step/end', turn: 1, step: 1, seq: 10, ts: 1900 },
+    { type: 'turn/end', turn: 1, reason: 'complete', seq: 11, ts: 2000 },
+  ])
+  const reply = nodes.find((node) => node.kind === 'reply')
+  assert.equal(reply?.kind, 'reply')
+  if (reply?.kind !== 'reply') return
+  assert.equal(reply.steps?.length, 2)
+  assert.deepEqual(reply.steps?.[0], {
+    step: 0,
+    inputTokens: 10,
+    outputTokens: 4,
+    toolCount: 1,
+    messageChars: 5,
+  })
+  assert.deepEqual(reply.steps?.[1], {
+    step: 1,
+    inputTokens: 3,
+    outputTokens: 2,
+    toolCount: 0,
+    messageChars: 5,
+  })
+  assert.equal(reply.parts[0]?.step, 0)
+  assert.equal(reply.parts.at(-1)?.step, 1)
+})
+
 test('projectTrajectory skips assistant/chunk (dsh-style; message is authoritative)', () => {
   const rows = projectTrajectory([
     { type: 'turn/start', turn: 1, seq: 1, ts: 1 },
