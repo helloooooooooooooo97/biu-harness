@@ -24,7 +24,7 @@
 18. **Web：运行中 Steer/inject** — agent 忙时输入仍可用，`kind: 'inject'` 入队，不搬完整 QueueDock。
 19. **Web：React Router（单向）** — `/` · `/s/:id` · `/s/:id/trajectory` · `/workspace`；URL → `applyRoute`；跳转只用 `Link`/`navigate`，无双向 bridge。**单壳常驻**：路由变化不卸载 `AppShell`；Agent/Workspace 与 Chat/Trajectory 用保活叠层（`visibility`，避免 `display:none` 丢掉大 Markdown 布局）；slot props / `renderSlot` 稳定 + Chat/Markdown `memo`，避免切换时重解析。
 20. **Web：Activity Bar 模块切换** — Agent 仅为其中一个视图；切到 Workspace 等其它页不卸载 session 投影，切回 Agent 会话仍在；Settings 挂在 Activity Bar 底部。
-21. **Web：Session 绑定项目** — Agent 顶栏右侧紧凑 **Bind project** chip（不再占大右侧栏）；点选系统目录绑定为 Session cwd。
+21. **Web：Session 绑定项目** — 对话输入上方仅文件夹图标绑定项目（不再占大右侧栏 / 不显示路径文案）；点选系统目录绑定为 Session cwd。
 22. **Agent mode（Standard / Minimal）** — Settings 可选；`minimal` 对齐 dsh：模型侧只暴露 `bash` + `str_replace_editor`；模式写入 `.cordis/chat-config.json`。
 23. **Session host cwd（对齐 dsh）** — Bind project 后 bash / str_replace_editor 以该目录为 cwd。
 24. **配置热插拔（瘦）** — 外部插件只经 `cordis.plugins.json` 加载；主仓源码不 import 具体包名。见 `docs/plugin-packages.md`。

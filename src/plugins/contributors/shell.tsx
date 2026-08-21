@@ -105,8 +105,7 @@ function WorkspaceModule() {
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
       <h1 className="text-xl font-semibold tracking-tight text-[var(--dsw-label)]">Workspace</h1>
       <p className="max-w-md text-sm leading-6 text-[var(--dsw-label-3)]">
-        项目绑定在对话输入上方的 <strong className="font-semibold text-[var(--dsw-label-2)]">Bind project</strong>{' '}
-        胶囊：选目录后作为该 Session 的 cwd。无需单独大面板。
+        项目绑定在对话输入上方的文件夹图标：选目录后作为该 Session 的 cwd。无需单独大面板。
       </p>
     </div>
   )
