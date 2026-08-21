@@ -722,15 +722,20 @@ export class SessionViewService extends Service {
     })
   }
 
-  async send(text: string, kind: 'wake' | 'inject' = 'wake') {
+  async send(text: string, kind: 'wake' | 'inject' = 'wake', extraTools: string[] = []) {
     const content = text.trim()
     if (!content) return
     const sessionId = await this.ensureSession()
+    const tools = [...new Set(extraTools.map((name) => name.trim()).filter(Boolean))]
+    const body =
+      kind === 'inject'
+        ? { text: content, kind: 'inject' as const, ...(tools.length ? { extraTools: tools } : {}) }
+        : { text: content, ...(tools.length ? { extraTools: tools } : {}) }
     if (kind === 'inject') {
       const res = await fetch(`/api/sessions/${sessionId}/messages`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ text: content, kind: 'inject' }),
+        body: JSON.stringify(body),
       })
       const data = (await res.json()) as { error?: string }
       if (!res.ok) {
@@ -744,7 +749,7 @@ export class SessionViewService extends Service {
       const res = await fetch(`/api/sessions/${sessionId}/messages`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ text: content }),
+        body: JSON.stringify(body),
       })
       const data = (await res.json()) as { error?: string; sessionId?: string; text?: string }
       if (!res.ok) throw new Error(data.error || `发送失败：${res.status}`)

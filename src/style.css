@@ -1435,3 +1435,87 @@ body {
     display: none;
   }
 }
+
+/* Composer slash tool picker */
+.composer-form {
+  position: relative;
+}
+
+.composer-slash {
+  position: absolute;
+  right: 10px;
+  bottom: calc(100% + 8px);
+  left: 10px;
+  z-index: 8;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid var(--dsw-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--dsw-sidebar) 94%, #000);
+  box-shadow: var(--dsw-shadow-lv2);
+  backdrop-filter: blur(12px);
+}
+
+.composer-slash-head,
+.composer-slash-empty {
+  padding: 8px 12px;
+  color: var(--dsw-label-3);
+  font-size: 11px;
+}
+
+.composer-slash-item {
+  display: grid;
+  grid-template-columns: minmax(120px, 34%) minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-label);
+  text-align: left;
+  cursor: pointer;
+}
+
+.composer-slash-item:hover,
+.composer-slash-item.is-active {
+  background: var(--dsw-hover-strong);
+}
+
+.composer-slash-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--dsw-business);
+}
+
+.composer-slash-desc {
+  overflow: hidden;
+  color: var(--dsw-label-3);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-tool-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px 0;
+}
+
+.composer-tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--dsw-border);
+  border-radius: 999px;
+  background: var(--dsw-business-soft);
+  padding: 3px 8px;
+  color: var(--dsw-label-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.composer-tool-chip:hover {
+  color: var(--dsw-business);
+}

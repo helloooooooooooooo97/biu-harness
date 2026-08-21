@@ -5,10 +5,14 @@ import type { AgentTurn, ClaimedInput } from './agent-loop.ts'
 
 export type { AgentTurn, LlmConfig }
 
+export interface AgentSendOptions {
+  extraTools?: string[]
+}
+
 export interface AgentHandle {
   sessionId: string
-  send(text: string): Promise<AgentTurn>
-  inject(text: string): void
+  send(text: string, opts?: AgentSendOptions): Promise<AgentTurn>
+  inject(text: string, opts?: AgentSendOptions): void
   cancel(): void
   dispose(): void
 }
@@ -56,10 +60,15 @@ export class AgentsService extends Service {
 
     const handle: AgentHandle = {
       sessionId: id,
-      send: async (text: string) => {
+      send: async (text: string, opts?: AgentSendOptions) => {
         const trimmed = text.trim()
         if (!trimmed) return { text: '请先输入内容。', steps: [] }
-        live.inbox.push({ kind: 'wake', text: trimmed })
+        const extraTools = sanitizeExtraTools(opts?.extraTools)
+        live.inbox.push({
+          kind: 'wake',
+          text: trimmed,
+          ...(extraTools.length ? { extraTools } : {}),
+        })
         if (live.running) await live.running
         let result: AgentTurn = { text: '', steps: [] }
         live.abort = new AbortController()
@@ -73,9 +82,15 @@ export class AgentsService extends Service {
           live.running = undefined
         }
       },
-      inject: (text: string) => {
+      inject: (text: string, opts?: AgentSendOptions) => {
         const trimmed = text.trim()
-        if (trimmed) live.inbox.push({ kind: 'inject', text: trimmed })
+        if (!trimmed) return
+        const extraTools = sanitizeExtraTools(opts?.extraTools)
+        live.inbox.push({
+          kind: 'inject',
+          text: trimmed,
+          ...(extraTools.length ? { extraTools } : {}),
+        })
       },
       cancel: () => live.abort.abort(),
       dispose: () => {
@@ -99,6 +114,11 @@ export class AgentsService extends Service {
     const agent = await this.create()
     return agent.send(last)
   }
+}
+
+function sanitizeExtraTools(names: string[] | undefined): string[] {
+  if (!Array.isArray(names) || !names.length) return []
+  return [...new Set(names.map((name) => String(name).trim()).filter(Boolean))]
 }
 
 function claim(inbox: ClaimedInput[]): ClaimedInput[] | undefined {

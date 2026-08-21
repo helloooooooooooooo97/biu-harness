@@ -110,6 +110,7 @@ export class ChatService extends Service {
       configured: Boolean(this.config.apiKey),
       hint: hint(this.config.apiKey),
       tools: this.ctx.tools.names(),
+      toolCatalog: this.ctx.tools.catalog(),
     }
   }
 
@@ -356,16 +357,24 @@ export function apply(ctx: Context) {
     route.send(200, { ok: true, id })
   })
   ctx.http.route('POST', '/api/sessions/:id/messages', async (route) => {
-    const payload = (await route.json()) as { text?: string; kind?: 'wake' | 'inject' }
+    const payload = (await route.json()) as {
+      text?: string
+      kind?: 'wake' | 'inject'
+      extraTools?: string[]
+    }
     const agent = await ctx.agents.create(route.params.id)
     // re-sync in-memory LLM without rewriting disk
     chat.patch({}, { persist: false })
+    const extraTools = Array.isArray(payload.extraTools)
+      ? [...new Set(payload.extraTools.map((name) => String(name).trim()).filter(Boolean))]
+      : []
+    const sendOpts = extraTools.length ? { extraTools } : undefined
     if (payload.kind === 'inject') {
-      agent.inject(payload.text ?? '')
+      agent.inject(payload.text ?? '', sendOpts)
       return route.send(200, { sessionId: agent.sessionId, queued: true })
     }
     try {
-      const turn = await agent.send(payload.text ?? '')
+      const turn = await agent.send(payload.text ?? '', sendOpts)
       route.send(200, { sessionId: agent.sessionId, text: turn.text, steps: turn.steps })
     } catch (error) {
       route.send(500, { error: String(error) })

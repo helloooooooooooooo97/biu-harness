@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
 
@@ -6,6 +7,11 @@ export interface ToolSpec {
   description: string
   parameters: Record<string, unknown>
   execute: (args: Record<string, unknown>, signal: AbortSignal) => unknown | Promise<unknown>
+}
+
+export interface ToolCatalogItem {
+  name: string
+  description: string
 }
 
 export interface ToolRequest {
@@ -20,6 +26,14 @@ export type ToolGuard = (req: ToolRequest) => ToolRequest | Promise<ToolRequest>
 export type AgentToolMode = 'standard' | 'minimal'
 
 export const MINIMAL_TOOL_NAMES = ['bash', 'str_replace_editor'] as const
+
+/** 本回合 slash 选中的额外工具（极简模式下临时放开）。 */
+const extraToolsStorage = new AsyncLocalStorage<ReadonlySet<string>>()
+
+export function runWithExtraTools<T>(names: readonly string[], fn: () => T): T {
+  const cleaned = [...new Set(names.map((n) => n.trim()).filter(Boolean))]
+  return extraToolsStorage.run(new Set(cleaned), fn)
+}
 
 export class ToolsService extends Service {
   private tools = new Map<string, ToolSpec>()
@@ -43,7 +57,8 @@ export class ToolsService extends Service {
 
   private visible(name: string) {
     if (this.mode === 'standard') return true
-    return (MINIMAL_TOOL_NAMES as readonly string[]).includes(name)
+    if ((MINIMAL_TOOL_NAMES as readonly string[]).includes(name)) return true
+    return extraToolsStorage.getStore()?.has(name) ?? false
   }
 
   register(spec: ToolSpec) {
@@ -65,6 +80,13 @@ export class ToolsService extends Service {
         this.guards = this.guards.filter((item) => item !== fn)
       }
     }, 'tools.guard')
+  }
+
+  /** 全量目录（不受 mode 过滤），供 slash 菜单。 */
+  catalog(): ToolCatalogItem[] {
+    return [...this.tools.values()]
+      .map((tool) => ({ name: tool.name, description: tool.description }))
+      .sort((a, b) => a.name.localeCompare(b.name))
   }
 
   schemas() {
