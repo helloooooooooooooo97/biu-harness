@@ -11,7 +11,11 @@
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "types": ["node", "vite/client", "vitest/globals"]
+    "types": ["node", "vite/client", "vitest/globals"],
+    "paths": {
+      "@hmr/greeter-host": ["./packages/greeter-host/src/index.ts"],
+      "@hmr/greeter-ui": ["./packages/greeter-ui/src/index.tsx"]
+    }
   },
-  "include": ["src", "host"]
+  "include": ["src", "host", "packages"]
 }

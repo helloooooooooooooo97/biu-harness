@@ -10,6 +10,9 @@ export interface PluginRow {
   togglable: boolean
   enabled: boolean
   state: string
+  /** cordis.plugins.json 声明的前端包名 */
+  ui?: string
+  packageName?: string
 }
 
 export interface Snapshot {

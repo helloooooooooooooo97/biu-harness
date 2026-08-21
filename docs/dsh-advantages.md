@@ -27,6 +27,7 @@
 21. **Web：Session 绑定项目** — Agent 顶栏右侧紧凑 **Bind project** chip（不再占大右侧栏）；点选系统目录绑定为 Session cwd。
 22. **Agent mode（Standard / Minimal）** — Settings 可选；`minimal` 对齐 dsh：模型侧只暴露 `bash` + `str_replace_editor`；模式写入 `.cordis/chat-config.json`。
 23. **Session host cwd（对齐 dsh）** — Bind project 后 bash / str_replace_editor 以该目录为 cwd。
+24. **插件包化（瘦）** — 问候服务拆成 `@hmr/greeter-host` / `@hmr/greeter-ui`，经 `cordis.plugins.json` 引入；热插拔仍走 hub fiber。详见 `docs/plugin-packages.md`。
 
 ## 功能级差异（相对官方 client，优点对齐后）
 

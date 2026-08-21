@@ -1,5 +1,4 @@
 import type { Plugin } from 'cordis'
-import * as greeter from './plugins/contributors/greeter.ts'
 import * as uppercase from './plugins/contributors/uppercase.ts'
 import * as notes from './plugins/contributors/notes.ts'
 import * as clock from './plugins/contributors/clock.ts'
@@ -19,9 +18,13 @@ export interface CatalogEntry {
   togglable: boolean
   enabled: boolean
   config?: unknown
+  /** 前端包名（cordis.plugins.json 外部插件） */
+  ui?: string
+  packageName?: string
 }
 
-export const catalog: CatalogEntry[] = [
+/** 内置插件；问候服务已拆到 packages/，见 cordis.plugins.json。 */
+export const builtinCatalog: CatalogEntry[] = [
   {
     id: 'dashboard',
     name: '控制台',
@@ -30,16 +33,6 @@ export const catalog: CatalogEntry[] = [
     plugin: dashboard,
     inject: dashboard.inject,
     togglable: false,
-    enabled: true,
-  },
-  {
-    id: 'greeter',
-    name: '问候服务',
-    layer: 'capability',
-    blurb: 'ctx.greet + GET /api/greet。',
-    plugin: greeter,
-    inject: greeter.inject,
-    togglable: true,
     enabled: true,
   },
   {
@@ -113,3 +106,6 @@ export const catalog: CatalogEntry[] = [
     enabled: true,
   },
 ]
+
+/** @deprecated 使用 resolveCatalog()；保留同步 builtin 别名以免旧引用炸掉。 */
+export const catalog = builtinCatalog

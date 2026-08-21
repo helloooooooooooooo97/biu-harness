@@ -1,0 +1,14 @@
+{
+  "name": "@hmr/greeter-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "问候服务前端插件：Settings demos 卡片，消费 /api/greet",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "react": "^19.1.1"
+  }
+}

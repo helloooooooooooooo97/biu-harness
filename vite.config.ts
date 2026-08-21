@@ -1,9 +1,19 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const root = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@hmr/greeter-host': join(root, 'packages/greeter-host/src/index.ts'),
+      '@hmr/greeter-ui': join(root, 'packages/greeter-ui/src/index.tsx'),
+    },
+  },
   appType: 'spa',
   server: {
     port: 5173,

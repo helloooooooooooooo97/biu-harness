@@ -1,5 +1,6 @@
 import { Service, type Context, type Fiber, type Plugin } from 'cordis'
-import { catalog, type CatalogEntry } from '../../catalog.ts'
+import type { CatalogEntry } from '../../catalog.ts'
+import { resolveCatalog } from '../../resolve-catalog.ts'
 import type { PageSpec } from '../../types.ts'
 
 export const HUB_CHANGE = 'hub/change' as const
@@ -19,7 +20,7 @@ export class HubService extends Service {
   private events: Array<{ ts: number; mode: string; name: string; args: unknown[] }> = []
   private seq = 0
 
-  constructor(ctx: Context) {
+  constructor(ctx: Context, catalog: CatalogEntry[]) {
     super(ctx, 'hub')
     ctx.on('internal/dispatch', (mode, name, args) => {
       if (name.startsWith('internal/')) return
@@ -39,7 +40,7 @@ export class HubService extends Service {
     ctx.on(HUB_CHANGE, () => {
       ctx.http.broadcast(HUB_CHANNEL_SNAPSHOT, this.snapshot())
     })
-    // 自动挂载所有的插件
+    // 自动挂载所有的插件（内置 + cordis.plugins.json）
     for (const entry of catalog) {
       this.forks.set(entry.id, { entry })
       if (entry.enabled) this.mount(entry.id)
@@ -68,6 +69,8 @@ export class HubService extends Service {
       togglable: entry.togglable,
       enabled: Boolean(fiber && fiber.uid !== null),
       state: fiber ? STATE[fiber.state] ?? String(fiber.state) : 'off',
+      ...(entry.ui ? { ui: entry.ui } : {}),
+      ...(entry.packageName ? { packageName: entry.packageName } : {}),
     }))
     return {
       seq: ++this.seq,
@@ -120,6 +123,7 @@ function clone(value: unknown): unknown[] {
 export const name = 'hub'
 export const inject = ['http', 'tools']
 
-export function apply(ctx: Context) {
-  new HubService(ctx)
+export async function apply(ctx: Context) {
+  const catalog = await resolveCatalog()
+  new HubService(ctx, catalog)
 }

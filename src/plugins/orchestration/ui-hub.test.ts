@@ -42,10 +42,13 @@ test('ui-hub mounts hello and chat from snapshot', async () => {
   const base = ctx.snapshot.get()
   ctx.snapshot.get = () => ({
     ...base,
-    plugins: [plugin('greeter', true), plugin('chat', true)],
+    plugins: [
+      { ...plugin('greeter', true), ui: '@hmr/greeter-ui' },
+      plugin('chat', true),
+    ],
   })
   await ctx.plugin(uiHub)
-  await new Promise((resolve) => setTimeout(resolve, 50))
+  await new Promise((resolve) => setTimeout(resolve, 80))
   assert.equal(ctx.slots.list('demos').some((item) => item.id === 'hello'), true)
   assert.equal(ctx.slots.list('composer').some((item) => item.id === 'chat'), true)
   assert.equal(ctx.slots.list('settings').some((item) => item.id === 'chat-config'), true)
