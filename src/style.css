@@ -159,6 +159,24 @@ body {
   line-height: 0;
 }
 
+.grok-bot-avatar svg,
+.session-mascot-mark svg {
+  display: block;
+}
+
+.session-mascot-mark {
+  border-radius: 8px;
+}
+
+.grok-bot-avatar svg,
+.session-mascot-mark svg {
+  display: block;
+}
+
+.session-mascot-mark {
+  border-radius: 8px;
+}
+
 .app-activity-brand:hover {
   color: var(--dsw-business);
 }
