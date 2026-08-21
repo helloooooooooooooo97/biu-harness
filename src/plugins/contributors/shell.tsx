@@ -185,7 +185,7 @@ function Shell(props: SlotProps) {
             <div className="flex items-center gap-0.5">
               <button
                 type="button"
-                className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-black/[0.04] hover:text-[var(--dsw-business)]"
+                className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
                 title="New Session"
                 aria-label="New Session"
                 onClick={() => {
@@ -196,7 +196,7 @@ function Shell(props: SlotProps) {
               </button>
               <button
                 type="button"
-                className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-black/[0.04] hover:text-[var(--dsw-business)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--dsw-label-3)]"
+                className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--dsw-label-3)]"
                 title="Fork"
                 aria-label="Fork"
                 disabled={!sessionId}
@@ -217,7 +217,7 @@ function Shell(props: SlotProps) {
                 <div
                   key={item.id}
                   className={`group mb-1 flex w-full items-stretch rounded-[12px] ${
-                    active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-black/[0.03]'
+                    active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-[var(--dsw-hover)]'
                   }`}
                 >
                   <Link
@@ -334,11 +334,11 @@ function Shell(props: SlotProps) {
       </main>
 
       <div
-        className={`fixed inset-0 z-20 flex items-center justify-center bg-black/40 ${settingsOpen ? '' : 'hidden'}`}
+        className={`fixed inset-0 z-20 flex items-center justify-center bg-[var(--dsw-overlay)] ${settingsOpen ? '' : 'hidden'}`}
         onClick={() => setSettingsOpen(false)}
       >
         <div
-          className="flex h-[min(800px,calc(100vh-48px))] w-[min(800px,calc(100vw-48px))] overflow-hidden rounded-[24px] bg-white shadow-2xl"
+          className="flex h-[min(800px,calc(100vh-48px))] w-[min(800px,calc(100vw-48px))] overflow-hidden rounded-[24px] bg-[var(--dsw-surface)] shadow-2xl"
           role="dialog"
           aria-modal="true"
           onClick={(event) => event.stopPropagation()}
@@ -360,7 +360,7 @@ function Shell(props: SlotProps) {
               <h2 className="text-sm font-medium">Plugins & demos</h2>
               <button
                 type="button"
-                className="rounded-full px-2 py-1 text-sm text-[var(--dsw-label-3)] hover:bg-black/5"
+                className="rounded-full px-2 py-1 text-sm text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)]"
                 onClick={() => setSettingsOpen(false)}
               >
                 Close

@@ -16,7 +16,7 @@ function ClockBadge(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
   const iso = useSnapshot((state: Snapshot) => state.clockIso)
   return (
-    <article className="space-y-1 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-3">
+    <article className="space-y-1 rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-3 py-3">
       <h2 className="text-sm font-medium">Heartbeat</h2>
       <time className="font-mono text-sm tracking-wide text-[var(--dsw-label-3)]" dateTime={iso}>
         {formatClock(iso)}

@@ -12,7 +12,7 @@ function PluginTree(props: SlotProps) {
   return (
     <ul className="m-0 list-none space-y-2 p-0">
       {snap.map((plugin) => (
-        <li className="rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-3" key={plugin.id}>
+        <li className="rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-3 py-3" key={plugin.id}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="m-0 text-sm font-medium">{plugin.name}</h3>

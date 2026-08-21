@@ -1,23 +1,30 @@
 @import "tailwindcss";
 
-/* Lean DSH tokens — mirrored from deepseek-harness ui-theme (light) */
+/* Lean DSH tokens — night / dark theme */
 :root {
-  --dsw-bg: rgb(255, 255, 255);
-  --dsw-sidebar: rgb(249, 250, 251);
-  --dsw-label: rgb(15, 17, 21);
-  --dsw-label-2: rgb(82, 88, 102);
-  --dsw-label-3: rgb(120, 126, 140);
-  --dsw-border: rgba(0, 0, 0, 0.1);
-  --dsw-bubble: rgb(237, 243, 254);
-  --dsw-business: rgb(65, 118, 230);
-  --dsw-business-soft: rgb(237, 243, 254);
-  --dsw-input: rgb(255, 255, 255);
-  --dsw-tool: rgb(249, 250, 251);
-  --dsw-danger: rgb(220, 80, 80);
-  --dsw-ok: rgb(34, 140, 90);
+  color-scheme: dark;
+  --dsw-bg: rgb(16, 17, 20);
+  --dsw-sidebar: rgb(22, 23, 27);
+  --dsw-label: rgb(232, 234, 239);
+  --dsw-label-2: rgb(168, 172, 184);
+  --dsw-label-3: rgb(120, 125, 138);
+  --dsw-border: rgba(255, 255, 255, 0.1);
+  --dsw-bubble: rgb(38, 52, 82);
+  --dsw-business: rgb(96, 148, 245);
+  --dsw-business-soft: rgba(96, 148, 245, 0.18);
+  --dsw-input: rgb(28, 29, 34);
+  --dsw-tool: rgb(28, 29, 34);
+  --dsw-surface: rgb(28, 29, 34);
+  --dsw-danger: rgb(232, 112, 112);
+  --dsw-danger-soft: rgba(232, 112, 112, 0.14);
+  --dsw-ok: rgb(74, 186, 128);
+  --dsw-hover: rgba(255, 255, 255, 0.06);
+  --dsw-hover-strong: rgba(255, 255, 255, 0.1);
+  --dsw-muted-fill: rgba(255, 255, 255, 0.04);
+  --dsw-overlay: rgba(0, 0, 0, 0.55);
   --dsw-radius-bubble: 22px;
   --dsw-radius-card: 12px;
-  --dsw-shadow-lv2: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --dsw-shadow-lv2: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.45);
   --dsw-chat-width: 748px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei", sans-serif;
@@ -51,7 +58,7 @@ body {
   height: 1.2rem;
   border: 0;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--dsw-hover-strong);
   cursor: pointer;
 }
 
@@ -63,7 +70,7 @@ body {
   width: 0.9rem;
   height: 0.9rem;
   border-radius: 999px;
-  background: #fff;
+  background: var(--dsw-label);
   transition: transform 0.16s ease;
 }
 
@@ -95,7 +102,7 @@ body {
 }
 
 .dsw-hero-glow {
-  background: radial-gradient(ellipse at center, rgba(65, 118, 230, 0.16), transparent 70%);
+  background: radial-gradient(ellipse at center, rgba(96, 148, 245, 0.22), transparent 70%);
 }
 
 /* App shell — VS Code-like activity bar + optional side bar */
@@ -191,7 +198,7 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--dsw-hover-strong);
 }
 
 .app-activity-live.is-live {
@@ -230,7 +237,7 @@ body {
   font-size: 12px;
   line-height: 1.2;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(15, 17, 21, 0.06);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(10px);
 }
 
@@ -248,14 +255,14 @@ body {
   border-radius: 999px;
   background: color-mix(in srgb, var(--dsw-bg) 82%, transparent);
   backdrop-filter: blur(10px);
-  box-shadow: 0 4px 14px rgba(15, 17, 21, 0.06);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 .project-chip:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--dsw-business) 40%, var(--dsw-border));
   background: transparent;
   color: var(--dsw-business);
-  box-shadow: 0 6px 18px rgba(65, 118, 230, 0.12);
+  box-shadow: 0 6px 18px rgba(96, 148, 245, 0.2);
 }
 
 .project-chip:disabled,
@@ -305,9 +312,9 @@ body {
 }
 
 .dock-approval-card {
-  border: 1px solid rgb(253, 230, 138);
+  border: 1px solid rgba(250, 204, 100, 0.35);
   border-radius: 12px;
-  background: rgb(255, 251, 235);
+  background: rgba(250, 204, 100, 0.1);
   padding: 8px 12px;
   font-size: 12px;
   color: var(--dsw-label);
@@ -355,7 +362,7 @@ body {
 }
 
 .project-tree-row:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--dsw-hover);
 }
 
 .project-tree-row.is-active {
@@ -390,7 +397,7 @@ body {
   flex: 1;
   resize: none;
   border: 0;
-  background: #fff;
+  background: var(--dsw-surface);
   padding: 10px 12px;
   color: var(--dsw-label);
   font-family: var(--font-mono);
@@ -485,7 +492,7 @@ body {
   height: 24px;
   border: 0;
   border-bottom: 1px solid var(--dsw-border);
-  background: rgba(15, 17, 21, 0.03);
+  background: var(--dsw-muted-fill);
   padding: 0 12px;
   color: var(--dsw-label-2);
   font: inherit;
@@ -523,7 +530,7 @@ body {
 .traj-row-wrap {
   display: flex;
   align-items: stretch;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--dsw-border);
 }
 
 .traj-step-fold,
@@ -652,7 +659,7 @@ body {
   gap: 4px;
   max-width: 100%;
   border-radius: 999px;
-  background: rgba(15, 17, 21, 0.06);
+  background: var(--dsw-hover);
   padding: 1px 7px;
   color: var(--dsw-label-2);
   font-weight: 600;
@@ -687,7 +694,7 @@ body {
   border: 1px solid var(--dsw-border);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--dsw-surface);
 }
 
 .traj-usage-card-title {
@@ -711,7 +718,7 @@ body {
   gap: 2px;
   border-radius: 8px;
   padding: 8px 10px;
-  background: rgba(15, 17, 21, 0.03);
+  background: var(--dsw-muted-fill);
 }
 
 .traj-usage-stat span {
@@ -746,7 +753,7 @@ body {
   border: 1px solid var(--dsw-border);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--dsw-surface);
 }
 
 .traj-io-card-title {
@@ -765,10 +772,10 @@ body {
 }
 
 .traj-io-msg {
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--dsw-border);
   border-radius: 10px;
   overflow: hidden;
-  background: rgba(15, 17, 21, 0.02);
+  background: var(--dsw-muted-fill);
 }
 
 .traj-io-msg-head {
@@ -776,7 +783,7 @@ body {
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--dsw-border);
   background: rgba(255, 255, 255, 0.7);
 }
 
@@ -790,7 +797,7 @@ body {
 
 .traj-io-role-system {
   color: var(--dsw-label-2);
-  background: rgba(15, 17, 21, 0.06);
+  background: var(--dsw-hover);
 }
 
 .traj-io-role-user {
@@ -828,7 +835,7 @@ body {
 }
 
 .traj-io-msg-tools {
-  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+  border-top: 1px dashed var(--dsw-border);
   color: var(--dsw-label-2);
 }
 
@@ -874,7 +881,7 @@ body {
 
 .traj-tag-system {
   color: var(--dsw-label-2);
-  background: rgba(15, 17, 21, 0.06);
+  background: var(--dsw-hover);
 }
 
 .traj-tag-turn {
@@ -884,7 +891,7 @@ body {
 
 .traj-tag-step {
   color: var(--dsw-label-3);
-  background: rgba(15, 17, 21, 0.04);
+  background: var(--dsw-muted-fill);
 }
 
 .traj-empty {
@@ -961,7 +968,7 @@ body {
 }
 
 .traj-detail-close:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--dsw-hover);
 }
 
 .traj-detail-body {
@@ -1008,7 +1015,7 @@ body {
   border: 1px solid var(--dsw-border);
   border-radius: 10px;
   padding: 10px;
-  background: #fff;
+  background: var(--dsw-surface);
   color: var(--dsw-label-2);
   font-family: var(--font-mono);
   font-size: 11px;
@@ -1091,7 +1098,7 @@ body {
 .chat-md code {
   border-radius: 4px;
   padding: 0.1em 0.35em;
-  background: rgba(15, 17, 21, 0.06);
+  background: var(--dsw-hover);
   font-family: var(--font-mono);
   font-size: 0.9em;
 }
@@ -1129,7 +1136,7 @@ body {
 }
 
 .chat-md th {
-  background: rgba(15, 17, 21, 0.03);
+  background: var(--dsw-muted-fill);
 }
 
 .chat-md hr {

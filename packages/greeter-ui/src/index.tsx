@@ -23,7 +23,7 @@ function HelloCard(_props: SlotProps) {
   }
 
   return (
-    <article className="space-y-2 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-3">
+    <article className="space-y-2 rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-3 py-3">
       <h2 className="text-sm font-medium">Greeting demo</h2>
       <p className="text-xs leading-5 text-[var(--dsw-label-3)]">
         独立包 <code>@hmr/greeter-ui</code> · fetch /api/greet · 随 greeter 热插拔

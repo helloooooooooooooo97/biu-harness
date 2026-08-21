@@ -36,7 +36,7 @@ function NotesCard(_props: SlotProps) {
   }
 
   return (
-    <article className="space-y-2 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-3">
+    <article className="space-y-2 rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-3 py-3">
       <h2 className="text-sm font-medium">Notes demo</h2>
       <p className="text-xs leading-5 text-[var(--dsw-label-3)]">POST /api/notes — unloads with notes plugin.</p>
       <form className="flex gap-2" onSubmit={onSubmit}>
