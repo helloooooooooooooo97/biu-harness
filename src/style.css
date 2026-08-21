@@ -168,13 +168,27 @@ body {
   border-radius: 8px;
 }
 
-.grok-bot-avatar svg,
-.session-mascot-mark svg {
-  display: block;
+.session-mascot-mark.is-busy svg {
+  animation: session-mascot-pulse 1.1s ease-in-out infinite;
 }
 
-.session-mascot-mark {
-  border-radius: 8px;
+@keyframes session-mascot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session-mascot-mark.is-busy svg {
+    animation: none;
+    opacity: 0.85;
+  }
 }
 
 .app-activity-brand:hover {
