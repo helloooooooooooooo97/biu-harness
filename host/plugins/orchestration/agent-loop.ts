@@ -2,8 +2,10 @@ import { Service, type Context } from 'cordis'
 import '../../types.ts'
 import type { AssistantReply, ChatOptions, LlmClient, LlmConfig, LlmMessage } from './llm.ts'
 import type { InboxKind } from '../core/session-types.ts'
+import { normalizeSessionType } from '../core/session-types.ts'
 import { runWithSession } from '../core/session-scope.ts'
 import { runWithExtraTools } from '../registry/tools.ts'
+import { LIVE_TOOL_NAMES } from '../seams/live-sessions.ts'
 
 export interface AgentTurn {
   text: string
@@ -42,6 +44,12 @@ export class AgentLoop implements AgentRunner {
     const extras = [
       ...new Set(claimed.flatMap((item) => item.extraTools ?? []).map((name) => name.trim()).filter(Boolean)),
     ]
+    // 极简是底座；Slash / Live 都是增量放开。live session 回合自动加上调度工具。
+    if (normalizeSessionType(this.ctx.sessions.peek(this.sessionId)?.type) === 'live') {
+      for (const name of LIVE_TOOL_NAMES) {
+        if (!extras.includes(name)) extras.push(name)
+      }
+    }
     return runWithSession(this.sessionId, () => runWithExtraTools(extras, () => this.runInSession(claimed)))
   }
 

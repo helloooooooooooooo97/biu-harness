@@ -3,6 +3,13 @@ import '../../types.ts'
 import { currentSessionId } from '../core/session-scope.ts'
 import { normalizeSessionType, type SessionEvent, type SessionType } from '../core/session-types.ts'
 
+export const LIVE_TOOL_NAMES = [
+  'session_list',
+  'session_inspect',
+  'session_wake',
+  'session_inject',
+] as const
+
 const LIVE_PROMPT = `你是 Live 指挥席（文字版）：调度其他 chat session，而不是亲自改代码或跑长任务。
 优先用 session_list / session_inspect 了解现场，再用 session_wake（新任务）或 session_inject（补充指示）派工。
 回答简洁：说明你调度了谁、做了什么、结果如何。`
