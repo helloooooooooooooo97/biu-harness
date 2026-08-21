@@ -118,10 +118,13 @@ export function ChatConfig(_props: SlotProps) {
           onChange={(event) => setAgentMode(event.target.value as AgentMode)}
           data-testid="agent-mode"
         >
-          <option value="standard">Standard — 全部已注册工具</option>
-          <option value="minimal">Minimal — 对齐 dsh：仅 bash + str_replace_editor</option>
+          <option value="standard">标准模式 — 全部已注册工具</option>
+          <option value="minimal">极简模式 — 对齐 dsh：仅 bash + str_replace_editor</option>
         </select>
       </label>
+      <p className="m-0 text-xs leading-5 text-[var(--dsw-label-3)]">
+        也可在对话输入上方的胶囊快速切换「标准 / 极简」。
+      </p>
       {tools.length ? (
         <p className="m-0 text-xs leading-5 text-[var(--dsw-label-3)]">
           当前对模型可见工具：{tools.join(', ')}
