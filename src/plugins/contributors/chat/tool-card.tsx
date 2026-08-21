@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { ChatNode } from '../../infrastructure/session-project.ts'
+import type { ChatToolPart } from '../../infrastructure/session-project.ts'
 import {
   diffStats,
   formatToolDetail,
@@ -169,7 +169,7 @@ export function ToolCard({
   node,
   onInspect,
 }: {
-  node: Extract<ChatNode, { kind: 'tool' }>
+  node: ChatToolPart
   onInspect: (callId: string) => void
 }) {
   const parsed = useMemo(() => parseToolCall(node.name, node.arguments), [node.name, node.arguments])

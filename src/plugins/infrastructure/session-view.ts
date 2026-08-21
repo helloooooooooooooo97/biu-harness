@@ -821,11 +821,33 @@ function patchStreamingNodes(
   chunk: Extract<SessionEvent, { type: 'assistant/chunk' }>,
 ): ChatNode[] {
   const last = nodes.at(-1)
-  if (last?.kind === 'assistant' && last.streaming) {
-    if (last.text === chunk.text) return nodes
-    return [...nodes.slice(0, -1), { ...last, text: chunk.text, streaming: true }]
+  if (last?.kind === 'reply') {
+    const parts = [...last.parts]
+    const lastPart = parts.at(-1)
+    if (lastPart?.kind === 'assistant' && lastPart.streaming) {
+      if (lastPart.text === chunk.text) return nodes
+      parts[parts.length - 1] = { ...lastPart, text: chunk.text, streaming: true }
+    } else {
+      parts.push({ id: `a-${chunk.seq}`, kind: 'assistant', text: chunk.text, streaming: true })
+    }
+    const copyText = parts
+      .filter((part) => part.kind === 'assistant')
+      .map((part) => (part.kind === 'assistant' ? part.text.trim() : ''))
+      .filter(Boolean)
+      .join('\n\n')
+    return [...nodes.slice(0, -1), { ...last, parts, copyText, streaming: true, finished: false }]
   }
-  return [...nodes, { id: `a-${chunk.seq}`, kind: 'assistant', text: chunk.text, streaming: true }]
+  return [
+    ...nodes,
+    {
+      id: `r-${chunk.seq}`,
+      kind: 'reply',
+      parts: [{ id: `a-${chunk.seq}`, kind: 'assistant', text: chunk.text, streaming: true }],
+      copyText: chunk.text,
+      streaming: true,
+      finished: false,
+    },
+  ]
 }
 
 export function bindSessionView(source: SessionViewService) {

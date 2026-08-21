@@ -1,7 +1,7 @@
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindProjectView, type ProjectViewService } from '../../infrastructure/project-view.ts'
 
-/** 紧凑项目绑定：仅文件夹图标，与标准/极简胶囊同一行。 */
+/** 紧凑项目绑定：未绑定时仅图标；绑定后显示文件夹名。 */
 export function SessionProjectPanel(props: SlotProps) {
   const useProjectView = props.useProjectView as ReturnType<typeof bindProjectView>
   const projectView = props.projectView as ProjectViewService
@@ -19,18 +19,20 @@ export function SessionProjectPanel(props: SlotProps) {
   }
 
   const label = project?.path ?? '选择本机文件夹并绑定为 Session cwd'
+  const bound = Boolean(project)
 
   return (
     <div className="project-chip-wrap">
       <button
         type="button"
-        className={`project-chip project-chip-icon-only${project ? ' is-bound' : ' project-chip-empty'}${busy ? ' is-busy' : ''}`}
+        className={`project-chip${bound ? ' is-bound' : ' project-chip-icon-only project-chip-empty'}${busy ? ' is-busy' : ''}`}
         disabled={busy}
         title={label}
-        aria-label={project ? `已绑定 ${project.name}` : '绑定项目文件夹'}
+        aria-label={bound ? `已绑定 ${project!.name}` : '绑定项目文件夹'}
         onClick={() => void projectView.openFolderForSession(sessionId).catch(() => undefined)}
       >
         <FolderGlyph />
+        {bound ? <span className="project-chip-name">{project!.name}</span> : null}
       </button>
       {error ? <span className="project-chip-error" title={error}>!</span> : null}
     </div>
