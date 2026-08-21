@@ -48,9 +48,10 @@ test('loop appends multiple assistant/chunk deltas from onDelta', async () => {
   const turn = await loop.run([{ kind: 'wake', text: 'hi' }])
   assert.equal(turn.text, 'Hello')
   const chunks = (await ctx.sessions.require(sessionId)).events.filter((event) => event.type === 'assistant/chunk')
+  // onDelta 在 ~48ms 窗口内合并后再 append，同一步内多次 delta 落成一条 chunk
   assert.deepEqual(
     chunks.map((event) => (event.type === 'assistant/chunk' ? event.text : '')),
-    ['Hel', 'lo'],
+    ['Hello'],
   )
   const message = (await ctx.sessions.require(sessionId)).events.find((event) => event.type === 'assistant/message')
   assert.equal(message?.type === 'assistant/message' && message.usage?.inputTokens, 1)

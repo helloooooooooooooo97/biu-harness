@@ -1005,6 +1005,18 @@ body {
   overflow-wrap: anywhere;
 }
 
+.chat-md-stream-pre {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .chat-md > :first-child {
   margin-top: 0;
 }

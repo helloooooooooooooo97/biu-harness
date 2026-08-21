@@ -87,7 +87,7 @@ function NodeView({ node, onInspect }: { node: ChatNode; onInspect: (callId: str
   if (node.kind === 'assistant') {
     return (
       <div className="w-full max-w-[var(--dsw-chat-width)] self-start text-[15px] leading-7 text-[var(--dsw-label)]">
-        {node.text ? <MarkdownBody text={node.text} /> : node.streaming ? '…' : null}
+        {node.text ? <MarkdownBody text={node.text} streaming={Boolean(node.streaming)} /> : node.streaming ? '…' : null}
         {node.streaming ? <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span> : null}
       </div>
     )
@@ -169,7 +169,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       scrollRef.current = parent
       setScrollEpoch((value) => value + 1)
     }
-  })
+  }, [sessionId])
 
   const virtualizer = useVirtualizer({
     count: virtualize ? nodes.length : 0,
@@ -200,15 +200,19 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     return () => parent.removeEventListener('scroll', onScroll)
   }, [sessionId, scrollEpoch, virtualize])
 
+  const lastNode = nodes.at(-1)
+  // 流式时按 ~96 字符步进 stickKey，避免每个 delta 都触发布局滚动
+  const stickKey =
+    lastNode?.kind === 'assistant'
+      ? `${lastNode.id}:${lastNode.streaming ? Math.floor(lastNode.text.length / 96) : lastNode.text.length}:${lastNode.streaming ? 1 : 0}`
+      : `${nodes.length}:${pending ? 1 : 0}:${error ?? ''}`
+
   useLayoutEffect(() => {
     if (!stickToBottomRef.current || nodes.length === 0) return
-    if (virtualize) {
-      virtualizer.scrollToIndex(nodes.length - 1, { align: 'end' })
-      return
-    }
     const parent = scrollRef.current
+    // 流式时直接改 scrollTop，避免 virtualizer.scrollToIndex 每帧重测布局
     if (parent) parent.scrollTop = parent.scrollHeight
-  }, [nodes, pending, error, agentStatus, agentStep, virtualize, virtualizer])
+  }, [stickKey, nodes.length])
 
   if (nodes.length === 0 && !pending && !error) return <EmptyHero />
 

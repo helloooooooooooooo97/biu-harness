@@ -84,7 +84,14 @@ export class SessionsService extends Service {
     const record = await this.require(id)
     const event: SessionEvent = { ...body, seq: record.events.length, ts: Date.now() }
     record.events.push(event)
-    await this.persist(record)
+    this.cache.set(id, record)
+    // chunk 极高频：先内存追加并广播，落盘合并到下一帧/定时器，避免每 token 全量 JSON 写盘
+    if (body.type === 'assistant/chunk') {
+      this.schedulePersist(id)
+    } else {
+      this.clearPersistTimer(id)
+      await this.persist(record)
+    }
     this.ctx.emit('session/event', { sessionId: id, event })
     return event
   }
@@ -124,8 +131,30 @@ export class SessionsService extends Service {
   }
 
   async delete(id: string) {
+    this.clearPersistTimer(id)
     this.cache.delete(id)
     return this.ctx.sessionStore.delete(id)
+  }
+
+  private persistTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+  private schedulePersist(id: string) {
+    if (this.persistTimers.has(id)) return
+    this.persistTimers.set(
+      id,
+      setTimeout(() => {
+        this.persistTimers.delete(id)
+        const record = this.cache.get(id)
+        if (record) void this.persist(record)
+      }, 80),
+    )
+  }
+
+  private clearPersistTimer(id: string) {
+    const timer = this.persistTimers.get(id)
+    if (timer == null) return
+    clearTimeout(timer)
+    this.persistTimers.delete(id)
   }
 
   private async persist(record: SessionRecord) {
