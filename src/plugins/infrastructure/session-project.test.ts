@@ -79,6 +79,25 @@ test('reply aggregates turn duration and usage for footer', () => {
   assert.equal(reply.copyText, 'hello')
 })
 
+test('reply counts distinct steps in a turn', () => {
+  const nodes = projectNodes([
+    { type: 'turn/start', turn: 2, seq: 1, ts: 1000 },
+    { type: 'user/message', text: 'hi', kind: 'wake', seq: 2, ts: 1100 },
+    { type: 'step/start', turn: 2, step: 0, seq: 3, ts: 1200 },
+    { type: 'assistant/message', text: 'a', usage: { inputTokens: 1, outputTokens: 1 }, seq: 4, ts: 1300 },
+    { type: 'step/end', turn: 2, step: 0, seq: 5, ts: 1400 },
+    { type: 'step/start', turn: 2, step: 1, seq: 6, ts: 1500 },
+    { type: 'assistant/message', text: 'b', usage: { inputTokens: 2, outputTokens: 2 }, seq: 7, ts: 1600 },
+    { type: 'step/end', turn: 2, step: 1, seq: 8, ts: 1700 },
+    { type: 'turn/end', turn: 2, reason: 'complete', seq: 9, ts: 1800 },
+  ])
+  const reply = nodes.find((node) => node.kind === 'reply')
+  assert.equal(reply?.kind, 'reply')
+  if (reply?.kind !== 'reply') return
+  assert.equal(reply.turn, 2)
+  assert.equal(reply.stepCount, 2)
+})
+
 test('projectTrajectory skips assistant/chunk (dsh-style; message is authoritative)', () => {
   const rows = projectTrajectory([
     { type: 'turn/start', turn: 1, seq: 1, ts: 1 },

@@ -61,6 +61,7 @@ export type ChatNode =
       /** 本回合所有助手正文，供一键复制 */
       copyText: string
       turn?: number
+      stepCount?: number
       usage?: TrajectoryUsage
       durationMs?: number
       streaming?: boolean
@@ -128,6 +129,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     usage: { input: number; output: number; total: number; cache: number; hit: boolean }
     streaming: boolean
     turn?: number
+    steps: Set<number>
   } | null = null
 
   function ensureReply(seq: number) {
@@ -139,6 +141,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
         tools: new Map(),
         usage: { input: 0, output: 0, total: 0, cache: 0, hit: false },
         streaming: false,
+        steps: new Set(),
         ...(currentTurn != null ? { turn: currentTurn } : {}),
       }
     }
@@ -181,6 +184,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       parts: reply.parts,
       copyText,
       ...(reply.turn != null ? { turn: reply.turn } : {}),
+      ...(reply.steps.size ? { stepCount: reply.steps.size } : {}),
       ...(usage ? { usage } : {}),
       ...(durationMs != null ? { durationMs } : {}),
       streaming: reply.streaming && !finished,
@@ -194,6 +198,8 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       flushReply()
       turnStartTs = event.ts
       currentTurn = event.turn
+    } else if (event.type === 'step/start') {
+      ensureReply(event.seq).steps.add(event.step)
     } else if (event.type === 'user/message') {
       flushReply()
       nodes.push({ id: `u-${event.seq}`, kind: 'user', text: event.text, kindTag: event.kind })

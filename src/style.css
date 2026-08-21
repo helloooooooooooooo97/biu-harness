@@ -187,19 +187,28 @@ body {
 
 .chat-view-header {
   position: relative;
-  display: flex;
+  display: grid;
   height: 36px;
   flex-shrink: 0;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
   border-bottom: 1px solid var(--dsw-border);
   padding: 0 12px;
 }
 
+.chat-view-header-left,
+.chat-view-header-right {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-view-header-right {
+  justify-content: flex-end;
+}
+
 .chat-view-header-expand {
-  position: absolute;
-  left: 10px;
-  top: 50%;
   display: grid;
   place-items: center;
   width: 26px;
@@ -208,7 +217,6 @@ body {
   border-radius: 6px;
   background: transparent;
   color: var(--dsw-label-3);
-  transform: translateY(-50%);
   cursor: pointer;
 }
 
@@ -217,9 +225,34 @@ body {
   color: var(--dsw-business);
 }
 
+.chat-view-project {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 220px;
+  align-items: center;
+  gap: 6px;
+  color: var(--dsw-label-2);
+}
+
+.chat-view-project-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--dsw-label-3);
+}
+
+.chat-view-project-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
 .chat-view-header-tabs {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 2px;
 }
 
@@ -415,32 +448,49 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent);
+  border: 1px solid var(--dsw-border);
   border-radius: 999px;
   background: color-mix(in srgb, var(--dsw-bg) 82%, transparent);
-  padding: 5px 11px 5px 9px;
-  color: var(--dsw-label-2);
-  font-size: 12px;
-  line-height: 1.2;
+  padding: 0;
+  color: var(--dsw-label-3);
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(10px);
+  box-shadow: none;
 }
 
 .project-chip-icon-only {
   width: 32px;
   height: 32px;
-  padding: 0;
 }
 
-.project-chip-name {
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.project-chip-dashed {
+  border-style: dashed;
+}
+
+.project-chip:hover:not(:disabled) {
+  color: var(--dsw-label-2);
+}
+
+.project-chip:disabled,
+.project-chip.is-busy {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.project-chip-muted {
+  color: var(--dsw-label-3);
+  cursor: default;
+}
+
+.project-chip-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.project-chip-error {
+  color: var(--dsw-danger);
   font-size: 12px;
-  line-height: 1.2;
-  color: inherit;
+  font-weight: 700;
 }
 
 .dock-seg {
@@ -452,47 +502,6 @@ body {
   background: color-mix(in srgb, var(--dsw-bg) 82%, transparent);
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-}
-
-.project-chip:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--dsw-business) 40%, var(--dsw-border));
-  background: transparent;
-  color: var(--dsw-business);
-  box-shadow: 0 6px 18px rgba(242, 241, 237, 0.18);
-}
-
-.project-chip:disabled,
-.project-chip.is-busy {
-  opacity: 0.55;
-  cursor: wait;
-}
-
-.project-chip-empty {
-  color: var(--dsw-label-3);
-}
-
-.project-chip-muted {
-  border-style: dashed;
-  color: var(--dsw-label-3);
-  box-shadow: none;
-  cursor: default;
-}
-
-.project-chip-icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-.project-chip.is-bound {
-  color: var(--dsw-business);
-  border-color: color-mix(in srgb, var(--dsw-business) 35%, var(--dsw-border));
-}
-
-.project-chip-error {
-  color: var(--dsw-danger);
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .dock-approval-hint {

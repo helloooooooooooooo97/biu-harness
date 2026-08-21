@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { LuCheck, LuCopy, LuGitFork, LuHash, LuTimer, LuCoins } from 'react-icons/lu'
+import { LuCheck, LuCoins, LuCopy, LuGitFork, LuHash, LuLayers, LuTimer } from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import {
@@ -236,6 +236,13 @@ function NodeView({
               {node.turn != null ? (
                 <MetaItem icon={<LuHash className="size-3" />} value={node.turn} title={`第 ${node.turn} 轮`} />
               ) : null}
+              {node.stepCount != null ? (
+                <MetaItem
+                  icon={<LuLayers className="size-3" />}
+                  value={node.stepCount}
+                  title={`本回合 ${node.stepCount} 个 step`}
+                />
+              ) : null}
               {node.durationMs != null ? (
                 <MetaItem
                   icon={<LuTimer className="size-3" />}
@@ -246,7 +253,7 @@ function NodeView({
               {node.usage ? (
                 <MetaItem icon={<LuCoins className="size-3" />} value={<UsageInline usage={node.usage} />} title="Token 用量" />
               ) : null}
-              {node.turn == null && node.durationMs == null && !node.usage ? (
+              {node.turn == null && node.stepCount == null && node.durationMs == null && !node.usage ? (
                 <span className="chat-reply-meta-empty">—</span>
               ) : null}
             </div>
