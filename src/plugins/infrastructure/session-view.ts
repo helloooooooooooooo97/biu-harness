@@ -25,7 +25,7 @@ export interface SessionListItem {
   mascot?: { shape: string; color: string }
 }
 
-export type ConversationView = 'chat' | 'trajectory'
+export type ConversationView = 'chat' | 'debug'
 export type ApprovalMode = 'auto' | 'hold'
 
 /** 与 host DEFAULT_TAIL_TURNS / DEFAULT_TRAJECTORY_TURNS 对齐 */
@@ -145,11 +145,11 @@ export class SessionViewService extends Service {
 
   setView(view: ConversationView) {
     this.replace({ view, focusCallId: view === 'chat' ? undefined : this.value.focusCallId })
-    if (view === 'trajectory') void this.ensureTrajectory()
+    if (view === 'debug') void this.ensureTrajectory()
   }
 
   inspectCall(callId: string) {
-    this.replace({ view: 'trajectory', focusCallId: callId })
+    this.replace({ view: 'debug', focusCallId: callId })
     void this.ensureTrajectory()
   }
 
@@ -207,7 +207,7 @@ export class SessionViewService extends Service {
         focusCallId: route.view === 'chat' ? undefined : this.value.focusCallId,
       })
     }
-    if (route.view === 'trajectory') await this.ensureTrajectory()
+    if (route.view === 'debug') await this.ensureTrajectory()
   }
 
   ingest(sessionId: string, event: SessionEvent) {
@@ -229,7 +229,7 @@ export class SessionViewService extends Service {
     })
     this.stashCurrent()
     // Trajectory 索引走独立接口；运行中只做轻量刷新，不塞全文 events
-    if (this.value.view === 'trajectory') void this.refreshTrajectoryIndex()
+    if (this.value.view === 'debug') void this.refreshTrajectoryIndex()
     void this.refreshSessions()
   }
 
@@ -366,7 +366,7 @@ export class SessionViewService extends Service {
         this.touchCache(sessionId)
         this.loadGen += 1
         this.applyCached(sessionId, cached, view)
-        if (view === 'trajectory') void this.ensureTrajectory()
+        if (view === 'debug') void this.ensureTrajectory()
         void this.revalidate(sessionId, view)
         return
       }
@@ -389,7 +389,7 @@ export class SessionViewService extends Service {
           trajectoryLoading: false,
           totalTurns: 0,
         })
-        if (view === 'trajectory') void this.ensureTrajectory()
+        if (view === 'debug') void this.ensureTrajectory()
         void this.revalidate(sessionId, view)
         return
       }
@@ -422,7 +422,7 @@ export class SessionViewService extends Service {
       }
     }
     await this.revalidate(sessionId, view)
-    if (view === 'trajectory') await this.ensureTrajectory()
+    if (view === 'debug') await this.ensureTrajectory()
   }
 
   /** 静默拉取并套用；若用户已切走则丢弃 */
@@ -475,10 +475,10 @@ export class SessionViewService extends Service {
         project: body.project,
         hasMoreOlder,
         totalTurns,
-        trajectory: view === 'trajectory' ? this.value.trajectory : [],
+        trajectory: view === 'debug' ? this.value.trajectory : [],
         error: undefined,
       })
-      if (view === 'trajectory') void this.ensureTrajectory()
+      if (view === 'debug') void this.ensureTrajectory()
     } catch {
       /* 静默 */
     }
@@ -578,7 +578,7 @@ export class SessionViewService extends Service {
     const sessionId = this.value.sessionId
     if (!sessionId) return
     if (this.value.trajectoryLoading) return
-    this.replace({ trajectoryLoading: true, view: 'trajectory' })
+    this.replace({ trajectoryLoading: true, view: 'debug' })
     try {
       const res = await fetch(
         `/api/sessions/${sessionId}/trajectory?turns=${TRAJECTORY_TAIL_TURNS}`,
@@ -590,7 +590,7 @@ export class SessionViewService extends Service {
         trajectoryHasMore: Boolean(body.hasMore),
         trajectoryLoading: false,
         totalTurns: typeof body.totalTurns === 'number' ? body.totalTurns : this.value.totalTurns,
-        view: 'trajectory',
+        view: 'debug',
       })
     } catch (error) {
       this.replace({ trajectoryLoading: false, error: String(error) })
@@ -599,7 +599,7 @@ export class SessionViewService extends Service {
 
   async refreshTrajectoryIndex() {
     const sessionId = this.value.sessionId
-    if (!sessionId || this.value.view !== 'trajectory') return
+    if (!sessionId || this.value.view !== 'debug') return
     try {
       const res = await fetch(
         `/api/sessions/${sessionId}/trajectory?turns=${TRAJECTORY_TAIL_TURNS}`,

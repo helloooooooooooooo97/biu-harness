@@ -15,12 +15,27 @@ import { FishLogo } from './brand.tsx'
 import { SidebarMascot } from './mascot/sidebar-mascot.tsx'
 import { resolveSessionMascot } from './mascot/session-mascot.ts'
 import { FolderGlyph } from './chat/project-panel.tsx'
-import { LuMessageSquare, LuPanelLeft, LuPanelLeftClose, LuPlus, LuWaypoints } from 'react-icons/lu'
+import { DashboardModule } from './dashboard-module.tsx'
+import {
+  LuBug,
+  LuLayoutDashboard,
+  LuMessageSquare,
+  LuPanelLeft,
+  LuPanelLeftClose,
+  LuPlus,
+} from 'react-icons/lu'
 
 export const name = 'shell'
 export const inject = ['slots', 'snapshot', 'sessionView', 'projectView']
 
 function ModuleIcon({ id }: { id: AppModuleId }) {
+  if (id === 'dashboard') {
+    return (
+      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4.5h7v7H4zM13 4.5h7v4h-7zM13 11.5h7v8h-7zM4 14.5h7v5H4z" />
+      </svg>
+    )
+  }
   if (id === 'workspace') {
     return (
       <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
@@ -130,7 +145,7 @@ function Shell(props: SlotProps) {
   const appRoute = parseAppPath(location.pathname)
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
-  const agentHref = sessionId ? `/s/${sessionId}${view === 'trajectory' ? '/trajectory' : ''}` : '/'
+  const agentHref = sessionId ? `/s/${sessionId}${view === 'debug' ? '/debug' : ''}` : '/'
   const showChatSidebar = activeModule === 'agent' && !sidebarCollapsed
 
   // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
@@ -188,28 +203,15 @@ function Shell(props: SlotProps) {
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-4">
           <div className="mb-2 flex items-center justify-between gap-2 px-1">
             <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Chat</span>
-            <div className="flex items-center gap-0.5">
-              <button
-                type="button"
-                className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
-                title="Collapse sidebar"
-                aria-label="Collapse sidebar"
-                onClick={() => setSidebarCollapsed(true)}
-              >
-                <LuPanelLeftClose className="size-3.5" />
-              </button>
-              <button
-                type="button"
-                className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
-                title="New Session"
-                aria-label="New Session"
-                onClick={() => {
-                  void sessionView.newSession().then((id) => navigate(`/s/${id}`))
-                }}
-              >
-                <LuPlus className="size-3.5" />
-              </button>
-            </div>
+            <button
+              type="button"
+              className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
+              title="Collapse sidebar"
+              aria-label="Collapse sidebar"
+              onClick={() => setSidebarCollapsed(true)}
+            >
+              <LuPanelLeftClose className="size-3.5" />
+            </button>
           </div>
           {sessions.length === 0 ? (
             <p className="px-1 text-[11px] leading-4 text-[var(--dsw-label-3)]">No chats yet. Send a message or create one.</p>
@@ -225,7 +227,7 @@ function Shell(props: SlotProps) {
                   }`}
                 >
                   <Link
-                    to={`/s/${item.id}${view === 'trajectory' ? '/trajectory' : ''}`}
+                    to={`/s/${item.id}${view === 'debug' ? '/debug' : ''}`}
                     className="flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-2 text-left text-sm"
                   >
                     <SidebarMascot
@@ -267,6 +269,24 @@ function Shell(props: SlotProps) {
               )
             })
           )}
+        </div>
+        <div className="app-side-footer">
+          <button
+            type="button"
+            className="app-side-footer-item"
+            title="添加聊天"
+            aria-label="添加聊天"
+            onClick={() => {
+              void sessionView.newSession().then((id) => navigate(`/s/${id}`))
+            }}
+          >
+            <LuPlus className="size-4 shrink-0" aria-hidden />
+            <span>添加聊天</span>
+          </button>
+          <Link to="/dashboard" className="app-side-footer-item" title="Dashboard" aria-label="Dashboard">
+            <LuLayoutDashboard className="size-4 shrink-0" aria-hidden />
+            <span>Dashboard</span>
+          </Link>
         </div>
       </aside>
 
@@ -311,14 +331,14 @@ function Shell(props: SlotProps) {
                 )}
               </NavLink>
               <NavLink
-                to={sessionId ? `/s/${sessionId}/trajectory` : '/'}
-                title="Trajectory"
-                aria-label="Trajectory"
+                to={sessionId ? `/s/${sessionId}/debug` : '/'}
+                title="Debug"
+                aria-label="Debug"
                 className={({ isActive }) => `chat-view-tab${isActive ? ' is-active' : ''}`}
               >
                 {({ isActive }) => (
                   <>
-                    <LuWaypoints className="size-3.5" />
+                    <LuBug className="size-3.5" />
                     {isActive ? <span className="chat-view-tab-underline" /> : null}
                   </>
                 )}
@@ -329,7 +349,7 @@ function Shell(props: SlotProps) {
           <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             {/*
               不用 display:none：大 Markdown DOM 被隐藏后再显示会重算布局（数百 ms longtask）。
-              absolute + visibility 保活布局，Chat↔Trajectory 只切可见性。
+              absolute + visibility 保活布局，Chat↔Debug 只切可见性。
             */}
             <div
               className={`absolute inset-0 min-h-0 overflow-hidden ${
@@ -351,13 +371,19 @@ function Shell(props: SlotProps) {
             </div>
             <div
               className={`absolute inset-0 min-h-0 overflow-hidden ${
-                view === 'trajectory' ? 'z-[1] flex flex-col' : 'pointer-events-none invisible z-0 flex flex-col'
+                view === 'debug' ? 'z-[1] flex flex-col' : 'pointer-events-none invisible z-0 flex flex-col'
               }`}
-              aria-hidden={view !== 'trajectory'}
+              aria-hidden={view !== 'debug'}
             >
               {props.renderSlot('trajectory')}
             </div>
           </div>
+        </div>
+        <div
+          className={activeModule === 'dashboard' ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : 'hidden'}
+          aria-hidden={activeModule !== 'dashboard'}
+        >
+          <DashboardModule />
         </div>
         <div
           className={activeModule === 'workspace' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}

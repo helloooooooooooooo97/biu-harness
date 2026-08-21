@@ -183,7 +183,7 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
     return (
       <div className="traj-empty">
         <p className="traj-empty-title">No session</p>
-        <p className="traj-empty-body">Open or create a session to inspect its append-only event ledger.</p>
+        <p className="traj-empty-body">打开或新建会话后，可在此查看调试日志。</p>
       </div>
     )
   }
@@ -191,7 +191,7 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   if (!rows.length && trajectoryLoading) {
     return (
       <div className="traj-empty">
-        <p className="traj-empty-title">Loading trajectory…</p>
+        <p className="traj-empty-title">Loading debug log…</p>
       </div>
     )
   }
