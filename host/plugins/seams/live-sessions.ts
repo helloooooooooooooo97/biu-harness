@@ -6,13 +6,118 @@ import { normalizeSessionType, type SessionEvent, type SessionType } from '../co
 export const LIVE_TOOL_NAMES = [
   'session_list',
   'session_inspect',
+  'session_progress',
   'session_wake',
   'session_inject',
 ] as const
 
 const LIVE_PROMPT = `你是 Live 指挥席（文字版）：调度其他 chat session，而不是亲自改代码或跑长任务。
-优先用 session_list / session_inspect 了解现场，再用 session_wake（新任务）或 session_inject（补充指示）派工。
-回答简洁：说明你调度了谁、做了什么、结果如何。`
+工作流：session_list / session_inspect 了解现场 → session_wake（wait=false 可先派工）或 session_inject → session_progress 抽查进度。
+向用户汇报要克制：只在关键节点、明显卡住、或用户追问时旁白，不要刷屏。
+回答简洁：说明调度了谁、当前状态、下一步。`
+
+export interface SessionProgressSnapshot {
+  sessionId: string
+  type: SessionType
+  status: 'idle' | 'running'
+  turn: number | null
+  step: number | null
+  reason?: string
+  lastTool?: { name: string; ok?: boolean } | null
+  assistantText: string
+  eventCount: number
+  newestSeq: number
+  updatedAt: number
+  inboxPending: number
+}
+
+/** 从事件日志推导 worker 进度快照（供 Live 抽查）。 */
+export function buildSessionProgress(
+  events: SessionEvent[],
+  opts: { afterSeq?: number; textLimit?: number; busy?: boolean; inboxPending?: number } = {},
+): Omit<SessionProgressSnapshot, 'sessionId' | 'type'> {
+  const textLimit = Math.min(2000, Math.max(80, opts.textLimit ?? 600))
+  const afterSeq =
+    opts.afterSeq == null || !Number.isFinite(opts.afterSeq) ? undefined : opts.afterSeq
+
+  let turn: number | null = null
+  let step: number | null = null
+  let reason: string | undefined
+  let openTurn = false
+  let lastTool: { name: string; ok?: boolean } | null = null
+  let assistantText = ''
+  const chunkParts: string[] = []
+  let deltaTool: { name: string; ok?: boolean } | null = null
+  let deltaAssistant = ''
+  const deltaChunks: string[] = []
+
+  for (const event of events) {
+    const inDelta = afterSeq == null || event.seq > afterSeq
+    if (event.type === 'turn/start') {
+      turn = event.turn
+      step = null
+      reason = undefined
+      openTurn = true
+      chunkParts.length = 0
+      assistantText = ''
+      if (inDelta) {
+        deltaChunks.length = 0
+        deltaAssistant = ''
+      }
+    } else if (event.type === 'turn/end') {
+      turn = event.turn
+      reason = event.reason
+      openTurn = false
+      step = null
+    } else if (event.type === 'step/start') {
+      turn = event.turn
+      step = event.step
+      openTurn = true
+    } else if (event.type === 'step/end') {
+      turn = event.turn
+      step = event.step
+    } else if (event.type === 'tool/call') {
+      lastTool = { name: event.name }
+      if (inDelta) deltaTool = { name: event.name }
+    } else if (event.type === 'tool/result') {
+      lastTool = { name: event.name, ok: event.ok }
+      if (inDelta) deltaTool = { name: event.name, ok: event.ok }
+    } else if (event.type === 'assistant/message') {
+      if (event.text.trim()) {
+        assistantText = event.text
+        chunkParts.length = 0
+        if (inDelta) {
+          deltaAssistant = event.text
+          deltaChunks.length = 0
+        }
+      }
+    } else if (event.type === 'assistant/chunk') {
+      chunkParts.push(event.text)
+      if (inDelta) deltaChunks.push(event.text)
+    }
+  }
+
+  if (!assistantText.trim() && chunkParts.length) assistantText = chunkParts.join('')
+  let reportText = afterSeq == null ? assistantText : deltaAssistant
+  if (!reportText.trim() && afterSeq != null && deltaChunks.length) reportText = deltaChunks.join('')
+  if (!reportText.trim()) reportText = assistantText
+  if (reportText.length > textLimit) reportText = `${reportText.slice(0, textLimit)}…`
+
+  const newest = events.at(-1)
+  const busy = Boolean(opts.busy) || openTurn
+  return {
+    status: busy ? 'running' : 'idle',
+    turn,
+    step,
+    ...(reason ? { reason } : {}),
+    lastTool: afterSeq == null ? lastTool : deltaTool ?? lastTool,
+    assistantText: reportText,
+    eventCount: events.length,
+    newestSeq: newest?.seq ?? -1,
+    updatedAt: newest?.ts ?? 0,
+    inboxPending: opts.inboxPending ?? 0,
+  }
+}
 
 async function requireLiveCaller(ctx: Context) {
   const sessionId = currentSessionId()
@@ -50,7 +155,7 @@ export function apply(ctx: Context) {
 
   ctx.tools.register({
     name: 'session_list',
-    description: '列出其他 session（含 type/status 摘要）。Live 指挥席专用。',
+    description: '列出其他 session（含 type 与 busy 状态）。Live 指挥席专用。',
     parameters: {
       type: 'object',
       properties: {
@@ -72,6 +177,7 @@ export function apply(ctx: Context) {
           id: item.id,
           title: item.title,
           type: normalizeSessionType(item.type),
+          status: ctx.agents.isBusy(item.id) ? ('running' as const) : ('idle' as const),
           eventCount: item.eventCount,
           updatedAt: item.updatedAt,
           project: item.project?.name,
@@ -100,6 +206,7 @@ export function apply(ctx: Context) {
       return {
         id: record.id,
         type: normalizeSessionType(record.type),
+        status: ctx.agents.isBusy(targetId) ? 'running' : 'idle',
         project: record.project,
         eventCount: record.events.length,
         recent: recentMessages(record.events, limit),
@@ -108,13 +215,53 @@ export function apply(ctx: Context) {
   })
 
   ctx.tools.register({
+    name: 'session_progress',
+    description:
+      '抽查目标 session 的运行进度（turn/step/status/最近 assistant 摘要）。派工后用于旁白，勿高频刷屏。',
+    parameters: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string' },
+        afterSeq: { type: 'number', description: '只看该 seq 之后的事件（增量抽查）' },
+        textLimit: { type: 'number', description: 'assistant 摘要最大字符，默认 600' },
+      },
+      required: ['sessionId'],
+    },
+    execute: async (args) => {
+      await requireLiveCaller(ctx)
+      const targetId = String(args.sessionId || '').trim()
+      if (!targetId) throw new Error('sessionId required')
+      const record = await ctx.sessions.require(targetId)
+      const afterSeq =
+        args.afterSeq == null || args.afterSeq === '' ? undefined : Number(args.afterSeq)
+      const textLimit = args.textLimit == null ? undefined : Number(args.textLimit)
+      const progress = buildSessionProgress(record.events, {
+        afterSeq: Number.isFinite(afterSeq) ? afterSeq : undefined,
+        textLimit: Number.isFinite(textLimit) ? textLimit : undefined,
+        busy: ctx.agents.isBusy(targetId),
+        inboxPending: ctx.agents.inboxPending(targetId),
+      })
+      return {
+        sessionId: record.id,
+        type: normalizeSessionType(record.type),
+        ...progress,
+      } satisfies SessionProgressSnapshot
+    },
+  })
+
+  ctx.tools.register({
     name: 'session_wake',
-    description: '向目标 chat session 发送一条 wake 用户消息并启动其 agent 回合。',
+    description:
+      '向目标 chat session 发送 wake 并启动 agent。wait=false 时立即返回，可用 session_progress 抽查。',
     parameters: {
       type: 'object',
       properties: {
         sessionId: { type: 'string' },
         text: { type: 'string' },
+        wait: {
+          type: 'boolean',
+          description: '默认 true 等回合结束；false 则入队后立即返回 queued',
+        },
       },
       required: ['sessionId', 'text'],
     },
@@ -122,6 +269,7 @@ export function apply(ctx: Context) {
       const selfId = await requireLiveCaller(ctx)
       const targetId = String(args.sessionId || '').trim()
       const text = String(args.text || '').trim()
+      const wait = args.wait !== false && args.wait !== 'false'
       if (!targetId) throw new Error('sessionId required')
       if (!text) throw new Error('text required')
       if (targetId === selfId) throw new Error('cannot wake the current live session')
@@ -130,10 +278,15 @@ export function apply(ctx: Context) {
         throw new Error('cannot wake another live session; target a chat session')
       }
       const agent = await ctx.agents.create(targetId)
-      const turn = await agent.send(text)
+      if (!wait) {
+        void agent.send(text, { wait: false })
+        return { sessionId: targetId, queued: true, wait: false }
+      }
+      const turn = await agent.send(text, { wait: true })
       return {
         sessionId: targetId,
         queued: false,
+        wait: true,
         text: turn.text.slice(0, 1200),
         steps: turn.steps.length,
       }
