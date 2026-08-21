@@ -1,13 +1,18 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { loadGrokBot } from './grok-bot-loader.ts'
-import { attachSharedTicker, detachSharedTicker, quietSidebarMotion } from './grok-bot-scheduler.ts'
+import {
+  applySidebarMood,
+  attachSharedTicker,
+  detachSharedTicker,
+  suppressSidebarTricks,
+} from './grok-bot-scheduler.ts'
 import type { GrokCharacterLike, GrokColor, GrokShape } from './grok-bot-types.ts'
 
 export type GrokBotAvatarProps = {
   shape: GrokShape
   color: GrokColor
   size?: number
-  /** Agent running → thinking; else calm idle (no onboarding thrash) */
+  /** Agent running → thinking; else onboarding expression playlist */
   busy?: boolean
   /** Force-pause (e.g. offscreen). Visibility also auto-pauses. */
   paused?: boolean
@@ -29,7 +34,7 @@ type BotInternal = GrokCharacterLike & {
 
 /**
  * Animated Grok Bot for the session list.
- * Uses a shared ~30fps ticker + hold/idle (no per-bot 60fps / onboarding / tricks).
+ * Shared ~30fps ticker; onboarding cycles rich expressions; hop/spin tricks stay off.
  */
 export const GrokBotAvatar = memo(function GrokBotAvatar({
   shape,
@@ -91,14 +96,13 @@ export const GrokBotAvatar = memo(function GrokBotAvatar({
         scheme: 'light',
         loginWrap: true,
         sizePx: size,
-        mode: 'hold',
+        mode: busyRef.current ? 'hold' : 'onboarding',
         state: busyRef.current ? 'thinking' : 'idle',
         followPointer,
         paused: true,
         eyeColor: '#f3efe6',
       }) as BotInternal
-      quietSidebarMotion(bot)
-      if (busyRef.current) bot.setState('thinking', { resetEyes: false })
+      applySidebarMood(bot, busyRef.current)
       attachSharedTicker(bot)
       bot.setPaused(paused || !visible)
       botRef.current = bot
@@ -121,20 +125,15 @@ export const GrokBotAvatar = memo(function GrokBotAvatar({
     if (!bot || !ready) return
     bot.setShape(shape)
     bot.setColor(color, 'light')
-    // Shape morph can re-arm tricks — keep them off for sidebar.
-    quietSidebarMotion(bot)
-    if (busy) bot.setState('thinking', { resetEyes: false })
+    // setShape can re-arm tricks — keep them off.
+    suppressSidebarTricks(bot)
+    applySidebarMood(bot, busy)
   }, [shape, color, ready, busy])
 
   useEffect(() => {
-    const bot = botRef.current as BotInternal | null
+    const bot = botRef.current
     if (!bot || !ready) return
-    if (busy) {
-      bot.setMode('hold')
-      bot.setState('thinking', { resetEyes: false })
-    } else {
-      quietSidebarMotion(bot)
-    }
+    applySidebarMood(bot, busy)
   }, [busy, ready])
 
   useEffect(() => {
@@ -160,7 +159,6 @@ export const GrokBotAvatar = memo(function GrokBotAvatar({
           overflow: 'visible',
           colorScheme: 'light',
           opacity: ready ? 1 : 0.35,
-          // Promote to own layer so SVG paints don't dirty the whole sidebar
           transform: 'translateZ(0)',
           willChange: 'transform',
         }}

@@ -77,21 +77,31 @@ export function detachSharedTicker(bot: object) {
   }
 }
 
-/** Quiet a character: no onboarding mood thrash, no hop/spin tricks. */
-export function quietSidebarMotion(bot: object) {
+/** Keep hop/spin tricks off so expression cycling stays smooth. */
+export function suppressSidebarTricks(bot: object) {
   const raw = bot as {
-    mode?: string
     trickAt?: number
     celebrateAt?: number
     trick?: unknown
     hopAt?: number
-    setMode?: (m: string) => void
-    setState?: (s: string, o?: { resetEyes?: boolean }) => void
   }
-  raw.setMode?.('hold')
-  raw.setState?.('idle', { resetEyes: false })
   raw.trickAt = Number.POSITIVE_INFINITY
   raw.celebrateAt = -1
   raw.trick = null
   raw.hopAt = -1
+}
+
+/** Idle: onboarding mood playlist (curious/happy/playful/…). Busy: thinking. */
+export function applySidebarMood(bot: object, busy: boolean) {
+  const raw = bot as {
+    setMode?: (m: string) => void
+    setState?: (s: string, o?: { resetEyes?: boolean }) => void
+  }
+  suppressSidebarTricks(bot)
+  if (busy) {
+    raw.setMode?.('hold')
+    raw.setState?.('thinking', { resetEyes: false })
+    return
+  }
+  raw.setMode?.('onboarding')
 }
