@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Image } from 'antd'
 import type { ChatToolPart } from '../../infrastructure/session-project.ts'
 import {
   diffStats,
@@ -52,14 +53,22 @@ function DiffBlock({ lines, path }: { lines: DiffLine[]; path?: string }) {
 function ArtifactGallery({ artifacts }: { artifacts: NonNullable<Extract<FormattedDetail, { kind: 'bash' }>['artifacts']> }) {
   if (!artifacts.length) return null
   return (
-    <div className="tool-artifacts" aria-label="Artifacts">
-      {artifacts.map((item) => (
-        <a key={item.url} className="tool-artifact" href={item.url} target="_blank" rel="noreferrer">
-          <img className="tool-artifact-img" src={item.url} alt={item.name} loading="lazy" />
-          <span className="tool-artifact-caption">{item.source || item.name}</span>
-        </a>
-      ))}
-    </div>
+    <Image.PreviewGroup>
+      <div className="tool-artifacts" aria-label="Artifacts">
+        {artifacts.map((item) => (
+          <div key={item.url} className="tool-artifact">
+            <Image
+              className="tool-artifact-img"
+              src={item.url}
+              alt={item.name}
+              loading="lazy"
+              style={{ width: '100%', maxHeight: 220, objectFit: 'contain' }}
+            />
+            <span className="tool-artifact-caption">{item.source || item.name}</span>
+          </div>
+        ))}
+      </div>
+    </Image.PreviewGroup>
   )
 }
 

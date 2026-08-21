@@ -7,6 +7,7 @@ import { bindSessionView, type SessionViewService } from '../../infrastructure/s
 import {
   formatTrajectoryUsage,
   type ChatNode,
+  type ChatStepStat,
   type TrajectoryUsage,
 } from '../../infrastructure/session-project.ts'
 import { SidebarMascot } from '../mascot/sidebar-mascot.tsx'
@@ -50,6 +51,92 @@ function formatDuration(ms: number) {
 
 function formatTok(n: number) {
   return n.toLocaleString('en-US')
+}
+
+const STEP_LABELS = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
+
+function stepLabel(step: number) {
+  // event.step 从 0 起；展示用 Step 一 / Step 1
+  const ordinal = step + 1
+  if (ordinal >= 1 && ordinal <= STEP_LABELS.length) return `Step ${STEP_LABELS[ordinal - 1]}`
+  return `Step ${ordinal}`
+}
+
+function StepBar({ stat }: { stat: ChatStepStat }) {
+  const total = stat.inputTokens + stat.outputTokens
+  return (
+    <div className="chat-step-bar" role="group" aria-label={stepLabel(stat.step)}>
+      <div className="chat-step-bar-main">
+        <span className="chat-step-bar-title">{stepLabel(stat.step)}</span>
+        <span className="chat-step-bar-sep" aria-hidden>
+          ·
+        </span>
+        <span className="chat-step-bar-stat" title="Token 用量">
+          {formatTok(stat.inputTokens)}→{formatTok(stat.outputTokens)}
+          {total ? <span className="chat-step-bar-muted"> · Σ{formatTok(total)}</span> : null}
+        </span>
+        <span className="chat-step-bar-sep" aria-hidden>
+          ·
+        </span>
+        <span className="chat-step-bar-stat" title="本步工具数">
+          {stat.toolCount} tools
+        </span>
+        <span className="chat-step-bar-sep" aria-hidden>
+          ·
+        </span>
+        <span className="chat-step-bar-stat" title="本步 Message 字数">
+          {formatTok(stat.messageChars)} chars
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function ReplyParts({
+  node,
+  onInspect,
+}: {
+  node: Extract<ChatNode, { kind: 'reply' }>
+  onInspect: (callId: string) => void
+}) {
+  const stepMap = new Map((node.steps ?? []).map((item) => [item.step, item]))
+  const elements: ReactNode[] = []
+  let lastStep: number | undefined
+
+  for (const part of node.parts) {
+    const step = part.step
+    if (step != null && step !== lastStep) {
+      const stat = stepMap.get(step) ?? {
+        step,
+        inputTokens: 0,
+        outputTokens: 0,
+        toolCount: 0,
+        messageChars: 0,
+      }
+      elements.push(<StepBar key={`step-${step}`} stat={stat} />)
+      lastStep = step
+    }
+
+    if (part.kind === 'assistant') {
+      const partStreaming = Boolean(part.streaming)
+      elements.push(
+        <div key={part.id} className="chat-assistant-body">
+          {part.text ? (
+            <MarkdownBody text={part.text} streaming={partStreaming} />
+          ) : partStreaming ? (
+            '…'
+          ) : null}
+          {partStreaming ? (
+            <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span>
+          ) : null}
+        </div>,
+      )
+    } else {
+      elements.push(<ToolCard key={part.id} node={part} onInspect={onInspect} />)
+    }
+  }
+
+  return <>{elements}</>
 }
 
 function cacheHitPct(usage: TrajectoryUsage): number | null {
@@ -210,24 +297,7 @@ function NodeView({
       <div className="chat-reply-block">
         <div className={`chat-reply-card${streaming ? ' is-streaming' : ''}`}>
           <div className="chat-reply-body">
-            {node.parts.map((part) => {
-              if (part.kind === 'assistant') {
-                const partStreaming = Boolean(part.streaming)
-                return (
-                  <div key={part.id} className="chat-assistant-body">
-                    {part.text ? (
-                      <MarkdownBody text={part.text} streaming={partStreaming} />
-                    ) : partStreaming ? (
-                      '…'
-                    ) : null}
-                    {partStreaming ? (
-                      <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span>
-                    ) : null}
-                  </div>
-                )
-              }
-              return <ToolCard key={part.id} node={part} onInspect={onInspect} />
-            })}
+            <ReplyParts node={node} onInspect={onInspect} />
           </div>
         </div>
         {showFooter ? (
