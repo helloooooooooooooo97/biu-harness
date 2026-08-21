@@ -130,6 +130,10 @@ export class SessionsService extends Service {
     return this.ctx.sessionStore.list()
   }
 
+  listSummaries() {
+    return this.ctx.sessionStore.listSummaries()
+  }
+
   async delete(id: string) {
     this.clearPersistTimer(id)
     this.cache.delete(id)

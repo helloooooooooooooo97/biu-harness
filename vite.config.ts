@@ -16,5 +16,6 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    environmentMatchGlobs: [['host/**', 'node']],
   },
 })

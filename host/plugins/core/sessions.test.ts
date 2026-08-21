@@ -64,6 +64,47 @@ test('json session store round-trips versioned records', async () => {
   assert.equal(loaded?.events.some((item) => item.type === 'user/message'), true)
 })
 
+test('sqlite session store round-trips and listSummaries skips full reload', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cordis-sqlite-'))
+  const path = join(dir, 'sessions.sqlite')
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx.plugin(sessions)
+  const record = await ctx.sessions.create('sql1')
+  await ctx.sessions.append('sql1', { type: 'user/message', text: 'sqlite hi', kind: 'wake' })
+  await ctx.sessions.append('sql1', { type: 'assistant/message', text: 'ok' })
+  await ctx.sessions.append('sql1', { type: 'turn/end', turn: 1, reason: 'complete' })
+  const summaries = await ctx.sessions.listSummaries()
+  assert.equal(summaries[0]?.id, 'sql1')
+  assert.equal(summaries[0]?.title, 'sqlite hi')
+  assert.equal(summaries[0]?.eventCount, 4)
+
+  const ctx2 = new Context()
+  await ctx2.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx2.plugin(sessions)
+  const loaded = await ctx2.sessions.get('sql1')
+  assert.equal(loaded?.id, record.id)
+  assert.equal(loaded?.events.length, 4)
+  assert.equal(loaded?.events.some((item) => item.type === 'assistant/message' && item.text === 'ok'), true)
+})
+
+test('sqlite migrates legacy json sessions once', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cordis-migrate-'))
+  const jsonDir = join(dir, 'sessions')
+  const path = join(dir, 'sessions.sqlite')
+  const ctxJson = new Context()
+  await ctxJson.plugin(sessionStore, { driver: 'json', dir: jsonDir })
+  await ctxJson.plugin(sessions)
+  await ctxJson.sessions.create('legacy1')
+  await ctxJson.sessions.append('legacy1', { type: 'user/message', text: 'from json', kind: 'wake' })
+
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'sqlite', path, dir: jsonDir })
+  await ctx.plugin(sessions)
+  const loaded = await ctx.sessions.get('legacy1')
+  assert.equal(loaded?.events.some((item) => item.type === 'user/message' && item.text === 'from json'), true)
+})
+
 test('fork copies the append-only log into a child session', async () => {
   const ctx = new Context()
   await ctx.plugin(sessionStore, { driver: 'memory' })
