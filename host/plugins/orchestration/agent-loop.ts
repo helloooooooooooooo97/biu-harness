@@ -27,15 +27,12 @@ export interface AgentRunner {
 
 export type AgentLoopFactory = (config: LlmConfig, sessionId: string, signal: AbortSignal) => AgentRunner
 
-const MAX_STEPS = 8
-
 export class AgentLoop implements AgentRunner {
   constructor(
     private ctx: Context,
     private llm: LlmClient,
     private sessionId: string,
     private signal: AbortSignal,
-    private maxSteps = MAX_STEPS,
   ) {}
 
   async run(claimed: ClaimedInput[]): Promise<AgentTurn> {
@@ -69,7 +66,7 @@ export class AgentLoop implements AgentRunner {
     const steps: AgentTurn['steps'] = []
     let final = '（空回复）'
 
-    for (let step = 0; step < this.maxSteps; step++) {
+    for (let step = 0; ; step++) {
       if (this.signal.aborted) {
         await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'cancelled' })
         throw new Error('cancelled')
@@ -142,10 +139,6 @@ export class AgentLoop implements AgentRunner {
       await session.append(this.sessionId, { type: 'step/end', turn, step })
       final = steps.at(-1)?.detail ?? final
     }
-
-    await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'max-steps' })
-    this.ctx.emit('agent/status', { status: 'idle', step: this.maxSteps })
-    return { text: '工具轮次过多，已停止。', steps }
   }
 }
 
