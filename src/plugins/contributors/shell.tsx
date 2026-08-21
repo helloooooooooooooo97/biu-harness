@@ -17,7 +17,6 @@ import {
   assignSessionMascot,
   DEFAULT_SESSION_MASCOT,
   ensureSessionMascots,
-  getOrAssignSessionMascot,
   releaseSessionMascot,
 } from './mascot/session-mascot.ts'
 import type { SessionMascotIdentity } from './mascot/grok-bot-types.ts'
