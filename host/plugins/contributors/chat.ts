@@ -4,6 +4,7 @@ import { Service, type Context } from 'cordis'
 import '../../types.ts'
 import type { ChatMessage } from './chat-types.ts'
 import type { AgentToolMode } from '../registry/tools.ts'
+import { DEFAULT_TAIL_TURNS, sliceBeforeTurns, sliceTailTurns } from '../core/session-window.ts'
 
 export type { ChatMessage }
 
@@ -211,12 +212,45 @@ export function apply(ctx: Context) {
   ctx.http.route('GET', '/api/sessions/:id', async (route) => {
     const record = await ctx.sessions.get(route.params.id)
     if (!record) return route.send(404, { error: 'unknown session' })
+    const turnsRaw = route.query.get('turns')
+    const limitTurns =
+      turnsRaw == null || turnsRaw === ''
+        ? DEFAULT_TAIL_TURNS
+        : turnsRaw === 'all'
+          ? 0
+          : Math.max(0, Number(turnsRaw) || DEFAULT_TAIL_TURNS)
+    const window = sliceTailTurns(record.events, limitTurns)
     route.send(200, {
       id: record.id,
       version: record.version,
-      events: record.events,
-      messages: ctx.sessions.deriveMessages(record.id),
+      events: window.events,
+      hasMore: window.hasMore,
+      totalTurns: window.totalTurns,
+      totalEvents: window.totalEvents,
+      oldestSeq: window.oldestSeq,
+      newestSeq: window.newestSeq,
       ...(record.project ? { project: record.project } : {}),
+    })
+  })
+  ctx.http.route('GET', '/api/sessions/:id/events', async (route) => {
+    const record = await ctx.sessions.get(route.params.id)
+    if (!record) return route.send(404, { error: 'unknown session' })
+    const beforeSeq = Number(route.query.get('beforeSeq'))
+    if (!Number.isFinite(beforeSeq)) return route.send(400, { error: 'beforeSeq required' })
+    const turnsRaw = route.query.get('turns')
+    const limitTurns =
+      turnsRaw == null || turnsRaw === ''
+        ? DEFAULT_TAIL_TURNS
+        : Math.max(1, Number(turnsRaw) || DEFAULT_TAIL_TURNS)
+    const window = sliceBeforeTurns(record.events, beforeSeq, limitTurns)
+    route.send(200, {
+      id: record.id,
+      events: window.events,
+      hasMore: window.hasMore,
+      totalTurns: window.totalTurns,
+      totalEvents: window.totalEvents,
+      oldestSeq: window.oldestSeq,
+      newestSeq: window.newestSeq,
     })
   })
   ctx.http.route('PUT', '/api/sessions/:id/project', async (route) => {

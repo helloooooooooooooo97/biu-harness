@@ -27,6 +27,9 @@ export interface SessionListItem {
 export type ConversationView = 'chat' | 'trajectory'
 export type ApprovalMode = 'auto' | 'hold'
 
+/** 与 host DEFAULT_TAIL_TURNS 对齐：首屏只拉最近若干 turn */
+export const SESSION_TAIL_TURNS = 24
+
 export interface SessionViewState {
   sessionId: string | null
   events: SessionEvent[]
@@ -41,6 +44,10 @@ export interface SessionViewState {
   approvalMode: ApprovalMode
   approvals: ApprovalItem[]
   project?: { name: string; path?: string; boundAt: number }
+  /** 是否还有更早的 turn 可懒加载 */
+  hasMoreOlder: boolean
+  loadingOlder: boolean
+  totalTurns: number
   error?: string
 }
 
@@ -55,6 +62,18 @@ const empty: SessionViewState = {
   pending: false,
   approvalMode: 'auto',
   approvals: [],
+  hasMoreOlder: false,
+  loadingOlder: false,
+  totalTurns: 0,
+}
+
+type SessionPayload = {
+  id: string
+  events: SessionEvent[]
+  hasMore?: boolean
+  totalTurns?: number
+  totalEvents?: number
+  project?: { name: string; path?: string; boundAt: number }
 }
 
 export class SessionViewService extends Service {
@@ -76,16 +95,17 @@ export class SessionViewService extends Service {
 
   setView(view: ConversationView) {
     this.replace({ view, focusCallId: view === 'chat' ? undefined : this.value.focusCallId })
+    if (view === 'trajectory') void this.ensureTrajectory()
   }
 
   inspectCall(callId: string) {
     this.replace({ view: 'trajectory', focusCallId: callId })
+    void this.ensureTrajectory()
   }
 
   /** URL → 状态：只由路由层调用，不回写 URL */
   async applyRoute(route: AppRoute) {
     if (route.kind === 'module') {
-      // 其它模块不碰 agent session 投影，切回 Agent 时会话仍在。
       return
     }
     if (route.kind === 'home') {
@@ -100,13 +120,16 @@ export class SessionViewService extends Service {
         pending: false,
         agentStatus: 'idle',
         project: undefined,
+        hasMoreOlder: false,
+        loadingOlder: false,
+        totalTurns: 0,
         error: undefined,
       })
       return
     }
     if (this.value.sessionId !== route.sessionId) {
       try {
-        await this.load(route.sessionId)
+        await this.load(route.sessionId, { view: route.view })
       } catch (error) {
         this.replace({
           error: String(error),
@@ -116,16 +139,19 @@ export class SessionViewService extends Service {
           trajectory: [],
           view: 'chat',
           focusCallId: undefined,
+          hasMoreOlder: false,
+          loadingOlder: false,
+          totalTurns: 0,
         })
         throw error
       }
-    }
-    if (this.value.view !== route.view) {
+    } else if (this.value.view !== route.view) {
       this.replace({
         view: route.view,
         focusCallId: route.view === 'chat' ? undefined : this.value.focusCallId,
       })
     }
+    if (route.view === 'trajectory') await this.ensureTrajectory()
   }
 
   ingest(sessionId: string, event: SessionEvent) {
@@ -139,17 +165,17 @@ export class SessionViewService extends Service {
     }
     this.flushChunkFrame()
     const events = upsertEvent(this.value.sessionId === sessionId ? this.value.events : [], event)
+    const onTraj = this.value.view === 'trajectory'
     this.replace({
       sessionId,
       events,
       nodes: projectNodes(events),
-      trajectory: projectTrajectory(events),
+      ...(onTraj ? { trajectory: projectTrajectory(events) } : {}),
       error: undefined,
     })
     void this.refreshSessions()
   }
 
-  /** chunk 高频：合并进 events/nodes，但 Trajectory 引用保持不变；通知合并到每帧一次。 */
   private ingestChunk(sessionId: string, event: Extract<SessionEvent, { type: 'assistant/chunk' }>) {
     const events = upsertEvent(this.value.sessionId === sessionId ? this.value.events : [], event)
     const chunk = events.at(-1)
@@ -190,7 +216,6 @@ export class SessionViewService extends Service {
   }
 
   setAgentStatus(status: 'idle' | 'running', step?: number) {
-    // pending 由 send()/cancel() 拥有；WS 的 idle 不能提前清掉，否则会像「agent 没响应」
     if (status === 'running') {
       this.replace({ agentStatus: 'running', agentStep: step, pending: true })
       return
@@ -250,8 +275,7 @@ export class SessionViewService extends Service {
     const res = await fetch('/api/sessions', { method: 'POST' })
     const body = (await res.json()) as { id?: string }
     if (!body.id) throw new Error('无法创建 session')
-    await this.load(body.id)
-    this.replace({ view: 'chat', focusCallId: undefined })
+    await this.load(body.id, { view: 'chat' })
     await this.refreshSessions()
     return body.id
   }
@@ -261,27 +285,93 @@ export class SessionViewService extends Service {
     return this.newSession()
   }
 
-  async load(sessionId: string) {
-    const res = await fetch(`/api/sessions/${sessionId}`)
+  async load(sessionId: string, options: { view?: ConversationView } = {}) {
+    const view = options.view ?? this.value.view
+    const turns = view === 'trajectory' ? 'all' : String(SESSION_TAIL_TURNS)
+    const res = await fetch(`/api/sessions/${sessionId}?turns=${encodeURIComponent(turns)}`)
     if (!res.ok) throw new Error(`加载 session 失败：${res.status}`)
-    const body = (await res.json()) as {
-      id: string
-      events: SessionEvent[]
-      project?: { name: string; path?: string; boundAt: number }
-    }
+    const body = (await res.json()) as SessionPayload
     const events = compactSessionEvents(Array.isArray(body.events) ? body.events : [])
+    const onTraj = view === 'trajectory'
     this.replace({
       sessionId: body.id,
       events,
       nodes: projectNodes(events),
-      trajectory: projectTrajectory(events),
+      trajectory: onTraj ? projectTrajectory(events) : [],
       project: body.project,
+      view,
+      focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
       error: undefined,
       pending: false,
       agentStatus: 'idle',
+      hasMoreOlder: Boolean(body.hasMore),
+      loadingOlder: false,
+      totalTurns: typeof body.totalTurns === 'number' ? body.totalTurns : 0,
     })
-    await this.refreshSessions()
-    await this.refreshApprovals()
+    void this.refreshSessions()
+    void this.refreshApprovals()
+  }
+
+  /** 上滑加载更早 turn；返回是否真正拉到了数据 */
+  async loadOlder(): Promise<boolean> {
+    const { sessionId, hasMoreOlder, loadingOlder, events } = this.value
+    if (!sessionId || !hasMoreOlder || loadingOlder) return false
+    const beforeSeq = events[0]?.seq
+    if (beforeSeq == null) return false
+    this.replace({ loadingOlder: true })
+    try {
+      const res = await fetch(
+        `/api/sessions/${sessionId}/events?beforeSeq=${beforeSeq}&turns=${SESSION_TAIL_TURNS}`,
+      )
+      if (!res.ok) throw new Error(`加载更早事件失败：${res.status}`)
+      const body = (await res.json()) as SessionPayload
+      const older = compactSessionEvents(Array.isArray(body.events) ? body.events : [])
+      if (!older.length) {
+        this.replace({ hasMoreOlder: false, loadingOlder: false })
+        return false
+      }
+      const seen = new Set(events.map((event) => event.seq))
+      const merged = [...older.filter((event) => !seen.has(event.seq)), ...events].sort(
+        (a, b) => a.seq - b.seq,
+      )
+      const onTraj = this.value.view === 'trajectory'
+      this.replace({
+        events: merged,
+        nodes: projectNodes(merged),
+        ...(onTraj ? { trajectory: projectTrajectory(merged) } : {}),
+        hasMoreOlder: Boolean(body.hasMore),
+        loadingOlder: false,
+        totalTurns: typeof body.totalTurns === 'number' ? body.totalTurns : this.value.totalTurns,
+      })
+      return true
+    } catch (error) {
+      this.replace({ loadingOlder: false, error: String(error) })
+      return false
+    }
+  }
+
+  /** 进入 Trajectory 时再拉全量并投影；Chat 路径不碰 trajectory。 */
+  async ensureTrajectory() {
+    const sessionId = this.value.sessionId
+    if (!sessionId) return
+    if (this.value.hasMoreOlder) {
+      const res = await fetch(`/api/sessions/${sessionId}?turns=all`)
+      if (!res.ok) throw new Error(`加载 trajectory 失败：${res.status}`)
+      const body = (await res.json()) as SessionPayload
+      const events = compactSessionEvents(Array.isArray(body.events) ? body.events : [])
+      this.replace({
+        events,
+        nodes: projectNodes(events),
+        trajectory: projectTrajectory(events),
+        hasMoreOlder: false,
+        totalTurns: typeof body.totalTurns === 'number' ? body.totalTurns : this.value.totalTurns,
+        view: 'trajectory',
+      })
+      return
+    }
+    if (this.value.trajectory.length === 0 && this.value.events.length > 0) {
+      this.replace({ trajectory: projectTrajectory(this.value.events), view: 'trajectory' })
+    }
   }
 
   setProjectMeta(project?: { name: string; path?: string; boundAt: number }) {
@@ -298,8 +388,7 @@ export class SessionViewService extends Service {
     const res = await fetch(`/api/sessions/${sessionId}/fork`, { method: 'POST' })
     const body = (await res.json()) as { id?: string; error?: string }
     if (!res.ok || !body.id) throw new Error(body.error || 'fork failed')
-    await this.load(body.id)
-    this.replace({ view: 'chat' })
+    await this.load(body.id, { view: 'chat' })
     return body.id
   }
 
@@ -312,8 +401,7 @@ export class SessionViewService extends Service {
     if (!wasActive) return
     const next = this.value.sessions[0]?.id
     if (next) {
-      await this.load(next)
-      this.replace({ view: 'chat', focusCallId: undefined })
+      await this.load(next, { view: 'chat' })
       return
     }
     this.replace({
@@ -327,6 +415,9 @@ export class SessionViewService extends Service {
       view: 'chat',
       focusCallId: undefined,
       project: undefined,
+      hasMoreOlder: false,
+      loadingOlder: false,
+      totalTurns: 0,
       error: undefined,
     })
   }
@@ -357,14 +448,14 @@ export class SessionViewService extends Service {
       })
       const data = (await res.json()) as { error?: string; sessionId?: string; text?: string }
       if (!res.ok) throw new Error(data.error || `发送失败：${res.status}`)
-      if (data.sessionId && data.sessionId !== sessionId) await this.load(data.sessionId)
-      else await this.load(sessionId)
+      if (data.sessionId && data.sessionId !== sessionId) await this.load(data.sessionId, { view: 'chat' })
+      else await this.load(sessionId, { view: this.value.view })
       if (typeof data.text === 'string' && data.text.startsWith('模型调用失败：')) {
         this.replace({ error: data.text })
       }
     } catch (error) {
       try {
-        await this.load(sessionId)
+        await this.load(sessionId, { view: this.value.view })
       } catch {
         /* 加载失败时仍展示下方 error */
       }
@@ -402,7 +493,6 @@ function upsertEvent(events: SessionEvent[], event: SessionEvent) {
   if (event.type === 'assistant/chunk') {
     const last = events.at(-1)
     if (last?.type === 'assistant/chunk') {
-      // 合并连续 delta，保持首条 chunk 的 seq（Chat 流式节点 id 稳定）
       return [
         ...events.slice(0, -1),
         { ...last, text: last.text + event.text, ts: event.ts },
@@ -418,14 +508,12 @@ function upsertEvent(events: SessionEvent[], event: SessionEvent) {
   return [...events, event].sort((a, b) => a.seq - b.seq)
 }
 
-/** 流式 chunk：只补丁最后一条 streaming assistant，避免每 delta 全量 projectNodes。 */
 function patchStreamingNodes(
   nodes: ChatNode[],
   chunk: Extract<SessionEvent, { type: 'assistant/chunk' }>,
 ): ChatNode[] {
   const last = nodes.at(-1)
   if (last?.kind === 'assistant' && last.streaming) {
-    // coalesced chunk.text 已是累计全文
     if (last.text === chunk.text) return nodes
     return [...nodes.slice(0, -1), { ...last, text: chunk.text, streaming: true }]
   }
