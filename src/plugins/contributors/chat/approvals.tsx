@@ -5,7 +5,7 @@ import { SessionProjectPanel } from './project-panel.tsx'
 
 type AgentMode = 'standard' | 'minimal'
 
-/** Dock 顶栏：Bind project + 极简/标准胶囊；pending approval 在 auto/hold 上方提示。 */
+/** Dock 顶栏：左侧文件 + 标准/极简胶囊，右侧 auto/hold；同一水平线。 */
 export function ApprovalsRail(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
@@ -48,28 +48,6 @@ export function ApprovalsRail(props: SlotProps) {
 
   return (
     <div className="w-full space-y-2">
-      <div className="dock-capsules dock-capsules-float" role="toolbar" aria-label="Session controls">
-        <SessionProjectPanel {...props} />
-        <button
-          type="button"
-          className={`dock-capsule${agentMode === 'standard' ? ' is-active' : ''}`}
-          disabled={modeBusy}
-          aria-pressed={agentMode === 'standard'}
-          onClick={() => void setMode('standard')}
-        >
-          标准模式
-        </button>
-        <button
-          type="button"
-          className={`dock-capsule${agentMode === 'minimal' ? ' is-active' : ''}`}
-          disabled={modeBusy}
-          aria-pressed={agentMode === 'minimal'}
-          onClick={() => void setMode('minimal')}
-        >
-          极简模式
-        </button>
-      </div>
-
       {approvals.length ? (
         <div className="dock-approval-hint" role="status">
           <div className="dock-approval-hint-label">待确认工具 · 先处理后再发</div>
@@ -101,9 +79,38 @@ export function ApprovalsRail(props: SlotProps) {
         </div>
       ) : null}
 
-      <div className="flex items-center justify-end gap-2 px-1 text-[11px] text-[var(--dsw-label-3)]">
-        <span className="sr-only">Tool approval mode</span>
-        <div className="flex overflow-hidden rounded-full border border-[var(--dsw-border)] bg-white">
+      <div
+        className="flex items-center justify-between gap-2 bg-transparent px-1 text-[11px] text-[var(--dsw-label-3)]"
+        role="toolbar"
+        aria-label="Session controls"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <SessionProjectPanel {...props} />
+          <span className="sr-only">Agent mode</span>
+          <div className="dock-seg">
+            {([
+              ['standard', '标准'],
+              ['minimal', '极简'],
+            ] as const).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                disabled={modeBusy}
+                aria-pressed={agentMode === mode}
+                className={`px-2.5 py-1 ${
+                  agentMode === mode
+                    ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
+                    : 'hover:bg-black/[0.03]'
+                }`}
+                onClick={() => void setMode(mode)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="dock-seg">
+          <span className="sr-only">Tool approval mode</span>
           {(['auto', 'hold'] as const).map((mode) => (
             <button
               key={mode}

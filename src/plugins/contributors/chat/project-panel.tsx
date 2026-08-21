@@ -1,7 +1,7 @@
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindProjectView, type ProjectViewService } from '../../infrastructure/project-view.ts'
 
-/** 紧凑项目绑定胶囊：挂在对话 dock（输入框上方）与模式切换并列。 */
+/** 紧凑项目绑定：输入框上方左侧，与标准/极简胶囊同一行。 */
 export function SessionProjectPanel(props: SlotProps) {
   const useProjectView = props.useProjectView as ReturnType<typeof bindProjectView>
   const projectView = props.projectView as ProjectViewService

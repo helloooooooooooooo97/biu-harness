@@ -123,7 +123,7 @@ export function ChatConfig(_props: SlotProps) {
         </select>
       </label>
       <p className="m-0 text-xs leading-5 text-[var(--dsw-label-3)]">
-        也可在对话输入上方的胶囊快速切换「标准 / 极简」。
+        也可在对话输入上方与文件并列的胶囊快速切换「标准 / 极简」。
       </p>
       {tools.length ? (
         <p className="m-0 text-xs leading-5 text-[var(--dsw-label-3)]">

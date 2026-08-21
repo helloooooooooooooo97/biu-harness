@@ -12,6 +12,7 @@ import {
   type AppModuleId,
 } from '../infrastructure/app-modules.ts'
 import { BrandWordmark, FishLogo } from './brand.tsx'
+import { LuGitFork, LuPlus } from 'react-icons/lu'
 
 export const name = 'shell'
 export const inject = ['slots', 'snapshot', 'sessionView', 'projectView']
@@ -173,39 +174,40 @@ function Shell(props: SlotProps) {
         }`}
         aria-hidden={activeModule !== 'agent'}
       >
-        <div className="flex shrink-0 flex-col gap-2 px-4 pt-4 pb-2">
+        <div className="shrink-0 px-4 pt-4 pb-2">
           <BrandWordmark />
-          <div className="text-[13px] font-semibold tracking-tight">Agent</div>
-        </div>
-        <div className="shrink-0 px-3 pb-3">
-          <button
-            type="button"
-            className="flex w-full items-center justify-center gap-2 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-2 text-sm font-medium hover:bg-[var(--dsw-business-soft)]"
-            onClick={() => {
-              void sessionView.newSession().then((id) => navigate(`/s/${id}`))
-            }}
-          >
-            <span className="text-lg leading-none">+</span>
-            New Session
-          </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3">
-          <div className="mb-2 flex items-center justify-between px-1">
-            <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Sessions</span>
-            {sessionId ? (
+          <div className="mb-2 flex items-center justify-between gap-2 px-1">
+            <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Chat</span>
+            <div className="flex items-center gap-0.5">
               <button
                 type="button"
-                className="text-[11px] text-[var(--dsw-business)] hover:underline"
+                className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-black/[0.04] hover:text-[var(--dsw-business)]"
+                title="New Session"
+                aria-label="New Session"
+                onClick={() => {
+                  void sessionView.newSession().then((id) => navigate(`/s/${id}`))
+                }}
+              >
+                <LuPlus className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-black/[0.04] hover:text-[var(--dsw-business)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--dsw-label-3)]"
+                title="Fork"
+                aria-label="Fork"
+                disabled={!sessionId}
                 onClick={() => {
                   void sessionView.forkCurrent().then((id) => navigate(`/s/${id}`))
                 }}
               >
-                Fork
+                <LuGitFork className="size-3.5" />
               </button>
-            ) : null}
+            </div>
           </div>
           {sessions.length === 0 ? (
-            <p className="px-1 text-[11px] leading-4 text-[var(--dsw-label-3)]">No sessions yet. Send a message or create one.</p>
+            <p className="px-1 text-[11px] leading-4 text-[var(--dsw-label-3)]">No chats yet. Send a message or create one.</p>
           ) : (
             sessions.map((item) => {
               const active = item.id === sessionId
@@ -299,13 +301,15 @@ function Shell(props: SlotProps) {
               }`}
               aria-hidden={view !== 'chat'}
             >
-              <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden px-4 pb-4 md:px-6">
-                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain py-4">
+              <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 py-4 pb-44 md:px-6">
                   {props.renderSlot('stage')}
                 </div>
-                <div className="shrink-0 space-y-2 bg-[var(--dsw-bg)] pt-1 pb-3">
-                  {props.renderSlot('dock')}
-                  {props.renderSlot('composer')}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] bg-transparent px-4 pb-4 md:px-6">
+                  <div className="pointer-events-auto space-y-2 bg-transparent">
+                    {props.renderSlot('dock')}
+                    {props.renderSlot('composer')}
+                  </div>
                 </div>
               </div>
             </div>

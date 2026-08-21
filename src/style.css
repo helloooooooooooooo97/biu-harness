@@ -227,14 +227,25 @@ body {
   gap: 6px;
   border: 1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent);
   border-radius: 999px;
-  background: transparent;
+  background: color-mix(in srgb, var(--dsw-bg) 82%, transparent);
   padding: 5px 11px 5px 9px;
   color: var(--dsw-label-2);
   font-size: 12px;
   line-height: 1.2;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(15, 17, 21, 0.06);
-  backdrop-filter: none;
+  backdrop-filter: blur(10px);
+}
+
+.dock-seg {
+  display: flex;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--dsw-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dsw-bg) 82%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(15, 17, 21, 0.06);
 }
 
 .project-chip:hover:not(:disabled) {
@@ -310,58 +321,6 @@ body {
   color: var(--dsw-danger);
   font-size: 12px;
   font-weight: 700;
-}
-
-/* Dock: three floating capsules on one row, no fill */
-.dock-capsules {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 8px;
-  padding: 0 2px;
-  background: transparent;
-}
-
-.dock-capsules-float {
-  position: relative;
-  z-index: 2;
-  width: fit-content;
-  max-width: 100%;
-  margin: 0 auto 2px;
-  background: transparent;
-}
-
-.dock-capsule {
-  flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent);
-  border-radius: 999px;
-  background: transparent;
-  padding: 5px 12px;
-  color: var(--dsw-label-3);
-  font-size: 12px;
-  line-height: 1.2;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(15, 17, 21, 0.06);
-}
-
-.dock-capsule:hover:not(:disabled) {
-  color: var(--dsw-label);
-  border-color: color-mix(in srgb, var(--dsw-label) 22%, var(--dsw-border));
-  background: transparent;
-  box-shadow: 0 6px 18px rgba(15, 17, 21, 0.08);
-}
-
-.dock-capsule.is-active {
-  color: var(--dsw-business);
-  border-color: color-mix(in srgb, var(--dsw-business) 45%, var(--dsw-border));
-  background: transparent;
-  font-weight: 550;
-  box-shadow: 0 6px 18px rgba(65, 118, 230, 0.12);
-}
-
-.dock-capsule:disabled {
-  opacity: 0.55;
-  cursor: default;
 }
 
 .dock-approval-hint {
