@@ -212,7 +212,6 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
           <span>{rows.length} events</span>
           <span className="traj-meta-sep">·</span>
           <span>{groups.length} turns</span>
-          <span className="traj-meta-sep">·</span>
           <span className="traj-meta-usage" title="Sum of assistant/message usage in this session">
             <span className="traj-meta-usage-label">usage</span>
             <UsageInline usage={cumulative} />

@@ -752,6 +752,7 @@ body {
   align-items: center;
   gap: 6px;
   min-width: 0;
+  margin-left: auto;
 }
 
 .traj-meta-usage-label {
