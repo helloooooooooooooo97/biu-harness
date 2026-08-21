@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVirtualizer } from '@tanstack/react-virtual'
+import { LuCheck, LuCopy, LuGitFork } from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import type { ChatNode } from '../../infrastructure/session-project.ts'
@@ -24,25 +25,90 @@ function findScrollParent(el: HTMLElement | null): HTMLElement | null {
   return null
 }
 
-function NodeView({ node, onInspect }: { node: ChatNode; onInspect: (callId: string) => void }) {
+function AssistantActions({
+  text,
+  onFork,
+}: {
+  text: string
+  onFork: () => void | Promise<void>
+}) {
+  const [copied, setCopied] = useState(false)
+  const [forkBusy, setForkBusy] = useState(false)
+
+  async function copy() {
+    if (!text.trim()) return
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1400)
+    } catch {
+      /* clipboard may be denied */
+    }
+  }
+
+  async function fork() {
+    if (forkBusy) return
+    setForkBusy(true)
+    try {
+      await onFork()
+    } finally {
+      setForkBusy(false)
+    }
+  }
+
+  return (
+    <div className="chat-assistant-actions" role="group" aria-label="消息操作">
+      <button
+        type="button"
+        className={`chat-assistant-action${copied ? ' is-done' : ''}`}
+        title={copied ? '已复制' : '复制'}
+        aria-label={copied ? '已复制' : '复制回复'}
+        onClick={() => void copy()}
+      >
+        {copied ? <LuCheck className="size-3.5" /> : <LuCopy className="size-3.5" />}
+      </button>
+      <button
+        type="button"
+        className="chat-assistant-action"
+        title="Fork 会话"
+        aria-label="Fork 会话"
+        disabled={forkBusy}
+        onClick={() => void fork()}
+      >
+        <LuGitFork className="size-3.5" />
+      </button>
+    </div>
+  )
+}
+
+function NodeView({
+  node,
+  onInspect,
+  onFork,
+}: {
+  node: ChatNode
+  onInspect: (callId: string) => void
+  onFork: () => void | Promise<void>
+}) {
   if (node.kind === 'user') {
     return (
-      <div className="flex w-full justify-end">
-        <div
-          className="max-w-[525px] px-4 py-3 text-[15px] leading-6 text-[var(--dsw-label)]"
-          style={{ background: 'var(--dsw-bubble)', borderRadius: 'var(--dsw-radius-bubble)' }}
-        >
-          {node.kindTag === 'inject' ? <div className="mb-1 text-[10px] text-[var(--dsw-label-3)]">inject</div> : null}
+      <div className="chat-user-row">
+        <div className="chat-user-bubble">
+          {node.kindTag === 'inject' ? <div className="chat-user-tag">inject</div> : null}
           <MarkdownBody text={node.text} />
         </div>
       </div>
     )
   }
   if (node.kind === 'assistant') {
+    const streaming = Boolean(node.streaming)
     return (
-      <div className="w-full self-start text-[15px] leading-7 text-[var(--dsw-label)]">
-        {node.text ? <MarkdownBody text={node.text} streaming={Boolean(node.streaming)} /> : node.streaming ? '…' : null}
-        {node.streaming ? <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span> : null}
+      <div className="chat-assistant-row">
+        <div className="chat-assistant-body">
+          {node.text ? <MarkdownBody text={node.text} streaming={streaming} /> : streaming ? '…' : null}
+          {streaming ? <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span> : null}
+        </div>
+        {!streaming && node.text.trim() ? <AssistantActions text={node.text} onFork={onFork} /> : null}
       </div>
     )
   }
@@ -118,6 +184,12 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     },
     [sessionView, sessionId, navigate],
   )
+
+  const onFork = useCallback(() => {
+    return sessionView.forkCurrent().then((id) => {
+      navigate(`/s/${id}`)
+    })
+  }, [sessionView, navigate])
 
   useLayoutEffect(() => {
     const parent = findScrollParent(rootRef.current)
@@ -201,7 +273,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
                 className="absolute top-0 left-0 w-full"
                 style={{ transform: `translateY(${item.start}px)` }}
               >
-                <NodeViewMemo node={node} onInspect={onInspect} />
+                <NodeViewMemo node={node} onInspect={onInspect} onFork={onFork} />
               </div>
             )
           })}
@@ -209,7 +281,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       ) : (
         <div className="flex flex-col gap-4">
           {nodes.map((node) => (
-            <NodeViewMemo key={node.id} node={node} onInspect={onInspect} />
+            <NodeViewMemo key={node.id} node={node} onInspect={onInspect} onFork={onFork} />
           ))}
         </div>
       )}
