@@ -18,8 +18,8 @@ const ESTIMATE_ROW_PX = 160
 const VIRTUALIZE_AFTER = 12
 /** 加大 overscan：快速上滑时预挂载更多行，减少白屏 */
 const OVERSCAN = 18
-/** 滚动停下多久后恢复完整 Markdown */
-const SCROLL_IDLE_MS = 90
+/** 滚动停下多久后，给尚未 hydrate 的行补上完整渲染 */
+const SCROLL_IDLE_MS = 120
 
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
   let node = el?.parentElement ?? null
@@ -29,6 +29,18 @@ function findScrollParent(el: HTMLElement | null): HTMLElement | null {
     node = node.parentElement
   }
   return null
+}
+
+function RowLoading({ kind }: { kind: ChatNode['kind'] }) {
+  const label =
+    kind === 'user' ? '消息加载中' : kind === 'assistant' ? '回复加载中' : kind === 'tool' ? '工具加载中' : '加载中'
+  return (
+    <div className="chat-row-loading" aria-busy="true" aria-label={label}>
+      <span className="chat-row-loading-dot" />
+      <span className="chat-row-loading-dot" />
+      <span className="chat-row-loading-dot" />
+    </div>
+  )
 }
 
 function AssistantActions({
@@ -91,19 +103,24 @@ function NodeView({
   node,
   onInspect,
   onFork,
-  lightweight,
+  hydrated,
 }: {
   node: ChatNode
   onInspect: (callId: string) => void
   onFork: () => void | Promise<void>
-  lightweight: boolean
+  /** false = 滚动中新进视口，只显示 loading，不动已 hydrate 的 Markdown */
+  hydrated: boolean
 }) {
+  if (!hydrated) {
+    return <RowLoading kind={node.kind} />
+  }
+
   if (node.kind === 'user') {
     return (
       <div className="chat-user-row">
         <div className="chat-user-bubble">
           {node.kindTag === 'inject' ? <div className="chat-user-tag">inject</div> : null}
-          <MarkdownBody text={node.text} lightweight={lightweight} />
+          <MarkdownBody text={node.text} />
         </div>
       </div>
     )
@@ -114,27 +131,17 @@ function NodeView({
       <div className="chat-assistant-row">
         <div className="chat-assistant-body">
           {node.text ? (
-            <MarkdownBody text={node.text} streaming={streaming} lightweight={lightweight && !streaming} />
+            <MarkdownBody text={node.text} streaming={streaming} />
           ) : streaming ? (
             '…'
           ) : null}
           {streaming ? <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span> : null}
         </div>
-        {!streaming && !lightweight && node.text.trim() ? (
-          <AssistantActions text={node.text} onFork={onFork} />
-        ) : null}
+        {!streaming && node.text.trim() ? <AssistantActions text={node.text} onFork={onFork} /> : null}
       </div>
     )
   }
   if (node.kind === 'tool') {
-    if (lightweight) {
-      return (
-        <div className="rounded-[12px] border border-[var(--dsw-border)] px-3 py-2 font-mono text-[12px] text-[var(--dsw-label-3)]">
-          {node.name}
-          {node.result ? (node.result.ok ? ' · ok' : ' · err') : ' · …'}
-        </div>
-      )
-    }
     return <ToolCard node={node} onInspect={onInspect} />
   }
   return <div className="self-center text-xs text-[var(--dsw-label-3)]">{node.text}</div>
@@ -199,6 +206,8 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const stickToBottomRef = useRef(true)
   const scrollIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prefetchingRef = useRef(false)
+  /** 已完整渲染过的行：滚动中也不降级成原文 / stub */
+  const hydratedRef = useRef(new Set<string>())
   const [scrollEpoch, setScrollEpoch] = useState(0)
   const [isScrolling, setIsScrolling] = useState(false)
 
@@ -217,6 +226,11 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       navigate(`/s/${id}`)
     })
   }, [sessionView, navigate])
+
+  useEffect(() => {
+    hydratedRef.current = new Set()
+    setIsScrolling(false)
+  }, [sessionId])
 
   useLayoutEffect(() => {
     const parent = findScrollParent(rootRef.current)
@@ -305,7 +319,20 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
 
   if (nodes.length === 0 && !pending && !error) return <EmptyHero />
 
-  const lightweight = virtualize && isScrolling
+  const rowHydrated = (node: ChatNode) => {
+    if (hydratedRef.current.has(node.id)) return true
+    // 流式助手：直接展示流式文本，不走 loading
+    if (node.kind === 'assistant' && node.streaming) {
+      hydratedRef.current.add(node.id)
+      return true
+    }
+    // 静止或非虚表：完整渲染，并记下，下次滚动不再拆掉
+    if (!virtualize || !isScrolling) {
+      hydratedRef.current.add(node.id)
+      return true
+    }
+    return false
+  }
 
   return (
     <div ref={rootRef} className="w-full" data-chat-virtual={virtualize ? '1' : '0'}>
@@ -318,11 +345,12 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
           {virtualizer.getVirtualItems().map((item) => {
             const node = nodes[item.index]
             if (!node) return null
+            const hydrated = rowHydrated(node)
             return (
               <div
                 key={item.key}
                 data-index={item.index}
-                ref={isScrolling ? undefined : virtualizer.measureElement}
+                ref={isScrolling && !hydrated ? undefined : virtualizer.measureElement}
                 className="chat-virt-row absolute top-0 left-0 w-full"
                 style={{ transform: `translateY(${item.start}px)` }}
               >
@@ -330,7 +358,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
                   node={node}
                   onInspect={onInspect}
                   onFork={onFork}
-                  lightweight={lightweight}
+                  hydrated={hydrated}
                 />
               </div>
             )
@@ -344,7 +372,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
               node={node}
               onInspect={onInspect}
               onFork={onFork}
-              lightweight={false}
+              hydrated
             />
           ))}
         </div>
