@@ -26,6 +26,7 @@ function toSummary(record: SessionRecord): SessionSummary {
     title: deriveTitle(record.events, record.id),
     updatedAt: record.events.at(-1)?.ts ?? 0,
     ...(record.project ? { project: record.project } : {}),
+    ...(record.mascot ? { mascot: record.mascot } : {}),
   }
 }
 

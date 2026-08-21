@@ -13,12 +13,7 @@ import {
 } from '../infrastructure/app-modules.ts'
 import { FishLogo } from './brand.tsx'
 import { SessionMascotMark, SidebarMascot } from './mascot/sidebar-mascot.tsx'
-import {
-  assignSessionMascot,
-  DEFAULT_SESSION_MASCOT,
-  ensureSessionMascots,
-  releaseSessionMascot,
-} from './mascot/session-mascot.ts'
+import { DEFAULT_SESSION_MASCOT, resolveSessionMascot } from './mascot/session-mascot.ts'
 import type { SessionMascotIdentity } from './mascot/grok-bot-types.ts'
 import { LuPlus } from 'react-icons/lu'
 
@@ -142,16 +137,18 @@ function Shell(props: SlotProps) {
   const view = useSessionView((state) => state.view)
   const agentBusy = useSessionView((state) => state.agentStatus === 'running')
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [mascotMap, setMascotMap] = useState<Record<string, SessionMascotIdentity>>({})
   const activeModule = moduleIdFromPath(location.pathname)
   const appRoute = parseAppPath(location.pathname)
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   const agentHref = sessionId ? `/s/${sessionId}${view === 'trajectory' ? '/trajectory' : ''}` : '/'
-  const activeMascot =
-    (routeSessionId && mascotMap[routeSessionId]) ||
-    (sessionId && mascotMap[sessionId]) ||
-    DEFAULT_SESSION_MASCOT
+  const activeSession =
+    sessions.find((item) => item.id === routeSessionId) || sessions.find((item) => item.id === sessionId)
+  const activeMascot = activeSession
+    ? resolveSessionMascot(activeSession.id, activeSession.mascot)
+    : routeSessionId
+      ? resolveSessionMascot(routeSessionId)
+      : DEFAULT_SESSION_MASCOT
 
   // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
   useEffect(() => {
@@ -164,10 +161,6 @@ function Shell(props: SlotProps) {
   useEffect(() => {
     void sessionView.refreshSessions()
   }, [sessionView])
-
-  useEffect(() => {
-    setMascotMap(ensureSessionMascots(sessions.map((item) => item.id)))
-  }, [sessions])
 
   useEffect(() => {
     void projectView.attachSession(sessionId, project)
@@ -215,11 +208,7 @@ function Shell(props: SlotProps) {
                 title="New Session"
                 aria-label="New Session"
                 onClick={() => {
-                  void sessionView.newSession().then((id) => {
-                    const identity = assignSessionMascot(id)
-                    setMascotMap((prev) => ({ ...prev, [id]: identity }))
-                    navigate(`/s/${id}`)
-                  })
+                  void sessionView.newSession().then((id) => navigate(`/s/${id}`))
                 }}
               >
                 <LuPlus className="size-3.5" />
@@ -231,7 +220,7 @@ function Shell(props: SlotProps) {
           ) : (
             sessions.map((item) => {
               const active = item.id === routeSessionId
-              const identity = mascotMap[item.id] ?? DEFAULT_SESSION_MASCOT
+              const identity = resolveSessionMascot(item.id, item.mascot)
               return (
                 <div
                   key={item.id}
@@ -268,12 +257,6 @@ function Shell(props: SlotProps) {
                       event.stopPropagation()
                       if (!window.confirm(`Delete session “${item.title}”?`)) return
                       const wasActive = item.id === sessionId
-                      releaseSessionMascot(item.id)
-                      setMascotMap((prev) => {
-                        const next = { ...prev }
-                        delete next[item.id]
-                        return next
-                      })
                       void sessionView.deleteSession(item.id).then(() => {
                         if (!wasActive) return
                         const next = sessionView.get().sessionId

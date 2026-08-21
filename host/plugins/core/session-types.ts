@@ -38,11 +38,18 @@ export interface SessionProject {
   boundAt: number
 }
 
+/** Per-chat Grok shape+color role — assigned once at create and persisted. */
+export interface SessionMascot {
+  shape: string
+  color: string
+}
+
 export interface SessionRecord {
   id: string
   version: number
   events: SessionEvent[]
   project?: SessionProject
+  mascot?: SessionMascot
 }
 
 /** 侧栏列表用：不必加载整段 events。 */
@@ -53,6 +60,7 @@ export interface SessionSummary {
   title: string
   updatedAt: number
   project?: SessionProject
+  mascot?: SessionMascot
 }
 
 export interface SessionStore {
