@@ -214,6 +214,7 @@ body {
 .project-chip-wrap {
   display: inline-flex;
   max-width: min(220px, 36vw);
+  flex-shrink: 1;
   align-items: center;
   gap: 2px;
 }
@@ -224,20 +225,23 @@ body {
   max-width: 100%;
   align-items: center;
   gap: 6px;
-  border: 1px solid var(--dsw-border);
+  border: 1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent);
   border-radius: 999px;
-  background: #fff;
-  padding: 4px 10px 4px 8px;
+  background: transparent;
+  padding: 5px 11px 5px 9px;
   color: var(--dsw-label-2);
   font-size: 12px;
   line-height: 1.2;
   cursor: pointer;
+  box-shadow: 0 4px 14px rgba(15, 17, 21, 0.06);
+  backdrop-filter: none;
 }
 
 .project-chip:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--dsw-business) 35%, var(--dsw-border));
-  background: var(--dsw-business-soft);
+  border-color: color-mix(in srgb, var(--dsw-business) 40%, var(--dsw-border));
+  background: transparent;
   color: var(--dsw-business);
+  box-shadow: 0 6px 18px rgba(65, 118, 230, 0.12);
 }
 
 .project-chip:disabled,
@@ -253,6 +257,7 @@ body {
 .project-chip-muted {
   border-style: dashed;
   color: var(--dsw-label-3);
+  box-shadow: none;
   cursor: default;
 }
 
@@ -273,7 +278,7 @@ body {
 .project-chip-hint {
   flex-shrink: 0;
   border-radius: 999px;
-  background: rgba(15, 17, 21, 0.06);
+  background: transparent;
   padding: 1px 6px;
   color: var(--dsw-label-3);
   font-size: 10px;
@@ -297,7 +302,7 @@ body {
 }
 
 .project-chip-unbind:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.05);
+  background: transparent;
   color: var(--dsw-danger);
 }
 
@@ -307,45 +312,54 @@ body {
   font-weight: 700;
 }
 
-/* Dock: Bind project + agent mode capsules */
+/* Dock: three floating capsules on one row, no fill */
 .dock-capsules {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
   padding: 0 2px;
+  background: transparent;
 }
 
-.dock-mode-pills {
-  display: inline-flex;
-  overflow: hidden;
-  border: 1px solid var(--dsw-border);
+.dock-capsules-float {
+  position: relative;
+  z-index: 2;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 2px;
+  background: transparent;
+}
+
+.dock-capsule {
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent);
   border-radius: 999px;
-  background: #fff;
-}
-
-.dock-mode-pill {
-  padding: 4px 10px;
+  background: transparent;
+  padding: 5px 12px;
+  color: var(--dsw-label-3);
   font-size: 12px;
   line-height: 1.2;
-  color: var(--dsw-label-3);
-  background: transparent;
-  border: 0;
   cursor: pointer;
+  box-shadow: 0 4px 14px rgba(15, 17, 21, 0.06);
 }
 
-.dock-mode-pill:hover:not(:disabled) {
+.dock-capsule:hover:not(:disabled) {
   color: var(--dsw-label);
-  background: rgba(0, 0, 0, 0.03);
+  border-color: color-mix(in srgb, var(--dsw-label) 22%, var(--dsw-border));
+  background: transparent;
+  box-shadow: 0 6px 18px rgba(15, 17, 21, 0.08);
 }
 
-.dock-mode-pill.is-active {
+.dock-capsule.is-active {
   color: var(--dsw-business);
-  background: var(--dsw-business-soft);
+  border-color: color-mix(in srgb, var(--dsw-business) 45%, var(--dsw-border));
+  background: transparent;
   font-weight: 550;
+  box-shadow: 0 6px 18px rgba(65, 118, 230, 0.12);
 }
 
-.dock-mode-pill:disabled {
+.dock-capsule:disabled {
   opacity: 0.55;
   cursor: default;
 }

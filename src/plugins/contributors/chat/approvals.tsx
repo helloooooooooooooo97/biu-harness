@@ -48,28 +48,26 @@ export function ApprovalsRail(props: SlotProps) {
 
   return (
     <div className="w-full space-y-2">
-      <div className="dock-capsules" role="toolbar" aria-label="Session controls">
+      <div className="dock-capsules dock-capsules-float" role="toolbar" aria-label="Session controls">
         <SessionProjectPanel {...props} />
-        <div className="dock-mode-pills" role="group" aria-label="Agent mode">
-          <button
-            type="button"
-            className={`dock-mode-pill${agentMode === 'standard' ? ' is-active' : ''}`}
-            disabled={modeBusy}
-            aria-pressed={agentMode === 'standard'}
-            onClick={() => void setMode('standard')}
-          >
-            标准模式
-          </button>
-          <button
-            type="button"
-            className={`dock-mode-pill${agentMode === 'minimal' ? ' is-active' : ''}`}
-            disabled={modeBusy}
-            aria-pressed={agentMode === 'minimal'}
-            onClick={() => void setMode('minimal')}
-          >
-            极简模式
-          </button>
-        </div>
+        <button
+          type="button"
+          className={`dock-capsule${agentMode === 'standard' ? ' is-active' : ''}`}
+          disabled={modeBusy}
+          aria-pressed={agentMode === 'standard'}
+          onClick={() => void setMode('standard')}
+        >
+          标准模式
+        </button>
+        <button
+          type="button"
+          className={`dock-capsule${agentMode === 'minimal' ? ' is-active' : ''}`}
+          disabled={modeBusy}
+          aria-pressed={agentMode === 'minimal'}
+          onClick={() => void setMode('minimal')}
+        >
+          极简模式
+        </button>
       </div>
 
       {approvals.length ? (
