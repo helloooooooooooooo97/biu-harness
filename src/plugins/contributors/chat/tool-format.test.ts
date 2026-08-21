@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { diffStats, lineDiff, parseToolCall, toolSummary } from './tool-format.ts'
+import { diffStats, formatToolDetail, lineDiff, parseToolCall, prettyJsonString, toolSummary } from './tool-format.ts'
 
 test('lineDiff marks removals and additions', () => {
   const lines = lineDiff('a\nb\nc', 'a\nx\nc')
@@ -52,4 +52,28 @@ test('parseToolCall create/insert', () => {
     JSON.stringify({ command: 'insert', path: 'n.ts', insert_line: 2, new_str: 'x' }),
   )
   assert.equal(inserted.kind, 'insert')
+})
+
+test('formatToolDetail unwraps bash stdout/stderr json', () => {
+  const formatted = formatToolDetail(
+    JSON.stringify({ code: 0, stdout: 'hello\nworld\n', stderr: '' }),
+    'bash',
+  )
+  assert.equal(formatted?.kind, 'bash')
+  if (formatted?.kind !== 'bash') return
+  assert.equal(formatted.code, 0)
+  assert.equal(formatted.stdout, 'hello\nworld\n')
+  assert.equal(formatted.stderr, '')
+})
+
+test('formatToolDetail pretty-prints generic json objects', () => {
+  const formatted = formatToolDetail('{"a":1,"b":[2,3]}')
+  assert.equal(formatted?.kind, 'json')
+  if (formatted?.kind !== 'json') return
+  assert.match(formatted.text, /\n/)
+  assert.match(formatted.text, /"a": 1/)
+})
+
+test('prettyJsonString indents objects', () => {
+  assert.match(prettyJsonString('{"x":1}'), /"x": 1/)
 })

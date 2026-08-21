@@ -72,6 +72,66 @@ function parseJsonObject(raw: string): Record<string, unknown> | null {
   }
 }
 
+function parseJsonValue(raw: string): unknown | undefined {
+  const text = raw.trim()
+  if (!text || (text[0] !== '{' && text[0] !== '[' && text[0] !== '"' && text !== 'true' && text !== 'false' && text !== 'null' && !/^-?\d/.test(text))) {
+    return undefined
+  }
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return undefined
+  }
+}
+
+/** 把工具结果里的 JSON 变得可读；bash 特判 stdout/stderr。 */
+export type FormattedDetail =
+  | { kind: 'bash'; code: number | null; stdout: string; stderr: string }
+  | { kind: 'text'; text: string }
+  | { kind: 'json'; text: string }
+
+export function formatToolDetail(detail: string | undefined, toolKind?: ParsedToolCall['kind']): FormattedDetail | null {
+  if (detail == null || detail === '') return null
+  const trimmed = detail.trim()
+
+  if (toolKind === 'bash' || trimmed.startsWith('{')) {
+    const obj = parseJsonObject(trimmed)
+    if (obj && ('stdout' in obj || 'stderr' in obj || 'code' in obj)) {
+      const codeRaw = obj.code
+      const code =
+        typeof codeRaw === 'number'
+          ? codeRaw
+          : codeRaw === null
+            ? null
+            : typeof codeRaw === 'string' && /^-?\d+$/.test(codeRaw)
+              ? Number(codeRaw)
+              : null
+      return {
+        kind: 'bash',
+        code,
+        stdout: typeof obj.stdout === 'string' ? obj.stdout : obj.stdout != null ? String(obj.stdout) : '',
+        stderr: typeof obj.stderr === 'string' ? obj.stderr : obj.stderr != null ? String(obj.stderr) : '',
+      }
+    }
+  }
+
+  const parsed = parseJsonValue(trimmed)
+  if (parsed !== undefined && (typeof parsed === 'object' || Array.isArray(parsed))) {
+    return { kind: 'json', text: JSON.stringify(parsed, null, 2) }
+  }
+  return { kind: 'text', text: detail }
+}
+
+export function prettyJsonString(raw: string): string {
+  const parsed = parseJsonValue(raw)
+  if (parsed === undefined) return raw
+  try {
+    return JSON.stringify(parsed, null, 2)
+  } catch {
+    return raw
+  }
+}
+
 function asString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined
 }
