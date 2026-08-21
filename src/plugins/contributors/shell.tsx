@@ -12,7 +12,7 @@ import {
   type AppModuleId,
 } from '../infrastructure/app-modules.ts'
 import { BrandWordmark, FishLogo } from './brand.tsx'
-import { LuGitFork, LuPlus } from 'react-icons/lu'
+import { LuPlus } from 'react-icons/lu'
 
 export const name = 'shell'
 export const inject = ['slots', 'snapshot', 'sessionView', 'projectView']
@@ -193,18 +193,6 @@ function Shell(props: SlotProps) {
                 }}
               >
                 <LuPlus className="size-3.5" />
-              </button>
-              <button
-                type="button"
-                className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--dsw-label-3)]"
-                title="Fork"
-                aria-label="Fork"
-                disabled={!sessionId}
-                onClick={() => {
-                  void sessionView.forkCurrent().then((id) => navigate(`/s/${id}`))
-                }}
-              >
-                <LuGitFork className="size-3.5" />
               </button>
             </div>
           </div>
