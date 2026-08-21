@@ -298,10 +298,10 @@ function Shell(props: SlotProps) {
               aria-hidden={view !== 'chat'}
             >
               <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 py-4 pb-44 md:px-6">
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 py-4 pb-44 md:px-8 lg:px-10">
                   {props.renderSlot('stage')}
                 </div>
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] bg-transparent px-4 pb-4 md:px-6">
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] bg-transparent px-6 pb-4 md:px-8 lg:px-10">
                   <div className="pointer-events-auto space-y-2 bg-transparent">
                     {props.renderSlot('dock')}
                     {props.renderSlot('composer')}

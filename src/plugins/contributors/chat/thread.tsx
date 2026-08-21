@@ -131,13 +131,15 @@ function NodeView({
     const streaming = Boolean(node.streaming)
     return (
       <div className="chat-assistant-row">
-        <div className="chat-assistant-body">
-          {node.text ? (
-            <MarkdownBody text={node.text} streaming={streaming} />
-          ) : streaming ? (
-            '…'
-          ) : null}
-          {streaming ? <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span> : null}
+        <div className="chat-assistant-main">
+          <div className="chat-assistant-body">
+            {node.text ? (
+              <MarkdownBody text={node.text} streaming={streaming} />
+            ) : streaming ? (
+              '…'
+            ) : null}
+            {streaming ? <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span> : null}
+          </div>
         </div>
         {!streaming && node.text.trim() ? <AssistantActions text={node.text} onFork={onFork} /> : null}
       </div>
