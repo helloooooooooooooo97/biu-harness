@@ -9,6 +9,8 @@ import {
   type SessionRecord,
   type SessionStore,
   type SessionSummary,
+  type SessionType,
+  normalizeSessionType,
 } from '../core/session-types.ts'
 import { isSessionMascot, parseSessionMascot } from '../core/session-mascot.ts'
 
@@ -21,6 +23,7 @@ type SessionRow = {
   version: number
   project_json: string | null
   mascot_json: string | null
+  type: string | null
   event_count: number
   title: string
   updated_at: number
@@ -85,13 +88,18 @@ export class SqliteSessionStore implements SessionStore {
     } catch {
       /* column already exists */
     }
+    try {
+      this.db.exec(`ALTER TABLE sessions ADD COLUMN type TEXT NOT NULL DEFAULT 'chat'`)
+    } catch {
+      /* column already exists */
+    }
     return this
   }
 
   async load(id: string): Promise<SessionRecord | undefined> {
     const row = this.db
-      .prepare('SELECT id, version, project_json, mascot_json FROM sessions WHERE id = ?')
-      .get(id) as Pick<SessionRow, 'id' | 'version' | 'project_json' | 'mascot_json'> | undefined
+      .prepare('SELECT id, version, project_json, mascot_json, type FROM sessions WHERE id = ?')
+      .get(id) as Pick<SessionRow, 'id' | 'version' | 'project_json' | 'mascot_json' | 'type'> | undefined
     if (!row) return undefined
     if (row.version !== SESSION_FORMAT_VERSION) {
       throw new Error(`unsupported session version ${row.version}`)
@@ -102,10 +110,12 @@ export class SqliteSessionStore implements SessionStore {
     const events = eventRows.map((item) => JSON.parse(item.event_json) as SessionEvent)
     const project = parseProject(row.project_json)
     const mascot = parseMascot(row.mascot_json)
+    const type = normalizeSessionType(row.type) as SessionType
     return {
       id: row.id,
       version: row.version,
       events,
+      type,
       ...(project ? { project } : {}),
       ...(mascot ? { mascot } : {}),
     }
@@ -119,18 +129,20 @@ export class SqliteSessionStore implements SessionStore {
     const updatedAt = record.events.at(-1)?.ts ?? Date.now()
     const projectJson = record.project ? JSON.stringify(record.project) : null
     const mascotJson = record.mascot ? JSON.stringify(record.mascot) : null
+    const type = normalizeSessionType(record.type)
     const eventCount = record.events.length
 
     const insertEvent = this.db.prepare(
       'INSERT INTO events (session_id, seq, ts, type, event_json) VALUES (?, ?, ?, ?, ?)',
     )
     const upsertSession = this.db.prepare(`
-      INSERT INTO sessions (id, version, project_json, mascot_json, event_count, title, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO sessions (id, version, project_json, mascot_json, type, event_count, title, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         version = excluded.version,
         project_json = excluded.project_json,
         mascot_json = excluded.mascot_json,
+        type = excluded.type,
         event_count = excluded.event_count,
         title = excluded.title,
         updated_at = excluded.updated_at
@@ -157,7 +169,7 @@ export class SqliteSessionStore implements SessionStore {
 
     this.db.exec('BEGIN IMMEDIATE')
     try {
-      upsertSession.run(record.id, record.version, projectJson, mascotJson, eventCount, title, updatedAt)
+      upsertSession.run(record.id, record.version, projectJson, mascotJson, type, eventCount, title, updatedAt)
 
       if (storedCount === 0) {
         if (eventCount > 0) replaceAll()
@@ -199,7 +211,7 @@ export class SqliteSessionStore implements SessionStore {
   async listSummaries(): Promise<SessionSummary[]> {
     const rows = this.db
       .prepare(
-        'SELECT id, version, project_json, mascot_json, event_count, title, updated_at FROM sessions ORDER BY updated_at DESC',
+        'SELECT id, version, project_json, mascot_json, type, event_count, title, updated_at FROM sessions ORDER BY updated_at DESC',
       )
       .all() as SessionRow[]
     return rows.map((row) => {
@@ -211,6 +223,7 @@ export class SqliteSessionStore implements SessionStore {
         eventCount: row.event_count,
         title: row.title || row.id.slice(0, 8),
         updatedAt: row.updated_at,
+        type: normalizeSessionType(row.type),
         ...(project ? { project } : {}),
         ...(mascot ? { mascot } : {}),
       }

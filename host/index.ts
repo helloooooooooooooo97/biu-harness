@@ -19,6 +19,7 @@ import * as approvals from './plugins/orchestration/approvals.ts'
 import * as agentLoop from './plugins/orchestration/agent-loop.ts'
 import * as agents from './plugins/orchestration/agents.ts'
 import * as subagents from './plugins/seams/subagents.ts'
+import * as liveSessions from './plugins/seams/live-sessions.ts'
 import * as hub from './plugins/registry/hub.ts'
 
 const publicDir = join(dirname(fileURLToPath(import.meta.url)), '../public')
@@ -56,6 +57,7 @@ async function boot() {
   await ctx.plugin(agentLoop)
   await ctx.plugin(agents)
   await ctx.plugin(subagents)
+  await ctx.plugin(liveSessions)
   await ctx.plugin(hub)
 }
 

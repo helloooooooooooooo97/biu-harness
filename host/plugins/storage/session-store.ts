@@ -8,6 +8,7 @@ import {
   type SessionRecord,
   type SessionStore,
   type SessionSummary,
+  normalizeSessionType,
 } from '../core/session-types.ts'
 
 function deriveTitle(events: SessionEvent[], fallbackId: string): string {
@@ -25,6 +26,7 @@ function toSummary(record: SessionRecord): SessionSummary {
     eventCount: record.events.length,
     title: deriveTitle(record.events, record.id),
     updatedAt: record.events.at(-1)?.ts ?? 0,
+    type: normalizeSessionType(record.type),
     ...(record.project ? { project: record.project } : {}),
     ...(record.mascot ? { mascot: record.mascot } : {}),
   }

@@ -21,6 +21,7 @@ export interface SessionListItem {
   title: string
   eventCount: number
   updatedAt: number
+  type?: 'chat' | 'live'
   project?: { name: string; path?: string; boundAt: number }
   mascot?: { shape: string; color: string }
 }
@@ -114,7 +115,8 @@ function sessionsEqual(a: SessionListItem[], b: SessionListItem[]): boolean {
       left.project?.path !== right.project?.path ||
       left.project?.name !== right.project?.name ||
       left.mascot?.shape !== right.mascot?.shape ||
-      left.mascot?.color !== right.mascot?.color
+      left.mascot?.color !== right.mascot?.color ||
+      (left.type ?? 'chat') !== (right.type ?? 'chat')
     ) {
       return false
     }
@@ -337,8 +339,13 @@ export class SessionViewService extends Service {
     this.replace({ approvalMode: body.mode === 'hold' ? 'hold' : 'auto' })
   }
 
-  async newSession() {
-    const res = await fetch('/api/sessions', { method: 'POST' })
+  async newSession(opts: { type?: 'chat' | 'live' } = {}) {
+    const type = opts.type === 'live' ? 'live' : 'chat'
+    const res = await fetch('/api/sessions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ type }),
+    })
     const body = (await res.json()) as { id?: string }
     if (!body.id) throw new Error('无法创建 session')
     await this.load(body.id, { view: 'chat' })

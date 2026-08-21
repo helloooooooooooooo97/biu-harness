@@ -191,10 +191,13 @@ export function apply(ctx: Context) {
     route.send(200, chat.patch(payload ?? {}))
   })
   ctx.http.route('POST', '/api/sessions', async (route) => {
-    const record = await ctx.sessions.create()
+    const payload = ((await route.json().catch(() => null)) ?? {}) as { type?: string }
+    const type = payload?.type === 'live' ? 'live' : 'chat'
+    const record = await ctx.sessions.create(undefined, { type })
     route.send(201, {
       id: record.id,
       version: record.version,
+      type: record.type ?? type,
       ...(record.mascot ? { mascot: record.mascot } : {}),
     })
   })
@@ -207,6 +210,7 @@ export function apply(ctx: Context) {
         eventCount: item.eventCount,
         title: item.title,
         updatedAt: item.updatedAt,
+        type: item.type ?? 'chat',
         ...(item.project ? { project: item.project } : {}),
         ...(item.mascot ? { mascot: item.mascot } : {}),
       })),
@@ -226,6 +230,7 @@ export function apply(ctx: Context) {
     route.send(200, {
       id: record.id,
       version: record.version,
+      type: record.type ?? 'chat',
       events: window.events,
       hasMore: window.hasMore,
       totalTurns: window.totalTurns,
@@ -357,6 +362,7 @@ export function apply(ctx: Context) {
         id: child.id,
         version: child.version,
         parentId: route.params.id,
+        type: child.type ?? 'chat',
         ...(child.mascot ? { mascot: child.mascot } : {}),
       })
     } catch (error) {
