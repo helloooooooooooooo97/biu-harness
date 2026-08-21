@@ -7,6 +7,8 @@ export type { AgentTurn, LlmConfig }
 
 export interface AgentSendOptions {
   extraTools?: string[]
+  /** false：入队后立即返回，不阻塞等回合结束（Live 派工后可再 progress）。默认 true。 */
+  wait?: boolean
 }
 
 export interface AgentHandle {
@@ -34,6 +36,15 @@ export class AgentsService extends Service {
 
   configure(llm: LlmConfig) {
     this.llm = llm
+  }
+
+  /** Live progress：该 session 的 agent 是否正在跑回合。 */
+  isBusy(sessionId: string) {
+    return Boolean(this.lives.get(sessionId)?.running)
+  }
+
+  inboxPending(sessionId: string) {
+    return this.lives.get(sessionId)?.inbox.length ?? 0
   }
 
   async create(sessionId?: string): Promise<AgentHandle> {
@@ -64,22 +75,33 @@ export class AgentsService extends Service {
         const trimmed = text.trim()
         if (!trimmed) return { text: '请先输入内容。', steps: [] }
         const extraTools = sanitizeExtraTools(opts?.extraTools)
+        const wait = opts?.wait !== false
         live.inbox.push({
           kind: 'wake',
           text: trimmed,
           ...(extraTools.length ? { extraTools } : {}),
         })
-        if (live.running) await live.running
-        let result: AgentTurn = { text: '', steps: [] }
+        if (live.running) {
+          if (!wait) return { text: '', steps: [] }
+          await live.running
+        }
         live.abort = new AbortController()
-        live.running = kick().then((turn) => {
+        let result: AgentTurn = { text: '', steps: [] }
+        const running = kick().then((turn) => {
           result = turn
         })
+        live.running = running
+        if (!wait) {
+          void running.finally(() => {
+            if (live.running === running) live.running = undefined
+          })
+          return { text: '', steps: [] }
+        }
         try {
-          await live.running
+          await running
           return result
         } finally {
-          live.running = undefined
+          if (live.running === running) live.running = undefined
         }
       },
       inject: (text: string, opts?: AgentSendOptions) => {

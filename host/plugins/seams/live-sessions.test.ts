@@ -100,3 +100,63 @@ test('live session turn unlocks session_* tools on top of minimal mode', async (
   // 回合外仍回到极简底座
   assert.deepEqual(ctx.tools.names().sort(), ['bash'])
 })
+
+test('buildSessionProgress derives turn/step/status and afterSeq delta text', () => {
+  const events = [
+    { type: 'session/open' as const, version: 1, seq: 0, ts: 1 },
+    { type: 'turn/start' as const, turn: 1, seq: 1, ts: 2 },
+    { type: 'step/start' as const, turn: 1, step: 1, seq: 2, ts: 3 },
+    { type: 'tool/call' as const, id: '1', name: 'bash', arguments: '{}', seq: 3, ts: 4 },
+    { type: 'tool/result' as const, id: '1', name: 'bash', ok: true, detail: 'ok', seq: 4, ts: 5 },
+    { type: 'assistant/message' as const, text: 'working on it', seq: 5, ts: 6 },
+    { type: 'step/end' as const, turn: 1, step: 1, seq: 6, ts: 7 },
+  ]
+  const mid = liveSessions.buildSessionProgress(events, { busy: true })
+  assert.equal(mid.status, 'running')
+  assert.equal(mid.turn, 1)
+  assert.equal(mid.step, 1)
+  assert.equal(mid.lastTool?.name, 'bash')
+  assert.equal(mid.lastTool?.ok, true)
+  assert.equal(mid.assistantText, 'working on it')
+
+  const more = [
+    ...events,
+    { type: 'assistant/message' as const, text: 'almost done', seq: 7, ts: 8 },
+    { type: 'turn/end' as const, turn: 1, reason: 'complete', seq: 8, ts: 9 },
+  ]
+  const done = liveSessions.buildSessionProgress(more, { afterSeq: 6, busy: false })
+  assert.equal(done.status, 'idle')
+  assert.equal(done.reason, 'complete')
+  assert.equal(done.assistantText, 'almost done')
+  assert.equal(done.newestSeq, 8)
+})
+
+test('session_progress and async wake work for live caller', async () => {
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  await ctx.plugin(tools)
+  await ctx.plugin(systemPrompt)
+  await ctx.plugin(llm)
+  await ctx.plugin(agentLoop)
+  await ctx.plugin(agents)
+  await ctx.plugin(liveSessions)
+
+  const live = await ctx.sessions.create(undefined, { type: 'live' })
+  const chat = await ctx.sessions.create()
+  await ctx.sessions.append(chat.id, { type: 'turn/start', turn: 1 })
+  await ctx.sessions.append(chat.id, { type: 'step/start', turn: 1, step: 2 })
+  await ctx.sessions.append(chat.id, { type: 'assistant/message', text: 'halfway' })
+
+  const progress = (await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_progress', { sessionId: chat.id }, new AbortController().signal),
+  )) as { status: string; step: number; assistantText: string }
+  assert.equal(progress.status, 'running')
+  assert.equal(progress.step, 2)
+  assert.equal(progress.assistantText, 'halfway')
+
+  const listed = (await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_list', {}, new AbortController().signal),
+  )) as { sessions: Array<{ id: string; status: string }> }
+  assert.equal(listed.sessions.find((item) => item.id === chat.id)?.status, 'idle')
+})
