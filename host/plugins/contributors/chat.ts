@@ -12,6 +12,7 @@ import {
   buildTrajectoryWindow,
   findEvent,
 } from '../core/trajectory-index.ts'
+import { readArtifactFile } from '../core/artifacts.ts'
 
 export type { ChatMessage }
 
@@ -280,6 +281,19 @@ export function apply(ctx: Context) {
       oldestSeq: window.oldestSeq,
       newestSeq: window.newestSeq,
     })
+  })
+  ctx.http.route('GET', '/api/sessions/:id/artifacts/:name', async (route) => {
+    const record = await ctx.sessions.get(route.params.id)
+    if (!record) return route.send(404, { error: 'unknown session' })
+    const file = await readArtifactFile(route.params.id, route.params.name)
+    if (!file) return route.send(404, { error: 'unknown artifact' })
+    if (route.res.headersSent) return
+    route.res.writeHead(200, {
+      'content-type': file.mime,
+      'cache-control': 'private, max-age=3600',
+      'content-length': file.data.byteLength,
+    })
+    route.res.end(file.data)
   })
   ctx.http.route('GET', '/api/sessions/:id/events/:seq', async (route) => {
     const record = await ctx.sessions.get(route.params.id)
