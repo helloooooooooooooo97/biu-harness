@@ -65,9 +65,37 @@ export class AgentLoop implements AgentRunner {
 
     const steps: AgentTurn['steps'] = []
     let final = '（空回复）'
+    let chunkBuf = ''
+    let chunkFlush: Promise<void> = Promise.resolve()
+    let chunkTimer: ReturnType<typeof setTimeout> | null = null
+
+    const flushChunks = () => {
+      if (chunkTimer != null) {
+        clearTimeout(chunkTimer)
+        chunkTimer = null
+      }
+      if (!chunkBuf) return chunkFlush
+      const text = chunkBuf
+      chunkBuf = ''
+      chunkFlush = chunkFlush.then(() =>
+        session.append(this.sessionId, { type: 'assistant/chunk', text }),
+      )
+      return chunkFlush
+    }
+
+    const queueChunk = (text: string) => {
+      if (!text) return
+      chunkBuf += text
+      if (chunkTimer != null) return
+      chunkTimer = setTimeout(() => {
+        chunkTimer = null
+        void flushChunks()
+      }, 48)
+    }
 
     for (let step = 0; ; step++) {
       if (this.signal.aborted) {
+        await flushChunks()
         await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'cancelled' })
         throw new Error('cancelled')
       }
@@ -79,10 +107,12 @@ export class AgentLoop implements AgentRunner {
       try {
         reply = await this.llm.chat(messages, this.ctx.tools.schemas(), this.signal, {
           onDelta: async (text) => {
-            if (text) await session.append(this.sessionId, { type: 'assistant/chunk', text })
+            queueChunk(text)
           },
         })
+        await flushChunks()
       } catch (error) {
+        await flushChunks()
         if (this.signal.aborted) {
           await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'cancelled' })
           this.ctx.emit('agent/status', { status: 'idle' })

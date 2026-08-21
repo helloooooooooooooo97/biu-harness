@@ -23,6 +23,12 @@ export class HubService extends Service {
     super(ctx, 'hub')
     ctx.on('internal/dispatch', (mode, name, args) => {
       if (name.startsWith('internal/')) return
+      // 流式 delta 极高频，不进 hub event 总线（避免 Settings EventLog 拖垮主线程）
+      if (name === 'llm/stream') return
+      if (name === 'session/event') {
+        const payload = args[0] as { event?: { type?: string } } | undefined
+        if (payload?.event?.type === 'assistant/chunk') return
+      }
       this.events.unshift({ ts: Date.now(), mode, name, args: clone(args) })
       this.events.splice(80)
       ctx.http.broadcast(HUB_CHANNEL_EVENT, this.events[0])

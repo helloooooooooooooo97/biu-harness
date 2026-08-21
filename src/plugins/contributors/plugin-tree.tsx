@@ -8,10 +8,10 @@ export const inject = ['slots', 'snapshot']
 function PluginTree(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
   const setEnabled = props.setEnabled as (id: string, enabled: boolean) => Promise<void>
-  const snap = useSnapshot((state: Snapshot) => state)
+  const snap = useSnapshot((state: Snapshot) => state.plugins)
   return (
     <ul className="m-0 list-none space-y-2 p-0">
-      {snap.plugins.map((plugin) => (
+      {snap.map((plugin) => (
         <li className="rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-3" key={plugin.id}>
           <div className="flex items-start justify-between gap-3">
             <div>

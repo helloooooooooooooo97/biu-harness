@@ -84,7 +84,10 @@ export class SnapshotService extends Service {
         if (parsed.type === 'session') {
           const detail = parsed.payload as { sessionId?: string; event?: SessionEventLike }
           if (detail.sessionId && detail.event && typeof detail.event.seq === 'number') {
-            this.replace({ lastSessionId: detail.sessionId, lastSessionEvent: detail.event.type })
+            // chunk 不写 snapshot 元数据，避免 Settings 里订阅整表 snapshot 的组件跟着抖
+            if (detail.event.type !== 'assistant/chunk') {
+              this.replace({ lastSessionId: detail.sessionId, lastSessionEvent: detail.event.type })
+            }
             const view = this.ctx.get('sessionView') as
               | { ingest: (sessionId: string, event: SessionEventLike) => void }
               | undefined
