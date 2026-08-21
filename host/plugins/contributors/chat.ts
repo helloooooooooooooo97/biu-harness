@@ -193,28 +193,17 @@ export function apply(ctx: Context) {
     route.send(201, { id: record.id, version: record.version })
   })
   ctx.http.route('GET', '/api/sessions', async (route) => {
-    const ids = await ctx.sessions.list()
-    const items = []
-    for (const id of ids) {
-      const record = await ctx.sessions.get(id)
-      if (!record) continue
-      const users = record.events.filter((event) => event.type === 'user/message')
-      const lastUser = users.at(-1)
-      const title =
-        lastUser && 'text' in lastUser && typeof lastUser.text === 'string'
-          ? lastUser.text.slice(0, 48) || id.slice(0, 8)
-          : id.slice(0, 8)
-      items.push({
-        id,
-        version: record.version,
-        eventCount: record.events.length,
-        title,
-        updatedAt: record.events.at(-1)?.ts ?? 0,
-        ...(record.project ? { project: record.project } : {}),
-      })
-    }
-    items.sort((a, b) => b.updatedAt - a.updatedAt)
-    route.send(200, { sessions: items })
+    const items = await ctx.sessions.listSummaries()
+    route.send(200, {
+      sessions: items.map((item) => ({
+        id: item.id,
+        version: item.version,
+        eventCount: item.eventCount,
+        title: item.title,
+        updatedAt: item.updatedAt,
+        ...(item.project ? { project: item.project } : {}),
+      })),
+    })
   })
   ctx.http.route('GET', '/api/sessions/:id', async (route) => {
     const record = await ctx.sessions.get(route.params.id)

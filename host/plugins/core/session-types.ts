@@ -45,9 +45,20 @@ export interface SessionRecord {
   project?: SessionProject
 }
 
+/** 侧栏列表用：不必加载整段 events。 */
+export interface SessionSummary {
+  id: string
+  version: number
+  eventCount: number
+  title: string
+  updatedAt: number
+  project?: SessionProject
+}
+
 export interface SessionStore {
   load(id: string): Promise<SessionRecord | undefined>
   save(record: SessionRecord): Promise<void>
   list(): Promise<string[]>
+  listSummaries(): Promise<SessionSummary[]>
   delete(id: string): Promise<boolean>
 }
