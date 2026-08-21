@@ -1,8 +1,5 @@
 import { memo } from 'react'
-import { CursorAvatar, type CursorState } from './cursor-avatar.tsx'
-
-/** Cream-on-dark friendly body gradient (matches app neutrals, not loud brand orange). */
-const SIDEBAR_GRADIENT: [string, string, string] = ['#f2f1ed', '#a8a59c', '#5c5a54']
+import { CursorAvatar, DEFAULT_GRADIENT, type CursorState } from './cursor-avatar.tsx'
 
 export type SidebarMascotProps = {
   size?: number
@@ -13,28 +10,33 @@ export type SidebarMascotProps = {
 }
 
 function stateFor(busy: boolean): CursorState {
-  return busy ? 'working' : 'idle'
+  return busy ? 'working' : 'happy'
 }
 
 /** OpenMausBot / Blob Studio cursor mascot — Grok-Bot–style animated sidebar face. */
 export const SidebarMascot = memo(function SidebarMascot({
-  size = 28,
+  size = 44,
   busy = false,
   className,
   title = 'Harness',
 }: SidebarMascotProps) {
   return (
-    <CursorAvatar
-      state={stateFor(busy)}
-      size={size}
-      gradient={SIDEBAR_GRADIENT}
-      eyeColor="#14120f"
-      lookAround={0.35}
-      effects={false}
-      glyphs={false}
-      motion={busy ? 0.85 : 0.55}
-      className={className}
-      title={title}
-    />
+    <span
+      className="sidebar-mascot"
+      style={{ width: size, height: size, display: 'inline-grid', placeItems: 'center' }}
+    >
+      <CursorAvatar
+        state={stateFor(busy)}
+        size={size}
+        gradient={DEFAULT_GRADIENT}
+        eyeColor="#ffffff"
+        lookAround={0.45}
+        effects={!busy}
+        glyphs={false}
+        motion={busy ? 0.9 : 0.65}
+        className={className}
+        title={title}
+      />
+    </span>
   )
 })
