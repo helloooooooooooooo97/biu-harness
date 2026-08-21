@@ -1,11 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
 import type { SlotProps } from '../registry/slots.ts'
 import { bindSnapshot, type Snapshot, type SnapshotService } from '../infrastructure/snapshot.ts'
-import { bindSessionView, type SessionViewService } from '../infrastructure/session-view.ts'
+import { bindSessionView, type SessionListItem, type SessionViewService } from '../infrastructure/session-view.ts'
 import { bindProjectView, type ProjectViewService } from '../infrastructure/project-view.ts'
 import { parseAppPath } from '../infrastructure/session-route.ts'
+import {
+  UNGROUPED_PROJECT_KEY,
+  groupSessionsByProject,
+  readCollapsedProjects,
+  writeCollapsedProjects,
+} from '../infrastructure/session-groups.ts'
 import {
   APP_MODULES,
   moduleIdFromPath,
@@ -18,6 +24,8 @@ import { FolderGlyph } from './chat/project-panel.tsx'
 import { DashboardModule } from './dashboard-module.tsx'
 import {
   LuBug,
+  LuChevronDown,
+  LuChevronRight,
   LuLayoutDashboard,
   LuMessageSquare,
   LuPanelLeft,
@@ -127,6 +135,69 @@ function WorkspaceModule() {
   )
 }
 
+function SessionRow({
+  item,
+  active,
+  busy,
+  view,
+  onDelete,
+}: {
+  item: SessionListItem
+  active: boolean
+  busy: boolean
+  view: string
+  onDelete: () => void
+}) {
+  const identity = resolveSessionMascot(item.id, item.mascot)
+  return (
+    <div
+      className={`group mb-0.5 flex w-full items-stretch rounded-[8px] ${
+        active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-[var(--dsw-hover)]'
+      }`}
+    >
+      <Link
+        to={`/s/${item.id}${view === 'debug' ? '/debug' : ''}`}
+        className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-1.5 text-left text-sm"
+      >
+        <SidebarMascot
+          size={28}
+          identity={identity}
+          busy={busy}
+          title={`${identity.shape} · ${identity.color}`}
+        />
+        <span className="min-w-0 flex-1">
+          <div className="truncate font-medium">
+            {(item.type ?? 'chat') === 'live' ? (
+              <span className="mr-1.5 text-[10px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
+                live
+              </span>
+            ) : null}
+            {item.title}
+          </div>
+          <div className="mt-0.5 font-mono text-[10px] opacity-70">
+            {item.id.slice(0, 8)} · {item.eventCount} events
+          </div>
+        </span>
+      </Link>
+      <button
+        type="button"
+        className="shrink-0 px-2 text-[var(--dsw-label-3)] opacity-0 transition-opacity hover:text-[var(--dsw-danger)] group-hover:opacity-100 focus:opacity-100"
+        aria-label={`Delete session ${item.title}`}
+        title="Delete"
+        onClick={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          onDelete()
+        }}
+      >
+        <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M10 7V5h4v2m-6 3v8m4-8v8m-7-11 1 14h10l1-14" />
+        </svg>
+      </button>
+    </div>
+  )
+}
+
 function Shell(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
@@ -142,12 +213,49 @@ function Shell(props: SlotProps) {
   const agentBusy = useSessionView((state) => state.agentStatus === 'running')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>(() =>
+    readCollapsedProjects(),
+  )
   const activeModule = moduleIdFromPath(location.pathname)
   const appRoute = parseAppPath(location.pathname)
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   const agentHref = sessionId ? `/s/${sessionId}${view === 'debug' ? '/debug' : ''}` : '/'
   const showChatSidebar = activeModule === 'agent' && !sidebarCollapsed
+  const projectGroups = useMemo(() => groupSessionsByProject(sessions), [sessions])
+
+  useEffect(() => {
+    if (!routeSessionId) return
+    const group = projectGroups.find((item) => item.sessions.some((row) => row.id === routeSessionId))
+    if (!group || !collapsedProjects[group.key]) return
+    setCollapsedProjects((prev) => {
+      const next = { ...prev, [group.key]: false }
+      writeCollapsedProjects(next)
+      return next
+    })
+  }, [routeSessionId, projectGroups, collapsedProjects])
+
+  function toggleProjectGroup(key: string) {
+    setCollapsedProjects((prev) => {
+      const next = { ...prev, [key]: !prev[key] }
+      writeCollapsedProjects(next)
+      return next
+    })
+  }
+
+  function createChat(opts: { type?: 'chat' | 'live'; projectPath?: string } = {}) {
+    void sessionView.newSession(opts).then((id) => navigate(`/s/${id}`))
+  }
+
+  function deleteChat(item: SessionListItem) {
+    if (!window.confirm(`Delete session “${item.title}”?`)) return
+    const wasActive = item.id === sessionId
+    void sessionView.deleteSession(item.id).then(() => {
+      if (!wasActive) return
+      const next = sessionView.get().sessionId
+      navigate(next ? `/s/${next}` : '/')
+    })
+  }
 
   // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
   useEffect(() => {
@@ -221,9 +329,7 @@ function Shell(props: SlotProps) {
               className="app-side-actions-item"
               title="添加聊天"
               aria-label="添加聊天"
-              onClick={() => {
-                void sessionView.newSession({ type: 'chat' }).then((id) => navigate(`/s/${id}`))
-              }}
+              onClick={() => createChat({ type: 'chat' })}
             >
               <span className="app-side-actions-icon" aria-hidden>
                 <LuPlus className="size-4" />
@@ -235,9 +341,7 @@ function Shell(props: SlotProps) {
               className="app-side-actions-item"
               title="新建 Live"
               aria-label="新建 Live"
-              onClick={() => {
-                void sessionView.newSession({ type: 'live' }).then((id) => navigate(`/s/${id}`))
-              }}
+              onClick={() => createChat({ type: 'live' })}
             >
               <span className="app-side-actions-icon" aria-hidden>
                 <LuRadio className="size-4" />
@@ -252,66 +356,67 @@ function Shell(props: SlotProps) {
             </Link>
           </div>
 
-          <div className="mt-2">
+          <div className="mt-2 space-y-2">
             {sessions.length === 0 ? (
               <p className="px-2 text-[11px] leading-4 text-[var(--dsw-label-3)]">No chats yet. Send a message or create one.</p>
             ) : (
-              sessions.map((item) => {
-                const active = item.id === routeSessionId
-                const identity = resolveSessionMascot(item.id, item.mascot)
+              projectGroups.map((group) => {
+                const collapsed = Boolean(collapsedProjects[group.key])
+                const isUngrouped = group.key === UNGROUPED_PROJECT_KEY
                 return (
-                  <div
-                    key={item.id}
-                    className={`group mb-0.5 flex w-full items-stretch rounded-[8px] ${
-                      active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-[var(--dsw-hover)]'
-                    }`}
-                  >
-                    <Link
-                      to={`/s/${item.id}${view === 'debug' ? '/debug' : ''}`}
-                      className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-1.5 text-left text-sm"
-                    >
-                      <SidebarMascot
-                        size={28}
-                        identity={identity}
-                        busy={active && agentBusy}
-                        title={`${identity.shape} · ${identity.color}`}
-                      />
-                      <span className="min-w-0 flex-1">
-                        <div className="truncate font-medium">
-                          {(item.type ?? 'chat') === 'live' ? (
-                            <span className="mr-1.5 text-[10px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
-                              live
-                            </span>
-                          ) : null}
-                          {item.title}
-                        </div>
-                        <div className="mt-0.5 font-mono text-[10px] opacity-70">
-                          {item.id.slice(0, 8)} · {item.eventCount} events
-                          {item.project ? ` · ${item.project.name}` : ''}
-                        </div>
-                      </span>
-                    </Link>
-                    <button
-                      type="button"
-                      className="shrink-0 px-2 text-[var(--dsw-label-3)] opacity-0 transition-opacity hover:text-[var(--dsw-danger)] group-hover:opacity-100 focus:opacity-100"
-                      aria-label={`Delete session ${item.title}`}
-                      title="Delete"
-                      onClick={(event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        if (!window.confirm(`Delete session “${item.title}”?`)) return
-                        const wasActive = item.id === sessionId
-                        void sessionView.deleteSession(item.id).then(() => {
-                          if (!wasActive) return
-                          const next = sessionView.get().sessionId
-                          navigate(next ? `/s/${next}` : '/')
-                        })
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M10 7V5h4v2m-6 3v8m4-8v8m-7-11 1 14h10l1-14" />
-                      </svg>
-                    </button>
+                  <div key={group.key} className="min-w-0">
+                    <div className="group/header mb-0.5 flex items-center gap-0.5 px-1">
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 items-center gap-1.5 rounded-[6px] px-1 py-1 text-left text-[11px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
+                        title={group.path ?? group.label}
+                        aria-expanded={!collapsed}
+                        onClick={() => toggleProjectGroup(group.key)}
+                      >
+                        {collapsed ? (
+                          <LuChevronRight className="size-3.5 shrink-0" />
+                        ) : (
+                          <LuChevronDown className="size-3.5 shrink-0" />
+                        )}
+                        {isUngrouped ? (
+                          <span className="grid size-3.5 place-items-center text-[10px] opacity-70" aria-hidden>
+                            —
+                          </span>
+                        ) : (
+                          <FolderGlyph className="size-3.5 shrink-0 opacity-80" />
+                        )}
+                        <span className="min-w-0 flex-1 truncate normal-case tracking-normal">{group.label}</span>
+                        <span className="shrink-0 font-mono text-[10px] opacity-60">{group.sessions.length}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="grid size-6 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] opacity-0 hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)] group-hover/header:opacity-100 focus:opacity-100"
+                        title={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
+                        aria-label={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
+                        onClick={() =>
+                          createChat({
+                            type: 'chat',
+                            ...(group.path ? { projectPath: group.path } : {}),
+                          })
+                        }
+                      >
+                        <LuPlus className="size-3.5" />
+                      </button>
+                    </div>
+                    {collapsed ? null : (
+                      <div className="min-w-0">
+                        {group.sessions.map((item) => (
+                          <SessionRow
+                            key={item.id}
+                            item={item}
+                            active={item.id === routeSessionId}
+                            busy={item.id === routeSessionId && agentBusy}
+                            view={view}
+                            onDelete={() => deleteChat(item)}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )
               })
