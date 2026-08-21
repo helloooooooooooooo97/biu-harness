@@ -125,6 +125,18 @@ test('load fetches tail turns and skips trajectory until ensureTrajectory', asyn
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const url = String(input)
     calls.push(url)
+    if (url.includes('/api/sessions/s1/trajectory')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 's1',
+          rows: [{ id: 'tr-4', seq: 4, turn: 0, step: null, depth: 0, type: 'assistant/message', summary: 'ab' }],
+          hasMore: false,
+          totalTurns: 1,
+        }),
+      } as Response
+    }
     if (url.includes('/api/sessions/s1?turns=')) {
       return {
         ok: true,
@@ -159,6 +171,51 @@ test('load fetches tail turns and skips trajectory until ensureTrajectory', asyn
   assert.equal(view.get().events.some((event) => event.type === 'assistant/chunk'), false)
   assert.equal(view.get().trajectory.length, 0)
   assert.equal(view.get().nodes.some((node) => node.kind === 'assistant' && node.text === 'ab'), true)
+  await view.ensureTrajectory()
+  assert.equal(calls.some((url) => url.includes('/trajectory?turns=')), true)
+  assert.equal(view.get().trajectory.length, 1)
+  assert.equal(calls.some((url) => url.includes('turns=all')), false)
+})
+
+test('fetchEventDetail and fetchEventRequest hit fine-grained APIs', async () => {
+  const calls: string[] = []
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input)
+    calls.push(url)
+    if (url.endsWith('/api/sessions/s1/events/4/request')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 's1', seq: 4, messages: [{ role: 'user', content: 'hi' }] }),
+      } as Response
+    }
+    if (url.endsWith('/api/sessions/s1/events/4')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 's1',
+          event: { type: 'assistant/message', text: 'ab', seq: 4, ts: 5 },
+        }),
+      } as Response
+    }
+    if (url.includes('/api/sessions')) {
+      return { ok: true, status: 200, json: async () => ({ sessions: [] }) } as Response
+    }
+    if (url.includes('/api/approvals')) {
+      return { ok: true, status: 200, json: async () => ({ mode: 'auto', pending: [] }) } as Response
+    }
+    return { ok: false, status: 404, json: async () => ({}) } as Response
+  }) as typeof fetch
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  view.ingest('s1', { type: 'session/open', version: 1, seq: 0, ts: 1 })
+  const event = await view.fetchEventDetail(4)
+  assert.equal(event?.type, 'assistant/message')
+  const request = await view.fetchEventRequest(4)
+  assert.equal(request[0]?.content, 'hi')
+  assert.equal(calls.some((url) => url.includes('/events/4/request')), true)
 })
 
 test('loadOlder prepends earlier turns', async () => {

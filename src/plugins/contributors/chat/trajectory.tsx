@@ -3,7 +3,6 @@ import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import {
   formatTrajectoryUsage,
-  projectRequestMessages,
   sumTrajectoryRowUsage,
   type DerivedMessage,
   type SessionEvent,
@@ -122,19 +121,20 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   const rows = useSessionView((state) => state.trajectory)
   const focusCallId = useSessionView((state) => state.focusCallId)
   const sessionId = useSessionView((state) => state.sessionId)
+  const trajectoryHasMore = useSessionView((state) => state.trajectoryHasMore)
+  const trajectoryLoading = useSessionView((state) => state.trajectoryLoading)
   const [selectedSeq, setSelectedSeq] = useState<number | null>(null)
+  const [detailEvent, setDetailEvent] = useState<SessionEvent | null>(null)
+  const [detailRequest, setDetailRequest] = useState<DerivedMessage[] | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState<string | undefined>()
   /** turn key → collapsed */
   const [collapsedTurns, setCollapsedTurns] = useState<Record<string, boolean>>({})
   /** `${turn}:${step}` → collapsed */
   const [collapsedSteps, setCollapsedSteps] = useState<Record<string, boolean>>({})
 
   const groups = useMemo(() => groupByTurn(rows), [rows])
-  // 不要订阅 events：chunk 流式时 events 每帧变，会拖垮隐藏的 Trajectory 与输入框
   const cumulative = useMemo(() => sumTrajectoryRowUsage(rows), [rows])
-  const selected = useMemo(() => {
-    if (selectedSeq == null) return undefined
-    return sessionView.get().events.find((event) => event.seq === selectedSeq)
-  }, [selectedSeq, rows, sessionView])
 
   useEffect(() => {
     if (!focusCallId) return
@@ -144,8 +144,39 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   }, [focusCallId, rows])
 
   useEffect(() => {
-    if (selectedSeq == null) return
-    if (!sessionView.get().events.some((event) => event.seq === selectedSeq)) setSelectedSeq(null)
+    if (selectedSeq == null) {
+      setDetailEvent(null)
+      setDetailRequest(null)
+      setDetailError(undefined)
+      return
+    }
+    if (!rows.some((row) => row.seq === selectedSeq)) {
+      setSelectedSeq(null)
+      return
+    }
+    let cancelled = false
+    setDetailLoading(true)
+    setDetailError(undefined)
+    setDetailEvent(null)
+    setDetailRequest(null)
+    void (async () => {
+      try {
+        const event = await sessionView.fetchEventDetail(selectedSeq)
+        if (cancelled) return
+        setDetailEvent(event)
+        if (event?.type === 'assistant/message') {
+          const request = await sessionView.fetchEventRequest(selectedSeq)
+          if (!cancelled) setDetailRequest(request)
+        }
+      } catch (error) {
+        if (!cancelled) setDetailError(String(error))
+      } finally {
+        if (!cancelled) setDetailLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [selectedSeq, rows, sessionView])
 
   if (!sessionId) {
@@ -153,6 +184,14 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
       <div className="traj-empty">
         <p className="traj-empty-title">No session</p>
         <p className="traj-empty-body">Open or create a session to inspect its append-only event ledger.</p>
+      </div>
+    )
+  }
+
+  if (!rows.length && trajectoryLoading) {
+    return (
+      <div className="traj-empty">
+        <p className="traj-empty-title">Loading trajectory…</p>
       </div>
     )
   }
@@ -167,7 +206,7 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   }
 
   return (
-    <div className={`traj-root${selected ? ' traj-root-split' : ''}`}>
+    <div className={`traj-root${selectedSeq != null ? ' traj-root-split' : ''}`}>
       <div className="traj-pane">
         <div className="traj-meta">
           <span>{rows.length} events</span>
@@ -179,6 +218,19 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
             <UsageInline usage={cumulative} />
           </span>
         </div>
+
+        {trajectoryHasMore ? (
+          <div className="traj-meta">
+            <button
+              type="button"
+              className="traj-detail-close"
+              disabled={trajectoryLoading}
+              onClick={() => void sessionView.loadOlderTrajectory()}
+            >
+              {trajectoryLoading ? 'Loading…' : 'Load earlier turns'}
+            </button>
+          </div>
+        ) : null}
 
         <div className="traj-head" role="row">
           <span className="traj-col-seq">#</span>
@@ -266,18 +318,22 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
         </div>
       </div>
 
-      {selected ? (
+      {selectedSeq != null ? (
         <aside className="traj-detail" aria-label="Event detail">
           <div className="traj-detail-head">
             <div>
-              <div className="traj-detail-title">#{selected.seq}</div>
-              <div className="traj-detail-type">{selected.type}</div>
+              <div className="traj-detail-title">#{selectedSeq}</div>
+              <div className="traj-detail-type">{detailEvent?.type ?? (detailLoading ? 'loading…' : '—')}</div>
             </div>
             <button type="button" className="traj-detail-close" onClick={() => setSelectedSeq(null)}>
               Close
             </button>
           </div>
-          <EventDetailBody event={selected} events={sessionView.get().events} />
+          {detailLoading ? <div className="traj-detail-body">Loading detail…</div> : null}
+          {detailError ? <div className="traj-detail-body">{detailError}</div> : null}
+          {!detailLoading && detailEvent ? (
+            <EventDetailBody event={detailEvent} request={detailRequest ?? undefined} />
+          ) : null}
         </aside>
       ) : null}
     </div>
@@ -308,11 +364,15 @@ function filterCollapsedSteps(
   return out
 }
 
-function EventDetailBody({ event, events }: { event: SessionEvent; events: SessionEvent[] }) {
-  const fields = detailFields(event, events)
+function EventDetailBody({
+  event,
+  request,
+}: {
+  event: SessionEvent
+  request?: DerivedMessage[]
+}) {
+  const fields = detailFields(event, request)
   const usage = event.type === 'assistant/message' ? event.usage : undefined
-  const request =
-    event.type === 'assistant/message' ? projectRequestMessages(events, event.seq) : undefined
   return (
     <div className="traj-detail-body">
       <dl className="traj-detail-meta">
@@ -385,7 +445,10 @@ function ResponsePanel({ event }: { event: Extract<SessionEvent, { type: 'assist
   )
 }
 
-function detailFields(event: SessionEvent, events: SessionEvent[]): Array<{ label: string; value: string }> {
+function detailFields(
+  event: SessionEvent,
+  request?: DerivedMessage[],
+): Array<{ label: string; value: string }> {
   if (event.type === 'user/message' || event.type === 'assistant/chunk' || event.type === 'system/prompt') {
     return [
       ...(event.type === 'user/message' && event.kind ? [{ label: 'kind', value: event.kind }] : []),
@@ -395,8 +458,7 @@ function detailFields(event: SessionEvent, events: SessionEvent[]): Array<{ labe
   if (event.type === 'assistant/message') {
     const rows = [{ label: 'text', value: `${event.text.length} chars` }]
     if (event.tool_calls?.length) rows.push({ label: 'tool_calls', value: String(event.tool_calls.length) })
-    const requestCount = projectRequestMessages(events, event.seq).length
-    rows.push({ label: 'request', value: `${requestCount} messages (derived)` })
+    if (request) rows.push({ label: 'request', value: `${request.length} messages (derived)` })
     return rows
   }
   if (event.type === 'tool/call') {

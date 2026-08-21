@@ -5,6 +5,13 @@ import '../../types.ts'
 import type { ChatMessage } from './chat-types.ts'
 import type { AgentToolMode } from '../registry/tools.ts'
 import { DEFAULT_TAIL_TURNS, sliceBeforeTurns, sliceTailTurns } from '../core/session-window.ts'
+import {
+  DEFAULT_TRAJECTORY_TURNS,
+  buildRequestMessages,
+  buildTrajectoryBefore,
+  buildTrajectoryWindow,
+  findEvent,
+} from '../core/trajectory-index.ts'
 
 export type { ChatMessage }
 
@@ -251,6 +258,56 @@ export function apply(ctx: Context) {
       totalEvents: window.totalEvents,
       oldestSeq: window.oldestSeq,
       newestSeq: window.newestSeq,
+    })
+  })
+  ctx.http.route('GET', '/api/sessions/:id/trajectory', async (route) => {
+    const record = await ctx.sessions.get(route.params.id)
+    if (!record) return route.send(404, { error: 'unknown session' })
+    const beforeSeqRaw = route.query.get('beforeSeq')
+    const turnsRaw = route.query.get('turns')
+    const limitTurns =
+      turnsRaw == null || turnsRaw === ''
+        ? DEFAULT_TRAJECTORY_TURNS
+        : turnsRaw === 'all'
+          ? 0
+          : Math.max(0, Number(turnsRaw) || DEFAULT_TRAJECTORY_TURNS)
+    const window =
+      beforeSeqRaw != null && beforeSeqRaw !== ''
+        ? buildTrajectoryBefore(record.events, Number(beforeSeqRaw), limitTurns || DEFAULT_TRAJECTORY_TURNS)
+        : buildTrajectoryWindow(record.events, limitTurns)
+    route.send(200, {
+      id: record.id,
+      rows: window.rows,
+      hasMore: window.hasMore,
+      totalTurns: window.totalTurns,
+      totalEvents: window.totalEvents,
+      oldestSeq: window.oldestSeq,
+      newestSeq: window.newestSeq,
+    })
+  })
+  ctx.http.route('GET', '/api/sessions/:id/events/:seq', async (route) => {
+    const record = await ctx.sessions.get(route.params.id)
+    if (!record) return route.send(404, { error: 'unknown session' })
+    const seq = Number(route.params.seq)
+    if (!Number.isFinite(seq)) return route.send(400, { error: 'invalid seq' })
+    const event = findEvent(record.events, seq)
+    if (!event) return route.send(404, { error: 'unknown event' })
+    route.send(200, { id: record.id, event })
+  })
+  ctx.http.route('GET', '/api/sessions/:id/events/:seq/request', async (route) => {
+    const record = await ctx.sessions.get(route.params.id)
+    if (!record) return route.send(404, { error: 'unknown session' })
+    const seq = Number(route.params.seq)
+    if (!Number.isFinite(seq)) return route.send(400, { error: 'invalid seq' })
+    const event = findEvent(record.events, seq)
+    if (!event) return route.send(404, { error: 'unknown event' })
+    if (event.type !== 'assistant/message') {
+      return route.send(400, { error: 'request derivation only for assistant/message' })
+    }
+    route.send(200, {
+      id: record.id,
+      seq,
+      messages: buildRequestMessages(record.events, seq),
     })
   })
   ctx.http.route('PUT', '/api/sessions/:id/project', async (route) => {
