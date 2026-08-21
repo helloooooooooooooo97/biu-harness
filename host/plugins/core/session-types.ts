@@ -44,12 +44,20 @@ export interface SessionMascot {
   color: string
 }
 
+/** Session 用途：普通对话 vs Live 指挥席。缺省按 chat 处理。 */
+export type SessionType = 'chat' | 'live'
+
+export function normalizeSessionType(value: unknown): SessionType {
+  return value === 'live' ? 'live' : 'chat'
+}
+
 export interface SessionRecord {
   id: string
   version: number
   events: SessionEvent[]
   project?: SessionProject
   mascot?: SessionMascot
+  type?: SessionType
 }
 
 /** 侧栏列表用：不必加载整段 events。 */
@@ -61,6 +69,7 @@ export interface SessionSummary {
   updatedAt: number
   project?: SessionProject
   mascot?: SessionMascot
+  type?: SessionType
 }
 
 export interface SessionStore {

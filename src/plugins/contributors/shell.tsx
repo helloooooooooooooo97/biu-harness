@@ -23,6 +23,7 @@ import {
   LuPanelLeft,
   LuPanelLeftClose,
   LuPlus,
+  LuRadio,
 } from 'react-icons/lu'
 
 export const name = 'shell'
@@ -221,13 +222,27 @@ function Shell(props: SlotProps) {
               title="添加聊天"
               aria-label="添加聊天"
               onClick={() => {
-                void sessionView.newSession().then((id) => navigate(`/s/${id}`))
+                void sessionView.newSession({ type: 'chat' }).then((id) => navigate(`/s/${id}`))
               }}
             >
               <span className="app-side-actions-icon" aria-hidden>
                 <LuPlus className="size-4" />
               </span>
               <span className="app-side-actions-label">添加聊天</span>
+            </button>
+            <button
+              type="button"
+              className="app-side-actions-item"
+              title="新建 Live"
+              aria-label="新建 Live"
+              onClick={() => {
+                void sessionView.newSession({ type: 'live' }).then((id) => navigate(`/s/${id}`))
+              }}
+            >
+              <span className="app-side-actions-icon" aria-hidden>
+                <LuRadio className="size-4" />
+              </span>
+              <span className="app-side-actions-label">新建 Live</span>
             </button>
             <Link to="/dashboard" className="app-side-actions-item" title="Dashboard" aria-label="Dashboard">
               <span className="app-side-actions-icon" aria-hidden>
@@ -262,7 +277,14 @@ function Shell(props: SlotProps) {
                         title={`${identity.shape} · ${identity.color}`}
                       />
                       <span className="min-w-0 flex-1">
-                        <div className="truncate font-medium">{item.title}</div>
+                        <div className="truncate font-medium">
+                          {(item.type ?? 'chat') === 'live' ? (
+                            <span className="mr-1.5 text-[10px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
+                              live
+                            </span>
+                          ) : null}
+                          {item.title}
+                        </div>
                         <div className="mt-0.5 font-mono text-[10px] opacity-70">
                           {item.id.slice(0, 8)} · {item.eventCount} events
                           {item.project ? ` · ${item.project.name}` : ''}
