@@ -189,6 +189,10 @@ body {
   grid-template-columns: 48px 280px minmax(0, 1fr);
 }
 
+.app-shell-agent.is-sidebar-collapsed {
+  grid-template-columns: 48px minmax(0, 1fr);
+}
+
 .app-shell-module {
   grid-template-columns: 48px minmax(0, 1fr);
 }
