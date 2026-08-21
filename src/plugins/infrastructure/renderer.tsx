@@ -38,7 +38,7 @@ function AppShell({ slots }: { slots: SlotsService }) {
   return <Outlet slots={slots} name="root" kind="single" />
 }
 
-/** 单壳常驻：路由变化不卸载 Shell，避免 Chat/Trajectory/模块切换整树重挂。 */
+/** 单壳常驻：路由变化不卸载 Shell，避免 Chat/Debug/模块切换整树重挂。 */
 function Root({ slots }: { slots: SlotsService }) {
   const location = useLocation()
   if (!isKnownAppPath(location.pathname)) {
