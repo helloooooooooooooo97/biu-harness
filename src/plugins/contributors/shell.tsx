@@ -200,7 +200,25 @@ function Shell(props: SlotProps) {
         }`}
         aria-hidden={!showChatSidebar}
       >
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-4">
+        <div className="app-side-actions">
+          <button
+            type="button"
+            className="app-side-actions-item"
+            title="添加聊天"
+            aria-label="添加聊天"
+            onClick={() => {
+              void sessionView.newSession().then((id) => navigate(`/s/${id}`))
+            }}
+          >
+            <LuPlus className="size-4 shrink-0" aria-hidden />
+            <span>添加聊天</span>
+          </button>
+          <Link to="/dashboard" className="app-side-actions-item" title="Dashboard" aria-label="Dashboard">
+            <LuLayoutDashboard className="size-4 shrink-0" aria-hidden />
+            <span>Dashboard</span>
+          </Link>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-3">
           <div className="mb-2 flex items-center justify-between gap-2 px-1">
             <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Chat</span>
             <button
@@ -269,24 +287,6 @@ function Shell(props: SlotProps) {
               )
             })
           )}
-        </div>
-        <div className="app-side-footer">
-          <button
-            type="button"
-            className="app-side-footer-item"
-            title="添加聊天"
-            aria-label="添加聊天"
-            onClick={() => {
-              void sessionView.newSession().then((id) => navigate(`/s/${id}`))
-            }}
-          >
-            <LuPlus className="size-4 shrink-0" aria-hidden />
-            <span>添加聊天</span>
-          </button>
-          <Link to="/dashboard" className="app-side-footer-item" title="Dashboard" aria-label="Dashboard">
-            <LuLayoutDashboard className="size-4 shrink-0" aria-hidden />
-            <span>Dashboard</span>
-          </Link>
         </div>
       </aside>
 
