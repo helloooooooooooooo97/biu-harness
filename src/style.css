@@ -12,12 +12,13 @@
   --dsw-label-3: rgba(242, 241, 237, 0.45);
   /* oklab warm border ≈ rgba(242,241,237,0.1) on dark */
   --dsw-border: rgba(242, 241, 237, 0.1);
-  /* User prompt: color-mix(input.bg 90%, #282828) warm analog */
-  --dsw-bubble: #35322c;
+  /* User prompt — Cursor agent chat fill (cool charcoal, not muddy warm gray) */
+  --dsw-bubble: #262626;
   /* Accent: white / gray (no brand orange) */
   --dsw-business: #f2f1ed;
   --dsw-business-soft: rgba(242, 241, 237, 0.1);
-  --dsw-input: #1e1c18;
+  /* Composer matches human-message surface (Cursor: same family as bubble) */
+  --dsw-input: #262626;
   --dsw-tool: #1e1c18;
   --dsw-surface: #1e1c18;
   /* Semantic — muted, not orange */
@@ -1042,11 +1043,14 @@ body {
   width: 100%;
   max-width: 100%;
   padding: 12px 14px;
+  border: 0;
   border-radius: var(--dsw-radius-bubble);
   background: var(--dsw-bubble);
+  box-shadow: none;
   color: var(--dsw-label);
   font-size: 15px;
   line-height: 1.55;
+  outline: none;
 }
 
 .chat-user-tag {
