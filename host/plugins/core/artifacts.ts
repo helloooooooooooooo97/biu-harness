@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readFile, access } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, access, readdir, stat } from 'node:fs/promises'
 import { basename, extname, isAbsolute, join, resolve, relative } from 'node:path'
 import { constants } from 'node:fs'
 
@@ -40,7 +40,7 @@ export function isImagePath(path: string) {
   return IMAGE_EXTENSIONS.has(extname(path).toLowerCase())
 }
 
-/** 从 bash stdout/stderr 里抠出看起来像图片路径的片段。 */
+/** 从 bash stdout/stderr/命令行里抠出看起来像图片路径的片段。 */
 export function extractImagePathCandidates(text: string): string[] {
   if (!text) return []
   const found: string[] = []
@@ -77,7 +77,41 @@ async function fileExists(path: string) {
   }
 }
 
-/** 将工作区内的图片复制到 `.cordis/artifacts/<sessionId>/`，返回可给前端用的元数据。 */
+/** 扫工作区浅层目录，找出命令执行期间新写入/改动的图片（截图常不打印路径）。 */
+export async function findRecentImageFiles(root: string, sinceMs: number, maxDepth = 2): Promise<string[]> {
+  const base = resolve(root)
+  const out: string[] = []
+
+  async function walk(dir: string, depth: number) {
+    if (depth > maxDepth || out.length >= 24) return
+    let entries
+    try {
+      entries = await readdir(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === '.cordis') continue
+      const full = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        await walk(full, depth + 1)
+        continue
+      }
+      if (!entry.isFile() || !isImagePath(entry.name)) continue
+      try {
+        const info = await stat(full)
+        if (info.mtimeMs >= sinceMs) out.push(full)
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  await walk(base, 0)
+  return out
+}
+
+/** 将图片复制到 `.cordis/artifacts/<sessionId>/`。工作区内相对路径 + 可读绝对路径均可。 */
 export async function ingestSessionImages(options: {
   sessionId: string
   candidates: string[]
@@ -93,13 +127,18 @@ export async function ingestSessionImages(options: {
   await mkdir(dir, { recursive: true })
 
   const used = new Set<string>()
+  const seenSource = new Set<string>()
   const out: ArtifactMeta[] = []
 
   for (const candidate of candidates) {
     const full = isAbsolute(candidate) ? resolve(candidate) : resolve(root, candidate)
+    if (!isImagePath(full) || seenSource.has(full)) continue
     const rel = relative(root, full)
-    if (rel.startsWith('..') || !isImagePath(full)) continue
+    const insideWorkspace = !rel.startsWith('..') && !isAbsolute(rel)
+    // 相对路径必须在工作区内；绝对路径只要文件存在可读即可（bash 截图常落 /tmp）
+    if (!isAbsolute(candidate) && !insideWorkspace) continue
     if (!(await fileExists(full))) continue
+    seenSource.add(full)
 
     const name = safeArtifactName(full, used)
     const dest = join(dir, name)
@@ -108,7 +147,7 @@ export async function ingestSessionImages(options: {
       name,
       mime: artifactMime(name),
       url: `/api/sessions/${encodeURIComponent(sessionId)}/artifacts/${encodeURIComponent(name)}`,
-      source: rel || basename(full),
+      source: insideWorkspace ? rel || basename(full) : full,
     })
   }
 

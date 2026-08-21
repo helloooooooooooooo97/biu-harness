@@ -49,6 +49,20 @@ function DiffBlock({ lines, path }: { lines: DiffLine[]; path?: string }) {
   )
 }
 
+function ArtifactGallery({ artifacts }: { artifacts: NonNullable<Extract<FormattedDetail, { kind: 'bash' }>['artifacts']> }) {
+  if (!artifacts.length) return null
+  return (
+    <div className="tool-artifacts" aria-label="Artifacts">
+      {artifacts.map((item) => (
+        <a key={item.url} className="tool-artifact" href={item.url} target="_blank" rel="noreferrer">
+          <img className="tool-artifact-img" src={item.url} alt={item.name} loading="lazy" />
+          <span className="tool-artifact-caption">{item.source || item.name}</span>
+        </a>
+      ))}
+    </div>
+  )
+}
+
 function DetailView({ detail }: { detail: FormattedDetail }) {
   if (detail.kind === 'bash') {
     const hasOut = Boolean(detail.stdout)
@@ -74,16 +88,7 @@ function DetailView({ detail }: { detail: FormattedDetail }) {
             {!hasOut && !hasErr ? <span className="text-white/35">(empty)</span> : null}
           </pre>
         </div>
-        {artifacts.length > 0 ? (
-          <div className="tool-artifacts" aria-label="Artifacts">
-            {artifacts.map((item) => (
-              <a key={item.url} className="tool-artifact" href={item.url} target="_blank" rel="noreferrer">
-                <img className="tool-artifact-img" src={item.url} alt={item.name} loading="lazy" />
-                <span className="tool-artifact-caption">{item.source || item.name}</span>
-              </a>
-            ))}
-          </div>
-        ) : null}
+        <ArtifactGallery artifacts={artifacts} />
       </div>
     )
   }
@@ -186,13 +191,19 @@ export function ToolCard({
   onInspect: (callId: string) => void
 }) {
   const parsed = useMemo(() => parseToolCall(node.name, node.arguments), [node.name, node.arguments])
-  const [open, setOpen] = useState(() => shouldAutoOpenTool(parsed))
+  const formatted = useMemo(
+    () => formatToolDetail(node.result?.detail, parsed.kind),
+    [node.result?.detail, parsed.kind],
+  )
+  const [open, setOpen] = useState(() => shouldAutoOpenTool(parsed, node.result?.detail))
   const summary = toolSummary(parsed, node.result?.detail?.slice(0, 80) || node.arguments.slice(0, 80) || '…')
   const title = toolTitle(parsed, node.name)
   const previewLines = useMemo(() => {
     if (parsed.kind !== 'str_replace' || open) return null
     return lineDiff(parsed.oldStr, parsed.newStr).filter((line) => line.type !== 'equal').slice(0, 4)
   }, [parsed, open])
+  const collapsedArtifacts =
+    !open && formatted?.kind === 'bash' && formatted.artifacts?.length ? formatted.artifacts : null
 
   return (
     <div className="w-full self-stretch">
@@ -225,6 +236,11 @@ export function ToolCard({
       {!open && previewLines && previewLines.length > 0 ? (
         <div className="mt-1 px-2">
           <DiffBlock path={parsed.kind === 'str_replace' ? parsed.path : undefined} lines={previewLines} />
+        </div>
+      ) : null}
+      {collapsedArtifacts ? (
+        <div className="mt-1 px-2">
+          <ArtifactGallery artifacts={collapsedArtifacts} />
         </div>
       ) : null}
       {open ? (

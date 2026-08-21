@@ -79,3 +79,26 @@ test('bash copies printed image paths into session artifacts', async () => {
     process.chdir(prev)
   }
 })
+
+test('bash ingests silently written workspace screenshots without printing path', async () => {
+  const base = await mkdtemp(join(tmpdir(), 'cordis-sh-silent-'))
+  const prev = process.cwd()
+  process.chdir(base)
+  try {
+    const { ctx, workspace } = await runtime(join(base, 'ws'))
+    const result = await runWithSession('sess-silent', () =>
+      ctx.tools.invoke('bash', {
+        command:
+          'python3 -c "import base64,pathlib; pathlib.Path(\'silent.png\').write_bytes(base64.b64decode(\'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==\'))"',
+      }),
+    )
+    const bash = result as { artifacts?: Array<{ name: string; url: string }> }
+    assert.ok(bash.artifacts?.some((item) => item.name === 'silent.png'))
+    const file = await readArtifactFile('sess-silent', 'silent.png', base)
+    assert.ok(file)
+    assert.equal(file.data.byteLength > 0, true)
+    void workspace
+  } finally {
+    process.chdir(prev)
+  }
+})
