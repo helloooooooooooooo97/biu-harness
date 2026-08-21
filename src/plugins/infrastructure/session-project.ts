@@ -204,6 +204,30 @@ export function sumTrajectoryUsage(events: SessionEvent[]): TrajectoryUsage | un
   }
 }
 
+/** 从 Trajectory 行汇总 usage（避免为了合计去订阅整份 events，chunk 流式时少重绘）。 */
+export function sumTrajectoryRowUsage(rows: Array<{ usage?: TrajectoryUsage }>): TrajectoryUsage | undefined {
+  let input = 0
+  let output = 0
+  let total = 0
+  let cache = 0
+  let hit = false
+  for (const row of rows) {
+    if (!row.usage) continue
+    hit = true
+    input += row.usage.inputTokens
+    output += row.usage.outputTokens
+    total += row.usage.totalTokens ?? row.usage.inputTokens + row.usage.outputTokens
+    cache += row.usage.cacheReadTokens ?? 0
+  }
+  if (!hit) return undefined
+  return {
+    inputTokens: input,
+    outputTokens: output,
+    totalTokens: total,
+    ...(cache ? { cacheReadTokens: cache } : {}),
+  }
+}
+
 function assistantSummary(event: Extract<SessionEvent, { type: 'assistant/message' }>): string {
   const tools = event.tool_calls?.length ?? 0
   if (event.text.trim()) return event.text.slice(0, 160)

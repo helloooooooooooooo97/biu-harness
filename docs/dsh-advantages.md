@@ -18,15 +18,15 @@
 12. **Web：审批可观察** — hold 待批出现在 composer dock，允许/拒绝回调 host。
 13. **Web 壳对标 dsh 观感** — 最左 **VS Code 式 Activity Bar**（纯图标切换 Agent / Workspace…）；Agent 下再挂 Side Bar（Sessions）+ Chat / Trajectory；演示插件进 Settings modal。
 14. **Web：可恢复会话列表 + 真 New Session / Fork** — `GET /api/sessions` 列出会话；Agent 侧栏切换 `load`；Fork 走 `POST /api/sessions/:id/fork`。
-15. **Web：Trajectory 事件账本** — Chat/Trajectory 可切换；`projectTrajectory` 从日志投影结构化行（**跳过** `assistant/chunk`，对齐 dsh：chunk 只服务 Chat 流式，message 为权威）；点击行打开事件详情；`assistant/message` 详情用 `deriveMessages(seq 前缀)` 投影本步 request；工具行可 `inspectCall`；`usage` 写入事件并显示。客户端 `compactSessionEvents` / ingest 合并连续 chunk，避免轨道与重渲染被 delta 淹没。
-16. **Web：Chat Markdown** — 用户/助手气泡用 `react-markdown` + `remark-gfm` 渲染；消息较多时 `@tanstack/react-virtual` 只挂载可视区附近行（变高 `measureElement`），避免长对话全量 Markdown DOM。
+15. **Web：Trajectory 事件账本** — Chat/Trajectory 可切换；`projectTrajectory` 跳过 `assistant/chunk`；turn / step 可折叠（小三角 ▸）；`usage` Input 胶囊 + cache 进度背景；客户端合并连续 chunk。
+16. **Web：Chat Markdown** — `react-markdown` + GFM；消息较多时 `@tanstack/react-virtual` 只挂载可视区；chunk ingest 按帧合并且不重算 Trajectory，避免打字/流式卡顿。
 17. **Web：审批 mode + 重水合** — `auto`/`hold` 可切换；启动与 `load` 时 `GET /api/approvals` 恢复 pending，不只依赖 WS。
 18. **Web：运行中 Steer/inject** — agent 忙时输入仍可用，`kind: 'inject'` 入队，不搬完整 QueueDock。
 19. **Web：React Router（单向）** — `/` · `/s/:id` · `/s/:id/trajectory` · `/workspace`；URL → `applyRoute`；跳转只用 `Link`/`navigate`，无双向 bridge。**单壳常驻**：路由变化不卸载 `AppShell`；Agent/Workspace 与 Chat/Trajectory 用保活叠层（`visibility`，避免 `display:none` 丢掉大 Markdown 布局）；slot props / `renderSlot` 稳定 + Chat/Markdown `memo`，避免切换时重解析。
 20. **Web：Activity Bar 模块切换** — Agent 仅为其中一个视图；切到 Workspace 等其它页不卸载 session 投影，切回 Agent 会话仍在；Settings 挂在 Activity Bar 底部。
-21. **Web：Session 绑定本地项目文件夹** — Agent Chat 右侧 Project 面板 `Open folder`（File System Access API）；文件夹名写入 session.project，句柄按 sessionId 存 IndexedDB；可浏览/编辑/保存文本文件。
-22. **Agent mode（Standard / Minimal）** — Settings 可选；`minimal` 对齐 dsh：模型侧只暴露 `bash` + `str_replace_editor`（view/create/str_replace/insert）；模式写入 `.cordis/chat-config.json`，`tools.schemas()` / `names()` / `invoke` 统一过滤。
-23. **Session 绑定 host 工作区（对齐 dsh）** — Project 点 Open folder 弹出系统选目录对话框并自动绑定；该 Session 的 bash / str_replace_editor 直接以该目录为 cwd。
+21. **Web：Session 绑定项目** — Agent 顶栏右侧紧凑 **Bind project** chip（不再占大右侧栏）；点选系统目录绑定为 Session cwd。
+22. **Agent mode（Standard / Minimal）** — Settings 可选；`minimal` 对齐 dsh：模型侧只暴露 `bash` + `str_replace_editor`；模式写入 `.cordis/chat-config.json`。
+23. **Session host cwd（对齐 dsh）** — Bind project 后 bash / str_replace_editor 以该目录为 cwd。
 
 ## 功能级差异（相对官方 client，优点对齐后）
 

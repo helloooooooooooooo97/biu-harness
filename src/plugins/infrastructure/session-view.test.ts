@@ -100,6 +100,7 @@ test('ingest coalesces consecutive chunks and omits them from trajectory', async
   const view = ctx.sessionView as SessionViewService
   view.ingest('s1', { type: 'session/open', version: 1, seq: 0, ts: 1 })
   view.ingest('s1', { type: 'user/message', text: 'hi', seq: 1, ts: 2 })
+  const trajBefore = view.get().trajectory
   view.ingest('s1', { type: 'assistant/chunk', text: 'hel', seq: 2, ts: 3 })
   view.ingest('s1', { type: 'assistant/chunk', text: 'lo', seq: 3, ts: 4 })
   assert.equal(view.get().events.filter((event) => event.type === 'assistant/chunk').length, 1)
@@ -109,6 +110,8 @@ test('ingest coalesces consecutive chunks and omits them from trajectory', async
     'hello',
   )
   assert.equal(view.get().trajectory.some((row) => row.type === 'assistant/chunk'), false)
+  // chunk 路径保持 trajectory 引用，避免隐藏账本随 delta 重绘
+  assert.equal(view.get().trajectory, trajBefore)
   const assistant = view.get().nodes.find((node) => node.kind === 'assistant')
   assert.equal(assistant?.kind === 'assistant' && assistant.text, 'hello')
   assert.equal(assistant?.kind === 'assistant' && assistant.streaming, true)
