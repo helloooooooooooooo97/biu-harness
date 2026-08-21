@@ -1,35 +1,41 @@
-/** `/` | `/s/:id` | `/s/:id/trajectory` | `/workspace` */
-export type RouteView = 'chat' | 'trajectory'
+/** `/` | `/s/:id` | `/s/:id/debug` | `/workspace` | `/dashboard`（兼容旧 `/trajectory`） */
+export type RouteView = 'chat' | 'debug'
 
 export type AppRoute =
   | { kind: 'home' }
   | { kind: 'session'; sessionId: string; view: RouteView }
-  | { kind: 'module'; moduleId: 'workspace' }
+  | { kind: 'module'; moduleId: 'workspace' | 'dashboard' }
 
 export function parseAppPath(pathname: string): AppRoute {
   const path = normalizePath(pathname)
   if (path === '/workspace') return { kind: 'module', moduleId: 'workspace' }
+  if (path === '/dashboard') return { kind: 'module', moduleId: 'dashboard' }
   if (path === '/') return { kind: 'home' }
-  const match = path.match(/^\/s\/([^/]+)(?:\/(chat|trajectory))?$/)
+  const match = path.match(/^\/s\/([^/]+)(?:\/(chat|debug|trajectory))?$/)
   if (!match?.[1]) return { kind: 'home' }
+  const segment = match[2]
   return {
     kind: 'session',
     sessionId: decodeURIComponent(match[1]),
-    view: match[2] === 'trajectory' ? 'trajectory' : 'chat',
+    view: segment === 'debug' || segment === 'trajectory' ? 'debug' : 'chat',
   }
 }
 
 /** 已知应用 path（未知则 Navigate 回 `/`，且不拆 Shell）。 */
 export function isKnownAppPath(pathname: string): boolean {
   const path = normalizePath(pathname)
-  if (path === '/' || path === '/workspace') return true
-  return /^\/s\/[^/]+(?:\/(chat|trajectory))?$/.test(path)
+  if (path === '/' || path === '/workspace' || path === '/dashboard') return true
+  return /^\/s\/[^/]+(?:\/(chat|debug|trajectory))?$/.test(path)
 }
 
 export function buildAppPath(route: AppRoute): string {
   if (route.kind === 'home') return '/'
-  if (route.kind === 'module') return route.moduleId === 'workspace' ? '/workspace' : '/'
-  if (route.view === 'trajectory') return `/s/${encodeURIComponent(route.sessionId)}/trajectory`
+  if (route.kind === 'module') {
+    if (route.moduleId === 'workspace') return '/workspace'
+    if (route.moduleId === 'dashboard') return '/dashboard'
+    return '/'
+  }
+  if (route.view === 'debug') return `/s/${encodeURIComponent(route.sessionId)}/debug`
   return `/s/${encodeURIComponent(route.sessionId)}`
 }
 

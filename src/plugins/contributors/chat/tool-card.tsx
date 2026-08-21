@@ -219,7 +219,7 @@ export function ToolCard({
           className="shrink-0 rounded-[8px] px-2 py-1 text-[11px] text-[var(--dsw-business)] hover:bg-[var(--dsw-business-soft)]"
           onClick={() => onInspect(node.callId)}
         >
-          Trajectory
+          Debug
         </button>
       </div>
       {!open && previewLines && previewLines.length > 0 ? (
