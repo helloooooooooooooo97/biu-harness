@@ -8,7 +8,7 @@ import * as snapshot from './snapshot.ts'
 import * as sessionView from './session-view.ts'
 import * as projectView from './project-view.ts'
 import * as shell from '../contributors/shell.tsx'
-import * as hello from '../contributors/hello.tsx'
+import * as greeterUi from '@hmr/greeter-ui'
 import * as quotes from '../contributors/quotes.tsx'
 import { renderRoot } from './renderer.tsx'
 
@@ -19,7 +19,7 @@ test('list sorts by order; demos show after shell opens', async () => {
   await ctx.plugin(projectView)
   await ctx.plugin(snapshot)
   await ctx.plugin(quotes)
-  await ctx.plugin(hello)
+  await ctx.plugin(greeterUi)
   await ctx.plugin(shell)
   const html = renderToStaticMarkup(renderRoot(ctx.slots))
   assert.match(html, /Greeting demo/)
