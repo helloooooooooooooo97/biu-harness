@@ -100,7 +100,7 @@ export function ApprovalsRail(props: SlotProps) {
                 className={`px-2.5 py-1 ${
                   agentMode === mode
                     ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
-                    : 'hover:bg-black/[0.03]'
+                    : 'hover:bg-[var(--dsw-hover)]'
                 }`}
                 onClick={() => void setMode(mode)}
               >
@@ -118,7 +118,7 @@ export function ApprovalsRail(props: SlotProps) {
               className={`px-2.5 py-1 capitalize ${
                 approvalMode === mode
                   ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
-                  : 'hover:bg-black/[0.03]'
+                  : 'hover:bg-[var(--dsw-hover)]'
               }`}
               onClick={() => void sessionView.setApprovalMode(mode)}
             >

@@ -89,7 +89,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
         {pending ? (
           <>
             <button
-              className="rounded-full border border-[var(--dsw-border)] px-3 py-1.5 text-xs text-[var(--dsw-label-2)] hover:bg-black/5"
+              className="rounded-full border border-[var(--dsw-border)] px-3 py-1.5 text-xs text-[var(--dsw-label-2)] hover:bg-[var(--dsw-hover)]"
               type="button"
               onClick={() => void sessionView.cancel()}
             >

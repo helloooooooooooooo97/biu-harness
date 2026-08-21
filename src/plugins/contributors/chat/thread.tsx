@@ -62,7 +62,7 @@ function EmptyHero() {
         </span>
         <div className="flex items-center gap-2">
           <h2 className="text-2xl font-semibold tracking-tight">How can I help you?</h2>
-          <span className="rounded-full bg-black/5 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-[var(--dsw-label-3)]">
+          <span className="rounded-full bg-[var(--dsw-hover)] px-2 py-0.5 text-[10px] font-semibold tracking-wider text-[var(--dsw-label-3)]">
             PREVIEW
           </span>
         </div>
@@ -84,7 +84,7 @@ function StatusRow({
   return (
     <div className="mb-4 flex items-center gap-2 text-xs text-[var(--dsw-label-3)]">
       <span
-        className={`size-2 rounded-full ${agentStatus === 'running' ? 'bg-[var(--dsw-ok)]' : 'bg-black/20'}`}
+        className={`size-2 rounded-full ${agentStatus === 'running' ? 'bg-[var(--dsw-ok)]' : 'bg-[var(--dsw-hover-strong)]'}`}
         aria-hidden
       />
       <span>{agentStatus === 'running' ? `Running${agentStep != null ? ` · step ${agentStep}` : ''}` : 'Idle'}</span>
@@ -214,7 +214,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
         </div>
       )}
       {error ? (
-        <div className="mt-4 rounded-[12px] bg-red-50 px-3 py-2 text-sm text-[var(--dsw-danger)]">{error}</div>
+        <div className="mt-4 rounded-[12px] bg-[var(--dsw-danger-soft)] px-3 py-2 text-sm text-[var(--dsw-danger)]">{error}</div>
       ) : null}
     </div>
   )

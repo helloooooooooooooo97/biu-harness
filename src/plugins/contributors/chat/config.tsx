@@ -78,11 +78,11 @@ export function ChatConfig(_props: SlotProps) {
   }
 
   const field =
-    'mt-1 w-full rounded-[12px] border border-[var(--dsw-border)] bg-white px-2 py-2 text-sm text-[var(--dsw-label)] outline-none'
+    'mt-1 w-full rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-2 py-2 text-sm text-[var(--dsw-label)] outline-none'
 
   return (
     <form
-      className="space-y-3 rounded-[12px] border border-[var(--dsw-border)] bg-white px-3 py-3"
+      className="space-y-3 rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-3 py-3"
       data-testid="assistant-config"
       onSubmit={onSubmit}
     >

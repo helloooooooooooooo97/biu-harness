@@ -17,7 +17,7 @@ import {
 function DiffBlock({ lines, path }: { lines: DiffLine[]; path?: string }) {
   const stats = diffStats(lines)
   return (
-    <div className="overflow-hidden rounded-[10px] border border-[var(--dsw-border)] bg-white">
+    <div className="overflow-hidden rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)]">
       {path ? (
         <div className="flex items-center justify-between gap-2 border-b border-[var(--dsw-border)] bg-[var(--dsw-tool)] px-3 py-1.5">
           <span className="min-w-0 truncate font-mono text-[11px] text-[var(--dsw-label-2)]">{path}</span>
@@ -186,7 +186,7 @@ export function ToolCard({
       <div className="flex items-center gap-1">
         <button
           type="button"
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-[12px] px-2 py-1.5 text-left text-[13px] hover:bg-black/[0.03]"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-[12px] px-2 py-1.5 text-left text-[13px] hover:bg-[var(--dsw-hover)]"
           onClick={() => setOpen((value) => !value)}
         >
           <span className="grid size-4 place-items-center text-[10px] text-[var(--dsw-label-3)]">{open ? '▾' : '▸'}</span>
