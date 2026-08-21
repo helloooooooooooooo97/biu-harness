@@ -30,20 +30,7 @@ export function SessionProjectPanel(props: SlotProps) {
       >
         <FolderGlyph />
         <span className="project-chip-name">{project?.name ?? 'Bind project'}</span>
-        {project ? <span className="project-chip-hint">cwd</span> : null}
       </button>
-      {project ? (
-        <button
-          type="button"
-          className="project-chip-unbind"
-          disabled={busy}
-          title="Unbind workspace"
-          aria-label="Unbind workspace"
-          onClick={() => void projectView.unbindFolder()}
-        >
-          ×
-        </button>
-      ) : null}
       {error ? <span className="project-chip-error" title={error}>!</span> : null}
     </div>
   )
