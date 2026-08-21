@@ -6,6 +6,7 @@ import { bindSessionView, type SessionViewService } from '../../infrastructure/s
 import type { ChatNode } from '../../infrastructure/session-project.ts'
 import { FishLogo } from '../brand.tsx'
 import { MarkdownBody } from './markdown.tsx'
+import { ToolCard } from './tool-card.tsx'
 
 const NEAR_BOTTOM_PX = 96
 const ROW_GAP_PX = 16
@@ -21,53 +22,6 @@ function findScrollParent(el: HTMLElement | null): HTMLElement | null {
     node = node.parentElement
   }
   return null
-}
-
-function ToolRow({
-  node,
-  onInspect,
-}: {
-  node: Extract<ChatNode, { kind: 'tool' }>
-  onInspect: (callId: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const summary = node.result?.detail?.slice(0, 80) || node.arguments.slice(0, 80) || '…'
-  return (
-    <div className="w-full self-stretch">
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-[12px] px-2 py-1.5 text-left text-[13px] hover:bg-black/[0.03]"
-          onClick={() => setOpen((value) => !value)}
-        >
-          <span className="grid size-4 place-items-center text-[10px] text-[var(--dsw-label-3)]">{open ? '▾' : '▸'}</span>
-          <span className="font-medium">{node.name}</span>
-          <span className="text-[var(--dsw-label-3)]">·</span>
-          <span className="min-w-0 flex-1 truncate text-[var(--dsw-label-3)]">{summary}</span>
-          {node.result ? (
-            <span className={node.result.ok ? 'text-[var(--dsw-ok)]' : 'text-[var(--dsw-danger)]'}>
-              {node.result.ok ? 'ok' : 'fail'}
-            </span>
-          ) : (
-            <span className="text-[var(--dsw-label-3)]">running</span>
-          )}
-        </button>
-        <button
-          type="button"
-          className="shrink-0 rounded-[8px] px-2 py-1 text-[11px] text-[var(--dsw-business)] hover:bg-[var(--dsw-business-soft)]"
-          onClick={() => onInspect(node.callId)}
-        >
-          Trajectory
-        </button>
-      </div>
-      {open ? (
-        <div className="mt-1 space-y-2 rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] p-3 font-mono text-xs">
-          {node.arguments ? <pre className="whitespace-pre-wrap text-[var(--dsw-label-2)]">{node.arguments}</pre> : null}
-          {node.result?.detail ? <pre className="whitespace-pre-wrap">{node.result.detail}</pre> : null}
-        </div>
-      ) : null}
-    </div>
-  )
 }
 
 function NodeView({ node, onInspect }: { node: ChatNode; onInspect: (callId: string) => void }) {
@@ -92,7 +46,7 @@ function NodeView({ node, onInspect }: { node: ChatNode; onInspect: (callId: str
       </div>
     )
   }
-  if (node.kind === 'tool') return <ToolRow node={node} onInspect={onInspect} />
+  if (node.kind === 'tool') return <ToolCard node={node} onInspect={onInspect} />
   return <div className="self-center text-xs text-[var(--dsw-label-3)]">{node.text}</div>
 }
 
