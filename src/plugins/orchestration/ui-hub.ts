@@ -1,12 +1,12 @@
 import type { Context, Fiber, Plugin } from 'cordis'
-import * as hello from '../contributors/hello.tsx'
 import * as notes from '../contributors/notes.tsx'
 import * as clock from '../contributors/clock.tsx'
 import * as quotes from '../contributors/quotes.tsx'
 import * as chat from '../contributors/chat/index.ts'
+import { uiPackageLoaders } from './ui-packages.ts'
 
-const uiCatalog: Record<string, Plugin> = {
-  greeter: hello,
+/** 仍留在主仓的内置 UI 插件（未拆包）。 */
+const builtinUi: Record<string, Plugin> = {
   notes,
   clock,
   quotes,
@@ -21,6 +21,12 @@ export function apply(ctx: Context) {
   let pending = false
   let running = false
 
+  async function resolvePlugin(id: string, ui?: string): Promise<Plugin | undefined> {
+    if (builtinUi[id]) return builtinUi[id]
+    if (ui && uiPackageLoaders[ui]) return uiPackageLoaders[ui]!()
+    return undefined
+  }
+
   async function sync() {
     if (running) {
       pending = true
@@ -28,15 +34,21 @@ export function apply(ctx: Context) {
     }
     running = true
     try {
-      const enabled = new Set(ctx.snapshot.get().plugins.filter((plugin) => plugin.enabled).map((plugin) => plugin.id))
-      for (const [id, plugin] of Object.entries(uiCatalog)) {
-        const should = enabled.has(id)
-        const fiber = forks.get(id)
-        if (should && !fiber) forks.set(id, ctx.plugin(plugin))
-        else if (!should && fiber) {
-          await fiber.dispose()
-          forks.delete(id)
-        }
+      const rows = ctx.snapshot.get().plugins
+      const enabledRows = rows.filter((plugin) => plugin.enabled)
+      const enabledIds = new Set(enabledRows.map((plugin) => plugin.id))
+
+      for (const row of enabledRows) {
+        if (forks.has(row.id)) continue
+        const plugin = await resolvePlugin(row.id, row.ui)
+        if (!plugin) continue
+        forks.set(row.id, ctx.plugin(plugin))
+      }
+
+      for (const [id, fiber] of [...forks.entries()]) {
+        if (enabledIds.has(id)) continue
+        await fiber.dispose()
+        forks.delete(id)
       }
     } finally {
       running = false

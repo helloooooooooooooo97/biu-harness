@@ -1,0 +1,14 @@
+{
+  "plugins": [
+    {
+      "id": "greeter",
+      "name": "问候服务",
+      "layer": "capability",
+      "blurb": "独立包：@hmr/greeter-host + @hmr/greeter-ui（cordis.plugins.json 引入）。",
+      "package": "@hmr/greeter-host",
+      "ui": "@hmr/greeter-ui",
+      "togglable": true,
+      "enabled": true
+    }
+  ]
+}

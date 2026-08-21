@@ -1,0 +1,13 @@
+{
+  "name": "@hmr/greeter-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "问候服务 host 插件：ctx.greet + tool greet + GET /api/greet",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "concurrently -k \"npm:dev:host\" \"npm:dev:web\"",
     "dev:host": "tsx watch host/index.ts",
@@ -12,6 +15,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@hmr/greeter-host": "*",
+    "@hmr/greeter-ui": "*",
     "@tanstack/react-virtual": "^3.14.10",
     "cordis": "4.0.0-rc.8",
     "react": "^19.1.1",
