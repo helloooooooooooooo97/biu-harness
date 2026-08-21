@@ -7,23 +7,25 @@ import * as snapshot from '../infrastructure/snapshot.ts'
 import * as sessionView from '../infrastructure/session-view.ts'
 import * as projectView from '../infrastructure/project-view.ts'
 import * as uiHub from './ui-hub.ts'
+import { uiPackageLoaders } from 'virtual:cordis-ui-loaders'
 
 const Dummy = () => null
 
-function plugin(id: string, enabled: boolean) {
+function plugin(id: string, enabled: boolean, ui?: string) {
   return {
     id,
     name: id,
     layer: 'capability',
     blurb: '',
-    inject: [],
+    inject: [] as string[],
     togglable: true,
     enabled,
     state: enabled ? 'active' : 'off',
+    ...(ui ? { ui } : {}),
   }
 }
 
-test('ui-hub mounts hello and chat from snapshot', async () => {
+test('ui-hub mounts configured ui packages and builtin chat', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
   await ctx.plugin(sessionView)
@@ -39,17 +41,17 @@ test('ui-hub mounts hello and chat from snapshot', async () => {
       settings: { kind: 'list' },
     },
   })
+  const uiIds = Object.keys(uiPackageLoaders)
+  assert.ok(uiIds.length >= 1, 'virtual loaders should come from cordis.plugins.json')
+  const externalId = 'ext-from-config'
   const base = ctx.snapshot.get()
   ctx.snapshot.get = () => ({
     ...base,
-    plugins: [
-      { ...plugin('greeter', true), ui: '@hmr/greeter-ui' },
-      plugin('chat', true),
-    ],
+    plugins: [plugin(externalId, true, uiIds[0]), plugin('chat', true)],
   })
   await ctx.plugin(uiHub)
   await new Promise((resolve) => setTimeout(resolve, 80))
-  assert.equal(ctx.slots.list('demos').some((item) => item.id === 'hello'), true)
+  assert.equal(ctx.slots.list('demos').length >= 1, true)
   assert.equal(ctx.slots.list('composer').some((item) => item.id === 'chat'), true)
   assert.equal(ctx.slots.list('settings').some((item) => item.id === 'chat-config'), true)
 })

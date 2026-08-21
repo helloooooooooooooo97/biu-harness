@@ -23,7 +23,7 @@ export interface CatalogEntry {
   packageName?: string
 }
 
-/** 内置插件；问候服务已拆到 packages/，见 cordis.plugins.json。 */
+/** 内置插件；可热插拔能力只写在 cordis.plugins.json，主仓不引用具体包。 */
 export const builtinCatalog: CatalogEntry[] = [
   {
     id: 'dashboard',

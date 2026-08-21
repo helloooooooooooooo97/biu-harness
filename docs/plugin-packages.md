@@ -1,39 +1,34 @@
-# 插件包化（问候服务示范）
+# 真正的配置热插拔（问候服务示范）
 
-对标 dsh 的 **workspace 包 + 配置组合**，本仓做瘦实现。
+主仓 **源码不出现、也不 import 任何具体插件包名**。插件只写在 `cordis.plugins.json`，由通用加载器解析。
 
-## 与 dsh 对比
+## 与上一版的区别 / 与 dsh
 
-| | 本仓（瘦） | 官方 dsh |
-|---|---|---|
-| Monorepo | `packages/*` + npm workspaces | `pnpm-workspace` · `packages/<group>/<pkg>` |
-| 包名 | `@hmr/greeter-host` / `@hmr/greeter-ui` | `@deepseek-ai/dsh-*` |
-| 组合配置 | 根目录 `cordis.plugins.json` | `cordis.yml` / `cordis.patch.yml` + profile bundles |
-| 加载 | host `resolveCatalog()` 动态 `import(package)` | `@deepseek-ai/cordis-plugin-loader` |
-| 热插拔 | 仍走 hub `mount` / `fiber.dispose` + ui-hub 同步 | Loader + `cordis-plugin-hmr` + config 热替换 |
-| 前后端 | **刻意拆成两包**（host 能力 / web 卡片） | 常见一包或 client 子导出 |
+| | 错误做法（已改掉） | 本仓正确做法 | 官方 dsh |
+|---|---|---|---|
+| 主仓是否写死包名 | `import '@hmr/greeter-ui'`、`ui-packages.ts` 登记 | **否**；只读配置 | 否；`cordis.yml` 的 `name` |
+| 根 package.json | 写 `"@hmr/greeter-*": "*"` | **不写**；`postinstall` 按配置 symlink | workspace 包由 bundle/yml 组合 |
+| Vite | 手写 alias | `cordisPluginsVite` 读配置生成 alias + `virtual:cordis-ui-loaders` | client 包清单 / boot |
+| Host | catalog 静态 import | `importConfiguredPackage(配置里的字符串)` | Loader |
 
-刻意不搬：多层 patch 叠层、Schemastery Config、`__DSH_BOOT__` 动态 client 包。
+## 怎么加一个插件
 
-## 问候服务两包
-
-- `@hmr/greeter-host` — `ctx.greet`、tool `greet`、`GET /api/greet`、hub page
-- `@hmr/greeter-ui` — Settings demos 卡片，消费 `/api/greet`
-
-启用/禁用仍在 Settings 开关；关闭 host 插件时 ui-hub 会卸掉 `@hmr/greeter-ui`。
-
-## 配置引入
-
-编辑根目录 `cordis.plugins.json` 的 `plugins[]`：
+1. 在 `packages/<dir>/` 放好包（`package.json` 的 `name` 任意 scoped 名）
+2. 只改 **`cordis.plugins.json`**：
 
 ```json
 {
   "id": "greeter",
   "package": "@hmr/greeter-host",
   "ui": "@hmr/greeter-ui",
-  "enabled": true,
-  "togglable": true
+  "enabled": true
 }
 ```
 
-重启 host 后生效。前端 `ui` 字段需在 `src/plugins/orchestration/ui-packages.ts` 登记动态 import（Vite 需静态可分析的包名）。
+3. `npm install`（或 `node scripts/link-cordis-plugins.mjs`）→ 启动
+
+主仓 `src/` / `host/` 里搜不到 `@hmr/greeter` 字样才算合格。
+
+## 热插拔
+
+Settings 开关仍走 hub `fiber.dispose` / ui-hub 同步；卸掉配置项并重启即等于主仓从未安装过该插件。
