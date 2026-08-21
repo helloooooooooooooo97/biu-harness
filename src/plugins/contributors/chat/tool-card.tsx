@@ -53,24 +53,37 @@ function DetailView({ detail }: { detail: FormattedDetail }) {
   if (detail.kind === 'bash') {
     const hasOut = Boolean(detail.stdout)
     const hasErr = Boolean(detail.stderr)
+    const artifacts = detail.artifacts ?? []
     return (
-      <div className="overflow-hidden rounded-[10px] border border-[var(--dsw-border)] bg-[#1e1f24]">
-        <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-1.5">
-          <span className="font-mono text-[10px] tracking-wide text-white/45 uppercase">output</span>
-          <span
-            className={`font-mono text-[10px] tabular-nums ${
-              detail.code === 0 || detail.code == null ? 'text-[#7dcea0]' : 'text-[#f1948a]'
-            }`}
-          >
-            exit {detail.code ?? '—'}
-          </span>
+      <div className="space-y-2">
+        <div className="overflow-hidden rounded-[10px] border border-[var(--dsw-border)] bg-[#1e1f24]">
+          <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-1.5">
+            <span className="font-mono text-[10px] tracking-wide text-white/45 uppercase">output</span>
+            <span
+              className={`font-mono text-[10px] tabular-nums ${
+                detail.code === 0 || detail.code == null ? 'text-[#7dcea0]' : 'text-[#f1948a]'
+              }`}
+            >
+              exit {detail.code ?? '—'}
+            </span>
+          </div>
+          <pre className="max-h-72 overflow-auto px-3 py-2 font-mono text-[11px] leading-5 text-[#e8eaed]">
+            {hasOut ? <span className="whitespace-pre-wrap">{detail.stdout.replace(/\n$/, '')}</span> : null}
+            {hasOut && hasErr ? '\n\n' : null}
+            {hasErr ? <span className="whitespace-pre-wrap text-[#f5b7b1]">{detail.stderr.replace(/\n$/, '')}</span> : null}
+            {!hasOut && !hasErr ? <span className="text-white/35">(empty)</span> : null}
+          </pre>
         </div>
-        <pre className="max-h-72 overflow-auto px-3 py-2 font-mono text-[11px] leading-5 text-[#e8eaed]">
-          {hasOut ? <span className="whitespace-pre-wrap">{detail.stdout.replace(/\n$/, '')}</span> : null}
-          {hasOut && hasErr ? '\n\n' : null}
-          {hasErr ? <span className="whitespace-pre-wrap text-[#f5b7b1]">{detail.stderr.replace(/\n$/, '')}</span> : null}
-          {!hasOut && !hasErr ? <span className="text-white/35">(empty)</span> : null}
-        </pre>
+        {artifacts.length > 0 ? (
+          <div className="tool-artifacts" aria-label="Artifacts">
+            {artifacts.map((item) => (
+              <a key={item.url} className="tool-artifact" href={item.url} target="_blank" rel="noreferrer">
+                <img className="tool-artifact-img" src={item.url} alt={item.name} loading="lazy" />
+                <span className="tool-artifact-caption">{item.source || item.name}</span>
+              </a>
+            ))}
+          </div>
+        ) : null}
       </div>
     )
   }

@@ -85,10 +85,36 @@ function parseJsonValue(raw: string): unknown | undefined {
 }
 
 /** 把工具结果里的 JSON 变得可读；bash 特判 stdout/stderr。 */
+export type ToolArtifact = {
+  name: string
+  url: string
+  mime?: string
+  source?: string
+}
+
 export type FormattedDetail =
-  | { kind: 'bash'; code: number | null; stdout: string; stderr: string }
+  | { kind: 'bash'; code: number | null; stdout: string; stderr: string; artifacts?: ToolArtifact[] }
   | { kind: 'text'; text: string }
   | { kind: 'json'; text: string }
+
+function parseArtifacts(raw: unknown): ToolArtifact[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined
+  const items: ToolArtifact[] = []
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue
+    const item = entry as Record<string, unknown>
+    const name = typeof item.name === 'string' ? item.name : ''
+    const url = typeof item.url === 'string' ? item.url : ''
+    if (!name || !url) continue
+    items.push({
+      name,
+      url,
+      ...(typeof item.mime === 'string' ? { mime: item.mime } : {}),
+      ...(typeof item.source === 'string' ? { source: item.source } : {}),
+    })
+  }
+  return items.length ? items : undefined
+}
 
 export function formatToolDetail(detail: string | undefined, toolKind?: ParsedToolCall['kind']): FormattedDetail | null {
   if (detail == null || detail === '') return null
@@ -96,7 +122,7 @@ export function formatToolDetail(detail: string | undefined, toolKind?: ParsedTo
 
   if (toolKind === 'bash' || trimmed.startsWith('{')) {
     const obj = parseJsonObject(trimmed)
-    if (obj && ('stdout' in obj || 'stderr' in obj || 'code' in obj)) {
+    if (obj && ('stdout' in obj || 'stderr' in obj || 'code' in obj || 'artifacts' in obj)) {
       const codeRaw = obj.code
       const code =
         typeof codeRaw === 'number'
@@ -106,11 +132,13 @@ export function formatToolDetail(detail: string | undefined, toolKind?: ParsedTo
             : typeof codeRaw === 'string' && /^-?\d+$/.test(codeRaw)
               ? Number(codeRaw)
               : null
+      const artifacts = parseArtifacts(obj.artifacts)
       return {
         kind: 'bash',
         code,
         stdout: typeof obj.stdout === 'string' ? obj.stdout : obj.stdout != null ? String(obj.stdout) : '',
         stderr: typeof obj.stderr === 'string' ? obj.stderr : obj.stderr != null ? String(obj.stderr) : '',
+        ...(artifacts ? { artifacts } : {}),
       }
     }
   }

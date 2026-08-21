@@ -66,6 +66,22 @@ test('formatToolDetail unwraps bash stdout/stderr json', () => {
   assert.equal(formatted.stderr, '')
 })
 
+test('formatToolDetail keeps bash artifacts for chat rendering', () => {
+  const formatted = formatToolDetail(
+    JSON.stringify({
+      code: 0,
+      stdout: 'shot.png\n',
+      stderr: '',
+      artifacts: [{ name: 'shot.png', url: '/api/sessions/s1/artifacts/shot.png', mime: 'image/png' }],
+    }),
+    'bash',
+  )
+  assert.equal(formatted?.kind, 'bash')
+  if (formatted?.kind !== 'bash') return
+  assert.equal(formatted.artifacts?.length, 1)
+  assert.equal(formatted.artifacts?.[0]?.url, '/api/sessions/s1/artifacts/shot.png')
+})
+
 test('formatToolDetail pretty-prints generic json objects', () => {
   const formatted = formatToolDetail('{"a":1,"b":[2,3]}')
   assert.equal(formatted?.kind, 'json')

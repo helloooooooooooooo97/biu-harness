@@ -1924,6 +1924,45 @@ body {
   color: var(--dsw-business);
 }
 
+.tool-artifacts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.tool-artifact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+  border: 1px solid var(--dsw-border);
+  border-radius: 12px;
+  background: var(--dsw-surface);
+  text-decoration: none;
+  color: inherit;
+}
+
+.tool-artifact:hover {
+  border-color: color-mix(in srgb, var(--dsw-business) 45%, var(--dsw-border));
+}
+
+.tool-artifact-img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  background: color-mix(in srgb, var(--dsw-sidebar) 88%, #000);
+}
+
+.tool-artifact-caption {
+  padding: 0 10px 8px;
+  color: var(--dsw-label-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
 .dash-root {
   display: flex;
   min-height: 0;
