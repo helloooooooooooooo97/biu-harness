@@ -1,34 +1,42 @@
 @import "tailwindcss";
 
-/* Lean DSH tokens — night / dark theme */
+/* Cursor-aligned tokens — warm dark IDE chat (accent orange #f54e00) */
 :root {
   color-scheme: dark;
-  --dsw-bg: rgb(16, 17, 20);
-  --dsw-sidebar: rgb(22, 23, 27);
-  --dsw-label: rgb(232, 234, 239);
-  --dsw-label-2: rgb(168, 172, 184);
-  --dsw-label-3: rgb(120, 125, 138);
-  --dsw-border: rgba(255, 255, 255, 0.1);
-  --dsw-bubble: rgb(48, 50, 56);
-  --dsw-business: rgb(96, 148, 245);
-  --dsw-business-soft: rgba(96, 148, 245, 0.18);
-  --dsw-input: rgb(28, 29, 34);
-  --dsw-tool: rgb(28, 29, 34);
-  --dsw-surface: rgb(28, 29, 34);
-  --dsw-danger: rgb(232, 112, 112);
-  --dsw-danger-soft: rgba(232, 112, 112, 0.14);
-  --dsw-ok: rgb(74, 186, 128);
-  --dsw-hover: rgba(255, 255, 255, 0.06);
-  --dsw-hover-strong: rgba(255, 255, 255, 0.1);
-  --dsw-muted-fill: rgba(255, 255, 255, 0.04);
-  --dsw-overlay: rgba(0, 0, 0, 0.55);
-  --dsw-radius-bubble: 14px;
-  --dsw-radius-card: 12px;
-  --dsw-shadow-lv2: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.45);
+  /* Canvas / chrome — warm near-black (from Cursor Dark #26251e family) */
+  --dsw-bg: #14120f;
+  --dsw-sidebar: #1a1814;
+  /* Cream-on-dark type (Cursor Cream #f2f1ed as ink on dark) */
+  --dsw-label: #f2f1ed;
+  --dsw-label-2: rgba(242, 241, 237, 0.72);
+  --dsw-label-3: rgba(242, 241, 237, 0.45);
+  /* oklab warm border ≈ rgba(242,241,237,0.1) on dark */
+  --dsw-border: rgba(242, 241, 237, 0.1);
+  /* User prompt: color-mix(input.bg 90%, #282828) warm analog */
+  --dsw-bubble: #35322c;
+  /* Cursor Orange */
+  --dsw-business: #f54e00;
+  --dsw-business-soft: rgba(245, 78, 0, 0.16);
+  --dsw-input: #1e1c18;
+  --dsw-tool: #1e1c18;
+  --dsw-surface: #1e1c18;
+  /* Semantic from Cursor design system */
+  --dsw-danger: #cf2d56;
+  --dsw-danger-soft: rgba(207, 45, 86, 0.14);
+  --dsw-ok: #1f8a65;
+  --dsw-hover: rgba(242, 241, 237, 0.06);
+  --dsw-hover-strong: rgba(242, 241, 237, 0.1);
+  --dsw-muted-fill: rgba(242, 241, 237, 0.04);
+  --dsw-overlay: rgba(20, 18, 15, 0.72);
+  /* Cursor radii: 8px buttons/cards, softer bubble */
+  --dsw-radius-bubble: 8px;
+  --dsw-radius-card: 8px;
+  /* Hairline-first depth (Cursor prefers border rings over heavy elevation) */
+  --dsw-shadow-lv2: 0 0 0 1px rgba(242, 241, 237, 0.06), 0 8px 24px rgba(0, 0, 0, 0.35);
   --dsw-chat-width: 748px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
-    "Microsoft YaHei", sans-serif;
-  --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Consolas, monospace;
+    "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, Consolas, monospace;
 }
 
 @theme {
@@ -102,7 +110,7 @@ body {
 }
 
 .dsw-hero-glow {
-  background: radial-gradient(ellipse at center, rgba(96, 148, 245, 0.22), transparent 70%);
+  background: radial-gradient(ellipse at center, rgba(245, 78, 0, 0.14), transparent 70%);
 }
 
 /* App shell — VS Code-like activity bar + optional side bar */
@@ -262,7 +270,7 @@ body {
   border-color: color-mix(in srgb, var(--dsw-business) 40%, var(--dsw-border));
   background: transparent;
   color: var(--dsw-business);
-  box-shadow: 0 6px 18px rgba(96, 148, 245, 0.2);
+  box-shadow: 0 6px 18px rgba(245, 78, 0, 0.18);
 }
 
 .project-chip:disabled,
@@ -504,7 +512,7 @@ body {
 }
 
 .traj-group-bar:hover {
-  background: rgba(65, 118, 230, 0.06);
+  background: rgba(245, 78, 0, 0.08);
 }
 
 .traj-group-bar-left {
@@ -551,7 +559,7 @@ body {
 
 .traj-step-fold:hover {
   color: var(--dsw-business);
-  background: rgba(65, 118, 230, 0.06);
+  background: rgba(245, 78, 0, 0.08);
 }
 
 .traj-row-wrap .traj-row {
@@ -575,7 +583,7 @@ body {
 }
 
 .traj-row:hover {
-  background: rgba(65, 118, 230, 0.05);
+  background: rgba(245, 78, 0, 0.06);
 }
 
 .traj-row-focus {
@@ -598,8 +606,8 @@ body {
   width: 6px;
   height: 6px;
   margin-right: 6px;
-  border-left: 1px solid rgba(65, 118, 230, 0.45);
-  border-bottom: 1px solid rgba(65, 118, 230, 0.45);
+  border-left: 1px solid rgba(245, 78, 0, 0.45);
+  border-bottom: 1px solid rgba(245, 78, 0, 0.45);
   vertical-align: middle;
   transform: translateY(-1px);
 }
@@ -886,7 +894,7 @@ body {
 
 .traj-tag-turn {
   color: var(--dsw-label-2);
-  background: rgba(65, 118, 230, 0.08);
+  background: rgba(245, 78, 0, 0.1);
 }
 
 .traj-tag-step {
