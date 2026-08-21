@@ -210,21 +210,18 @@ body {
   border: 0;
 }
 
-/* Compact project bind chip (dock capsules) */
+/* Compact project bind: icon-only (dock capsules) */
 .project-chip-wrap {
   display: inline-flex;
-  max-width: min(220px, 36vw);
-  flex-shrink: 1;
+  flex-shrink: 0;
   align-items: center;
   gap: 2px;
 }
 
 .project-chip {
   display: inline-flex;
-  min-width: 0;
-  max-width: 100%;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
   border: 1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent);
   border-radius: 999px;
   background: color-mix(in srgb, var(--dsw-bg) 82%, transparent);
@@ -235,6 +232,12 @@ body {
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(15, 17, 21, 0.06);
   backdrop-filter: blur(10px);
+}
+
+.project-chip-icon-only {
+  width: 32px;
+  height: 32px;
+  padding: 0;
 }
 
 .dock-seg {
@@ -273,17 +276,14 @@ body {
 }
 
 .project-chip-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
 }
 
-.project-chip-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 550;
+.project-chip.is-bound {
+  color: var(--dsw-business);
+  border-color: color-mix(in srgb, var(--dsw-business) 35%, var(--dsw-border));
 }
 
 .project-chip-error {
