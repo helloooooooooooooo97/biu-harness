@@ -73,3 +73,27 @@ test('minimal mode only exposes bash and str_replace_editor', async () => {
   assert.equal(await ctx.tools.invoke('bash'), 'bash')
   await assert.rejects(() => ctx.tools.invoke('fs_read'), /not available in minimal mode/)
 })
+
+test('catalog lists all tools; extraTools temporarily unlocks minimal', async () => {
+  const ctx = new Context()
+  await ctx.plugin(tools)
+  for (const name of ['bash', 'str_replace_editor', 'fs_read']) {
+    ctx.tools.register({
+      name,
+      description: `${name} desc`,
+      parameters: { type: 'object', properties: {} },
+      execute: () => name,
+    })
+  }
+  ctx.tools.setMode('minimal')
+  assert.deepEqual(
+    ctx.tools.catalog().map((item) => item.name),
+    ['bash', 'fs_read', 'str_replace_editor'],
+  )
+  await assert.rejects(() => ctx.tools.invoke('fs_read'), /not available in minimal mode/)
+  await tools.runWithExtraTools(['fs_read'], async () => {
+    assert.deepEqual(ctx.tools.names().sort(), ['bash', 'fs_read', 'str_replace_editor'])
+    assert.equal(await ctx.tools.invoke('fs_read'), 'fs_read')
+  })
+  await assert.rejects(() => ctx.tools.invoke('fs_read'), /not available in minimal mode/)
+})

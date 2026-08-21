@@ -3,6 +3,7 @@ import '../../types.ts'
 import type { AssistantReply, ChatOptions, LlmClient, LlmConfig, LlmMessage } from './llm.ts'
 import type { InboxKind } from '../core/session-types.ts'
 import { runWithSession } from '../core/session-scope.ts'
+import { runWithExtraTools } from '../registry/tools.ts'
 
 export interface AgentTurn {
   text: string
@@ -12,6 +13,8 @@ export interface AgentTurn {
 export interface ClaimedInput {
   kind: InboxKind
   text: string
+  /** slash 为本回合临时放开的额外工具（极简模式） */
+  extraTools?: string[]
 }
 
 export interface PreStepReq {
@@ -36,7 +39,10 @@ export class AgentLoop implements AgentRunner {
   ) {}
 
   async run(claimed: ClaimedInput[]): Promise<AgentTurn> {
-    return runWithSession(this.sessionId, () => this.runInSession(claimed))
+    const extras = [
+      ...new Set(claimed.flatMap((item) => item.extraTools ?? []).map((name) => name.trim()).filter(Boolean)),
+    ]
+    return runWithSession(this.sessionId, () => runWithExtraTools(extras, () => this.runInSession(claimed)))
   }
 
   private async runInSession(claimed: ClaimedInput[]): Promise<AgentTurn> {
