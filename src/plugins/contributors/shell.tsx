@@ -14,7 +14,7 @@ import {
 import { FishLogo } from './brand.tsx'
 import { SidebarMascot } from './mascot/sidebar-mascot.tsx'
 import { resolveSessionMascot } from './mascot/session-mascot.ts'
-import { LuPanelLeft, LuPanelLeftClose, LuPlus } from 'react-icons/lu'
+import { LuMessageSquare, LuPanelLeft, LuPanelLeftClose, LuPlus, LuWaypoints } from 'react-icons/lu'
 
 export const name = 'shell'
 export const inject = ['slots', 'snapshot', 'sessionView', 'projectView']
@@ -289,27 +289,43 @@ function Shell(props: SlotProps) {
             <NavLink
               to={sessionId ? `/s/${sessionId}` : '/'}
               end
+              title="Chat"
+              aria-label="Chat"
               className={({ isActive }) =>
-                `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
+                `relative grid size-8 place-items-center rounded-[6px] ${
+                  isActive
+                    ? 'text-[var(--dsw-business)]'
+                    : 'text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]'
+                }`
               }
             >
               {({ isActive }) => (
                 <>
-                  Chat
-                  {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
+                  <LuMessageSquare className="size-4" />
+                  {isActive ? (
+                    <span className="absolute inset-x-1.5 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" />
+                  ) : null}
                 </>
               )}
             </NavLink>
             <NavLink
               to={sessionId ? `/s/${sessionId}/trajectory` : '/'}
+              title="Trajectory"
+              aria-label="Trajectory"
               className={({ isActive }) =>
-                `relative pb-3 pt-3 text-[13px] font-medium ${isActive ? 'text-[var(--dsw-business)]' : 'text-[var(--dsw-label-3)]'}`
+                `relative grid size-8 place-items-center rounded-[6px] ${
+                  isActive
+                    ? 'text-[var(--dsw-business)]'
+                    : 'text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]'
+                }`
               }
             >
               {({ isActive }) => (
                 <>
-                  Trajectory
-                  {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" /> : null}
+                  <LuWaypoints className="size-4" />
+                  {isActive ? (
+                    <span className="absolute inset-x-1.5 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" />
+                  ) : null}
                 </>
               )}
             </NavLink>
