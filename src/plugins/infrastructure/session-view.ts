@@ -89,9 +89,43 @@ type TrajectoryPayload = {
   totalTurns?: number
 }
 
+type SessionCacheEntry = {
+  events: SessionEvent[]
+  nodes: ChatNode[]
+  project?: { name: string; path?: string; boundAt: number }
+  hasMoreOlder: boolean
+  totalTurns: number
+}
+
+const SESSION_CACHE_MAX = 16
+
+function sessionsEqual(a: SessionListItem[], b: SessionListItem[]): boolean {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    const left = a[i]!
+    const right = b[i]!
+    if (
+      left.id !== right.id ||
+      left.title !== right.title ||
+      left.eventCount !== right.eventCount ||
+      left.updatedAt !== right.updatedAt ||
+      left.project?.path !== right.project?.path ||
+      left.project?.name !== right.project?.name
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
 export class SessionViewService extends Service {
   private value: SessionViewState = empty
   private listeners = new Set<() => void>()
+  /** 切会话瞬时缓存：避免每次都等网络才卸掉旧 Chat DOM */
+  private cache = new Map<string, SessionCacheEntry>()
+  private cacheOrder: string[] = []
+  private loadGen = 0
 
   constructor(ctx: Context) {
     super(ctx, 'sessionView')
@@ -123,6 +157,8 @@ export class SessionViewService extends Service {
     }
     if (route.kind === 'home') {
       if (!this.value.sessionId && this.value.view === 'chat') return
+      this.stashCurrent()
+      this.loadGen += 1
       this.replace({
         sessionId: null,
         events: [],
@@ -188,6 +224,7 @@ export class SessionViewService extends Service {
       nodes: projectNodes(events),
       error: undefined,
     })
+    this.stashCurrent()
     // Trajectory 索引走独立接口；运行中只做轻量刷新，不塞全文 events
     if (this.value.view === 'trajectory') void this.refreshTrajectoryIndex()
     void this.refreshSessions()
@@ -254,7 +291,10 @@ export class SessionViewService extends Service {
       const res = await fetch('/api/sessions')
       if (!res.ok) return
       const body = (await res.json()) as { sessions?: SessionListItem[] }
-      this.replace({ sessions: Array.isArray(body.sessions) ? body.sessions : [] })
+      const next = Array.isArray(body.sessions) ? body.sessions : []
+      // 列表引用每次都新会打穿 Shell；无变化则跳过
+      if (sessionsEqual(this.value.sessions, next)) return
+      this.replace({ sessions: next })
     } catch {
       /* host 未就绪时忽略 */
     }
@@ -268,10 +308,16 @@ export class SessionViewService extends Service {
         mode?: ApprovalMode
         pending?: ApprovalItem[]
       }
-      this.replace({
-        approvalMode: body.mode === 'hold' ? 'hold' : 'auto',
-        approvals: Array.isArray(body.pending) ? body.pending : [],
-      })
+      const approvalMode = body.mode === 'hold' ? 'hold' : 'auto'
+      const approvals = Array.isArray(body.pending) ? body.pending : []
+      if (
+        this.value.approvalMode === approvalMode &&
+        this.value.approvals.length === approvals.length &&
+        this.value.approvals.every((item, index) => item.id === approvals[index]?.id)
+      ) {
+        return
+      }
+      this.replace({ approvalMode, approvals })
     } catch {
       /* host 未就绪时忽略 */
     }
@@ -304,14 +350,52 @@ export class SessionViewService extends Service {
 
   async load(sessionId: string, options: { view?: ConversationView } = {}) {
     const view = options.view ?? this.value.view
+    if (this.value.sessionId && this.value.sessionId !== sessionId) this.stashCurrent()
+
+    const cached = this.cache.get(sessionId)
+    if (cached) {
+      this.touchCache(sessionId)
+      this.loadGen += 1
+      this.applyCached(sessionId, cached, view)
+      if (view === 'trajectory') void this.ensureTrajectory()
+      // 后台校对，不挡切换
+      void this.revalidate(sessionId, view)
+      return
+    }
+
+    // 立刻清空旧会话 UI —— 切到空 chat 也先卸掉重 Markdown，再等网络
+    const gen = ++this.loadGen
+    this.replace({
+      sessionId,
+      events: [],
+      nodes: [],
+      trajectory: [],
+      project: undefined,
+      view,
+      focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
+      error: undefined,
+      pending: false,
+      agentStatus: 'idle',
+      hasMoreOlder: false,
+      loadingOlder: false,
+      trajectoryHasMore: false,
+      trajectoryLoading: false,
+      totalTurns: 0,
+    })
+
     const res = await fetch(`/api/sessions/${sessionId}?turns=${SESSION_TAIL_TURNS}`)
     if (!res.ok) throw new Error(`加载 session 失败：${res.status}`)
+    if (gen !== this.loadGen || this.value.sessionId !== sessionId) return
     const body = (await res.json()) as SessionPayload
+    if (gen !== this.loadGen || this.value.sessionId !== sessionId) return
     const events = compactSessionEvents(Array.isArray(body.events) ? body.events : [])
+    const nodes = projectNodes(events)
+    const hasMoreOlder = Boolean(body.hasMore)
+    const totalTurns = typeof body.totalTurns === 'number' ? body.totalTurns : 0
     this.replace({
       sessionId: body.id,
       events,
-      nodes: projectNodes(events),
+      nodes,
       trajectory: [],
       project: body.project,
       view,
@@ -319,15 +403,113 @@ export class SessionViewService extends Service {
       error: undefined,
       pending: false,
       agentStatus: 'idle',
-      hasMoreOlder: Boolean(body.hasMore),
+      hasMoreOlder,
       loadingOlder: false,
       trajectoryHasMore: false,
       trajectoryLoading: false,
-      totalTurns: typeof body.totalTurns === 'number' ? body.totalTurns : 0,
+      totalTurns,
+    })
+    this.putCache(body.id, {
+      events,
+      nodes,
+      project: body.project,
+      hasMoreOlder,
+      totalTurns,
     })
     if (view === 'trajectory') await this.ensureTrajectory()
-    void this.refreshSessions()
-    void this.refreshApprovals()
+  }
+
+  /** 缓存命中后的静默刷新；若用户已切走则丢弃 */
+  private async revalidate(sessionId: string, view: ConversationView) {
+    const gen = this.loadGen
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}?turns=${SESSION_TAIL_TURNS}`)
+      if (!res.ok) return
+      if (gen !== this.loadGen || this.value.sessionId !== sessionId) return
+      const body = (await res.json()) as SessionPayload
+      if (gen !== this.loadGen || this.value.sessionId !== sessionId) return
+      const events = compactSessionEvents(Array.isArray(body.events) ? body.events : [])
+      const nodes = projectNodes(events)
+      const hasMoreOlder = Boolean(body.hasMore)
+      const totalTurns = typeof body.totalTurns === 'number' ? body.totalTurns : 0
+      const sameLen = events.length === this.value.events.length
+      const sameTail =
+        sameLen &&
+        events.at(-1)?.seq === this.value.events.at(-1)?.seq &&
+        events.at(-1)?.ts === this.value.events.at(-1)?.ts
+      this.putCache(sessionId, {
+        events,
+        nodes,
+        project: body.project,
+        hasMoreOlder,
+        totalTurns,
+      })
+      if (sameTail && body.project?.path === this.value.project?.path) return
+      this.replace({
+        events,
+        nodes,
+        project: body.project,
+        hasMoreOlder,
+        totalTurns,
+        trajectory: view === 'trajectory' ? this.value.trajectory : [],
+      })
+      if (view === 'trajectory') void this.ensureTrajectory()
+    } catch {
+      /* 静默 */
+    }
+  }
+
+  private applyCached(sessionId: string, cached: SessionCacheEntry, view: ConversationView) {
+    this.replace({
+      sessionId,
+      events: cached.events,
+      nodes: cached.nodes,
+      trajectory: [],
+      project: cached.project,
+      view,
+      focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
+      error: undefined,
+      pending: false,
+      agentStatus: 'idle',
+      hasMoreOlder: cached.hasMoreOlder,
+      loadingOlder: false,
+      trajectoryHasMore: false,
+      trajectoryLoading: false,
+      totalTurns: cached.totalTurns,
+    })
+  }
+
+  private stashCurrent() {
+    const id = this.value.sessionId
+    if (!id) return
+    this.putCache(id, {
+      events: this.value.events,
+      nodes: this.value.nodes,
+      project: this.value.project,
+      hasMoreOlder: this.value.hasMoreOlder,
+      totalTurns: this.value.totalTurns,
+    })
+  }
+
+  private putCache(id: string, entry: SessionCacheEntry) {
+    if (this.cache.has(id)) this.cacheOrder = this.cacheOrder.filter((item) => item !== id)
+    this.cache.set(id, entry)
+    this.cacheOrder.push(id)
+    while (this.cacheOrder.length > SESSION_CACHE_MAX) {
+      const evict = this.cacheOrder.shift()
+      if (evict) this.cache.delete(evict)
+    }
+  }
+
+  private touchCache(id: string) {
+    if (!this.cache.has(id)) return
+    this.cacheOrder = this.cacheOrder.filter((item) => item !== id)
+    this.cacheOrder.push(id)
+  }
+
+  private dropCache(id: string) {
+    this.cache.delete(id)
+    this.cacheOrder = this.cacheOrder.filter((item) => item !== id)
   }
 
   /** 上滑加载更早 chat turn；返回是否真正拉到了数据 */
@@ -485,6 +667,7 @@ export class SessionViewService extends Service {
     const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' })
     const body = (await res.json()) as { ok?: boolean; error?: string }
     if (!res.ok) throw new Error(body.error || `删除失败：${res.status}`)
+    this.dropCache(id)
     const wasActive = this.value.sessionId === id
     await this.refreshSessions()
     if (!wasActive) return
@@ -493,6 +676,7 @@ export class SessionViewService extends Service {
       await this.load(next, { view: 'chat' })
       return
     }
+    this.loadGen += 1
     this.replace({
       sessionId: null,
       events: [],

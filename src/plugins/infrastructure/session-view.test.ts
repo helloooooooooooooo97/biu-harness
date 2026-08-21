@@ -218,6 +218,99 @@ test('fetchEventDetail and fetchEventRequest hit fine-grained APIs', async () =>
   assert.equal(calls.some((url) => url.includes('/events/4/request')), true)
 })
 
+test('load clears previous chat immediately before network returns', async () => {
+  let release!: (value: unknown) => void
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.includes('/api/sessions/empty?turns=')) {
+      await gate
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'empty', events: [{ type: 'session/open', version: 1, seq: 0, ts: 1 }], hasMore: false, totalTurns: 0 }),
+      } as Response
+    }
+    if (url.includes('/api/sessions/busy?turns=')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 'busy',
+          events: [
+            { type: 'session/open', version: 1, seq: 0, ts: 1 },
+            { type: 'user/message', text: 'hi', seq: 1, ts: 2 },
+            { type: 'assistant/message', text: 'yo', seq: 2, ts: 3 },
+          ],
+          hasMore: false,
+          totalTurns: 1,
+        }),
+      } as Response
+    }
+    if (url.includes('/api/sessions')) {
+      return { ok: true, status: 200, json: async () => ({ sessions: [] }) } as Response
+    }
+    if (url.includes('/api/approvals')) {
+      return { ok: true, status: 200, json: async () => ({ mode: 'auto', pending: [] }) } as Response
+    }
+    return { ok: false, status: 404, json: async () => ({}) } as Response
+  }) as typeof fetch
+
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  await view.load('busy', { view: 'chat' })
+  assert.equal(view.get().nodes.length > 0, true)
+
+  const pending = view.load('empty', { view: 'chat' })
+  assert.equal(view.get().sessionId, 'empty')
+  assert.equal(view.get().nodes.length, 0)
+  release(undefined)
+  await pending
+  assert.equal(view.get().sessionId, 'empty')
+})
+
+test('second load of same session hits memory cache without waiting on fetch', async () => {
+  let fetches = 0
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.includes('/api/sessions/s1?turns=')) {
+      fetches += 1
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 's1',
+          events: [
+            { type: 'session/open', version: 1, seq: 0, ts: 1 },
+            { type: 'user/message', text: 'hi', seq: 1, ts: 2 },
+          ],
+          hasMore: false,
+          totalTurns: 1,
+        }),
+      } as Response
+    }
+    if (url.includes('/api/sessions')) {
+      return { ok: true, status: 200, json: async () => ({ sessions: [] }) } as Response
+    }
+    if (url.includes('/api/approvals')) {
+      return { ok: true, status: 200, json: async () => ({ mode: 'auto', pending: [] }) } as Response
+    }
+    return { ok: false, status: 404, json: async () => ({}) } as Response
+  }) as typeof fetch
+
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  await view.load('s1', { view: 'chat' })
+  await view.load('s1', { view: 'chat' })
+  // 首次 + 后台 revalidate；同步路径已用缓存，nodes 立刻可用
+  assert.equal(view.get().nodes.some((node) => node.kind === 'user'), true)
+  assert.equal(fetches >= 1, true)
+})
+
 test('loadOlder prepends earlier turns', async () => {
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const url = String(input)
