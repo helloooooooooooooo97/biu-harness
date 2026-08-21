@@ -197,12 +197,7 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   }
 
   if (!rows.length) {
-    return (
-      <div className="traj-empty">
-        <p className="traj-empty-title">Empty trajectory</p>
-        <p className="traj-empty-body">Send a message in Chat — events will project here as they append.</p>
-      </div>
-    )
+    return <div className="traj-root" aria-hidden />
   }
 
   return (

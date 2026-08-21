@@ -14,6 +14,7 @@ import {
 import { FishLogo } from './brand.tsx'
 import { SidebarMascot } from './mascot/sidebar-mascot.tsx'
 import { resolveSessionMascot } from './mascot/session-mascot.ts'
+import { FolderGlyph } from './chat/project-panel.tsx'
 import { LuMessageSquare, LuPanelLeft, LuPanelLeftClose, LuPlus, LuWaypoints } from 'react-icons/lu'
 
 export const name = 'shell'
@@ -275,26 +276,32 @@ function Shell(props: SlotProps) {
           aria-hidden={activeModule !== 'agent'}
         >
           <header className="chat-view-header">
-            {sidebarCollapsed ? (
-              <button
-                type="button"
-                className="chat-view-header-expand"
-                title="Expand sidebar"
-                aria-label="Expand sidebar"
-                onClick={() => setSidebarCollapsed(false)}
-              >
-                <LuPanelLeft className="size-3.5" />
-              </button>
-            ) : null}
+            <div className="chat-view-header-left">
+              {sidebarCollapsed ? (
+                <button
+                  type="button"
+                  className="chat-view-header-expand"
+                  title="Expand sidebar"
+                  aria-label="Expand sidebar"
+                  onClick={() => setSidebarCollapsed(false)}
+                >
+                  <LuPanelLeft className="size-3.5" />
+                </button>
+              ) : null}
+              {project ? (
+                <div className="chat-view-project" title={project.path ?? project.name}>
+                  <FolderGlyph className="chat-view-project-icon" />
+                  <span className="chat-view-project-name">{project.name}</span>
+                </div>
+              ) : null}
+            </div>
             <nav className="chat-view-header-tabs" aria-label="View">
               <NavLink
                 to={sessionId ? `/s/${sessionId}` : '/'}
                 end
                 title="Chat"
                 aria-label="Chat"
-                className={({ isActive }) =>
-                  `chat-view-tab${isActive ? ' is-active' : ''}`
-                }
+                className={({ isActive }) => `chat-view-tab${isActive ? ' is-active' : ''}`}
               >
                 {({ isActive }) => (
                   <>
@@ -307,9 +314,7 @@ function Shell(props: SlotProps) {
                 to={sessionId ? `/s/${sessionId}/trajectory` : '/'}
                 title="Trajectory"
                 aria-label="Trajectory"
-                className={({ isActive }) =>
-                  `chat-view-tab${isActive ? ' is-active' : ''}`
-                }
+                className={({ isActive }) => `chat-view-tab${isActive ? ' is-active' : ''}`}
               >
                 {({ isActive }) => (
                   <>
@@ -319,6 +324,7 @@ function Shell(props: SlotProps) {
                 )}
               </NavLink>
             </nav>
+            <div className="chat-view-header-right" aria-hidden />
           </header>
           <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             {/*
