@@ -1024,16 +1024,16 @@ body {
   word-break: break-word;
 }
 
-/* Chat messages — Cursor-like: gray user bubble, bare assistant + actions */
+/* Chat messages — Cursor-like: full-width gray user row, bare assistant + actions */
 .chat-user-row {
   display: flex;
   width: 100%;
-  justify-content: flex-end;
 }
 
 .chat-user-bubble {
-  max-width: min(525px, 88%);
-  padding: 10px 14px;
+  width: 100%;
+  max-width: 100%;
+  padding: 12px 14px;
   border-radius: var(--dsw-radius-bubble);
   background: var(--dsw-bubble);
   color: var(--dsw-label);
