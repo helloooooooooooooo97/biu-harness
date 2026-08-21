@@ -136,7 +136,7 @@ body {
   flex-direction: column;
   align-items: stretch;
   border-right: 1px solid var(--dsw-border);
-  background: #eceef1;
+  background: #0f0e0c;
 }
 
 .app-activity-brand {
