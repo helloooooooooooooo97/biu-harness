@@ -2,12 +2,15 @@ import { useMemo, useState } from 'react'
 import type { ChatNode } from '../../infrastructure/session-project.ts'
 import {
   diffStats,
+  formatToolDetail,
   lineDiff,
   parseToolCall,
+  prettyJsonString,
   shouldAutoOpenTool,
   toolSummary,
   toolTitle,
   type DiffLine,
+  type FormattedDetail,
   type ParsedToolCall,
 } from './tool-format.ts'
 
@@ -46,14 +49,57 @@ function DiffBlock({ lines, path }: { lines: DiffLine[]; path?: string }) {
   )
 }
 
+function DetailView({ detail }: { detail: FormattedDetail }) {
+  if (detail.kind === 'bash') {
+    const hasOut = Boolean(detail.stdout)
+    const hasErr = Boolean(detail.stderr)
+    return (
+      <div className="overflow-hidden rounded-[10px] border border-[var(--dsw-border)] bg-[#1e1f24]">
+        <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-1.5">
+          <span className="font-mono text-[10px] tracking-wide text-white/45 uppercase">output</span>
+          <span
+            className={`font-mono text-[10px] tabular-nums ${
+              detail.code === 0 || detail.code == null ? 'text-[#7dcea0]' : 'text-[#f1948a]'
+            }`}
+          >
+            exit {detail.code ?? '—'}
+          </span>
+        </div>
+        <pre className="max-h-72 overflow-auto px-3 py-2 font-mono text-[11px] leading-5 text-[#e8eaed]">
+          {hasOut ? <span className="whitespace-pre-wrap">{detail.stdout.replace(/\n$/, '')}</span> : null}
+          {hasOut && hasErr ? '\n\n' : null}
+          {hasErr ? <span className="whitespace-pre-wrap text-[#f5b7b1]">{detail.stderr.replace(/\n$/, '')}</span> : null}
+          {!hasOut && !hasErr ? <span className="text-white/35">(empty)</span> : null}
+        </pre>
+      </div>
+    )
+  }
+
+  if (detail.kind === 'json') {
+    return (
+      <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] px-3 py-2 font-mono text-[11px] leading-5 text-[var(--dsw-label-2)]">
+        {detail.text}
+      </pre>
+    )
+  }
+
+  return (
+    <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] px-3 py-2 font-mono text-[11px] leading-5 text-[var(--dsw-label)]">
+      {detail.text}
+    </pre>
+  )
+}
+
 function ToolBody({ parsed, rawArguments, detail }: { parsed: ParsedToolCall; rawArguments: string; detail?: string }) {
+  const formatted = formatToolDetail(detail, parsed.kind)
+
   if (parsed.kind === 'str_replace') {
     const lines = lineDiff(parsed.oldStr, parsed.newStr)
     return (
       <div className="space-y-2">
         <DiffBlock path={parsed.path} lines={lines} />
-        {detail && !detail.startsWith('The file ') ? (
-          <pre className="whitespace-pre-wrap font-mono text-[11px] text-[var(--dsw-label-3)]">{detail}</pre>
+        {formatted && formatted.kind === 'text' && !formatted.text.startsWith('The file ') ? (
+          <DetailView detail={formatted} />
         ) : null}
       </div>
     )
@@ -64,8 +110,8 @@ function ToolBody({ parsed, rawArguments, detail }: { parsed: ParsedToolCall; ra
     return (
       <div className="space-y-2">
         <DiffBlock path={parsed.path} lines={lines} />
-        {detail && !detail.startsWith('File created') ? (
-          <pre className="whitespace-pre-wrap font-mono text-[11px] text-[var(--dsw-label-3)]">{detail}</pre>
+        {formatted && formatted.kind === 'text' && !formatted.text.startsWith('File created') ? (
+          <DetailView detail={formatted} />
         ) : null}
       </div>
     )
@@ -76,8 +122,8 @@ function ToolBody({ parsed, rawArguments, detail }: { parsed: ParsedToolCall; ra
     return (
       <div className="space-y-2">
         <DiffBlock path={`${parsed.path} · after line ${parsed.insertLine}`} lines={lines} />
-        {detail && !detail.startsWith('The file ') ? (
-          <pre className="whitespace-pre-wrap font-mono text-[11px] text-[var(--dsw-label-3)]">{detail}</pre>
+        {formatted && formatted.kind === 'text' && !formatted.text.startsWith('The file ') ? (
+          <DetailView detail={formatted} />
         ) : null}
       </div>
     )
@@ -90,11 +136,7 @@ function ToolBody({ parsed, rawArguments, detail }: { parsed: ParsedToolCall; ra
           <span className="text-[#8ab4f8]">$ </span>
           {parsed.command}
         </pre>
-        {detail ? (
-          <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] px-3 py-2 font-mono text-[11px] leading-5 text-[var(--dsw-label)]">
-            {detail}
-          </pre>
-        ) : null}
+        {formatted ? <DetailView detail={formatted} /> : null}
       </div>
     )
   }
@@ -106,11 +148,7 @@ function ToolBody({ parsed, rawArguments, detail }: { parsed: ParsedToolCall; ra
           {parsed.path}
           {parsed.viewRange ? `:${parsed.viewRange[0]}-${parsed.viewRange[1]}` : ''}
         </div>
-        {detail ? (
-          <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] px-3 py-2 font-mono text-[11px] leading-5">
-            {detail}
-          </pre>
-        ) : null}
+        {formatted ? <DetailView detail={formatted} /> : null}
       </div>
     )
   }
@@ -118,9 +156,11 @@ function ToolBody({ parsed, rawArguments, detail }: { parsed: ParsedToolCall; ra
   return (
     <div className="space-y-2">
       {rawArguments ? (
-        <pre className="whitespace-pre-wrap font-mono text-[11px] text-[var(--dsw-label-2)]">{rawArguments}</pre>
+        <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] px-3 py-2 font-mono text-[11px] leading-5 text-[var(--dsw-label-2)]">
+          {prettyJsonString(rawArguments)}
+        </pre>
       ) : null}
-      {detail ? <pre className="whitespace-pre-wrap font-mono text-[11px]">{detail}</pre> : null}
+      {formatted ? <DetailView detail={formatted} /> : null}
     </div>
   )
 }
