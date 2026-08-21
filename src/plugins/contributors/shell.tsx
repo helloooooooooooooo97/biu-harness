@@ -205,21 +205,7 @@ function Shell(props: SlotProps) {
         }`}
         aria-hidden={activeModule !== 'agent'}
       >
-        <div className="flex shrink-0 items-center gap-2.5 px-4 pt-4 pb-2">
-          <SidebarMascot
-            size={48}
-            busy={agentBusy}
-            identity={activeMascot}
-            title={`${activeMascot.shape} · ${activeMascot.color}`}
-          />
-          <div className="flex items-center gap-2 text-[var(--dsw-label)]">
-            <span className="text-[15px] font-semibold tracking-tight">deepseek</span>
-            <span className="rounded-[6px] border border-[var(--dsw-border)] bg-[var(--dsw-hover)] px-1.5 py-[2px] text-[10px] font-semibold tracking-wider text-[var(--dsw-label-2)]">
-              HARNESS
-            </span>
-          </div>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-4">
           <div className="mb-2 flex items-center justify-between gap-2 px-1">
             <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Chat</span>
             <div className="flex items-center gap-0.5">
