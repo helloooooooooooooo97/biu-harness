@@ -257,21 +257,13 @@ function Shell(props: SlotProps) {
                     to={`/s/${item.id}${view === 'trajectory' ? '/trajectory' : ''}`}
                     className="flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-2 text-left text-sm"
                   >
-                    {active ? (
-                      <SidebarMascot
-                        size={28}
-                        busy={agentBusy}
-                        identity={identity}
-                        title={`${identity.shape} · ${identity.color}`}
-                      />
-                    ) : (
-                      <SessionMascotMark
-                        size={28}
-                        shape={identity.shape}
-                        color={identity.color}
-                        title={`${identity.shape} · ${identity.color}`}
-                      />
-                    )}
+                    <SessionMascotMark
+                      size={28}
+                      shape={identity.shape}
+                      color={identity.color}
+                      busy={active && agentBusy}
+                      title={`${identity.shape} · ${identity.color}`}
+                    />
                     <span className="min-w-0 flex-1">
                       <div className="truncate font-medium">{item.title}</div>
                       <div className="mt-0.5 font-mono text-[10px] opacity-70">
