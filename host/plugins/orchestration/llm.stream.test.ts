@@ -21,7 +21,7 @@ test('consumeChatCompletionSse yields text deltas and usage', async () => {
       'data: {"choices":[{"delta":{}}],"usage":{"prompt_tokens":3,"completion_tokens":2,"total_tokens":5}}\n\n',
       'data: [DONE]\n\n',
     ]),
-    { onDelta: (text) => deltas.push(text) },
+    { onDelta: (text) => { deltas.push(text) } },
   )
   assert.deepEqual(deltas, ['你', '好'])
   assert.equal(reply.content, '你好')

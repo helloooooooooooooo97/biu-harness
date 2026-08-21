@@ -77,9 +77,9 @@ export class AgentLoop implements AgentRunner {
       if (!chunkBuf) return chunkFlush
       const text = chunkBuf
       chunkBuf = ''
-      chunkFlush = chunkFlush.then(() =>
-        session.append(this.sessionId, { type: 'assistant/chunk', text }),
-      )
+      chunkFlush = chunkFlush.then(async () => {
+        await session.append(this.sessionId, { type: 'assistant/chunk', text })
+      })
       return chunkFlush
     }
 
