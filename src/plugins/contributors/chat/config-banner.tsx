@@ -28,7 +28,7 @@ export function ChatConfigBanner(_props: SlotProps) {
 
   return (
     <div
-      className="mx-auto w-full max-w-[calc(var(--dsw-chat-width)+32px)] border border-[var(--dsw-border)] bg-[var(--dsw-input)] px-4 py-2 text-xs text-[var(--dsw-label-2)]"
+      className="w-full border border-[var(--dsw-border)] bg-[var(--dsw-input)] px-4 py-2 text-xs text-[var(--dsw-label-2)]"
       style={{ borderRadius: 'var(--dsw-radius-bubble)' }}
       role="status"
     >

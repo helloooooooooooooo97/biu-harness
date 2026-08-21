@@ -33,7 +33,7 @@ function ToolRow({
   const [open, setOpen] = useState(false)
   const summary = node.result?.detail?.slice(0, 80) || node.arguments.slice(0, 80) || '…'
   return (
-    <div className="w-full max-w-[var(--dsw-chat-width)] self-stretch">
+    <div className="w-full self-stretch">
       <div className="flex items-center gap-1">
         <button
           type="button"
@@ -86,7 +86,7 @@ function NodeView({ node, onInspect }: { node: ChatNode; onInspect: (callId: str
   }
   if (node.kind === 'assistant') {
     return (
-      <div className="w-full max-w-[var(--dsw-chat-width)] self-start text-[15px] leading-7 text-[var(--dsw-label)]">
+      <div className="w-full self-start text-[15px] leading-7 text-[var(--dsw-label)]">
         {node.text ? <MarkdownBody text={node.text} streaming={Boolean(node.streaming)} /> : node.streaming ? '…' : null}
         {node.streaming ? <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span> : null}
       </div>
@@ -113,7 +113,7 @@ function EmptyHero() {
           </span>
         </div>
         <p className="max-w-md text-sm text-[var(--dsw-label-3)]">
-          对话由 append-only session 投影。右侧 Project 可为本 Session 打开本地文件夹并编辑文件。
+          对话由 append-only session 投影。输入框上方可绑定本机文件夹作为 Session cwd。
         </p>
       </div>
     </div>
@@ -229,7 +229,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   if (nodes.length === 0 && !pending && !error) return <EmptyHero />
 
   return (
-    <div ref={rootRef} className="mx-auto w-full max-w-[var(--dsw-chat-width)]" data-chat-virtual={virtualize ? '1' : '0'}>
+    <div ref={rootRef} className="w-full" data-chat-virtual={virtualize ? '1' : '0'}>
       <StatusRow agentStatus={agentStatus} agentStep={agentStep} />
       {loadingOlder ? (
         <div className="mb-3 text-center text-[11px] text-[var(--dsw-label-3)]">加载更早消息…</div>
