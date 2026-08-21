@@ -1114,6 +1114,12 @@ body {
   color: var(--dsw-ok);
 }
 
+/* Virtualized chat rows — hint browser to skip offscreen paint work */
+.chat-virt-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 160px;
+}
+
 /* Chat Markdown */
 .chat-md {
   max-width: 100%;

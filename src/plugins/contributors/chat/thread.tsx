@@ -10,10 +10,16 @@ import { MarkdownBody } from './markdown.tsx'
 import { ToolCard } from './tool-card.tsx'
 
 const NEAR_BOTTOM_PX = 96
+/** 提早预取更早消息，避免滑到顶才开始请求 */
+const PREFETCH_OLDER_PX = 720
 const ROW_GAP_PX = 16
 const ESTIMATE_ROW_PX = 160
 /** 消息很少时全量渲染更简单，也避免虚表测量抖动 */
 const VIRTUALIZE_AFTER = 12
+/** 加大 overscan：快速上滑时预挂载更多行，减少白屏 */
+const OVERSCAN = 18
+/** 滚动停下多久后恢复完整 Markdown */
+const SCROLL_IDLE_MS = 90
 
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
   let node = el?.parentElement ?? null
@@ -85,17 +91,19 @@ function NodeView({
   node,
   onInspect,
   onFork,
+  lightweight,
 }: {
   node: ChatNode
   onInspect: (callId: string) => void
   onFork: () => void | Promise<void>
+  lightweight: boolean
 }) {
   if (node.kind === 'user') {
     return (
       <div className="chat-user-row">
         <div className="chat-user-bubble">
           {node.kindTag === 'inject' ? <div className="chat-user-tag">inject</div> : null}
-          <MarkdownBody text={node.text} />
+          <MarkdownBody text={node.text} lightweight={lightweight} />
         </div>
       </div>
     )
@@ -105,14 +113,30 @@ function NodeView({
     return (
       <div className="chat-assistant-row">
         <div className="chat-assistant-body">
-          {node.text ? <MarkdownBody text={node.text} streaming={streaming} /> : streaming ? '…' : null}
+          {node.text ? (
+            <MarkdownBody text={node.text} streaming={streaming} lightweight={lightweight && !streaming} />
+          ) : streaming ? (
+            '…'
+          ) : null}
           {streaming ? <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span> : null}
         </div>
-        {!streaming && node.text.trim() ? <AssistantActions text={node.text} onFork={onFork} /> : null}
+        {!streaming && !lightweight && node.text.trim() ? (
+          <AssistantActions text={node.text} onFork={onFork} />
+        ) : null}
       </div>
     )
   }
-  if (node.kind === 'tool') return <ToolCard node={node} onInspect={onInspect} />
+  if (node.kind === 'tool') {
+    if (lightweight) {
+      return (
+        <div className="rounded-[12px] border border-[var(--dsw-border)] px-3 py-2 font-mono text-[12px] text-[var(--dsw-label-3)]">
+          {node.name}
+          {node.result ? (node.result.ok ? ' · ok' : ' · err') : ' · …'}
+        </div>
+      )
+    }
+    return <ToolCard node={node} onInspect={onInspect} />
+  }
   return <div className="self-center text-xs text-[var(--dsw-label-3)]">{node.text}</div>
 }
 
@@ -173,7 +197,10 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLElement | null>(null)
   const stickToBottomRef = useRef(true)
+  const scrollIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const prefetchingRef = useRef(false)
   const [scrollEpoch, setScrollEpoch] = useState(0)
+  const [isScrolling, setIsScrolling] = useState(false)
 
   const virtualize = nodes.length >= VIRTUALIZE_AFTER
 
@@ -203,7 +230,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     count: virtualize ? nodes.length : 0,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ESTIMATE_ROW_PX,
-    overscan: 4,
+    overscan: OVERSCAN,
     gap: ROW_GAP_PX,
     getItemKey: (index) => nodes[index]?.id ?? index,
   })
@@ -219,23 +246,47 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   useEffect(() => {
     const parent = scrollRef.current
     if (!parent) return
-    const onScroll = () => {
-      const distance = parent.scrollHeight - parent.scrollTop - parent.clientHeight
-      stickToBottomRef.current = distance <= NEAR_BOTTOM_PX
-      if (parent.scrollTop <= NEAR_BOTTOM_PX && hasMoreOlder && !loadingOlder) {
-        const beforeHeight = parent.scrollHeight
-        const beforeTop = parent.scrollTop
-        void sessionView.loadOlder().then((loaded) => {
+
+    const markScrolling = () => {
+      setIsScrolling(true)
+      if (scrollIdleTimer.current != null) clearTimeout(scrollIdleTimer.current)
+      scrollIdleTimer.current = setTimeout(() => {
+        scrollIdleTimer.current = null
+        setIsScrolling(false)
+      }, SCROLL_IDLE_MS)
+    }
+
+    const maybePrefetchOlder = () => {
+      if (!hasMoreOlder || loadingOlder || prefetchingRef.current) return
+      if (parent.scrollTop > PREFETCH_OLDER_PX) return
+      const beforeHeight = parent.scrollHeight
+      const beforeTop = parent.scrollTop
+      prefetchingRef.current = true
+      void sessionView
+        .loadOlder()
+        .then((loaded) => {
           if (!loaded) return
           requestAnimationFrame(() => {
             parent.scrollTop = beforeTop + (parent.scrollHeight - beforeHeight)
           })
         })
-      }
+        .finally(() => {
+          prefetchingRef.current = false
+        })
+    }
+
+    const onScroll = () => {
+      markScrolling()
+      const distance = parent.scrollHeight - parent.scrollTop - parent.clientHeight
+      stickToBottomRef.current = distance <= NEAR_BOTTOM_PX
+      maybePrefetchOlder()
     }
     onScroll()
     parent.addEventListener('scroll', onScroll, { passive: true })
-    return () => parent.removeEventListener('scroll', onScroll)
+    return () => {
+      parent.removeEventListener('scroll', onScroll)
+      if (scrollIdleTimer.current != null) clearTimeout(scrollIdleTimer.current)
+    }
   }, [sessionId, scrollEpoch, virtualize, hasMoreOlder, loadingOlder, sessionView])
 
   const lastNode = nodes.at(-1)
@@ -254,6 +305,8 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
 
   if (nodes.length === 0 && !pending && !error) return <EmptyHero />
 
+  const lightweight = virtualize && isScrolling
+
   return (
     <div ref={rootRef} className="w-full" data-chat-virtual={virtualize ? '1' : '0'}>
       <StatusRow agentStatus={agentStatus} agentStep={agentStep} />
@@ -269,11 +322,16 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
               <div
                 key={item.key}
                 data-index={item.index}
-                ref={virtualizer.measureElement}
-                className="absolute top-0 left-0 w-full"
+                ref={isScrolling ? undefined : virtualizer.measureElement}
+                className="chat-virt-row absolute top-0 left-0 w-full"
                 style={{ transform: `translateY(${item.start}px)` }}
               >
-                <NodeViewMemo node={node} onInspect={onInspect} onFork={onFork} />
+                <NodeViewMemo
+                  node={node}
+                  onInspect={onInspect}
+                  onFork={onFork}
+                  lightweight={lightweight}
+                />
               </div>
             )
           })}
@@ -281,7 +339,13 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       ) : (
         <div className="flex flex-col gap-4">
           {nodes.map((node) => (
-            <NodeViewMemo key={node.id} node={node} onInspect={onInspect} onFork={onFork} />
+            <NodeViewMemo
+              key={node.id}
+              node={node}
+              onInspect={onInspect}
+              onFork={onFork}
+              lightweight={false}
+            />
           ))}
         </div>
       )}
