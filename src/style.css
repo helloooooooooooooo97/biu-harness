@@ -300,30 +300,50 @@ body {
 .app-side-actions {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--dsw-border);
-  padding: 12px 12px 10px;
+  gap: 1px;
+  margin: 2px 0 4px;
 }
 
 .app-side-actions-item {
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 10px;
-  border-radius: 10px;
-  padding: 9px 10px;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 7px 8px;
   color: var(--dsw-label-2);
   font-size: 13px;
   font-weight: 500;
   line-height: 1.2;
   text-align: left;
+  text-decoration: none;
   transition: background 0.12s ease, color 0.12s ease;
+}
+
+.app-side-actions-icon {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  place-items: center;
+  color: var(--dsw-label-3);
+}
+
+.app-side-actions-label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-side-actions-item:hover {
   background: var(--dsw-hover);
-  color: var(--dsw-business);
+  color: var(--dsw-label);
+}
+
+.app-side-actions-item:hover .app-side-actions-icon {
+  color: var(--dsw-label);
 }
 
 .app-activity-bar {
