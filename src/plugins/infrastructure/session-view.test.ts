@@ -90,7 +90,7 @@ test('inspectCall switches to trajectory with focus', async () => {
   assert.equal(view.get().focusCallId, 'c1')
 })
 
-test('ingest coalesces consecutive chunks and omits them from trajectory', async () => {
+test('ingest coalesces consecutive chunks and skips trajectory on chat view', async () => {
   mockFetch({
     '/api/sessions': () => ({ sessions: [] }),
     '/api/approvals': () => ({ mode: 'auto', pending: [] }),
@@ -109,8 +109,6 @@ test('ingest coalesces consecutive chunks and omits them from trajectory', async
       (view.get().events.find((event) => event.type === 'assistant/chunk') as { text: string }).text,
     'hello',
   )
-  assert.equal(view.get().trajectory.some((row) => row.type === 'assistant/chunk'), false)
-  // chunk 路径保持 trajectory 引用，避免隐藏账本随 delta 重绘
   assert.equal(view.get().trajectory, trajBefore)
   const assistant = view.get().nodes.find((node) => node.kind === 'assistant')
   assert.equal(assistant?.kind === 'assistant' && assistant.text, 'hello')
@@ -118,13 +116,16 @@ test('ingest coalesces consecutive chunks and omits them from trajectory', async
 
   view.ingest('s1', { type: 'assistant/message', text: 'hello', seq: 4, ts: 5 })
   assert.equal(view.get().events.some((event) => event.type === 'assistant/chunk'), false)
-  assert.equal(view.get().trajectory.some((row) => row.type === 'assistant/message'), true)
+  // chat 视图不投影 trajectory
+  assert.equal(view.get().trajectory.length, 0)
 })
 
-test('load compacts historical chunks from host log', async () => {
+test('load fetches tail turns and skips trajectory until ensureTrajectory', async () => {
+  const calls: string[] = []
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const url = String(input)
-    if (url.match(/\/api\/sessions\/s1$/)) {
+    calls.push(url)
+    if (url.includes('/api/sessions/s1?turns=')) {
       return {
         ok: true,
         status: 200,
@@ -137,6 +138,59 @@ test('load compacts historical chunks from host log', async () => {
             { type: 'assistant/chunk', text: 'b', seq: 3, ts: 4 },
             { type: 'assistant/message', text: 'ab', seq: 4, ts: 5 },
           ],
+          hasMore: false,
+          totalTurns: 1,
+        }),
+      } as Response
+    }
+    if (url.includes('/api/sessions') && !url.includes('/s1')) {
+      return { ok: true, status: 200, json: async () => ({ sessions: [] }) } as Response
+    }
+    if (url.includes('/api/approvals')) {
+      return { ok: true, status: 200, json: async () => ({ mode: 'auto', pending: [] }) } as Response
+    }
+    return { ok: false, status: 404, json: async () => ({}) } as Response
+  }) as typeof fetch
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  await view.load('s1', { view: 'chat' })
+  assert.equal(calls.some((url) => url.includes('turns=24')), true)
+  assert.equal(view.get().events.some((event) => event.type === 'assistant/chunk'), false)
+  assert.equal(view.get().trajectory.length, 0)
+  assert.equal(view.get().nodes.some((node) => node.kind === 'assistant' && node.text === 'ab'), true)
+})
+
+test('loadOlder prepends earlier turns', async () => {
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.includes('/api/sessions/s1/events?beforeSeq=')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 's1',
+          events: [
+            { type: 'user/message', text: 'old', seq: 1, ts: 1 },
+            { type: 'assistant/message', text: 'old-a', seq: 2, ts: 2 },
+          ],
+          hasMore: false,
+          totalTurns: 2,
+        }),
+      } as Response
+    }
+    if (url.includes('/api/sessions/s1?turns=')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 's1',
+          events: [
+            { type: 'user/message', text: 'new', seq: 3, ts: 3 },
+            { type: 'assistant/message', text: 'new-a', seq: 4, ts: 4 },
+          ],
+          hasMore: true,
+          totalTurns: 2,
         }),
       } as Response
     }
@@ -151,10 +205,11 @@ test('load compacts historical chunks from host log', async () => {
   const ctx = new Context()
   await ctx.plugin(sessionView)
   const view = ctx.sessionView as SessionViewService
-  await view.load('s1')
-  assert.equal(view.get().events.some((event) => event.type === 'assistant/chunk'), false)
-  assert.equal(view.get().trajectory.some((row) => row.type === 'assistant/chunk'), false)
-  assert.equal(view.get().nodes.some((node) => node.kind === 'assistant' && node.text === 'ab'), true)
+  await view.load('s1', { view: 'chat' })
+  assert.equal(view.get().hasMoreOlder, true)
+  await view.loadOlder()
+  assert.equal(view.get().nodes[0]?.kind === 'user' && view.get().nodes[0].text, 'old')
+  assert.equal(view.get().hasMoreOlder, false)
 })
 
 test('deleteSession clears active session when list empty', async () => {

@@ -148,6 +148,8 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const agentStep = useSessionView((state) => state.agentStep)
   const sessionId = useSessionView((state) => state.sessionId)
   const error = useSessionView((state) => state.error)
+  const hasMoreOlder = useSessionView((state) => state.hasMoreOlder)
+  const loadingOlder = useSessionView((state) => state.loadingOlder)
   const rootRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLElement | null>(null)
   const stickToBottomRef = useRef(true)
@@ -194,11 +196,21 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     const onScroll = () => {
       const distance = parent.scrollHeight - parent.scrollTop - parent.clientHeight
       stickToBottomRef.current = distance <= NEAR_BOTTOM_PX
+      if (parent.scrollTop <= NEAR_BOTTOM_PX && hasMoreOlder && !loadingOlder) {
+        const beforeHeight = parent.scrollHeight
+        const beforeTop = parent.scrollTop
+        void sessionView.loadOlder().then((loaded) => {
+          if (!loaded) return
+          requestAnimationFrame(() => {
+            parent.scrollTop = beforeTop + (parent.scrollHeight - beforeHeight)
+          })
+        })
+      }
     }
     onScroll()
     parent.addEventListener('scroll', onScroll, { passive: true })
     return () => parent.removeEventListener('scroll', onScroll)
-  }, [sessionId, scrollEpoch, virtualize])
+  }, [sessionId, scrollEpoch, virtualize, hasMoreOlder, loadingOlder, sessionView])
 
   const lastNode = nodes.at(-1)
   // 流式时按 ~96 字符步进 stickKey，避免每个 delta 都触发布局滚动
@@ -219,6 +231,9 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   return (
     <div ref={rootRef} className="mx-auto w-full max-w-[var(--dsw-chat-width)]" data-chat-virtual={virtualize ? '1' : '0'}>
       <StatusRow agentStatus={agentStatus} agentStep={agentStep} />
+      {loadingOlder ? (
+        <div className="mb-3 text-center text-[11px] text-[var(--dsw-label-3)]">加载更早消息…</div>
+      ) : null}
       {virtualize ? (
         <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
           {virtualizer.getVirtualItems().map((item) => {
