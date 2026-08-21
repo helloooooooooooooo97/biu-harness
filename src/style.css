@@ -142,9 +142,21 @@ body {
 
 .app-activity-brand {
   display: grid;
-  height: 48px;
+  height: 52px;
   place-items: center;
   color: var(--dsw-label);
+  overflow: visible;
+}
+
+.app-activity-brand svg {
+  display: block;
+  overflow: visible;
+}
+
+.sidebar-mascot {
+  flex-shrink: 0;
+  overflow: visible;
+  line-height: 0;
 }
 
 .app-activity-brand:hover {

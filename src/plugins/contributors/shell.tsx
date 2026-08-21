@@ -11,7 +11,8 @@ import {
   moduleIdFromPath,
   type AppModuleId,
 } from '../infrastructure/app-modules.ts'
-import { BrandWordmark, FishLogo } from './brand.tsx'
+import { FishLogo } from './brand.tsx'
+import { SidebarMascot } from './mascot/sidebar-mascot.tsx'
 import { LuPlus } from 'react-icons/lu'
 
 export const name = 'shell'
@@ -41,17 +42,19 @@ function ModuleRail({
   active,
   agentHref,
   live,
+  busy,
   onSettings,
 }: {
   active: AppModuleId
   agentHref: string
   live: boolean
+  busy: boolean
   onSettings: () => void
 }) {
   return (
     <nav className="app-activity-bar" aria-label="Activity bar">
       <Link to={agentHref} className="app-activity-brand" title="HARNESS" aria-label="Home">
-        <FishLogo size={18} />
+        <SidebarMascot size={34} busy={busy} title="Harness mascot" />
       </Link>
       <div className="app-activity-list">
         {APP_MODULES.map((module) => {
@@ -123,6 +126,7 @@ function Shell(props: SlotProps) {
   const sessionId = useSessionView((state) => state.sessionId)
   const project = useSessionView((state) => state.project)
   const view = useSessionView((state) => state.view)
+  const agentBusy = useSessionView((state) => state.agentStatus === 'running')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const activeModule = moduleIdFromPath(location.pathname)
   const appRoute = parseAppPath(location.pathname)
@@ -166,6 +170,7 @@ function Shell(props: SlotProps) {
         active={activeModule}
         agentHref={agentHref}
         live={live}
+        busy={agentBusy}
         onSettings={() => setSettingsOpen(true)}
       />
 
@@ -176,8 +181,14 @@ function Shell(props: SlotProps) {
         }`}
         aria-hidden={activeModule !== 'agent'}
       >
-        <div className="shrink-0 px-4 pt-4 pb-2">
-          <BrandWordmark />
+        <div className="flex shrink-0 items-center gap-2.5 px-4 pt-4 pb-2">
+          <SidebarMascot size={48} busy={agentBusy} title="Harness mascot" />
+          <div className="flex items-center gap-2 text-[var(--dsw-label)]">
+            <span className="text-[15px] font-semibold tracking-tight">deepseek</span>
+            <span className="rounded-[6px] border border-[var(--dsw-border)] bg-[var(--dsw-hover)] px-1.5 py-[2px] text-[10px] font-semibold tracking-wider text-[var(--dsw-label-2)]">
+              HARNESS
+            </span>
+          </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3">
           <div className="mb-2 flex items-center justify-between gap-2 px-1">
