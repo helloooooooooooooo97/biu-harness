@@ -36,7 +36,7 @@ function HelloCard(_props: SlotProps) {
           aria-label="名字"
         />
         <button
-          className="rounded-[12px] px-3 py-2 text-sm text-white"
+          className="rounded-[12px] px-3 py-2 text-sm text-[var(--dsw-bg)]"
           style={{ background: 'var(--dsw-business)' }}
           type="submit"
         >

@@ -60,7 +60,7 @@ export function ApprovalsRail(props: SlotProps) {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="rounded-full px-3 py-1 text-[11px] text-white"
+                  className="rounded-full px-3 py-1 text-[11px] text-[var(--dsw-bg)]"
                   style={{ background: 'var(--dsw-business)' }}
                   onClick={() => void sessionView.decideApproval(item.id, true)}
                 >

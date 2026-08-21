@@ -96,7 +96,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
               Cancel
             </button>
             <button
-              className="rounded-full px-3 py-1.5 text-xs text-white disabled:opacity-40"
+              className="rounded-full px-3 py-1.5 text-xs text-[var(--dsw-bg)] disabled:opacity-40"
               style={{ background: 'var(--dsw-business)' }}
               type="submit"
               disabled={!canSubmit}
@@ -106,7 +106,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           </>
         ) : (
           <button
-            className="grid size-8 place-items-center rounded-full text-white disabled:opacity-40"
+            className="grid size-8 place-items-center rounded-full text-[var(--dsw-bg)] disabled:opacity-40"
             style={{ background: 'var(--dsw-business)' }}
             type="submit"
             disabled={!canSubmit}

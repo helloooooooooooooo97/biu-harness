@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Cursor-aligned tokens — warm dark IDE chat (accent orange #f54e00) */
+/* Cursor-aligned tokens — warm dark IDE chat (neutral white/gray accents) */
 :root {
   color-scheme: dark;
   /* Canvas / chrome — warm near-black (from Cursor Dark #26251e family) */
@@ -14,13 +14,13 @@
   --dsw-border: rgba(242, 241, 237, 0.1);
   /* User prompt: color-mix(input.bg 90%, #282828) warm analog */
   --dsw-bubble: #35322c;
-  /* Cursor Orange */
-  --dsw-business: #f54e00;
-  --dsw-business-soft: rgba(245, 78, 0, 0.16);
+  /* Accent: white / gray (no brand orange) */
+  --dsw-business: #f2f1ed;
+  --dsw-business-soft: rgba(242, 241, 237, 0.1);
   --dsw-input: #1e1c18;
   --dsw-tool: #1e1c18;
   --dsw-surface: #1e1c18;
-  /* Semantic from Cursor design system */
+  /* Semantic — muted, not orange */
   --dsw-danger: #cf2d56;
   --dsw-danger-soft: rgba(207, 45, 86, 0.14);
   --dsw-ok: #1f8a65;
@@ -110,7 +110,7 @@ body {
 }
 
 .dsw-hero-glow {
-  background: radial-gradient(ellipse at center, rgba(245, 78, 0, 0.14), transparent 70%);
+  background: radial-gradient(ellipse at center, rgba(242, 241, 237, 0.14), transparent 70%);
 }
 
 /* App shell — VS Code-like activity bar + optional side bar */
@@ -270,7 +270,7 @@ body {
   border-color: color-mix(in srgb, var(--dsw-business) 40%, var(--dsw-border));
   background: transparent;
   color: var(--dsw-business);
-  box-shadow: 0 6px 18px rgba(245, 78, 0, 0.18);
+  box-shadow: 0 6px 18px rgba(242, 241, 237, 0.18);
 }
 
 .project-chip:disabled,
@@ -512,7 +512,7 @@ body {
 }
 
 .traj-group-bar:hover {
-  background: rgba(245, 78, 0, 0.08);
+  background: rgba(242, 241, 237, 0.08);
 }
 
 .traj-group-bar-left {
@@ -559,7 +559,7 @@ body {
 
 .traj-step-fold:hover {
   color: var(--dsw-business);
-  background: rgba(245, 78, 0, 0.08);
+  background: rgba(242, 241, 237, 0.08);
 }
 
 .traj-row-wrap .traj-row {
@@ -583,7 +583,7 @@ body {
 }
 
 .traj-row:hover {
-  background: rgba(245, 78, 0, 0.06);
+  background: rgba(242, 241, 237, 0.06);
 }
 
 .traj-row-focus {
@@ -606,8 +606,8 @@ body {
   width: 6px;
   height: 6px;
   margin-right: 6px;
-  border-left: 1px solid rgba(245, 78, 0, 0.45);
-  border-bottom: 1px solid rgba(245, 78, 0, 0.45);
+  border-left: 1px solid rgba(242, 241, 237, 0.45);
+  border-bottom: 1px solid rgba(242, 241, 237, 0.45);
   vertical-align: middle;
   transform: translateY(-1px);
 }
@@ -894,7 +894,7 @@ body {
 
 .traj-tag-turn {
   color: var(--dsw-label-2);
-  background: rgba(245, 78, 0, 0.1);
+  background: rgba(242, 241, 237, 0.1);
 }
 
 .traj-tag-step {
