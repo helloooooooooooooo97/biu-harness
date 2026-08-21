@@ -97,8 +97,8 @@ async function pickLinux(initial?: string) {
         errors.push(String(err.message))
         continue
       }
-      // zenity cancel → exit 1
-      if (err.code === 1 || err.code === '1') throw new DirectoryPickCancelled()
+      // zenity cancel → exit 1（child_process 上 code 常为 number）
+      if (Number(err.code) === 1) throw new DirectoryPickCancelled()
       throw error
     }
   }

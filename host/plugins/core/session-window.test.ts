@@ -1,15 +1,15 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import type { SessionEvent } from './session-types.ts'
+import type { SessionEvent, SessionEventBody } from './session-types.ts'
 import { compactSessionEvents, sliceBeforeTurns, sliceTailTurns } from './session-window.ts'
 
-function ev(partial: Omit<SessionEvent, 'ts'> & { ts?: number }): SessionEvent {
-  return { ts: partial.ts ?? partial.seq, ...partial } as SessionEvent
+function ev(partial: SessionEventBody & { seq: number; ts?: number }): SessionEvent {
+  return { ...partial, ts: partial.ts ?? partial.seq }
 }
 
 test('compactSessionEvents drops chunks superseded by message', () => {
   const out = compactSessionEvents([
-    ev({ type: 'user/message', text: 'hi', seq: 1 }),
+    ev({ type: 'user/message', text: 'hi', kind: 'wake', seq: 1 }),
     ev({ type: 'assistant/chunk', text: 'a', seq: 2 }),
     ev({ type: 'assistant/chunk', text: 'b', seq: 3 }),
     ev({ type: 'assistant/message', text: 'ab', seq: 4 }),
@@ -26,7 +26,7 @@ test('sliceTailTurns returns only last N user turns with preamble', () => {
     ev({ type: 'system/prompt', text: 'sys', seq: 1 }),
   ]
   for (let turn = 0; turn < 5; turn++) {
-    raw.push(ev({ type: 'user/message', text: `u${turn}`, seq: 10 + turn * 2 }))
+    raw.push(ev({ type: 'user/message', text: `u${turn}`, kind: 'wake', seq: 10 + turn * 2 }))
     raw.push(ev({ type: 'assistant/message', text: `a${turn}`, seq: 11 + turn * 2 }))
   }
   const window = sliceTailTurns(raw, 2)
@@ -44,7 +44,7 @@ test('sliceTailTurns returns only last N user turns with preamble', () => {
 test('sliceBeforeTurns pages older turns', () => {
   const raw: SessionEvent[] = [ev({ type: 'session/open', version: 1, seq: 0 })]
   for (let turn = 0; turn < 6; turn++) {
-    raw.push(ev({ type: 'user/message', text: `u${turn}`, seq: 10 + turn * 2 }))
+    raw.push(ev({ type: 'user/message', text: `u${turn}`, kind: 'wake', seq: 10 + turn * 2 }))
     raw.push(ev({ type: 'assistant/message', text: `a${turn}`, seq: 11 + turn * 2 }))
   }
   const tail = sliceTailTurns(raw, 2)

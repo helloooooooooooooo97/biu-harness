@@ -1,16 +1,16 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import type { SessionEvent } from './session-types.ts'
+import type { SessionEvent, SessionEventBody } from './session-types.ts'
 import { buildTrajectoryWindow, findEvent, buildRequestMessages } from './trajectory-index.ts'
 
-function ev(partial: Omit<SessionEvent, 'ts'> & { ts?: number }): SessionEvent {
-  return { ts: partial.ts ?? partial.seq, ...partial } as SessionEvent
+function ev(partial: SessionEventBody & { seq: number; ts?: number }): SessionEvent {
+  return { ...partial, ts: partial.ts ?? partial.seq }
 }
 
 test('trajectory window returns summary rows without full bodies', () => {
   const raw: SessionEvent[] = [ev({ type: 'session/open', version: 1, seq: 0 })]
   for (let i = 0; i < 3; i++) {
-    raw.push(ev({ type: 'user/message', text: `u${i}-${'x'.repeat(200)}`, seq: 10 + i * 2 }))
+    raw.push(ev({ type: 'user/message', text: `u${i}-${'x'.repeat(200)}`, kind: 'wake', seq: 10 + i * 2 }))
     raw.push(
       ev({
         type: 'assistant/message',
@@ -30,7 +30,7 @@ test('findEvent and buildRequestMessages for assistant detail', () => {
   const raw: SessionEvent[] = [
     ev({ type: 'session/open', version: 1, seq: 0 }),
     ev({ type: 'system/prompt', text: 'sys', seq: 1 }),
-    ev({ type: 'user/message', text: 'hi', seq: 2 }),
+    ev({ type: 'user/message', text: 'hi', kind: 'wake', seq: 2 }),
     ev({ type: 'assistant/message', text: 'yo', seq: 3, usage: { inputTokens: 1, outputTokens: 1 } }),
   ]
   const event = findEvent(raw, 3)

@@ -362,7 +362,9 @@ test('loadOlder prepends earlier turns', async () => {
   await view.load('s1', { view: 'chat', wait: true })
   assert.equal(view.get().hasMoreOlder, true)
   await view.loadOlder()
-  assert.equal(view.get().nodes[0]?.kind === 'user' && view.get().nodes[0].text, 'old')
+  const first = view.get().nodes[0]
+  assert.equal(first?.kind, 'user')
+  assert.equal(first && first.kind === 'user' ? first.text : undefined, 'old')
   assert.equal(view.get().hasMoreOlder, false)
 })
 
