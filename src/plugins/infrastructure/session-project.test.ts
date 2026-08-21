@@ -24,10 +24,18 @@ test('projects user, streaming assistant, tool call/result from session events',
   const nodes = projectNodes(events)
   assert.deepEqual(
     nodes.map((node) => node.kind),
-    ['user', 'assistant', 'tool', 'assistant'],
+    ['user', 'reply'],
   )
-  assert.equal(nodes[1]?.kind === 'assistant' && nodes[1].text, 'hello')
-  assert.equal(nodes[2]?.kind === 'tool' && nodes[2].result?.detail, 'ok')
+  const reply = nodes[1]
+  assert.equal(reply?.kind, 'reply')
+  if (reply?.kind !== 'reply') return
+  assert.deepEqual(
+    reply.parts.map((part) => part.kind),
+    ['assistant', 'tool', 'assistant'],
+  )
+  assert.equal(reply.copyText, 'hello\n\ndone')
+  assert.equal(reply.parts[0]?.kind === 'assistant' && reply.parts[0].text, 'hello')
+  assert.equal(reply.parts[1]?.kind === 'tool' && reply.parts[1].result?.detail, 'ok')
 })
 
 test('turn/end non-complete becomes a status row', () => {
@@ -37,6 +45,37 @@ test('turn/end non-complete becomes a status row', () => {
   ])
   assert.equal(nodes[0]?.kind, 'turn')
   assert.match(nodes[0]?.kind === 'turn' ? nodes[0].text : '', /cancelled/)
+})
+
+test('reply aggregates turn duration and usage for footer', () => {
+  const nodes = projectNodes([
+    { type: 'turn/start', turn: 1, seq: 1, ts: 1000 },
+    { type: 'user/message', text: 'hi', kind: 'wake', seq: 2, ts: 1100 },
+    {
+      type: 'assistant/message',
+      text: 'hello',
+      usage: { inputTokens: 20, outputTokens: 8, cacheReadTokens: 4 },
+      seq: 3,
+      ts: 1500,
+    },
+    { type: 'turn/end', turn: 1, reason: 'complete', seq: 4, ts: 2800 },
+  ])
+  assert.deepEqual(
+    nodes.map((node) => node.kind),
+    ['user', 'reply'],
+  )
+  const reply = nodes[1]
+  assert.equal(reply?.kind, 'reply')
+  if (reply?.kind !== 'reply') return
+  assert.equal(reply.finished, true)
+  assert.equal(reply.durationMs, 1800)
+  assert.deepEqual(reply.usage, {
+    inputTokens: 20,
+    outputTokens: 8,
+    totalTokens: 28,
+    cacheReadTokens: 4,
+  })
+  assert.equal(reply.copyText, 'hello')
 })
 
 test('projectTrajectory skips assistant/chunk (dsh-style; message is authoritative)', () => {

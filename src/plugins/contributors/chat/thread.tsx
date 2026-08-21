@@ -1,10 +1,14 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { LuCheck, LuCopy, LuGitFork } from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
-import type { ChatNode } from '../../infrastructure/session-project.ts'
+import {
+  formatTrajectoryUsage,
+  type ChatNode,
+  type TrajectoryUsage,
+} from '../../infrastructure/session-project.ts'
 import { SidebarMascot } from '../mascot/sidebar-mascot.tsx'
 import { DEFAULT_SESSION_MASCOT, resolveSessionMascot } from '../mascot/session-mascot.ts'
 import type { SessionMascotIdentity } from '../mascot/grok-bot-types.ts'
@@ -15,7 +19,7 @@ const NEAR_BOTTOM_PX = 96
 /** 提早预取更早消息，避免滑到顶才开始请求 */
 const PREFETCH_OLDER_PX = 720
 const ROW_GAP_PX = 16
-const ESTIMATE_ROW_PX = 160
+const ESTIMATE_ROW_PX = 220
 /** 消息很少时全量渲染更简单，也避免虚表测量抖动 */
 const VIRTUALIZE_AFTER = 12
 /** 加大 overscan：快速上滑时预挂载更多行，减少白屏 */
@@ -33,9 +37,61 @@ function findScrollParent(el: HTMLElement | null): HTMLElement | null {
   return null
 }
 
+function formatDuration(ms: number) {
+  if (ms < 1000) return `${Math.max(0, Math.round(ms))}ms`
+  if (ms < 60_000) {
+    const sec = ms / 1000
+    return `${sec < 10 ? sec.toFixed(1) : Math.round(sec)}s`
+  }
+  const minutes = Math.floor(ms / 60_000)
+  const seconds = Math.round((ms % 60_000) / 1000)
+  return `${minutes}m ${seconds}s`
+}
+
+function formatTok(n: number) {
+  return n.toLocaleString('en-US')
+}
+
+function cacheHitPct(usage: TrajectoryUsage): number | null {
+  if (!usage.inputTokens || !usage.cacheReadTokens) return null
+  return Math.min(100, Math.round((usage.cacheReadTokens / usage.inputTokens) * 100))
+}
+
+function UsageInline({ usage }: { usage: TrajectoryUsage }) {
+  const pct = cacheHitPct(usage)
+  const inStyle: CSSProperties | undefined =
+    pct != null
+      ? {
+          backgroundImage: `linear-gradient(90deg, rgba(34, 140, 90, 0.28) 0%, rgba(34, 140, 90, 0.28) ${pct}%, rgba(15, 17, 21, 0.06) ${pct}%, rgba(15, 17, 21, 0.06) 100%)`,
+        }
+      : undefined
+  return (
+    <span className="traj-usage" title={formatTrajectoryUsage(usage)}>
+      <span
+        className={`traj-usage-in-wrap${pct != null ? ' has-cache' : ''}`}
+        style={inStyle}
+        title={
+          pct != null
+            ? `input ${formatTok(usage.inputTokens)} · cache hit ${pct}% (${formatTok(usage.cacheReadTokens!)})`
+            : `input ${formatTok(usage.inputTokens)}`
+        }
+      >
+        <span className="traj-usage-in">{formatTok(usage.inputTokens)}</span>
+        {pct != null ? <span className="traj-usage-cache-pct">{pct}%</span> : null}
+      </span>
+      <span className="traj-usage-arrow" aria-hidden>
+        →
+      </span>
+      <span className="traj-usage-out" title="output tokens">
+        {formatTok(usage.outputTokens)}
+      </span>
+    </span>
+  )
+}
+
 function RowLoading({ kind }: { kind: ChatNode['kind'] }) {
   const label =
-    kind === 'user' ? '消息加载中' : kind === 'assistant' ? '回复加载中' : kind === 'tool' ? '工具加载中' : '加载中'
+    kind === 'user' ? '消息加载中' : kind === 'reply' ? '回复加载中' : kind === 'turn' ? '状态加载中' : '加载中'
   return (
     <div className="chat-row-loading" aria-busy="true" aria-label={label}>
       <span className="chat-row-loading-dot" />
@@ -45,7 +101,7 @@ function RowLoading({ kind }: { kind: ChatNode['kind'] }) {
   )
 }
 
-function AssistantActions({
+function ReplyActions({
   text,
   onFork,
 }: {
@@ -77,12 +133,12 @@ function AssistantActions({
   }
 
   return (
-    <div className="chat-assistant-actions" role="group" aria-label="消息操作">
+    <div className="chat-reply-actions" role="group" aria-label="回合操作">
       <button
         type="button"
         className={`chat-assistant-action${copied ? ' is-done' : ''}`}
         title={copied ? '已复制' : '复制'}
-        aria-label={copied ? '已复制' : '复制回复'}
+        aria-label={copied ? '已复制' : '复制本回合回复'}
         onClick={() => void copy()}
       >
         {copied ? <LuCheck className="size-3.5" /> : <LuCopy className="size-3.5" />}
@@ -127,27 +183,52 @@ function NodeView({
       </div>
     )
   }
-  if (node.kind === 'assistant') {
+
+  if (node.kind === 'reply') {
     const streaming = Boolean(node.streaming)
+    const showFooter = !streaming
     return (
-      <div className="chat-assistant-row">
-        <div className="chat-assistant-main">
-          <div className="chat-assistant-body">
-            {node.text ? (
-              <MarkdownBody text={node.text} streaming={streaming} />
-            ) : streaming ? (
-              '…'
-            ) : null}
-            {streaming ? <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span> : null}
-          </div>
+      <div className={`chat-reply-card${streaming ? ' is-streaming' : ''}`}>
+        <div className="chat-reply-body">
+          {node.parts.map((part) => {
+            if (part.kind === 'assistant') {
+              const partStreaming = Boolean(part.streaming)
+              return (
+                <div key={part.id} className="chat-assistant-body">
+                  {part.text ? (
+                    <MarkdownBody text={part.text} streaming={partStreaming} />
+                  ) : partStreaming ? (
+                    '…'
+                  ) : null}
+                  {partStreaming ? (
+                    <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span>
+                  ) : null}
+                </div>
+              )
+            }
+            return <ToolCard key={part.id} node={part} onInspect={onInspect} />
+          })}
         </div>
-        {!streaming && node.text.trim() ? <AssistantActions text={node.text} onFork={onFork} /> : null}
+        {showFooter ? (
+          <div className="chat-reply-footer">
+            <div className="chat-reply-meta">
+              {node.durationMs != null ? (
+                <span className="chat-reply-duration" title="本回合耗时">
+                  {formatDuration(node.durationMs)}
+                </span>
+              ) : null}
+              {node.usage ? <UsageInline usage={node.usage} /> : null}
+              {!node.usage && node.durationMs == null ? (
+                <span className="chat-reply-meta-empty">—</span>
+              ) : null}
+            </div>
+            {node.copyText.trim() ? <ReplyActions text={node.copyText} onFork={onFork} /> : null}
+          </div>
+        ) : null}
       </div>
     )
   }
-  if (node.kind === 'tool') {
-    return <ToolCard node={node} onInspect={onInspect} />
-  }
+
   return <div className="self-center text-xs text-[var(--dsw-label-3)]">{node.text}</div>
 }
 
@@ -303,8 +384,8 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const lastNode = nodes.at(-1)
   // 流式时按 ~96 字符步进 stickKey，避免每个 delta 都触发布局滚动
   const stickKey =
-    lastNode?.kind === 'assistant'
-      ? `${lastNode.id}:${lastNode.streaming ? Math.floor(lastNode.text.length / 96) : lastNode.text.length}:${lastNode.streaming ? 1 : 0}`
+    lastNode?.kind === 'reply' && lastNode.streaming
+      ? `${lastNode.id}:${Math.floor(lastNode.copyText.length / 96)}:1`
       : `${nodes.length}:${pending ? 1 : 0}:${error ?? ''}`
 
   useLayoutEffect(() => {
@@ -324,8 +405,8 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
 
   const rowHydrated = (node: ChatNode) => {
     if (hydratedRef.current.has(node.id)) return true
-    // 流式助手：直接展示流式文本，不走 loading
-    if (node.kind === 'assistant' && node.streaming) {
+    // 流式回复：直接展示，不走 loading
+    if (node.kind === 'reply' && node.streaming) {
       hydratedRef.current.add(node.id)
       return true
     }

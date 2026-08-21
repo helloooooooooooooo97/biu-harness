@@ -110,9 +110,9 @@ test('ingest coalesces consecutive chunks and skips trajectory on chat view', as
     'hello',
   )
   assert.equal(view.get().trajectory, trajBefore)
-  const assistant = view.get().nodes.find((node) => node.kind === 'assistant')
-  assert.equal(assistant?.kind === 'assistant' && assistant.text, 'hello')
-  assert.equal(assistant?.kind === 'assistant' && assistant.streaming, true)
+  const assistant = view.get().nodes.find((node) => node.kind === 'reply')
+  assert.equal(assistant?.kind === 'reply' && assistant.parts[0]?.kind === 'assistant' && assistant.parts[0].text, 'hello')
+  assert.equal(assistant?.kind === 'reply' && assistant.streaming, true)
 
   view.ingest('s1', { type: 'assistant/message', text: 'hello', seq: 4, ts: 5 })
   assert.equal(view.get().events.some((event) => event.type === 'assistant/chunk'), false)
@@ -170,7 +170,14 @@ test('load fetches tail turns and skips trajectory until ensureTrajectory', asyn
   assert.equal(calls.some((url) => url.includes('turns=24')), true)
   assert.equal(view.get().events.some((event) => event.type === 'assistant/chunk'), false)
   assert.equal(view.get().trajectory.length, 0)
-  assert.equal(view.get().nodes.some((node) => node.kind === 'assistant' && node.text === 'ab'), true)
+  assert.equal(
+    view.get().nodes.some(
+      (node) =>
+        node.kind === 'reply' &&
+        node.parts.some((part) => part.kind === 'assistant' && part.text === 'ab'),
+    ),
+    true,
+  )
   await view.ensureTrajectory()
   assert.equal(calls.some((url) => url.includes('/trajectory?turns=')), true)
   assert.equal(view.get().trajectory.length, 1)

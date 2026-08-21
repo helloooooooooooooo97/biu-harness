@@ -26,17 +26,44 @@ export type SessionEvent = {
   | { type: 'tool/result'; id: string; name: string; ok: boolean; detail: string }
 )
 
+export interface TrajectoryUsage {
+  inputTokens: number
+  outputTokens: number
+  totalTokens?: number
+  cacheReadTokens?: number
+}
+
 /** 精简 ConversationNode：事件 → 可渲染行。 */
+export type ChatToolPart = {
+  id: string
+  kind: 'tool'
+  callId: string
+  name: string
+  arguments: string
+  result?: { ok: boolean; detail: string }
+}
+
+export type ChatAssistantPart = {
+  id: string
+  kind: 'assistant'
+  text: string
+  streaming?: boolean
+}
+
+export type ChatReplyPart = ChatAssistantPart | ChatToolPart
+
 export type ChatNode =
   | { id: string; kind: 'user'; text: string; kindTag?: string }
-  | { id: string; kind: 'assistant'; text: string; streaming?: boolean }
   | {
       id: string
-      kind: 'tool'
-      callId: string
-      name: string
-      arguments: string
-      result?: { ok: boolean; detail: string }
+      kind: 'reply'
+      parts: ChatReplyPart[]
+      /** 本回合所有助手正文，供一键复制 */
+      copyText: string
+      usage?: TrajectoryUsage
+      durationMs?: number
+      streaming?: boolean
+      finished?: boolean
     }
   | { id: string; kind: 'turn'; text: string }
 
@@ -90,77 +117,152 @@ export function projectRequestMessages(events: SessionEvent[], assistantSeq: num
 
 export function projectNodes(events: SessionEvent[]): ChatNode[] {
   const nodes: ChatNode[] = []
-  let streamingId: string | null = null
-  const tools = new Map<string, Extract<ChatNode, { kind: 'tool' }>>()
+  let turnStartTs: number | undefined
+  let reply: {
+    id: string
+    parts: ChatReplyPart[]
+    streamingId: string | null
+    tools: Map<string, ChatToolPart>
+    usage: { input: number; output: number; total: number; cache: number; hit: boolean }
+    streaming: boolean
+  } | null = null
+
+  function ensureReply(seq: number) {
+    if (!reply) {
+      reply = {
+        id: `r-${seq}`,
+        parts: [],
+        streamingId: null,
+        tools: new Map(),
+        usage: { input: 0, output: 0, total: 0, cache: 0, hit: false },
+        streaming: false,
+      }
+    }
+    return reply
+  }
+
+  function addUsage(usage: NonNullable<Extract<SessionEvent, { type: 'assistant/message' }>['usage']>) {
+    const r = reply
+    if (!r) return
+    r.usage.hit = true
+    r.usage.input += usage.inputTokens
+    r.usage.output += usage.outputTokens
+    r.usage.total += usage.totalTokens ?? usage.inputTokens + usage.outputTokens
+    r.usage.cache += usage.cacheReadTokens ?? 0
+  }
+
+  function flushReply(endTs?: number, finished = false) {
+    if (!reply || reply.parts.length === 0) {
+      reply = null
+      return
+    }
+    const copyText = reply.parts
+      .filter((part): part is ChatAssistantPart => part.kind === 'assistant')
+      .map((part) => part.text.trim())
+      .filter(Boolean)
+      .join('\n\n')
+    const usage: TrajectoryUsage | undefined = reply.usage.hit
+      ? {
+          inputTokens: reply.usage.input,
+          outputTokens: reply.usage.output,
+          totalTokens: reply.usage.total,
+          ...(reply.usage.cache ? { cacheReadTokens: reply.usage.cache } : {}),
+        }
+      : undefined
+    const durationMs =
+      finished && turnStartTs != null && endTs != null ? Math.max(0, endTs - turnStartTs) : undefined
+    nodes.push({
+      id: reply.id,
+      kind: 'reply',
+      parts: reply.parts,
+      copyText,
+      ...(usage ? { usage } : {}),
+      ...(durationMs != null ? { durationMs } : {}),
+      streaming: reply.streaming && !finished,
+      finished,
+    })
+    reply = null
+  }
 
   for (const event of events) {
-    if (event.type === 'user/message') {
-      streamingId = null
+    if (event.type === 'turn/start') {
+      flushReply()
+      turnStartTs = event.ts
+    } else if (event.type === 'user/message') {
+      flushReply()
       nodes.push({ id: `u-${event.seq}`, kind: 'user', text: event.text, kindTag: event.kind })
     } else if (event.type === 'assistant/chunk') {
-      if (streamingId) {
-        const idx = nodes.findIndex((node) => node.id === streamingId)
-        const current = idx >= 0 ? nodes[idx] : undefined
+      const r = ensureReply(event.seq)
+      if (r.streamingId) {
+        const idx = r.parts.findIndex((part) => part.id === r.streamingId)
+        const current = idx >= 0 ? r.parts[idx] : undefined
         if (current?.kind === 'assistant') {
-          nodes[idx] = { ...current, text: current.text + event.text, streaming: true }
+          r.parts[idx] = { ...current, text: current.text + event.text, streaming: true }
         }
       } else {
-        streamingId = `a-${event.seq}`
-        nodes.push({ id: streamingId, kind: 'assistant', text: event.text, streaming: true })
+        r.streamingId = `a-${event.seq}`
+        r.parts.push({ id: r.streamingId, kind: 'assistant', text: event.text, streaming: true })
       }
+      r.streaming = true
     } else if (event.type === 'assistant/message') {
-      if (streamingId) {
-        const idx = nodes.findIndex((node) => node.id === streamingId)
-        if (idx >= 0 && nodes[idx]?.kind === 'assistant') {
-          nodes[idx] = { id: streamingId, kind: 'assistant', text: event.text, streaming: false }
+      const r = ensureReply(event.seq)
+      if (event.usage) addUsage(event.usage)
+      if (r.streamingId) {
+        const idx = r.parts.findIndex((part) => part.id === r.streamingId)
+        if (idx >= 0 && r.parts[idx]?.kind === 'assistant') {
+          r.parts[idx] = { id: r.streamingId, kind: 'assistant', text: event.text, streaming: false }
         }
-        streamingId = null
+        r.streamingId = null
+        r.streaming = false
       } else if (event.text || !event.tool_calls?.length) {
-        nodes.push({ id: `a-${event.seq}`, kind: 'assistant', text: event.text })
+        r.parts.push({ id: `a-${event.seq}`, kind: 'assistant', text: event.text })
       }
     } else if (event.type === 'tool/call') {
-      streamingId = null
-      const node: Extract<ChatNode, { kind: 'tool' }> = {
+      const r = ensureReply(event.seq)
+      r.streamingId = null
+      r.streaming = false
+      const part: ChatToolPart = {
         id: `t-${event.id}`,
         kind: 'tool',
         callId: event.id,
         name: event.name,
         arguments: event.arguments,
       }
-      tools.set(event.id, node)
-      nodes.push(node)
+      r.tools.set(event.id, part)
+      r.parts.push(part)
     } else if (event.type === 'tool/result') {
-      const existing = tools.get(event.id)
+      const r = ensureReply(event.seq)
+      const existing = r.tools.get(event.id)
       if (existing) {
         const next = { ...existing, result: { ok: event.ok, detail: event.detail } }
-        tools.set(event.id, next)
-        const idx = nodes.findIndex((node) => node.id === existing.id)
-        if (idx >= 0) nodes[idx] = next
+        r.tools.set(event.id, next)
+        const idx = r.parts.findIndex((part) => part.id === existing.id)
+        if (idx >= 0) r.parts[idx] = next
       } else {
-        nodes.push({
+        const part: ChatToolPart = {
           id: `t-${event.id}`,
           kind: 'tool',
           callId: event.id,
           name: event.name,
           arguments: '',
           result: { ok: event.ok, detail: event.detail },
-        })
+        }
+        r.tools.set(event.id, part)
+        r.parts.push(part)
       }
-    } else if (event.type === 'turn/end' && event.reason && event.reason !== 'complete') {
-      nodes.push({ id: `turn-${event.seq}`, kind: 'turn', text: `回合结束：${event.reason}` })
+    } else if (event.type === 'turn/end') {
+      flushReply(event.ts, true)
+      turnStartTs = undefined
+      if (event.reason && event.reason !== 'complete') {
+        nodes.push({ id: `turn-${event.seq}`, kind: 'turn', text: `回合结束：${event.reason}` })
+      }
     }
   }
+  flushReply()
   return nodes
 }
 
 /** Lean Trajectory 行：官方 ui-trajectory 的瘦投影，不搬虚表/搜索索引。 */
-export interface TrajectoryUsage {
-  inputTokens: number
-  outputTokens: number
-  totalTokens?: number
-  cacheReadTokens?: number
-}
-
 export interface TrajectoryRow {
   id: string
   seq: number
