@@ -30,7 +30,7 @@ function AssistantActions({
   onFork,
 }: {
   text: string
-  onFork: () => void
+  onFork: () => void | Promise<void>
 }) {
   const [copied, setCopied] = useState(false)
   const [forkBusy, setForkBusy] = useState(false)
@@ -88,7 +88,7 @@ function NodeView({
 }: {
   node: ChatNode
   onInspect: (callId: string) => void
-  onFork: () => void
+  onFork: () => void | Promise<void>
 }) {
   if (node.kind === 'user') {
     return (
