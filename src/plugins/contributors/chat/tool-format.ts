@@ -259,8 +259,15 @@ export function toolTitle(parsed: ParsedToolCall, name: string): string {
   }
 }
 
-export function shouldAutoOpenTool(parsed: ParsedToolCall): boolean {
-  return parsed.kind === 'str_replace' || parsed.kind === 'create' || parsed.kind === 'insert'
+export function shouldAutoOpenTool(parsed: ParsedToolCall, detail?: string): boolean {
+  if (parsed.kind === 'str_replace' || parsed.kind === 'create' || parsed.kind === 'insert') return true
+  if (!detail) return false
+  try {
+    const obj = JSON.parse(detail) as { artifacts?: unknown }
+    return Array.isArray(obj.artifacts) && obj.artifacts.length > 0
+  } catch {
+    return false
+  }
 }
 
 export function diffStats(lines: DiffLine[]): { added: number; removed: number } {
