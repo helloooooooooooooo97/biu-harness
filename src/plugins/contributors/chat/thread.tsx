@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { LuCheck, LuCoins, LuCopy, LuGitFork, LuHash, LuLayers, LuTimer } from 'react-icons/lu'
+import { LuCheck, LuCoins, LuCopy, LuGitFork, LuHash, LuLayers, LuTimer, LuType, LuWrench } from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import {
@@ -58,31 +58,47 @@ function stepLabel(step: number) {
   return `Step ${step + 1}`
 }
 
+function MetaItem({
+  icon,
+  value,
+  title,
+}: {
+  icon: ReactNode
+  value: ReactNode
+  title: string
+}) {
+  return (
+    <span className="chat-reply-meta-item" title={title}>
+      <span className="chat-reply-meta-icon" aria-hidden>
+        {icon}
+      </span>
+      <span className="chat-reply-meta-value">{value}</span>
+    </span>
+  )
+}
+
 function StepBar({ stat }: { stat: ChatStepStat }) {
-  const total = stat.inputTokens + stat.outputTokens
+  const usage: TrajectoryUsage = {
+    inputTokens: stat.inputTokens,
+    outputTokens: stat.outputTokens,
+    totalTokens: stat.inputTokens + stat.outputTokens,
+    ...(stat.cacheReadTokens ? { cacheReadTokens: stat.cacheReadTokens } : {}),
+  }
   return (
     <div className="chat-step-bar" role="group" aria-label={stepLabel(stat.step)}>
-      <div className="chat-step-bar-main">
-        <span className="chat-step-bar-title">{stepLabel(stat.step)}</span>
-        <span className="chat-step-bar-sep" aria-hidden>
-          ·
-        </span>
-        <span className="chat-step-bar-stat" title="Token 用量">
-          {formatTok(stat.inputTokens)}→{formatTok(stat.outputTokens)}
-          {total ? <span className="chat-step-bar-muted"> · Σ{formatTok(total)}</span> : null}
-        </span>
-        <span className="chat-step-bar-sep" aria-hidden>
-          ·
-        </span>
-        <span className="chat-step-bar-stat" title="本步工具数">
-          {stat.toolCount} tools
-        </span>
-        <span className="chat-step-bar-sep" aria-hidden>
-          ·
-        </span>
-        <span className="chat-step-bar-stat" title="本步 Message 字数">
-          {formatTok(stat.messageChars)} chars
-        </span>
+      <div className="chat-reply-meta">
+        <MetaItem icon={<LuLayers className="size-3" />} value={stat.step + 1} title={stepLabel(stat.step)} />
+        <MetaItem
+          icon={<LuCoins className="size-3" />}
+          value={<UsageInline usage={usage} />}
+          title="本步 Token 用量"
+        />
+        <MetaItem icon={<LuWrench className="size-3" />} value={stat.toolCount} title={`本步 ${stat.toolCount} 个工具`} />
+        <MetaItem
+          icon={<LuType className="size-3" />}
+          value={formatTok(stat.messageChars)}
+          title={`本步 Message ${formatTok(stat.messageChars)} 字`}
+        />
       </div>
     </div>
   )
@@ -168,25 +184,6 @@ function UsageInline({ usage }: { usage: TrajectoryUsage }) {
       <span className="traj-usage-out" title="output tokens">
         {formatTok(usage.outputTokens)}
       </span>
-    </span>
-  )
-}
-
-function MetaItem({
-  icon,
-  value,
-  title,
-}: {
-  icon: ReactNode
-  value: ReactNode
-  title: string
-}) {
-  return (
-    <span className="chat-reply-meta-item" title={title}>
-      <span className="chat-reply-meta-icon" aria-hidden>
-        {icon}
-      </span>
-      <span className="chat-reply-meta-value">{value}</span>
     </span>
   )
 }
