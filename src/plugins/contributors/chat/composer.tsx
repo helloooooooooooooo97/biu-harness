@@ -66,7 +66,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
 
   return (
     <form
-      className="mx-auto w-full max-w-[calc(var(--dsw-chat-width)+32px)] border border-[var(--dsw-border)] bg-[var(--dsw-input)]"
+      className="w-full border border-[var(--dsw-border)] bg-[var(--dsw-input)]"
       style={{ borderRadius: 'var(--dsw-radius-bubble)', boxShadow: 'var(--dsw-shadow-lv2)' }}
       onSubmit={onSubmit}
     >

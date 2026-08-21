@@ -47,7 +47,7 @@ export function ApprovalsRail(props: SlotProps) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[calc(var(--dsw-chat-width)+32px)] space-y-2">
+    <div className="w-full space-y-2">
       <div className="dock-capsules" role="toolbar" aria-label="Session controls">
         <SessionProjectPanel {...props} />
         <div className="dock-mode-pills" role="group" aria-label="Agent mode">
