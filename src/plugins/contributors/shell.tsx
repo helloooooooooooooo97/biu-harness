@@ -274,61 +274,51 @@ function Shell(props: SlotProps) {
           className={`min-h-0 min-w-0 flex-col overflow-hidden ${activeModule === 'agent' ? 'flex flex-1' : 'hidden'}`}
           aria-hidden={activeModule !== 'agent'}
         >
-          <header className="flex h-12 shrink-0 items-center gap-3 border-b border-[var(--dsw-border)] px-6">
+          <header className="chat-view-header">
             {sidebarCollapsed ? (
               <button
                 type="button"
-                className="grid size-7 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
+                className="chat-view-header-expand"
                 title="Expand sidebar"
                 aria-label="Expand sidebar"
                 onClick={() => setSidebarCollapsed(false)}
               >
-                <LuPanelLeft className="size-4" />
+                <LuPanelLeft className="size-3.5" />
               </button>
             ) : null}
-            <NavLink
-              to={sessionId ? `/s/${sessionId}` : '/'}
-              end
-              title="Chat"
-              aria-label="Chat"
-              className={({ isActive }) =>
-                `relative grid size-8 place-items-center rounded-[6px] ${
-                  isActive
-                    ? 'text-[var(--dsw-business)]'
-                    : 'text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <LuMessageSquare className="size-4" />
-                  {isActive ? (
-                    <span className="absolute inset-x-1.5 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" />
-                  ) : null}
-                </>
-              )}
-            </NavLink>
-            <NavLink
-              to={sessionId ? `/s/${sessionId}/trajectory` : '/'}
-              title="Trajectory"
-              aria-label="Trajectory"
-              className={({ isActive }) =>
-                `relative grid size-8 place-items-center rounded-[6px] ${
-                  isActive
-                    ? 'text-[var(--dsw-business)]'
-                    : 'text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <LuWaypoints className="size-4" />
-                  {isActive ? (
-                    <span className="absolute inset-x-1.5 bottom-0 h-0.5 rounded-full bg-[var(--dsw-business)]" />
-                  ) : null}
-                </>
-              )}
-            </NavLink>
+            <nav className="chat-view-header-tabs" aria-label="View">
+              <NavLink
+                to={sessionId ? `/s/${sessionId}` : '/'}
+                end
+                title="Chat"
+                aria-label="Chat"
+                className={({ isActive }) =>
+                  `chat-view-tab${isActive ? ' is-active' : ''}`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <LuMessageSquare className="size-3.5" />
+                    {isActive ? <span className="chat-view-tab-underline" /> : null}
+                  </>
+                )}
+              </NavLink>
+              <NavLink
+                to={sessionId ? `/s/${sessionId}/trajectory` : '/'}
+                title="Trajectory"
+                aria-label="Trajectory"
+                className={({ isActive }) =>
+                  `chat-view-tab${isActive ? ' is-active' : ''}`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <LuWaypoints className="size-3.5" />
+                    {isActive ? <span className="chat-view-tab-underline" /> : null}
+                  </>
+                )}
+              </NavLink>
+            </nav>
           </header>
           <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             {/*
