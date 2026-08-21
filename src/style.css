@@ -185,6 +185,73 @@ body {
   color: var(--dsw-label);
 }
 
+.chat-view-header {
+  position: relative;
+  display: flex;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--dsw-border);
+  padding: 0 12px;
+}
+
+.chat-view-header-expand {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-label-3);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.chat-view-header-expand:hover {
+  background: var(--dsw-hover);
+  color: var(--dsw-business);
+}
+
+.chat-view-header-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.chat-view-tab {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--dsw-label-3);
+}
+
+.chat-view-tab:hover {
+  background: var(--dsw-hover);
+  color: var(--dsw-business);
+}
+
+.chat-view-tab.is-active {
+  color: var(--dsw-business);
+}
+
+.chat-view-tab-underline {
+  position: absolute;
+  right: 6px;
+  bottom: 2px;
+  left: 6px;
+  height: 1.5px;
+  border-radius: 999px;
+  background: var(--dsw-business);
+}
+
 .app-shell-agent {
   grid-template-columns: 48px 280px minmax(0, 1fr);
 }
@@ -1201,12 +1268,19 @@ body {
   max-width: 100%;
 }
 
+.chat-reply-block {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .chat-reply-card {
   display: flex;
   width: 100%;
   flex-direction: column;
   gap: 12px;
-  padding: 12px 14px 10px;
+  padding: 12px 14px;
   border: 1px solid var(--dsw-border);
   border-radius: 12px;
   background: color-mix(in srgb, var(--dsw-surface) 72%, transparent);
@@ -1226,28 +1300,36 @@ body {
   line-height: 1.7;
 }
 
-.chat-reply-footer {
+.chat-reply-bar {
   display: flex;
+  height: 32px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding-top: 2px;
-  border-top: 1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent);
+  gap: 10px;
+  padding: 0 10px 0 12px;
+  border: 1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dsw-bg) 78%, var(--dsw-surface));
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
 }
 
 .chat-reply-meta {
   display: inline-flex;
   min-width: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
+  overflow: hidden;
   color: var(--dsw-label-3);
   font-size: 11px;
+  line-height: 1;
 }
 
 .chat-reply-duration {
+  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
   color: var(--dsw-label-2);
+  line-height: 1;
 }
 
 .chat-reply-meta-empty {
@@ -1260,10 +1342,10 @@ body {
   align-items: center;
   gap: 2px;
   margin-left: auto;
-  opacity: 0.78;
+  opacity: 0.82;
 }
 
-.chat-reply-card:hover .chat-reply-actions {
+.chat-reply-block:hover .chat-reply-actions {
   opacity: 1;
 }
 
@@ -1529,15 +1611,15 @@ body {
 
 .composer-pill-row {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
-  min-height: 48px;
-  padding: 8px 10px;
+  min-height: 44px;
+  padding: 6px 10px;
 }
 
 .composer-pill.is-expanded .composer-pill-row {
   align-items: flex-end;
-  padding: 10px 12px 10px;
+  padding: 10px 12px;
 }
 
 .composer-plus {
@@ -1546,7 +1628,7 @@ body {
   place-items: center;
   width: 28px;
   height: 28px;
-  margin-bottom: 2px;
+  margin: 0;
   border: 1px solid var(--dsw-border);
   border-radius: 999px;
   background: transparent;
@@ -1564,18 +1646,25 @@ body {
   min-width: 0;
   max-height: 140px;
   min-height: 28px;
-  margin: 2px 0;
+  margin: 0;
+  padding: 0;
   resize: none;
   border: 0;
   background: transparent;
   color: var(--dsw-label);
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 28px;
   outline: none;
+}
+
+.composer-pill.is-expanded .composer-pill-input {
+  line-height: 1.45;
+  padding: 2px 0;
 }
 
 .composer-pill-input::placeholder {
   color: var(--dsw-label-3);
+  line-height: 28px;
 }
 
 .composer-pill-right {
@@ -1583,7 +1672,7 @@ body {
   flex-shrink: 0;
   align-items: center;
   gap: 8px;
-  margin-bottom: 1px;
+  margin: 0;
 }
 
 .composer-model {

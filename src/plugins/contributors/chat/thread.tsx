@@ -188,29 +188,31 @@ function NodeView({
     const streaming = Boolean(node.streaming)
     const showFooter = !streaming
     return (
-      <div className={`chat-reply-card${streaming ? ' is-streaming' : ''}`}>
-        <div className="chat-reply-body">
-          {node.parts.map((part) => {
-            if (part.kind === 'assistant') {
-              const partStreaming = Boolean(part.streaming)
-              return (
-                <div key={part.id} className="chat-assistant-body">
-                  {part.text ? (
-                    <MarkdownBody text={part.text} streaming={partStreaming} />
-                  ) : partStreaming ? (
-                    '…'
-                  ) : null}
-                  {partStreaming ? (
-                    <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span>
-                  ) : null}
-                </div>
-              )
-            }
-            return <ToolCard key={part.id} node={part} onInspect={onInspect} />
-          })}
+      <div className="chat-reply-block">
+        <div className={`chat-reply-card${streaming ? ' is-streaming' : ''}`}>
+          <div className="chat-reply-body">
+            {node.parts.map((part) => {
+              if (part.kind === 'assistant') {
+                const partStreaming = Boolean(part.streaming)
+                return (
+                  <div key={part.id} className="chat-assistant-body">
+                    {part.text ? (
+                      <MarkdownBody text={part.text} streaming={partStreaming} />
+                    ) : partStreaming ? (
+                      '…'
+                    ) : null}
+                    {partStreaming ? (
+                      <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span>
+                    ) : null}
+                  </div>
+                )
+              }
+              return <ToolCard key={part.id} node={part} onInspect={onInspect} />
+            })}
+          </div>
         </div>
         {showFooter ? (
-          <div className="chat-reply-footer">
+          <div className="chat-reply-bar" aria-label="回合摘要">
             <div className="chat-reply-meta">
               {node.durationMs != null ? (
                 <span className="chat-reply-duration" title="本回合耗时">
