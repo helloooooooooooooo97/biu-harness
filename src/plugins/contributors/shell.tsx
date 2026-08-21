@@ -54,7 +54,7 @@ function ModuleRail({
   return (
     <nav className="app-activity-bar" aria-label="Activity bar">
       <Link to={agentHref} className="app-activity-brand" title="HARNESS" aria-label="Home">
-        <SidebarMascot size={30} busy={busy} title="Harness mascot" />
+        <SidebarMascot size={34} busy={busy} title="Harness mascot" />
       </Link>
       <div className="app-activity-list">
         {APP_MODULES.map((module) => {
@@ -182,7 +182,7 @@ function Shell(props: SlotProps) {
         aria-hidden={activeModule !== 'agent'}
       >
         <div className="flex shrink-0 items-center gap-2.5 px-4 pt-4 pb-2">
-          <SidebarMascot size={36} busy={agentBusy} title="Harness mascot" />
+          <SidebarMascot size={48} busy={agentBusy} title="Harness mascot" />
           <div className="flex items-center gap-2 text-[var(--dsw-label)]">
             <span className="text-[15px] font-semibold tracking-tight">deepseek</span>
             <span className="rounded-[6px] border border-[var(--dsw-border)] bg-[var(--dsw-hover)] px-1.5 py-[2px] text-[10px] font-semibold tracking-wider text-[var(--dsw-label-2)]">
