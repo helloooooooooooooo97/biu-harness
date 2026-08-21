@@ -348,84 +348,102 @@ export class SessionViewService extends Service {
     return this.newSession()
   }
 
-  async load(sessionId: string, options: { view?: ConversationView } = {}) {
+  async load(sessionId: string, options: { view?: ConversationView; wait?: boolean } = {}) {
     const view = options.view ?? this.value.view
-    if (this.value.sessionId && this.value.sessionId !== sessionId) this.stashCurrent()
+    const wait = options.wait === true
+    const switching = Boolean(this.value.sessionId && this.value.sessionId !== sessionId)
+    if (switching) this.stashCurrent()
 
     const cached = this.cache.get(sessionId)
-    if (cached) {
-      this.touchCache(sessionId)
-      this.loadGen += 1
-      this.applyCached(sessionId, cached, view)
-      if (view === 'trajectory') void this.ensureTrajectory()
-      // 后台校对，不挡切换
-      void this.revalidate(sessionId, view)
-      return
+    const needSwap = this.value.sessionId !== sessionId
+
+    // 路由切换（含空会话 / 冷启动）：立刻换壳，网络只后台校对，绝不 await
+    if (!wait) {
+      if (cached) {
+        this.touchCache(sessionId)
+        this.loadGen += 1
+        this.applyCached(sessionId, cached, view)
+        if (view === 'trajectory') void this.ensureTrajectory()
+        void this.revalidate(sessionId, view)
+        return
+      }
+      if (needSwap) {
+        this.loadGen += 1
+        this.replace({
+          sessionId,
+          events: [],
+          nodes: [],
+          trajectory: [],
+          project: undefined,
+          view,
+          focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
+          error: undefined,
+          pending: false,
+          agentStatus: 'idle',
+          hasMoreOlder: false,
+          loadingOlder: false,
+          trajectoryHasMore: false,
+          trajectoryLoading: false,
+          totalTurns: 0,
+        })
+        if (view === 'trajectory') void this.ensureTrajectory()
+        void this.revalidate(sessionId, view)
+        return
+      }
     }
 
-    // 立刻清空旧会话 UI —— 切到空 chat 也先卸掉重 Markdown，再等网络
-    const gen = ++this.loadGen
-    this.replace({
-      sessionId,
-      events: [],
-      nodes: [],
-      trajectory: [],
-      project: undefined,
-      view,
-      focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
-      error: undefined,
-      pending: false,
-      agentStatus: 'idle',
-      hasMoreOlder: false,
-      loadingOlder: false,
-      trajectoryHasMore: false,
-      trajectoryLoading: false,
-      totalTurns: 0,
-    })
-
-    const res = await fetch(`/api/sessions/${sessionId}?turns=${SESSION_TAIL_TURNS}`)
-    if (!res.ok) throw new Error(`加载 session 失败：${res.status}`)
-    if (gen !== this.loadGen || this.value.sessionId !== sessionId) return
-    const body = (await res.json()) as SessionPayload
-    if (gen !== this.loadGen || this.value.sessionId !== sessionId) return
-    const events = compactSessionEvents(Array.isArray(body.events) ? body.events : [])
-    const nodes = projectNodes(events)
-    const hasMoreOlder = Boolean(body.hasMore)
-    const totalTurns = typeof body.totalTurns === 'number' ? body.totalTurns : 0
-    this.replace({
-      sessionId: body.id,
-      events,
-      nodes,
-      trajectory: [],
-      project: body.project,
-      view,
-      focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
-      error: undefined,
-      pending: false,
-      agentStatus: 'idle',
-      hasMoreOlder,
-      loadingOlder: false,
-      trajectoryHasMore: false,
-      trajectoryLoading: false,
-      totalTurns,
-    })
-    this.putCache(body.id, {
-      events,
-      nodes,
-      project: body.project,
-      hasMoreOlder,
-      totalTurns,
-    })
+    // wait：发送后等同会话刷新，必须等网络；切会话时也先乐观换壳再 await
+    this.loadGen += 1
+    if (needSwap) {
+      if (cached) {
+        this.touchCache(sessionId)
+        this.applyCached(sessionId, cached, view)
+      } else {
+        this.replace({
+          sessionId,
+          events: [],
+          nodes: [],
+          trajectory: [],
+          project: undefined,
+          view,
+          focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
+          error: undefined,
+          pending: false,
+          agentStatus: 'idle',
+          hasMoreOlder: false,
+          loadingOlder: false,
+          trajectoryHasMore: false,
+          trajectoryLoading: false,
+          totalTurns: 0,
+        })
+      }
+    }
+    await this.revalidate(sessionId, view)
     if (view === 'trajectory') await this.ensureTrajectory()
   }
 
-  /** 缓存命中后的静默刷新；若用户已切走则丢弃 */
+  /** 静默拉取并套用；若用户已切走则丢弃 */
   private async revalidate(sessionId: string, view: ConversationView) {
     const gen = this.loadGen
     try {
       const res = await fetch(`/api/sessions/${sessionId}?turns=${SESSION_TAIL_TURNS}`)
-      if (!res.ok) return
       if (gen !== this.loadGen || this.value.sessionId !== sessionId) return
+      if (!res.ok) {
+        if (res.status === 404) {
+          this.replace({
+            error: `加载 session 失败：${res.status}`,
+            sessionId: null,
+            events: [],
+            nodes: [],
+            trajectory: [],
+            view: 'chat',
+            focusCallId: undefined,
+            hasMoreOlder: false,
+            totalTurns: 0,
+          })
+        }
+        return
+      }
       const body = (await res.json()) as SessionPayload
       if (gen !== this.loadGen || this.value.sessionId !== sessionId) return
       const events = compactSessionEvents(Array.isArray(body.events) ? body.events : [])
@@ -444,14 +462,18 @@ export class SessionViewService extends Service {
         hasMoreOlder,
         totalTurns,
       })
-      if (sameTail && body.project?.path === this.value.project?.path) return
+      if (sameTail && body.project?.path === this.value.project?.path && this.value.totalTurns === totalTurns) {
+        return
+      }
       this.replace({
+        sessionId: body.id,
         events,
         nodes,
         project: body.project,
         hasMoreOlder,
         totalTurns,
         trajectory: view === 'trajectory' ? this.value.trajectory : [],
+        error: undefined,
       })
       if (view === 'trajectory') void this.ensureTrajectory()
     } catch {
@@ -723,14 +745,17 @@ export class SessionViewService extends Service {
       })
       const data = (await res.json()) as { error?: string; sessionId?: string; text?: string }
       if (!res.ok) throw new Error(data.error || `发送失败：${res.status}`)
-      if (data.sessionId && data.sessionId !== sessionId) await this.load(data.sessionId, { view: 'chat' })
-      else await this.load(sessionId, { view: this.value.view })
+      if (data.sessionId && data.sessionId !== sessionId) {
+        await this.load(data.sessionId, { view: 'chat', wait: true })
+      } else {
+        await this.load(sessionId, { view: this.value.view, wait: true })
+      }
       if (typeof data.text === 'string' && data.text.startsWith('模型调用失败：')) {
         this.replace({ error: data.text })
       }
     } catch (error) {
       try {
-        await this.load(sessionId, { view: this.value.view })
+        await this.load(sessionId, { view: this.value.view, wait: true })
       } catch {
         /* 加载失败时仍展示下方 error */
       }

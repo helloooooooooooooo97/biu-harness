@@ -166,7 +166,7 @@ test('load fetches tail turns and skips trajectory until ensureTrajectory', asyn
   const ctx = new Context()
   await ctx.plugin(sessionView)
   const view = ctx.sessionView as SessionViewService
-  await view.load('s1', { view: 'chat' })
+  await view.load('s1', { view: 'chat', wait: true })
   assert.equal(calls.some((url) => url.includes('turns=24')), true)
   assert.equal(view.get().events.some((event) => event.type === 'assistant/chunk'), false)
   assert.equal(view.get().trajectory.length, 0)
@@ -218,14 +218,16 @@ test('fetchEventDetail and fetchEventRequest hit fine-grained APIs', async () =>
   assert.equal(calls.some((url) => url.includes('/events/4/request')), true)
 })
 
-test('load clears previous chat immediately before network returns', async () => {
+test('load clears previous chat immediately and does not wait on network', async () => {
   let release!: (value: unknown) => void
   const gate = new Promise((resolve) => {
     release = resolve
   })
+  let emptyFetchStarted = false
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const url = String(input)
     if (url.includes('/api/sessions/empty?turns=')) {
+      emptyFetchStarted = true
       await gate
       return {
         ok: true,
@@ -261,14 +263,16 @@ test('load clears previous chat immediately before network returns', async () =>
   const ctx = new Context()
   await ctx.plugin(sessionView)
   const view = ctx.sessionView as SessionViewService
-  await view.load('busy', { view: 'chat' })
+  await view.load('busy', { view: 'chat', wait: true })
   assert.equal(view.get().nodes.length > 0, true)
 
-  const pending = view.load('empty', { view: 'chat' })
+  // 切到空会话：load 在网络返回前就 resolve；UI 已清空
+  await view.load('empty', { view: 'chat' })
   assert.equal(view.get().sessionId, 'empty')
   assert.equal(view.get().nodes.length, 0)
+  assert.equal(emptyFetchStarted, true)
   release(undefined)
-  await pending
+  await new Promise((r) => setTimeout(r, 0))
   assert.equal(view.get().sessionId, 'empty')
 })
 
@@ -304,7 +308,7 @@ test('second load of same session hits memory cache without waiting on fetch', a
   const ctx = new Context()
   await ctx.plugin(sessionView)
   const view = ctx.sessionView as SessionViewService
-  await view.load('s1', { view: 'chat' })
+  await view.load('s1', { view: 'chat', wait: true })
   await view.load('s1', { view: 'chat' })
   // 首次 + 后台 revalidate；同步路径已用缓存，nodes 立刻可用
   assert.equal(view.get().nodes.some((node) => node.kind === 'user'), true)
@@ -355,7 +359,7 @@ test('loadOlder prepends earlier turns', async () => {
   const ctx = new Context()
   await ctx.plugin(sessionView)
   const view = ctx.sessionView as SessionViewService
-  await view.load('s1', { view: 'chat' })
+  await view.load('s1', { view: 'chat', wait: true })
   assert.equal(view.get().hasMoreOlder, true)
   await view.loadOlder()
   assert.equal(view.get().nodes[0]?.kind === 'user' && view.get().nodes[0].text, 'old')
