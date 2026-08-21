@@ -297,16 +297,16 @@ body {
   grid-template-columns: 48px minmax(0, 1fr);
 }
 
-.app-side-footer {
+.app-side-actions {
   display: flex;
   flex-direction: column;
   gap: 2px;
   flex-shrink: 0;
-  border-top: 1px solid var(--dsw-border);
-  padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--dsw-border);
+  padding: 12px 12px 10px;
 }
 
-.app-side-footer-item {
+.app-side-actions-item {
   display: flex;
   width: 100%;
   align-items: center;
@@ -321,7 +321,7 @@ body {
   transition: background 0.12s ease, color 0.12s ease;
 }
 
-.app-side-footer-item:hover {
+.app-side-actions-item:hover {
   background: var(--dsw-hover);
   color: var(--dsw-business);
 }
