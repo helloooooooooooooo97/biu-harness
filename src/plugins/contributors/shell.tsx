@@ -11,7 +11,7 @@ import {
   moduleIdFromPath,
   type AppModuleId,
 } from '../infrastructure/app-modules.ts'
-import { BrandWordmark, FishLogo } from './brand.tsx'
+import { FishLogo } from './brand.tsx'
 import { SidebarMascot } from './mascot/sidebar-mascot.tsx'
 import { LuPlus } from 'react-icons/lu'
 
