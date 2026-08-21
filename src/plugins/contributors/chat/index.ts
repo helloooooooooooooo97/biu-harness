@@ -6,7 +6,6 @@ import { ChatConfig } from './config.tsx'
 import { ChatConfigBanner } from './config-banner.tsx'
 import { ChatThread } from './thread.tsx'
 import { TrajectoryView } from './trajectory.tsx'
-import { SessionProjectPanel } from './project-panel.tsx'
 import { bindProjectView, type ProjectViewService } from '../../infrastructure/project-view.ts'
 
 export const name = 'chat-ui'
@@ -25,7 +24,7 @@ export function apply(ctx: Context) {
   const props = () => slotProps
   ctx.slots.place('stage', ChatThread, { key: 'chat-thread', order: 1, props })
   ctx.slots.place('trajectory', TrajectoryView, { key: 'trajectory', order: 1, props })
-  ctx.slots.place('project', SessionProjectPanel, { key: 'session-project', order: 1, props })
+  // project 胶囊嵌在 dock ApprovalsRail 胶囊行，不再单独占顶栏
   ctx.slots.place('composer', ChatComposer, { key: 'chat', order: 10, props })
   ctx.slots.place('dock', ChatConfigBanner, { key: 'chat-config-banner', order: 1 })
   ctx.slots.place('dock', ApprovalsRail, { key: 'approvals', order: 5, props })

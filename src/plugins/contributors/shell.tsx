@@ -104,8 +104,8 @@ function WorkspaceModule() {
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
       <h1 className="text-xl font-semibold tracking-tight text-[var(--dsw-label)]">Workspace</h1>
       <p className="max-w-md text-sm leading-6 text-[var(--dsw-label-3)]">
-        项目绑定在 Agent 顶栏右侧的 <strong className="font-semibold text-[var(--dsw-label-2)]">Bind project</strong>{' '}
-        ：选目录后作为该 Session 的 cwd。无需单独大面板。
+        项目绑定在对话输入上方的 <strong className="font-semibold text-[var(--dsw-label-2)]">Bind project</strong>{' '}
+        胶囊：选目录后作为该 Session 的 cwd。无需单独大面板。
       </p>
     </div>
   )
@@ -287,7 +287,6 @@ function Shell(props: SlotProps) {
                 </>
               )}
             </NavLink>
-            <div className="ml-auto flex min-w-0 items-center">{props.renderSlot('project')}</div>
           </header>
           <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             {/*
