@@ -145,6 +145,12 @@ body {
   height: 48px;
   place-items: center;
   color: var(--dsw-label);
+  overflow: visible;
+}
+
+.app-activity-brand svg {
+  display: block;
+  overflow: visible;
 }
 
 .app-activity-brand:hover {
