@@ -12,7 +12,15 @@ import {
   type AppModuleId,
 } from '../infrastructure/app-modules.ts'
 import { FishLogo } from './brand.tsx'
-import { SidebarMascot } from './mascot/sidebar-mascot.tsx'
+import { SessionMascotMark, SidebarMascot } from './mascot/sidebar-mascot.tsx'
+import {
+  assignSessionMascot,
+  DEFAULT_SESSION_MASCOT,
+  ensureSessionMascots,
+  getOrAssignSessionMascot,
+  releaseSessionMascot,
+} from './mascot/session-mascot.ts'
+import type { SessionMascotIdentity } from './mascot/grok-bot-types.ts'
 import { LuPlus } from 'react-icons/lu'
 
 export const name = 'shell'
@@ -43,18 +51,25 @@ function ModuleRail({
   agentHref,
   live,
   busy,
+  identity,
   onSettings,
 }: {
   active: AppModuleId
   agentHref: string
   live: boolean
   busy: boolean
+  identity: SessionMascotIdentity
   onSettings: () => void
 }) {
   return (
     <nav className="app-activity-bar" aria-label="Activity bar">
       <Link to={agentHref} className="app-activity-brand" title="HARNESS" aria-label="Home">
-        <SidebarMascot size={34} busy={busy} title="Harness mascot" />
+        <SidebarMascot
+          size={34}
+          busy={busy}
+          identity={identity}
+          title={`${identity.shape} · ${identity.color}`}
+        />
       </Link>
       <div className="app-activity-list">
         {APP_MODULES.map((module) => {
@@ -128,11 +143,16 @@ function Shell(props: SlotProps) {
   const view = useSessionView((state) => state.view)
   const agentBusy = useSessionView((state) => state.agentStatus === 'running')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [mascotMap, setMascotMap] = useState<Record<string, SessionMascotIdentity>>({})
   const activeModule = moduleIdFromPath(location.pathname)
   const appRoute = parseAppPath(location.pathname)
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   const agentHref = sessionId ? `/s/${sessionId}${view === 'trajectory' ? '/trajectory' : ''}` : '/'
+  const activeMascot =
+    (routeSessionId && mascotMap[routeSessionId]) ||
+    (sessionId && mascotMap[sessionId]) ||
+    DEFAULT_SESSION_MASCOT
 
   // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
   useEffect(() => {
@@ -145,6 +165,10 @@ function Shell(props: SlotProps) {
   useEffect(() => {
     void sessionView.refreshSessions()
   }, [sessionView])
+
+  useEffect(() => {
+    setMascotMap(ensureSessionMascots(sessions.map((item) => item.id)))
+  }, [sessions])
 
   useEffect(() => {
     void projectView.attachSession(sessionId, project)
@@ -171,6 +195,7 @@ function Shell(props: SlotProps) {
         agentHref={agentHref}
         live={live}
         busy={agentBusy}
+        identity={activeMascot}
         onSettings={() => setSettingsOpen(true)}
       />
 
@@ -182,7 +207,12 @@ function Shell(props: SlotProps) {
         aria-hidden={activeModule !== 'agent'}
       >
         <div className="flex shrink-0 items-center gap-2.5 px-4 pt-4 pb-2">
-          <SidebarMascot size={48} busy={agentBusy} title="Harness mascot" />
+          <SidebarMascot
+            size={48}
+            busy={agentBusy}
+            identity={activeMascot}
+            title={`${activeMascot.shape} · ${activeMascot.color}`}
+          />
           <div className="flex items-center gap-2 text-[var(--dsw-label)]">
             <span className="text-[15px] font-semibold tracking-tight">deepseek</span>
             <span className="rounded-[6px] border border-[var(--dsw-border)] bg-[var(--dsw-hover)] px-1.5 py-[2px] text-[10px] font-semibold tracking-wider text-[var(--dsw-label-2)]">
@@ -200,7 +230,11 @@ function Shell(props: SlotProps) {
                 title="New Session"
                 aria-label="New Session"
                 onClick={() => {
-                  void sessionView.newSession().then((id) => navigate(`/s/${id}`))
+                  void sessionView.newSession().then((id) => {
+                    const identity = assignSessionMascot(id)
+                    setMascotMap((prev) => ({ ...prev, [id]: identity }))
+                    navigate(`/s/${id}`)
+                  })
                 }}
               >
                 <LuPlus className="size-3.5" />
@@ -212,6 +246,7 @@ function Shell(props: SlotProps) {
           ) : (
             sessions.map((item) => {
               const active = item.id === routeSessionId
+              const identity = mascotMap[item.id] ?? DEFAULT_SESSION_MASCOT
               return (
                 <div
                   key={item.id}
@@ -221,13 +256,30 @@ function Shell(props: SlotProps) {
                 >
                   <Link
                     to={`/s/${item.id}${view === 'trajectory' ? '/trajectory' : ''}`}
-                    className="min-w-0 flex-1 px-3 py-2 text-left text-sm"
+                    className="flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-2 text-left text-sm"
                   >
-                    <div className="truncate font-medium">{item.title}</div>
-                    <div className="mt-0.5 font-mono text-[10px] opacity-70">
-                      {item.id.slice(0, 8)} · {item.eventCount} events
-                      {item.project ? ` · ${item.project.name}` : ''}
-                    </div>
+                    {active ? (
+                      <SidebarMascot
+                        size={28}
+                        busy={agentBusy}
+                        identity={identity}
+                        title={`${identity.shape} · ${identity.color}`}
+                      />
+                    ) : (
+                      <SessionMascotMark
+                        size={28}
+                        shape={identity.shape}
+                        color={identity.color}
+                        title={`${identity.shape} · ${identity.color}`}
+                      />
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{item.title}</div>
+                      <div className="mt-0.5 font-mono text-[10px] opacity-70">
+                        {item.id.slice(0, 8)} · {item.eventCount} events
+                        {item.project ? ` · ${item.project.name}` : ''}
+                      </div>
+                    </span>
                   </Link>
                   <button
                     type="button"
@@ -239,6 +291,12 @@ function Shell(props: SlotProps) {
                       event.stopPropagation()
                       if (!window.confirm(`Delete session “${item.title}”?`)) return
                       const wasActive = item.id === sessionId
+                      releaseSessionMascot(item.id)
+                      setMascotMap((prev) => {
+                        const next = { ...prev }
+                        delete next[item.id]
+                        return next
+                      })
                       void sessionView.deleteSession(item.id).then(() => {
                         if (!wasActive) return
                         const next = sessionView.get().sessionId
