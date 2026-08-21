@@ -14,7 +14,7 @@ import {
 import { FishLogo } from './brand.tsx'
 import { SidebarMascot } from './mascot/sidebar-mascot.tsx'
 import { resolveSessionMascot } from './mascot/session-mascot.ts'
-import { LuPlus } from 'react-icons/lu'
+import { LuPanelLeft, LuPanelLeftClose, LuPlus } from 'react-icons/lu'
 
 export const name = 'shell'
 export const inject = ['slots', 'snapshot', 'sessionView', 'projectView']
@@ -124,11 +124,13 @@ function Shell(props: SlotProps) {
   const view = useSessionView((state) => state.view)
   const agentBusy = useSessionView((state) => state.agentStatus === 'running')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const activeModule = moduleIdFromPath(location.pathname)
   const appRoute = parseAppPath(location.pathname)
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   const agentHref = sessionId ? `/s/${sessionId}${view === 'trajectory' ? '/trajectory' : ''}` : '/'
+  const showChatSidebar = activeModule === 'agent' && !sidebarCollapsed
 
   // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
   useEffect(() => {
@@ -160,7 +162,13 @@ function Shell(props: SlotProps) {
 
   return (
     <div
-      className={`app-shell${activeModule === 'agent' ? ' app-shell-agent' : ' app-shell-module'}`}
+      className={`app-shell${
+        activeModule === 'agent'
+          ? sidebarCollapsed
+            ? ' app-shell-agent is-sidebar-collapsed'
+            : ' app-shell-agent'
+          : ' app-shell-module'
+      }`}
     >
       <ModuleRail
         active={activeModule}
@@ -172,14 +180,23 @@ function Shell(props: SlotProps) {
       {/* 模块切换用 hidden 保活，避免卸载重挂导致路由体感慢 */}
       <aside
         className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] ${
-          activeModule === 'agent' ? 'flex' : 'hidden'
+          showChatSidebar ? 'flex' : 'hidden'
         }`}
-        aria-hidden={activeModule !== 'agent'}
+        aria-hidden={!showChatSidebar}
       >
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-4">
           <div className="mb-2 flex items-center justify-between gap-2 px-1">
             <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Chat</span>
             <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
+                title="Collapse sidebar"
+                aria-label="Collapse sidebar"
+                onClick={() => setSidebarCollapsed(true)}
+              >
+                <LuPanelLeftClose className="size-3.5" />
+              </button>
               <button
                 type="button"
                 className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
@@ -257,7 +274,18 @@ function Shell(props: SlotProps) {
           className={`min-h-0 min-w-0 flex-col overflow-hidden ${activeModule === 'agent' ? 'flex flex-1' : 'hidden'}`}
           aria-hidden={activeModule !== 'agent'}
         >
-          <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[var(--dsw-border)] px-6">
+          <header className="flex h-12 shrink-0 items-center gap-3 border-b border-[var(--dsw-border)] px-6">
+            {sidebarCollapsed ? (
+              <button
+                type="button"
+                className="grid size-7 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
+                title="Expand sidebar"
+                aria-label="Expand sidebar"
+                onClick={() => setSidebarCollapsed(false)}
+              >
+                <LuPanelLeft className="size-4" />
+              </button>
+            ) : null}
             <NavLink
               to={sessionId ? `/s/${sessionId}` : '/'}
               end
