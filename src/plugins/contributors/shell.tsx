@@ -126,6 +126,9 @@ function Shell(props: SlotProps) {
   const view = useSessionView((state) => state.view)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const activeModule = moduleIdFromPath(location.pathname)
+  const appRoute = parseAppPath(location.pathname)
+  // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
+  const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   const agentHref = sessionId ? `/s/${sessionId}${view === 'trajectory' ? '/trajectory' : ''}` : '/'
 
   // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
@@ -210,7 +213,7 @@ function Shell(props: SlotProps) {
             <p className="px-1 text-[11px] leading-4 text-[var(--dsw-label-3)]">No chats yet. Send a message or create one.</p>
           ) : (
             sessions.map((item) => {
-              const active = item.id === sessionId
+              const active = item.id === routeSessionId
               return (
                 <div
                   key={item.id}
