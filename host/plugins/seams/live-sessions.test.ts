@@ -55,3 +55,48 @@ test('live tools list/inspect/inject; reject from chat sessions', async () => {
   )) as { queued: boolean }
   assert.equal(injected.queued, true)
 })
+
+test('live session turn unlocks session_* tools on top of minimal mode', async () => {
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  await ctx.plugin(tools)
+  await ctx.plugin(systemPrompt)
+  await ctx.plugin(llm)
+  await ctx.plugin(agentLoop)
+  await ctx.plugin(agents)
+  await ctx.plugin(liveSessions)
+
+  // 模拟极简底座已有 bash；live 工具应作为增量挂上
+  ctx.tools.register({
+    name: 'bash',
+    description: 'bash',
+    parameters: { type: 'object', properties: {} },
+    execute: () => 'ok',
+  })
+  ctx.tools.setMode('minimal')
+  assert.deepEqual(ctx.tools.names().sort(), ['bash'])
+  assert.equal(ctx.tools.names().includes('session_list'), false)
+
+  const live = await ctx.sessions.create(undefined, { type: 'live' })
+  let seen: string[] = []
+  const { AgentLoop } = await import('../orchestration/agent-loop.ts')
+  const loop = new AgentLoop(
+    ctx,
+    {
+      async chat(_messages, toolSchemas) {
+        seen = (toolSchemas as Array<{ function: { name: string } }>).map((item) => item.function.name).sort()
+        return { content: 'ok', toolCalls: [], usage: { inputTokens: 1, outputTokens: 1 } }
+      },
+    },
+    live.id,
+    new AbortController().signal,
+  )
+  await loop.run([{ kind: 'wake', text: 'list sessions' }])
+  assert.equal(seen.includes('bash'), true)
+  for (const name of liveSessions.LIVE_TOOL_NAMES) {
+    assert.equal(seen.includes(name), true, `expected ${name} in schemas during live turn`)
+  }
+  // 回合外仍回到极简底座
+  assert.deepEqual(ctx.tools.names().sort(), ['bash'])
+})
