@@ -114,6 +114,76 @@ body {
   background: radial-gradient(ellipse at center, rgba(242, 241, 237, 0.14), transparent 70%);
 }
 
+.chat-empty-hero {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: min(52vh, 420px);
+  padding: 48px 24px 72px;
+}
+
+.chat-empty-hero-glow {
+  pointer-events: none;
+  position: absolute;
+  inset: 12% 18% 28%;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(242, 241, 237, 0.16), transparent 62%),
+    radial-gradient(ellipse at 50% 58%, rgba(120, 160, 180, 0.08), transparent 70%);
+  filter: blur(2px);
+}
+
+.chat-empty-hero-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  text-align: center;
+}
+
+.chat-empty-hero-mascot {
+  display: grid;
+  place-items: center;
+  width: 148px;
+  height: 148px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(243, 239, 230, 0.95), rgba(243, 239, 230, 0.72) 58%, transparent 72%);
+  box-shadow:
+    inset 0 -18px 36px rgba(40, 30, 10, 0.08),
+    0 18px 48px rgba(0, 0, 0, 0.28);
+  animation: chat-empty-mascot-float 3.6s ease-in-out infinite;
+}
+
+.chat-empty-hero-title {
+  margin: 0;
+  font-family: "Segoe UI Soft", "SF Pro Rounded", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  font-weight: 560;
+  letter-spacing: -0.02em;
+  color: var(--dsw-label);
+}
+
+@keyframes chat-empty-mascot-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-empty-hero-mascot {
+    animation: none;
+  }
+}
+
 /* App shell — VS Code-like activity bar + optional side bar */
 .app-shell {
   display: grid;

@@ -5,7 +5,9 @@ import { LuCheck, LuCopy, LuGitFork } from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import type { ChatNode } from '../../infrastructure/session-project.ts'
-import { FishLogo } from '../brand.tsx'
+import { SidebarMascot } from '../mascot/sidebar-mascot.tsx'
+import { DEFAULT_SESSION_MASCOT, resolveSessionMascot } from '../mascot/session-mascot.ts'
+import type { SessionMascotIdentity } from '../mascot/grok-bot-types.ts'
 import { MarkdownBody } from './markdown.tsx'
 import { ToolCard } from './tool-card.tsx'
 
@@ -149,23 +151,15 @@ function NodeView({
 
 const NodeViewMemo = memo(NodeView)
 
-function EmptyHero() {
+function EmptyHero({ identity, busy }: { identity: SessionMascotIdentity; busy: boolean }) {
   return (
-    <div className="relative flex flex-1 flex-col items-center justify-center px-4 py-16">
-      <div className="dsw-hero-glow pointer-events-none absolute inset-0" />
-      <div className="relative z-[1] flex flex-col items-center gap-3 text-center">
-        <span className="dsw-fish-swim text-[var(--dsw-label)]">
-          <FishLogo size={34} />
-        </span>
-        <div className="flex items-center gap-2">
-          <h2 className="text-2xl font-semibold tracking-tight">How can I help you?</h2>
-          <span className="rounded-full bg-[var(--dsw-hover)] px-2 py-0.5 text-[10px] font-semibold tracking-wider text-[var(--dsw-label-3)]">
-            PREVIEW
-          </span>
+    <div className="chat-empty-hero">
+      <div className="chat-empty-hero-glow" aria-hidden />
+      <div className="chat-empty-hero-inner">
+        <div className="chat-empty-hero-mascot">
+          <SidebarMascot size={112} identity={identity} busy={busy} title={`${identity.shape} · ${identity.color}`} />
         </div>
-        <p className="max-w-md text-sm text-[var(--dsw-label-3)]">
-          对话由 append-only session 投影。输入框上方可绑定本机文件夹作为 Session cwd。
-        </p>
+        <h2 className="chat-empty-hero-title">Need a hand?</h2>
       </div>
     </div>
   )
@@ -198,6 +192,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const agentStatus = useSessionView((state) => state.agentStatus)
   const agentStep = useSessionView((state) => state.agentStep)
   const sessionId = useSessionView((state) => state.sessionId)
+  const sessions = useSessionView((state) => state.sessions)
   const error = useSessionView((state) => state.error)
   const hasMoreOlder = useSessionView((state) => state.hasMoreOlder)
   const loadingOlder = useSessionView((state) => state.loadingOlder)
@@ -317,7 +312,13 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     if (parent) parent.scrollTop = parent.scrollHeight
   }, [stickKey, nodes.length])
 
-  if (nodes.length === 0 && !pending && !error) return <EmptyHero />
+  if (nodes.length === 0 && !pending && !error) {
+    const session = sessions.find((item) => item.id === sessionId)
+    const identity = sessionId
+      ? resolveSessionMascot(sessionId, session?.mascot)
+      : DEFAULT_SESSION_MASCOT
+    return <EmptyHero identity={identity} busy={agentStatus === 'running'} />
+  }
 
   const rowHydrated = (node: ChatNode) => {
     if (hydratedRef.current.has(node.id)) return true
