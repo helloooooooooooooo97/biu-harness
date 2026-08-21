@@ -68,6 +68,7 @@ test('reply aggregates turn duration and usage for footer', () => {
   assert.equal(reply?.kind, 'reply')
   if (reply?.kind !== 'reply') return
   assert.equal(reply.finished, true)
+  assert.equal(reply.turn, 1)
   assert.equal(reply.durationMs, 1800)
   assert.deepEqual(reply.usage, {
     inputTokens: 20,

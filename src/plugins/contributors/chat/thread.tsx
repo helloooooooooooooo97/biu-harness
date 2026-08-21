@@ -1,7 +1,7 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { LuCheck, LuCopy, LuGitFork } from 'react-icons/lu'
+import { LuCheck, LuCopy, LuGitFork, LuHash, LuTimer, LuCoins } from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import {
@@ -85,6 +85,25 @@ function UsageInline({ usage }: { usage: TrajectoryUsage }) {
       <span className="traj-usage-out" title="output tokens">
         {formatTok(usage.outputTokens)}
       </span>
+    </span>
+  )
+}
+
+function MetaItem({
+  icon,
+  value,
+  title,
+}: {
+  icon: ReactNode
+  value: ReactNode
+  title: string
+}) {
+  return (
+    <span className="chat-reply-meta-item" title={title}>
+      <span className="chat-reply-meta-icon" aria-hidden>
+        {icon}
+      </span>
+      <span className="chat-reply-meta-value">{value}</span>
     </span>
   )
 }
@@ -214,13 +233,20 @@ function NodeView({
         {showFooter ? (
           <div className="chat-reply-bar" aria-label="回合摘要">
             <div className="chat-reply-meta">
-              {node.durationMs != null ? (
-                <span className="chat-reply-duration" title="本回合耗时">
-                  {formatDuration(node.durationMs)}
-                </span>
+              {node.turn != null ? (
+                <MetaItem icon={<LuHash className="size-3" />} value={node.turn} title={`第 ${node.turn} 轮`} />
               ) : null}
-              {node.usage ? <UsageInline usage={node.usage} /> : null}
-              {!node.usage && node.durationMs == null ? (
+              {node.durationMs != null ? (
+                <MetaItem
+                  icon={<LuTimer className="size-3" />}
+                  value={formatDuration(node.durationMs)}
+                  title="本回合耗时"
+                />
+              ) : null}
+              {node.usage ? (
+                <MetaItem icon={<LuCoins className="size-3" />} value={<UsageInline usage={node.usage} />} title="Token 用量" />
+              ) : null}
+              {node.turn == null && node.durationMs == null && !node.usage ? (
                 <span className="chat-reply-meta-empty">—</span>
               ) : null}
             </div>
