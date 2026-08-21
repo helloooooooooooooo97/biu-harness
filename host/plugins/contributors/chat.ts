@@ -190,7 +190,11 @@ export function apply(ctx: Context) {
   })
   ctx.http.route('POST', '/api/sessions', async (route) => {
     const record = await ctx.sessions.create()
-    route.send(201, { id: record.id, version: record.version })
+    route.send(201, {
+      id: record.id,
+      version: record.version,
+      ...(record.mascot ? { mascot: record.mascot } : {}),
+    })
   })
   ctx.http.route('GET', '/api/sessions', async (route) => {
     const items = await ctx.sessions.listSummaries()
@@ -202,6 +206,7 @@ export function apply(ctx: Context) {
         title: item.title,
         updatedAt: item.updatedAt,
         ...(item.project ? { project: item.project } : {}),
+        ...(item.mascot ? { mascot: item.mascot } : {}),
       })),
     })
   })
@@ -226,6 +231,7 @@ export function apply(ctx: Context) {
       oldestSeq: window.oldestSeq,
       newestSeq: window.newestSeq,
       ...(record.project ? { project: record.project } : {}),
+      ...(record.mascot ? { mascot: record.mascot } : {}),
     })
   })
   ctx.http.route('GET', '/api/sessions/:id/events', async (route) => {
@@ -332,7 +338,12 @@ export function apply(ctx: Context) {
   ctx.http.route('POST', '/api/sessions/:id/fork', async (route) => {
     try {
       const child = await ctx.sessions.fork(route.params.id)
-      route.send(201, { id: child.id, version: child.version, parentId: route.params.id })
+      route.send(201, {
+        id: child.id,
+        version: child.version,
+        parentId: route.params.id,
+        ...(child.mascot ? { mascot: child.mascot } : {}),
+      })
     } catch (error) {
       route.send(400, { error: String(error) })
     }

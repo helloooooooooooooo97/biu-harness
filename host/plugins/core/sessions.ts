@@ -7,11 +7,18 @@ import {
   SESSION_FORMAT_VERSION,
   type SessionEvent,
   type SessionEventBody,
+  type SessionMascot,
   type SessionProject,
   type SessionRecord,
 } from './session-types.ts'
+import {
+  isSessionMascot,
+  mascotFromSessionId,
+  pickSessionMascot,
+  type SessionMascot as AssignedMascot,
+} from './session-mascot.ts'
 
-export type { SessionEvent, SessionEventBody, SessionProject, SessionRecord }
+export type { SessionEvent, SessionEventBody, SessionProject, SessionRecord, SessionMascot }
 export { SESSION_FORMAT_VERSION }
 
 export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
@@ -52,10 +59,13 @@ export class SessionsService extends Service {
   }
 
   async create(id: string = crypto.randomUUID()) {
+    const used = await this.collectUsedMascots()
+    const mascot = pickSessionMascot(id, used)
     const record: SessionRecord = {
       id,
       version: SESSION_FORMAT_VERSION,
       events: [{ type: 'session/open', version: SESSION_FORMAT_VERSION, seq: 0, ts: Date.now() }],
+      mascot,
     }
     await this.persist(record)
     return record
@@ -104,11 +114,14 @@ export class SessionsService extends Service {
 
   async fork(sourceId: string, childId: string = crypto.randomUUID()) {
     const source = await this.require(sourceId)
+    const used = await this.collectUsedMascots()
+    const mascot = pickSessionMascot(childId, used)
     const record: SessionRecord = {
       id: childId,
       version: source.version,
       events: source.events.map((event) => ({ ...event })),
       ...(source.project ? { project: { ...source.project } } : {}),
+      mascot,
     }
     await this.persist(record)
     return record
@@ -130,8 +143,32 @@ export class SessionsService extends Service {
     return this.ctx.sessionStore.list()
   }
 
-  listSummaries() {
-    return this.ctx.sessionStore.listSummaries()
+  async listSummaries() {
+    const items = await this.ctx.sessionStore.listSummaries()
+    const out = []
+    for (const item of items) {
+      if (item.mascot && isSessionMascot(item.mascot)) {
+        out.push(item)
+        continue
+      }
+      // Legacy sessions: pin a stable mascot once and persist.
+      const record = await this.require(item.id)
+      if (!record.mascot || !isSessionMascot(record.mascot)) {
+        record.mascot = mascotFromSessionId(record.id)
+        await this.persist(record)
+      }
+      out.push({ ...item, mascot: record.mascot })
+    }
+    return out
+  }
+
+  private async collectUsedMascots(): Promise<AssignedMascot[]> {
+    const items = await this.ctx.sessionStore.listSummaries()
+    const used: AssignedMascot[] = []
+    for (const item of items) {
+      if (item.mascot && isSessionMascot(item.mascot)) used.push(item.mascot)
+    }
+    return used
   }
 
   async delete(id: string) {

@@ -22,6 +22,7 @@ export interface SessionListItem {
   eventCount: number
   updatedAt: number
   project?: { name: string; path?: string; boundAt: number }
+  mascot?: { shape: string; color: string }
 }
 
 export type ConversationView = 'chat' | 'trajectory'
@@ -111,7 +112,9 @@ function sessionsEqual(a: SessionListItem[], b: SessionListItem[]): boolean {
       left.eventCount !== right.eventCount ||
       left.updatedAt !== right.updatedAt ||
       left.project?.path !== right.project?.path ||
-      left.project?.name !== right.project?.name
+      left.project?.name !== right.project?.name ||
+      left.mascot?.shape !== right.mascot?.shape ||
+      left.mascot?.color !== right.mascot?.color
     ) {
       return false
     }
