@@ -200,26 +200,8 @@ function Shell(props: SlotProps) {
         }`}
         aria-hidden={!showChatSidebar}
       >
-        <div className="app-side-actions">
-          <button
-            type="button"
-            className="app-side-actions-item"
-            title="添加聊天"
-            aria-label="添加聊天"
-            onClick={() => {
-              void sessionView.newSession().then((id) => navigate(`/s/${id}`))
-            }}
-          >
-            <LuPlus className="size-4 shrink-0" aria-hidden />
-            <span>添加聊天</span>
-          </button>
-          <Link to="/dashboard" className="app-side-actions-item" title="Dashboard" aria-label="Dashboard">
-            <LuLayoutDashboard className="size-4 shrink-0" aria-hidden />
-            <span>Dashboard</span>
-          </Link>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-3">
-          <div className="mb-2 flex items-center justify-between gap-2 px-1">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pt-3 pb-3">
+          <div className="mb-1 flex items-center justify-between gap-2 px-2">
             <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Chat</span>
             <button
               type="button"
@@ -231,62 +213,88 @@ function Shell(props: SlotProps) {
               <LuPanelLeftClose className="size-3.5" />
             </button>
           </div>
-          {sessions.length === 0 ? (
-            <p className="px-1 text-[11px] leading-4 text-[var(--dsw-label-3)]">No chats yet. Send a message or create one.</p>
-          ) : (
-            sessions.map((item) => {
-              const active = item.id === routeSessionId
-              const identity = resolveSessionMascot(item.id, item.mascot)
-              return (
-                <div
-                  key={item.id}
-                  className={`group mb-1 flex w-full items-stretch rounded-[12px] ${
-                    active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-[var(--dsw-hover)]'
-                  }`}
-                >
-                  <Link
-                    to={`/s/${item.id}${view === 'debug' ? '/debug' : ''}`}
-                    className="flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-2 text-left text-sm"
+
+          <div className="app-side-actions" role="navigation" aria-label="Chat actions">
+            <button
+              type="button"
+              className="app-side-actions-item"
+              title="添加聊天"
+              aria-label="添加聊天"
+              onClick={() => {
+                void sessionView.newSession().then((id) => navigate(`/s/${id}`))
+              }}
+            >
+              <span className="app-side-actions-icon" aria-hidden>
+                <LuPlus className="size-4" />
+              </span>
+              <span className="app-side-actions-label">添加聊天</span>
+            </button>
+            <Link to="/dashboard" className="app-side-actions-item" title="Dashboard" aria-label="Dashboard">
+              <span className="app-side-actions-icon" aria-hidden>
+                <LuLayoutDashboard className="size-4" />
+              </span>
+              <span className="app-side-actions-label">Dashboard</span>
+            </Link>
+          </div>
+
+          <div className="mt-2">
+            {sessions.length === 0 ? (
+              <p className="px-2 text-[11px] leading-4 text-[var(--dsw-label-3)]">No chats yet. Send a message or create one.</p>
+            ) : (
+              sessions.map((item) => {
+                const active = item.id === routeSessionId
+                const identity = resolveSessionMascot(item.id, item.mascot)
+                return (
+                  <div
+                    key={item.id}
+                    className={`group mb-0.5 flex w-full items-stretch rounded-[8px] ${
+                      active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-[var(--dsw-hover)]'
+                    }`}
                   >
-                    <SidebarMascot
-                      size={28}
-                      identity={identity}
-                      busy={active && agentBusy}
-                      title={`${identity.shape} · ${identity.color}`}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <div className="truncate font-medium">{item.title}</div>
-                      <div className="mt-0.5 font-mono text-[10px] opacity-70">
-                        {item.id.slice(0, 8)} · {item.eventCount} events
-                        {item.project ? ` · ${item.project.name}` : ''}
-                      </div>
-                    </span>
-                  </Link>
-                  <button
-                    type="button"
-                    className="shrink-0 px-2 text-[var(--dsw-label-3)] opacity-0 transition-opacity hover:text-[var(--dsw-danger)] group-hover:opacity-100 focus:opacity-100"
-                    aria-label={`Delete session ${item.title}`}
-                    title="Delete"
-                    onClick={(event) => {
-                      event.preventDefault()
-                      event.stopPropagation()
-                      if (!window.confirm(`Delete session “${item.title}”?`)) return
-                      const wasActive = item.id === sessionId
-                      void sessionView.deleteSession(item.id).then(() => {
-                        if (!wasActive) return
-                        const next = sessionView.get().sessionId
-                        navigate(next ? `/s/${next}` : '/')
-                      })
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M10 7V5h4v2m-6 3v8m4-8v8m-7-11 1 14h10l1-14" />
-                    </svg>
-                  </button>
-                </div>
-              )
-            })
-          )}
+                    <Link
+                      to={`/s/${item.id}${view === 'debug' ? '/debug' : ''}`}
+                      className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-1.5 text-left text-sm"
+                    >
+                      <SidebarMascot
+                        size={28}
+                        identity={identity}
+                        busy={active && agentBusy}
+                        title={`${identity.shape} · ${identity.color}`}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <div className="truncate font-medium">{item.title}</div>
+                        <div className="mt-0.5 font-mono text-[10px] opacity-70">
+                          {item.id.slice(0, 8)} · {item.eventCount} events
+                          {item.project ? ` · ${item.project.name}` : ''}
+                        </div>
+                      </span>
+                    </Link>
+                    <button
+                      type="button"
+                      className="shrink-0 px-2 text-[var(--dsw-label-3)] opacity-0 transition-opacity hover:text-[var(--dsw-danger)] group-hover:opacity-100 focus:opacity-100"
+                      aria-label={`Delete session ${item.title}`}
+                      title="Delete"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        if (!window.confirm(`Delete session “${item.title}”?`)) return
+                        const wasActive = item.id === sessionId
+                        void sessionView.deleteSession(item.id).then(() => {
+                          if (!wasActive) return
+                          const next = sessionView.get().sessionId
+                          navigate(next ? `/s/${next}` : '/')
+                        })
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M10 7V5h4v2m-6 3v8m4-8v8m-7-11 1 14h10l1-14" />
+                      </svg>
+                    </button>
+                  </div>
+                )
+              })
+            )}
+          </div>
         </div>
       </aside>
 
