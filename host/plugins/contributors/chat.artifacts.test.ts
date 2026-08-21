@@ -40,7 +40,7 @@ test('GET /api/sessions/:id/artifacts/:name returns image bytes', async () => {
   const ready = new Promise<void>((resolve) => {
     ctx.on('http/ready', () => resolve())
   })
-  await ctx.plugin(http, { port, publicDir })
+  const httpFiber = await ctx.plugin(http, { port, publicDir })
   await ctx.plugin(sessionStore, { driver: 'memory' })
   await ctx.plugin(sessions)
   await ready
@@ -82,7 +82,7 @@ test('GET /api/sessions/:id/artifacts/:name returns image bytes', async () => {
     const unknownSession = await fetch(`http://127.0.0.1:${port}/api/sessions/no-such/artifacts/smoke.png`)
     assert.equal(unknownSession.status, 404)
   } finally {
-    await ctx.parallel('dispose')
+    await httpFiber.dispose()
     process.chdir(prev)
     await rm(base, { recursive: true, force: true })
   }
