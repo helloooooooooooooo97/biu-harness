@@ -1327,17 +1327,35 @@ body {
   min-width: 0;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   overflow: hidden;
   color: var(--dsw-label-3);
   font-size: 11px;
   line-height: 1;
 }
 
-.chat-reply-duration {
+.chat-reply-meta-item {
+  display: inline-flex;
+  min-width: 0;
   flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
+  align-items: center;
+  gap: 4px;
   color: var(--dsw-label-2);
+  line-height: 1;
+}
+
+.chat-reply-meta-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  color: var(--dsw-label-3);
+}
+
+.chat-reply-meta-value {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 

@@ -60,6 +60,7 @@ export type ChatNode =
       parts: ChatReplyPart[]
       /** 本回合所有助手正文，供一键复制 */
       copyText: string
+      turn?: number
       usage?: TrajectoryUsage
       durationMs?: number
       streaming?: boolean
@@ -118,6 +119,7 @@ export function projectRequestMessages(events: SessionEvent[], assistantSeq: num
 export function projectNodes(events: SessionEvent[]): ChatNode[] {
   const nodes: ChatNode[] = []
   let turnStartTs: number | undefined
+  let currentTurn: number | undefined
   let reply: {
     id: string
     parts: ChatReplyPart[]
@@ -125,6 +127,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     tools: Map<string, ChatToolPart>
     usage: { input: number; output: number; total: number; cache: number; hit: boolean }
     streaming: boolean
+    turn?: number
   } | null = null
 
   function ensureReply(seq: number) {
@@ -136,6 +139,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
         tools: new Map(),
         usage: { input: 0, output: 0, total: 0, cache: 0, hit: false },
         streaming: false,
+        ...(currentTurn != null ? { turn: currentTurn } : {}),
       }
     }
     return reply
@@ -176,6 +180,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       kind: 'reply',
       parts: reply.parts,
       copyText,
+      ...(reply.turn != null ? { turn: reply.turn } : {}),
       ...(usage ? { usage } : {}),
       ...(durationMs != null ? { durationMs } : {}),
       streaming: reply.streaming && !finished,
@@ -188,6 +193,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     if (event.type === 'turn/start') {
       flushReply()
       turnStartTs = event.ts
+      currentTurn = event.turn
     } else if (event.type === 'user/message') {
       flushReply()
       nodes.push({ id: `u-${event.seq}`, kind: 'user', text: event.text, kindTag: event.kind })
@@ -253,6 +259,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     } else if (event.type === 'turn/end') {
       flushReply(event.ts, true)
       turnStartTs = undefined
+      currentTurn = undefined
       if (event.reason && event.reason !== 'complete') {
         nodes.push({ id: `turn-${event.seq}`, kind: 'turn', text: `回合结束：${event.reason}` })
       }
