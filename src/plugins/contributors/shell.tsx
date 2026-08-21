@@ -12,9 +12,8 @@ import {
   type AppModuleId,
 } from '../infrastructure/app-modules.ts'
 import { FishLogo } from './brand.tsx'
-import { SessionMascotMark, SidebarMascot } from './mascot/sidebar-mascot.tsx'
-import { DEFAULT_SESSION_MASCOT, resolveSessionMascot } from './mascot/session-mascot.ts'
-import type { SessionMascotIdentity } from './mascot/grok-bot-types.ts'
+import { SidebarMascot } from './mascot/sidebar-mascot.tsx'
+import { resolveSessionMascot } from './mascot/session-mascot.ts'
 import { LuPlus } from 'react-icons/lu'
 
 export const name = 'shell'
@@ -44,27 +43,15 @@ function ModuleRail({
   active,
   agentHref,
   live,
-  busy,
-  identity,
   onSettings,
 }: {
   active: AppModuleId
   agentHref: string
   live: boolean
-  busy: boolean
-  identity: SessionMascotIdentity
   onSettings: () => void
 }) {
   return (
     <nav className="app-activity-bar" aria-label="Activity bar">
-      <Link to={agentHref} className="app-activity-brand" title="HARNESS" aria-label="Home">
-        <SidebarMascot
-          size={34}
-          busy={busy}
-          identity={identity}
-          title={`${identity.shape} · ${identity.color}`}
-        />
-      </Link>
       <div className="app-activity-list">
         {APP_MODULES.map((module) => {
           const to = module.id === 'agent' ? agentHref : module.path
@@ -142,13 +129,6 @@ function Shell(props: SlotProps) {
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   const agentHref = sessionId ? `/s/${sessionId}${view === 'trajectory' ? '/trajectory' : ''}` : '/'
-  const activeSession =
-    sessions.find((item) => item.id === routeSessionId) || sessions.find((item) => item.id === sessionId)
-  const activeMascot = activeSession
-    ? resolveSessionMascot(activeSession.id, activeSession.mascot)
-    : routeSessionId
-      ? resolveSessionMascot(routeSessionId)
-      : DEFAULT_SESSION_MASCOT
 
   // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
   useEffect(() => {
@@ -186,8 +166,6 @@ function Shell(props: SlotProps) {
         active={activeModule}
         agentHref={agentHref}
         live={live}
-        busy={agentBusy}
-        identity={activeMascot}
         onSettings={() => setSettingsOpen(true)}
       />
 
@@ -232,10 +210,9 @@ function Shell(props: SlotProps) {
                     to={`/s/${item.id}${view === 'trajectory' ? '/trajectory' : ''}`}
                     className="flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-2 text-left text-sm"
                   >
-                    <SessionMascotMark
+                    <SidebarMascot
                       size={28}
-                      shape={identity.shape}
-                      color={identity.color}
+                      identity={identity}
                       busy={active && agentBusy}
                       title={`${identity.shape} · ${identity.color}`}
                     />
