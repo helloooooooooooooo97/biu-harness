@@ -23,12 +23,12 @@ const ROW_GAP_PX = 16
 const ESTIMATE_ROW_PX = 220
 /** 超过该条数才上虚表；过低阈值会抖，过高则短会话也会一次挂满 Markdown */
 const VIRTUALIZE_AFTER = 4
-/** overscan 过大时可视区外仍挂大量 remark DOM，拖死主线程 */
-const OVERSCAN = 6
+/** overscan 过大时可视区外仍挂大量 Markdown DOM，拖死主线程 */
+const OVERSCAN = 3
 /** 滚动停下多久后，给尚未 hydrate 的行补上完整渲染 */
-const SCROLL_IDLE_MS = 120
+const SCROLL_IDLE_MS = 140
 /** 停下后每帧最多新 hydrate 几行，避免一次补齐打爆主线程 */
-const HYDRATE_PER_IDLE = 2
+const HYDRATE_PER_IDLE = 1
 
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
   let node = el?.parentElement ?? null
