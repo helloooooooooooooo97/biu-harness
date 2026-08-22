@@ -841,11 +841,35 @@ export class SessionViewService extends Service {
   }
 
   setProjectMeta(project?: { name: string; path?: string; boundAt: number }) {
-    this.replace({ project })
-    const sessions = this.value.sessions.map((item) =>
-      item.id === this.value.sessionId ? { ...item, project } : item,
-    )
-    this.replace({ sessions })
+    const current = this.value.project
+    const sameProject =
+      current === project ||
+      (Boolean(current) === Boolean(project) &&
+        current?.name === project?.name &&
+        current?.path === project?.path &&
+        current?.boundAt === project?.boundAt)
+    const sessionId = this.value.sessionId
+    const sessionsUnchanged =
+      !sessionId ||
+      this.value.sessions.every((item) => {
+        if (item.id !== sessionId) return true
+        const p = item.project
+        return (
+          p === project ||
+          (Boolean(p) === Boolean(project) &&
+            p?.name === project?.name &&
+            p?.path === project?.path &&
+            p?.boundAt === project?.boundAt)
+        )
+      })
+    if (sameProject && sessionsUnchanged) return
+
+    const sessions = sessionId
+      ? this.value.sessions.map((item) =>
+          item.id === sessionId ? { ...item, project } : item,
+        )
+      : this.value.sessions
+    this.replace({ project, sessions })
   }
 
   async forkCurrent() {

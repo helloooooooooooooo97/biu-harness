@@ -235,9 +235,10 @@ function Shell(props: SlotProps) {
   useEffect(() => {
     const unsub = projectView.subscribe(() => {
       const state = projectView.get()
-      if (state.sessionId && state.sessionId === sessionView.get().sessionId) {
-        sessionView.setProjectMeta(state.project)
-      }
+      const current = sessionView.get()
+      if (!state.sessionId || state.sessionId !== current.sessionId) return
+      // attachSession 回写同内容时会再次进来；setProjectMeta 内部相等则 no-op，打断环
+      sessionView.setProjectMeta(state.project)
     })
     return () => {
       unsub()
