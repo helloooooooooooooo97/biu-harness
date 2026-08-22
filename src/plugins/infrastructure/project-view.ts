@@ -19,6 +19,15 @@ const empty: ProjectViewState = {
   busy: false,
 }
 
+function projectMetaEqual(
+  a?: { name: string; path?: string; boundAt: number },
+  b?: { name: string; path?: string; boundAt: number },
+) {
+  if (a === b) return true
+  if (!a || !b) return !a && !b
+  return a.name === b.name && a.path === b.path && a.boundAt === b.boundAt
+}
+
 export class ProjectViewService extends Service {
   private value: ProjectViewState = empty
   private listeners = new Set<() => void>()
@@ -40,6 +49,14 @@ export class ProjectViewService extends Service {
       project?.path
         ? { name: project.name, path: project.path, boundAt: project.boundAt }
         : undefined
+    if (
+      this.value.sessionId === sessionId &&
+      projectMetaEqual(this.value.project, bound) &&
+      this.value.busy === false &&
+      this.value.error === undefined
+    ) {
+      return
+    }
     this.replace({
       sessionId,
       project: bound,
