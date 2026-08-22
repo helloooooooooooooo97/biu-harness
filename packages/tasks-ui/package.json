@@ -9,6 +9,7 @@
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8",
-    "react": "^19.1.1"
+    "react": "^19.1.1",
+    "react-icons": "^5.7.0"
   }
 }
