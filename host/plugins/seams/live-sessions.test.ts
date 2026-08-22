@@ -212,6 +212,7 @@ test('worker turn/end appends a live旁白 once per turn', async () => {
         item.text.includes('all green'),
     )
   })
+  assert.equal(liveSessions.listLiveWatchesForTests(chat.id).length, 0)
 
   const before = (await ctx.sessions.require(live.id)).events.filter(
     (item) => item.type === 'assistant/message' && item.text.includes('[指挥席]'),
@@ -272,6 +273,7 @@ test('session_wake wait=false watches; wait=true does not; turn/end notifies liv
         item.text.includes('task finished from factory'),
     )
   })
+  assert.equal(liveSessions.listLiveWatchesForTests(chat.id).length, 0)
 
   liveSessions.resetLiveWatchesForTests()
   const chat2 = await ctx.sessions.create()

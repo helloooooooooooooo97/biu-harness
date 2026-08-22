@@ -32,49 +32,49 @@ export interface SessionProgressSnapshot {
   inboxPending: number
 }
 
-/** live 盯着的 worker：wait=false 的 wake / inject 会登记。 */
+/** live → worker 的可撤销订阅（turn/end 旁白后 dispose）。 */
 export interface LiveWorkerWatch {
   liveSessionId: string
   workerSessionId: string
   sinceSeq: number
   watchedAt: number
-  /** 已旁白过的 turn，避免同一 turn/end 重复通知 */
-  notifiedTurns: Set<number>
 }
 
-/** workerSessionId → watches（可被多个 live 同时盯） */
-const workerWatches = new Map<string, LiveWorkerWatch[]>()
+interface ArmedWatch extends LiveWorkerWatch {
+  dispose: () => void
+}
 
-/** 测试用：清空派遣订阅。 */
+/** liveId\\0workerId → 当前订阅；插件卸载 / turn/end 时撤销 */
+const armedWatches = new Map<string, ArmedWatch>()
+
+type ArmWatch = (liveSessionId: string, workerSessionId: string, sinceSeq?: number) => LiveWorkerWatch | undefined
+
+let armWatch: ArmWatch | null = null
+
+function watchKey(liveSessionId: string, workerSessionId: string) {
+  return `${liveSessionId}\0${workerSessionId}`
+}
+
+/** 测试用：撤销并清空所有派遣订阅。 */
 export function resetLiveWatchesForTests() {
-  workerWatches.clear()
+  for (const arm of armedWatches.values()) arm.dispose()
+  armedWatches.clear()
 }
 
 /** 测试用：查看某 worker 当前被谁盯着。 */
-export function listLiveWatchesForTests(workerSessionId?: string) {
-  if (workerSessionId) return [...(workerWatches.get(workerSessionId) ?? [])]
-  return [...workerWatches.values()].flat()
+export function listLiveWatchesForTests(workerSessionId?: string): LiveWorkerWatch[] {
+  const all = [...armedWatches.values()].map(({ dispose: _dispose, ...rest }) => rest)
+  if (workerSessionId) return all.filter((item) => item.workerSessionId === workerSessionId)
+  return all
 }
 
+/**
+ * 订阅 worker 的下一轮 turn/end（可撤销）。
+ * 需在 live-sessions apply 之后调用；结束时会自动 dispose。
+ */
 export function watchWorker(liveSessionId: string, workerSessionId: string, sinceSeq = -1) {
-  if (!liveSessionId || !workerSessionId || liveSessionId === workerSessionId) return
-  const bucket = workerWatches.get(workerSessionId) ?? []
-  const existing = bucket.find((item) => item.liveSessionId === liveSessionId)
-  if (existing) {
-    existing.sinceSeq = Math.min(existing.sinceSeq, sinceSeq)
-    existing.watchedAt = Date.now()
-    return existing
-  }
-  const watch: LiveWorkerWatch = {
-    liveSessionId,
-    workerSessionId,
-    sinceSeq,
-    watchedAt: Date.now(),
-    notifiedTurns: new Set(),
-  }
-  bucket.push(watch)
-  workerWatches.set(workerSessionId, bucket)
-  return watch
+  if (!armWatch) throw new Error('live-sessions is not applied')
+  return armWatch(liveSessionId, workerSessionId, sinceSeq)
 }
 
 function formatWorkerLabel(title: string | undefined, workerSessionId: string) {
@@ -210,18 +210,17 @@ function recentMessages(events: SessionEvent[], limit = 12) {
   return out.reverse()
 }
 
-async function notifyLiveOfWorkerTurnEnd(
+async function appendLiveTurnEndNote(
   ctx: Context,
+  liveSessionId: string,
   workerSessionId: string,
   event: Extract<SessionEvent, { type: 'turn/end' }>,
+  sinceSeq: number,
 ) {
-  const watches = workerWatches.get(workerSessionId)
-  if (!watches?.length) return
-
   const worker = await ctx.sessions.get(workerSessionId)
   if (!worker) return
   const progress = buildSessionProgress(worker.events, {
-    afterSeq: Math.min(...watches.map((item) => item.sinceSeq)),
+    afterSeq: sinceSeq,
     textLimit: 280,
     busy: false,
   })
@@ -235,20 +234,13 @@ async function notifyLiveOfWorkerTurnEnd(
     reason: event.reason,
     assistantText: progress.assistantText,
   })
-
-  for (const watch of watches) {
-    if (watch.notifiedTurns.has(event.turn)) continue
-    // 旁白本身会再 emit session/event；旁白写在 live 上，不会匹配 worker watches
-    watch.notifiedTurns.add(event.turn)
-    try {
-      await ctx.sessions.append(watch.liveSessionId, {
-        type: 'assistant/message',
-        text: note,
-      })
-    } catch (error) {
-      watch.notifiedTurns.delete(event.turn)
-      console.warn('[live-sessions] failed to append turn-end note', error)
-    }
+  try {
+    await ctx.sessions.append(liveSessionId, {
+      type: 'assistant/message',
+      text: note,
+    })
+  } catch (error) {
+    console.warn('[live-sessions] failed to append turn-end note', error)
   }
 }
 
@@ -256,17 +248,53 @@ export const name = 'live-sessions'
 export const inject = ['tools', 'sessions', 'agents', 'systemPrompt']
 
 export function apply(ctx: Context) {
+  const arm: ArmWatch = (liveSessionId, workerSessionId, sinceSeq = -1) => {
+    if (!liveSessionId || !workerSessionId || liveSessionId === workerSessionId) return
+    const key = watchKey(liveSessionId, workerSessionId)
+    armedWatches.get(key)?.dispose()
+
+    let disposed = false
+    const dispose = () => {
+      if (disposed) return
+      disposed = true
+      stop()
+      if (armedWatches.get(key)?.dispose === dispose) armedWatches.delete(key)
+    }
+
+    // 挂在 live 插件 fiber 上：插件卸载自动撤销；turn/end 时手动撤销
+    const stop = ctx.sessions.subscribe(
+      workerSessionId,
+      (event) => {
+        if (event.type !== 'turn/end') return
+        const since = armedWatches.get(key)?.sinceSeq ?? sinceSeq
+        dispose()
+        void appendLiveTurnEndNote(ctx, liveSessionId, workerSessionId, event, since)
+      },
+      ctx,
+    )
+
+    const watch: ArmedWatch = {
+      liveSessionId,
+      workerSessionId,
+      sinceSeq,
+      watchedAt: Date.now(),
+      dispose,
+    }
+    armedWatches.set(key, watch)
+    return watch
+  }
+
+  armWatch = arm
+  ctx.effect(() => () => {
+    resetLiveWatchesForTests()
+    if (armWatch === arm) armWatch = null
+  })
+
   ctx.systemPrompt.register('live.persona', () => {
     const sessionId = currentSessionId()
     if (!sessionId) return ''
     const type = normalizeSessionType(ctx.sessions.peek(sessionId)?.type)
     return type === 'live' ? LIVE_PROMPT : ''
-  })
-
-  // 单点订阅：sessions.append → session/event；只处理已登记 worker 的 turn/end
-  ctx.on('session/event', ({ sessionId, event }) => {
-    if (event.type !== 'turn/end') return
-    void notifyLiveOfWorkerTurnEnd(ctx, sessionId, event)
   })
 
   ctx.tools.register({
@@ -395,8 +423,8 @@ export function apply(ctx: Context) {
       }
       const agent = await ctx.agents.create(targetId)
       if (!wait) {
-        // 先登记再派工，避免极快完成时丢掉 turn/end
-        watchWorker(selfId, targetId, target.events.at(-1)?.seq ?? -1)
+        // 先订阅再派工，避免极快完成时丢掉 turn/end；结束后自动 dispose
+        arm(selfId, targetId, target.events.at(-1)?.seq ?? -1)
         void agent.send(text, { wait: false })
         return { sessionId: targetId, queued: true, wait: false, watched: true }
       }
@@ -430,7 +458,7 @@ export function apply(ctx: Context) {
       if (!text) throw new Error('text required')
       if (targetId === selfId) throw new Error('cannot inject into the current live session')
       const target = await ctx.sessions.require(targetId)
-      watchWorker(selfId, targetId, target.events.at(-1)?.seq ?? -1)
+      arm(selfId, targetId, target.events.at(-1)?.seq ?? -1)
       const agent = await ctx.agents.create(targetId)
       agent.inject(text)
       return { sessionId: targetId, queued: true, watched: true }
