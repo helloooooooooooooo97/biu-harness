@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
 import type { SlotProps } from '../registry/slots.ts'
@@ -224,13 +224,18 @@ function Shell(props: SlotProps) {
   const agentHref = sessionId ? `/s/${sessionId}${view === 'debug' ? '/debug' : ''}` : '/'
   const showChatSidebar = activeModule === 'agent' && !sidebarCollapsed
   const projectGroups = useMemo(() => groupSessionsByProject(sessions), [sessions])
+  const prevRouteSessionRef = useRef<string | null>(null)
 
+  // 仅在「切到」某组内会话时自动展开；手动折叠当前组不会被立刻顶开
   useEffect(() => {
-    if (!routeSessionId) return
+    const prev = prevRouteSessionRef.current
+    prevRouteSessionRef.current = routeSessionId
+    if (!routeSessionId || prev === routeSessionId) return
     const group = projectGroups.find((item) => item.sessions.some((row) => row.id === routeSessionId))
     if (!group || !collapsedProjects[group.key]) return
-    setCollapsedProjects((prev) => {
-      const next = { ...prev, [group.key]: false }
+    setCollapsedProjects((prevCollapsed) => {
+      if (!prevCollapsed[group.key]) return prevCollapsed
+      const next = { ...prevCollapsed, [group.key]: false }
       writeCollapsedProjects(next)
       return next
     })
