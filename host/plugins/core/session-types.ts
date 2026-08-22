@@ -2,6 +2,11 @@ export const SESSION_FORMAT_VERSION = 1
 
 export type InboxKind = 'wake' | 'inject'
 
+/** 谁写入这条 user/message：真人用户，或其它 session（如 Live 派工）。缺省按 user。 */
+export type MessageSender =
+  | { type: 'user' }
+  | { type: 'session'; sessionId: string }
+
 /** 写入 append 的正文（不含 seq/ts）；与 SessionEvent 判别联合一一对应。 */
 export type SessionEventBody =
   | { type: 'session/open'; version: number }
@@ -10,7 +15,7 @@ export type SessionEventBody =
   | { type: 'step/start'; turn: number; step: number }
   | { type: 'step/end'; turn: number; step: number }
   | { type: 'system/prompt'; text: string }
-  | { type: 'user/message'; text: string; kind: InboxKind }
+  | { type: 'user/message'; text: string; kind: InboxKind; sender?: MessageSender }
   | {
       type: 'assistant/message'
       text: string

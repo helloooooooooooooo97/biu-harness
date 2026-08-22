@@ -9,7 +9,12 @@ export type SessionEvent = {
   | { type: 'step/start'; turn: number; step: number }
   | { type: 'step/end'; turn: number; step: number }
   | { type: 'system/prompt'; text: string }
-  | { type: 'user/message'; text: string; kind?: string }
+  | {
+      type: 'user/message'
+      text: string
+      kind?: string
+      sender?: { type: 'user' } | { type: 'session'; sessionId: string }
+    }
   | {
       type: 'assistant/message'
       text: string
@@ -65,7 +70,15 @@ export type ChatStepStat = {
 }
 
 export type ChatNode =
-  | { id: string; kind: 'user'; text: string; kindTag?: string; ts?: number }
+  | {
+      id: string
+      kind: 'user'
+      text: string
+      kindTag?: string
+      ts?: number
+      /** 缺省 / user = 真人；session = Live 等其它会话派工 */
+      sender?: { type: 'user' } | { type: 'session'; sessionId: string }
+    }
   | {
       id: string
       kind: 'reply'
@@ -256,6 +269,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
         text: event.text,
         kindTag: event.kind,
         ts: event.ts,
+        ...(event.sender ? { sender: event.sender } : {}),
       })
     } else if (event.type === 'assistant/chunk') {
       const r = ensureReply(event.seq)

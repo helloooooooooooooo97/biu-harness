@@ -41,6 +41,24 @@ test('projects user, streaming assistant, tool call/result from session events',
   if (user?.kind === 'user') assert.equal(user.ts, 2)
 })
 
+test('projects live sender onto user nodes', () => {
+  const nodes = projectNodes([
+    { type: 'session/open', version: 1, seq: 0, ts: 1 },
+    {
+      type: 'user/message',
+      text: 'do it',
+      kind: 'wake',
+      sender: { type: 'session', sessionId: 'live-1' },
+      seq: 1,
+      ts: 2,
+    },
+  ])
+  const user = nodes[0]
+  assert.equal(user?.kind, 'user')
+  if (user?.kind !== 'user') return
+  assert.deepEqual(user.sender, { type: 'session', sessionId: 'live-1' })
+})
+
 test('keeps reply streaming across tools until turn/end (Details stay open)', () => {
   const base: SessionEvent[] = [
     { type: 'turn/start', turn: 1, seq: 0, ts: 1 },

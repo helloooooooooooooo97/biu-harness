@@ -216,28 +216,30 @@ export const SessionInspector = memo(function SessionInspector({
                   key={tool.name}
                   className={`session-inspector-tool${tool.active ? ' is-active' : ''}`}
                   data-tool={tool.name}
+                  title={tool.description || tool.name}
                 >
-                  <div className="session-inspector-tool-top">
-                    {tool.configurable ? (
-                      <input
-                        type="checkbox"
-                        checked={(data?.extraTools ?? []).includes(tool.name)}
-                        disabled={busy}
-                        aria-label={`启用 ${tool.name}`}
-                        onChange={(event) => toggleExtra(tool.name, event.target.checked)}
-                      />
-                    ) : (
-                      <span className="session-inspector-tool-dot" aria-hidden />
-                    )}
-                    <code>{tool.name}</code>
-                    <span className={`session-inspector-badge ${SOURCE_TONE[tool.source]}`}>
-                      {tool.source}
+                  {tool.configurable ? (
+                    <input
+                      type="checkbox"
+                      className="session-inspector-tool-check"
+                      checked={(data?.extraTools ?? []).includes(tool.name)}
+                      disabled={busy}
+                      aria-label={`启用 ${tool.name}`}
+                      onChange={(event) => toggleExtra(tool.name, event.target.checked)}
+                    />
+                  ) : (
+                    <span
+                      className={`session-inspector-tool-icon${tool.active ? ' is-on' : ''}`}
+                      aria-hidden
+                    >
+                      <LuWrench className="size-3.5" />
                     </span>
-                    <span className={`session-inspector-state${tool.active ? ' is-on' : ''}`}>
-                      {tool.active ? '可用' : '未开'}
-                    </span>
-                  </div>
-                  <p>{tool.description || '（无说明）'}</p>
+                  )}
+                  <span className="session-inspector-tool-name">{tool.name}</span>
+                  <span className="session-inspector-tool-source">{tool.source}</span>
+                  <span className={`session-inspector-state${tool.active ? ' is-on' : ''}`}>
+                    {tool.active ? '可用' : '未开'}
+                  </span>
                 </li>
               ))}
             </ul>

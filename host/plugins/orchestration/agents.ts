@@ -2,6 +2,7 @@ import { Service, type Context } from 'cordis'
 import '../../types.ts'
 import type { LlmConfig } from './llm.ts'
 import type { AgentTurn, ClaimedInput } from './agent-loop.ts'
+import type { MessageSender } from '../core/session-types.ts'
 
 export type { AgentTurn, LlmConfig }
 
@@ -9,6 +10,8 @@ export interface AgentSendOptions {
   extraTools?: string[]
   /** false：入队后立即返回，不阻塞等回合结束（Live 派工后可再 progress）。默认 true。 */
   wait?: boolean
+  /** 消息来源：Live 派工时传入 { type: 'session', sessionId } */
+  sender?: MessageSender
 }
 
 export interface AgentHandle {
@@ -80,6 +83,7 @@ export class AgentsService extends Service {
           kind: 'wake',
           text: trimmed,
           ...(extraTools.length ? { extraTools } : {}),
+          ...(opts?.sender ? { sender: opts.sender } : {}),
         })
         if (live.running) {
           if (!wait) return { text: '', steps: [] }
@@ -113,6 +117,7 @@ export class AgentsService extends Service {
           kind: 'inject',
           text: trimmed,
           ...(extraTools.length ? { extraTools } : {}),
+          ...(opts?.sender ? { sender: opts.sender } : {}),
         })
       },
       cancel: () => live.abort.abort(),
