@@ -1,7 +1,7 @@
 import type { Context } from 'cordis'
 import '../../types.ts'
 import { MINIMAL_TOOL_NAMES, type AgentToolMode } from '../registry/tools.ts'
-import { LIVE_TOOL_NAMES, buildSessionProgress } from './live-sessions.ts'
+import { LIVE_TOOL_NAMES } from './live-sessions.ts'
 import { collectLiveDispatchedTasks } from './live-dispatched-usage.ts'
 import { normalizeSessionType, type SessionEvent, type SessionType } from '../core/session-types.ts'
 
@@ -21,21 +21,6 @@ export interface InspectorSourceInfo {
   id: ToolSourceId
   label: string
   description: string
-}
-
-export interface InspectorWorkerRow {
-  id: string
-  title: string
-  type: SessionType
-  status: 'idle' | 'running'
-  turn: number | null
-  step: number | null
-  lastTool: string | null
-  assistantText: string
-  updatedAt: number
-  inboxPending: number
-  project?: string
-  mascot?: { shape: string; color: string }
 }
 
 const SOURCE_INFO: InspectorSourceInfo[] = [
@@ -103,40 +88,6 @@ export function buildInspectorTools(
     })
 }
 
-export async function buildLiveWorkers(ctx: Context, selfId: string): Promise<InspectorWorkerRow[]> {
-  const items = await ctx.sessions.listSummaries()
-  const workers: InspectorWorkerRow[] = []
-  for (const item of items) {
-    if (item.id === selfId) continue
-    if (normalizeSessionType(item.type) === 'live') continue
-    const record = await ctx.sessions.require(item.id)
-    const progress = buildSessionProgress(record.events, {
-      busy: ctx.agents.isBusy(item.id),
-      inboxPending: ctx.agents.inboxPending(item.id),
-      textLimit: 180,
-    })
-    workers.push({
-      id: item.id,
-      title: item.title,
-      type: normalizeSessionType(item.type),
-      status: progress.status,
-      turn: progress.turn,
-      step: progress.step,
-      lastTool: progress.lastTool?.name ?? null,
-      assistantText: progress.assistantText,
-      updatedAt: progress.updatedAt || item.updatedAt,
-      inboxPending: progress.inboxPending,
-      project: item.project?.name,
-      ...(item.mascot ? { mascot: item.mascot } : {}),
-    })
-  }
-  workers.sort((a, b) => {
-    if (a.status !== b.status) return a.status === 'running' ? -1 : 1
-    return b.updatedAt - a.updatedAt
-  })
-  return workers
-}
-
 export const name = 'session-inspector'
 export const inject = ['http', 'sessions', 'agents', 'tools', 'chat']
 
@@ -162,7 +113,6 @@ export function apply(ctx: Context) {
       tools,
     }
     if (sessionType === 'live') {
-      body.workers = await buildLiveWorkers(ctx, id)
       const dispatched = await loadDispatchedUsage(ctx, id, record.events)
       const titles = new Map<string, string>()
       const mascots = new Map<string, { shape: string; color: string; eye?: number }>()

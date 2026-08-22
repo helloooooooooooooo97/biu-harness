@@ -1,16 +1,14 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LuListTree, LuPanelRightClose, LuRadio, LuWrench } from 'react-icons/lu'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { LuListTree, LuPanelRightClose, LuWrench } from 'react-icons/lu'
 import {
   bindSessionView,
   type SessionViewService,
 } from '../infrastructure/session-view.ts'
-import { SidebarMascot } from './mascot/sidebar-mascot.tsx'
-import { resolveSessionMascot } from './mascot/session-mascot.ts'
 import { TrajectoryView } from './chat/trajectory.tsx'
 
 type ToolSourceId = 'minimal' | 'live' | 'plugin'
 type AgentMode = 'standard' | 'minimal'
-type InspectorTab = 'tools' | 'live' | 'traj'
+type InspectorTab = 'tools' | 'traj'
 
 interface InspectorTool {
   name: string
@@ -26,20 +24,6 @@ interface InspectorSource {
   description: string
 }
 
-interface InspectorWorker {
-  id: string
-  title: string
-  status: 'idle' | 'running'
-  turn: number | null
-  step: number | null
-  lastTool: string | null
-  assistantText: string
-  updatedAt: number
-  inboxPending: number
-  project?: string
-  mascot?: { shape: string; color: string; eye?: number }
-}
-
 interface InspectorPayload {
   sessionId: string
   type: 'chat' | 'live'
@@ -47,7 +31,6 @@ interface InspectorPayload {
   extraTools: string[]
   sources: InspectorSource[]
   tools: InspectorTool[]
-  workers?: InspectorWorker[]
 }
 
 export type SessionInspectorProps = {
@@ -75,12 +58,7 @@ export const SessionInspector = memo(function SessionInspector({
   sessionView,
 }: SessionInspectorProps) {
   const sessionId = useSessionView((state) => state.sessionId)
-  const sessions = useSessionView((state) => state.sessions)
   const focusCallId = useSessionView((state) => state.focusCallId)
-  const sessionType = useMemo(() => {
-    const hit = sessions.find((item) => item.id === sessionId)
-    return (hit?.type ?? 'chat') as 'chat' | 'live'
-  }, [sessionId, sessions])
 
   const [tab, setTab] = useState<InspectorTab>('tools')
   const [data, setData] = useState<InspectorPayload | null>(null)
@@ -93,8 +71,8 @@ export const SessionInspector = memo(function SessionInspector({
       setTab('traj')
       return
     }
-    setTab(sessionType === 'live' ? 'live' : 'tools')
-  }, [sessionType, sessionId, focusCallId])
+    setTab('tools')
+  }, [sessionId, focusCallId])
 
   useEffect(() => {
     if (!open || tab !== 'traj') return
@@ -175,7 +153,6 @@ export const SessionInspector = memo(function SessionInspector({
   const mode = data?.agentMode ?? 'standard'
   const sources = data?.sources ?? []
   const tools = data?.tools ?? []
-  const workers = data?.workers ?? []
 
   return (
     <aside
@@ -184,7 +161,7 @@ export const SessionInspector = memo(function SessionInspector({
       aria-label="会话检查器"
     >
       <div
-        className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize touch-none hover:bg-[color-mix(in_srgb,var(--dsw-business)_35%,transparent)]"
+        className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize touch-none before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-transparent hover:before:bg-[color-mix(in_srgb,var(--dsw-business)_55%,transparent)]"
         data-testid="inspector-resize"
         title="拖动调整宽度"
         onPointerDown={(event) => {
@@ -207,18 +184,6 @@ export const SessionInspector = memo(function SessionInspector({
             <LuWrench className="size-3.5" />
             工具
           </button>
-          {sessionType === 'live' ? (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === 'live'}
-              className={tabClass(tab === 'live')}
-              onClick={() => setTab('live')}
-            >
-              <LuRadio className="size-3.5" />
-              指挥台
-            </button>
-          ) : null}
           <button
             type="button"
             role="tab"
@@ -321,57 +286,6 @@ export const SessionInspector = memo(function SessionInspector({
                 </li>
               ))}
             </ul>
-          </div>
-        ) : null}
-
-        {tab === 'live' ? (
-          <div className="flex flex-col gap-2.5">
-            <p className="m-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
-              其它 chat session 的现场（只读，约 2s 刷新）。
-            </p>
-            {workers.length === 0 ? (
-              <div className="text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">暂无 worker session</div>
-            ) : (
-              <ul className="m-0 flex list-none flex-col gap-px p-0" data-testid="inspector-workers">
-                {workers.map((worker) => (
-                  <li key={worker.id} className="rounded-[8px] px-2 py-1.5 hover:bg-[var(--dsw-hover)]">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <SidebarMascot
-                        size={22}
-                        sessionId={worker.id}
-                        identity={resolveSessionMascot(worker.id, worker.mascot)}
-                        busy={worker.status === 'running'}
-                        animate={false}
-                        title={worker.title}
-                      />
-                      <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{worker.title}</span>
-                      <span
-                        className={`ml-auto shrink-0 text-[10px] font-semibold ${
-                          worker.status === 'running'
-                            ? 'text-[var(--dsw-ok,#34d399)]'
-                            : 'text-[var(--dsw-label-3)]'
-                        }`}
-                      >
-                        {worker.status}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] text-[var(--dsw-label-3)]">
-                      {worker.project ? <span>{worker.project}</span> : null}
-                      <span>
-                        t{worker.turn ?? '—'} / s{worker.step ?? '—'}
-                      </span>
-                      {worker.lastTool ? <span>{worker.lastTool}</span> : null}
-                      {worker.inboxPending > 0 ? <span>inbox {worker.inboxPending}</span> : null}
-                    </div>
-                    {worker.assistantText ? (
-                      <p className="mt-1.5 mb-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
-                        {worker.assistantText}
-                      </p>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
         ) : null}
 
