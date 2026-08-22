@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type DragEvent, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import type { Context } from 'cordis'
 import {
   LuActivity,
@@ -7,16 +7,18 @@ import {
   LuCircleCheck,
   LuCircleDashed,
   LuClock,
-  LuColumns3,
   LuFlag,
   LuListChecks,
   LuLoaderCircle,
+  LuNotebookPen,
+  LuPanelRight,
   LuPlus,
   LuSearch,
-  LuTable2,
+  LuStickyNote,
   LuText,
   LuTrash2,
   LuUserRound,
+  LuX,
 } from 'react-icons/lu'
 
 export type SlotProps = Record<string, unknown> & {
@@ -51,6 +53,7 @@ export type Task = {
   status: TaskStatus
   priority: TaskPriority
   dueAt: number | null
+  description: string
   notes: string
   sort: number
   createdAt: number
@@ -60,8 +63,6 @@ export type Task = {
   assignedAt: number | null
   execution?: TaskExecution
 }
-
-type ViewMode = 'table' | 'board'
 
 const STATUS_META: Array<{ id: TaskStatus; label: string; icon: ReactNode }> = [
   { id: 'todo', label: '待办', icon: <LuCircleDashed size={13} aria-hidden /> },
@@ -144,11 +145,14 @@ function formatWhen(ts: number | null | undefined): string {
   })
 }
 
-function formatDue(ts: number | null): string {
+function formatDueInput(ts: number | null): string {
   if (!ts) return ''
   const date = new Date(ts)
   if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 function useTasks(pollMs = 2500) {
@@ -256,25 +260,27 @@ function ExecBadge({ execution }: { execution?: TaskExecution }) {
   )
 }
 
-function PriorityMark({ value }: { value: TaskPriority }) {
-  return (
-    <span className={`tasks-priority is-${value}`} title={`优先级 ${PRIORITY_LABEL[value]}`}>
-      <LuFlag size={12} aria-hidden />
-      <span>{PRIORITY_LABEL[value]}</span>
-    </span>
-  )
-}
-
 function StatusIcon({ status }: { status: TaskStatus }) {
   const meta = STATUS_META.find((item) => item.id === status)
   return <span className={`tasks-status-icon is-${status}`}>{meta?.icon}</span>
 }
 
+function ThIcon({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <th>
+      <span className="tasks-th">
+        {icon}
+        {children}
+      </span>
+    </th>
+  )
+}
+
 function TasksWorkspace({ compact = false }: { compact?: boolean }) {
   const { tasks, setTasks, error, loading, refresh, query, setQuery } = useTasks(compact ? 3000 : 2500)
-  const [view, setView] = useState<ViewMode>(compact ? 'board' : 'table')
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
+  const [detailId, setDetailId] = useState<string | null>(null)
 
   const counts = useMemo(() => {
     const map = { todo: 0, doing: 0, done: 0, total: tasks.length }
@@ -282,14 +288,10 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
     return map
   }, [tasks])
 
-  const byStatus = useMemo(() => {
-    const map: Record<TaskStatus, Task[]> = { todo: [], doing: [], done: [] }
-    for (const task of tasks) map[task.status].push(task)
-    for (const key of Object.keys(map) as TaskStatus[]) {
-      map[key].sort((a, b) => a.sort - b.sort || b.updatedAt - a.updatedAt)
-    }
-    return map
-  }, [tasks])
+  const detailTask = useMemo(
+    () => (detailId ? tasks.find((item) => item.id === detailId) ?? null : null),
+    [detailId, tasks],
+  )
 
   async function onCreate(event: FormEvent) {
     event.preventDefault()
@@ -300,6 +302,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
       const task = await createTask(title)
       setTasks((prev) => [task, ...prev.filter((item) => item.id !== task.id)])
       setDraft('')
+      setDetailId(task.id)
     } catch (err) {
       console.error(err)
     } finally {
@@ -320,6 +323,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
 
   async function onDelete(id: string) {
     setTasks((prev) => prev.filter((item) => item.id !== id))
+    if (detailId === id) setDetailId(null)
     try {
       await removeTask(id)
     } catch {
@@ -327,115 +331,94 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
     }
   }
 
-  async function onDropStatus(taskId: string, status: TaskStatus) {
-    const hit = tasks.find((item) => item.id === taskId)
-    if (!hit || hit.status === status) return
-    await onUpdate(taskId, { status })
-  }
-
   return (
-    <div className={`tasks-root${compact ? ' is-compact' : ''}`}>
-      <header className="tasks-head">
-        <div className="tasks-head-left">
-          <h1 className="tasks-title">
-            <LuListChecks size={compact ? 16 : 22} aria-hidden />
-            任务
-          </h1>
-          <div className="tasks-stats" aria-label="任务统计">
-            <span className="is-todo">
-              <LuCircleDashed size={12} aria-hidden />
-              {counts.todo} 待办
-            </span>
-            <span className="is-doing">
-              <LuLoaderCircle size={12} aria-hidden />
-              {counts.doing} 进行
-            </span>
-            <span className="is-done">
-              <LuCircleCheck size={12} aria-hidden />
-              {counts.done} 完成
-            </span>
+    <div className={`tasks-root${compact ? ' is-compact' : ''}${detailTask ? ' has-detail' : ''}`}>
+      <div className="tasks-main">
+        <header className="tasks-head">
+          <div className="tasks-head-left">
+            <h1 className="tasks-title">
+              <LuListChecks size={compact ? 16 : 18} aria-hidden />
+              任务
+            </h1>
+            <div className="tasks-stats" aria-label="任务统计">
+              <span className="is-todo">
+                <LuCircleDashed size={12} aria-hidden />
+                {counts.todo} 待办
+              </span>
+              <span className="is-doing">
+                <LuLoaderCircle size={12} aria-hidden />
+                {counts.doing} 进行
+              </span>
+              <span className="is-done">
+                <LuCircleCheck size={12} aria-hidden />
+                {counts.done} 完成
+              </span>
+            </div>
           </div>
-        </div>
-        <div className="tasks-view-switch" role="tablist" aria-label="视图">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={view === 'table'}
-            className={`tasks-view-btn${view === 'table' ? ' is-active' : ''}`}
-            onClick={() => setView('table')}
-          >
-            <LuTable2 size={13} aria-hidden />
-            表格
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={view === 'board'}
-            className={`tasks-view-btn${view === 'board' ? ' is-active' : ''}`}
-            onClick={() => setView('board')}
-          >
-            <LuColumns3 size={13} aria-hidden />
-            看板
-          </button>
-        </div>
-      </header>
+        </header>
 
-      <div className="tasks-toolbar">
-        <form className="tasks-create" onSubmit={onCreate}>
-          <input
-            className="tasks-create-input"
-            value={draft}
-            placeholder="新建任务，回车添加"
-            aria-label="新建任务"
-            onChange={(event) => setDraft(event.target.value)}
-          />
-          <button type="submit" className="tasks-create-btn" disabled={busy || !draft.trim()}>
-            <LuPlus size={14} aria-hidden />
-            添加
-          </button>
-        </form>
-        <label className="tasks-search-wrap">
-          <LuSearch size={14} aria-hidden />
-          <input
-            className="tasks-search"
-            value={query}
-            placeholder="搜索标题 / 人 / 备注"
-            aria-label="搜索任务"
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </label>
+        <div className="tasks-toolbar">
+          <form className="tasks-create" onSubmit={onCreate}>
+            <input
+              className="tasks-create-input"
+              value={draft}
+              placeholder="新建任务，回车添加"
+              aria-label="新建任务"
+              onChange={(event) => setDraft(event.target.value)}
+            />
+            <button type="submit" className="tasks-create-btn" disabled={busy || !draft.trim()}>
+              <LuPlus size={14} aria-hidden />
+              添加
+            </button>
+          </form>
+          <label className="tasks-search-wrap">
+            <LuSearch size={14} aria-hidden />
+            <input
+              className="tasks-search"
+              value={query}
+              placeholder="搜索标题 / 人 / 描述"
+              aria-label="搜索任务"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+        </div>
+
+        {error ? <div className="tasks-error">{error}</div> : null}
+        {loading && tasks.length === 0 ? <div className="tasks-empty">加载中…</div> : null}
+
+        <TasksTable
+          tasks={tasks}
+          detailId={detailId}
+          onOpenDetail={setDetailId}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          compact={compact}
+        />
       </div>
 
-      {error ? <div className="tasks-error">{error}</div> : null}
-      {loading && tasks.length === 0 ? <div className="tasks-empty">加载中…</div> : null}
-
-      {view === 'table' ? (
-        <TasksTable tasks={tasks} onUpdate={onUpdate} onDelete={onDelete} compact={compact} />
-      ) : (
-        <TasksBoard columns={byStatus} onDropStatus={onDropStatus} onUpdate={onUpdate} onDelete={onDelete} />
-      )}
+      {detailTask ? (
+        <TaskDetailPanel
+          task={detailTask}
+          onClose={() => setDetailId(null)}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />
+      ) : null}
     </div>
-  )
-}
-
-function ThIcon({ icon, children }: { icon: ReactNode; children: ReactNode }) {
-  return (
-    <th>
-      <span className="tasks-th">
-        {icon}
-        {children}
-      </span>
-    </th>
   )
 }
 
 function TasksTable({
   tasks,
+  detailId,
+  onOpenDetail,
   onUpdate,
   onDelete,
   compact,
 }: {
   tasks: Task[]
+  detailId: string | null
+  onOpenDetail: (id: string) => void
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>
   onDelete: (id: string) => Promise<void>
   compact: boolean
@@ -461,27 +444,19 @@ function TasksTable({
         </thead>
         <tbody>
           {tasks.map((task) => (
-            <tr key={task.id}>
+            <tr key={task.id} className={detailId === task.id ? 'is-active' : undefined}>
               <td className="tasks-col-title">
-                <div className="tasks-title-cell">
-                  <input
-                    className="tasks-cell-input"
-                    defaultValue={task.title}
-                    key={`${task.id}-${task.updatedAt}-title`}
-                    aria-label="标题"
-                    title={task.title}
-                    onBlur={(event) => {
-                      const title = event.target.value.trim()
-                      if (title && title !== task.title) void onUpdate(task.id, { title })
-                    }}
-                  />
-                  {task.dueAt ? (
-                    <span className="tasks-due" title={`截止 ${formatDue(task.dueAt)}`}>
-                      <LuCalendarClock size={11} aria-hidden />
-                      {formatDue(task.dueAt)}
-                    </span>
-                  ) : null}
-                </div>
+                <input
+                  className="tasks-cell-input"
+                  defaultValue={task.title}
+                  key={`${task.id}-${task.updatedAt}-title`}
+                  aria-label="标题"
+                  title={task.title}
+                  onBlur={(event) => {
+                    const title = event.target.value.trim()
+                    if (title && title !== task.title) void onUpdate(task.id, { title })
+                  }}
+                />
               </td>
               <td className="tasks-col-status">
                 <div className="tasks-status-cell">
@@ -565,9 +540,20 @@ function TasksTable({
                 <ExecBadge execution={task.execution} />
               </td>
               <td className="tasks-col-action">
-                <button type="button" className="tasks-icon-btn" title="删除" onClick={() => void onDelete(task.id)}>
-                  <LuTrash2 size={14} aria-hidden />
-                </button>
+                <div className="tasks-row-actions">
+                  <button
+                    type="button"
+                    className={`tasks-icon-btn${detailId === task.id ? ' is-active' : ''}`}
+                    title="详情"
+                    aria-label="打开详情"
+                    onClick={() => onOpenDetail(task.id)}
+                  >
+                    <LuPanelRight size={14} aria-hidden />
+                  </button>
+                  <button type="button" className="tasks-icon-btn" title="删除" onClick={() => void onDelete(task.id)}>
+                    <LuTrash2 size={14} aria-hidden />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
@@ -577,103 +563,205 @@ function TasksTable({
   )
 }
 
-function TasksBoard({
-  columns,
-  onDropStatus,
+function TaskDetailPanel({
+  task,
+  onClose,
   onUpdate,
   onDelete,
 }: {
-  columns: Record<TaskStatus, Task[]>
-  onDropStatus: (taskId: string, status: TaskStatus) => Promise<void>
+  task: Task
+  onClose: () => void
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>
   onDelete: (id: string) => Promise<void>
 }) {
-  function onDragStart(event: DragEvent, id: string) {
-    event.dataTransfer.setData('text/task-id', id)
-    event.dataTransfer.effectAllowed = 'move'
-  }
+  const [title, setTitle] = useState(task.title)
+  const [description, setDescription] = useState(task.description ?? '')
+  const [notes, setNotes] = useState(task.notes ?? '')
+  const [due, setDue] = useState(formatDueInput(task.dueAt))
+  const [assigneeDraft, setAssigneeDraft] = useState(task.assignee?.sessionId || task.assignee?.name || '')
 
-  function onDragOver(event: DragEvent) {
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-  }
+  useEffect(() => {
+    setTitle(task.title)
+    setDescription(task.description ?? '')
+    setNotes(task.notes ?? '')
+    setDue(formatDueInput(task.dueAt))
+    setAssigneeDraft(task.assignee?.sessionId || task.assignee?.name || '')
+  }, [task.id, task.updatedAt])
 
   return (
-    <div className="tasks-board">
-      {STATUS_META.map((column) => (
-        <section
-          key={column.id}
-          className="tasks-column"
-          onDragOver={onDragOver}
-          onDrop={(event) => {
-            event.preventDefault()
-            const id = event.dataTransfer.getData('text/task-id')
-            if (id) void onDropStatus(id, column.id)
+    <aside className="tasks-detail" aria-label="任务详情">
+      <header className="tasks-detail-head">
+        <div className="tasks-detail-head-title">
+          <LuPanelRight size={14} aria-hidden />
+          任务详情
+        </div>
+        <button type="button" className="tasks-icon-btn" title="关闭" onClick={onClose}>
+          <LuX size={14} aria-hidden />
+        </button>
+      </header>
+
+      <div className="tasks-detail-body">
+        <label className="tasks-field">
+          <span>标题</span>
+          <input
+            className="tasks-field-input"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            onBlur={() => {
+              const next = title.trim()
+              if (next && next !== task.title) void onUpdate(task.id, { title: next })
+            }}
+          />
+        </label>
+
+        <div className="tasks-field-row">
+          <label className="tasks-field">
+            <span>状态</span>
+            <select
+              className="tasks-field-input"
+              value={task.status}
+              onChange={(event) => void onUpdate(task.id, { status: event.target.value as TaskStatus })}
+            >
+              {STATUS_META.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="tasks-field">
+            <span>优先级</span>
+            <select
+              className="tasks-field-input"
+              value={task.priority}
+              onChange={(event) => void onUpdate(task.id, { priority: event.target.value as TaskPriority })}
+            >
+              {(Object.keys(PRIORITY_LABEL) as TaskPriority[]).map((key) => (
+                <option key={key} value={key}>
+                  {PRIORITY_LABEL[key]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="tasks-field">
+          <span>
+            <LuStickyNote size={12} aria-hidden />
+            描述
+          </span>
+          <textarea
+            className="tasks-field-textarea"
+            value={description}
+            placeholder="任务要做什么、验收标准…"
+            rows={5}
+            onChange={(event) => setDescription(event.target.value)}
+            onBlur={() => {
+              if (description !== (task.description ?? '')) void onUpdate(task.id, { description })
+            }}
+          />
+        </label>
+
+        <label className="tasks-field">
+          <span>
+            <LuNotebookPen size={12} aria-hidden />
+            备忘
+          </span>
+          <textarea
+            className="tasks-field-textarea"
+            value={notes}
+            placeholder="临时笔记、链接、提醒…"
+            rows={4}
+            onChange={(event) => setNotes(event.target.value)}
+            onBlur={() => {
+              if (notes !== (task.notes ?? '')) void onUpdate(task.id, { notes })
+            }}
+          />
+        </label>
+
+        <label className="tasks-field">
+          <span>
+            <LuCalendarClock size={12} aria-hidden />
+            截止日期
+          </span>
+          <input
+            className="tasks-field-input"
+            type="date"
+            value={due}
+            onChange={(event) => setDue(event.target.value)}
+            onBlur={() => {
+              const next = due.trim() ? new Date(`${due}T00:00:00`).getTime() : null
+              const prev = task.dueAt
+              if (next !== prev) void onUpdate(task.id, { dueAt: next })
+            }}
+          />
+        </label>
+
+        <label className="tasks-field">
+          <span>
+            <LuBot size={12} aria-hidden />
+            分配人
+          </span>
+          <div className="tasks-detail-actor">
+            <ActorChip actor={task.assignee} />
+            <input
+              className="tasks-field-input"
+              value={assigneeDraft}
+              placeholder="sessionId 或人名"
+              onChange={(event) => setAssigneeDraft(event.target.value)}
+              onBlur={() => {
+                const raw = assigneeDraft.trim()
+                const prev = task.assignee?.sessionId || task.assignee?.name || ''
+                if (raw === prev) return
+                if (!raw) {
+                  void onUpdate(task.id, { assignee: null })
+                  return
+                }
+                if (/^[0-9a-f-]{8,}$/i.test(raw) || raw.length >= 20) {
+                  void onUpdate(task.id, { assigneeSessionId: raw })
+                } else {
+                  void onUpdate(task.id, { assignee: raw })
+                }
+              }}
+            />
+          </div>
+        </label>
+
+        <div className="tasks-detail-meta">
+          <div>
+            <span className="tasks-detail-meta-label">创建人</span>
+            <ActorChip actor={task.creator} empty="—" />
+            <TimeLabel ts={task.createdAt} />
+          </div>
+          <div>
+            <span className="tasks-detail-meta-label">分配时间</span>
+            <TimeLabel ts={task.assignedAt} />
+          </div>
+          <div>
+            <span className="tasks-detail-meta-label">执行</span>
+            <ExecBadge execution={task.execution} />
+          </div>
+          {task.execution?.assistantText ? (
+            <div className="tasks-detail-exec-text" title={task.execution.assistantText}>
+              {task.execution.assistantText}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <footer className="tasks-detail-foot">
+        <button
+          type="button"
+          className="tasks-danger-btn"
+          onClick={() => {
+            if (window.confirm('删除这个任务？')) void onDelete(task.id)
           }}
         >
-          <header className="tasks-column-head">
-            <span className="tasks-column-title">
-              <StatusIcon status={column.id} />
-              {column.label}
-            </span>
-            <span className="tasks-column-count">{columns[column.id].length}</span>
-          </header>
-          <ul className="tasks-column-list">
-            {columns[column.id].map((task) => (
-              <li
-                key={task.id}
-                className="tasks-card"
-                draggable
-                onDragStart={(event) => onDragStart(event, task.id)}
-              >
-                <div className="tasks-card-top">
-                  <PriorityMark value={task.priority} />
-                  <ExecBadge execution={task.execution} />
-                  <button type="button" className="tasks-icon-btn" title="删除" onClick={() => void onDelete(task.id)}>
-                    <LuTrash2 size={13} aria-hidden />
-                  </button>
-                </div>
-                <input
-                  className="tasks-card-title"
-                  defaultValue={task.title}
-                  key={`${task.id}-${task.updatedAt}-card`}
-                  aria-label="标题"
-                  title={task.title}
-                  onBlur={(event) => {
-                    const title = event.target.value.trim()
-                    if (title && title !== task.title) void onUpdate(task.id, { title })
-                  }}
-                />
-                <div className="tasks-card-people">
-                  <div className="tasks-card-person">
-                    <span className="tasks-card-label">
-                      <LuUserRound size={11} aria-hidden />
-                      创建
-                    </span>
-                    <ActorChip actor={task.creator} empty="—" />
-                    <TimeLabel ts={task.createdAt} />
-                  </div>
-                  <div className="tasks-card-person">
-                    <span className="tasks-card-label">
-                      <LuBot size={11} aria-hidden />
-                      分配
-                    </span>
-                    <ActorChip actor={task.assignee} />
-                    <TimeLabel ts={task.assignedAt} />
-                  </div>
-                </div>
-                {task.dueAt ? (
-                  <div className="tasks-due">
-                    <LuCalendarClock size={11} aria-hidden />
-                    {formatDue(task.dueAt)}
-                  </div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
+          <LuTrash2 size={13} aria-hidden />
+          删除任务
+        </button>
+      </footer>
+    </aside>
   )
 }
 
@@ -713,19 +801,18 @@ if (typeof document !== 'undefined') {
   linear-gradient(180deg, color-mix(in srgb, var(--dsw-surface) 55%, var(--dsw-bg)), var(--dsw-bg));
   color:var(--dsw-label); }
 .tasks-inspector-panel { display:flex; min-height:0; flex:1; flex-direction:column; overflow:hidden; }
-.tasks-root { display:flex; min-height:0; flex:1; flex-direction:column; gap:10px; padding:12px 14px 14px; overflow:auto; }
-.tasks-root.is-compact { padding:8px 10px 10px; gap:8px; }
+.tasks-root { display:flex; min-height:0; flex:1; gap:0; overflow:hidden; }
+.tasks-root.is-compact { flex-direction:column; }
+.tasks-main { display:flex; min-width:0; min-height:0; flex:1; flex-direction:column; gap:10px; padding:12px 14px 14px; overflow:auto; }
+.tasks-root.is-compact .tasks-main { padding:8px 10px 10px; gap:8px; }
 .tasks-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .tasks-title { margin:0; display:inline-flex; align-items:center; gap:6px; font-size:16px; font-weight:700; letter-spacing:-0.02em; }
-.tasks-root.is-compact .tasks-title { font-size:13px; gap:5px; }
+.tasks-root.is-compact .tasks-title { font-size:13px; }
 .tasks-stats { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; color:var(--dsw-label-3); font-size:11px; font-variant-numeric:tabular-nums; }
 .tasks-stats > span { display:inline-flex; align-items:center; gap:3px; }
 .tasks-stats .is-todo { color:var(--dsw-label-2); }
 .tasks-stats .is-doing { color:var(--dsw-business); }
 .tasks-stats .is-done { color:color-mix(in srgb, #3d9a5f 80%, var(--dsw-label-3)); }
-.tasks-view-switch { display:inline-flex; gap:2px; padding:2px; border:1px solid var(--dsw-border); border-radius:7px; background:var(--dsw-muted-fill); }
-.tasks-view-btn { border:0; border-radius:5px; padding:3px 8px; background:transparent; color:var(--dsw-label-3); cursor:pointer; font:inherit; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px; }
-.tasks-view-btn.is-active { background:var(--dsw-surface); color:var(--dsw-label); }
 .tasks-toolbar { display:flex; gap:6px; align-items:stretch; flex-wrap:wrap; }
 .tasks-create { display:flex; gap:6px; flex:1 1 240px; min-width:0; }
 .tasks-create-input, .tasks-search { min-width:0; border:1px solid var(--dsw-border); border-radius:8px; padding:6px 8px; background:var(--dsw-input); color:var(--dsw-label); font:inherit; font-size:12px; outline:none; }
@@ -743,18 +830,17 @@ if (typeof document !== 'undefined') {
 .tasks-table td { padding:4px 6px; border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent); vertical-align:middle; }
 .tasks-table tr:last-child td { border-bottom:0; }
 .tasks-table tr:hover td { background:color-mix(in srgb, var(--dsw-hover) 55%, transparent); }
+.tasks-table tr.is-active td { background:color-mix(in srgb, var(--dsw-business) 8%, transparent); }
 .tasks-col-title { width:18%; max-width:180px; }
 .tasks-col-status { width:9%; }
 .tasks-col-priority { width:7%; }
 .tasks-col-actor { width:12%; }
 .tasks-col-time { width:11%; }
 .tasks-col-exec { width:10%; }
-.tasks-col-action { width:32px; }
-.tasks-title-cell { display:flex; align-items:center; gap:6px; min-width:0; }
-.tasks-title-cell .tasks-cell-input { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.tasks-due { display:inline-flex; align-items:center; gap:3px; color:var(--dsw-label-3); font-size:10px; white-space:nowrap; flex:none; }
-.tasks-cell-input, .tasks-cell-select, .tasks-card-title { width:100%; border:0; border-radius:5px; padding:2px 4px; background:transparent; color:var(--dsw-label); font:inherit; outline:none; }
-.tasks-cell-input:focus, .tasks-cell-select:focus, .tasks-card-title:focus { background:var(--dsw-hover); }
+.tasks-col-action { width:56px; }
+.tasks-col-title .tasks-cell-input { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tasks-cell-input, .tasks-cell-select { width:100%; border:0; border-radius:5px; padding:2px 4px; background:transparent; color:var(--dsw-label); font:inherit; outline:none; }
+.tasks-cell-input:focus, .tasks-cell-select:focus { background:var(--dsw-hover); }
 .tasks-status-cell { display:flex; align-items:center; gap:4px; min-width:0; }
 .tasks-status-cell .tasks-cell-select { flex:1; min-width:0; }
 .tasks-priority-select { max-width:3.5rem; }
@@ -768,7 +854,7 @@ if (typeof document !== 'undefined') {
 .tasks-assignee-edit { flex:1; min-width:0; font-size:11px; color:var(--dsw-label-2); }
 .tasks-time { display:inline-flex; align-items:center; gap:3px; color:var(--dsw-label-3); font-size:10px; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .tasks-time.is-empty { opacity:.7; }
-.tasks-actor { display:inline-flex; align-items:center; gap:4px; min-width:0; max-width:120px; }
+.tasks-actor { display:inline-flex; align-items:center; gap:4px; min-width:0; max-width:140px; }
 .tasks-actor.is-empty { color:var(--dsw-label-3); }
 .tasks-avatar { width:16px; height:16px; border-radius:5px; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:9px; font-weight:700; flex:none; box-shadow:inset 0 0 0 1px color-mix(in srgb, #000 18%, transparent); }
 .tasks-actor-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; color:var(--dsw-label-2); }
@@ -779,27 +865,30 @@ if (typeof document !== 'undefined') {
 .tasks-exec.is-muted { background:var(--dsw-muted-fill); color:var(--dsw-label-3); }
 .tasks-spin { animation: tasks-spin 1s linear infinite; }
 @keyframes tasks-spin { to { transform: rotate(360deg); } }
-.tasks-priority { display:inline-flex; align-items:center; gap:3px; color:var(--dsw-label-3); font-size:10px; font-weight:650; flex:none; }
+.tasks-priority { display:inline-flex; align-items:center; color:var(--dsw-label-3); flex:none; }
 .tasks-priority.is-med { color:#c48a2a; }
 .tasks-priority.is-high { color:#d64545; }
+.tasks-row-actions { display:inline-flex; align-items:center; gap:2px; }
 .tasks-icon-btn { border:0; border-radius:5px; padding:3px; background:transparent; color:var(--dsw-label-3); cursor:pointer; font:inherit; display:inline-flex; align-items:center; justify-content:center; }
-.tasks-icon-btn:hover { background:var(--dsw-hover); color:var(--dsw-label); }
-.tasks-board { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; min-height:220px; align-items:start; }
-.tasks-root.is-compact .tasks-board { grid-template-columns:1fr; }
-.tasks-column { display:flex; min-height:0; flex-direction:column; border:1px solid var(--dsw-border); border-radius:10px; background:color-mix(in srgb, var(--dsw-surface) 88%, transparent); overflow:hidden; }
-.tasks-column-head { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:7px 9px; border-bottom:1px solid var(--dsw-border); color:var(--dsw-label-2); font-size:11px; font-weight:650; }
-.tasks-column-title { display:inline-flex; align-items:center; gap:5px; }
-.tasks-column-count { min-width:1.4em; text-align:center; border-radius:999px; padding:0 5px; background:var(--dsw-muted-fill); color:var(--dsw-label-3); font-variant-numeric:tabular-nums; }
-.tasks-column-list { display:flex; flex:1; flex-direction:column; gap:6px; margin:0; padding:8px; list-style:none; overflow:auto; min-height:96px; }
-.tasks-card { border:1px solid color-mix(in srgb, var(--dsw-border) 90%, transparent); border-radius:9px; padding:8px; background:var(--dsw-muted-fill); cursor:grab; display:flex; flex-direction:column; gap:6px; }
-.tasks-card:hover { border-color:color-mix(in srgb, var(--dsw-business) 35%, var(--dsw-border)); }
-.tasks-card:active { cursor:grabbing; }
-.tasks-card-top { display:flex; align-items:center; gap:5px; }
-.tasks-card-top .tasks-icon-btn { margin-left:auto; }
-.tasks-card-title { font-size:12px; font-weight:650; padding:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.tasks-card-people { display:flex; flex-direction:column; gap:4px; }
-.tasks-card-person { display:grid; grid-template-columns:42px minmax(0,1fr) auto; gap:4px; align-items:center; }
-.tasks-card-label { display:inline-flex; align-items:center; gap:2px; color:var(--dsw-label-3); font-size:10px; }
+.tasks-icon-btn:hover, .tasks-icon-btn.is-active { background:var(--dsw-hover); color:var(--dsw-label); }
+.tasks-detail { width:min(340px, 42vw); flex:none; display:flex; flex-direction:column; min-height:0; border-left:1px solid var(--dsw-border); background:var(--dsw-sidebar); }
+.tasks-root.is-compact .tasks-detail { width:auto; border-left:0; border-top:1px solid var(--dsw-border); max-height:55%; }
+.tasks-detail-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; border-bottom:1px solid var(--dsw-border); }
+.tasks-detail-head-title { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:650; color:var(--dsw-label-2); }
+.tasks-detail-body { display:flex; flex:1; flex-direction:column; gap:10px; padding:12px; overflow:auto; }
+.tasks-field { display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--dsw-label-3); }
+.tasks-field > span { display:inline-flex; align-items:center; gap:4px; font-weight:600; }
+.tasks-field-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.tasks-field-input, .tasks-field-textarea { width:100%; border:1px solid var(--dsw-border); border-radius:8px; padding:7px 8px; background:var(--dsw-input); color:var(--dsw-label); font:inherit; font-size:12px; outline:none; resize:vertical; }
+.tasks-field-textarea { min-height:72px; line-height:1.45; }
+.tasks-detail-actor { display:flex; flex-direction:column; gap:6px; }
+.tasks-detail-meta { display:flex; flex-direction:column; gap:8px; padding-top:4px; border-top:1px solid var(--dsw-border); }
+.tasks-detail-meta > div { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.tasks-detail-meta-label { width:52px; color:var(--dsw-label-3); font-size:10px; font-weight:600; }
+.tasks-detail-exec-text { color:var(--dsw-label-3); font-size:11px; line-height:1.45; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+.tasks-detail-foot { padding:10px 12px; border-top:1px solid var(--dsw-border); }
+.tasks-danger-btn { border:1px solid color-mix(in srgb, var(--dsw-danger) 35%, var(--dsw-border)); border-radius:8px; padding:6px 10px; background:transparent; color:var(--dsw-danger); cursor:pointer; font:inherit; font-size:11px; font-weight:650; display:inline-flex; align-items:center; gap:5px; }
+.tasks-danger-btn:hover { background:var(--dsw-danger-soft); }
 `
   if (!style.parentNode) document.head.appendChild(style)
 }
