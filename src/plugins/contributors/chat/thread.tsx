@@ -107,22 +107,19 @@ function StepBar({ stat }: { stat: ChatStepStat }) {
   )
 }
 
-function ReplyParts({
-  node,
+function renderReplyPartList({
+  parts,
+  stepMap,
   onInspect,
-  expanded,
+  showSteps,
 }: {
-  node: Extract<ChatNode, { kind: 'reply' }>
+  parts: ChatReplyPart[]
+  stepMap: Map<number, ChatStepStat>
   onInspect: (callId: string) => void
-  /** true：完整 agent loop；false：只渲染最终 Message */
-  expanded: boolean
+  showSteps: boolean
 }) {
-  const { detailParts, finalParts } = splitReplyForDisplay(node)
-  const parts = expanded || node.streaming ? node.parts : finalParts
-  const stepMap = new Map((node.steps ?? []).map((item) => [item.step, item]))
   const elements: ReactNode[] = []
   let lastStep: number | undefined
-  const showSteps = expanded || Boolean(node.streaming)
 
   for (const part of parts) {
     const step = part.step
@@ -141,7 +138,7 @@ function ReplyParts({
     if (part.kind === 'assistant') {
       const partStreaming = Boolean(part.streaming)
       elements.push(
-        <div key={part.id} className="chat-assistant-body" data-reply-final={detailParts.length && !expanded ? '1' : undefined}>
+        <div key={part.id} className="chat-assistant-body">
           {part.text ? (
             <MarkdownBody text={part.text} streaming={partStreaming} />
           ) : partStreaming ? (
@@ -157,7 +154,44 @@ function ReplyParts({
     }
   }
 
-  return <>{elements}</>
+  return elements
+}
+
+function ReplyParts({
+  node,
+  onInspect,
+  expanded,
+}: {
+  node: Extract<ChatNode, { kind: 'reply' }>
+  onInspect: (callId: string) => void
+  /** true：展示 Details；false：Details 仍挂载但 hidden，避免展开时重建 DOM */
+  expanded: boolean
+}) {
+  const stepMap = new Map((node.steps ?? []).map((item) => [item.step, item]))
+  const streaming = Boolean(node.streaming)
+
+  // 流式中结构还在变，整段展开渲染
+  if (streaming) {
+    return <>{renderReplyPartList({ parts: node.parts, stepMap, onInspect, showSteps: true })}</>
+  }
+
+  const { detailParts, finalParts, hasDetails } = splitReplyForDisplay(node)
+
+  return (
+    <>
+      {hasDetails ? (
+        <div
+          className="chat-reply-details"
+          data-testid="reply-details"
+          hidden={!expanded}
+          aria-hidden={!expanded}
+        >
+          {renderReplyPartList({ parts: detailParts, stepMap, onInspect, showSteps: true })}
+        </div>
+      ) : null}
+      {renderReplyPartList({ parts: finalParts, stepMap, onInspect, showSteps: false })}
+    </>
+  )
 }
 
 /**
@@ -297,7 +331,7 @@ function UserTurnBar({
 }: {
   reply: Extract<ChatNode, { kind: 'reply' }>
   detailsOpen: boolean
-  onToggleDetails: () => void
+  onToggleDetails: (replyId: string) => void
 }) {
   if (reply.streaming) return null
   const { hasDetails } = splitReplyForDisplay(reply)
@@ -313,7 +347,7 @@ function UserTurnBar({
           aria-expanded={detailsOpen}
           aria-controls={`reply-details-${reply.id}`}
           data-testid="details-toggle"
-          onClick={onToggleDetails}
+          onClick={() => onToggleDetails(reply.id)}
         >
           {detailsOpen ? <LuChevronDown className="size-3.5" /> : <LuChevronRight className="size-3.5" />}
           <span>Details</span>
@@ -366,7 +400,7 @@ function NodeView({
   /** 用户消息发起的本回合回复（统计挂在用户气泡下） */
   replyForUser?: Extract<ChatNode, { kind: 'reply' }>
   detailsOpen?: boolean
-  onToggleDetails?: () => void
+  onToggleDetails?: (replyId: string) => void
   onInspect: (callId: string) => void
   onFork: () => void | Promise<void>
 }) {
@@ -429,7 +463,7 @@ export function ChatNodeList({
 }) {
   const [detailsOpenByReply, setDetailsOpenByReply] = useState<Record<string, boolean>>({})
 
-  const toggleDetails = useCallback((replyId: string) => {
+  const onToggleDetails = useCallback((replyId: string) => {
     setDetailsOpenByReply((prev) => ({ ...prev, [replyId]: !prev[replyId] }))
   }, [])
 
@@ -450,9 +484,7 @@ export function ChatNodeList({
               node={node}
               replyForUser={replyForUser}
               detailsOpen={detailsOpen}
-              onToggleDetails={
-                replyIdForDetails ? () => toggleDetails(replyIdForDetails) : undefined
-              }
+              onToggleDetails={onToggleDetails}
               onInspect={onInspect}
               onFork={onFork}
             />

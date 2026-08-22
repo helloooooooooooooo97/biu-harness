@@ -1450,6 +1450,11 @@ body {
   border-color: color-mix(in srgb, var(--dsw-border) 80%, transparent);
 }
 
+/* 折叠靠 hidden，不卸载，展开不再重建 Markdown/工具 DOM */
+.chat-reply-details[hidden] {
+  display: none !important;
+}
+
 .chat-reply-actions-row {
   display: flex;
   align-items: center;

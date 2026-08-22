@@ -64,11 +64,13 @@ describe('Details collapse UI', () => {
 
     expect(screen.getByTestId('details-toggle')).toBeTruthy()
     expect(screen.getByText('final answer here')).toBeTruthy()
-    expect(screen.queryByText('thinking draft')).toBeNull()
-    expect(screen.queryByText('read_file')).toBeNull()
+    // 折叠时 Details 仍挂在 DOM（hidden），避免展开重建
+    const details = screen.getByTestId('reply-details')
+    expect(details).toHaveProperty('hidden', true)
+    expect(details.textContent).toContain('thinking draft')
 
     fireEvent.click(screen.getByTestId('details-toggle'))
-    expect(screen.getByText('thinking draft')).toBeTruthy()
+    expect(screen.getByTestId('reply-details')).toHaveProperty('hidden', false)
     expect(screen.getByText('read_file')).toBeTruthy()
   })
 })
