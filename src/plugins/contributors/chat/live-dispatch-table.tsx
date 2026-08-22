@@ -122,6 +122,7 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
       </div>
       <table className="w-full table-fixed border-collapse text-left text-[11px]">
         <colgroup>
+          <col style={{ width: '5.5rem' }} />
           <col style={{ width: '2.75rem' }} />
           <col />
           <col style={{ width: '9.5rem' }} />
@@ -129,6 +130,7 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
         </colgroup>
         <thead>
           <tr className="text-[10px] uppercase tracking-wide text-[var(--dsw-label-3)]">
+            <th className="px-2 py-1.5 font-medium">项目</th>
             <th className="px-2 py-1.5 font-medium">谁</th>
             <th className="px-3 py-1.5 font-medium">任务</th>
             <th className="px-2 py-1.5 font-medium text-right">usage</th>
@@ -145,6 +147,14 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
                 key={`${task.sessionId}-${task.wakeTs ?? index}`}
                 className="border-t border-[color-mix(in_srgb,var(--dsw-border)_70%,transparent)]"
               >
+                <td className="min-w-0 px-2 py-2 align-middle">
+                  <div
+                    className="truncate text-[10px] text-[var(--dsw-label-2)]"
+                    title={task.project?.path ?? task.project?.name}
+                  >
+                    {task.project?.name ?? '—'}
+                  </div>
+                </td>
                 <td className="px-2 py-2 align-middle">
                   <SidebarMascot
                     size={22}
@@ -187,7 +197,7 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
         </tbody>
         <tfoot>
           <tr className="border-t border-[var(--dsw-border)] bg-[color-mix(in_srgb,var(--dsw-hover)_50%,transparent)]">
-            <td className="px-2 py-2" />
+            <td className="px-2 py-2" colSpan={2} />
             <td className="px-3 py-2 font-semibold text-[var(--dsw-label)]">合计（{tasks.length}）</td>
             <td className="px-2 py-2">
               <div className="flex justify-end">

@@ -166,9 +166,16 @@ export function apply(ctx: Context) {
       const dispatched = await loadDispatchedUsage(ctx, id, record.events)
       const titles = new Map<string, string>()
       const mascots = new Map<string, { shape: string; color: string; eye?: number }>()
+      const projects = new Map<string, { name: string; path?: string }>()
       for (const item of await ctx.sessions.listSummaries()) {
         titles.set(item.id, item.title)
         if (item.mascot) mascots.set(item.id, item.mascot)
+        if (item.project?.name) {
+          projects.set(item.id, {
+            name: item.project.name,
+            ...(item.project.path ? { path: item.project.path } : {}),
+          })
+        }
       }
       body.dispatchedUsage = dispatched.total
       body.dispatchedUsageByTurn = Object.fromEntries(
@@ -181,6 +188,7 @@ export function apply(ctx: Context) {
             ...task,
             title: titles.get(task.sessionId) ?? task.sessionId.slice(0, 8),
             ...(mascots.get(task.sessionId) ? { mascot: mascots.get(task.sessionId) } : {}),
+            ...(projects.get(task.sessionId) ? { project: projects.get(task.sessionId) } : {}),
           })),
         ]),
       )
@@ -203,9 +211,16 @@ export function apply(ctx: Context) {
     const dispatched = await loadDispatchedUsage(ctx, id, record.events)
     const titles = new Map<string, string>()
     const mascots = new Map<string, { shape: string; color: string; eye?: number }>()
+    const projects = new Map<string, { name: string; path?: string }>()
     for (const item of await ctx.sessions.listSummaries()) {
       titles.set(item.id, item.title)
       if (item.mascot) mascots.set(item.id, item.mascot)
+      if (item.project?.name) {
+        projects.set(item.id, {
+          name: item.project.name,
+          ...(item.project.path ? { path: item.project.path } : {}),
+        })
+      }
     }
     const tasksByTurn: Record<string, Array<Record<string, unknown>>> = {}
     const usageByTurn: Record<string, unknown> = {}
@@ -215,6 +230,7 @@ export function apply(ctx: Context) {
         ...task,
         title: titles.get(task.sessionId) ?? task.sessionId.slice(0, 8),
         ...(mascots.get(task.sessionId) ? { mascot: mascots.get(task.sessionId) } : {}),
+        ...(projects.get(task.sessionId) ? { project: projects.get(task.sessionId) } : {}),
       }))
     }
     route.send(200, {

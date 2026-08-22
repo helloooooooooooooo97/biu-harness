@@ -38,6 +38,7 @@ export type ApprovalMode = 'auto' | 'hold'
 export type DispatchedTaskRow = {
   sessionId: string
   title?: string
+  project?: { name: string; path?: string }
   mascot?: { shape: string; color: string; eye?: number }
   tool: 'session_wake' | 'session_inject'
   liveTurn?: number
