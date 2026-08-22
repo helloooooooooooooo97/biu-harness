@@ -12,13 +12,13 @@
   --dsw-label-3: rgba(242, 241, 237, 0.45);
   /* oklab warm border ≈ rgba(242,241,237,0.1) on dark */
   --dsw-border: rgba(242, 241, 237, 0.1);
-  /* User prompt — Cursor agent chat fill (cool charcoal, not muddy warm gray) */
+  /* User prompt / composer — fill uses canvas; this token is the thin border accent */
   --dsw-bubble: #262626;
   /* Accent: white / gray (no brand orange) */
   --dsw-business: #f2f1ed;
   --dsw-business-soft: rgba(242, 241, 237, 0.1);
-  /* Composer matches human-message surface (Cursor: same family as bubble) */
-  --dsw-input: #262626;
+  /* Composer fill matches canvas; border uses --dsw-bubble */
+  --dsw-input: var(--dsw-bg);
   --dsw-tool: #1e1c18;
   --dsw-surface: #1e1c18;
   /* Semantic — muted, not orange */
@@ -1798,10 +1798,10 @@ body {
 .composer-pill {
   position: relative;
   width: 100%;
-  border: 1px solid color-mix(in srgb, var(--dsw-border) 90%, transparent);
+  border: 1px solid var(--dsw-bubble);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--dsw-input) 92%, #1a1814);
-  box-shadow: 0 0 0 1px rgba(242, 241, 237, 0.04), 0 10px 28px rgba(0, 0, 0, 0.28);
+  background: var(--dsw-bg);
+  box-shadow: none;
   transition: border-radius 0.12s ease;
 }
 

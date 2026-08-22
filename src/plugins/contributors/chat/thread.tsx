@@ -384,7 +384,7 @@ function UserTurnBar({
 
   return (
     <div
-      className="box-border flex h-[30px] min-h-[30px] w-full items-center justify-between gap-3 border-0 border-t border-[color-mix(in_srgb,var(--dsw-border)_70%,transparent)] bg-[var(--dsw-bubble)] px-3 text-[11px] leading-none text-[var(--dsw-label-3)] rounded-b-[var(--dsw-radius-bubble)]"
+      className="box-border flex h-[30px] min-h-[30px] w-full items-center justify-between gap-3 border-0 border-t border-[var(--dsw-bubble)] bg-transparent px-3 text-[11px] leading-none text-[var(--dsw-label-3)]"
       aria-label="回合摘要"
       data-testid="user-turn-bar"
     >
@@ -554,8 +554,8 @@ function NodeView({
   if (node.kind === 'user') {
     const canExpand = overflows || expanded
     return (
-      <div className="flex w-full flex-col gap-0">
-        <div className="block w-full max-w-full rounded-t-[var(--dsw-radius-bubble)] border-0 bg-[var(--dsw-bubble)] px-3 py-2.5 text-[var(--dsw-label)]">
+      <div className="flex w-full flex-col gap-0 overflow-hidden rounded-[var(--dsw-radius-bubble)] border border-[var(--dsw-bubble)] bg-[var(--dsw-bg)]">
+        <div className="block w-full max-w-full border-0 bg-transparent px-3 py-2.5 text-[var(--dsw-label)]">
           <div
             className={`w-full max-w-full border-0 bg-transparent p-0 text-[length:var(--dsw-chat-font-size)] leading-[var(--dsw-chat-line-height)] text-[var(--dsw-label)] outline-none${canExpand && !expanded ? ' max-h-[80px] overflow-hidden' : ''}${expanded ? ' max-h-none overflow-visible' : ''}`}
             data-testid="user-bubble"
