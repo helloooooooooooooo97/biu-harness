@@ -1068,7 +1068,7 @@ body {
 }
 
 .traj-usage-out {
-  color: var(--dsw-business);
+  color: var(--dsw-label);
   font-weight: 600;
 }
 
@@ -1120,7 +1120,7 @@ body {
 }
 
 .traj-usage-stat-out strong {
-  color: var(--dsw-business);
+  color: var(--dsw-label);
 }
 
 .traj-usage-stat-sub {
@@ -1166,7 +1166,7 @@ body {
   gap: 6px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--dsw-border);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--dsw-muted-fill);
 }
 
 .traj-io-role {
@@ -1188,8 +1188,8 @@ body {
 }
 
 .traj-io-role-assistant {
-  color: var(--dsw-business);
-  background: var(--dsw-business-soft);
+  color: var(--dsw-label);
+  background: var(--dsw-hover-strong);
 }
 
 .traj-io-role-tool {
@@ -1208,7 +1208,7 @@ body {
   max-height: 220px;
   overflow: auto;
   padding: 8px;
-  color: var(--dsw-label);
+  color: var(--dsw-label-2);
   font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.45;
@@ -1252,8 +1252,8 @@ body {
 }
 
 .traj-tag-assistant {
-  color: var(--dsw-business);
-  background: var(--dsw-business-soft);
+  color: var(--dsw-label);
+  background: var(--dsw-hover-strong);
 }
 
 .traj-tag-tool {
@@ -1333,7 +1333,7 @@ body {
 
 .traj-detail-type {
   margin-top: 2px;
-  color: var(--dsw-business);
+  color: var(--dsw-label-2);
   font-family: var(--font-mono);
   font-size: 11px;
 }
