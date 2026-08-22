@@ -545,7 +545,8 @@ function NodeView({
   // 避免每条用户消息 useLayoutEffect 读 layout（滚动时强制同步布局会卡）
   const textLen = node.kind === 'user' ? node.text.length : 0
   const lineHints = node.kind === 'user' ? node.text.split('\n').length : 0
-  const overflows = textLen > 280 || lineHints > 6
+  // 限高约 80px：长文/多行才出展开按钮（避免每条都量 DOM）
+  const overflows = textLen > 140 || lineHints > 3
 
   if (node.kind === 'user') {
     const canExpand = overflows || expanded
@@ -553,7 +554,7 @@ function NodeView({
       <div className="flex w-full flex-col gap-0">
         <div className="block w-full max-w-full rounded-t-[var(--dsw-radius-bubble)] border-0 bg-[var(--dsw-bubble)] px-3 py-2.5 text-[var(--dsw-label)]">
           <div
-            className={`w-full max-w-full border-0 bg-transparent p-0 text-[length:var(--dsw-chat-font-size)] leading-[var(--dsw-chat-line-height)] text-[var(--dsw-label)] outline-none${canExpand && !expanded ? ' max-h-[160px] overflow-hidden' : ''}${expanded ? ' max-h-none overflow-visible' : ''}`}
+            className={`w-full max-w-full border-0 bg-transparent p-0 text-[length:var(--dsw-chat-font-size)] leading-[var(--dsw-chat-line-height)] text-[var(--dsw-label)] outline-none${canExpand && !expanded ? ' max-h-[80px] overflow-hidden' : ''}${expanded ? ' max-h-none overflow-visible' : ''}`}
             data-testid="user-bubble"
           >
             {node.kindTag === 'inject' ? (
