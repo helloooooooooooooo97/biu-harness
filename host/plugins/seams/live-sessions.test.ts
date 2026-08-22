@@ -40,9 +40,17 @@ test('live tools list/inspect/inject; reject from chat sessions', async () => {
 
   const listed = (await runWithSession(live.id, () =>
     ctx.tools.invoke('session_list', { type: 'chat' }, new AbortController().signal),
-  )) as { sessions: Array<{ id: string; type: string }> }
+  )) as { sessions: Array<{ id: string; type: string; self?: boolean }> }
   assert.equal(listed.sessions.some((item) => item.id === chat.id), true)
   assert.equal(listed.sessions.some((item) => item.id === live.id), false)
+
+  const listedAll = (await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_list', {}, new AbortController().signal),
+  )) as { sessions: Array<{ id: string; self?: boolean }> }
+  const selfRow = listedAll.sessions.find((item) => item.id === live.id)
+  assert.ok(selfRow)
+  assert.equal(selfRow?.self, true)
+  assert.equal(listedAll.sessions.find((item) => item.id === chat.id)?.self, false)
 
   const inspected = (await runWithSession(live.id, () =>
     ctx.tools.invoke('session_inspect', { sessionId: chat.id }, new AbortController().signal),

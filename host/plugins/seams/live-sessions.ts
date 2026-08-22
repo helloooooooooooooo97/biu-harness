@@ -163,7 +163,7 @@ export function apply(ctx: Context) {
 
   ctx.tools.register({
     name: 'session_list',
-    description: '列出其他 session（含 type 与 busy 状态）。Live 指挥席专用。',
+    description: '列出 session（含自己，self=true；含 type 与 busy 状态）。Live 指挥席专用。',
     parameters: {
       type: 'object',
       properties: {
@@ -178,13 +178,13 @@ export function apply(ctx: Context) {
       const limit = Math.min(100, Math.max(1, Number(args.limit) || 30))
       const items = await ctx.sessions.listSummaries()
       const sessions = items
-        .filter((item) => item.id !== selfId)
         .filter((item) => (filter ? normalizeSessionType(item.type) === filter : true))
         .slice(0, limit)
         .map((item) => ({
           id: item.id,
           title: item.title,
           type: normalizeSessionType(item.type),
+          self: item.id === selfId,
           status: ctx.agents.isBusy(item.id) ? ('running' as const) : ('idle' as const),
           eventCount: item.eventCount,
           updatedAt: item.updatedAt,
