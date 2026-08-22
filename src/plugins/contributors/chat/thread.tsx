@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LuCheck,
@@ -482,6 +482,26 @@ function findReplyForUser(nodes: ChatNode[], userIndex: number): Extract<ChatNod
   return undefined
 }
 
+/** 每个 user 与其后的回复合成一回合，作为 sticky 的包含块，避免多条用户消息叠在顶部。 */
+export function groupNodesIntoTurns(nodes: ChatNode[]): ChatNode[][] {
+  const turns: ChatNode[][] = []
+  let current: ChatNode[] = []
+  for (const node of nodes) {
+    if (node.kind === 'user') {
+      if (current.length) turns.push(current)
+      current = [node]
+      continue
+    }
+    if (!current.length) {
+      turns.push([node])
+      continue
+    }
+    current.push(node)
+  }
+  if (current.length) turns.push(current)
+  return turns
+}
+
 const noopToggleDetails = (_replyId: string) => undefined
 
 function NodeView({
@@ -591,28 +611,39 @@ export function ChatNodeList({
     setDetailsOpenByReply((prev) => ({ ...prev, [replyId]: !prev[replyId] }))
   }, [])
 
+  const turns = useMemo(() => groupNodesIntoTurns(nodes), [nodes])
+
   return (
     <div className="chat-node-list flex flex-col gap-4">
-      {nodes.map((node, index) => {
-        const replyForUser = node.kind === 'user' ? findReplyForUser(nodes, index) : undefined
-        const replyIdForDetails = node.kind === 'reply' ? node.id : replyForUser?.id
-        const detailsOpen = replyIdForDetails ? Boolean(detailsOpenByReply[replyIdForDetails]) : false
+      {turns.map((turn) => {
+        const anchor = turn[0]!
+        const startIndex = nodes.indexOf(anchor)
         return (
-          <div
-            key={node.id}
-            className="chat-msg-row"
-            data-node-id={node.id}
-            data-chat-kind={node.kind}
-          >
-            <NodeViewMemo
-              node={node}
-              replyForUser={replyForUser}
-              detailsOpen={detailsOpen}
-              onToggleDetails={onToggleDetails}
-              onInspect={onInspect}
-              onFork={onFork}
-              sessions={sessions}
-            />
+          <div key={anchor.id} className="chat-turn" data-testid="chat-turn" data-turn-anchor={anchor.id}>
+            {turn.map((node, offset) => {
+              const index = startIndex + offset
+              const replyForUser = node.kind === 'user' ? findReplyForUser(nodes, index) : undefined
+              const replyIdForDetails = node.kind === 'reply' ? node.id : replyForUser?.id
+              const detailsOpen = replyIdForDetails ? Boolean(detailsOpenByReply[replyIdForDetails]) : false
+              return (
+                <div
+                  key={node.id}
+                  className="chat-msg-row"
+                  data-node-id={node.id}
+                  data-chat-kind={node.kind}
+                >
+                  <NodeViewMemo
+                    node={node}
+                    replyForUser={replyForUser}
+                    detailsOpen={detailsOpen}
+                    onToggleDetails={onToggleDetails}
+                    onInspect={onInspect}
+                    onFork={onFork}
+                    sessions={sessions}
+                  />
+                </div>
+              )
+            })}
           </div>
         )
       })}
