@@ -234,12 +234,66 @@ function ReplyActions({
   )
 }
 
+/** 挂在发起本回合的用户消息下：用量 / 步数 / 复制 Fork */
+function UserTurnBar({
+  reply,
+  onFork,
+}: {
+  reply: Extract<ChatNode, { kind: 'reply' }>
+  onFork: () => void | Promise<void>
+}) {
+  if (reply.streaming) return null
+  const hasMeta = reply.turn != null || reply.stepCount != null || reply.durationMs != null || Boolean(reply.usage)
+  const hasActions = Boolean(reply.copyText.trim())
+  if (!hasMeta && !hasActions) return null
+
+  return (
+    <div className="chat-user-turn-bar" aria-label="回合摘要" data-testid="user-turn-bar">
+      <div className="chat-reply-meta">
+        {reply.turn != null ? (
+          <MetaItem icon={<LuHash className="size-3" />} value={reply.turn} title={`第 ${reply.turn} 轮`} />
+        ) : null}
+        {reply.stepCount != null ? (
+          <MetaItem
+            icon={<LuLayers className="size-3" />}
+            value={reply.stepCount}
+            title={`本回合 ${reply.stepCount} 个 step`}
+          />
+        ) : null}
+        {reply.durationMs != null ? (
+          <MetaItem
+            icon={<LuTimer className="size-3" />}
+            value={formatDuration(reply.durationMs)}
+            title="本回合耗时"
+          />
+        ) : null}
+        {reply.usage ? (
+          <MetaItem icon={<LuCoins className="size-3" />} value={<UsageInline usage={reply.usage} />} title="Token 用量" />
+        ) : null}
+      </div>
+      {hasActions ? <ReplyActions text={reply.copyText} onFork={onFork} /> : null}
+    </div>
+  )
+}
+
+function findReplyForUser(nodes: ChatNode[], userIndex: number): Extract<ChatNode, { kind: 'reply' }> | undefined {
+  for (let i = userIndex + 1; i < nodes.length; i += 1) {
+    const next = nodes[i]!
+    if (next.kind === 'user') return undefined
+    if (next.kind === 'reply') return next
+  }
+  return undefined
+}
+
 function NodeView({
   node,
+  replyForUser,
   onInspect,
   onFork,
 }: {
   node: ChatNode
+  /** 用户消息发起的本回合回复（统计挂在用户气泡下） */
+  replyForUser?: Extract<ChatNode, { kind: 'reply' }>
   onInspect: (callId: string) => void
   onFork: () => void | Promise<void>
 }) {
@@ -250,50 +304,18 @@ function NodeView({
           {node.kindTag === 'inject' ? <div className="chat-user-tag">inject</div> : null}
           <MarkdownBody text={node.text} />
         </div>
+        {replyForUser ? <UserTurnBar reply={replyForUser} onFork={onFork} /> : null}
       </div>
     )
   }
 
   if (node.kind === 'reply') {
     const streaming = Boolean(node.streaming)
-    const showFooter = !streaming
     return (
-      <div className="chat-reply-block">
-        <div className={`chat-reply-card${streaming ? ' is-streaming' : ''}`}>
-          <div className="chat-reply-body">
-            <ReplyParts node={node} onInspect={onInspect} />
-          </div>
+      <div className={`chat-reply-block${streaming ? ' is-streaming' : ''}`}>
+        <div className="chat-reply-body">
+          <ReplyParts node={node} onInspect={onInspect} />
         </div>
-        {showFooter ? (
-          <div className="chat-reply-bar" aria-label="回合摘要">
-            <div className="chat-reply-meta">
-              {node.turn != null ? (
-                <MetaItem icon={<LuHash className="size-3" />} value={node.turn} title={`第 ${node.turn} 轮`} />
-              ) : null}
-              {node.stepCount != null ? (
-                <MetaItem
-                  icon={<LuLayers className="size-3" />}
-                  value={node.stepCount}
-                  title={`本回合 ${node.stepCount} 个 step`}
-                />
-              ) : null}
-              {node.durationMs != null ? (
-                <MetaItem
-                  icon={<LuTimer className="size-3" />}
-                  value={formatDuration(node.durationMs)}
-                  title="本回合耗时"
-                />
-              ) : null}
-              {node.usage ? (
-                <MetaItem icon={<LuCoins className="size-3" />} value={<UsageInline usage={node.usage} />} title="Token 用量" />
-              ) : null}
-              {node.turn == null && node.stepCount == null && node.durationMs == null && !node.usage ? (
-                <span className="chat-reply-meta-empty">—</span>
-              ) : null}
-            </div>
-            {node.copyText.trim() ? <ReplyActions text={node.copyText} onFork={onFork} /> : null}
-          </div>
-        ) : null}
       </div>
     )
   }
@@ -319,14 +341,19 @@ export function ChatNodeList({
 }) {
   return (
     <div className="chat-node-list flex flex-col gap-4">
-      {nodes.map((node) => (
+      {nodes.map((node, index) => (
         <div
           key={node.id}
           className="chat-msg-row"
           data-node-id={node.id}
           data-chat-kind={node.kind}
         >
-          <NodeViewMemo node={node} onInspect={onInspect} onFork={onFork} />
+          <NodeViewMemo
+            node={node}
+            replyForUser={node.kind === 'user' ? findReplyForUser(nodes, index) : undefined}
+            onInspect={onInspect}
+            onFork={onFork}
+          />
         </div>
       ))}
     </div>

@@ -22,8 +22,9 @@ function sampleNodes(): ChatNode[] {
       kind: 'reply',
       parts: [{ id: 'a-1', kind: 'assistant', text: 'first answer **md**' }],
       copyText: 'first answer **md**',
-      toolCount: 0,
       durationMs: 10,
+      stepCount: 2,
+      turn: 1,
     },
     { id: 'u-2', kind: 'user', text: 'second question' },
     {
@@ -31,8 +32,8 @@ function sampleNodes(): ChatNode[] {
       kind: 'reply',
       parts: [{ id: 'a-2', kind: 'assistant', text: 'second answer' }],
       copyText: 'second answer',
-      toolCount: 0,
       durationMs: 10,
+      turn: 2,
     },
   ]
 }
@@ -59,5 +60,16 @@ describe('sticky user message markers', () => {
     rerender(<ChatNodeList nodes={nodes} onInspect={onInspect} onFork={onFork} />)
     expect(document.querySelectorAll('[data-chat-kind="user"]')).toHaveLength(2)
     expect(document.querySelector('[data-node-id="u-2"]')?.getAttribute('data-chat-kind')).toBe('user')
+  })
+
+  it('moves turn stats under the user message and drops reply footer/box chrome', () => {
+    const onInspect = vi.fn()
+    const onFork = vi.fn(async () => {})
+    render(<ChatNodeList nodes={sampleNodes()} onInspect={onInspect} onFork={onFork} />)
+
+    const user1 = document.querySelector('[data-node-id="u-1"]')
+    expect(user1?.querySelector('[data-testid="user-turn-bar"]')).toBeTruthy()
+    expect(document.querySelectorAll('.chat-reply-bar')).toHaveLength(0)
+    expect(document.querySelector('.chat-reply-card')).toBeNull()
   })
 })

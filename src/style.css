@@ -1394,6 +1394,8 @@ body {
 .chat-user-row {
   display: flex;
   width: 100%;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .chat-user-bubble {
@@ -1414,6 +1416,16 @@ body {
   margin-bottom: 4px;
   color: var(--dsw-label-3);
   font-size: 10px;
+}
+
+/* 回合统计挂在发起请求的用户消息下 */
+.chat-user-turn-bar {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 4px 0 2px;
 }
 
 .chat-assistant-row {
@@ -1441,29 +1453,14 @@ body {
   display: flex;
   width: 100%;
   flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--dsw-border);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--dsw-surface) 72%, transparent);
-}
-
-.chat-reply-card {
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px 14px;
+  background: transparent;
   border: 0;
   border-radius: 0;
-  background: transparent;
+  overflow: visible;
 }
 
-.chat-reply-card.is-streaming {
-  /* keep streaming look on the outer block via parent if needed */
-}
-
-.chat-reply-block:has(.chat-reply-card.is-streaming) {
-  border-color: color-mix(in srgb, var(--dsw-border) 80%, transparent);
+.chat-reply-block.is-streaming {
+  /* 流式时也不加框，仅靠正文本身 */
 }
 
 .chat-reply-body {
@@ -1471,6 +1468,7 @@ body {
   min-width: 0;
   flex-direction: column;
   gap: 10px;
+  padding: 0;
   color: var(--dsw-label);
   font-size: var(--dsw-chat-font-size);
   line-height: var(--dsw-chat-line-height);
@@ -1559,6 +1557,7 @@ body {
   opacity: 0.82;
 }
 
+.chat-user-row:hover .chat-reply-actions,
 .chat-reply-block:hover .chat-reply-actions {
   opacity: 1;
 }
