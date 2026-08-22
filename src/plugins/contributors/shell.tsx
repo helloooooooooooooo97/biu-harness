@@ -13,12 +13,14 @@ import {
 } from '../infrastructure/app-modules.ts'
 import { FishLogo } from './brand.tsx'
 import { ChatSidebar } from './chat-sidebar.tsx'
+import { SessionInspector } from './session-inspector.tsx'
 import { FolderGlyph } from './chat/project-panel.tsx'
 import { DashboardModule } from './dashboard-module.tsx'
 import {
   LuBug,
   LuMessageSquare,
   LuPanelLeft,
+  LuPanelRight,
 } from 'react-icons/lu'
 
 export const name = 'shell'
@@ -179,6 +181,32 @@ function Shell(props: SlotProps) {
   const view = useSessionView((state) => state.view)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [inspectorOpen, setInspectorOpen] = useState(() => {
+    try {
+      return localStorage.getItem('cordis.inspector.open') === '1'
+    } catch {
+      return false
+    }
+  })
+  const toggleInspector = useCallback(() => {
+    setInspectorOpen((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem('cordis.inspector.open', next ? '1' : '0')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+  const closeInspector = useCallback(() => {
+    setInspectorOpen(false)
+    try {
+      localStorage.setItem('cordis.inspector.open', '0')
+    } catch {
+      /* ignore */
+    }
+  }, [])
   const activeModule = moduleIdFromPath(location.pathname)
   const appRoute = parseAppPath(location.pathname)
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
@@ -220,9 +248,9 @@ function Shell(props: SlotProps) {
     <div
       className={`app-shell${
         activeModule === 'agent'
-          ? sidebarCollapsed
-            ? ' app-shell-agent is-sidebar-collapsed'
-            : ' app-shell-agent'
+          ? ` app-shell-agent${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}${
+              inspectorOpen ? ' is-inspector-open' : ''
+            }`
           : ' app-shell-module'
       }`}
     >
@@ -295,7 +323,19 @@ function Shell(props: SlotProps) {
                 )}
               </NavLink>
             </nav>
-            <div className="chat-view-header-right" aria-hidden />
+            <div className="chat-view-header-right">
+              <button
+                type="button"
+                className={`chat-view-header-expand${inspectorOpen ? ' is-active' : ''}`}
+                title={inspectorOpen ? '收起检查器' : '打开检查器'}
+                aria-label={inspectorOpen ? '收起检查器' : '打开检查器'}
+                aria-pressed={inspectorOpen}
+                data-testid="inspector-toggle"
+                onClick={toggleInspector}
+              >
+                <LuPanelRight className="size-3.5" />
+              </button>
+            </div>
           </header>
           <AgentMainPanels view={view} renderSlot={props.renderSlot} />
         </div>
@@ -312,6 +352,15 @@ function Shell(props: SlotProps) {
           <WorkspaceModule />
         </div>
       </main>
+
+      {activeModule === 'agent' ? (
+        <SessionInspector
+          open={inspectorOpen}
+          onClose={closeInspector}
+          useSessionView={useSessionView}
+          sessionView={sessionView}
+        />
+      ) : null}
 
       <div
         className={`fixed inset-0 z-20 flex items-center justify-center bg-[var(--dsw-overlay)] ${settingsOpen ? '' : 'hidden'}`}

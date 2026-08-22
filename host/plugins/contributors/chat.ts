@@ -25,6 +25,8 @@ interface ChatConfig {
   model: string
   systemPrompt: string
   agentMode: AgentToolMode
+  /** 极简模式下常驻额外工具（不含 minimal 底座与 live 调度工具） */
+  extraTools: string[]
 }
 
 function configPath() {
@@ -39,6 +41,7 @@ function defaults(): ChatConfig {
     model: process.env.CHAT_MODEL || (deepseek || !process.env.OPENAI_API_KEY ? 'deepseek-chat' : 'gpt-4o-mini'),
     systemPrompt: '你是控制台里的助手。需要时调用当前已注册的 tools；插件卸载后对应 tool 会消失。回答简洁。',
     agentMode: 'standard',
+    extraTools: [],
   }
 }
 
@@ -67,6 +70,7 @@ function writePersisted(config: ChatConfig) {
         model: config.model,
         systemPrompt: config.systemPrompt,
         agentMode: config.agentMode,
+        extraTools: config.extraTools,
         apiKey: config.apiKey,
       },
       null,
@@ -89,6 +93,9 @@ function mergePersisted(base: ChatConfig, saved: Partial<ChatConfig> | null): Ch
     systemPrompt: typeof saved.systemPrompt === 'string' ? saved.systemPrompt : base.systemPrompt,
     agentMode: parseAgentMode(saved.agentMode, base.agentMode),
     apiKey: !envKey && typeof saved.apiKey === 'string' && saved.apiKey.trim() ? saved.apiKey.trim() : base.apiKey,
+    extraTools: Array.isArray(saved.extraTools)
+      ? [...new Set(saved.extraTools.map((name) => String(name).trim()).filter(Boolean))]
+      : base.extraTools,
   }
 }
 
@@ -112,6 +119,7 @@ export class ChatService extends Service {
       hint: hint(this.config.apiKey),
       tools: this.ctx.tools.names(),
       toolCatalog: this.ctx.tools.catalog(),
+      extraTools: this.config.extraTools,
     }
   }
 
@@ -122,6 +130,7 @@ export class ChatService extends Service {
       model: string
       systemPrompt: string
       agentMode: AgentToolMode
+      extraTools: string[]
     }>,
     opts?: { persist?: boolean },
   ) {
@@ -130,6 +139,9 @@ export class ChatService extends Service {
     if (typeof next.systemPrompt === 'string') this.config.systemPrompt = next.systemPrompt
     if (typeof next.apiKey === 'string' && next.apiKey.trim()) this.config.apiKey = next.apiKey.trim()
     if (next.agentMode === 'standard' || next.agentMode === 'minimal') this.config.agentMode = next.agentMode
+    if (Array.isArray(next.extraTools)) {
+      this.config.extraTools = [...new Set(next.extraTools.map((name) => String(name).trim()).filter(Boolean))]
+    }
     this.syncLlm()
     this.syncToolsMode()
     if (opts?.persist !== false) {
@@ -161,6 +173,7 @@ export class ChatService extends Service {
 
   private syncToolsMode() {
     this.ctx.tools.setMode(this.config.agentMode)
+    this.ctx.tools.setPinnedExtras(this.config.extraTools)
   }
 }
 
@@ -187,6 +200,7 @@ export function apply(ctx: Context) {
       model: string
       systemPrompt: string
       agentMode: AgentToolMode
+      extraTools: string[]
     }>
     route.send(200, chat.patch(payload ?? {}))
   })
