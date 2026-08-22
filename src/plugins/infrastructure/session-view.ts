@@ -28,7 +28,7 @@ export interface SessionListItem {
   /** host 列表快照：该 session 的 agent 是否在跑 */
   busy?: boolean
   project?: { name: string; path?: string; boundAt: number }
-  mascot?: { shape: string; color: string }
+  mascot?: { shape: string; color: string; eye?: number }
 }
 
 export type ConversationView = 'chat' | 'debug'
@@ -38,6 +38,7 @@ export type ApprovalMode = 'auto' | 'hold'
 export type DispatchedTaskRow = {
   sessionId: string
   title?: string
+  mascot?: { shape: string; color: string; eye?: number }
   tool: 'session_wake' | 'session_inject'
   liveTurn?: number
   wakeTs?: number
@@ -158,6 +159,7 @@ function sessionsEqual(a: SessionListItem[], b: SessionListItem[]): boolean {
       left.project?.name !== right.project?.name ||
       left.mascot?.shape !== right.mascot?.shape ||
       left.mascot?.color !== right.mascot?.color ||
+      left.mascot?.eye !== right.mascot?.eye ||
       Boolean(left.busy) !== Boolean(right.busy) ||
       (left.type ?? 'chat') !== (right.type ?? 'chat')
     ) {

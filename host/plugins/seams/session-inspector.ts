@@ -165,8 +165,10 @@ export function apply(ctx: Context) {
       body.workers = await buildLiveWorkers(ctx, id)
       const dispatched = await loadDispatchedUsage(ctx, id, record.events)
       const titles = new Map<string, string>()
+      const mascots = new Map<string, { shape: string; color: string; eye?: number }>()
       for (const item of await ctx.sessions.listSummaries()) {
         titles.set(item.id, item.title)
+        if (item.mascot) mascots.set(item.id, item.mascot)
       }
       body.dispatchedUsage = dispatched.total
       body.dispatchedUsageByTurn = Object.fromEntries(
@@ -178,6 +180,7 @@ export function apply(ctx: Context) {
           value.tasks.map((task) => ({
             ...task,
             title: titles.get(task.sessionId) ?? task.sessionId.slice(0, 8),
+            ...(mascots.get(task.sessionId) ? { mascot: mascots.get(task.sessionId) } : {}),
           })),
         ]),
       )
@@ -199,8 +202,10 @@ export function apply(ctx: Context) {
     }
     const dispatched = await loadDispatchedUsage(ctx, id, record.events)
     const titles = new Map<string, string>()
+    const mascots = new Map<string, { shape: string; color: string; eye?: number }>()
     for (const item of await ctx.sessions.listSummaries()) {
       titles.set(item.id, item.title)
+      if (item.mascot) mascots.set(item.id, item.mascot)
     }
     const tasksByTurn: Record<string, Array<Record<string, unknown>>> = {}
     const usageByTurn: Record<string, unknown> = {}
@@ -209,6 +214,7 @@ export function apply(ctx: Context) {
       tasksByTurn[key] = value.tasks.map((task) => ({
         ...task,
         title: titles.get(task.sessionId) ?? task.sessionId.slice(0, 8),
+        ...(mascots.get(task.sessionId) ? { mascot: mascots.get(task.sessionId) } : {}),
       }))
     }
     route.send(200, {

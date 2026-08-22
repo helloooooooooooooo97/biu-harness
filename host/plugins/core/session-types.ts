@@ -43,10 +43,12 @@ export interface SessionProject {
   boundAt: number
 }
 
-/** Per-chat Grok shape+color role — assigned once at create and persisted. */
+/** Per-chat Grok shape+color(+eye) role — assigned once at create and persisted. */
 export interface SessionMascot {
   shape: string
   color: string
+  /** Resting eye morph frame; legacy records may omit and get backfilled. */
+  eye?: number
 }
 
 /** Session 用途：普通对话 vs Live 指挥席。缺省按 chat 处理。 */

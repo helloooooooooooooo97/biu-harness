@@ -37,7 +37,7 @@ interface InspectorWorker {
   updatedAt: number
   inboxPending: number
   project?: string
-  mascot?: { shape: string; color: string }
+  mascot?: { shape: string; color: string; eye?: number }
 }
 
 interface InspectorPayload {

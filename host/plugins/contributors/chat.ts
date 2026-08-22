@@ -261,8 +261,10 @@ export function apply(ctx: Context) {
       const summaries = await ctx.sessions.listSummaries()
       const workers = []
       const titles = new Map<string, string>()
+      const mascots = new Map<string, NonNullable<(typeof summaries)[number]['mascot']>>()
       for (const item of summaries) {
         titles.set(item.id, item.title)
+        if (item.mascot) mascots.set(item.id, item.mascot)
         if (item.id === record.id) continue
         if (normalizeSessionType(item.type) === 'live') continue
         const worker = await ctx.sessions.require(item.id)
@@ -279,6 +281,7 @@ export function apply(ctx: Context) {
           value.tasks.map((task) => ({
             ...task,
             title: titles.get(task.sessionId) ?? task.sessionId.slice(0, 8),
+            ...(mascots.get(task.sessionId) ? { mascot: mascots.get(task.sessionId) } : {}),
           })),
         ]),
       )

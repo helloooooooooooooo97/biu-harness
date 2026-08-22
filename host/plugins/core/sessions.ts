@@ -14,6 +14,7 @@ import {
   normalizeSessionType,
 } from './session-types.ts'
 import {
+  ensureSessionMascot,
   isSessionMascot,
   mascotFromSessionId,
   pickSessionMascot,
@@ -206,8 +207,22 @@ export class SessionsService extends Service {
         if (!record.mascot || !isSessionMascot(record.mascot)) {
           record.mascot = mascotFromSessionId(record.id)
           await this.persist(record)
+        } else {
+          const ensured = ensureSessionMascot(record.id, record.mascot)
+          if (ensured.eye !== record.mascot.eye) {
+            record.mascot = ensured
+            await this.persist(record)
+          }
         }
         next = { ...next, mascot: record.mascot }
+      } else {
+        const ensured = ensureSessionMascot(item.id, item.mascot)
+        if (ensured.eye !== item.mascot.eye) {
+          const record = await this.require(item.id)
+          record.mascot = ensured
+          await this.persist(record)
+          next = { ...next, mascot: ensured }
+        }
       }
       const type = normalizeSessionType(next.type)
       if (next.type !== type) {

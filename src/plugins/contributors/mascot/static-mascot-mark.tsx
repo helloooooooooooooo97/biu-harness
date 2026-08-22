@@ -45,7 +45,7 @@ export const StaticMascotMark = memo(function StaticMascotMark({
     return () => {
       cancelled = true
     }
-  }, [identity.shape, identity.color])
+  }, [identity.shape, identity.color, identity.eye])
 
   const vb = geo?.viewBox ?? DEFAULT_VB
   const ready = Boolean(geo?.path)
@@ -93,7 +93,7 @@ function readGeo(identity: SessionMascotIdentity): GeoSnapshot | null {
     ...DEFAULT_FACE,
     ...(shape && 'face' in shape && shape.face && typeof shape.face === 'object' ? shape.face : {}),
   } as FaceTune
-  const frame = root.eyes?.[0]
+  const frame = root.eyes?.[Math.min(Math.max(0, identity.eye | 0), (root.eyes?.length ?? 1) - 1)] ?? root.eyes?.[0]
   const eyePaths =
     frame && frame.length >= 2
       ? ([polyPath(frame[0]!), polyPath(frame[1]!)] as [string, string])

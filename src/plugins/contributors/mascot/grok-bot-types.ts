@@ -37,9 +37,18 @@ export const GROK_COLORS = [
 export type GrokShape = (typeof GROK_SHAPES)[number]
 export type GrokColor = (typeof GROK_COLORS)[number]
 
+/** 静止态可用的眼睛 morph 帧（避开过闭眼/睡眠帧，便于区分角色） */
+export const GROK_REST_EYES = [
+  0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24,
+] as const
+
+export const GROK_EYE_FRAME_COUNT = 25
+
 export type SessionMascotIdentity = {
   shape: GrokShape
   color: GrokColor
+  /** 默认静止表情帧（0..24），按 session 稳定分配 */
+  eye: number
 }
 
 export type GrokCharacterLike = {

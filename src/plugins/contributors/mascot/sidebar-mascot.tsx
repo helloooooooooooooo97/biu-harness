@@ -30,7 +30,8 @@ export type SidebarMascotProps = {
 }
 
 /**
- * 侧栏头像：空闲用静态描边（轻）；仅 intro / 允许 animate 的 busy 才挂完整 GrokCharacter。
+ * 侧栏头像：空闲用静态描边（轻）；busy 用与指挥台相同的呼吸灯（不挂完整 GrokCharacter）。
+ * 仅 intro 窗口允许挂完整动画。
  */
 export const SidebarMascot = memo(function SidebarMascot({
   size = 44,
