@@ -1608,11 +1608,32 @@ body {
   color: var(--dsw-ok);
 }
 
-/* 消息行常驻 DOM；屏外跳过绘制，来回滑不 remount */
-.chat-msg-row,
+/* 消息行：回复可跳过屏外绘制；用户行要 sticky，不能 content-visibility */
+.chat-msg-row[data-chat-kind='reply'],
+.chat-msg-row[data-chat-kind='turn'],
 .chat-virt-row {
   content-visibility: auto;
   contain-intrinsic-size: auto 160px;
+}
+
+/*
+ * Cursor 式：当前用户消息贴在滚动区顶部；
+ * 下一条用户消息顶上来时，浏览器 sticky 自动「换人」。
+ */
+.chat-msg-row[data-chat-kind='user'] {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  margin-top: -4px;
+  padding-top: 8px;
+  padding-bottom: 10px;
+  /* 盖住下面往上滚的回复，避免透出来 */
+  background: var(--dsw-bg);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+}
+
+.chat-msg-row[data-chat-kind='user'] .chat-user-bubble {
+  box-shadow: none;
 }
 
 /* Chat Markdown */

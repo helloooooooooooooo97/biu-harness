@@ -320,7 +320,12 @@ export function ChatNodeList({
   return (
     <div className="chat-node-list flex flex-col gap-4">
       {nodes.map((node) => (
-        <div key={node.id} className="chat-msg-row" data-node-id={node.id}>
+        <div
+          key={node.id}
+          className="chat-msg-row"
+          data-node-id={node.id}
+          data-chat-kind={node.kind}
+        >
           <NodeViewMemo node={node} onInspect={onInspect} onFork={onFork} />
         </div>
       ))}
