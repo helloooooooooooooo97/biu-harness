@@ -88,6 +88,44 @@ test('sqlite session store round-trips and listSummaries skips full reload', asy
   assert.equal(loaded?.events.some((item) => item.type === 'assistant/message' && item.text === 'ok'), true)
 })
 
+test('reload heals open step/turn left by crash', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cordis-heal-'))
+  const path = join(dir, 'sessions.sqlite')
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx.plugin(sessions)
+  await ctx.sessions.create('heal1')
+  await ctx.sessions.append('heal1', { type: 'user/message', text: 'go', kind: 'wake' })
+  await ctx.sessions.append('heal1', { type: 'turn/start', turn: 1 })
+  await ctx.sessions.append('heal1', { type: 'step/start', turn: 1, step: 0 })
+  // simulate crash: no step/end, no turn/end
+
+  const ctx2 = new Context()
+  await ctx2.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx2.plugin(sessions)
+  const loaded = await ctx2.sessions.get('heal1')
+  assert.ok(loaded)
+  const types = loaded!.events.map((item) => item.type)
+  assert.equal(types.includes('step/end'), true)
+  assert.equal(types.at(-1), 'turn/end')
+  const end = loaded!.events.at(-1)
+  assert.equal(end?.type, 'turn/end')
+  if (end?.type === 'turn/end') {
+    assert.equal(end.reason, 'host-restart')
+    assert.equal(end.turn, 1)
+  }
+  // second get should not append again
+  const again = await ctx2.sessions.get('heal1')
+  assert.equal(again?.events.length, loaded!.events.length)
+
+  const ctx3 = new Context()
+  await ctx3.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx3.plugin(sessions)
+  const persisted = await ctx3.sessions.get('heal1')
+  assert.equal(persisted?.events.filter((item) => item.type === 'turn/end').length, 1)
+  assert.equal(persisted?.events.filter((item) => item.type === 'step/end').length, 1)
+})
+
 test('sqlite migrates legacy json sessions once', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cordis-migrate-'))
   const jsonDir = join(dir, 'sessions')
