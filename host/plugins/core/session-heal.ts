@@ -69,10 +69,91 @@ export function orphanToolResultBodies(
   }))
 }
 
+function stripSeqTs(event: SessionEvent): SessionEventBody {
+  const { seq: _seq, ts: _ts, ...body } = event
+  return body as SessionEventBody
+}
+
 /**
- * 进程崩溃 / 重启后补齐日志：
- * 1) 缺失的 tool/result（先于 step/turn 结束）
- * 2) 未闭合的 step/end、turn/end（reason=host-restart）
+ * 按对话顺序重建事件：
+ * - 在带 tool_calls 的 assistant 之后、下一条 user/assistant 之前插入缺失的 tool/result
+ * - 丢掉错位/重复的 tool/result（例如旧 heal 追加在日志末尾）
+ * - 闭合未结束的 step/turn
+ * - 重编 seq
+ *
+ * 无变更时返回 null。
+ */
+export function rebuildHealedEvents(
+  events: SessionEvent[],
+  now = Date.now(),
+): SessionEvent[] | null {
+  const out: SessionEvent[] = []
+  const pending = new Map<string, string>()
+  let changed = false
+
+  const push = (body: SessionEventBody, ts: number) => {
+    out.push({ ...body, seq: out.length, ts } as SessionEvent)
+  }
+
+  const flushPending = () => {
+    if (!pending.size) return
+    changed = true
+    for (const body of orphanToolResultBodies(
+      [...pending.entries()].map(([id, name]) => ({ id, name })),
+    )) {
+      push(body, now)
+    }
+    pending.clear()
+  }
+
+  for (const event of events) {
+    if (event.type === 'tool/result') {
+      if (!pending.has(event.id)) {
+        changed = true
+        continue
+      }
+      pending.delete(event.id)
+      push(stripSeqTs(event), event.ts)
+      continue
+    }
+
+    if (event.type === 'user/message' || event.type === 'assistant/message') {
+      flushPending()
+      push(stripSeqTs(event), event.ts)
+      if (event.type === 'assistant/message' && event.tool_calls?.length) {
+        for (const call of event.tool_calls) {
+          pending.set(call.id, call.name)
+        }
+      }
+      continue
+    }
+
+    // chunk 可夹在 tool_calls 与 tool/result 之间；其余事件前先闭合未配对 tool
+    if (pending.size && event.type !== 'assistant/chunk') {
+      flushPending()
+    }
+    push(stripSeqTs(event), event.ts)
+  }
+
+  flushPending()
+
+  const { openTurn, openStep } = findOpenTurnStep(out)
+  if (openStep) {
+    changed = true
+    push({ type: 'step/end', turn: openStep.turn, step: openStep.step }, now)
+  }
+  if (openTurn != null) {
+    changed = true
+    push({ type: 'turn/end', turn: openTurn, reason: 'host-restart' }, now)
+  }
+
+  if (!changed) return null
+  return out.map((event, i) => ({ ...event, seq: i }))
+}
+
+/**
+ * 仅计算「追加在末尾」的补丁（旧行为）。新加载路径请用 rebuildHealedEvents。
+ * 保留给单元测试与兼容导出。
  */
 export function healInterruptedTurnBodies(events: SessionEvent[]): SessionEventBody[] {
   const orphans = findOrphanToolCalls(events)

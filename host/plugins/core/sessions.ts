@@ -19,11 +19,15 @@ import {
   pickSessionMascot,
   type SessionMascot as AssignedMascot,
 } from './session-mascot.ts'
-import { healInterruptedTurnBodies } from './session-heal.ts'
+import { rebuildHealedEvents } from './session-heal.ts'
 
 export type { SessionEvent, SessionEventBody, SessionProject, SessionRecord, SessionMascot, SessionType }
 export { SESSION_FORMAT_VERSION, normalizeSessionType }
-export { findOpenTurnStep, healInterruptedTurnBodies } from './session-heal.ts'
+export {
+  findOpenTurnStep,
+  healInterruptedTurnBodies,
+  rebuildHealedEvents,
+} from './session-heal.ts'
 
 export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
   let system = ''
@@ -69,6 +73,8 @@ export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
         for (const call of event.tool_calls!) pendingToolCalls.set(call.id, call.name)
       }
     } else if (event.type === 'tool/result') {
+      // 错位/重复的 tool/result 不能进 LLM（否则报 tool 必须跟在 tool_calls 后）
+      if (!pendingToolCalls.has(event.id)) continue
       messages.push({ role: 'tool', tool_call_id: event.id, content: event.detail })
       pendingToolCalls.delete(event.id)
     }
@@ -119,22 +125,12 @@ export class SessionsService extends Service {
    * 重启后进程内 agent 已空，但日志若仍开着 turn，UI/Live 会一直显示 running，再发消息也会叠 turn。
    */
   private async healOpenTurnsOnLoad(record: SessionRecord): Promise<SessionRecord> {
-    const bodies = healInterruptedTurnBodies(record.events)
-    if (!bodies.length) return record
-    const ts = Date.now()
-    let seq = record.events.length
-    const appended: SessionEvent[] = []
-    for (const body of bodies) {
-      const event = { ...body, seq: seq++, ts } as SessionEvent
-      record.events.push(event)
-      appended.push(event)
-    }
+    const rebuilt = rebuildHealedEvents(record.events)
+    if (!rebuilt) return record
+    record.events = rebuilt
     await this.persist(record)
-    for (const event of appended) {
-      this.ctx.emit('session/event', { sessionId: record.id, event })
-    }
     this.ctx.logger('sessions').info(
-      `healed interrupted session log session=${record.id} +${appended.map((e) => e.type).join(',')}`,
+      `healed interrupted session log session=${record.id} events=${rebuilt.length}`,
     )
     return record
   }

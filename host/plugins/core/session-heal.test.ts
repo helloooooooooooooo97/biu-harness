@@ -4,6 +4,8 @@ import {
   findOpenTurnStep,
   findOrphanToolCalls,
   healInterruptedTurnBodies,
+  INTERRUPTED_TOOL_DETAIL,
+  rebuildHealedEvents,
 } from './session-heal.ts'
 import type { SessionEvent } from './session-types.ts'
 import { deriveMessages } from './sessions.ts'
@@ -37,7 +39,6 @@ test('healInterruptedTurnBodies fills orphan tool results then closes step/turn'
       type: 'assistant/message',
       text: '',
       tool_calls: [{ id: 'c1', name: 'session_wake', arguments: '{}' }],
-      seq: 2,
     }),
   ])
   assert.deepEqual(bodies, [
@@ -46,8 +47,7 @@ test('healInterruptedTurnBodies fills orphan tool results then closes step/turn'
       id: 'c1',
       name: 'session_wake',
       ok: false,
-      detail:
-        'interrupted: tool call was not completed (host restart or crash before tool/result)',
+      detail: INTERRUPTED_TOOL_DETAIL,
     },
     { type: 'step/end', turn: 3, step: 1 },
     { type: 'turn/end', turn: 3, reason: 'host-restart' },
@@ -93,4 +93,96 @@ test('deriveMessages synthesizes missing tool results before next user', () => {
   assert.equal(messages[2]?.tool_call_id, 't1')
   assert.equal(messages[3]?.role, 'user')
   assert.equal(messages[3]?.content, 'hello again')
+})
+
+test('rebuildHealedEvents inserts tool result before error assistant and drops misplaced trailing result', () => {
+  const rebuilt = rebuildHealedEvents(
+    [
+      ev({ type: 'user/message', text: 'hi', kind: 'wake', seq: 0, ts: 10 }),
+      ev({
+        type: 'assistant/message',
+        text: '',
+        tool_calls: [{ id: 'call_x', name: 'session_wake', arguments: '{}' }],
+        seq: 1,
+        ts: 11,
+      }),
+      // 模型调用失败写进日志，旧 heal 却把 tool/result 追加在更后面
+      ev({
+        type: 'assistant/message',
+        text: "模型调用失败：Error: An assistant message with 'tool_calls' must be followed by tool messages",
+        seq: 2,
+        ts: 12,
+      }),
+      ev({
+        type: 'tool/result',
+        id: 'call_x',
+        name: 'session_wake',
+        ok: false,
+        detail: INTERRUPTED_TOOL_DETAIL,
+        seq: 3,
+        ts: 13,
+      }),
+      ev({ type: 'user/message', text: '再测并发', kind: 'wake', seq: 4, ts: 14 }),
+    ],
+    99,
+  )
+  assert.ok(rebuilt)
+  const types = rebuilt!.map((e) => e.type)
+  assert.deepEqual(types, [
+    'user/message',
+    'assistant/message',
+    'tool/result',
+    'assistant/message',
+    'user/message',
+  ])
+  assert.equal(rebuilt![2]?.type, 'tool/result')
+  if (rebuilt![2]?.type === 'tool/result') {
+    assert.equal(rebuilt![2].id, 'call_x')
+    assert.equal(rebuilt![2].ok, false)
+  }
+  // 错位的那条已被丢弃，没有第二份 tool/result
+  assert.equal(rebuilt!.filter((e) => e.type === 'tool/result').length, 1)
+
+  const messages = deriveMessages(rebuilt!)
+  assert.deepEqual(
+    messages.map((m) => m.role),
+    ['user', 'assistant', 'tool', 'assistant', 'user'],
+  )
+  assert.equal(messages[2]?.tool_call_id, 'call_x')
+})
+
+test('deriveMessages skips orphan tool results after error assistant', () => {
+  const messages = deriveMessages([
+    ev({
+      type: 'assistant/message',
+      text: '',
+      tool_calls: [{ id: 'c1', name: 'bash', arguments: '{}' }],
+      seq: 0,
+    }),
+    ev({ type: 'assistant/message', text: '模型调用失败', seq: 1 }),
+    ev({ type: 'tool/result', id: 'c1', name: 'bash', ok: false, detail: 'late', seq: 2 }),
+  ])
+  assert.deepEqual(
+    messages.map((m) => m.role),
+    ['assistant', 'tool', 'assistant'],
+  )
+  assert.equal(messages[1]?.tool_call_id, 'c1')
+  assert.match(String(messages[1]?.content), /interrupted/)
+})
+
+test('rebuildHealedEvents returns null when log is already healthy', () => {
+  assert.equal(
+    rebuildHealedEvents([
+      ev({ type: 'turn/start', turn: 1, seq: 0 }),
+      ev({
+        type: 'assistant/message',
+        text: '',
+        tool_calls: [{ id: 'c1', name: 'bash', arguments: '{}' }],
+        seq: 1,
+      }),
+      ev({ type: 'tool/result', id: 'c1', name: 'bash', ok: true, detail: 'ok', seq: 2 }),
+      ev({ type: 'turn/end', turn: 1, reason: 'complete', seq: 3 }),
+    ]),
+    null,
+  )
 })
