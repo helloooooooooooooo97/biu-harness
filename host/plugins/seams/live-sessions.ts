@@ -15,7 +15,7 @@ export const LIVE_TOOL_NAMES = [
 ] as const
 
 const LIVE_PROMPT = `你是 Live 指挥席（文字版）：调度其他 chat session，而不是亲自改代码或跑长任务。
-工作流：session_list / session_inspect 了解现场 → 需要时可 session_create 新建、session_rename / session_configure 调整目标 → session_wake（wait=false 可先派工）或 session_inject → session_progress 抽查进度。
+工作流：session_list / session_inspect 了解现场 → 需要时可 session_create（可带 project 绑定文件夹）新建、session_rename / session_configure（可改 project）调整目标 → session_wake（wait=false 可先派工）或 session_inject → session_progress 抽查进度。
 异步派工后不要等待对方完成：完成态在目标 session 自己的 turn 里，需要时再 inspect / progress。
 向用户汇报要克制：只在关键节点、明显卡住、或用户追问时说明，不要刷屏。
 回答简洁：说明调度了谁、当前状态、下一步。`
@@ -332,12 +332,17 @@ export function apply(ctx: Context) {
 
   ctx.tools.register({
     name: 'session_create',
-    description: '创建新的 chat session（可带标题与初始配置）。Live 指挥席专用。',
+    description:
+      '创建新的 chat session（可带标题、初始配置、绑定工作区文件夹）。Live 指挥席专用。',
     parameters: {
       type: 'object',
       properties: {
         title: { type: 'string', description: '会话显示名' },
         type: { type: 'string', description: "默认 'chat'；一般不要创建 live" },
+        project: {
+          type: 'string',
+          description: '绑定的主机绝对路径文件夹；创建后也可再改',
+        },
         model: { type: 'string' },
         provider: { type: 'string', enum: ['deepseek', 'openai'] },
         systemPrompt: { type: 'string' },
@@ -348,7 +353,7 @@ export function apply(ctx: Context) {
     execute: async (args) => {
       await requireLiveCaller(ctx)
       const type = args.type === 'live' ? 'live' : 'chat'
-      const record = await ctx.sessions.create(undefined, {
+      let record = await ctx.sessions.create(undefined, {
         type,
         ...(typeof args.title === 'string' ? { title: args.title } : {}),
         config: {
@@ -363,11 +368,16 @@ export function apply(ctx: Context) {
             : {}),
         },
       })
+      if (typeof args.project === 'string' && args.project.trim()) {
+        await ctx.sessions.setProject(record.id, { path: args.project.trim() })
+        record = await ctx.sessions.require(record.id)
+      }
       return {
         id: record.id,
         type: normalizeSessionType(record.type),
         title: record.config?.title ?? record.id.slice(0, 8),
         config: record.config ?? null,
+        project: record.project ?? null,
       }
     },
   })
@@ -397,12 +407,16 @@ export function apply(ctx: Context) {
   ctx.tools.register({
     name: 'session_configure',
     description:
-      '修改目标 session 的配置覆盖（model/provider/systemPrompt/agentMode/extraTools）。未传字段保持不变；systemPrompt 传空串可清回默认。',
+      '修改目标 session 的配置（title/model/provider/systemPrompt/agentMode/extraTools/project）。未传字段保持不变；systemPrompt 传空串可清回默认；project 传空串可解绑文件夹。',
     parameters: {
       type: 'object',
       properties: {
         sessionId: { type: 'string' },
         title: { type: 'string' },
+        project: {
+          type: 'string',
+          description: '绑定文件夹的绝对路径；传空串解绑；可重复修改',
+        },
         model: { type: 'string' },
         provider: { type: 'string', enum: ['deepseek', 'openai'] },
         systemPrompt: { type: 'string' },
@@ -415,7 +429,7 @@ export function apply(ctx: Context) {
       await requireLiveCaller(ctx)
       const targetId = String(args.sessionId || '').trim()
       if (!targetId) throw new Error('sessionId required')
-      const record = await ctx.sessions.patchConfig(targetId, {
+      let record = await ctx.sessions.patchConfig(targetId, {
         ...(typeof args.title === 'string' ? { title: args.title } : {}),
         ...(typeof args.model === 'string' ? { model: args.model } : {}),
         ...(args.provider === 'deepseek' || args.provider === 'openai' ? { provider: args.provider } : {}),
@@ -427,7 +441,16 @@ export function apply(ctx: Context) {
           ? { extraTools: args.extraTools.map((name) => String(name)) }
           : {}),
       })
-      return { id: record.id, config: record.config ?? null }
+      if (typeof args.project === 'string') {
+        const path = args.project.trim()
+        await ctx.sessions.setProject(targetId, path ? { path } : null)
+        record = await ctx.sessions.require(targetId)
+      }
+      return {
+        id: record.id,
+        config: record.config ?? null,
+        project: record.project ?? null,
+      }
     },
   })
 }

@@ -12,25 +12,43 @@ type SlotsService = {
 export type TaskStatus = 'todo' | 'doing' | 'done'
 export type TaskPriority = 'low' | 'med' | 'high'
 
+export type TaskActor = {
+  kind: 'user' | 'agent'
+  sessionId?: string
+  name: string
+  mascot?: { shape: string; color: string; eye?: number }
+}
+
+export type TaskExecution = {
+  status: 'idle' | 'running' | 'unassigned'
+  reason?: string
+  turn: number | null
+  assistantText: string
+  updatedAt: number
+}
+
 export type Task = {
   id: string
   title: string
   status: TaskStatus
   priority: TaskPriority
-  assignee: string
   dueAt: number | null
   notes: string
   sort: number
   createdAt: number
   updatedAt: number
+  creator: TaskActor
+  assignee: TaskActor | null
+  assignedAt: number | null
+  execution?: TaskExecution
 }
 
 type ViewMode = 'table' | 'board'
 
 const STATUS_META: Array<{ id: TaskStatus; label: string }> = [
-  { id: 'todo', label: 'Todo' },
-  { id: 'doing', label: 'Doing' },
-  { id: 'done', label: 'Done' },
+  { id: 'todo', label: '待办' },
+  { id: 'doing', label: '进行中' },
+  { id: 'done', label: '已完成' },
 ]
 
 const PRIORITY_LABEL: Record<TaskPriority, string> = {
@@ -39,8 +57,23 @@ const PRIORITY_LABEL: Record<TaskPriority, string> = {
   high: '高',
 }
 
-async function fetchTasks(): Promise<Task[]> {
-  const res = await fetch('/api/tasks')
+const MASCOT_COLOR: Record<string, string> = {
+  black: '#2a2a2a',
+  brown: '#8b5a2b',
+  red: '#d64545',
+  orange: '#e07a2f',
+  yellow: '#d4a017',
+  green: '#3d9a5f',
+  cyan: '#2a9f9a',
+  blue: '#3b6fd9',
+  violet: '#7a5ccf',
+  magenta: '#c44f9a',
+  gray: '#7a7f87',
+}
+
+async function fetchTasks(q = ''): Promise<Task[]> {
+  const url = q.trim() ? `/api/tasks?q=${encodeURIComponent(q.trim())}` : '/api/tasks'
+  const res = await fetch(url)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const body = (await res.json()) as { tasks?: Task[] }
   return Array.isArray(body.tasks) ? body.tasks : []
@@ -57,7 +90,7 @@ async function createTask(title: string): Promise<Task> {
   return body.task
 }
 
-async function patchTask(id: string, patch: Partial<Task>): Promise<Task> {
+async function patchTask(id: string, patch: Record<string, unknown>): Promise<Task> {
   const res = await fetch(`/api/tasks/${id}`, {
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },
@@ -76,14 +109,39 @@ async function removeTask(id: string): Promise<void> {
   }
 }
 
+function formatWhen(ts: number | null | undefined): string {
+  if (!ts) return '—'
+  const date = new Date(ts)
+  if (Number.isNaN(date.getTime())) return '—'
+  const diff = Date.now() - ts
+  if (diff < 60_000) return '刚刚'
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`
+  if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)} 天前`
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatDue(ts: number | null): string {
+  if (!ts) return ''
+  const date = new Date(ts)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
 function useTasks(pollMs = 2500) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [query, setQuery] = useState('')
 
   const refresh = useCallback(async () => {
     try {
-      const next = await fetchTasks()
+      const next = await fetchTasks(query)
       setTasks(next)
       setError('')
     } catch (err) {
@@ -91,7 +149,7 @@ function useTasks(pollMs = 2500) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [query])
 
   useEffect(() => {
     void refresh()
@@ -101,14 +159,71 @@ function useTasks(pollMs = 2500) {
     return () => window.clearInterval(timer)
   }, [refresh, pollMs])
 
-  return { tasks, setTasks, error, loading, refresh }
+  return { tasks, setTasks, error, loading, refresh, query, setQuery }
+}
+
+function ActorChip({ actor, empty = '未分配' }: { actor: TaskActor | null | undefined; empty?: string }) {
+  if (!actor) {
+    return <span className="tasks-actor is-empty">{empty}</span>
+  }
+  const color = actor.mascot?.color ? MASCOT_COLOR[actor.mascot.color] ?? '#7a7f87' : actor.kind === 'agent' ? '#3b6fd9' : '#7a7f87'
+  const initial = (actor.name || '?').trim().slice(0, 1).toUpperCase()
+  return (
+    <span className="tasks-actor" title={actor.sessionId ? `${actor.name} · ${actor.sessionId.slice(0, 8)}` : actor.name}>
+      <span className="tasks-avatar" style={{ background: color }} aria-hidden>
+        {initial}
+      </span>
+      <span className="tasks-actor-name">{actor.name}</span>
+      {actor.kind === 'agent' ? <span className="tasks-actor-kind">Agent</span> : null}
+    </span>
+  )
+}
+
+function ExecBadge({ execution }: { execution?: TaskExecution }) {
+  if (!execution || execution.status === 'unassigned') {
+    return <span className="tasks-exec is-muted">未派工</span>
+  }
+  if (execution.status === 'running') {
+    return (
+      <span className="tasks-exec is-running" title={execution.assistantText || execution.reason || ''}>
+        执行中{execution.turn != null ? ` · T${execution.turn}` : ''}
+      </span>
+    )
+  }
+  const doneHint = execution.reason === 'stop' || execution.reason === 'end' || Boolean(execution.assistantText)
+  return (
+    <span
+      className={`tasks-exec ${doneHint ? 'is-idle' : 'is-muted'}`}
+      title={execution.assistantText || execution.reason || ''}
+    >
+      {doneHint ? '已响应' : '空闲'}
+      {execution.turn != null ? ` · T${execution.turn}` : ''}
+    </span>
+  )
+}
+
+function PriorityMark({ value }: { value: TaskPriority }) {
+  return (
+    <span className={`tasks-priority is-${value}`} title={`优先级 ${PRIORITY_LABEL[value]}`}>
+      <i />
+      <i />
+      <i />
+      <span>{PRIORITY_LABEL[value]}</span>
+    </span>
+  )
 }
 
 function TasksWorkspace({ compact = false }: { compact?: boolean }) {
-  const { tasks, setTasks, error, loading, refresh } = useTasks(compact ? 3000 : 2500)
-  const [view, setView] = useState<ViewMode>('table')
+  const { tasks, setTasks, error, loading, refresh, query, setQuery } = useTasks(compact ? 3000 : 2500)
+  const [view, setView] = useState<ViewMode>(compact ? 'board' : 'table')
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
+
+  const counts = useMemo(() => {
+    const map = { todo: 0, doing: 0, done: 0, total: tasks.length }
+    for (const task of tasks) map[task.status] += 1
+    return map
+  }, [tasks])
 
   const byStatus = useMemo(() => {
     const map: Record<TaskStatus, Task[]> = { todo: [], doing: [], done: [] }
@@ -129,7 +244,6 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
       setTasks((prev) => [task, ...prev.filter((item) => item.id !== task.id)])
       setDraft('')
     } catch (err) {
-      setTasks((prev) => prev)
       console.error(err)
     } finally {
       setBusy(false)
@@ -137,8 +251,8 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
     }
   }
 
-  async function onUpdate(id: string, patch: Partial<Task>) {
-    setTasks((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)))
+  async function onUpdate(id: string, patch: Record<string, unknown>) {
+    setTasks((prev) => prev.map((item) => (item.id === id ? ({ ...item, ...patch } as Task) : item)))
     try {
       const task = await patchTask(id, patch)
       setTasks((prev) => prev.map((item) => (item.id === id ? task : item)))
@@ -167,7 +281,12 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
       <header className="tasks-head">
         <div className="tasks-head-left">
           <h1 className="tasks-title">任务</h1>
-          {!compact ? <p className="tasks-sub">Table / Board · Agent 可用 tools · SQLite</p> : null}
+          <div className="tasks-stats" aria-label="任务统计">
+            <span>{counts.total} 项</span>
+            <span className="is-todo">{counts.todo} 待办</span>
+            <span className="is-doing">{counts.doing} 进行</span>
+            <span className="is-done">{counts.done} 完成</span>
+          </div>
         </div>
         <div className="tasks-view-switch" role="tablist" aria-label="视图">
           <button
@@ -191,18 +310,27 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
         </div>
       </header>
 
-      <form className="tasks-create" onSubmit={onCreate}>
+      <div className="tasks-toolbar">
+        <form className="tasks-create" onSubmit={onCreate}>
+          <input
+            className="tasks-create-input"
+            value={draft}
+            placeholder="新建任务，回车添加"
+            aria-label="新建任务"
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <button type="submit" className="tasks-create-btn" disabled={busy || !draft.trim()}>
+            添加
+          </button>
+        </form>
         <input
-          className="tasks-create-input"
-          value={draft}
-          placeholder="新建任务，回车添加"
-          aria-label="新建任务"
-          onChange={(event) => setDraft(event.target.value)}
+          className="tasks-search"
+          value={query}
+          placeholder="搜索标题 / 人 / 备注"
+          aria-label="搜索任务"
+          onChange={(event) => setQuery(event.target.value)}
         />
-        <button type="submit" className="tasks-create-btn" disabled={busy || !draft.trim()}>
-          添加
-        </button>
-      </form>
+      </div>
 
       {error ? <div className="tasks-error">{error}</div> : null}
       {loading && tasks.length === 0 ? <div className="tasks-empty">加载中…</div> : null}
@@ -223,7 +351,7 @@ function TasksTable({
   compact,
 }: {
   tasks: Task[]
-  onUpdate: (id: string, patch: Partial<Task>) => Promise<void>
+  onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>
   onDelete: (id: string) => Promise<void>
   compact: boolean
 }) {
@@ -237,8 +365,12 @@ function TasksTable({
           <tr>
             <th>标题</th>
             <th>状态</th>
-            {!compact ? <th>优先级</th> : null}
-            {!compact ? <th>负责人</th> : null}
+            <th>优先级</th>
+            {!compact ? <th>创建人</th> : null}
+            {!compact ? <th>创建时间</th> : null}
+            <th>分配人</th>
+            {!compact ? <th>分配时间</th> : null}
+            <th>执行</th>
             <th aria-label="操作" />
           </tr>
         </thead>
@@ -246,16 +378,20 @@ function TasksTable({
           {tasks.map((task) => (
             <tr key={task.id}>
               <td>
-                <input
-                  className="tasks-cell-input"
-                  defaultValue={task.title}
-                  key={`${task.id}-${task.updatedAt}-title`}
-                  aria-label="标题"
-                  onBlur={(event) => {
-                    const title = event.target.value.trim()
-                    if (title && title !== task.title) void onUpdate(task.id, { title })
-                  }}
-                />
+                <div className="tasks-title-cell">
+                  <input
+                    className="tasks-cell-input"
+                    defaultValue={task.title}
+                    key={`${task.id}-${task.updatedAt}-title`}
+                    aria-label="标题"
+                    onBlur={(event) => {
+                      const title = event.target.value.trim()
+                      if (title && title !== task.title) void onUpdate(task.id, { title })
+                    }}
+                  />
+                  {task.notes ? <div className="tasks-notes-preview">{task.notes}</div> : null}
+                  {task.dueAt ? <div className="tasks-due">截止 {formatDue(task.dueAt)}</div> : null}
+                </div>
               </td>
               <td>
                 <select
@@ -271,39 +407,56 @@ function TasksTable({
                   ))}
                 </select>
               </td>
+              <td>
+                <select
+                  className="tasks-cell-select"
+                  value={task.priority}
+                  aria-label="优先级"
+                  onChange={(event) => void onUpdate(task.id, { priority: event.target.value as TaskPriority })}
+                >
+                  {(Object.keys(PRIORITY_LABEL) as TaskPriority[]).map((key) => (
+                    <option key={key} value={key}>
+                      {PRIORITY_LABEL[key]}
+                    </option>
+                  ))}
+                </select>
+              </td>
               {!compact ? (
                 <td>
-                  <select
-                    className="tasks-cell-select"
-                    value={task.priority}
-                    aria-label="优先级"
-                    onChange={(event) =>
-                      void onUpdate(task.id, { priority: event.target.value as TaskPriority })
-                    }
-                  >
-                    {(Object.keys(PRIORITY_LABEL) as TaskPriority[]).map((key) => (
-                      <option key={key} value={key}>
-                        {PRIORITY_LABEL[key]}
-                      </option>
-                    ))}
-                  </select>
+                  <ActorChip actor={task.creator} empty="—" />
                 </td>
               ) : null}
-              {!compact ? (
-                <td>
+              {!compact ? <td className="tasks-time">{formatWhen(task.createdAt)}</td> : null}
+              <td>
+                <div className="tasks-assignee-cell">
+                  <ActorChip actor={task.assignee} />
                   <input
-                    className="tasks-cell-input"
-                    defaultValue={task.assignee}
+                    className="tasks-cell-input tasks-assignee-edit"
+                    defaultValue={task.assignee?.sessionId || task.assignee?.name || ''}
                     key={`${task.id}-${task.updatedAt}-assignee`}
-                    placeholder="—"
-                    aria-label="负责人"
+                    placeholder="sessionId 或人名"
+                    aria-label="分配人"
                     onBlur={(event) => {
-                      const assignee = event.target.value.trim()
-                      if (assignee !== task.assignee) void onUpdate(task.id, { assignee })
+                      const raw = event.target.value.trim()
+                      const prev = task.assignee?.sessionId || task.assignee?.name || ''
+                      if (raw === prev) return
+                      if (!raw) {
+                        void onUpdate(task.id, { assignee: null })
+                        return
+                      }
+                      if (/^[0-9a-f-]{8,}$/i.test(raw) || raw.length >= 20) {
+                        void onUpdate(task.id, { assigneeSessionId: raw })
+                      } else {
+                        void onUpdate(task.id, { assignee: raw })
+                      }
                     }}
                   />
-                </td>
-              ) : null}
+                </div>
+              </td>
+              {!compact ? <td className="tasks-time">{formatWhen(task.assignedAt)}</td> : null}
+              <td>
+                <ExecBadge execution={task.execution} />
+              </td>
               <td>
                 <button type="button" className="tasks-icon-btn" title="删除" onClick={() => void onDelete(task.id)}>
                   ×
@@ -325,7 +478,7 @@ function TasksBoard({
 }: {
   columns: Record<TaskStatus, Task[]>
   onDropStatus: (taskId: string, status: TaskStatus) => Promise<void>
-  onUpdate: (id: string, patch: Partial<Task>) => Promise<void>
+  onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>
   onDelete: (id: string) => Promise<void>
 }) {
   function onDragStart(event: DragEvent, id: string) {
@@ -363,6 +516,13 @@ function TasksBoard({
                 draggable
                 onDragStart={(event) => onDragStart(event, task.id)}
               >
+                <div className="tasks-card-top">
+                  <PriorityMark value={task.priority} />
+                  <ExecBadge execution={task.execution} />
+                  <button type="button" className="tasks-icon-btn" title="删除" onClick={() => void onDelete(task.id)}>
+                    ×
+                  </button>
+                </div>
                 <input
                   className="tasks-card-title"
                   defaultValue={task.title}
@@ -373,12 +533,18 @@ function TasksBoard({
                     if (title && title !== task.title) void onUpdate(task.id, { title })
                   }}
                 />
-                <div className="tasks-card-meta">
-                  <span>{PRIORITY_LABEL[task.priority]}</span>
-                  {task.assignee ? <span>{task.assignee}</span> : null}
-                  <button type="button" className="tasks-icon-btn" title="删除" onClick={() => void onDelete(task.id)}>
-                    ×
-                  </button>
+                {task.notes ? <p className="tasks-card-notes">{task.notes}</p> : null}
+                <div className="tasks-card-people">
+                  <div className="tasks-card-person">
+                    <span className="tasks-card-label">创建</span>
+                    <ActorChip actor={task.creator} empty="—" />
+                    <span className="tasks-time">{formatWhen(task.createdAt)}</span>
+                  </div>
+                  <div className="tasks-card-person">
+                    <span className="tasks-card-label">分配</span>
+                    <ActorChip actor={task.assignee} />
+                    <span className="tasks-time">{formatWhen(task.assignedAt)}</span>
+                  </div>
                 </div>
               </li>
             ))}
@@ -415,50 +581,82 @@ export function apply(ctx: Context) {
   slots.place('inspector-tasks', TasksInspectorPanel, { key: 'tasks-inspector', order: 10 })
 }
 
-/** 注入一点插件样式（挂在 document，避免改主仓 css）。 */
 if (typeof document !== 'undefined') {
   const id = 'hmr-tasks-ui-style'
-  if (!document.getElementById(id)) {
-    const style = document.createElement('style')
-    style.id = id
-    style.textContent = `
-.tasks-module-page { display:flex; flex:1; min-height:0; flex-direction:column; overflow:hidden; background:var(--dsw-bg); color:var(--dsw-label); }
+  const style = document.getElementById(id) ?? document.createElement('style')
+  style.id = id
+  style.textContent = `
+.tasks-module-page { display:flex; flex:1; min-height:0; flex-direction:column; overflow:hidden; background:
+  radial-gradient(1200px 480px at 12% -10%, color-mix(in srgb, var(--dsw-business) 10%, transparent), transparent 60%),
+  linear-gradient(180deg, color-mix(in srgb, var(--dsw-surface) 70%, var(--dsw-bg)), var(--dsw-bg));
+  color:var(--dsw-label); }
 .tasks-inspector-panel { display:flex; min-height:0; flex:1; flex-direction:column; overflow:hidden; }
-.tasks-root { display:flex; min-height:0; flex:1; flex-direction:column; gap:12px; padding:16px 18px 20px; overflow:auto; }
+.tasks-root { display:flex; min-height:0; flex:1; flex-direction:column; gap:14px; padding:18px 20px 22px; overflow:auto; }
 .tasks-root.is-compact { padding:10px 12px 14px; gap:8px; }
 .tasks-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
-.tasks-title { margin:0; font-size:18px; font-weight:650; letter-spacing:-0.02em; }
+.tasks-title { margin:0; font-size:22px; font-weight:700; letter-spacing:-0.03em; }
 .tasks-root.is-compact .tasks-title { font-size:14px; }
-.tasks-sub { margin:4px 0 0; color:var(--dsw-label-3); font-size:12px; }
+.tasks-stats { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; color:var(--dsw-label-3); font-size:11px; font-variant-numeric:tabular-nums; }
+.tasks-stats .is-todo { color:var(--dsw-label-2); }
+.tasks-stats .is-doing { color:var(--dsw-business); }
+.tasks-stats .is-done { color:color-mix(in srgb, #3d9a5f 80%, var(--dsw-label-3)); }
 .tasks-view-switch { display:inline-flex; gap:2px; padding:2px; border:1px solid var(--dsw-border); border-radius:8px; background:var(--dsw-muted-fill); }
 .tasks-view-btn { border:0; border-radius:6px; padding:4px 10px; background:transparent; color:var(--dsw-label-3); cursor:pointer; font:inherit; font-size:12px; font-weight:600; }
-.tasks-view-btn.is-active { background:var(--dsw-surface); color:var(--dsw-label); }
-.tasks-create { display:flex; gap:8px; }
-.tasks-create-input { flex:1; min-width:0; border:1px solid var(--dsw-border); border-radius:10px; padding:8px 10px; background:var(--dsw-input); color:var(--dsw-label); font:inherit; font-size:13px; outline:none; }
+.tasks-view-btn.is-active { background:var(--dsw-surface); color:var(--dsw-label); box-shadow:0 1px 0 color-mix(in srgb, var(--dsw-label) 6%, transparent); }
+.tasks-toolbar { display:flex; gap:8px; align-items:stretch; flex-wrap:wrap; }
+.tasks-create { display:flex; gap:8px; flex:1 1 280px; min-width:0; }
+.tasks-create-input, .tasks-search { min-width:0; border:1px solid var(--dsw-border); border-radius:10px; padding:8px 10px; background:var(--dsw-input); color:var(--dsw-label); font:inherit; font-size:13px; outline:none; }
+.tasks-create-input { flex:1; }
+.tasks-search { flex:0 1 220px; }
 .tasks-create-btn { border:0; border-radius:10px; padding:8px 12px; background:var(--dsw-business); color:var(--dsw-bg); cursor:pointer; font:inherit; font-size:12px; font-weight:650; }
 .tasks-create-btn:disabled { opacity:.35; cursor:default; }
 .tasks-error { border-radius:8px; padding:8px 10px; background:var(--dsw-danger-soft); color:var(--dsw-danger); font-size:12px; }
 .tasks-empty { color:var(--dsw-label-3); font-size:12px; line-height:1.5; }
-.tasks-table-wrap { overflow:auto; border:1px solid var(--dsw-border); border-radius:12px; background:var(--dsw-surface); }
+.tasks-table-wrap { overflow:auto; border:1px solid var(--dsw-border); border-radius:14px; background:color-mix(in srgb, var(--dsw-surface) 92%, transparent); backdrop-filter:blur(6px); }
 .tasks-table { width:100%; border-collapse:collapse; font-size:12px; }
-.tasks-table th { padding:8px 10px; border-bottom:1px solid var(--dsw-border); color:var(--dsw-label-3); font-weight:600; text-align:left; }
-.tasks-table td { padding:6px 8px; border-bottom:1px solid var(--dsw-border); vertical-align:middle; }
+.tasks-table th { padding:10px 10px; border-bottom:1px solid var(--dsw-border); color:var(--dsw-label-3); font-weight:600; text-align:left; white-space:nowrap; position:sticky; top:0; background:var(--dsw-surface); z-index:1; }
+.tasks-table td { padding:8px 8px; border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent); vertical-align:top; }
 .tasks-table tr:last-child td { border-bottom:0; }
+.tasks-table tr:hover td { background:color-mix(in srgb, var(--dsw-hover) 70%, transparent); }
+.tasks-title-cell { display:flex; flex-direction:column; gap:3px; min-width:160px; }
+.tasks-notes-preview, .tasks-card-notes { margin:0; color:var(--dsw-label-3); font-size:11px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.tasks-due { color:var(--dsw-label-3); font-size:10px; }
 .tasks-cell-input, .tasks-cell-select, .tasks-card-title { width:100%; border:0; border-radius:6px; padding:4px 6px; background:transparent; color:var(--dsw-label); font:inherit; outline:none; }
 .tasks-cell-input:focus, .tasks-cell-select:focus, .tasks-card-title:focus { background:var(--dsw-hover); }
+.tasks-assignee-cell { display:flex; flex-direction:column; gap:4px; min-width:120px; }
+.tasks-assignee-edit { font-size:11px; color:var(--dsw-label-3); }
+.tasks-time { color:var(--dsw-label-3); font-size:11px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.tasks-actor { display:inline-flex; align-items:center; gap:6px; min-width:0; max-width:160px; }
+.tasks-actor.is-empty { color:var(--dsw-label-3); }
+.tasks-avatar { width:18px; height:18px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:10px; font-weight:700; flex:none; box-shadow:inset 0 0 0 1px color-mix(in srgb, #000 18%, transparent); }
+.tasks-actor-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; color:var(--dsw-label-2); }
+.tasks-actor-kind { font-size:9px; color:var(--dsw-label-3); border:1px solid var(--dsw-border); border-radius:4px; padding:0 4px; line-height:1.4; }
+.tasks-exec { display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:2px 8px; font-size:10px; font-weight:650; white-space:nowrap; }
+.tasks-exec.is-running { background:color-mix(in srgb, var(--dsw-business) 16%, transparent); color:var(--dsw-business); }
+.tasks-exec.is-idle { background:color-mix(in srgb, #3d9a5f 14%, transparent); color:#2f7d4c; }
+.tasks-exec.is-muted { background:var(--dsw-muted-fill); color:var(--dsw-label-3); }
+.tasks-priority { display:inline-flex; align-items:center; gap:3px; color:var(--dsw-label-3); font-size:10px; font-weight:650; }
+.tasks-priority i { width:3px; height:8px; border-radius:1px; background:color-mix(in srgb, var(--dsw-label-3) 35%, transparent); display:inline-block; }
+.tasks-priority.is-med i:nth-child(-n+2), .tasks-priority.is-high i { background:currentColor; }
+.tasks-priority.is-med { color:#c48a2a; }
+.tasks-priority.is-high { color:#d64545; }
 .tasks-icon-btn { border:0; border-radius:6px; padding:2px 6px; background:transparent; color:var(--dsw-label-3); cursor:pointer; font:inherit; }
 .tasks-icon-btn:hover { background:var(--dsw-hover); color:var(--dsw-label); }
-.tasks-board { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; min-height:280px; }
+.tasks-board { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; min-height:280px; align-items:start; }
 .tasks-root.is-compact .tasks-board { grid-template-columns:1fr; }
-.tasks-column { display:flex; min-height:0; flex-direction:column; border:1px solid var(--dsw-border); border-radius:12px; background:var(--dsw-surface); overflow:hidden; }
-.tasks-column-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-bottom:1px solid var(--dsw-border); color:var(--dsw-label-2); font-size:12px; font-weight:650; }
-.tasks-column-count { color:var(--dsw-label-3); font-variant-numeric:tabular-nums; }
-.tasks-column-list { display:flex; flex:1; flex-direction:column; gap:8px; margin:0; padding:8px; list-style:none; overflow:auto; min-height:120px; }
-.tasks-card { border:1px solid var(--dsw-border); border-radius:10px; padding:8px; background:var(--dsw-muted-fill); cursor:grab; }
-.tasks-card:active { cursor:grabbing; }
-.tasks-card-meta { display:flex; align-items:center; gap:8px; margin-top:6px; color:var(--dsw-label-3); font-size:11px; }
-.tasks-card-meta .tasks-icon-btn { margin-left:auto; }
+.tasks-column { display:flex; min-height:0; flex-direction:column; border:1px solid var(--dsw-border); border-radius:14px; background:color-mix(in srgb, var(--dsw-surface) 88%, transparent); overflow:hidden; }
+.tasks-column-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; border-bottom:1px solid var(--dsw-border); color:var(--dsw-label-2); font-size:12px; font-weight:650; }
+.tasks-column-count { min-width:1.5em; text-align:center; border-radius:999px; padding:1px 6px; background:var(--dsw-muted-fill); color:var(--dsw-label-3); font-variant-numeric:tabular-nums; }
+.tasks-column-list { display:flex; flex:1; flex-direction:column; gap:8px; margin:0; padding:10px; list-style:none; overflow:auto; min-height:120px; }
+.tasks-card { border:1px solid color-mix(in srgb, var(--dsw-border) 90%, transparent); border-radius:12px; padding:10px; background:var(--dsw-muted-fill); cursor:grab; display:flex; flex-direction:column; gap:8px; transition:border-color .15s ease, transform .15s ease; }
+.tasks-card:hover { border-color:color-mix(in srgb, var(--dsw-business) 35%, var(--dsw-border)); }
+.tasks-card:active { cursor:grabbing; transform:scale(.995); }
+.tasks-card-top { display:flex; align-items:center; gap:6px; }
+.tasks-card-top .tasks-icon-btn { margin-left:auto; }
+.tasks-card-title { font-size:13px; font-weight:650; padding:0; }
+.tasks-card-people { display:flex; flex-direction:column; gap:6px; }
+.tasks-card-person { display:grid; grid-template-columns:36px minmax(0,1fr) auto; gap:6px; align-items:center; }
+.tasks-card-label { color:var(--dsw-label-3); font-size:10px; }
 `
-    document.head.appendChild(style)
-  }
+  if (!style.parentNode) document.head.appendChild(style)
 }

@@ -11,13 +11,13 @@ import {
   sessionDisplayTitle,
 } from '../core/session-types.ts'
 
-function toSummary(record: SessionRecord): SessionSummary {
+function toSummary(record: SessionRecord, updatedAt?: number): SessionSummary {
   return {
     id: record.id,
     version: record.version,
     eventCount: record.events.length,
     title: sessionDisplayTitle(record),
-    updatedAt: record.events.at(-1)?.ts ?? 0,
+    updatedAt: updatedAt ?? record.events.at(-1)?.ts ?? 0,
     type: normalizeSessionType(record.type),
     ...(record.project ? { project: record.project } : {}),
     ...(record.mascot ? { mascot: record.mascot } : {}),
@@ -27,6 +27,7 @@ function toSummary(record: SessionRecord): SessionSummary {
 
 export class MemorySessionStore implements SessionStore {
   private records = new Map<string, SessionRecord>()
+  private touched = new Map<string, number>()
 
   async load(id: string) {
     return this.records.get(id)
@@ -34,6 +35,7 @@ export class MemorySessionStore implements SessionStore {
 
   async save(record: SessionRecord) {
     this.records.set(record.id, { ...record, events: [...record.events] })
+    this.touched.set(record.id, Date.now())
   }
 
   async list() {
@@ -41,10 +43,13 @@ export class MemorySessionStore implements SessionStore {
   }
 
   async listSummaries() {
-    return [...this.records.values()].map(toSummary).sort((a, b) => b.updatedAt - a.updatedAt)
+    return [...this.records.values()]
+      .map((record) => toSummary(record, this.touched.get(record.id)))
+      .sort((a, b) => b.updatedAt - a.updatedAt)
   }
 
   async delete(id: string) {
+    this.touched.delete(id)
     return this.records.delete(id)
   }
 }

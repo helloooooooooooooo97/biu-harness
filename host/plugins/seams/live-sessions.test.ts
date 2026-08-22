@@ -1,5 +1,8 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { Context } from 'cordis'
 import '../../types.ts'
 import * as sessionStore from '../storage/session-store.ts'
@@ -213,4 +216,52 @@ test('wait=false wake: queues worker and does not append note to live', async ()
     ),
     false,
   )
+})
+
+test('session_create / session_configure bind and rebind project folder', async () => {
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  await ctx.plugin(tools)
+  await ctx.plugin(systemPrompt)
+  await ctx.plugin(llm)
+  await ctx.plugin(agentLoop)
+  await ctx.plugin(agents)
+  await ctx.plugin(liveSessions)
+
+  const live = await ctx.sessions.create(undefined, { type: 'live' })
+  const dirA = await mkdtemp(join(tmpdir(), 'proj-a-'))
+  const dirB = await mkdtemp(join(tmpdir(), 'proj-b-'))
+  try {
+    const created = (await runWithSession(live.id, () =>
+      ctx.tools.invoke(
+        'session_create',
+        { title: 'worker-folder', project: dirA },
+        new AbortController().signal,
+      ),
+    )) as { id: string; project: { path: string; name: string } | null }
+    assert.ok(created.id)
+    assert.equal(created.project?.path, dirA)
+
+    const configured = (await runWithSession(live.id, () =>
+      ctx.tools.invoke(
+        'session_configure',
+        { sessionId: created.id, project: dirB },
+        new AbortController().signal,
+      ),
+    )) as { project: { path: string } | null }
+    assert.equal(configured.project?.path, dirB)
+
+    const cleared = (await runWithSession(live.id, () =>
+      ctx.tools.invoke(
+        'session_configure',
+        { sessionId: created.id, project: '' },
+        new AbortController().signal,
+      ),
+    )) as { project: unknown }
+    assert.equal(cleared.project, null)
+  } finally {
+    await rm(dirA, { recursive: true, force: true })
+    await rm(dirB, { recursive: true, force: true })
+  }
 })

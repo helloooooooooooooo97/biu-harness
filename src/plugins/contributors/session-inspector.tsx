@@ -85,6 +85,8 @@ export const SessionInspector = memo(function SessionInspector({
   const [busy, setBusy] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [promptDraft, setPromptDraft] = useState('')
+  const titleFocusedRef = useRef(false)
+  const promptFocusedRef = useRef(false)
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
   useEffect(() => {
@@ -107,12 +109,15 @@ export const SessionInspector = memo(function SessionInspector({
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const body = (await res.json()) as InspectorPayload
       setData(body)
-      setTitleDraft(body.config?.title ?? '')
-      setPromptDraft(
-        typeof body.config?.systemPrompt === 'string'
-          ? body.config.systemPrompt
-          : (body.defaults?.systemPrompt ?? ''),
-      )
+      // 编辑中勿被轮询覆盖，否则 blur 会把半成品写回或看起来像「改不了」
+      if (!titleFocusedRef.current) setTitleDraft(body.config?.title ?? '')
+      if (!promptFocusedRef.current) {
+        setPromptDraft(
+          typeof body.config?.systemPrompt === 'string'
+            ? body.config.systemPrompt
+            : (body.defaults?.systemPrompt ?? ''),
+        )
+      }
       setError('')
     } catch (err) {
       setError(String(err))
@@ -279,11 +284,20 @@ export const SessionInspector = memo(function SessionInspector({
                     disabled={busy}
                     data-testid="inspector-session-title"
                     onChange={(event) => setTitleDraft(event.target.value)}
+                    onFocus={() => {
+                      titleFocusedRef.current = true
+                    }}
                     onBlur={() => {
+                      titleFocusedRef.current = false
                       const next = titleDraft.trim()
                       const prev = data?.config?.title ?? ''
                       if (next === prev) return
                       void patchSessionConfig({ title: next || null })
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter') return
+                      event.preventDefault()
+                      ;(event.target as HTMLInputElement).blur()
                     }}
                   />
                 </label>
@@ -343,7 +357,11 @@ export const SessionInspector = memo(function SessionInspector({
                     disabled={busy}
                     data-testid="inspector-system-prompt"
                     onChange={(event) => setPromptDraft(event.target.value)}
+                    onFocus={() => {
+                      promptFocusedRef.current = true
+                    }}
                     onBlur={() => {
+                      promptFocusedRef.current = false
                       const prev =
                         typeof data?.config?.systemPrompt === 'string'
                           ? data.config.systemPrompt
