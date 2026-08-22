@@ -1418,13 +1418,33 @@ body {
   font-size: 10px;
 }
 
-/* 回合统计挂在发起请求的用户消息下（不含复制/Fork） */
+/* 回合统计挂在发起请求的用户消息下（不含复制/Fork）；右侧为发送时间 */
 .chat-user-turn-bar {
   display: flex;
   min-height: 24px;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
   padding: 0 4px 0 2px;
+}
+
+.chat-user-turn-bar-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-user-turn-sent {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  color: var(--dsw-label-3);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .chat-details-toggle {

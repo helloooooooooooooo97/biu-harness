@@ -16,7 +16,7 @@ afterEach(() => {
 
 function sampleNodes(): ChatNode[] {
   return [
-    { id: 'u-1', kind: 'user', text: 'first question' },
+    { id: 'u-1', kind: 'user', text: 'first question', ts: Date.parse('2026-08-22T10:30:00') },
     {
       id: 'r-1',
       kind: 'reply',
@@ -26,7 +26,7 @@ function sampleNodes(): ChatNode[] {
       stepCount: 2,
       turn: 1,
     },
-    { id: 'u-2', kind: 'user', text: 'second question' },
+    { id: 'u-2', kind: 'user', text: 'second question', ts: Date.parse('2026-08-22T11:05:00') },
     {
       id: 'r-2',
       kind: 'reply',
@@ -71,6 +71,7 @@ describe('sticky user message markers', () => {
     const reply1 = document.querySelector('[data-node-id="r-1"]')
     expect(user1?.querySelector('[data-testid="user-turn-bar"]')).toBeTruthy()
     expect(user1?.querySelector('[data-testid="user-tool-count"]')?.textContent).toBe('0')
+    expect(user1?.querySelector('[data-testid="user-sent-at"]')?.textContent).toMatch(/\d{1,2}:\d{2}/)
     expect(user1?.querySelector('[aria-label="回合操作"]')).toBeNull()
     expect(reply1?.querySelector('[aria-label="回合操作"]')).toBeTruthy()
     expect(document.querySelectorAll('.chat-reply-bar')).toHaveLength(0)

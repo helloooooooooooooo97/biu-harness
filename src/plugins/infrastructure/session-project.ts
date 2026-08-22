@@ -65,7 +65,7 @@ export type ChatStepStat = {
 }
 
 export type ChatNode =
-  | { id: string; kind: 'user'; text: string; kindTag?: string }
+  | { id: string; kind: 'user'; text: string; kindTag?: string; ts?: number }
   | {
       id: string
       kind: 'reply'
@@ -247,7 +247,13 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       if (currentStep === event.step) currentStep = undefined
     } else if (event.type === 'user/message') {
       flushReply()
-      nodes.push({ id: `u-${event.seq}`, kind: 'user', text: event.text, kindTag: event.kind })
+      nodes.push({
+        id: `u-${event.seq}`,
+        kind: 'user',
+        text: event.text,
+        kindTag: event.kind,
+        ts: event.ts,
+      })
     } else if (event.type === 'assistant/chunk') {
       const r = ensureReply(event.seq)
       if (r.streamingId) {

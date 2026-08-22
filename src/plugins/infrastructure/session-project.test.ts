@@ -36,6 +36,9 @@ test('projects user, streaming assistant, tool call/result from session events',
   assert.equal(reply.copyText, 'hello\n\ndone')
   assert.equal(reply.parts[0]?.kind === 'assistant' && reply.parts[0].text, 'hello')
   assert.equal(reply.parts[1]?.kind === 'tool' && reply.parts[1].result?.detail, 'ok')
+  const user = nodes[0]
+  assert.equal(user?.kind, 'user')
+  if (user?.kind === 'user') assert.equal(user.ts, 2)
 })
 
 test('turn/end non-complete becomes a status row', () => {

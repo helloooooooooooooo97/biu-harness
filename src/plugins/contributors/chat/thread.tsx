@@ -4,6 +4,7 @@ import {
   LuCheck,
   LuChevronDown,
   LuChevronRight,
+  LuClock,
   LuCoins,
   LuCopy,
   LuGitFork,
@@ -323,7 +324,21 @@ function ReplyActions({
   )
 }
 
-/** 挂在发起本回合的用户消息下：Details + 统计 */
+function formatSentAt(ts: number) {
+  const date = new Date(ts)
+  if (Number.isNaN(date.getTime())) return ''
+  const now = new Date()
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  const time = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+  if (sameDay) return time
+  const day = date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
+  return `${day} ${time}`
+}
+
+/** 挂在发起本回合的用户消息下：Details + 统计；右侧为发送时间 */
 function replyToolCount(reply: Extract<ChatNode, { kind: 'reply' }>) {
   const fromParts = reply.parts.reduce((count, part) => count + (part.kind === 'tool' ? 1 : 0), 0)
   if (fromParts > 0) return fromParts
@@ -331,67 +346,82 @@ function replyToolCount(reply: Extract<ChatNode, { kind: 'reply' }>) {
 }
 
 function UserTurnBar({
+  user,
   reply,
   detailsOpen,
   onToggleDetails,
 }: {
-  reply: Extract<ChatNode, { kind: 'reply' }>
+  user: Extract<ChatNode, { kind: 'user' }>
+  reply?: Extract<ChatNode, { kind: 'reply' }>
   detailsOpen: boolean
   onToggleDetails: (replyId: string) => void
 }) {
-  if (reply.streaming) return null
-  const { hasDetails } = splitReplyForDisplay(reply)
-  const toolCount = replyToolCount(reply)
+  const streaming = Boolean(reply?.streaming)
+  const { hasDetails } = reply && !streaming ? splitReplyForDisplay(reply) : { hasDetails: false }
+  const toolCount = reply && !streaming ? replyToolCount(reply) : 0
   const hasMeta =
-    reply.turn != null ||
-    reply.stepCount != null ||
-    reply.durationMs != null ||
-    Boolean(reply.usage) ||
-    toolCount > 0
-  if (!hasDetails && !hasMeta) return null
+    !streaming &&
+    reply != null &&
+    (reply.turn != null ||
+      reply.stepCount != null ||
+      reply.durationMs != null ||
+      Boolean(reply.usage) ||
+      toolCount > 0)
+  const sentLabel = user.ts != null ? formatSentAt(user.ts) : ''
+  if (!hasDetails && !hasMeta && !sentLabel) return null
 
   return (
     <div className="chat-user-turn-bar" aria-label="回合摘要" data-testid="user-turn-bar">
-      {hasDetails ? (
-        <button
-          type="button"
-          className={`chat-details-toggle${detailsOpen ? ' is-open' : ''}`}
-          aria-expanded={detailsOpen}
-          aria-controls={`reply-details-${reply.id}`}
-          data-testid="details-toggle"
-          onClick={() => onToggleDetails(reply.id)}
-        >
-          {detailsOpen ? <LuChevronDown className="size-3.5" /> : <LuChevronRight className="size-3.5" />}
-          <span>Details</span>
-        </button>
-      ) : null}
-      <div className="chat-reply-meta">
-        {reply.turn != null ? (
-          <MetaItem icon={<LuHash className="size-3" />} value={reply.turn} title={`第 ${reply.turn} 轮`} />
+      <div className="chat-user-turn-bar-main">
+        {hasDetails && reply ? (
+          <button
+            type="button"
+            className={`chat-details-toggle${detailsOpen ? ' is-open' : ''}`}
+            aria-expanded={detailsOpen}
+            aria-controls={`reply-details-${reply.id}`}
+            data-testid="details-toggle"
+            onClick={() => onToggleDetails(reply.id)}
+          >
+            {detailsOpen ? <LuChevronDown className="size-3.5" /> : <LuChevronRight className="size-3.5" />}
+            <span>Details</span>
+          </button>
         ) : null}
-        {reply.stepCount != null ? (
-          <MetaItem
-            icon={<LuLayers className="size-3" />}
-            value={reply.stepCount}
-            title={`本回合 ${reply.stepCount} 个 step`}
-          />
-        ) : null}
-        <MetaItem
-          icon={<LuWrench className="size-3" />}
-          value={<span data-testid="user-tool-count">{toolCount}</span>}
-          title={`本回合 ${toolCount} 次工具调用`}
-        />
-        {reply.durationMs != null ? (
-          <MetaItem
-            icon={<LuTimer className="size-3" />}
-            value={formatDuration(reply.durationMs)}
-            title="本回合耗时"
-          />
-        ) : null}
-        {reply.usage ? (
-          <MetaItem icon={<LuCoins className="size-3" />} value={<UsageInline usage={reply.usage} />} title="Token 用量" />
+        {hasMeta && reply ? (
+          <div className="chat-reply-meta">
+            {reply.turn != null ? (
+              <MetaItem icon={<LuHash className="size-3" />} value={reply.turn} title={`第 ${reply.turn} 轮`} />
+            ) : null}
+            {reply.stepCount != null ? (
+              <MetaItem
+                icon={<LuLayers className="size-3" />}
+                value={reply.stepCount}
+                title={`本回合 ${reply.stepCount} 个 step`}
+              />
+            ) : null}
+            <MetaItem
+              icon={<LuWrench className="size-3" />}
+              value={<span data-testid="user-tool-count">{toolCount}</span>}
+              title={`本回合 ${toolCount} 次工具调用`}
+            />
+            {reply.durationMs != null ? (
+              <MetaItem
+                icon={<LuTimer className="size-3" />}
+                value={formatDuration(reply.durationMs)}
+                title="本回合耗时"
+              />
+            ) : null}
+            {reply.usage ? (
+              <MetaItem icon={<LuCoins className="size-3" />} value={<UsageInline usage={reply.usage} />} title="Token 用量" />
+            ) : null}
+          </div>
         ) : null}
       </div>
+      {sentLabel ? (
+        <span className="chat-user-turn-sent" title="发送时间" data-testid="user-sent-at">
+          <LuClock className="size-3" aria-hidden />
+          <span>{sentLabel}</span>
+        </span>
+      ) : null}
     </div>
   )
 }
@@ -405,11 +435,13 @@ function findReplyForUser(nodes: ChatNode[], userIndex: number): Extract<ChatNod
   return undefined
 }
 
+const noopToggleDetails = (_replyId: string) => undefined
+
 function NodeView({
   node,
   replyForUser,
   detailsOpen,
-  onToggleDetails,
+  onToggleDetails = noopToggleDetails,
   onInspect,
   onFork,
 }: {
@@ -428,13 +460,12 @@ function NodeView({
           {node.kindTag === 'inject' ? <div className="chat-user-tag">inject</div> : null}
           <MarkdownBody text={node.text} />
         </div>
-        {replyForUser && onToggleDetails ? (
-          <UserTurnBar
-            reply={replyForUser}
-            detailsOpen={Boolean(detailsOpen)}
-            onToggleDetails={onToggleDetails}
-          />
-        ) : null}
+        <UserTurnBar
+          user={node}
+          reply={replyForUser}
+          detailsOpen={Boolean(detailsOpen)}
+          onToggleDetails={onToggleDetails}
+        />
       </div>
     )
   }
