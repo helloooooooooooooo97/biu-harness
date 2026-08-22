@@ -13,6 +13,7 @@ export const LIVE_TOOL_NAMES = [
 
 const LIVE_PROMPT = `你是 Live 指挥席（文字版）：调度其他 chat session，而不是亲自改代码或跑长任务。
 工作流：session_list / session_inspect 了解现场 → session_wake（wait=false 可先派工）或 session_inject → session_progress 抽查进度。
+异步派工后，worker 的 turn/end 会自动写成旁白落到本会话；仍可主动 session_progress。
 向用户汇报要克制：只在关键节点、明显卡住、或用户追问时旁白，不要刷屏。
 回答简洁：说明调度了谁、当前状态、下一步。`
 
@@ -29,6 +30,73 @@ export interface SessionProgressSnapshot {
   newestSeq: number
   updatedAt: number
   inboxPending: number
+}
+
+/** live → worker 的可撤销订阅（turn/end 旁白后 dispose）。 */
+export interface LiveWorkerWatch {
+  liveSessionId: string
+  workerSessionId: string
+  sinceSeq: number
+  watchedAt: number
+}
+
+interface ArmedWatch extends LiveWorkerWatch {
+  dispose: () => void
+}
+
+/** liveId\\0workerId → 当前订阅；插件卸载 / turn/end 时撤销 */
+const armedWatches = new Map<string, ArmedWatch>()
+
+type ArmWatch = (liveSessionId: string, workerSessionId: string, sinceSeq?: number) => LiveWorkerWatch | undefined
+
+let armWatch: ArmWatch | null = null
+
+function watchKey(liveSessionId: string, workerSessionId: string) {
+  return `${liveSessionId}\0${workerSessionId}`
+}
+
+/** 测试用：撤销并清空所有派遣订阅。 */
+export function resetLiveWatchesForTests() {
+  for (const arm of armedWatches.values()) arm.dispose()
+  armedWatches.clear()
+}
+
+/** 测试用：查看某 worker 当前被谁盯着。 */
+export function listLiveWatchesForTests(workerSessionId?: string): LiveWorkerWatch[] {
+  const all = [...armedWatches.values()].map(({ dispose: _dispose, ...rest }) => rest)
+  if (workerSessionId) return all.filter((item) => item.workerSessionId === workerSessionId)
+  return all
+}
+
+/**
+ * 订阅 worker 的下一轮 turn/end（可撤销）。
+ * 需在 live-sessions apply 之后调用；结束时会自动 dispose。
+ */
+export function watchWorker(liveSessionId: string, workerSessionId: string, sinceSeq = -1) {
+  if (!armWatch) throw new Error('live-sessions is not applied')
+  return armWatch(liveSessionId, workerSessionId, sinceSeq)
+}
+
+function formatWorkerLabel(title: string | undefined, workerSessionId: string) {
+  const trimmed = title?.trim()
+  if (trimmed) return trimmed
+  return workerSessionId.slice(0, 8)
+}
+
+export function formatLiveTurnEndNote(opts: {
+  title?: string
+  workerSessionId: string
+  turn: number
+  reason: string
+  assistantText?: string
+}) {
+  const label = formatWorkerLabel(opts.title, opts.workerSessionId)
+  const done = opts.reason === 'complete' || opts.reason === 'completed'
+  const status = done ? '已完成' : `结束（${opts.reason}）`
+  const summary = (opts.assistantText ?? '').trim().replace(/\s+/g, ' ').slice(0, 280)
+  return summary
+    ? `[指挥席] ${label} ${status} · turn ${opts.turn}\n${summary}`
+    : `[指挥席] ${label} ${status} · turn ${opts.turn}`
 }
 
 /** 从事件日志推导 worker 进度快照（供 Live 抽查）。 */
@@ -142,10 +210,86 @@ function recentMessages(events: SessionEvent[], limit = 12) {
   return out.reverse()
 }
 
+async function appendLiveTurnEndNote(
+  ctx: Context,
+  liveSessionId: string,
+  workerSessionId: string,
+  event: Extract<SessionEvent, { type: 'turn/end' }>,
+  sinceSeq: number,
+) {
+  const worker = await ctx.sessions.get(workerSessionId)
+  if (!worker) return
+  const progress = buildSessionProgress(worker.events, {
+    afterSeq: sinceSeq,
+    textLimit: 280,
+    busy: false,
+  })
+  const title =
+    (await ctx.sessions.listSummaries()).find((item) => item.id === workerSessionId)?.title ??
+    undefined
+  const note = formatLiveTurnEndNote({
+    title,
+    workerSessionId,
+    turn: event.turn,
+    reason: event.reason,
+    assistantText: progress.assistantText,
+  })
+  try {
+    await ctx.sessions.append(liveSessionId, {
+      type: 'assistant/message',
+      text: note,
+    })
+  } catch (error) {
+    console.warn('[live-sessions] failed to append turn-end note', error)
+  }
+}
+
 export const name = 'live-sessions'
 export const inject = ['tools', 'sessions', 'agents', 'systemPrompt']
 
 export function apply(ctx: Context) {
+  const arm: ArmWatch = (liveSessionId, workerSessionId, sinceSeq = -1) => {
+    if (!liveSessionId || !workerSessionId || liveSessionId === workerSessionId) return
+    const key = watchKey(liveSessionId, workerSessionId)
+    armedWatches.get(key)?.dispose()
+
+    let disposed = false
+    const dispose = () => {
+      if (disposed) return
+      disposed = true
+      stop()
+      if (armedWatches.get(key)?.dispose === dispose) armedWatches.delete(key)
+    }
+
+    // 挂在 live 插件 fiber 上：插件卸载自动撤销；turn/end 时手动撤销
+    const stop = ctx.sessions.subscribe(
+      workerSessionId,
+      (event) => {
+        if (event.type !== 'turn/end') return
+        const since = armedWatches.get(key)?.sinceSeq ?? sinceSeq
+        dispose()
+        void appendLiveTurnEndNote(ctx, liveSessionId, workerSessionId, event, since)
+      },
+      ctx,
+    )
+
+    const watch: ArmedWatch = {
+      liveSessionId,
+      workerSessionId,
+      sinceSeq,
+      watchedAt: Date.now(),
+      dispose,
+    }
+    armedWatches.set(key, watch)
+    return watch
+  }
+
+  armWatch = arm
+  ctx.effect(() => () => {
+    resetLiveWatchesForTests()
+    if (armWatch === arm) armWatch = null
+  })
+
   ctx.systemPrompt.register('live.persona', () => {
     const sessionId = currentSessionId()
     if (!sessionId) return ''
@@ -252,7 +396,7 @@ export function apply(ctx: Context) {
   ctx.tools.register({
     name: 'session_wake',
     description:
-      '向目标 chat session 发送 wake 并启动 agent。wait=false 时立即返回，可用 session_progress 抽查。',
+      '向目标 chat session 发送 wake 并启动 agent。wait=false 时立即返回，完成时自动旁白回 Live。',
     parameters: {
       type: 'object',
       properties: {
@@ -279,8 +423,10 @@ export function apply(ctx: Context) {
       }
       const agent = await ctx.agents.create(targetId)
       if (!wait) {
+        // 先订阅再派工，避免极快完成时丢掉 turn/end；结束后自动 dispose
+        arm(selfId, targetId, target.events.at(-1)?.seq ?? -1)
         void agent.send(text, { wait: false })
-        return { sessionId: targetId, queued: true, wait: false }
+        return { sessionId: targetId, queued: true, wait: false, watched: true }
       }
       const turn = await agent.send(text, { wait: true })
       return {
@@ -295,7 +441,7 @@ export function apply(ctx: Context) {
 
   ctx.tools.register({
     name: 'session_inject',
-    description: '向目标 session 注入补充指示（inject）；若对方正在跑会进入 inbox。',
+    description: '向目标 session 注入补充指示（inject）；若对方正在跑会进入 inbox。完成后旁白回 Live。',
     parameters: {
       type: 'object',
       properties: {
@@ -311,10 +457,11 @@ export function apply(ctx: Context) {
       if (!targetId) throw new Error('sessionId required')
       if (!text) throw new Error('text required')
       if (targetId === selfId) throw new Error('cannot inject into the current live session')
-      await ctx.sessions.require(targetId)
+      const target = await ctx.sessions.require(targetId)
+      arm(selfId, targetId, target.events.at(-1)?.seq ?? -1)
       const agent = await ctx.agents.create(targetId)
       agent.inject(text)
-      return { sessionId: targetId, queued: true }
+      return { sessionId: targetId, queued: true, watched: true }
     },
   })
 }

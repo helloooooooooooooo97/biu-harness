@@ -110,6 +110,23 @@ export class SessionsService extends Service {
     return event
   }
 
+  /**
+   * 订阅某 session 后续 append 事件。返回撤销函数（cordis disposable）。
+   * 传入 `owner` 时挂到该 ctx 的 fiber：插件卸载会自动撤销；也可手动调用返回值提前撤销。
+   */
+  subscribe(
+    sessionId: string,
+    listener: (event: SessionEvent) => void | Promise<void>,
+    owner: Context = this.ctx,
+  ): () => boolean {
+    const target = String(sessionId || '').trim()
+    if (!target) return () => false
+    return owner.on('session/event', ({ sessionId: id, event }) => {
+      if (id !== target) return
+      void listener(event)
+    })
+  }
+
   deriveMessages(id: string) {
     const record = this.cache.get(id)
     if (!record) throw new Error(`unknown session: ${id}`)
