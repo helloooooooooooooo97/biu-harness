@@ -143,7 +143,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
         aria-hidden={view !== 'chat'}
       >
         <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 py-4 pb-44 md:px-8 lg:px-10">
+          <div className="chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 py-4 pb-44 md:px-8 lg:px-10">
             {renderSlot('stage')}
           </div>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] bg-transparent px-6 pb-4 md:px-8 lg:px-10">

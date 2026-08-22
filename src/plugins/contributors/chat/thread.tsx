@@ -23,12 +23,10 @@ const ROW_GAP_PX = 16
 const ESTIMATE_ROW_PX = 220
 /** 超过该条数才上虚表；过低阈值会抖，过高则短会话也会一次挂满 Markdown */
 const VIRTUALIZE_AFTER = 4
-/** overscan 过大时可视区外仍挂大量 Markdown DOM，拖死主线程 */
-const OVERSCAN = 3
-/** 滚动停下多久后，给尚未 hydrate 的行补上完整渲染 */
+/** overscan：只挂可视区附近行；太大拖死主线程，太小快速滑动会闪空白 */
+const OVERSCAN = 4
+/** 滚动中暂停 measure，停下后再量真实高度（虚表常见做法） */
 const SCROLL_IDLE_MS = 140
-/** 停下后每帧最多新 hydrate 几行，避免一次补齐打爆主线程 */
-const HYDRATE_PER_IDLE = 1
 
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
   let node = el?.parentElement ?? null
@@ -190,18 +188,6 @@ function UsageInline({ usage }: { usage: TrajectoryUsage }) {
   )
 }
 
-function RowLoading({ kind }: { kind: ChatNode['kind'] }) {
-  const label =
-    kind === 'user' ? '消息加载中' : kind === 'reply' ? '回复加载中' : kind === 'turn' ? '状态加载中' : '加载中'
-  return (
-    <div className="chat-row-loading" aria-busy="true" aria-label={label}>
-      <span className="chat-row-loading-dot" />
-      <span className="chat-row-loading-dot" />
-      <span className="chat-row-loading-dot" />
-    </div>
-  )
-}
-
 function ReplyActions({
   text,
   onFork,
@@ -262,18 +248,11 @@ function NodeView({
   node,
   onInspect,
   onFork,
-  hydrated,
 }: {
   node: ChatNode
   onInspect: (callId: string) => void
   onFork: () => void | Promise<void>
-  /** false = 滚动中新进视口，只显示 loading，不动已 hydrate 的 Markdown */
-  hydrated: boolean
 }) {
-  if (!hydrated) {
-    return <RowLoading kind={node.kind} />
-  }
-
   if (node.kind === 'user') {
     return (
       <div className="chat-user-row">
@@ -399,12 +378,9 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const stickToBottomRef = useRef(true)
   const scrollIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prefetchingRef = useRef(false)
-  /** 已完整渲染过的行：滚动中也不降级成原文 / stub */
-  const hydratedRef = useRef(new Set<string>())
   const [scrollEpoch, setScrollEpoch] = useState(0)
+  /** 滚动中暂停 measure，避免每帧重测；停下后再量真实高度 */
   const [isScrolling, setIsScrolling] = useState(false)
-  /** 允许从列表末尾往前 hydrate 的条数；idle 时递增，避免一次挂满 Markdown */
-  const [hydrateQuota, setHydrateQuota] = useState(4)
 
   const virtualize = nodes.length >= VIRTUALIZE_AFTER
 
@@ -423,30 +399,8 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   }, [sessionView, navigate])
 
   useEffect(() => {
-    hydratedRef.current = new Set()
     setIsScrolling(false)
-    setHydrateQuota(4)
   }, [sessionId])
-
-  useEffect(() => {
-    if (isScrolling) return
-    if (hydrateQuota >= nodes.length) return
-    let cancelled = false
-    let handle = 0
-    const bump = () => {
-      if (cancelled) return
-      setHydrateQuota((value) => Math.min(nodes.length, value + HYDRATE_PER_IDLE))
-    }
-    handle =
-      typeof requestIdleCallback === 'function'
-        ? requestIdleCallback(bump, { timeout: 200 })
-        : window.setTimeout(bump, 32)
-    return () => {
-      cancelled = true
-      if (typeof cancelIdleCallback === 'function') cancelIdleCallback(handle)
-      else window.clearTimeout(handle)
-    }
-  }, [isScrolling, hydrateQuota, nodes.length, sessionId])
 
   useLayoutEffect(() => {
     const parent = findScrollParent(rootRef.current)
@@ -547,24 +501,6 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     )
   }
 
-  const rowHydrated = (node: ChatNode, index: number) => {
-    if (hydratedRef.current.has(node.id)) return true
-    // 流式回复：直接展示，不走 loading
-    if (node.kind === 'reply' && node.streaming) {
-      hydratedRef.current.add(node.id)
-      return true
-    }
-    // 滚动中：新进视口的行先 stub，避免一边滑一边 remark
-    if (virtualize && isScrolling) return false
-    // 从底部往上按配额 hydrate（用户通常看最新）
-    const fromEnd = nodes.length - 1 - index
-    if (fromEnd < hydrateQuota) {
-      hydratedRef.current.add(node.id)
-      return true
-    }
-    return false
-  }
-
   return (
     <div
       ref={rootRef}
@@ -582,35 +518,23 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
           {virtualizer.getVirtualItems().map((item) => {
             const node = nodes[item.index]
             if (!node) return null
-            const hydrated = rowHydrated(node, item.index)
             return (
               <div
                 key={item.key}
                 data-index={item.index}
-                ref={isScrolling && !hydrated ? undefined : virtualizer.measureElement}
+                ref={isScrolling ? undefined : virtualizer.measureElement}
                 className="chat-virt-row absolute top-0 left-0 w-full"
                 style={{ transform: `translateY(${item.start}px)` }}
               >
-                <NodeViewMemo
-                  node={node}
-                  onInspect={onInspect}
-                  onFork={onFork}
-                  hydrated={hydrated}
-                />
+                <NodeViewMemo node={node} onInspect={onInspect} onFork={onFork} />
               </div>
             )
           })}
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {nodes.map((node, index) => (
-            <NodeViewMemo
-              key={node.id}
-              node={node}
-              onInspect={onInspect}
-              onFork={onFork}
-              hydrated={rowHydrated(node, index)}
-            />
+          {nodes.map((node) => (
+            <NodeViewMemo key={node.id} node={node} onInspect={onInspect} onFork={onFork} />
           ))}
         </div>
       )}

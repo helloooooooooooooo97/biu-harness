@@ -35,6 +35,10 @@
   /* Hairline-first depth (Cursor prefers border rings over heavy elevation) */
   --dsw-shadow-lv2: 0 0 0 1px rgba(242, 241, 237, 0.06), 0 8px 24px rgba(0, 0, 0, 0.35);
   --dsw-chat-width: 748px;
+  /* 右侧对话正文字号（略小于原先 15px，更接近 Cursor 阅读密度） */
+  --dsw-chat-font-size: 13px;
+  --dsw-chat-line-height: 1.6;
+  --dsw-chat-composer-font-size: 13px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, Consolas, monospace;
@@ -1380,6 +1384,12 @@ body {
   word-break: break-word;
 }
 
+/* 右侧主对话区：统一正文字号，子元素用 em 相对缩放 */
+.chat-stage {
+  font-size: var(--dsw-chat-font-size);
+  line-height: var(--dsw-chat-line-height);
+}
+
 /* Chat messages — Cursor-like: full-width gray user row, bare assistant + actions */
 .chat-user-row {
   display: flex;
@@ -1389,14 +1399,14 @@ body {
 .chat-user-bubble {
   width: 100%;
   max-width: 100%;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border: 0;
   border-radius: var(--dsw-radius-bubble);
   background: var(--dsw-bubble);
   box-shadow: none;
   color: var(--dsw-label);
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: var(--dsw-chat-font-size);
+  line-height: var(--dsw-chat-line-height);
   outline: none;
 }
 
@@ -1413,8 +1423,8 @@ body {
   align-items: flex-start;
   gap: 6px;
   color: var(--dsw-label);
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: var(--dsw-chat-font-size);
+  line-height: var(--dsw-chat-line-height);
 }
 
 .chat-assistant-main {
@@ -1460,10 +1470,10 @@ body {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   color: var(--dsw-label);
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: var(--dsw-chat-font-size);
+  line-height: var(--dsw-chat-line-height);
 }
 
 .chat-step-bar {
@@ -1863,7 +1873,7 @@ body {
   border: 0;
   background: transparent;
   color: var(--dsw-label);
-  font-size: 14px;
+  font-size: var(--dsw-chat-composer-font-size);
   line-height: 28px;
   outline: none;
 }
