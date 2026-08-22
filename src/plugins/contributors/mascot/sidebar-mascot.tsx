@@ -14,6 +14,11 @@ export { SIDEBAR_MASCOT_INTRO_MS, markSidebarMascotFresh } from '../../infrastru
 export type SidebarMascotProps = {
   size?: number
   busy?: boolean
+  /**
+   * 是否挂完整 GrokCharacter 动画。默认仅 busy/intro 时开。
+   * 侧栏非当前会话请传 false：只亮静态绿点，避免多 bot 抢 RAF。
+   */
+  animate?: boolean
   /** 用于匹配 markSidebarMascotFresh；有剩余 intro 时才播放动画 */
   sessionId?: string
   className?: string
@@ -25,11 +30,12 @@ export type SidebarMascotProps = {
 }
 
 /**
- * 侧栏头像：空闲用静态描边（轻）；仅 intro / busy 才挂完整 GrokCharacter。
+ * 侧栏头像：空闲用静态描边（轻）；仅 intro / 允许 animate 的 busy 才挂完整 GrokCharacter。
  */
 export const SidebarMascot = memo(function SidebarMascot({
   size = 44,
   busy = false,
+  animate,
   sessionId,
   className,
   title = 'Harness',
@@ -50,14 +56,15 @@ export const SidebarMascot = memo(function SidebarMascot({
     return () => window.clearTimeout(timer)
   }, [sessionId])
 
-  const animated = busy || introMs > 0
+  const allowMotion = animate !== false
+  const animated = allowMotion && (busy || introMs > 0)
 
   if (!animated) {
     return (
       <StaticMascotMark
         identity={identity}
         size={size}
-        busy={false}
+        busy={busy}
         className={className}
         title={title}
       />

@@ -382,12 +382,16 @@ function UserTurnBar({
   const sentLabel = user.ts != null ? formatSentAt(user.ts) : ''
 
   return (
-    <div className="chat-user-turn-bar" aria-label="回合摘要" data-testid="user-turn-bar">
-      <div className="chat-user-turn-bar-main">
+    <div
+      className="box-border flex h-[30px] min-h-[30px] w-full items-center justify-between gap-3 border-0 border-t border-[color-mix(in_srgb,var(--dsw-border)_70%,transparent)] bg-[var(--dsw-bubble)] px-3 text-[11px] leading-none text-[var(--dsw-label-3)] rounded-b-[var(--dsw-radius-bubble)]"
+      aria-label="回合摘要"
+      data-testid="user-turn-bar"
+    >
+      <div className="flex min-h-full min-w-0 flex-1 items-center gap-2.5">
         {hasDetails && reply ? (
           <button
             type="button"
-            className={`chat-details-toggle${detailsOpen ? ' is-open' : ''}`}
+            className={`inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-[6px] border border-transparent bg-transparent py-0.5 pr-2 pl-1 text-[11px] leading-none text-[var(--dsw-label-3)] hover:border-[color-mix(in_srgb,var(--dsw-border)_80%,transparent)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label-2)]${detailsOpen ? ' border-[color-mix(in_srgb,var(--dsw-border)_80%,transparent)] bg-[var(--dsw-hover)] text-[var(--dsw-label-2)]' : ''}`}
             aria-expanded={detailsOpen}
             aria-controls={`reply-details-${reply.id}`}
             data-testid="details-toggle"
@@ -427,11 +431,11 @@ function UserTurnBar({
           </div>
         ) : null}
       </div>
-      <div className="chat-user-turn-bar-end">
+      <div className="inline-flex shrink-0 items-center gap-1.5" data-testid="user-turn-bar-end">
         {canExpand && onToggleExpand ? (
           <button
             type="button"
-            className="chat-user-expand"
+            className="inline-grid size-[22px] cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
             aria-expanded={Boolean(expanded)}
             aria-label={expanded ? '收起请求全文' : '展开请求全文'}
             data-testid="user-expand-toggle"
@@ -442,7 +446,11 @@ function UserTurnBar({
         ) : null}
         <UserSenderAvatar sender={user.sender} sessions={sessions} />
         {sentLabel ? (
-          <span className="chat-user-turn-sent" title="发送时间" data-testid="user-sent-at">
+          <span
+            className="inline-flex shrink-0 items-center gap-1 text-[11px] leading-none text-[var(--dsw-label-3)] tabular-nums"
+            title="发送时间"
+            data-testid="user-sent-at"
+          >
             <LuClock className="size-3" aria-hidden />
             <span>{sentLabel}</span>
           </span>
@@ -463,13 +471,22 @@ function UserSenderAvatar({
     const hit = sessions.find((item) => item.id === sender.sessionId)
     const identity = resolveSessionMascot(sender.sessionId, hit?.mascot)
     return (
-      <span className="chat-user-avatar" title={hit?.title || 'Live session'} data-testid="user-sender-mascot">
+      <span
+        className="grid size-[18px] shrink-0 place-items-center text-[var(--dsw-label-3)]"
+        title={hit?.title || 'Live session'}
+        data-testid="user-sender-mascot"
+      >
         <StaticMascotMark identity={identity} size={16} title={hit?.title || identity.shape} />
       </span>
     )
   }
   return (
-    <span className="chat-user-avatar is-human" title="你" data-testid="user-sender-human" aria-hidden>
+    <span
+      className="grid size-[18px] shrink-0 place-items-center rounded-[5px] bg-[color-mix(in_srgb,var(--dsw-label-3)_14%,transparent)] text-[var(--dsw-label-3)]"
+      title="你"
+      data-testid="user-sender-human"
+      aria-hidden
+    >
       <LuUser className="size-3" />
     </span>
   )
@@ -525,29 +542,23 @@ function NodeView({
   sessions?: SessionListItem[]
 }) {
   const [expanded, setExpanded] = useState(false)
-  const bodyRef = useRef<HTMLDivElement>(null)
-  const [overflows, setOverflows] = useState(false)
-
-  useLayoutEffect(() => {
-    if (node.kind !== 'user') return
-    const el = bodyRef.current
-    if (!el) return
-    // 展开时也用 scrollHeight 对比上限，避免收起后漏掉按钮
-    const limit = Number.parseFloat(getComputedStyle(el).getPropertyValue('--chat-user-max-height')) || 160
-    setOverflows(el.scrollHeight > limit + 1)
-  }, [node.kind === 'user' ? node.text : '', expanded, node.kind])
+  // 避免每条用户消息 useLayoutEffect 读 layout（滚动时强制同步布局会卡）
+  const textLen = node.kind === 'user' ? node.text.length : 0
+  const lineHints = node.kind === 'user' ? node.text.split('\n').length : 0
+  const overflows = textLen > 280 || lineHints > 6
 
   if (node.kind === 'user') {
     const canExpand = overflows || expanded
     return (
-      <div className="chat-user-row">
-        <div className={`chat-user-shell${expanded ? ' is-expanded' : ''}`}>
+      <div className="flex w-full flex-col gap-0">
+        <div className="block w-full max-w-full rounded-t-[var(--dsw-radius-bubble)] border-0 bg-[var(--dsw-bubble)] px-3 py-2.5 text-[var(--dsw-label)]">
           <div
-            ref={bodyRef}
-            className={`chat-user-bubble${expanded ? ' is-expanded' : ''}${canExpand && !expanded ? ' is-clamped' : ''}`}
+            className={`w-full max-w-full border-0 bg-transparent p-0 text-[length:var(--dsw-chat-font-size)] leading-[var(--dsw-chat-line-height)] text-[var(--dsw-label)] outline-none${canExpand && !expanded ? ' max-h-[160px] overflow-hidden' : ''}${expanded ? ' max-h-none overflow-visible' : ''}`}
             data-testid="user-bubble"
           >
-            {node.kindTag === 'inject' ? <div className="chat-user-tag">inject</div> : null}
+            {node.kindTag === 'inject' ? (
+              <div className="mb-1 text-[10px] text-[var(--dsw-label-3)]">inject</div>
+            ) : null}
             <MarkdownBody text={node.text} />
           </div>
         </div>
@@ -595,7 +606,7 @@ const NodeViewMemo = memo(NodeView)
  * 屏外绘制交给 CSS content-visibility；来回滑不会整行 remount。
  * 导出供回归测试断言「跳回不重新挂载」。
  */
-export function ChatNodeList({
+export const ChatNodeList = memo(function ChatNodeList({
   nodes,
   onInspect,
   onFork,
@@ -620,16 +631,24 @@ export function ChatNodeList({
         const anchor = turn[0]!
         const startIndex = nodes.indexOf(anchor)
         return (
-          <div key={anchor.id} className="chat-turn" data-testid="chat-turn" data-turn-anchor={anchor.id}>
+          <div key={anchor.id} className="flex flex-col gap-4" data-testid="chat-turn" data-turn-anchor={anchor.id}>
             {turn.map((node, offset) => {
               const index = startIndex + offset
               const replyForUser = node.kind === 'user' ? findReplyForUser(nodes, index) : undefined
               const replyIdForDetails = node.kind === 'reply' ? node.id : replyForUser?.id
               const detailsOpen = replyIdForDetails ? Boolean(detailsOpenByReply[replyIdForDetails]) : false
+              const stickyUser =
+                node.kind === 'user'
+                  ? 'sticky top-0 z-[1] -mt-1 bg-[var(--dsw-bg)] pt-2 pb-2.5 shadow-[0_1px_0_color-mix(in_srgb,var(--dsw-border)_80%,transparent)]'
+                  : ''
+              const skipPaint =
+                node.kind === 'reply' || node.kind === 'turn'
+                  ? '[content-visibility:auto] [contain-intrinsic-size:auto_160px]'
+                  : ''
               return (
                 <div
                   key={node.id}
-                  className="chat-msg-row"
+                  className={[stickyUser, skipPaint].filter(Boolean).join(' ')}
                   data-node-id={node.id}
                   data-chat-kind={node.kind}
                 >
@@ -650,7 +669,7 @@ export function ChatNodeList({
       })}
     </div>
   )
-}
+})
 
 function EmptyHero({
   identity,

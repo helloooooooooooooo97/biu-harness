@@ -295,21 +295,60 @@ export class SessionViewService extends Service {
 
   setAgentStatus(status: 'idle' | 'running', step?: number, sessionId?: string) {
     const id = sessionId ?? this.value.sessionId
-    const busySessions = { ...this.value.busySessions }
-    if (id) {
-      if (status === 'running') busySessions[id] = true
-      else delete busySessions[id]
-    }
-    // 显式指向「其它」session：只改 busySessions，不动当前会话 chrome
-    if (sessionId && this.value.sessionId && sessionId !== this.value.sessionId) {
-      this.replace({ busySessions })
-      return
-    }
+    const isOther = Boolean(sessionId && this.value.sessionId && sessionId !== this.value.sessionId)
+
     if (status === 'running') {
-      this.replace({ busySessions, agentStatus: 'running', agentStep: step, pending: true })
+      const alreadyBusy = Boolean(id && this.value.busySessions[id])
+      if (isOther) {
+        // worker 步进会连发 running：busy 集合没变就别 notify，避免侧栏跟着抖
+        if (alreadyBusy || !id) return
+        this.replace({ busySessions: { ...this.value.busySessions, [id]: true } })
+        return
+      }
+      const busySessions =
+        alreadyBusy || !id
+          ? this.value.busySessions
+          : { ...this.value.busySessions, [id]: true as const }
+      if (
+        this.value.agentStatus === 'running' &&
+        this.value.pending &&
+        this.value.agentStep === step &&
+        busySessions === this.value.busySessions
+      ) {
+        return
+      }
+      this.replace({
+        ...(busySessions === this.value.busySessions ? {} : { busySessions }),
+        agentStatus: 'running',
+        agentStep: step,
+        pending: true,
+      })
       return
     }
-    this.replace({ busySessions, agentStatus: 'idle', agentStep: step, pending: false })
+
+    // idle
+    const nextBusy = { ...this.value.busySessions }
+    if (id && nextBusy[id]) delete nextBusy[id]
+    const busyChanged = Boolean(id && this.value.busySessions[id])
+    if (isOther) {
+      if (!busyChanged) return
+      this.replace({ busySessions: nextBusy })
+      return
+    }
+    if (
+      this.value.agentStatus === 'idle' &&
+      !this.value.pending &&
+      this.value.agentStep === step &&
+      !busyChanged
+    ) {
+      return
+    }
+    this.replace({
+      ...(busyChanged ? { busySessions: nextBusy } : {}),
+      agentStatus: 'idle',
+      agentStep: step,
+      pending: false,
+    })
   }
 
   /** 切会话时按 busySessions 恢复当前栏 pending/agentStatus */

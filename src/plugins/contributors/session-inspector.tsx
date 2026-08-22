@@ -49,18 +49,19 @@ interface InspectorPayload {
   workers?: InspectorWorker[]
 }
 
-const SOURCE_TONE: Record<ToolSourceId, string> = {
-  minimal: 'inspector-source-minimal',
-  live: 'inspector-source-live',
-  plugin: 'inspector-source-plugin',
-}
-
 export type SessionInspectorProps = {
   open: boolean
   onClose: () => void
   useSessionView: ReturnType<typeof bindSessionView>
   sessionView: SessionViewService
 }
+
+const tabClass = (active: boolean) =>
+  `inline-flex cursor-pointer items-center gap-1.5 rounded-[6px] border-0 px-2 py-1.5 text-[11px] font-semibold ${
+    active
+      ? 'bg-[color-mix(in_srgb,var(--dsw-business)_14%,transparent)] text-[var(--dsw-business)]'
+      : 'bg-transparent text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]'
+  }`
 
 export const SessionInspector = memo(function SessionInspector({
   open,
@@ -133,21 +134,27 @@ export const SessionInspector = memo(function SessionInspector({
 
   if (!open) return null
 
-  const tools = data?.tools ?? []
-  const sources = data?.sources ?? []
-  const workers = data?.workers ?? []
   const mode = data?.agentMode ?? 'standard'
+  const sources = data?.sources ?? []
+  const tools = data?.tools ?? []
+  const workers = data?.workers ?? []
 
   return (
-    <aside className="session-inspector" data-testid="session-inspector" aria-label="会话检查器">
-      <div className="session-inspector-head">
-        <div className="session-inspector-title">
+    <aside
+      className="flex min-h-0 min-w-0 flex-col border-l border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] text-[var(--dsw-label)]"
+      data-testid="session-inspector"
+      aria-label="会话检查器"
+    >
+      <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-[var(--dsw-border)] px-2.5">
+        <div className="flex min-w-0 items-center gap-2 text-[12px] font-semibold">
           <span>检查器</span>
-          <span className="session-inspector-type">{sessionType}</span>
+          <span className="rounded-full bg-[var(--dsw-muted-fill)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--dsw-label-3)] uppercase">
+            {sessionType}
+          </span>
         </div>
         <button
           type="button"
-          className="session-inspector-close"
+          className="grid size-6 cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
           title="收起右侧栏"
           aria-label="收起右侧栏"
           onClick={onClose}
@@ -156,12 +163,12 @@ export const SessionInspector = memo(function SessionInspector({
         </button>
       </div>
 
-      <div className="session-inspector-tabs" role="tablist" aria-label="检查器分区">
+      <div className="flex shrink-0 gap-1 border-b border-[var(--dsw-border)] px-2 py-1.5" role="tablist" aria-label="检查器分区">
         <button
           type="button"
           role="tab"
           aria-selected={tab === 'tools'}
-          className={`session-inspector-tab${tab === 'tools' ? ' is-active' : ''}`}
+          className={tabClass(tab === 'tools')}
           onClick={() => setTab('tools')}
         >
           <LuWrench className="size-3.5" />
@@ -172,7 +179,7 @@ export const SessionInspector = memo(function SessionInspector({
             type="button"
             role="tab"
             aria-selected={tab === 'live'}
-            className={`session-inspector-tab${tab === 'live' ? ' is-active' : ''}`}
+            className={tabClass(tab === 'live')}
             onClick={() => setTab('live')}
           >
             <LuRadio className="size-3.5" />
@@ -181,14 +188,19 @@ export const SessionInspector = memo(function SessionInspector({
         ) : null}
       </div>
 
-      <div className="session-inspector-body">
-        {error ? <div className="session-inspector-error">{error}</div> : null}
+      <div className="min-h-0 flex-1 overflow-auto p-2.5">
+        {error ? (
+          <div className="mb-2 rounded-[8px] bg-[color-mix(in_srgb,#c44_16%,transparent)] p-2 text-[11px] text-[#f08888]">
+            {error}
+          </div>
+        ) : null}
 
         {tab === 'tools' ? (
-          <div className="session-inspector-section">
-            <label className="session-inspector-field">
+          <div className="flex flex-col gap-2.5">
+            <label className="flex flex-col gap-1 text-[11px] text-[var(--dsw-label-3)]">
               <span>Agent mode</span>
               <select
+                className="rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-2 py-1.5 text-[12px] text-[var(--dsw-label)]"
                 value={mode}
                 disabled={busy}
                 data-testid="inspector-agent-mode"
@@ -201,27 +213,29 @@ export const SessionInspector = memo(function SessionInspector({
               </select>
             </label>
 
-            <div className="session-inspector-sources">
+            <div className="flex flex-col gap-px">
               {sources.map((source) => (
-                <div key={source.id} className={`session-inspector-source ${SOURCE_TONE[source.id]}`}>
-                  <div className="session-inspector-source-label">{source.label}</div>
-                  <div className="session-inspector-source-desc">{source.description}</div>
+                <div key={source.id} className="rounded-[8px] px-2 py-1.5 hover:bg-[var(--dsw-hover)]">
+                  <div className="text-[11px] font-semibold text-[var(--dsw-label-2)]">{source.label}</div>
+                  <div className="mt-0.5 text-[11px] leading-[1.4] text-[var(--dsw-label-3)]">{source.description}</div>
                 </div>
               ))}
             </div>
 
-            <ul className="session-inspector-tools" data-testid="inspector-tools">
+            <ul className="m-0 flex list-none flex-col gap-px p-0" data-testid="inspector-tools">
               {tools.map((tool) => (
                 <li
                   key={tool.name}
-                  className={`session-inspector-tool${tool.active ? ' is-active' : ''}`}
+                  className={`relative box-border flex h-[30px] min-h-[30px] w-full items-center gap-2 rounded-[8px] border-0 px-2 py-[5px] text-[12px] font-medium leading-[1.2] transition-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] ${
+                    tool.active ? 'text-[var(--dsw-label)]' : 'text-[var(--dsw-label-2)]'
+                  }`}
                   data-tool={tool.name}
                   title={tool.description || tool.name}
                 >
                   {tool.configurable ? (
                     <input
                       type="checkbox"
-                      className="session-inspector-tool-check"
+                      className="m-0 size-3.5 shrink-0 accent-[var(--dsw-business)]"
                       checked={(data?.extraTools ?? []).includes(tool.name)}
                       disabled={busy}
                       aria-label={`启用 ${tool.name}`}
@@ -229,15 +243,23 @@ export const SessionInspector = memo(function SessionInspector({
                     />
                   ) : (
                     <span
-                      className={`session-inspector-tool-icon${tool.active ? ' is-on' : ''}`}
+                      className={`grid size-4 shrink-0 place-items-center ${
+                        tool.active ? 'text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)]'
+                      }`}
                       aria-hidden
                     >
                       <LuWrench className="size-3.5" />
                     </span>
                   )}
-                  <span className="session-inspector-tool-name">{tool.name}</span>
-                  <span className="session-inspector-tool-source">{tool.source}</span>
-                  <span className={`session-inspector-state${tool.active ? ' is-on' : ''}`}>
+                  <span className="min-w-0 flex-1 truncate font-mono text-[11px] font-medium">{tool.name}</span>
+                  <span className="shrink-0 text-[10px] font-medium lowercase text-[var(--dsw-label-3)]">
+                    {tool.source}
+                  </span>
+                  <span
+                    className={`ml-auto shrink-0 text-[10px] font-semibold ${
+                      tool.active ? 'text-[var(--dsw-ok,#34d399)]' : 'text-[var(--dsw-label-3)]'
+                    }`}
+                  >
                     {tool.active ? '可用' : '未开'}
                   </span>
                 </li>
@@ -245,30 +267,37 @@ export const SessionInspector = memo(function SessionInspector({
             </ul>
           </div>
         ) : (
-          <div className="session-inspector-section">
-            <p className="session-inspector-hint">其它 chat session 的现场（只读，约 2s 刷新）。</p>
+          <div className="flex flex-col gap-2.5">
+            <p className="m-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
+              其它 chat session 的现场（只读，约 2s 刷新）。
+            </p>
             {workers.length === 0 ? (
-              <div className="session-inspector-empty">暂无 worker session</div>
+              <div className="text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">暂无 worker session</div>
             ) : (
-              <ul className="session-inspector-workers" data-testid="inspector-workers">
+              <ul className="m-0 flex list-none flex-col gap-px p-0" data-testid="inspector-workers">
                 {workers.map((worker) => (
-                  <li key={worker.id} className="session-inspector-worker">
-                    <div className="session-inspector-worker-top">
+                  <li key={worker.id} className="rounded-[8px] px-2 py-1.5 hover:bg-[var(--dsw-hover)]">
+                    <div className="flex min-w-0 items-center gap-1.5">
                       <SidebarMascot
                         size={22}
                         sessionId={worker.id}
                         identity={resolveSessionMascot(worker.id, worker.mascot)}
                         busy={worker.status === 'running'}
+                        animate={false}
                         title={worker.title}
                       />
-                      <span className="session-inspector-worker-title">{worker.title}</span>
+                      <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{worker.title}</span>
                       <span
-                        className={`session-inspector-state${worker.status === 'running' ? ' is-on' : ''}`}
+                        className={`ml-auto shrink-0 text-[10px] font-semibold ${
+                          worker.status === 'running'
+                            ? 'text-[var(--dsw-ok,#34d399)]'
+                            : 'text-[var(--dsw-label-3)]'
+                        }`}
                       >
                         {worker.status}
                       </span>
                     </div>
-                    <div className="session-inspector-worker-meta">
+                    <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] text-[var(--dsw-label-3)]">
                       {worker.project ? <span>{worker.project}</span> : null}
                       <span>
                         t{worker.turn ?? '—'} / s{worker.step ?? '—'}
@@ -277,7 +306,9 @@ export const SessionInspector = memo(function SessionInspector({
                       {worker.inboxPending > 0 ? <span>inbox {worker.inboxPending}</span> : null}
                     </div>
                     {worker.assistantText ? (
-                      <p className="session-inspector-worker-text">{worker.assistantText}</p>
+                      <p className="mt-1.5 mb-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
+                        {worker.assistantText}
+                      </p>
                     ) : null}
                   </li>
                 ))}
