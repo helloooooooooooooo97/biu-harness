@@ -1765,9 +1765,15 @@ body {
 }
 
 /*
- * Cursor 式：当前用户消息贴在滚动区顶部；
- * 下一条用户消息顶上来时，浏览器 sticky 自动「换人」。
+ * Cursor 式：当前用户消息贴在滚动区顶部。
+ * sticky 范围被限制在 .chat-turn（本回合）内，因此同时只会有一条用户消息贴顶。
  */
+.chat-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .chat-msg-row[data-chat-kind='user'] {
   position: sticky;
   top: 0;
