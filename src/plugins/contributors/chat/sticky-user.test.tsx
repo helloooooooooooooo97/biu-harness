@@ -74,6 +74,21 @@ describe('sticky user message markers', () => {
     expect(document.querySelector('[data-node-id="u-2"]')?.getAttribute('data-chat-kind')).toBe('user')
   })
 
+  it('puts sender avatar left of sent time on the turn bar', () => {
+    const onInspect = vi.fn()
+    const onFork = vi.fn(async () => {})
+    render(<ChatNodeList nodes={sampleNodes()} onInspect={onInspect} onFork={onFork} />)
+
+    const bar = document.querySelector('[data-node-id="u-1"] [data-testid="user-turn-bar"]')
+    const end = bar?.querySelector('.chat-user-turn-bar-end')
+    const kids = end ? [...end.children] : []
+    const senderIdx = kids.findIndex((el) => el.getAttribute('data-testid') === 'user-sender-human')
+    const timeIdx = kids.findIndex((el) => el.getAttribute('data-testid') === 'user-sent-at')
+    expect(senderIdx).toBeGreaterThanOrEqual(0)
+    expect(timeIdx).toBeGreaterThan(senderIdx)
+    expect(document.querySelector('[data-testid="user-bubble"] [data-testid="user-sender-human"]')).toBeNull()
+  })
+
   it('puts stats under user message; copy/fork stay on reply', () => {
     const onInspect = vi.fn()
     const onFork = vi.fn(async () => {})
