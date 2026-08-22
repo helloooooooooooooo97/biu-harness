@@ -130,11 +130,11 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
         </colgroup>
         <thead>
           <tr className="text-[10px] uppercase tracking-wide text-[var(--dsw-label-3)]">
-            <th className="px-2 py-1.5 font-medium">项目</th>
-            <th className="px-2 py-1.5 font-medium">谁</th>
-            <th className="px-3 py-1.5 font-medium">任务</th>
-            <th className="px-2 py-1.5 font-medium text-right">usage</th>
-            <th className="px-2 py-1.5 font-medium text-right">状态</th>
+            <th className="px-2 py-1.5 text-center font-medium">项目</th>
+            <th className="px-2 py-1.5 text-center font-medium">代理</th>
+            <th className="px-3 py-1.5 text-center font-medium">任务</th>
+            <th className="px-2 py-1.5 text-center font-medium">usage</th>
+            <th className="px-2 py-1.5 text-center font-medium">状态</th>
           </tr>
         </thead>
         <tbody>
@@ -156,14 +156,16 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
                   </div>
                 </td>
                 <td className="px-2 py-2 align-middle">
-                  <SidebarMascot
-                    size={22}
-                    sessionId={task.sessionId}
-                    identity={identity}
-                    busy={running}
-                    animate={false}
-                    title={task.title ?? identity.shape}
-                  />
+                  <div className="flex justify-center">
+                    <SidebarMascot
+                      size={22}
+                      sessionId={task.sessionId}
+                      identity={identity}
+                      busy={running}
+                      animate={false}
+                      title={task.title ?? identity.shape}
+                    />
+                  </div>
                 </td>
                 <td className="min-w-0 px-3 py-2 align-middle">
                   <div className="truncate font-semibold text-[var(--dsw-label)]">
