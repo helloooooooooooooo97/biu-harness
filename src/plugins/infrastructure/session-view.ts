@@ -339,7 +339,7 @@ export class SessionViewService extends Service {
     this.replace({ approvalMode: body.mode === 'hold' ? 'hold' : 'auto' })
   }
 
-  async newSession(opts: { type?: 'chat' | 'live' } = {}) {
+  async newSession(opts: { type?: 'chat' | 'live'; projectPath?: string } = {}) {
     const type = opts.type === 'live' ? 'live' : 'chat'
     const res = await fetch('/api/sessions', {
       method: 'POST',
@@ -348,6 +348,18 @@ export class SessionViewService extends Service {
     })
     const body = (await res.json()) as { id?: string }
     if (!body.id) throw new Error('无法创建 session')
+    const projectPath = opts.projectPath?.trim()
+    if (projectPath) {
+      const bind = await fetch(`/api/sessions/${body.id}/project`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ path: projectPath }),
+      })
+      if (!bind.ok) {
+        const err = (await bind.json().catch(() => ({}))) as { error?: string }
+        throw new Error(err.error || `绑定项目失败：${bind.status}`)
+      }
+    }
     await this.load(body.id, { view: 'chat' })
     await this.refreshSessions()
     return body.id
