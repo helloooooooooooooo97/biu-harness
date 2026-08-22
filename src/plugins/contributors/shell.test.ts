@@ -24,5 +24,7 @@ test('declares dsh-like sidebar, demos, dock, stage, trajectory, project, compos
   assert.equal(ctx.slots.specOf('composer')?.kind, 'single')
   assert.equal(ctx.slots.specOf('settings')?.kind, 'list')
   assert.equal(ctx.slots.specOf('log')?.kind, 'single')
+  assert.equal(ctx.slots.specOf('tasks')?.kind, 'single')
+  assert.equal(ctx.slots.specOf('inspector-tasks')?.kind, 'single')
   assert.equal(ctx.slots.list('root').length, 1)
 })

@@ -9,6 +9,16 @@
       "ui": "@hmr/greeter-ui",
       "togglable": true,
       "enabled": true
+    },
+    {
+      "id": "tasks",
+      "name": "任务",
+      "layer": "capability",
+      "blurb": "独立包：@hmr/tasks-host + @hmr/tasks-ui。Table/Board + SQLite + Agent tools。",
+      "package": "@hmr/tasks-host",
+      "ui": "@hmr/tasks-ui",
+      "togglable": true,
+      "enabled": true
     }
   ]
 }

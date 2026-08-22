@@ -32,6 +32,17 @@ function ModuleIcon({ id }: { id: AppModuleId }) {
       </svg>
     )
   }
+  if (id === 'tasks') {
+    return (
+      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 6h11M9 12h11M9 18h11M4.5 6.5l.8.8L7 5.5M4.5 12.5l.8.8L7 11.5M4.5 18.5l.8.8L7 17.5"
+        />
+      </svg>
+    )
+  }
   return (
     <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
       <path
@@ -319,6 +330,13 @@ function Shell(props: SlotProps) {
         >
           <DashboardModule />
         </div>
+        <div
+          className={activeModule === 'tasks' ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : 'hidden'}
+          aria-hidden={activeModule !== 'tasks'}
+          data-testid="tasks-module"
+        >
+          {props.renderSlot('tasks')}
+        </div>
       </main>
 
       {activeModule === 'agent' ? (
@@ -329,6 +347,7 @@ function Shell(props: SlotProps) {
           onClose={closeInspector}
           useSessionView={useSessionView}
           sessionView={sessionView}
+          renderSlot={props.renderSlot}
         />
       ) : null}
 
@@ -414,6 +433,8 @@ export function apply(ctx: Context) {
       settings: { kind: 'list' },
       log: { kind: 'single' },
       routes: { kind: 'single' },
+      tasks: { kind: 'single' },
+      'inspector-tasks': { kind: 'single' },
     },
     props: () => shellProps,
   })
