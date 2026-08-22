@@ -11,6 +11,9 @@ import {
   type SessionProject,
   type SessionRecord,
   type SessionType,
+  type SessionConfig,
+  mergeSessionConfig,
+  normalizeSessionConfig,
   normalizeSessionType,
 } from './session-types.ts'
 import {
@@ -22,8 +25,8 @@ import {
 } from './session-mascot.ts'
 import { rebuildHealedEvents } from './session-heal.ts'
 
-export type { SessionEvent, SessionEventBody, SessionProject, SessionRecord, SessionMascot, SessionType }
-export { SESSION_FORMAT_VERSION, normalizeSessionType }
+export type { SessionEvent, SessionEventBody, SessionProject, SessionRecord, SessionMascot, SessionType, SessionConfig }
+export { SESSION_FORMAT_VERSION, normalizeSessionType, normalizeSessionConfig, mergeSessionConfig }
 export {
   findOpenTurnStep,
   healInterruptedTurnBodies,
@@ -91,16 +94,24 @@ export class SessionsService extends Service {
     super(ctx, 'sessions')
   }
 
-  async create(id: string = crypto.randomUUID(), opts: { type?: SessionType } = {}) {
+  async create(
+    id: string = crypto.randomUUID(),
+    opts: { type?: SessionType; title?: string; config?: SessionConfig } = {},
+  ) {
     const used = await this.collectUsedMascots()
     const mascot = pickSessionMascot(id, used)
     const type = normalizeSessionType(opts.type)
+    const seeded = normalizeSessionConfig({
+      ...(opts.config ?? {}),
+      ...(opts.title ? { title: opts.title } : {}),
+    })
     const record: SessionRecord = {
       id,
       version: SESSION_FORMAT_VERSION,
       events: [{ type: 'session/open', version: SESSION_FORMAT_VERSION, seq: 0, ts: Date.now() }],
       mascot,
       type,
+      ...(seeded ? { config: seeded } : {}),
     }
     await this.persist(record)
     return record
@@ -140,6 +151,23 @@ export class SessionsService extends Service {
     const record = await this.get(id)
     if (!record) throw new Error(`unknown session: ${id}`)
     return record
+  }
+
+  /** 合并写入会话配置；传 null/空字符串可清除 title / systemPrompt。 */
+  async patchConfig(
+    id: string,
+    patch: SessionConfig & { title?: string | null; systemPrompt?: string | null },
+  ) {
+    const record = await this.require(id)
+    const next = mergeSessionConfig(record.config, patch)
+    if (next) record.config = next
+    else delete record.config
+    await this.persist(record)
+    return record
+  }
+
+  async rename(id: string, title: string) {
+    return this.patchConfig(id, { title })
   }
 
   async append(id: string, body: SessionEventBody) {

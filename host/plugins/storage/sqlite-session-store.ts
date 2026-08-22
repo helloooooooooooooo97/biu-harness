@@ -10,7 +10,10 @@ import {
   type SessionStore,
   type SessionSummary,
   type SessionType,
+  type SessionConfig,
+  normalizeSessionConfig,
   normalizeSessionType,
+  sessionDisplayTitle,
 } from '../core/session-types.ts'
 import { isSessionMascot, parseSessionMascot } from '../core/session-mascot.ts'
 
@@ -23,18 +26,11 @@ type SessionRow = {
   version: number
   project_json: string | null
   mascot_json: string | null
+  config_json: string | null
   type: string | null
   event_count: number
   title: string
   updated_at: number
-}
-
-function deriveTitle(events: SessionEvent[], fallbackId: string): string {
-  for (let i = events.length - 1; i >= 0; i -= 1) {
-    const event = events[i]
-    if (event?.type === 'user/message' && event.text.trim()) return event.text.slice(0, 48)
-  }
-  return fallbackId.slice(0, 8)
 }
 
 function parseProject(raw: string | null): SessionProject | undefined {
@@ -49,6 +45,15 @@ function parseProject(raw: string | null): SessionProject | undefined {
 function parseMascot(raw: string | null): SessionMascot | undefined {
   const parsed = parseSessionMascot(raw)
   return parsed && isSessionMascot(parsed) ? parsed : undefined
+}
+
+function parseConfig(raw: string | null): SessionConfig | undefined {
+  if (!raw) return undefined
+  try {
+    return normalizeSessionConfig(JSON.parse(raw))
+  } catch {
+    return undefined
+  }
 }
 
 /** SQLite session store：事件分行增量写入，避免整包 JSON 反复落盘。 */
@@ -93,13 +98,20 @@ export class SqliteSessionStore implements SessionStore {
     } catch {
       /* column already exists */
     }
+    try {
+      this.db.exec('ALTER TABLE sessions ADD COLUMN config_json TEXT')
+    } catch {
+      /* column already exists */
+    }
     return this
   }
 
   async load(id: string): Promise<SessionRecord | undefined> {
     const row = this.db
-      .prepare('SELECT id, version, project_json, mascot_json, type FROM sessions WHERE id = ?')
-      .get(id) as Pick<SessionRow, 'id' | 'version' | 'project_json' | 'mascot_json' | 'type'> | undefined
+      .prepare('SELECT id, version, project_json, mascot_json, config_json, type FROM sessions WHERE id = ?')
+      .get(id) as
+      | Pick<SessionRow, 'id' | 'version' | 'project_json' | 'mascot_json' | 'config_json' | 'type'>
+      | undefined
     if (!row) return undefined
     if (row.version !== SESSION_FORMAT_VERSION) {
       throw new Error(`unsupported session version ${row.version}`)
@@ -110,6 +122,7 @@ export class SqliteSessionStore implements SessionStore {
     const events = eventRows.map((item) => JSON.parse(item.event_json) as SessionEvent)
     const project = parseProject(row.project_json)
     const mascot = parseMascot(row.mascot_json)
+    const config = parseConfig(row.config_json)
     const type = normalizeSessionType(row.type) as SessionType
     return {
       id: row.id,
@@ -118,6 +131,7 @@ export class SqliteSessionStore implements SessionStore {
       type,
       ...(project ? { project } : {}),
       ...(mascot ? { mascot } : {}),
+      ...(config ? { config } : {}),
     }
   }
 
@@ -125,10 +139,11 @@ export class SqliteSessionStore implements SessionStore {
     if (record.version !== SESSION_FORMAT_VERSION) {
       throw new Error(`unsupported session version ${record.version}`)
     }
-    const title = deriveTitle(record.events, record.id)
+    const title = sessionDisplayTitle(record)
     const updatedAt = record.events.at(-1)?.ts ?? Date.now()
     const projectJson = record.project ? JSON.stringify(record.project) : null
     const mascotJson = record.mascot ? JSON.stringify(record.mascot) : null
+    const configJson = record.config ? JSON.stringify(record.config) : null
     const type = normalizeSessionType(record.type)
     const eventCount = record.events.length
 
@@ -136,12 +151,13 @@ export class SqliteSessionStore implements SessionStore {
       'INSERT INTO events (session_id, seq, ts, type, event_json) VALUES (?, ?, ?, ?, ?)',
     )
     const upsertSession = this.db.prepare(`
-      INSERT INTO sessions (id, version, project_json, mascot_json, type, event_count, title, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO sessions (id, version, project_json, mascot_json, config_json, type, event_count, title, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         version = excluded.version,
         project_json = excluded.project_json,
         mascot_json = excluded.mascot_json,
+        config_json = excluded.config_json,
         type = excluded.type,
         event_count = excluded.event_count,
         title = excluded.title,
@@ -169,7 +185,17 @@ export class SqliteSessionStore implements SessionStore {
 
     this.db.exec('BEGIN IMMEDIATE')
     try {
-      upsertSession.run(record.id, record.version, projectJson, mascotJson, type, eventCount, title, updatedAt)
+      upsertSession.run(
+        record.id,
+        record.version,
+        projectJson,
+        mascotJson,
+        configJson,
+        type,
+        eventCount,
+        title,
+        updatedAt,
+      )
 
       if (storedCount === 0) {
         if (eventCount > 0) replaceAll()
@@ -211,12 +237,13 @@ export class SqliteSessionStore implements SessionStore {
   async listSummaries(): Promise<SessionSummary[]> {
     const rows = this.db
       .prepare(
-        'SELECT id, version, project_json, mascot_json, type, event_count, title, updated_at FROM sessions ORDER BY updated_at DESC',
+        'SELECT id, version, project_json, mascot_json, config_json, type, event_count, title, updated_at FROM sessions ORDER BY updated_at DESC',
       )
       .all() as SessionRow[]
     return rows.map((row) => {
       const project = parseProject(row.project_json)
       const mascot = parseMascot(row.mascot_json)
+      const config = parseConfig(row.config_json)
       return {
         id: row.id,
         version: row.version,
@@ -226,6 +253,7 @@ export class SqliteSessionStore implements SessionStore {
         type: normalizeSessionType(row.type),
         ...(project ? { project } : {}),
         ...(mascot ? { mascot } : {}),
+        ...(config ? { config } : {}),
       }
     })
   }

@@ -55,6 +55,11 @@ export class AgentsService extends Service {
     this.llm = llm
   }
 
+  private resolveLlm(sessionId: string): LlmConfig {
+    const chat = this.ctx.get('chat') as { resolveLlm?: (id?: string | null) => LlmConfig } | undefined
+    return chat?.resolveLlm?.(sessionId) ?? this.llm
+  }
+
   /** Live progress：该 session 的 agent 是否正在跑回合。 */
   isBusy(sessionId: string) {
     return Boolean(this.lives.get(sessionId)?.running)
@@ -97,7 +102,7 @@ export class AgentsService extends Service {
         const claimed = claim(live.inbox)
         this.emitInbox(id)
         if (!claimed) break
-        last = await this.ctx.agentLoop.create(this.llm, id, live.abort.signal).run(claimed)
+        last = await this.ctx.agentLoop.create(this.resolveLlm(id), id, live.abort.signal).run(claimed)
       }
       return last
     }

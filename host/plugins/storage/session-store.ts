@@ -4,31 +4,24 @@ import { Service, type Context } from 'cordis'
 import '../../types.ts'
 import {
   SESSION_FORMAT_VERSION,
-  type SessionEvent,
   type SessionRecord,
   type SessionStore,
   type SessionSummary,
   normalizeSessionType,
+  sessionDisplayTitle,
 } from '../core/session-types.ts'
-
-function deriveTitle(events: SessionEvent[], fallbackId: string): string {
-  for (let i = events.length - 1; i >= 0; i -= 1) {
-    const event = events[i]
-    if (event?.type === 'user/message' && event.text.trim()) return event.text.slice(0, 48)
-  }
-  return fallbackId.slice(0, 8)
-}
 
 function toSummary(record: SessionRecord): SessionSummary {
   return {
     id: record.id,
     version: record.version,
     eventCount: record.events.length,
-    title: deriveTitle(record.events, record.id),
+    title: sessionDisplayTitle(record),
     updatedAt: record.events.at(-1)?.ts ?? 0,
     type: normalizeSessionType(record.type),
     ...(record.project ? { project: record.project } : {}),
     ...(record.mascot ? { mascot: record.mascot } : {}),
+    ...(record.config ? { config: record.config } : {}),
   }
 }
 
