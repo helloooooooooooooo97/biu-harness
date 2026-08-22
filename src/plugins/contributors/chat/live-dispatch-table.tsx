@@ -7,6 +7,7 @@ import {
 import type { DispatchedTaskRow } from '../../infrastructure/session-view.ts'
 import { SidebarMascot } from '../mascot/sidebar-mascot.tsx'
 import { resolveSessionMascot } from '../mascot/session-mascot.ts'
+import { FolderGlyph } from './project-panel.tsx'
 
 export type LiveDispatchTaskRow = DispatchedTaskRow
 
@@ -149,10 +150,17 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
               >
                 <td className="min-w-0 px-2 py-2 align-middle">
                   <div
-                    className="truncate text-[10px] text-[var(--dsw-label-2)]"
+                    className="flex min-w-0 items-center justify-center gap-1 text-[10px] text-[var(--dsw-label-2)]"
                     title={task.project?.path ?? task.project?.name}
                   >
-                    {task.project?.name ?? '—'}
+                    {task.project?.name ? (
+                      <>
+                        <FolderGlyph className="size-3 shrink-0 opacity-80" />
+                        <span className="min-w-0 truncate">{task.project.name}</span>
+                      </>
+                    ) : (
+                      <span>—</span>
+                    )}
                   </div>
                 </td>
                 <td className="px-2 py-2 align-middle">
