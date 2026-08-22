@@ -80,7 +80,7 @@ describe('sticky user message markers', () => {
     render(<ChatNodeList nodes={sampleNodes()} onInspect={onInspect} onFork={onFork} />)
 
     const bar = document.querySelector('[data-node-id="u-1"] [data-testid="user-turn-bar"]')
-    const end = bar?.querySelector('.chat-user-turn-bar-end')
+    const end = bar?.querySelector('[data-testid="user-turn-bar-end"]')
     const kids = end ? [...end.children] : []
     const senderIdx = kids.findIndex((el) => el.getAttribute('data-testid') === 'user-sender-human')
     const timeIdx = kids.findIndex((el) => el.getAttribute('data-testid') === 'user-sent-at')

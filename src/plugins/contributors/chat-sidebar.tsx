@@ -26,12 +26,15 @@ const SessionRow = memo(function SessionRow({
   item,
   active,
   busy,
+  animateBusy,
   view,
   onDelete,
 }: {
   item: SessionListItem
   active: boolean
   busy: boolean
+  /** 仅当前打开会话才跑完整 mascot 动画 */
+  animateBusy: boolean
   view: string
   onDelete: (item: SessionListItem) => void
 }) {
@@ -47,6 +50,7 @@ const SessionRow = memo(function SessionRow({
           sessionId={item.id}
           identity={identity}
           busy={busy}
+          animate={animateBusy}
           title={`${identity.shape} · ${identity.color}`}
         />
         <span className="min-w-0 flex-1 truncate font-medium">
@@ -102,7 +106,20 @@ export const ChatSidebar = memo(function ChatSidebar({
   const agentBusy = useSessionView(
     (state) => state.agentStatus === 'running' || state.pending,
   )
-  const busySessions = useSessionView((state) => state.busySessions)
+  // 用签名订阅，避免 busySessions 对象引用抖动导致整栏重渲
+  const busySignature = useSessionView((state) =>
+    Object.keys(state.busySessions)
+      .sort()
+      .join(','),
+  )
+  const busySessions = useMemo(() => {
+    const map: Record<string, true> = {}
+    if (!busySignature) return map
+    for (const id of busySignature.split(',')) {
+      if (id) map[id] = true
+    }
+    return map
+  }, [busySignature])
   const collapsedProjects = useSidebarCollapseStore((state) => state.collapsed)
   const toggleProjectGroup = useSidebarCollapseStore((state) => state.toggle)
   const expandProjectGroup = useSidebarCollapseStore((state) => state.expand)
@@ -248,6 +265,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                         item={item}
                         active={item.id === routeSessionId}
                         busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
+                        animateBusy={item.id === routeSessionId && agentBusy}
                         view={view}
                         onDelete={deleteChat}
                       />
