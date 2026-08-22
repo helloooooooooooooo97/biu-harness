@@ -23,6 +23,8 @@ export interface SessionListItem {
   eventCount: number
   updatedAt: number
   type?: 'chat' | 'live'
+  /** host 列表快照：该 session 的 agent 是否在跑 */
+  busy?: boolean
   project?: { name: string; path?: string; boundAt: number }
   mascot?: { shape: string; color: string }
 }
@@ -47,6 +49,8 @@ export interface SessionViewState {
   agentStatus: 'idle' | 'running'
   agentStep?: number
   pending: boolean
+  /** 任意 session 的 busy（含 Live 派工的 worker）；侧栏 mascot 用 */
+  busySessions: Record<string, true>
   approvalMode: ApprovalMode
   approvals: ApprovalItem[]
   project?: { name: string; path?: string; boundAt: number }
@@ -71,6 +75,7 @@ const empty: SessionViewState = {
   view: 'chat',
   agentStatus: 'idle',
   pending: false,
+  busySessions: {},
   approvalMode: 'auto',
   approvals: [],
   hasMoreOlder: false,
@@ -122,6 +127,7 @@ function sessionsEqual(a: SessionListItem[], b: SessionListItem[]): boolean {
       left.project?.name !== right.project?.name ||
       left.mascot?.shape !== right.mascot?.shape ||
       left.mascot?.color !== right.mascot?.color ||
+      Boolean(left.busy) !== Boolean(right.busy) ||
       (left.type ?? 'chat') !== (right.type ?? 'chat')
     ) {
       return false
@@ -287,12 +293,52 @@ export class SessionViewService extends Service {
     for (const fn of this.listeners) fn()
   }
 
-  setAgentStatus(status: 'idle' | 'running', step?: number) {
-    if (status === 'running') {
-      this.replace({ agentStatus: 'running', agentStep: step, pending: true })
+  setAgentStatus(status: 'idle' | 'running', step?: number, sessionId?: string) {
+    const id = sessionId ?? this.value.sessionId
+    const busySessions = { ...this.value.busySessions }
+    if (id) {
+      if (status === 'running') busySessions[id] = true
+      else delete busySessions[id]
+    }
+    // 显式指向「其它」session：只改 busySessions，不动当前会话 chrome
+    if (sessionId && this.value.sessionId && sessionId !== this.value.sessionId) {
+      this.replace({ busySessions })
       return
     }
-    this.replace({ agentStatus: 'idle', agentStep: step, pending: false })
+    if (status === 'running') {
+      this.replace({ busySessions, agentStatus: 'running', agentStep: step, pending: true })
+      return
+    }
+    this.replace({ busySessions, agentStatus: 'idle', agentStep: step, pending: false })
+  }
+
+  /** 切会话时按 busySessions 恢复当前栏 pending/agentStatus */
+  private busyFlagsFor(sessionId: string | null | undefined) {
+    const running = Boolean(sessionId && this.value.busySessions[sessionId])
+    return {
+      pending: running,
+      agentStatus: (running ? 'running' : 'idle') as 'idle' | 'running',
+    }
+  }
+
+  private syncBusyFromSessions(sessions: SessionListItem[]) {
+    const busySessions = { ...this.value.busySessions }
+    let changed = false
+    const currentId = this.value.sessionId
+    for (const item of sessions) {
+      if (item.busy) {
+        if (!busySessions[item.id]) {
+          busySessions[item.id] = true
+          changed = true
+        }
+      } else if (busySessions[item.id]) {
+        // 当前会话正在 pending 时别被列表抖动清掉（send 乐观更新早于 isBusy）
+        if (item.id === currentId && this.value.pending) continue
+        delete busySessions[item.id]
+        changed = true
+      }
+    }
+    return changed ? busySessions : null
   }
 
   upsertApproval(item: ApprovalItem) {
@@ -310,9 +356,21 @@ export class SessionViewService extends Service {
       if (!res.ok) return
       const body = (await res.json()) as { sessions?: SessionListItem[] }
       const next = Array.isArray(body.sessions) ? body.sessions : []
-      // 列表引用每次都新会打穿 Shell；无变化则跳过
-      if (sessionsEqual(this.value.sessions, next)) return
-      this.replace({ sessions: next })
+      const busySessions = this.syncBusyFromSessions(next)
+      const sessionsChanged = !sessionsEqual(this.value.sessions, next)
+      if (!sessionsChanged && !busySessions) return
+      const patch: Partial<SessionViewState> = {}
+      if (sessionsChanged) patch.sessions = next
+      if (busySessions) {
+        patch.busySessions = busySessions
+        const currentId = this.value.sessionId
+        if (currentId) {
+          const running = Boolean(busySessions[currentId])
+          patch.agentStatus = running ? 'running' : 'idle'
+          patch.pending = running
+        }
+      }
+      this.replace(patch)
     } catch {
       /* host 未就绪时忽略 */
     }
@@ -415,8 +473,7 @@ export class SessionViewService extends Service {
             view,
             focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
             error: undefined,
-            pending: false,
-            agentStatus: 'idle',
+            ...this.busyFlagsFor(sessionId),
             loadingOlder: false,
             trajectoryHasMore: false,
             trajectoryLoading: false,
@@ -432,8 +489,7 @@ export class SessionViewService extends Service {
             view,
             focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
             error: undefined,
-            pending: false,
-            agentStatus: 'idle',
+            ...this.busyFlagsFor(sessionId),
             hasMoreOlder: false,
             loadingOlder: false,
             trajectoryHasMore: false,
@@ -462,8 +518,7 @@ export class SessionViewService extends Service {
           view,
           focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
           error: undefined,
-          pending: false,
-          agentStatus: 'idle',
+          ...this.busyFlagsFor(sessionId),
           loadingOlder: false,
           trajectoryHasMore: false,
           trajectoryLoading: false,
@@ -479,8 +534,7 @@ export class SessionViewService extends Service {
           view,
           focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
           error: undefined,
-          pending: false,
-          agentStatus: 'idle',
+          ...this.busyFlagsFor(sessionId),
           hasMoreOlder: false,
           loadingOlder: false,
           trajectoryHasMore: false,
@@ -545,7 +599,7 @@ export class SessionViewService extends Service {
         return
       }
       this.replace({
-        sessionId: body.id,
+        sessionId: body.id || sessionId,
         events,
         nodes,
         project: body.project,
@@ -571,8 +625,7 @@ export class SessionViewService extends Service {
       view,
       focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
       error: undefined,
-      pending: false,
-      agentStatus: 'idle',
+      ...this.busyFlagsFor(sessionId),
       hasMoreOlder: cached.hasMoreOlder,
       loadingOlder: false,
       trajectoryHasMore: false,
@@ -771,8 +824,11 @@ export class SessionViewService extends Service {
     const wasActive = this.value.sessionId === id
     // 乐观更新：先从侧栏拿掉，避免等网络才「卡一下消失」
     this.dropCache(id)
+    const busySessions = { ...this.value.busySessions }
+    delete busySessions[id]
     this.replace({
       sessions: prevSessions.filter((item) => item.id !== id),
+      busySessions,
       ...(wasActive
         ? {
             sessionId: null,
@@ -853,7 +909,8 @@ export class SessionViewService extends Service {
       }
       return
     }
-    this.replace({ pending: true, agentStatus: 'running', error: undefined })
+    this.setAgentStatus('running', undefined, sessionId)
+    this.replace({ error: undefined })
     try {
       const res = await fetch(`/api/sessions/${sessionId}/messages`, {
         method: 'POST',
@@ -876,7 +933,8 @@ export class SessionViewService extends Service {
       } catch {
         /* 加载失败时仍展示下方 error */
       }
-      this.replace({ error: String(error), pending: false, agentStatus: 'idle' })
+      this.setAgentStatus('idle', undefined, sessionId)
+      this.replace({ error: String(error) })
       throw error
     }
     // 成功后不要在 finally 里强行 idle：agent 仍在跑，状态交给 WS agent/status
@@ -886,7 +944,7 @@ export class SessionViewService extends Service {
     const sessionId = this.value.sessionId
     if (!sessionId) return
     await fetch(`/api/sessions/${sessionId}/cancel`, { method: 'POST' })
-    this.replace({ pending: false, agentStatus: 'idle' })
+    this.setAgentStatus('idle', undefined, sessionId)
   }
 
   async decideApproval(id: string, allow: boolean) {

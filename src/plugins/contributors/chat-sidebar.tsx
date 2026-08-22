@@ -102,6 +102,7 @@ export const ChatSidebar = memo(function ChatSidebar({
   const agentBusy = useSessionView(
     (state) => state.agentStatus === 'running' || state.pending,
   )
+  const busySessions = useSessionView((state) => state.busySessions)
   const collapsedProjects = useSidebarCollapseStore((state) => state.collapsed)
   const toggleProjectGroup = useSidebarCollapseStore((state) => state.toggle)
   const expandProjectGroup = useSidebarCollapseStore((state) => state.expand)
@@ -246,7 +247,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                         key={item.id}
                         item={item}
                         active={item.id === routeSessionId}
-                        busy={item.id === routeSessionId && agentBusy}
+                        busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
                         view={view}
                         onDelete={deleteChat}
                       />
