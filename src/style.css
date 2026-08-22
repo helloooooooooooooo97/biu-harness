@@ -1386,8 +1386,15 @@ body {
 
 /* 右侧主对话区：统一正文字号，子元素用 em 相对缩放 */
 .chat-stage {
+  /* 把 sticky 用户消息的 z-index 关在滚动层内，避免压过底部输入栏/悬浮按钮 */
+  isolation: isolate;
   font-size: var(--dsw-chat-font-size);
   line-height: var(--dsw-chat-line-height);
+}
+
+/* 底部输入栏 + dock 悬浮控件：叠在对话内容之上 */
+.chat-composer-dock {
+  z-index: 20;
 }
 
 /* Chat messages — Cursor-like: full-width gray user row, bare assistant + actions */
@@ -1691,7 +1698,8 @@ body {
 .chat-msg-row[data-chat-kind='user'] {
   position: sticky;
   top: 0;
-  z-index: 6;
+  /* 仅需盖住本滚动层内的回复；不得高于 .chat-composer-dock */
+  z-index: 1;
   margin-top: -4px;
   padding-top: 8px;
   padding-bottom: 10px;
