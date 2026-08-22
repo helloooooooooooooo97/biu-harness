@@ -105,11 +105,21 @@ export class SnapshotService extends Service {
           view?.upsertApproval(item)
         }
         if (parsed.type === 'agent') {
-          const status = parsed.payload as { status: 'idle' | 'running'; step?: number }
+          const status = parsed.payload as {
+            sessionId?: string
+            status: 'idle' | 'running'
+            step?: number
+          }
           const view = this.ctx.get('sessionView') as
-            | { setAgentStatus: (status: 'idle' | 'running', step?: number) => void }
+            | {
+                setAgentStatus: (
+                  status: 'idle' | 'running',
+                  step?: number,
+                  sessionId?: string,
+                ) => void
+              }
             | undefined
-          view?.setAgentStatus(status.status, status.step)
+          view?.setAgentStatus(status.status, status.step, status.sessionId)
         }
       }
       ws.onclose = () => {

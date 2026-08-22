@@ -73,7 +73,7 @@ declare module 'cordis' {
   interface Events {
     'http/ready'(info: { port: number }): void
     'hub/change'(): void
-    'agent/status'(payload: { status: 'idle' | 'running'; step?: number }): void
+    'agent/status'(payload: { sessionId: string; status: 'idle' | 'running'; step?: number }): void
     'agent/pre-step'(req: PreStepReq, next: () => PreStepReq): PreStepReq
     'session/event'(payload: { sessionId: string; event: SessionEvent }): void
     'tools/pre-execute'(req: ToolRequest, next: () => ToolRequest): ToolRequest

@@ -225,6 +225,7 @@ export function apply(ctx: Context) {
         title: item.title,
         updatedAt: item.updatedAt,
         type: item.type ?? 'chat',
+        busy: ctx.agents.isBusy(item.id),
         ...(item.project ? { project: item.project } : {}),
         ...(item.mascot ? { mascot: item.mascot } : {}),
       })),

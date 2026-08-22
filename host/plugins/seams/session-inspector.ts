@@ -34,6 +34,7 @@ export interface InspectorWorkerRow {
   updatedAt: number
   inboxPending: number
   project?: string
+  mascot?: { shape: string; color: string }
 }
 
 const SOURCE_INFO: InspectorSourceInfo[] = [
@@ -125,6 +126,7 @@ export async function buildLiveWorkers(ctx: Context, selfId: string): Promise<In
       updatedAt: progress.updatedAt || item.updatedAt,
       inboxPending: progress.inboxPending,
       project: item.project?.name,
+      ...(item.mascot ? { mascot: item.mascot } : {}),
     })
   }
   workers.sort((a, b) => {

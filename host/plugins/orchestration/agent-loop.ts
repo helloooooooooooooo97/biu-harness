@@ -62,7 +62,7 @@ export class AgentLoop implements AgentRunner {
     req = this.ctx.waterfall('agent/pre-step', req, () => req)
     if (req.reject) {
       await session.append(this.sessionId, { type: 'turn/end', turn, reason: req.reject })
-      this.ctx.emit('agent/status', { status: 'idle' })
+      this.ctx.emit('agent/status', { sessionId: this.sessionId, status: 'idle' })
       return { text: req.reject, steps: [] }
     }
     if (!req.messages.length) {
@@ -113,7 +113,7 @@ export class AgentLoop implements AgentRunner {
         await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'cancelled' })
         throw new Error('cancelled')
       }
-      this.ctx.emit('agent/status', { status: 'running', step })
+      this.ctx.emit('agent/status', { sessionId: this.sessionId, status: 'running', step })
       await session.append(this.sessionId, { type: 'step/start', turn, step })
 
       const messages = session.deriveMessages(this.sessionId)
@@ -129,7 +129,7 @@ export class AgentLoop implements AgentRunner {
         await flushChunks()
         if (this.signal.aborted) {
           await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'cancelled' })
-          this.ctx.emit('agent/status', { status: 'idle' })
+          this.ctx.emit('agent/status', { sessionId: this.sessionId, status: 'idle' })
           throw new Error('cancelled')
         }
         const detail = String(error)
@@ -137,7 +137,7 @@ export class AgentLoop implements AgentRunner {
         await session.append(this.sessionId, { type: 'assistant/message', text })
         await session.append(this.sessionId, { type: 'step/end', turn, step })
         await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'llm-error' })
-        this.ctx.emit('agent/status', { status: 'idle' })
+        this.ctx.emit('agent/status', { sessionId: this.sessionId, status: 'idle' })
         return { text, steps }
       }
 
@@ -150,7 +150,7 @@ export class AgentLoop implements AgentRunner {
         })
         await session.append(this.sessionId, { type: 'step/end', turn, step })
         await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'complete' })
-        this.ctx.emit('agent/status', { status: 'idle', step })
+        this.ctx.emit('agent/status', { sessionId: this.sessionId, status: 'idle', step })
         return { text: final, steps }
       }
 

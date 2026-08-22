@@ -4,6 +4,8 @@ import {
   bindSessionView,
   type SessionViewService,
 } from '../infrastructure/session-view.ts'
+import { SidebarMascot } from './mascot/sidebar-mascot.tsx'
+import { resolveSessionMascot } from './mascot/session-mascot.ts'
 
 type ToolSourceId = 'minimal' | 'live' | 'plugin'
 type AgentMode = 'standard' | 'minimal'
@@ -34,6 +36,7 @@ interface InspectorWorker {
   updatedAt: number
   inboxPending: number
   project?: string
+  mascot?: { shape: string; color: string }
 }
 
 interface InspectorPayload {
@@ -249,6 +252,13 @@ export const SessionInspector = memo(function SessionInspector({
                 {workers.map((worker) => (
                   <li key={worker.id} className="session-inspector-worker">
                     <div className="session-inspector-worker-top">
+                      <SidebarMascot
+                        size={22}
+                        sessionId={worker.id}
+                        identity={resolveSessionMascot(worker.id, worker.mascot)}
+                        busy={worker.status === 'running'}
+                        title={worker.title}
+                      />
                       <span className="session-inspector-worker-title">{worker.title}</span>
                       <span
                         className={`session-inspector-state${worker.status === 'running' ? ' is-on' : ''}`}

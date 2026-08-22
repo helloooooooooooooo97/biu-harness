@@ -96,9 +96,29 @@ test('send wake keeps running after HTTP so WS agent/status owns idle', async ()
   await view.send('hi')
   assert.equal(view.get().agentStatus, 'running')
   assert.equal(view.get().pending, true)
+  assert.equal(view.get().busySessions.s1, true)
   view.setAgentStatus('idle')
   assert.equal(view.get().agentStatus, 'idle')
   assert.equal(view.get().pending, false)
+  assert.equal(view.get().busySessions.s1, undefined)
+})
+
+test('setAgentStatus with other sessionId only updates busySessions', async () => {
+  mockFetch({
+    '/api/sessions': () => ({ sessions: [] }),
+    '/api/approvals': () => ({ mode: 'auto', pending: [] }),
+  })
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  view.ingest('live-1', { type: 'session/open', version: 1, seq: 0, ts: 1 })
+  assert.equal(view.get().sessionId, 'live-1')
+  view.setAgentStatus('running', 0, 'worker-2')
+  assert.equal(view.get().agentStatus, 'idle')
+  assert.equal(view.get().pending, false)
+  assert.equal(view.get().busySessions['worker-2'], true)
+  view.setAgentStatus('idle', undefined, 'worker-2')
+  assert.equal(view.get().busySessions['worker-2'], undefined)
 })
 
 test('inspectCall switches to trajectory with focus', async () => {
