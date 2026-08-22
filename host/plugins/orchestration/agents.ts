@@ -22,11 +22,23 @@ export interface AgentHandle {
   dispose(): void
 }
 
+export type InboxRow = {
+  id: string
+  kind: 'wake' | 'inject'
+  text: string
+}
+
 interface LiveAgent {
   handle: AgentHandle
   inbox: ClaimedInput[]
   running?: Promise<void>
   abort: AbortController
+}
+
+let inboxSeq = 0
+function nextInboxId() {
+  inboxSeq += 1
+  return `inq-${Date.now().toString(36)}-${inboxSeq}`
 }
 
 export class AgentsService extends Service {
@@ -50,6 +62,21 @@ export class AgentsService extends Service {
     return this.lives.get(sessionId)?.inbox.length ?? 0
   }
 
+  /** 当前尚未 claim 的排队消息（wake / inject）。 */
+  listInbox(sessionId: string): InboxRow[] {
+    const live = this.lives.get(sessionId)
+    if (!live) return []
+    return live.inbox.map((item) => ({
+      id: item.id ?? nextInboxId(),
+      kind: item.kind,
+      text: item.text,
+    }))
+  }
+
+  private emitInbox(sessionId: string) {
+    this.ctx.emit('agent/inbox', { sessionId, inbox: this.listInbox(sessionId) })
+  }
+
   async create(sessionId?: string): Promise<AgentHandle> {
     const id = sessionId ?? (await this.ctx.sessions.create()).id
     if (!(await this.ctx.sessions.get(id))) await this.ctx.sessions.create(id)
@@ -66,6 +93,7 @@ export class AgentsService extends Service {
       let last: AgentTurn = { text: '', steps: [] }
       while (true) {
         const claimed = claim(live.inbox)
+        this.emitInbox(id)
         if (!claimed) break
         last = await this.ctx.agentLoop.create(this.llm, id, live.abort.signal).run(claimed)
       }
@@ -79,12 +107,23 @@ export class AgentsService extends Service {
         if (!trimmed) return { text: '请先输入内容。', steps: [] }
         const extraTools = sanitizeExtraTools(opts?.extraTools)
         const wait = opts?.wait !== false
-        live.inbox.push({
-          kind: 'wake',
+        const entry = {
           text: trimmed,
+          id: nextInboxId(),
           ...(extraTools.length ? { extraTools } : {}),
           ...(opts?.sender ? { sender: opts.sender } : {}),
-        })
+        }
+
+        // Cursor 同款：忙碌且已有 wake 排队时，再发送 → inject（并入该 wake 的下一回合）
+        if (live.running && live.inbox.some((item) => item.kind === 'wake')) {
+          live.inbox.push({ kind: 'inject', ...entry })
+          this.emitInbox(id)
+          return { text: '', steps: [] }
+        }
+
+        live.inbox.push({ kind: 'wake', ...entry })
+        this.emitInbox(id)
+
         if (live.running) {
           if (!wait) return { text: '', steps: [] }
           await live.running
@@ -116,14 +155,17 @@ export class AgentsService extends Service {
         live.inbox.push({
           kind: 'inject',
           text: trimmed,
+          id: nextInboxId(),
           ...(extraTools.length ? { extraTools } : {}),
           ...(opts?.sender ? { sender: opts.sender } : {}),
         })
+        this.emitInbox(id)
       },
       cancel: () => live.abort.abort(),
       dispose: () => {
         live.abort.abort()
         this.lives.delete(id)
+        this.ctx.emit('agent/inbox', { sessionId: id, inbox: [] })
       },
     }
     live.handle = handle

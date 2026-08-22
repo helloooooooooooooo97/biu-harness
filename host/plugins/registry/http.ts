@@ -69,6 +69,7 @@ export class HttpService extends Service {
       })
       ctx.on('session/event', (payload) => this.broadcast('session', payload))
       ctx.on('agent/status', (payload) => this.broadcast('agent', payload))
+      ctx.on('agent/inbox', (payload) => this.broadcast('inbox', payload))
       server.on('error', (error: NodeJS.ErrnoException) => {
         if (error.code === 'EADDRINUSE') {
           ctx.logger('http').error(

@@ -50,6 +50,13 @@ export type DispatchedTaskRow = {
   preview?: string
 }
 
+/** 当前 session agent inbox 中尚未 claim 的排队消息 */
+export type InboxQueueItem = {
+  id: string
+  kind: 'wake' | 'inject'
+  text: string
+}
+
 /** 与 host DEFAULT_TAIL_TURNS 对齐；仅 loadOlder 分页仍用窗口拉取 */
 export const SESSION_TAIL_TURNS = 24
 export const TRAJECTORY_TAIL_TURNS = 48
@@ -67,6 +74,8 @@ export interface SessionViewState {
   agentStatus: 'idle' | 'running'
   agentStep?: number
   pending: boolean
+  /** 忙碌时已入队、尚未开始的 wake/inject */
+  inbox: InboxQueueItem[]
   /** 任意 session 的 busy（含 Live 派工的 worker）；侧栏 mascot 用 */
   busySessions: Record<string, true>
   approvalMode: ApprovalMode
@@ -99,6 +108,7 @@ const empty: SessionViewState = {
   view: 'chat',
   agentStatus: 'idle',
   pending: false,
+  inbox: [],
   busySessions: {},
   approvalMode: 'auto',
   approvals: [],
@@ -276,6 +286,7 @@ export class SessionViewService extends Service {
         focusCallId: undefined,
         pending: false,
         agentStatus: 'idle',
+        inbox: [],
         project: undefined,
         hasMoreOlder: false,
         loadingOlder: false,
@@ -757,6 +768,7 @@ export class SessionViewService extends Service {
       })
       this.syncDispatchedPoll()
       if (view === 'debug') void this.ensureTrajectory()
+      void this.refreshInbox(sessionId)
     } catch {
       /* 静默 */
     }
@@ -772,6 +784,7 @@ export class SessionViewService extends Service {
       view,
       focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
       error: undefined,
+      inbox: sessionId === this.value.sessionId ? this.value.inbox : [],
       ...this.busyFlagsFor(sessionId),
       hasMoreOlder: cached.hasMoreOlder,
       loadingOlder: false,
@@ -784,6 +797,7 @@ export class SessionViewService extends Service {
       switchingSession: false,
     })
     this.syncDispatchedPoll()
+    void this.refreshInbox(sessionId)
   }
 
   private stashCurrent() {
@@ -1052,6 +1066,7 @@ export class SessionViewService extends Service {
       approvals: [],
       pending: false,
       agentStatus: 'idle',
+      inbox: [],
       view: 'chat',
       focusCallId: undefined,
       project: undefined,
@@ -1070,23 +1085,35 @@ export class SessionViewService extends Service {
     if (!content) return
     const sessionId = await this.ensureSession()
     const tools = [...new Set(extraTools.map((name) => name.trim()).filter(Boolean))]
-    const body =
-      kind === 'inject'
-        ? { text: content, kind: 'inject' as const, ...(tools.length ? { extraTools: tools } : {}) }
-        : { text: content, ...(tools.length ? { extraTools: tools } : {}) }
-    if (kind === 'inject') {
+    const busy = this.value.pending || this.value.agentStatus === 'running'
+    const hasWake = this.value.inbox.some((item) => item.kind === 'wake')
+    // 忙碌且已有 wake：再发 → inject；否则 wake。忙碌时 wait:false 立刻返回。
+    const effectiveKind: 'wake' | 'inject' =
+      kind === 'inject' || (kind === 'wake' && busy && hasWake) ? 'inject' : 'wake'
+    const body: Record<string, unknown> =
+      effectiveKind === 'inject'
+        ? { text: content, kind: 'inject', ...(tools.length ? { extraTools: tools } : {}) }
+        : {
+            text: content,
+            ...(busy ? { wait: false } : {}),
+            ...(tools.length ? { extraTools: tools } : {}),
+          }
+
+    if (effectiveKind === 'inject') {
       const res = await fetch(`/api/sessions/${sessionId}/messages`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
       })
-      const data = (await res.json()) as { error?: string }
+      const data = (await res.json()) as { error?: string; inbox?: InboxQueueItem[] }
       if (!res.ok) {
         this.replace({ error: data.error || `注入失败：${res.status}` })
         throw new Error(data.error || `注入失败：${res.status}`)
       }
+      if (Array.isArray(data.inbox)) this.setInbox(data.inbox, sessionId)
       return
     }
+
     this.setAgentStatus('running', undefined, sessionId)
     this.replace({ error: undefined })
     try {
@@ -1095,8 +1122,19 @@ export class SessionViewService extends Service {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
       })
-      const data = (await res.json()) as { error?: string; sessionId?: string; text?: string }
+      const data = (await res.json()) as {
+        error?: string
+        sessionId?: string
+        text?: string
+        queued?: boolean
+        inbox?: InboxQueueItem[]
+      }
       if (!res.ok) throw new Error(data.error || `发送失败：${res.status}`)
+      if (Array.isArray(data.inbox)) this.setInbox(data.inbox, data.sessionId ?? sessionId)
+      if (data.queued) {
+        // 已入队：不阻塞等回合结束，状态交给 WS
+        return
+      }
       if (data.sessionId && data.sessionId !== sessionId) {
         await this.load(data.sessionId, { view: 'chat', wait: true })
       } else {
@@ -1116,6 +1154,29 @@ export class SessionViewService extends Service {
       throw error
     }
     // 成功后不要在 finally 里强行 idle：agent 仍在跑，状态交给 WS agent/status
+  }
+
+  setInbox(inbox: InboxQueueItem[], sessionId?: string) {
+    const id = sessionId ?? this.value.sessionId
+    if (id && this.value.sessionId && id !== this.value.sessionId) return
+    const next = Array.isArray(inbox) ? inbox : []
+    if (JSON.stringify(next) === JSON.stringify(this.value.inbox)) return
+    this.replace({ inbox: next })
+  }
+
+  async refreshInbox(sessionId = this.value.sessionId) {
+    if (!sessionId) {
+      this.replace({ inbox: [] })
+      return
+    }
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/inbox`)
+      if (!res.ok || this.value.sessionId !== sessionId) return
+      const body = (await res.json()) as { inbox?: InboxQueueItem[] }
+      this.setInbox(Array.isArray(body.inbox) ? body.inbox : [], sessionId)
+    } catch {
+      /* 静默 */
+    }
   }
 
   async cancel() {

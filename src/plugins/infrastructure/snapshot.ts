@@ -121,6 +121,23 @@ export class SnapshotService extends Service {
             | undefined
           view?.setAgentStatus(status.status, status.step, status.sessionId)
         }
+        if (parsed.type === 'inbox') {
+          const detail = parsed.payload as {
+            sessionId?: string
+            inbox?: Array<{ id: string; kind: 'wake' | 'inject'; text: string }>
+          }
+          const view = this.ctx.get('sessionView') as
+            | {
+                setInbox: (
+                  inbox: Array<{ id: string; kind: 'wake' | 'inject'; text: string }>,
+                  sessionId?: string,
+                ) => void
+              }
+            | undefined
+          if (detail.sessionId && Array.isArray(detail.inbox)) {
+            view?.setInbox(detail.inbox, detail.sessionId)
+          }
+        }
       }
       ws.onclose = () => {
         if (import.meta.env.MODE === 'test') return

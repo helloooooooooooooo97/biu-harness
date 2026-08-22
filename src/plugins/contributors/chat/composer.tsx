@@ -67,6 +67,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   const [modelBusy, setModelBusy] = useState(false)
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const pending = useSessionView((state) => state.pending)
+  const inbox = useSessionView((state) => state.inbox)
   const sessionView = props.sessionView as SessionViewService
   const navigate = useNavigate()
   const location = useLocation()
@@ -263,7 +264,6 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
-    if (pending) return
     if (slash?.open && filtered.length) {
       const item = filtered[activeIndex] ?? filtered[0]
       if (item) pickTool(item.name)
@@ -321,13 +321,31 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
 
     if (event.key !== 'Enter' || event.shiftKey) return
     if (event.nativeEvent.isComposing || event.keyCode === 229) return
-    if (pending) return
     event.preventDefault()
     event.currentTarget.form?.requestSubmit()
   }
 
   return (
-    <form className={`composer-pill${expanded ? ' is-expanded' : ''}`} onSubmit={onSubmit}>
+    <div className="composer-stack">
+      {inbox.length > 0 ? (
+        <div className="composer-inbox" aria-label="排队中">
+          <div className="composer-inbox-head">排队中 · {inbox.length}</div>
+          <ul className="composer-inbox-list">
+            {inbox.map((item) => (
+              <li key={item.id} className="composer-inbox-item">
+                <span className={`composer-inbox-kind composer-inbox-kind-${item.kind}`}>
+                  {item.kind}
+                </span>
+                <span className="composer-inbox-text" title={item.text}>
+                  {item.text}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <form className={`composer-pill${expanded ? ' is-expanded' : ''}`} onSubmit={onSubmit}>
       {slash?.open ? (
         <div className="composer-slash" role="listbox" aria-label="工具列表">
           <div className="composer-slash-head">工具 · 输入过滤 · Enter 选用</div>
@@ -392,7 +410,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           className="composer-pill-input"
           defaultValue=""
           rows={1}
-          placeholder={pending ? 'Add a follow up' : 'Add a follow up'}
+          placeholder={pending ? 'Add a follow up…' : 'Add a follow up'}
           aria-label="对话输入"
           aria-expanded={Boolean(slash?.open)}
           onChange={(event) => {
@@ -451,21 +469,21 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
             >
               <span className="composer-stop-square" aria-hidden />
             </button>
-          ) : (
-            <button
-              type="submit"
-              className="composer-send"
-              disabled={!canSubmit}
-              aria-label="Send"
-              title="发送"
-            >
-              <svg viewBox="0 0 24 24" className="size-3.5" fill="currentColor" aria-hidden>
-                <path d="M3.4 20.6 21 12 3.4 3.4 3 10.3 15 12 3 13.7z" />
-              </svg>
-            </button>
-          )}
+          ) : null}
+          <button
+            type="submit"
+            className="composer-send"
+            disabled={!canSubmit}
+            aria-label={pending ? 'Queue' : 'Send'}
+            title={pending ? (inbox.some((item) => item.kind === 'wake') ? '注入排队' : '加入排队') : '发送'}
+          >
+            <svg viewBox="0 0 24 24" className="size-3.5" fill="currentColor" aria-hidden>
+              <path d="M3.4 20.6 21 12 3.4 3.4 3 10.3 15 12 3 13.7z" />
+            </svg>
+          </button>
         </div>
       </div>
     </form>
+    </div>
   )
 })

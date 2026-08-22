@@ -435,6 +435,7 @@ export function apply(ctx: Context) {
     const payload = (await route.json()) as {
       text?: string
       kind?: 'wake' | 'inject'
+      wait?: boolean
       extraTools?: string[]
     }
     const agent = await ctx.agents.create(route.params.id)
@@ -443,17 +444,36 @@ export function apply(ctx: Context) {
     const extraTools = Array.isArray(payload.extraTools)
       ? [...new Set(payload.extraTools.map((name) => String(name).trim()).filter(Boolean))]
       : []
-    const sendOpts = extraTools.length ? { extraTools } : undefined
+    const sendOpts = {
+      ...(extraTools.length ? { extraTools } : {}),
+      ...(payload.wait === false ? { wait: false as const } : {}),
+    }
     if (payload.kind === 'inject') {
       agent.inject(payload.text ?? '', sendOpts)
-      return route.send(200, { sessionId: agent.sessionId, queued: true })
+      return route.send(200, {
+        sessionId: agent.sessionId,
+        queued: true,
+        inbox: ctx.agents.listInbox(agent.sessionId),
+      })
     }
     try {
       const turn = await agent.send(payload.text ?? '', sendOpts)
-      route.send(200, { sessionId: agent.sessionId, text: turn.text, steps: turn.steps })
+      route.send(200, {
+        sessionId: agent.sessionId,
+        text: turn.text,
+        steps: turn.steps,
+        queued: Boolean(sendOpts.wait === false || ctx.agents.isBusy(agent.sessionId)),
+        inbox: ctx.agents.listInbox(agent.sessionId),
+      })
     } catch (error) {
       route.send(500, { error: String(error) })
     }
+  })
+  ctx.http.route('GET', '/api/sessions/:id/inbox', async (route) => {
+    const id = route.params.id
+    if (!(await ctx.sessions.get(id))) return route.send(404, { error: 'unknown session' })
+    await ctx.agents.create(id)
+    route.send(200, { sessionId: id, inbox: ctx.agents.listInbox(id) })
   })
   ctx.http.route('POST', '/api/sessions/:id/cancel', (route) => {
     ctx.agents.get(route.params.id)?.cancel()
