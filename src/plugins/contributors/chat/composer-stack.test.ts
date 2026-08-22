@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const root = resolve(import.meta.dirname, '../../..')
+const root = resolve(import.meta.dirname, '../../../..')
 
 describe('composer dock stacking above sticky user', () => {
   it('isolates chat-stage and keeps composer-dock above sticky user z-index', () => {
