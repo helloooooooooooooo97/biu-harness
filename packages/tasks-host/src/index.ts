@@ -222,7 +222,7 @@ async function resolveCreator(host: HostCtx, explicit?: TaskActor): Promise<Task
 
 async function resolveAssignee(
   host: HostCtx,
-  input: { assignee?: TaskActor | null; assigneeSessionId?: string | null },
+  input: { assignee?: unknown; assigneeSessionId?: string | null },
 ): Promise<{ assignee: TaskActor | null; touchAssignedAt: boolean }> {
   if ('assigneeSessionId' in input) {
     const sid = input.assigneeSessionId?.trim()
@@ -234,9 +234,71 @@ async function resolveAssignee(
     return { assignee: { kind: 'agent', sessionId: sid, name: sid.slice(0, 8) }, touchAssignedAt: true }
   }
   if ('assignee' in input) {
-    return { assignee: normalizeActor(input.assignee), touchAssignedAt: true }
+    const assignee = await coerceAssigneeArg(host, input.assignee)
+    return { assignee, touchAssignedAt: true }
   }
   return { assignee: null, touchAssignedAt: false }
+}
+
+/**
+ * 工具 / API 入参归一：
+ * - null / '' → 清空
+ * - string 人名 → user
+ * - string sessionId / UUID → agent（查 sessions）
+ * - JSON 字符串对象 / actor 对象 → agent|user（带 sessionId 时补全 mascot/name）
+ */
+export async function coerceAssigneeArg(host: HostCtx, value: unknown): Promise<TaskActor | null> {
+  if (value == null) return null
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        return coerceAssigneeArg(host, JSON.parse(trimmed))
+      } catch {
+        /* fall through as plain name */
+      }
+    }
+    if (/^[0-9a-f]{8}-[0-9a-f-]+$/i.test(trimmed) || (trimmed.length >= 20 && !/\s/.test(trimmed))) {
+      const resolved = await resolveAssignee(host, { assigneeSessionId: trimmed })
+      return resolved.assignee
+    }
+    return { kind: 'user', name: trimmed.slice(0, 80) }
+  }
+  if (typeof value !== 'object') return null
+  // 避免 String(object) → "[object Object]"
+  const actor = normalizeActor(value)
+  if (!actor) return null
+  if (actor.sessionId) {
+    if (host.sessions) {
+      const peeked = host.sessions.peek(actor.sessionId) ?? (await host.sessions.get?.(actor.sessionId))
+      if (peeked) {
+        const fromSession = actorFromSession(peeked)
+        return {
+          ...fromSession,
+          ...(actor.name && actor.name !== 'Agent' ? { name: actor.name } : {}),
+          ...(actor.mascot ? { mascot: actor.mascot } : {}),
+        }
+      }
+    }
+    return {
+      kind: 'agent',
+      sessionId: actor.sessionId,
+      name: actor.name || actor.sessionId.slice(0, 8),
+      ...(actor.mascot ? { mascot: actor.mascot } : {}),
+    }
+  }
+  return actor
+}
+
+const ASSIGNEE_PARAM = {
+  description:
+    '分配人。支持：人名字符串；sessionId 字符串；或 actor 对象 { kind, sessionId?, name?, mascot? }；null 清空。也可用 assigneeSessionId。',
+} as const
+
+const ASSIGNEE_SESSION_PARAM = {
+  type: ['string', 'null'] as const,
+  description: '分配给某 session（Agent）；null 清空。与 assignee 二选一，优先本字段。',
 }
 
 function actorsEqual(a: TaskActor | null, b: TaskActor | null): boolean {
@@ -607,8 +669,8 @@ export function apply(ctx: Context) {
         title: { type: 'string' },
         status: { type: 'string', enum: ['todo', 'doing', 'done'] },
         priority: { type: 'string', enum: ['low', 'med', 'high'] },
-        assigneeSessionId: { type: 'string', description: '分配给的 session id（Agent）' },
-        assignee: { type: 'string', description: '分配给人名（非 Agent 时）' },
+        assigneeSessionId: ASSIGNEE_SESSION_PARAM,
+        assignee: ASSIGNEE_PARAM,
         dueAt: { type: 'number', description: '截止时间戳 ms' },
         description: { type: 'string', description: '任务描述' },
         notes: { type: 'string', description: '备忘' },
@@ -618,11 +680,11 @@ export function apply(ctx: Context) {
     execute: async (args) => {
       const creator = await resolveCreator(host)
       let assignee: TaskActor | null = null
-      if (typeof args.assigneeSessionId === 'string' && args.assigneeSessionId.trim()) {
+      if (args.assigneeSessionId !== undefined && args.assigneeSessionId !== null && String(args.assigneeSessionId).trim()) {
         const resolved = await resolveAssignee(host, { assigneeSessionId: String(args.assigneeSessionId) })
         assignee = resolved.assignee
-      } else if (typeof args.assignee === 'string' && args.assignee.trim()) {
-        assignee = { kind: 'user', name: String(args.assignee).trim() }
+      } else if (args.assignee !== undefined) {
+        assignee = await coerceAssigneeArg(host, args.assignee)
       }
       const row = tasks.create({
         title: String(args.title ?? ''),
@@ -640,7 +702,8 @@ export function apply(ctx: Context) {
 
   host.tools.register({
     name: 'tasks_update',
-    description: '更新任务字段（可改分配人 / 描述 / 备忘；改 status 即换状态）',
+    description:
+      '更新任务字段。分配人请用 assigneeSessionId，或 assignee（人名 / sessionId / actor 对象）；改 status 即换状态。',
     parameters: {
       type: 'object',
       properties: {
@@ -648,8 +711,8 @@ export function apply(ctx: Context) {
         title: { type: 'string' },
         status: { type: 'string', enum: ['todo', 'doing', 'done'] },
         priority: { type: 'string', enum: ['low', 'med', 'high'] },
-        assigneeSessionId: { type: ['string', 'null'], description: '分配 session；null 清空' },
-        assignee: { type: ['string', 'null'], description: '分配人名；null 清空' },
+        assigneeSessionId: ASSIGNEE_SESSION_PARAM,
+        assignee: ASSIGNEE_PARAM,
         dueAt: { type: ['number', 'null'] },
         description: { type: 'string', description: '任务描述' },
         notes: { type: 'string', description: '备忘' },
@@ -673,10 +736,7 @@ export function apply(ctx: Context) {
         })
         patch.assignee = resolved.assignee
       } else if (args.assignee !== undefined) {
-        patch.assignee =
-          args.assignee == null || !String(args.assignee).trim()
-            ? null
-            : { kind: 'user', name: String(args.assignee).trim() }
+        patch.assignee = await coerceAssigneeArg(host, args.assignee)
       }
       return present(tasks.update(id, patch))
     },
