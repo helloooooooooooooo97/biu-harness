@@ -2,7 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { buildAppPath, isKnownAppPath, parseAppPath, routeFromState } from './session-route.ts'
 
-test('parseAppPath covers home, session chat, debug, dashboard, and workspace module', () => {
+test('parseAppPath covers home, session chat, debug, and dashboard', () => {
   assert.deepEqual(parseAppPath('/'), { kind: 'home' })
   assert.deepEqual(parseAppPath('/s/abc'), { kind: 'session', sessionId: 'abc', view: 'chat' })
   assert.deepEqual(parseAppPath('/s/abc/'), { kind: 'session', sessionId: 'abc', view: 'chat' })
@@ -18,7 +18,7 @@ test('parseAppPath covers home, session chat, debug, dashboard, and workspace mo
     view: 'debug',
   })
   assert.deepEqual(parseAppPath('/dashboard'), { kind: 'module', moduleId: 'dashboard' })
-  assert.deepEqual(parseAppPath('/workspace'), { kind: 'module', moduleId: 'workspace' })
+  assert.deepEqual(parseAppPath('/workspace'), { kind: 'home' })
   assert.deepEqual(parseAppPath('/unknown'), { kind: 'home' })
 })
 
@@ -40,7 +40,6 @@ test('buildAppPath round-trips with parseAppPath', () => {
     { kind: 'session' as const, sessionId: 's1', view: 'chat' as const },
     { kind: 'session' as const, sessionId: 's1', view: 'debug' as const },
     { kind: 'module' as const, moduleId: 'dashboard' as const },
-    { kind: 'module' as const, moduleId: 'workspace' as const },
   ]
   for (const route of routes) {
     assert.deepEqual(parseAppPath(buildAppPath(route)), route)

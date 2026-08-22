@@ -32,14 +32,6 @@ function ModuleIcon({ id }: { id: AppModuleId }) {
       </svg>
     )
   }
-  if (id === 'workspace') {
-    return (
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 7.5h16M4 12h16M4 16.5h10" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7 4.5h10a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2z" />
-      </svg>
-    )
-  }
   return (
     <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
       <path
@@ -108,17 +100,6 @@ function ModuleRail({
         </button>
       </div>
     </nav>
-  )
-}
-
-function WorkspaceModule() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
-      <h1 className="text-xl font-semibold tracking-tight text-[var(--dsw-label)]">Workspace</h1>
-      <p className="max-w-md text-sm leading-6 text-[var(--dsw-label-3)]">
-        项目绑定在对话输入上方的文件夹图标：选目录后作为该 Session 的 cwd。无需单独大面板。
-      </p>
-    </div>
   )
 }
 
@@ -240,6 +221,13 @@ function Shell(props: SlotProps) {
     navigate(`/s/${encodeURIComponent(route.sessionId)}`, { replace: true })
   }, [location.pathname, navigate])
 
+  // 旧 /workspace 入口：活动栏已去掉，URL 收成 /
+  useEffect(() => {
+    const path = location.pathname.replace(/\/+$/, '') || '/'
+    if (path !== '/workspace') return
+    navigate('/', { replace: true })
+  }, [location.pathname, navigate])
+
   useEffect(() => {
     void sessionView.refreshSessions()
   }, [sessionView])
@@ -337,12 +325,6 @@ function Shell(props: SlotProps) {
           aria-hidden={activeModule !== 'dashboard'}
         >
           <DashboardModule />
-        </div>
-        <div
-          className={activeModule === 'workspace' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}
-          aria-hidden={activeModule !== 'workspace'}
-        >
-          <WorkspaceModule />
         </div>
       </main>
 

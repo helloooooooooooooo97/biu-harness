@@ -1,14 +1,15 @@
-/** `/` | `/s/:id` | `/s/:id/debug` | `/workspace` | `/dashboard`（兼容旧 `/trajectory`） */
+/** `/` | `/s/:id` | `/s/:id/debug` | `/dashboard`（兼容旧 `/workspace`、`/trajectory`） */
 export type RouteView = 'chat' | 'debug'
 
 export type AppRoute =
   | { kind: 'home' }
   | { kind: 'session'; sessionId: string; view: RouteView }
-  | { kind: 'module'; moduleId: 'workspace' | 'dashboard' }
+  | { kind: 'module'; moduleId: 'dashboard' }
 
 export function parseAppPath(pathname: string): AppRoute {
   const path = normalizePath(pathname)
-  if (path === '/workspace') return { kind: 'module', moduleId: 'workspace' }
+  // 旧 Workspace 模块入口：收成首页，活动栏不再展示
+  if (path === '/workspace') return { kind: 'home' }
   if (path === '/dashboard') return { kind: 'module', moduleId: 'dashboard' }
   if (path === '/') return { kind: 'home' }
   const match = path.match(/^\/s\/([^/]+)(?:\/(chat|debug|trajectory))?$/)
@@ -31,7 +32,6 @@ export function isKnownAppPath(pathname: string): boolean {
 export function buildAppPath(route: AppRoute): string {
   if (route.kind === 'home') return '/'
   if (route.kind === 'module') {
-    if (route.moduleId === 'workspace') return '/workspace'
     if (route.moduleId === 'dashboard') return '/dashboard'
     return '/'
   }
