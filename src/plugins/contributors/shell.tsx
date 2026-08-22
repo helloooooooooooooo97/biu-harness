@@ -221,13 +221,6 @@ function Shell(props: SlotProps) {
     navigate(`/s/${encodeURIComponent(route.sessionId)}`, { replace: true })
   }, [location.pathname, navigate])
 
-  // 旧 /workspace 入口：活动栏已去掉，URL 收成 /
-  useEffect(() => {
-    const path = location.pathname.replace(/\/+$/, '') || '/'
-    if (path !== '/workspace') return
-    navigate('/', { replace: true })
-  }, [location.pathname, navigate])
-
   useEffect(() => {
     void sessionView.refreshSessions()
   }, [sessionView])

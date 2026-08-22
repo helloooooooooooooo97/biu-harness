@@ -28,7 +28,7 @@ export function moduleById(id: AppModuleId): AppModule {
   return APP_MODULES.find((item) => item.id === id) ?? APP_MODULES[0]!
 }
 
-/** Agent 相关 path（含历史 `/s/:id`）；旧 `/workspace` 收成 agent。 */
+/** Agent 相关 path（含历史 `/s/:id`）。 */
 export function moduleIdFromPath(pathname: string): AppModuleId {
   const path = pathname.replace(/\/+$/, '') || '/'
   if (path === '/dashboard' || path.startsWith('/dashboard/')) return 'dashboard'

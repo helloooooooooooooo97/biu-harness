@@ -1,4 +1,4 @@
-/** `/` | `/s/:id` | `/s/:id/debug` | `/dashboard`（兼容旧 `/workspace`、`/trajectory`） */
+/** `/` | `/s/:id` | `/s/:id/debug` | `/dashboard`（兼容旧 `/trajectory`） */
 export type RouteView = 'chat' | 'debug'
 
 export type AppRoute =
@@ -8,8 +8,6 @@ export type AppRoute =
 
 export function parseAppPath(pathname: string): AppRoute {
   const path = normalizePath(pathname)
-  // 旧 Workspace 模块入口：收成首页，活动栏不再展示
-  if (path === '/workspace') return { kind: 'home' }
   if (path === '/dashboard') return { kind: 'module', moduleId: 'dashboard' }
   if (path === '/') return { kind: 'home' }
   const match = path.match(/^\/s\/([^/]+)(?:\/(chat|debug|trajectory))?$/)
@@ -25,7 +23,7 @@ export function parseAppPath(pathname: string): AppRoute {
 /** 已知应用 path（未知则 Navigate 回 `/`，且不拆 Shell）。 */
 export function isKnownAppPath(pathname: string): boolean {
   const path = normalizePath(pathname)
-  if (path === '/' || path === '/workspace' || path === '/dashboard') return true
+  if (path === '/' || path === '/dashboard') return true
   return /^\/s\/[^/]+(?:\/(chat|debug|trajectory))?$/.test(path)
 }
 

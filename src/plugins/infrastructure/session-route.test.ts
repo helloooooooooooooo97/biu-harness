@@ -18,14 +18,13 @@ test('parseAppPath covers home, session chat, debug, and dashboard', () => {
     view: 'debug',
   })
   assert.deepEqual(parseAppPath('/dashboard'), { kind: 'module', moduleId: 'dashboard' })
-  assert.deepEqual(parseAppPath('/workspace'), { kind: 'home' })
   assert.deepEqual(parseAppPath('/unknown'), { kind: 'home' })
 })
 
 test('isKnownAppPath accepts app surfaces and rejects noise', () => {
   assert.equal(isKnownAppPath('/'), true)
   assert.equal(isKnownAppPath('/dashboard'), true)
-  assert.equal(isKnownAppPath('/workspace'), true)
+  assert.equal(isKnownAppPath('/workspace'), false)
   assert.equal(isKnownAppPath('/s/abc'), true)
   assert.equal(isKnownAppPath('/s/abc/chat'), true)
   assert.equal(isKnownAppPath('/s/abc/debug'), true)
