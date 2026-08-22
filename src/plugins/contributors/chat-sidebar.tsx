@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   bindSessionView,
@@ -99,10 +99,24 @@ export const ChatSidebar = memo(function ChatSidebar({
   const sessions = useSessionView((state) => state.sessions)
   const sessionId = useSessionView((state) => state.sessionId)
   const view = useSessionView((state) => state.view)
-  const agentBusy = useSessionView((state) => state.agentStatus === 'running')
+  const agentBusy = useSessionView(
+    (state) => state.agentStatus === 'running' || state.pending,
+  )
   const collapsedProjects = useSidebarCollapseStore((state) => state.collapsed)
   const toggleProjectGroup = useSidebarCollapseStore((state) => state.toggle)
+  const expandProjectGroup = useSidebarCollapseStore((state) => state.expand)
   const projectGroups = useMemo(() => groupSessionsByProject(sessions), [sessions])
+  const prevRouteSessionRef = useRef<string | null>(null)
+
+  // 仅在「切到」另一会话时展开其所在组；列表刷新不会顶开用户刚折叠的组
+  useLayoutEffect(() => {
+    const prev = prevRouteSessionRef.current
+    prevRouteSessionRef.current = routeSessionId
+    if (!routeSessionId || prev === routeSessionId) return
+    const group = projectGroups.find((item) => item.sessions.some((row) => row.id === routeSessionId))
+    if (!group) return
+    expandProjectGroup(group.key)
+  }, [routeSessionId, projectGroups, expandProjectGroup])
 
   const createChat = useCallback(
     (opts: { type?: 'chat' | 'live'; projectPath?: string } = {}) => {
@@ -183,10 +197,7 @@ export const ChatSidebar = memo(function ChatSidebar({
             <p className="px-2 text-[11px] leading-4 text-[var(--dsw-label-3)]">No chats yet. Send a message or create one.</p>
           ) : (
             projectGroups.map((group) => {
-              const hasRouteSession = Boolean(
-                routeSessionId && group.sessions.some((row) => row.id === routeSessionId),
-              )
-              const collapsed = Boolean(collapsedProjects[group.key]) && !hasRouteSession
+              const collapsed = Boolean(collapsedProjects[group.key])
               const isUngrouped = group.key === UNGROUPED_PROJECT_KEY
               return (
                 <div key={group.key} className="min-w-0">

@@ -290,7 +290,7 @@ export class SessionViewService extends Service {
       this.replace({ agentStatus: 'running', agentStep: step, pending: true })
       return
     }
-    this.replace({ agentStatus: 'idle', agentStep: step })
+    this.replace({ agentStatus: 'idle', agentStep: step, pending: false })
   }
 
   upsertApproval(item: ApprovalItem) {
@@ -876,9 +876,8 @@ export class SessionViewService extends Service {
       }
       this.replace({ error: String(error), pending: false, agentStatus: 'idle' })
       throw error
-    } finally {
-      this.replace({ pending: false, agentStatus: 'idle' })
     }
+    // 成功后不要在 finally 里强行 idle：agent 仍在跑，状态交给 WS agent/status
   }
 
   async cancel() {

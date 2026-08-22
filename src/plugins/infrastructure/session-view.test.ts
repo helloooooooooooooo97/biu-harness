@@ -77,6 +77,30 @@ test('send inject posts kind without clearing running state', async () => {
   assert.equal(view.get().pending, true)
 })
 
+test('send wake keeps running after HTTP so WS agent/status owns idle', async () => {
+  mockFetch({
+    '/api/sessions': () => ({ sessions: [{ id: 's1', title: 'a', eventCount: 1, updatedAt: 1 }] }),
+    '/api/sessions/s1?turns=': () => ({
+      id: 's1',
+      events: [{ type: 'session/open', version: 1, seq: 0, ts: 1 }],
+      hasMore: false,
+      totalTurns: 0,
+    }),
+    '/api/approvals': () => ({ mode: 'auto', pending: [] }),
+    '/api/sessions/s1/messages': () => ({ sessionId: 's1', text: 'ok' }),
+  })
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  view.ingest('s1', { type: 'session/open', version: 1, seq: 0, ts: 1 })
+  await view.send('hi')
+  assert.equal(view.get().agentStatus, 'running')
+  assert.equal(view.get().pending, true)
+  view.setAgentStatus('idle')
+  assert.equal(view.get().agentStatus, 'idle')
+  assert.equal(view.get().pending, false)
+})
+
 test('inspectCall switches to trajectory with focus', async () => {
   mockFetch({
     '/api/sessions': () => ({ sessions: [] }),
