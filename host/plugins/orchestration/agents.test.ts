@@ -134,3 +134,61 @@ test('busy second send becomes inject alongside queued wake', async () => {
   assert.ok(users.includes('steer'))
   assert.ok(users.includes('follow-up wake'))
 })
+
+test('flush aborts current turn and claims queued wake+inject', async () => {
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  await ctx.plugin(tools)
+  await ctx.plugin(systemPrompt)
+  await ctx.plugin(llm)
+  await ctx.plugin(agentLoop)
+  await ctx.plugin(agents)
+  ctx.agents.configure({ provider: 'deepseek', apiKey: '', model: 'x' })
+  const agent = await ctx.agents.create()
+
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let runs = 0
+  const originalCreate = ctx.agentLoop.create.bind(ctx.agentLoop)
+  ctx.agentLoop.create = ((config, sessionId, signal) => {
+    const runner = originalCreate(config, sessionId, signal)
+    const originalRun = runner.run.bind(runner)
+    runner.run = async (claimed) => {
+      runs += 1
+      if (runs === 1) {
+        await gate
+        if (signal.aborted) throw new Error('cancelled')
+      }
+      return originalRun(claimed)
+    }
+    return runner
+  }) as typeof ctx.agentLoop.create
+
+  void agent.send('running-now', { wait: false })
+  for (let i = 0; i < 20 && !ctx.agents.isBusy(agent.sessionId); i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+  await agent.send('queued-wake', { wait: false })
+  await agent.send('queued-inject', { wait: false })
+  assert.equal(ctx.agents.listInbox(agent.sessionId).length, 2)
+
+  const flushPromise = agent.flush({ wait: false })
+  // 让 abort 生效后再放行第一回合
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  release()
+  const flushed = await flushPromise
+  assert.equal(flushed.flushed, true)
+
+  for (let i = 0; i < 80 && ctx.agents.isBusy(agent.sessionId); i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  assert.equal(ctx.agents.listInbox(agent.sessionId).length, 0)
+  const users = (await ctx.sessions.require(agent.sessionId)).events
+    .filter((item) => item.type === 'user/message')
+    .map((item) => ('text' in item ? item.text : ''))
+  assert.ok(users.includes('queued-inject'))
+  assert.ok(users.includes('queued-wake'))
+})

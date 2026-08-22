@@ -18,6 +18,8 @@ export interface AgentHandle {
   sessionId: string
   send(text: string, opts?: AgentSendOptions): Promise<AgentTurn>
   inject(text: string, opts?: AgentSendOptions): void
+  /** 空回车：abort 当前回合，立刻 kick/claim 队列（需至少一条 wake） */
+  flush(opts?: { wait?: boolean }): Promise<{ flushed: boolean }>
   cancel(): void
   dispose(): void
 }
@@ -100,6 +102,30 @@ export class AgentsService extends Service {
       return last
     }
 
+    const startKick = (wait: boolean): Promise<AgentTurn> => {
+      live.abort = new AbortController()
+      let result: AgentTurn = { text: '', steps: [] }
+      const running = kick()
+        .then((turn) => {
+          result = turn
+        })
+        .finally(() => {
+          if (live.running === running) live.running = undefined
+        })
+      live.running = running
+      this.ctx.emit('agent/status', { sessionId: id, status: 'running', step: 0 })
+      if (!wait) {
+        void running.catch(() => undefined)
+        return Promise.resolve({ text: '', steps: [] })
+      }
+      return running.then(() => result).catch((error) => {
+        if (/cancelled|AbortError|aborted/i.test(String(error))) {
+          return { text: '', steps: [] }
+        }
+        throw error
+      })
+    }
+
     const handle: AgentHandle = {
       sessionId: id,
       send: async (text: string, opts?: AgentSendOptions) => {
@@ -126,27 +152,9 @@ export class AgentsService extends Service {
 
         if (live.running) {
           if (!wait) return { text: '', steps: [] }
-          await live.running
+          await live.running.catch(() => undefined)
         }
-        live.abort = new AbortController()
-        let result: AgentTurn = { text: '', steps: [] }
-        const running = kick().then((turn) => {
-          result = turn
-        })
-        live.running = running
-        this.ctx.emit('agent/status', { sessionId: id, status: 'running', step: 0 })
-        if (!wait) {
-          void running.finally(() => {
-            if (live.running === running) live.running = undefined
-          })
-          return { text: '', steps: [] }
-        }
-        try {
-          await running
-          return result
-        } finally {
-          if (live.running === running) live.running = undefined
-        }
+        return startKick(wait)
       },
       inject: (text: string, opts?: AgentSendOptions) => {
         const trimmed = text.trim()
@@ -160,6 +168,19 @@ export class AgentsService extends Service {
           ...(opts?.sender ? { sender: opts.sender } : {}),
         })
         this.emitInbox(id)
+      },
+      flush: async (opts?: { wait?: boolean }) => {
+        const wait = opts?.wait !== false
+        // claim 需要 wake；队列里没有 wake 时空回车无意义
+        if (!live.inbox.some((item) => item.kind === 'wake')) {
+          return { flushed: false }
+        }
+        live.abort.abort()
+        if (live.running) {
+          await live.running.catch(() => undefined)
+        }
+        await startKick(wait)
+        return { flushed: true }
       },
       cancel: () => live.abort.abort(),
       dispose: () => {
