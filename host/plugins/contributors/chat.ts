@@ -13,7 +13,7 @@ import {
   findEvent,
 } from '../core/trajectory-index.ts'
 import { readArtifactFile } from '../core/artifacts.ts'
-import { collectLiveDispatchedUsage } from '../seams/live-dispatched-usage.ts'
+import { collectLiveDispatchedTasks } from '../seams/live-dispatched-usage.ts'
 import { normalizeSessionType } from '../core/session-types.ts'
 
 export type { ChatMessage }
@@ -260,15 +260,28 @@ export function apply(ctx: Context) {
     if ((record.type ?? 'chat') === 'live') {
       const summaries = await ctx.sessions.listSummaries()
       const workers = []
+      const titles = new Map<string, string>()
       for (const item of summaries) {
+        titles.set(item.id, item.title)
         if (item.id === record.id) continue
         if (normalizeSessionType(item.type) === 'live') continue
         const worker = await ctx.sessions.require(item.id)
         workers.push({ id: item.id, events: worker.events })
       }
-      const dispatched = collectLiveDispatchedUsage(record.id, record.events, workers)
+      const dispatched = collectLiveDispatchedTasks(record.id, record.events, workers)
       payload.dispatchedUsage = dispatched.total
-      payload.dispatchedUsageByTurn = dispatched.byLiveTurn
+      payload.dispatchedUsageByTurn = Object.fromEntries(
+        Object.entries(dispatched.byLiveTurn).map(([key, value]) => [key, value.usage]),
+      )
+      payload.dispatchedTasksByTurn = Object.fromEntries(
+        Object.entries(dispatched.byLiveTurn).map(([key, value]) => [
+          key,
+          value.tasks.map((task) => ({
+            ...task,
+            title: titles.get(task.sessionId) ?? task.sessionId.slice(0, 8),
+          })),
+        ]),
+      )
     }
     route.send(200, payload)
   })

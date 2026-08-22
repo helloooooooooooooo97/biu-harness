@@ -1,6 +1,10 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { collectLiveDispatchedUsage, listLiveWakes } from './live-dispatched-usage.ts'
+import {
+  collectLiveDispatchedTasks,
+  collectLiveDispatchedUsage,
+  listLiveWakes,
+} from './live-dispatched-usage.ts'
 import type { SessionEvent } from '../core/session-types.ts'
 
 function ev(partial: Omit<SessionEvent, 'seq' | 'ts'> & { seq?: number; ts?: number }): SessionEvent {
@@ -19,10 +23,14 @@ test('listLiveWakes reads session_wake/inject inside live turns', () => {
     }),
     ev({ type: 'turn/end', turn: 2, reason: 'complete', ts: 12 }),
   ])
-  assert.deepEqual(wakes, [{ ts: 11, targetId: 'w1', liveTurn: 2 }])
+  assert.equal(wakes.length, 1)
+  assert.equal(wakes[0]?.targetId, 'w1')
+  assert.equal(wakes[0]?.liveTurn, 2)
+  assert.equal(wakes[0]?.tool, 'session_wake')
+  assert.equal(wakes[0]?.preview, 'go')
 })
 
-test('collectLiveDispatchedUsage attributes worker turn to live turn', () => {
+test('collectLiveDispatchedTasks includes status and usage per wake', () => {
   const liveId = 'live-1'
   const liveEvents = [
     ev({ type: 'turn/start', turn: 3, ts: 100 }),
@@ -30,14 +38,8 @@ test('collectLiveDispatchedUsage attributes worker turn to live turn', () => {
       type: 'tool/call',
       id: 'c1',
       name: 'session_wake',
-      arguments: '{"sessionId":"worker-a","text":"run"}',
+      arguments: '{"sessionId":"worker-a","text":"run tests"}',
       ts: 110,
-    }),
-    ev({
-      type: 'assistant/message',
-      text: 'dispatched',
-      usage: { inputTokens: 5, outputTokens: 2 },
-      ts: 120,
     }),
     ev({ type: 'turn/end', turn: 3, reason: 'complete', ts: 130 }),
   ]
@@ -45,7 +47,7 @@ test('collectLiveDispatchedUsage attributes worker turn to live turn', () => {
     ev({ type: 'turn/start', turn: 1, ts: 140 }),
     ev({
       type: 'user/message',
-      text: 'run',
+      text: 'run tests',
       kind: 'wake',
       sender: { type: 'session', sessionId: liveId },
       ts: 141,
@@ -59,40 +61,82 @@ test('collectLiveDispatchedUsage attributes worker turn to live turn', () => {
     ev({ type: 'turn/end', turn: 1, reason: 'complete', ts: 210 }),
   ]
 
-  const result = collectLiveDispatchedUsage(liveId, liveEvents, [
+  const result = collectLiveDispatchedTasks(liveId, liveEvents, [
     { id: 'worker-a', events: workerEvents },
   ])
-  assert.deepEqual(result.byLiveTurn['3'], {
+  assert.equal(result.tasks.length, 1)
+  assert.equal(result.tasks[0]?.status, 'complete')
+  assert.equal(result.tasks[0]?.workerTurn, 1)
+  assert.deepEqual(result.tasks[0]?.usage, {
     inputTokens: 40,
     outputTokens: 10,
     totalTokens: 50,
     cacheReadTokens: 4,
   })
-  assert.equal(result.total.inputTokens, 40)
-  assert.equal(result.total.outputTokens, 10)
+  assert.equal(result.byLiveTurn['3']?.tasks.length, 1)
+  assert.equal(result.byLiveTurn['3']?.usage.inputTokens, 40)
 })
 
-test('collectLiveDispatchedUsage ignores turns not sent by this live', () => {
-  const result = collectLiveDispatchedUsage(
+test('collectLiveDispatchedTasks marks unmatched wake as pending', () => {
+  const result = collectLiveDispatchedTasks(
     'live-1',
-    [ev({ type: 'turn/start', turn: 1, ts: 1 }), ev({ type: 'turn/end', turn: 1, reason: 'complete', ts: 2 })],
+    [
+      ev({ type: 'turn/start', turn: 1, ts: 1 }),
+      ev({
+        type: 'tool/call',
+        id: 'c1',
+        name: 'session_wake',
+        arguments: '{"sessionId":"worker-a","text":"x"}',
+        ts: 2,
+      }),
+      ev({ type: 'turn/end', turn: 1, reason: 'complete', ts: 3 }),
+    ],
+    [{ id: 'worker-a', events: [] }],
+  )
+  assert.equal(result.tasks[0]?.status, 'pending')
+})
+
+test('collectLiveDispatchedUsage still aggregates by live turn', () => {
+  const liveId = 'live-1'
+  const result = collectLiveDispatchedUsage(
+    liveId,
+    [
+      ev({ type: 'turn/start', turn: 3, ts: 100 }),
+      ev({
+        type: 'tool/call',
+        id: 'c1',
+        name: 'session_wake',
+        arguments: '{"sessionId":"worker-a","text":"run"}',
+        ts: 110,
+      }),
+      ev({ type: 'turn/end', turn: 3, reason: 'complete', ts: 130 }),
+    ],
     [
       {
         id: 'worker-a',
         events: [
-          ev({ type: 'turn/start', turn: 1, ts: 3 }),
-          ev({ type: 'user/message', text: 'hi', kind: 'wake', ts: 4 }),
+          ev({ type: 'turn/start', turn: 1, ts: 140 }),
+          ev({
+            type: 'user/message',
+            text: 'run',
+            kind: 'wake',
+            sender: { type: 'session', sessionId: liveId },
+            ts: 141,
+          }),
           ev({
             type: 'assistant/message',
-            text: 'yo',
-            usage: { inputTokens: 9, outputTokens: 1 },
-            ts: 5,
+            text: 'done',
+            usage: { inputTokens: 40, outputTokens: 10 },
+            ts: 200,
           }),
-          ev({ type: 'turn/end', turn: 1, reason: 'complete', ts: 6 }),
+          ev({ type: 'turn/end', turn: 1, reason: 'complete', ts: 210 }),
         ],
       },
     ],
   )
-  assert.deepEqual(result.byLiveTurn, {})
-  assert.equal(result.total.inputTokens, 0)
+  assert.deepEqual(result.byLiveTurn['3'], {
+    inputTokens: 40,
+    outputTokens: 10,
+    totalTokens: 50,
+  })
 })

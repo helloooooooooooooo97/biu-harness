@@ -2,8 +2,8 @@ import type { Context } from 'cordis'
 import '../../types.ts'
 import { MINIMAL_TOOL_NAMES, type AgentToolMode } from '../registry/tools.ts'
 import { LIVE_TOOL_NAMES, buildSessionProgress } from './live-sessions.ts'
-import { collectLiveDispatchedUsage } from './live-dispatched-usage.ts'
-import { normalizeSessionType, type SessionType } from '../core/session-types.ts'
+import { collectLiveDispatchedTasks } from './live-dispatched-usage.ts'
+import { normalizeSessionType, type SessionEvent, type SessionType } from '../core/session-types.ts'
 
 export type ToolSourceId = 'minimal' | 'live' | 'plugin'
 
@@ -164,8 +164,23 @@ export function apply(ctx: Context) {
     if (sessionType === 'live') {
       body.workers = await buildLiveWorkers(ctx, id)
       const dispatched = await loadDispatchedUsage(ctx, id, record.events)
+      const titles = new Map<string, string>()
+      for (const item of await ctx.sessions.listSummaries()) {
+        titles.set(item.id, item.title)
+      }
       body.dispatchedUsage = dispatched.total
-      body.dispatchedUsageByTurn = dispatched.byLiveTurn
+      body.dispatchedUsageByTurn = Object.fromEntries(
+        Object.entries(dispatched.byLiveTurn).map(([key, value]) => [key, value.usage]),
+      )
+      body.dispatchedTasksByTurn = Object.fromEntries(
+        Object.entries(dispatched.byLiveTurn).map(([key, value]) => [
+          key,
+          value.tasks.map((task) => ({
+            ...task,
+            title: titles.get(task.sessionId) ?? task.sessionId.slice(0, 8),
+          })),
+        ]),
+      )
     }
     route.send(200, body)
   })
@@ -175,29 +190,44 @@ export function apply(ctx: Context) {
     const record = await ctx.sessions.get(id)
     if (!record) return route.send(404, { error: 'unknown session' })
     if (normalizeSessionType(record.type) !== 'live') {
-      return route.send(200, { sessionId: id, dispatchedUsage: null, dispatchedUsageByTurn: {} })
+      return route.send(200, {
+        sessionId: id,
+        dispatchedUsage: null,
+        dispatchedUsageByTurn: {},
+        dispatchedTasksByTurn: {},
+      })
     }
     const dispatched = await loadDispatchedUsage(ctx, id, record.events)
+    const titles = new Map<string, string>()
+    for (const item of await ctx.sessions.listSummaries()) {
+      titles.set(item.id, item.title)
+    }
+    const tasksByTurn: Record<string, Array<Record<string, unknown>>> = {}
+    const usageByTurn: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(dispatched.byLiveTurn)) {
+      usageByTurn[key] = value.usage
+      tasksByTurn[key] = value.tasks.map((task) => ({
+        ...task,
+        title: titles.get(task.sessionId) ?? task.sessionId.slice(0, 8),
+      }))
+    }
     route.send(200, {
       sessionId: id,
       dispatchedUsage: dispatched.total,
-      dispatchedUsageByTurn: dispatched.byLiveTurn,
+      dispatchedUsageByTurn: usageByTurn,
+      dispatchedTasksByTurn: tasksByTurn,
     })
   })
 }
 
-async function loadDispatchedUsage(
-  ctx: Context,
-  liveId: string,
-  liveEvents: import('../core/session-types.ts').SessionEvent[],
-) {
+async function loadDispatchedUsage(ctx: Context, liveId: string, liveEvents: SessionEvent[]) {
   const summaries = await ctx.sessions.listSummaries()
-  const workers: Array<{ id: string; events: import('../core/session-types.ts').SessionEvent[] }> = []
+  const workers: Array<{ id: string; events: SessionEvent[] }> = []
   for (const item of summaries) {
     if (item.id === liveId) continue
     if (normalizeSessionType(item.type) === 'live') continue
     const worker = await ctx.sessions.require(item.id)
     workers.push({ id: item.id, events: worker.events })
   }
-  return collectLiveDispatchedUsage(liveId, liveEvents, workers)
+  return collectLiveDispatchedTasks(liveId, liveEvents, workers)
 }

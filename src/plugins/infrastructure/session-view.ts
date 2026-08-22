@@ -34,6 +34,20 @@ export interface SessionListItem {
 export type ConversationView = 'chat' | 'debug'
 export type ApprovalMode = 'auto' | 'hold'
 
+/** Live 派工子任务（衍生查询，不入 session 日志） */
+export type DispatchedTaskRow = {
+  sessionId: string
+  title?: string
+  tool: 'session_wake' | 'session_inject'
+  liveTurn?: number
+  wakeTs?: number
+  status: 'pending' | 'running' | 'complete' | 'ended'
+  reason?: string
+  workerTurn?: number
+  usage?: TrajectoryUsage
+  preview?: string
+}
+
 /** 与 host DEFAULT_TAIL_TURNS 对齐；仅 loadOlder 分页仍用窗口拉取 */
 export const SESSION_TAIL_TURNS = 24
 export const TRAJECTORY_TAIL_TURNS = 48
@@ -65,6 +79,8 @@ export interface SessionViewState {
   totalTurns: number
   /** Live：其它 session 被本席 wake 的 turn usage（按 Live turn 号） */
   dispatchedUsageByTurn: Record<string, TrajectoryUsage>
+  /** Live：派工子任务（按 Live turn 号，衍生查询） */
+  dispatchedTasksByTurn: Record<string, DispatchedTaskRow[]>
   /** Live：派工 turn usage 合计 */
   dispatchedUsage?: TrajectoryUsage
   /** 切会话且无缓存：保留上一段画面直到新数据到齐，避免先闪 EmptyHero */
@@ -90,6 +106,7 @@ const empty: SessionViewState = {
   trajectoryLoading: false,
   totalTurns: 0,
   dispatchedUsageByTurn: {},
+  dispatchedTasksByTurn: {},
   switchingSession: false,
 }
 
@@ -103,6 +120,7 @@ type SessionPayload = {
   project?: { name: string; path?: string; boundAt: number }
   dispatchedUsage?: TrajectoryUsage
   dispatchedUsageByTurn?: Record<string, TrajectoryUsage>
+  dispatchedTasksByTurn?: Record<string, DispatchedTaskRow[]>
 }
 
 type TrajectoryPayload = {
@@ -119,6 +137,7 @@ type SessionCacheEntry = {
   hasMoreOlder: boolean
   totalTurns: number
   dispatchedUsageByTurn: Record<string, TrajectoryUsage>
+  dispatchedTasksByTurn: Record<string, DispatchedTaskRow[]>
   dispatchedUsage?: TrajectoryUsage
 }
 
@@ -195,17 +214,21 @@ export class SessionViewService extends Service {
       const body = (await res.json()) as {
         dispatchedUsage?: TrajectoryUsage | null
         dispatchedUsageByTurn?: Record<string, TrajectoryUsage>
+        dispatchedTasksByTurn?: Record<string, DispatchedTaskRow[]>
       }
       const byTurn = body.dispatchedUsageByTurn ?? {}
+      const tasksByTurn = body.dispatchedTasksByTurn ?? {}
       const dispatchedUsage = body.dispatchedUsage ?? undefined
       if (
         JSON.stringify(byTurn) === JSON.stringify(this.value.dispatchedUsageByTurn) &&
+        JSON.stringify(tasksByTurn) === JSON.stringify(this.value.dispatchedTasksByTurn) &&
         JSON.stringify(dispatchedUsage) === JSON.stringify(this.value.dispatchedUsage)
       ) {
         return
       }
       this.replace({
         dispatchedUsageByTurn: byTurn,
+        dispatchedTasksByTurn: tasksByTurn,
         dispatchedUsage,
         nodes: this.buildNodes(this.value.events, byTurn),
       })
@@ -679,6 +702,7 @@ export class SessionViewService extends Service {
       if (gen !== this.loadGen || this.value.sessionId !== sessionId) return
       const events = compactSessionEvents(Array.isArray(body.events) ? body.events : [])
       const byTurn = body.dispatchedUsageByTurn ?? {}
+      const tasksByTurn = body.dispatchedTasksByTurn ?? {}
       const dispatchedUsage = body.dispatchedUsage
       const nodes = this.buildNodes(events, byTurn)
       const hasMoreOlder = Boolean(body.hasMore)
@@ -695,6 +719,7 @@ export class SessionViewService extends Service {
         hasMoreOlder,
         totalTurns,
         dispatchedUsageByTurn: byTurn,
+        dispatchedTasksByTurn: tasksByTurn,
         ...(dispatchedUsage ? { dispatchedUsage } : {}),
       })
       // 切会话 hold 期间即使 tail「碰巧相同」也必须落地，否则会一直停在上一段画面
@@ -706,6 +731,7 @@ export class SessionViewService extends Service {
       ) {
         this.replace({
           dispatchedUsageByTurn: byTurn,
+          dispatchedTasksByTurn: tasksByTurn,
           dispatchedUsage,
           nodes,
         })
@@ -720,6 +746,7 @@ export class SessionViewService extends Service {
         hasMoreOlder,
         totalTurns,
         dispatchedUsageByTurn: byTurn,
+        dispatchedTasksByTurn: tasksByTurn,
         dispatchedUsage,
         trajectory: view === 'debug' ? this.value.trajectory : [],
         switchingSession: false,
@@ -749,6 +776,7 @@ export class SessionViewService extends Service {
       trajectoryLoading: false,
       totalTurns: cached.totalTurns,
       dispatchedUsageByTurn: cached.dispatchedUsageByTurn,
+      dispatchedTasksByTurn: cached.dispatchedTasksByTurn,
       dispatchedUsage: cached.dispatchedUsage,
       switchingSession: false,
     })
@@ -765,6 +793,7 @@ export class SessionViewService extends Service {
       hasMoreOlder: this.value.hasMoreOlder,
       totalTurns: this.value.totalTurns,
       dispatchedUsageByTurn: this.value.dispatchedUsageByTurn,
+      dispatchedTasksByTurn: this.value.dispatchedTasksByTurn,
       ...(this.value.dispatchedUsage ? { dispatchedUsage: this.value.dispatchedUsage } : {}),
     })
   }

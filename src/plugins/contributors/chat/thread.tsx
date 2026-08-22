@@ -30,7 +30,7 @@ import { StaticMascotMark } from '../mascot/static-mascot-mark.tsx'
 import { DEFAULT_SESSION_MASCOT, resolveSessionMascot } from '../mascot/session-mascot.ts'
 import type { SessionMascotIdentity } from '../mascot/grok-bot-types.ts'
 import { MarkdownBody } from './markdown.tsx'
-import { ToolCard } from './tool-card.tsx'
+import { LiveDispatchTable } from './live-dispatch-table.tsx'
 
 const NEAR_BOTTOM_PX = 96
 /** 提早预取更早消息，避免滑到顶才开始请求 */
@@ -531,6 +531,7 @@ function NodeView({
   onInspect,
   onFork,
   sessions = [],
+  dispatchTasks,
 }: {
   node: ChatNode
   /** 用户消息发起的本回合回复（统计挂在用户气泡下） */
@@ -540,6 +541,7 @@ function NodeView({
   onInspect: (callId: string) => void
   onFork: () => void | Promise<void>
   sessions?: SessionListItem[]
+  dispatchTasks?: import('../../infrastructure/session-view.ts').DispatchedTaskRow[]
 }) {
   const [expanded, setExpanded] = useState(false)
   // 避免每条用户消息 useLayoutEffect 读 layout（滚动时强制同步布局会卡）
@@ -587,6 +589,9 @@ function NodeView({
       >
         <div className="chat-reply-body">
           <ReplyParts node={node} onInspect={onInspect} expanded={expanded} />
+          {!streaming && dispatchTasks && dispatchTasks.length > 0 ? (
+            <LiveDispatchTable tasks={dispatchTasks} />
+          ) : null}
         </div>
         {!streaming && node.copyText.trim() ? (
           <div className="chat-reply-actions-row">
@@ -612,11 +617,16 @@ export const ChatNodeList = memo(function ChatNodeList({
   onInspect,
   onFork,
   sessions = [],
+  dispatchedTasksByTurn = {},
 }: {
   nodes: ChatNode[]
   onInspect: (callId: string) => void
   onFork: () => void | Promise<void>
   sessions?: SessionListItem[]
+  dispatchedTasksByTurn?: Record<
+    string,
+    import('../../infrastructure/session-view.ts').DispatchedTaskRow[]
+  >
 }) {
   const [detailsOpenByReply, setDetailsOpenByReply] = useState<Record<string, boolean>>({})
 
@@ -638,6 +648,9 @@ export const ChatNodeList = memo(function ChatNodeList({
               const replyForUser = node.kind === 'user' ? findReplyForUser(nodes, index) : undefined
               const replyIdForDetails = node.kind === 'reply' ? node.id : replyForUser?.id
               const detailsOpen = replyIdForDetails ? Boolean(detailsOpenByReply[replyIdForDetails]) : false
+              const replyNode = node.kind === 'reply' ? node : replyForUser
+              const dispatchTasks =
+                replyNode?.turn != null ? dispatchedTasksByTurn[String(replyNode.turn)] : undefined
               const stickyUser =
                 node.kind === 'user'
                   ? 'sticky top-0 z-[1] -mt-1 bg-[var(--dsw-bg)] pt-2 pb-2.5 shadow-[0_1px_0_color-mix(in_srgb,var(--dsw-border)_80%,transparent)]'
@@ -661,6 +674,7 @@ export const ChatNodeList = memo(function ChatNodeList({
                     onInspect={onInspect}
                     onFork={onFork}
                     sessions={sessions}
+                    dispatchTasks={dispatchTasks}
                   />
                 </div>
               )
@@ -730,6 +744,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const switchingSession = useSessionView((state) => state.switchingSession)
   const hasMoreOlder = useSessionView((state) => state.hasMoreOlder)
   const loadingOlder = useSessionView((state) => state.loadingOlder)
+  const dispatchedTasksByTurn = useSessionView((state) => state.dispatchedTasksByTurn)
   const rootRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLElement | null>(null)
   const stickToBottomRef = useRef(true)
@@ -839,7 +854,13 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       {loadingOlder ? (
         <div className="mb-3 text-center text-[11px] text-[var(--dsw-label-3)]">加载更早消息…</div>
       ) : null}
-      <ChatNodeList nodes={nodes} onInspect={onInspect} onFork={onFork} sessions={sessions} />
+      <ChatNodeList
+        nodes={nodes}
+        onInspect={onInspect}
+        onFork={onFork}
+        sessions={sessions}
+        dispatchedTasksByTurn={dispatchedTasksByTurn}
+      />
       {error ? (
         <div className="mt-4 rounded-[12px] bg-[var(--dsw-danger-soft)] px-3 py-2 text-sm text-[var(--dsw-danger)]">{error}</div>
       ) : null}
