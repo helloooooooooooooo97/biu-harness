@@ -19,9 +19,11 @@ import {
   pickSessionMascot,
   type SessionMascot as AssignedMascot,
 } from './session-mascot.ts'
+import { healInterruptedTurnBodies } from './session-heal.ts'
 
 export type { SessionEvent, SessionEventBody, SessionProject, SessionRecord, SessionMascot, SessionType }
 export { SESSION_FORMAT_VERSION, normalizeSessionType }
+export { findOpenTurnStep, healInterruptedTurnBodies } from './session-heal.ts'
 
 export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
   let system = ''
@@ -84,8 +86,35 @@ export class SessionsService extends Service {
     const hit = this.cache.get(id)
     if (hit) return hit
     const loaded = await this.ctx.sessionStore.load(id)
-    if (loaded) this.cache.set(id, loaded)
-    return loaded
+    if (!loaded) return loaded
+    const healed = await this.healOpenTurnsOnLoad(loaded)
+    this.cache.set(id, healed)
+    return healed
+  }
+
+  /**
+   * 从磁盘拉起时：强行闭合未结束的 step/turn。
+   * 重启后进程内 agent 已空，但日志若仍开着 turn，UI/Live 会一直显示 running，再发消息也会叠 turn。
+   */
+  private async healOpenTurnsOnLoad(record: SessionRecord): Promise<SessionRecord> {
+    const bodies = healInterruptedTurnBodies(record.events)
+    if (!bodies.length) return record
+    const ts = Date.now()
+    let seq = record.events.length
+    const appended: SessionEvent[] = []
+    for (const body of bodies) {
+      const event = { ...body, seq: seq++, ts } as SessionEvent
+      record.events.push(event)
+      appended.push(event)
+    }
+    await this.persist(record)
+    for (const event of appended) {
+      this.ctx.emit('session/event', { sessionId: record.id, event })
+    }
+    this.ctx.logger('sessions').info(
+      `healed open turn/step on load session=${record.id} +${appended.map((e) => e.type).join(',')}`,
+    )
+    return record
   }
 
   async require(id: string) {
