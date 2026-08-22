@@ -16,7 +16,6 @@ import { FolderGlyph } from './chat/project-panel.tsx'
 import {
   LuChevronDown,
   LuChevronRight,
-  LuLayoutDashboard,
   LuPanelLeftClose,
   LuPlus,
   LuRadio,
@@ -196,12 +195,6 @@ export const ChatSidebar = memo(function ChatSidebar({
             </span>
             <span className="app-side-actions-label">新建 Live</span>
           </button>
-          <Link to="/dashboard" className="app-side-actions-item" title="Dashboard" aria-label="Dashboard">
-            <span className="app-side-actions-icon" aria-hidden>
-              <LuLayoutDashboard className="size-4" />
-            </span>
-            <span className="app-side-actions-label">Dashboard</span>
-          </Link>
         </div>
 
         <div className="mt-2 space-y-1.5">
