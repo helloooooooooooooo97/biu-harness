@@ -144,7 +144,7 @@ test('ingest coalesces consecutive chunks and skips trajectory on chat view', as
   assert.equal(view.get().trajectory.length, 0)
 })
 
-test('load fetches tail turns and skips trajectory until ensureTrajectory', async () => {
+test('load fetches full session turns and skips trajectory until ensureTrajectory', async () => {
   const calls: string[] = []
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const url = String(input)
@@ -191,7 +191,7 @@ test('load fetches tail turns and skips trajectory until ensureTrajectory', asyn
   await ctx.plugin(sessionView)
   const view = ctx.sessionView as SessionViewService
   await view.load('s1', { view: 'chat', wait: true })
-  assert.equal(calls.some((url) => url.includes('turns=24')), true)
+  assert.equal(calls.some((url) => url.includes('turns=all')), true)
   assert.equal(view.get().events.some((event) => event.type === 'assistant/chunk'), false)
   assert.equal(view.get().trajectory.length, 0)
   assert.equal(
@@ -205,7 +205,7 @@ test('load fetches tail turns and skips trajectory until ensureTrajectory', asyn
   await view.ensureTrajectory()
   assert.equal(calls.some((url) => url.includes('/trajectory?turns=')), true)
   assert.equal(view.get().trajectory.length, 1)
-  assert.equal(calls.some((url) => url.includes('turns=all')), false)
+  assert.equal(calls.some((url) => url.includes('turns=24')), false)
 })
 
 test('fetchEventDetail and fetchEventRequest hit fine-grained APIs', async () => {

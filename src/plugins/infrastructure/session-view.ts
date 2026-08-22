@@ -30,9 +30,11 @@ export interface SessionListItem {
 export type ConversationView = 'chat' | 'debug'
 export type ApprovalMode = 'auto' | 'hold'
 
-/** 与 host DEFAULT_TAIL_TURNS / DEFAULT_TRAJECTORY_TURNS 对齐 */
+/** 与 host DEFAULT_TAIL_TURNS 对齐；仅 loadOlder 分页仍用窗口拉取 */
 export const SESSION_TAIL_TURNS = 24
 export const TRAJECTORY_TAIL_TURNS = 48
+/** 打开会话一次拉全量：上滑不再等网络；渲染仍靠虚表只挂可见行 */
+export const SESSION_LOAD_TURNS = 'all' as const
 
 export interface SessionViewState {
   sessionId: string | null
@@ -496,7 +498,7 @@ export class SessionViewService extends Service {
   private async revalidate(sessionId: string, view: ConversationView) {
     const gen = this.loadGen
     try {
-      const res = await fetch(`/api/sessions/${sessionId}?turns=${SESSION_TAIL_TURNS}`)
+      const res = await fetch(`/api/sessions/${sessionId}?turns=${SESSION_LOAD_TURNS}`)
       if (gen !== this.loadGen || this.value.sessionId !== sessionId) return
       if (!res.ok) {
         if (res.status === 404) {
