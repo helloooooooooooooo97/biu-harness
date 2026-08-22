@@ -15,6 +15,8 @@ export interface AgentTurn {
 export interface ClaimedInput {
   kind: InboxKind
   text: string
+  /** 前端排队展示用；写入 session 日志前可丢弃 */
+  id?: string
   /** slash 为本回合临时放开的额外工具（极简模式） */
   extraTools?: string[]
   /** 写入 user/message 的来源；缺省为真人用户 */

@@ -73,3 +73,64 @@ test('send wait:false returns immediately; isBusy clears when done', async () =>
     true,
   )
 })
+
+test('busy second send becomes inject alongside queued wake', async () => {
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  await ctx.plugin(tools)
+  await ctx.plugin(systemPrompt)
+  await ctx.plugin(llm)
+  await ctx.plugin(agentLoop)
+  await ctx.plugin(agents)
+  ctx.agents.configure({ provider: 'deepseek', apiKey: '', model: 'x' })
+  const agent = await ctx.agents.create()
+
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const originalCreate = ctx.agentLoop.create.bind(ctx.agentLoop)
+  ctx.agentLoop.create = ((config, sessionId, signal) => {
+    const runner = originalCreate(config, sessionId, signal)
+    const originalRun = runner.run.bind(runner)
+    runner.run = async (claimed) => {
+      await gate
+      return originalRun(claimed)
+    }
+    return runner
+  }) as typeof ctx.agentLoop.create
+
+  void agent.send('first', { wait: false })
+  for (let i = 0; i < 20 && !ctx.agents.isBusy(agent.sessionId); i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+  assert.equal(ctx.agents.isBusy(agent.sessionId), true)
+
+  await agent.send('follow-up wake', { wait: false })
+  let inbox = ctx.agents.listInbox(agent.sessionId)
+  assert.equal(inbox.length, 1)
+  assert.equal(inbox[0]?.kind, 'wake')
+  assert.equal(inbox[0]?.text, 'follow-up wake')
+
+  await agent.send('steer', { wait: false })
+  inbox = ctx.agents.listInbox(agent.sessionId)
+  assert.equal(inbox.length, 2)
+  assert.deepEqual(
+    inbox.map((item) => item.kind),
+    ['wake', 'inject'],
+  )
+  assert.equal(inbox[1]?.text, 'steer')
+
+  release()
+  for (let i = 0; i < 80 && ctx.agents.isBusy(agent.sessionId); i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  assert.equal(ctx.agents.listInbox(agent.sessionId).length, 0)
+  const users = (await ctx.sessions.require(agent.sessionId)).events
+    .filter((item) => item.type === 'user/message')
+    .map((item) => ('text' in item ? item.text : ''))
+  assert.ok(users.includes('first'))
+  assert.ok(users.includes('steer'))
+  assert.ok(users.includes('follow-up wake'))
+})

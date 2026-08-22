@@ -1988,6 +1988,76 @@ body {
   position: relative;
 }
 
+.composer-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.composer-inbox {
+  border: 1px solid var(--dsw-border);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--dsw-surface) 88%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.composer-inbox-head {
+  margin-bottom: 6px;
+  color: var(--dsw-label-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.composer-inbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.composer-inbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 2px;
+}
+
+.composer-inbox-kind {
+  flex-shrink: 0;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+}
+
+.composer-inbox-kind-wake {
+  color: var(--dsw-ok);
+  background: rgba(34, 140, 90, 0.12);
+}
+
+.composer-inbox-kind-inject {
+  color: var(--dsw-label);
+  background: var(--dsw-hover-strong);
+}
+
+.composer-inbox-text {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dsw-label-2);
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .composer-slash {
   position: absolute;
   right: 10px;
