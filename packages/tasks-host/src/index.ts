@@ -548,7 +548,7 @@ export function apply(ctx: Context) {
   host.hub.register({
     id: 'tasks',
     title: '任务',
-    subtitle: 'Table / Board · SQLite · Agent tools',
+    subtitle: '',
     plugin: 'tasks',
     kind: 'tasks',
   })
