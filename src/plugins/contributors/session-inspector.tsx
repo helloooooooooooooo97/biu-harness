@@ -161,7 +161,7 @@ export const SessionInspector = memo(function SessionInspector({
       aria-label="会话检查器"
     >
       <div
-        className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize touch-none before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-transparent hover:before:bg-[color-mix(in_srgb,var(--dsw-business)_55%,transparent)]"
+        className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize touch-none"
         data-testid="inspector-resize"
         title="拖动调整宽度"
         onPointerDown={(event) => {
