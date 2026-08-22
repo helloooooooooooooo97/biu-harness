@@ -1618,8 +1618,6 @@ body {
 .chat-md {
   max-width: 100%;
   overflow-wrap: anywhere;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 120px;
 }
 
 .chat-md-stream-pre {

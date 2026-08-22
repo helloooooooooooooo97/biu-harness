@@ -17,10 +17,13 @@ if (typeof window !== 'undefined') {
   })
 }
 
-const CACHE_LIMIT = 240
+const CACHE_LIMIT = 1200
 
-/** text → 已消毒 HTML；虚表卸载再挂时可直接复用，避免重解析 */
+/** text → 已消毒 HTML；虚表卸载再挂时同步命中，首帧即可贴 HTML */
 const htmlCache = new Map<string, string>()
+
+/** 同 text 并发只解析一次，避免虚表快速进出重复 marked */
+const inflight = new Map<string, Promise<string>>()
 
 let worker: Worker | null | undefined
 let nextId = 1
@@ -101,10 +104,14 @@ function getWorker(): Worker | null {
 /**
  * 把 Markdown 解析丢到 Worker；主线程只做 DOMPurify。
  * 无 Worker / 失败时同步 fallback（测例、旧环境）。
+ * 同 text 合并 in-flight，虚表抖动不会打爆 Worker。
  */
 export function renderMarkdownHtml(text: string): Promise<string> {
   const cached = getCachedMarkdownHtml(text)
   if (cached != null) return Promise.resolve(cached)
+
+  const existing = inflight.get(text)
+  if (existing) return existing
 
   const w = getWorker()
   if (!w) {
@@ -112,7 +119,7 @@ export function renderMarkdownHtml(text: string): Promise<string> {
   }
 
   const id = nextId++
-  return new Promise<string>((resolve, reject) => {
+  const job = new Promise<string>((resolve, reject) => {
     pending.set(id, {
       resolve: (dirty) => {
         try {
@@ -127,12 +134,20 @@ export function renderMarkdownHtml(text: string): Promise<string> {
     })
     const request: MarkdownWorkerRequest = { id, text }
     w.postMessage(request)
-  }).catch(() => parseMarkdownSync(text))
+  })
+    .catch(() => parseMarkdownSync(text))
+    .finally(() => {
+      inflight.delete(text)
+    })
+
+  inflight.set(text, job)
+  return job
 }
 
 /** 测试用：清空缓存与 Worker 状态 */
 export function resetMarkdownRenderForTests() {
   htmlCache.clear()
+  inflight.clear()
   for (const [, entry] of pending) {
     entry.reject(new Error('reset'))
   }

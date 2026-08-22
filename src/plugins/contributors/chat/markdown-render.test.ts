@@ -32,4 +32,11 @@ describe('markdown-render', () => {
     expect(second).toBe(first)
     expect(second).toContain('<strong>world</strong>')
   })
+
+  it('second ensure is cache hit (virtual list remount path)', () => {
+    const text = 'remount **me**'
+    const first = parseMarkdownSync(text)
+    const second = getCachedMarkdownHtml(text)
+    expect(second).toBe(first)
+  })
 })
