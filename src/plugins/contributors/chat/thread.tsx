@@ -190,7 +190,8 @@ function ReplyParts({
           {renderReplyPartList({ parts: detailParts, stepMap, onInspect, showSteps: true })}
         </div>
       ) : null}
-      {renderReplyPartList({ parts: finalParts, stepMap, onInspect, showSteps: false })}
+      {/* 展开 Details 时也要带上最终 Message 所在 step 的统计条 */}
+      {renderReplyPartList({ parts: finalParts, stepMap, onInspect, showSteps: expanded })}
     </>
   )
 }

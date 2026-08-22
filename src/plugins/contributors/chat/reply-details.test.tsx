@@ -18,6 +18,10 @@ function loopReply(): Extract<ChatNode, { kind: 'reply' }> {
     durationMs: 1200,
     stepCount: 2,
     turn: 1,
+    steps: [
+      { step: 0, inputTokens: 10, outputTokens: 20, toolCount: 1, messageChars: 14 },
+      { step: 1, inputTokens: 30, outputTokens: 40, toolCount: 0, messageChars: 17 },
+    ],
     parts: [
       { id: 'a-draft', kind: 'assistant', text: 'thinking draft', step: 0 },
       {
@@ -64,6 +68,8 @@ describe('Details collapse UI', () => {
 
     expect(screen.getByTestId('details-toggle')).toBeTruthy()
     expect(screen.getByText('final answer here')).toBeTruthy()
+    // 折叠时不展示最终 step 统计
+    expect(screen.queryByRole('group', { name: 'Step 2' })).toBeNull()
     // 折叠时 Details 仍挂在 DOM（hidden），避免展开重建
     const details = screen.getByTestId('reply-details')
     expect(details).toHaveProperty('hidden', true)
@@ -73,5 +79,7 @@ describe('Details collapse UI', () => {
     expect(screen.getByTestId('reply-details')).toHaveProperty('hidden', false)
     expect(screen.getByText('read_file')).toBeTruthy()
     expect(screen.getByTestId('user-tool-count').textContent).toBe('1')
+    // 展开后最终 Message 所在 step 的统计也要有
+    expect(screen.getByRole('group', { name: 'Step 2' })).toBeTruthy()
   })
 })
