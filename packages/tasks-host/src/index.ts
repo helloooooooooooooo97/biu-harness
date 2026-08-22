@@ -33,6 +33,9 @@ export type TaskRow = {
   status: TaskStatus
   priority: TaskPriority
   dueAt: number | null
+  /** 任务描述 */
+  description: string
+  /** 备忘 */
   notes: string
   sort: number
   createdAt: number
@@ -51,6 +54,7 @@ export type TaskCreateInput = {
   assignee?: TaskActor | null
   assigneeSessionId?: string
   dueAt?: number | null
+  description?: string
   notes?: string
   creator?: TaskActor
 }
@@ -62,6 +66,7 @@ export type TaskUpdateInput = Partial<{
   assignee: TaskActor | null
   assigneeSessionId: string | null
   dueAt: number | null
+  description: string
   notes: string
   sort: number
 }>
@@ -274,6 +279,7 @@ function mapRow(row: Record<string, unknown>): TaskRow {
     status: asStatus(row.status),
     priority: asPriority(row.priority),
     dueAt: row.due_at == null ? null : Number(row.due_at),
+    description: String(row.description ?? ''),
     notes: String(row.notes ?? ''),
     sort: Number(row.sort ?? 0),
     createdAt: Number(row.created_at ?? 0),
@@ -372,6 +378,7 @@ export class TasksService extends Service {
       'ALTER TABLE tasks ADD COLUMN creator_json TEXT',
       'ALTER TABLE tasks ADD COLUMN assignee_json TEXT',
       'ALTER TABLE tasks ADD COLUMN assigned_at INTEGER',
+      "ALTER TABLE tasks ADD COLUMN description TEXT NOT NULL DEFAULT ''",
     ]) {
       try {
         this.db.exec(sql)
@@ -400,10 +407,10 @@ export class TasksService extends Service {
     }
     if (filter.q?.trim()) {
       clauses.push(
-        '(title LIKE ? OR notes LIKE ? OR assignee LIKE ? OR creator_json LIKE ? OR assignee_json LIKE ?)',
+        '(title LIKE ? OR description LIKE ? OR notes LIKE ? OR assignee LIKE ? OR creator_json LIKE ? OR assignee_json LIKE ?)',
       )
       const like = `%${filter.q.trim()}%`
-      params.push(like, like, like, like, like)
+      params.push(like, like, like, like, like, like)
     }
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
     const rows = this.db
@@ -431,6 +438,7 @@ export class TasksService extends Service {
     const status = asStatus(input.status)
     const priority = asPriority(input.priority)
     const dueAt = input.dueAt == null || Number.isNaN(Number(input.dueAt)) ? null : Number(input.dueAt)
+    const description = String(input.description ?? '')
     const notes = String(input.notes ?? '')
     const creator = normalizeActor(input.creator, '用户') ?? { kind: 'user', name: '用户' }
     const assignee = input.assignee ? normalizeActor(input.assignee) : null
@@ -443,9 +451,9 @@ export class TasksService extends Service {
     this.db
       .prepare(
         `INSERT INTO tasks (
-          id, title, status, priority, assignee, due_at, notes, sort,
+          id, title, status, priority, assignee, due_at, description, notes, sort,
           created_at, updated_at, creator_json, assignee_json, assigned_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -454,6 +462,7 @@ export class TasksService extends Service {
         priority,
         assigneeLabel,
         dueAt,
+        description,
         notes,
         sort,
         ts,
@@ -480,6 +489,7 @@ export class TasksService extends Service {
           ? null
           : Number(patch.dueAt)
     const notes = patch.notes != null ? String(patch.notes) : current.notes
+    const description = patch.description != null ? String(patch.description) : current.description
     let sort = patch.sort != null ? Number(patch.sort) : current.sort
     if (status !== current.status && patch.sort == null) {
       const maxSort = this.db
@@ -501,7 +511,7 @@ export class TasksService extends Service {
     this.db
       .prepare(
         `UPDATE tasks SET
-          title = ?, status = ?, priority = ?, assignee = ?, due_at = ?, notes = ?, sort = ?,
+          title = ?, status = ?, priority = ?, assignee = ?, due_at = ?, description = ?, notes = ?, sort = ?,
           updated_at = ?, assignee_json = ?, assigned_at = ?
          WHERE id = ?`,
       )
@@ -511,6 +521,7 @@ export class TasksService extends Service {
         priority,
         assignee?.name ?? '',
         dueAt,
+        description,
         notes,
         sort,
         ts,
@@ -599,7 +610,8 @@ export function apply(ctx: Context) {
         assigneeSessionId: { type: 'string', description: '分配给的 session id（Agent）' },
         assignee: { type: 'string', description: '分配给人名（非 Agent 时）' },
         dueAt: { type: 'number', description: '截止时间戳 ms' },
-        notes: { type: 'string' },
+        description: { type: 'string', description: '任务描述' },
+        notes: { type: 'string', description: '备忘' },
       },
       required: ['title'],
     },
@@ -617,6 +629,7 @@ export function apply(ctx: Context) {
         ...(args.status != null ? { status: asStatus(args.status) } : {}),
         ...(args.priority != null ? { priority: asPriority(args.priority) } : {}),
         ...(args.dueAt != null ? { dueAt: Number(args.dueAt) } : {}),
+        ...(args.description != null ? { description: String(args.description) } : {}),
         ...(args.notes != null ? { notes: String(args.notes) } : {}),
         creator,
         assignee,
@@ -627,7 +640,7 @@ export function apply(ctx: Context) {
 
   host.tools.register({
     name: 'tasks_update',
-    description: '更新任务字段（可改分配人 assigneeSessionId / assignee；改 status 即换看板列）',
+    description: '更新任务字段（可改分配人 / 描述 / 备忘；改 status 即换状态）',
     parameters: {
       type: 'object',
       properties: {
@@ -638,7 +651,8 @@ export function apply(ctx: Context) {
         assigneeSessionId: { type: ['string', 'null'], description: '分配 session；null 清空' },
         assignee: { type: ['string', 'null'], description: '分配人名；null 清空' },
         dueAt: { type: ['number', 'null'] },
-        notes: { type: 'string' },
+        description: { type: 'string', description: '任务描述' },
+        notes: { type: 'string', description: '备忘' },
         sort: { type: 'number' },
       },
       required: ['id'],
@@ -650,6 +664,7 @@ export function apply(ctx: Context) {
       if (args.status != null) patch.status = asStatus(args.status)
       if (args.priority != null) patch.priority = asPriority(args.priority)
       if (args.dueAt !== undefined) patch.dueAt = args.dueAt == null ? null : Number(args.dueAt)
+      if (args.description != null) patch.description = String(args.description)
       if (args.notes != null) patch.notes = String(args.notes)
       if (args.sort != null) patch.sort = Number(args.sort)
       if (args.assigneeSessionId !== undefined) {

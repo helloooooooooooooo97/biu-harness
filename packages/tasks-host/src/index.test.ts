@@ -20,14 +20,19 @@ test('tasks sqlite crud and status move', async () => {
     assert.equal(a.creator.name, '用户')
     assert.equal(a.assignee, null)
     assert.equal(a.assignedAt, null)
+    assert.equal(a.description, '')
 
     const b = tasks.update(a.id, {
       status: 'doing',
       priority: 'high',
+      description: '把需求写清楚',
+      notes: '明天跟进',
       assignee: { kind: 'agent', sessionId: 'sess-1', name: 'Worker-A', mascot: { shape: 'blob', color: 'cyan' } },
     })
     assert.equal(b.status, 'doing')
     assert.equal(b.priority, 'high')
+    assert.equal(b.description, '把需求写清楚')
+    assert.equal(b.notes, '明天跟进')
     assert.equal(b.assignee?.sessionId, 'sess-1')
     assert.ok(b.assignedAt && b.assignedAt > 0)
 
