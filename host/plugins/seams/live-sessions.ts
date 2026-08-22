@@ -13,7 +13,7 @@ export const LIVE_TOOL_NAMES = [
 
 const LIVE_PROMPT = `你是 Live 指挥席（文字版）：调度其他 chat session，而不是亲自改代码或跑长任务。
 工作流：session_list / session_inspect 了解现场 → session_wake（wait=false 可先派工）或 session_inject → session_progress 抽查进度。
-异步派工后，worker 的 turn/end 会自动写成旁白落到本会话；仍可主动 session_progress。
+异步派工（wait=false / inject）后，worker turn/end 会旁白回本会话。
 向用户汇报要克制：只在关键节点、明显卡住、或用户追问时旁白，不要刷屏。
 回答简洁：说明调度了谁、当前状态、下一步。`
 
@@ -33,62 +33,7 @@ export interface SessionProgressSnapshot {
 }
 
 /** 测试可见：当前未撤销的 live→worker 监听。 */
-export interface LiveWorkerWatch {
-  liveSessionId: string
-  workerSessionId: string
-  sinceSeq: number
-  watchedAt: number
-}
 
-type Stop = () => void
-
-/** key=live\\0worker → stop；仅用于去重 / 测试 / 插件卸载清理 */
-const pendingStops = new Map<string, { watch: LiveWorkerWatch; stop: Stop }>()
-
-let watchImpl:
-  | ((liveSessionId: string, workerSessionId: string, sinceSeq?: number) => LiveWorkerWatch | undefined)
-  | null = null
-
-/** 测试用：撤销并清空。 */
-export function resetLiveWatchesForTests() {
-  for (const item of pendingStops.values()) item.stop()
-  pendingStops.clear()
-}
-
-/** 测试用：查看某 worker 当前被谁盯着。 */
-export function listLiveWatchesForTests(workerSessionId?: string): LiveWorkerWatch[] {
-  const all = [...pendingStops.values()].map((item) => item.watch)
-  if (workerSessionId) return all.filter((item) => item.workerSessionId === workerSessionId)
-  return all
-}
-
-/** 测试用：手动挂一个 turn/end 监听（需已 apply）。 */
-export function watchWorker(liveSessionId: string, workerSessionId: string, sinceSeq = -1) {
-  if (!watchImpl) throw new Error('live-sessions is not applied')
-  return watchImpl(liveSessionId, workerSessionId, sinceSeq)
-}
-
-function formatWorkerLabel(title: string | undefined, workerSessionId: string) {
-  const trimmed = title?.trim()
-  if (trimmed) return trimmed
-  return workerSessionId.slice(0, 8)
-}
-
-export function formatLiveTurnEndNote(opts: {
-  title?: string
-  workerSessionId: string
-  turn: number
-  reason: string
-  assistantText?: string
-}) {
-  const label = formatWorkerLabel(opts.title, opts.workerSessionId)
-  const done = opts.reason === 'complete' || opts.reason === 'completed'
-  const status = done ? '已完成' : `结束（${opts.reason}）`
-  const summary = (opts.assistantText ?? '').trim().replace(/\s+/g, ' ').slice(0, 280)
-  return summary
-    ? `[指挥席] ${label} ${status} · turn ${opts.turn}\n${summary}`
-    : `[指挥席] ${label} ${status} · turn ${opts.turn}`
-}
 
 /** 从事件日志推导 worker 进度快照（供 Live 抽查）。 */
 export function buildSessionProgress(
@@ -201,79 +146,36 @@ function recentMessages(events: SessionEvent[], limit = 12) {
   return out.reverse()
 }
 
-async function appendLiveTurnEndNote(
-  ctx: Context,
-  liveSessionId: string,
-  workerSessionId: string,
-  event: Extract<SessionEvent, { type: 'turn/end' }>,
-  sinceSeq: number,
-) {
-  const worker = await ctx.sessions.get(workerSessionId)
-  if (!worker) return
-  const progress = buildSessionProgress(worker.events, {
-    afterSeq: sinceSeq,
-    textLimit: 280,
-    busy: false,
-  })
-  const title =
-    (await ctx.sessions.listSummaries()).find((item) => item.id === workerSessionId)?.title ??
-    undefined
-  const note = formatLiveTurnEndNote({
-    title,
-    workerSessionId,
-    turn: event.turn,
-    reason: event.reason,
-    assistantText: progress.assistantText,
-  })
-  try {
-    await ctx.sessions.append(liveSessionId, {
-      type: 'assistant/message',
-      text: note,
-    })
-  } catch (error) {
-    console.warn('[live-sessions] failed to append turn-end note', error)
-  }
-}
 
 export const name = 'live-sessions'
 export const inject = ['tools', 'sessions', 'agents', 'systemPrompt']
 
 export function apply(ctx: Context) {
-  const watch = (liveSessionId: string, workerSessionId: string, sinceSeq = -1) => {
-    if (!liveSessionId || !workerSessionId || liveSessionId === workerSessionId) return
-    const key = `${liveSessionId}\0${workerSessionId}`
-    pendingStops.get(key)?.stop()
-
-    const stopListener = ctx.on('session/event', ({ sessionId, event }) => {
-      if (sessionId !== workerSessionId) return
-      if (event.type !== 'turn/end') return
+  /** wait=false / inject：听目标 session 的 turn/end，旁白后停掉 */
+  const watchTurnEnd = (liveId: string, workerId: string) => {
+    if (!liveId || !workerId || liveId === workerId) return
+    const stop = ctx.on('session/event', ({ sessionId, event }) => {
+      if (sessionId !== workerId || event.type !== 'turn/end') return
       stop()
-      void appendLiveTurnEndNote(ctx, liveSessionId, workerSessionId, event, sinceSeq)
+      void (async () => {
+        const worker = await ctx.sessions.get(workerId)
+        if (!worker) return
+        const last = [...worker.events].reverse().find((e) => e.type === 'assistant/message' && e.text.trim())
+        const summary = (last && 'text' in last ? String(last.text) : '').trim().replace(/\s+/g, ' ').slice(0, 280)
+        const done = event.reason === 'complete' || event.reason === 'completed'
+        const status = done ? '已完成' : `结束（${event.reason}）`
+        const label = workerId.slice(0, 8)
+        const note = summary
+          ? `[指挥席] ${label} ${status} · turn ${event.turn}\n${summary}`
+          : `[指挥席] ${label} ${status} · turn ${event.turn}`
+        try {
+          await ctx.sessions.append(liveId, { type: 'assistant/message', text: note })
+        } catch (error) {
+          console.warn('[live-sessions] turn/end note failed', error)
+        }
+      })()
     })
-
-    const stop = () => {
-      stopListener()
-      if (pendingStops.get(key)?.stop === stop) pendingStops.delete(key)
-    }
-
-    const entry = {
-      watch: {
-        liveSessionId,
-        workerSessionId,
-        sinceSeq,
-        watchedAt: Date.now(),
-      },
-      stop,
-    }
-    pendingStops.set(key, entry)
-    return entry.watch
   }
-
-  watchImpl = watch
-  ctx.effect(() => () => {
-    resetLiveWatchesForTests()
-    if (watchImpl === watch) watchImpl = null
-  })
 
   ctx.systemPrompt.register('live.persona', () => {
     const sessionId = currentSessionId()
@@ -409,9 +311,9 @@ export function apply(ctx: Context) {
       const agent = await ctx.agents.create(targetId)
       if (!wait) {
         // 先订阅再派工，避免极快完成时丢掉 turn/end；结束后自动 dispose
-        watch(selfId, targetId, target.events.at(-1)?.seq ?? -1)
+        watchTurnEnd(selfId, targetId)
         void agent.send(text, { wait: false })
-        return { sessionId: targetId, queued: true, wait: false, watched: true }
+        return { sessionId: targetId, queued: true, wait: false }
       }
       const turn = await agent.send(text, { wait: true })
       return {
@@ -443,10 +345,10 @@ export function apply(ctx: Context) {
       if (!text) throw new Error('text required')
       if (targetId === selfId) throw new Error('cannot inject into the current live session')
       const target = await ctx.sessions.require(targetId)
-      watch(selfId, targetId, target.events.at(-1)?.seq ?? -1)
+      watchTurnEnd(selfId, targetId)
       const agent = await ctx.agents.create(targetId)
       agent.inject(text)
-      return { sessionId: targetId, queued: true, watched: true }
+      return { sessionId: targetId, queued: true }
     },
   })
 }
