@@ -5,6 +5,7 @@ import {
   remainingSidebarMascotIntroMs,
 } from '../../infrastructure/session-mascot-fresh.ts'
 import { GrokBotAvatar } from './grok-bot-avatar.tsx'
+import { StaticMascotMark } from './static-mascot-mark.tsx'
 import type { SessionMascotIdentity } from './grok-bot-types.ts'
 import { DEFAULT_SESSION_MASCOT } from './session-mascot.ts'
 
@@ -23,7 +24,9 @@ export type SidebarMascotProps = {
   followPointer?: boolean
 }
 
-/** Per-session Grok：默认静止；fresh intro 或 busy 时才动，busy 时右下角绿点。 */
+/**
+ * 侧栏头像：空闲用静态描边（轻）；仅 intro / busy 才挂完整 GrokCharacter。
+ */
 export const SidebarMascot = memo(function SidebarMascot({
   size = 44,
   busy = false,
@@ -46,6 +49,20 @@ export const SidebarMascot = memo(function SidebarMascot({
     }, left)
     return () => window.clearTimeout(timer)
   }, [sessionId])
+
+  const animated = busy || introMs > 0
+
+  if (!animated) {
+    return (
+      <StaticMascotMark
+        identity={identity}
+        size={size}
+        busy={false}
+        className={className}
+        title={title}
+      />
+    )
+  }
 
   return (
     <GrokBotAvatar

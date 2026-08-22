@@ -710,11 +710,40 @@ export class SessionViewService extends Service {
   }
 
   async deleteSession(id: string) {
-    const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' })
-    const body = (await res.json()) as { ok?: boolean; error?: string }
-    if (!res.ok) throw new Error(body.error || `删除失败：${res.status}`)
-    this.dropCache(id)
+    const prevSessions = this.value.sessions
     const wasActive = this.value.sessionId === id
+    // 乐观更新：先从侧栏拿掉，避免等网络才「卡一下消失」
+    this.dropCache(id)
+    this.replace({
+      sessions: prevSessions.filter((item) => item.id !== id),
+      ...(wasActive
+        ? {
+            sessionId: null,
+            events: [],
+            nodes: [],
+            trajectory: [],
+            pending: false,
+            agentStatus: 'idle' as const,
+            project: undefined,
+            hasMoreOlder: false,
+            loadingOlder: false,
+            trajectoryHasMore: false,
+            trajectoryLoading: false,
+            totalTurns: 0,
+            error: undefined,
+          }
+        : {}),
+    })
+
+    try {
+      const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' })
+      const body = (await res.json()) as { ok?: boolean; error?: string }
+      if (!res.ok) throw new Error(body.error || `删除失败：${res.status}`)
+    } catch (error) {
+      this.replace({ sessions: prevSessions, error: String(error) })
+      throw error
+    }
+
     await this.refreshSessions()
     if (!wasActive) return
     const next = this.value.sessions[0]?.id

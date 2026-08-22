@@ -408,3 +408,39 @@ test('deleteSession clears active session when list empty', async () => {
   assert.equal(view.get().sessionId, null)
   assert.equal(view.get().sessions.length, 0)
 })
+
+test('deleteSession removes from list before DELETE resolves', async () => {
+  let resolveDelete!: (value: Response) => void
+  const deleteGate = new Promise<Response>((resolve) => {
+    resolveDelete = resolve
+  })
+  let sessions: Array<{ id: string; title: string; eventCount: number; updatedAt: number }> = [
+    { id: 's1', title: 'a', eventCount: 1, updatedAt: 2 },
+    { id: 's2', title: 'b', eventCount: 1, updatedAt: 1 },
+  ]
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input)
+    const method = init?.method ?? 'GET'
+    if (url.endsWith('/api/sessions') && method === 'GET') {
+      return { ok: true, status: 200, json: async () => ({ sessions }) } as Response
+    }
+    if (url.includes('/api/sessions/s1') && method === 'DELETE') {
+      return deleteGate
+    }
+    if (url.includes('/api/approvals')) {
+      return { ok: true, status: 200, json: async () => ({ mode: 'auto', pending: [] }) } as Response
+    }
+    return { ok: false, status: 404, json: async () => ({}) } as Response
+  }) as typeof fetch
+
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  await view.refreshSessions()
+  const pending = view.deleteSession('s1')
+  assert.equal(view.get().sessions.map((row) => row.id).join(','), 's2')
+  sessions = [{ id: 's2', title: 'b', eventCount: 1, updatedAt: 1 }]
+  resolveDelete({ ok: true, status: 200, json: async () => ({ ok: true, id: 's1' }) } as Response)
+  await pending
+  assert.equal(view.get().sessions.map((row) => row.id).join(','), 's2')
+})

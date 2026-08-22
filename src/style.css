@@ -317,7 +317,6 @@ body {
   line-height: 1.2;
   text-align: left;
   text-decoration: none;
-  transition: background 0.12s ease, color 0.12s ease;
 }
 
 .app-side-actions-icon {

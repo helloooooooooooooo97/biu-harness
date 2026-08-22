@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
 import type { SlotProps } from '../registry/slots.ts'
@@ -134,7 +134,7 @@ function WorkspaceModule() {
   )
 }
 
-function SessionRow({
+const SessionRow = memo(function SessionRow({
   item,
   active,
   busy,
@@ -145,7 +145,7 @@ function SessionRow({
   active: boolean
   busy: boolean
   view: string
-  onDelete: () => void
+  onDelete: (item: SessionListItem) => void
 }) {
   const identity = resolveSessionMascot(item.id, item.mascot)
   return (
@@ -187,7 +187,7 @@ function SessionRow({
         onClick={(event) => {
           event.preventDefault()
           event.stopPropagation()
-          onDelete()
+          onDelete(item)
         }}
       >
         <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -196,7 +196,7 @@ function SessionRow({
       </button>
     </div>
   )
-}
+})
 
 function Shell(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
@@ -215,7 +215,6 @@ function Shell(props: SlotProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const collapsedProjects = useSidebarCollapseStore((state) => state.collapsed)
   const toggleProjectGroup = useSidebarCollapseStore((state) => state.toggle)
-  const expandProjectGroup = useSidebarCollapseStore((state) => state.expand)
   const activeModule = moduleIdFromPath(location.pathname)
   const appRoute = parseAppPath(location.pathname)
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
@@ -223,31 +222,24 @@ function Shell(props: SlotProps) {
   const agentHref = sessionId ? `/s/${sessionId}${view === 'debug' ? '/debug' : ''}` : '/'
   const showChatSidebar = activeModule === 'agent' && !sidebarCollapsed
   const projectGroups = useMemo(() => groupSessionsByProject(sessions), [sessions])
-  const prevRouteSessionRef = useRef<string | null>(null)
-
-  // 仅在「切到」某组内会话时自动展开；手动折叠当前组不会被立刻顶开
-  useEffect(() => {
-    const prev = prevRouteSessionRef.current
-    prevRouteSessionRef.current = routeSessionId
-    if (!routeSessionId || prev === routeSessionId) return
-    const group = projectGroups.find((item) => item.sessions.some((row) => row.id === routeSessionId))
-    if (!group || !collapsedProjects[group.key]) return
-    expandProjectGroup(group.key)
-  }, [routeSessionId, projectGroups, collapsedProjects, expandProjectGroup])
 
   function createChat(opts: { type?: 'chat' | 'live'; projectPath?: string } = {}) {
     void sessionView.newSession(opts).then((id) => navigate(`/s/${id}`))
   }
 
-  function deleteChat(item: SessionListItem) {
-    if (!window.confirm(`Delete session “${item.title}”?`)) return
-    const wasActive = item.id === sessionId
-    void sessionView.deleteSession(item.id).then(() => {
-      if (!wasActive) return
-      const next = sessionView.get().sessionId
-      navigate(next ? `/s/${next}` : '/')
-    })
-  }
+  const deleteChat = useCallback(
+    (item: SessionListItem) => {
+      if (!window.confirm(`Delete session “${item.title}”?`)) return
+      const wasActive = item.id === sessionId
+      // 列表已乐观移除；切路由等 DELETE/load 完成后再跳，避免闪回
+      void sessionView.deleteSession(item.id).then(() => {
+        if (!wasActive) return
+        const next = sessionView.get().sessionId
+        navigate(next ? `/s/${next}` : '/')
+      })
+    },
+    [navigate, sessionId, sessionView],
+  )
 
   // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
   useEffect(() => {
@@ -353,7 +345,11 @@ function Shell(props: SlotProps) {
               <p className="px-2 text-[11px] leading-4 text-[var(--dsw-label-3)]">No chats yet. Send a message or create one.</p>
             ) : (
               projectGroups.map((group) => {
-                const collapsed = Boolean(collapsedProjects[group.key])
+                // 含当前路由会话的组首帧就展开，避免「先塌再展开」闪一下
+                const hasRouteSession = Boolean(
+                  routeSessionId && group.sessions.some((row) => row.id === routeSessionId),
+                )
+                const collapsed = Boolean(collapsedProjects[group.key]) && !hasRouteSession
                 const isUngrouped = group.key === UNGROUPED_PROJECT_KEY
                 return (
                   <div key={group.key} className="min-w-0">
@@ -404,7 +400,7 @@ function Shell(props: SlotProps) {
                             active={item.id === routeSessionId}
                             busy={item.id === routeSessionId && agentBusy}
                             view={view}
-                            onDelete={() => deleteChat(item)}
+                            onDelete={deleteChat}
                           />
                         ))}
                       </div>
