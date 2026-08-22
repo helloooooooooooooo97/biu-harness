@@ -32,7 +32,7 @@ export interface SessionProgressSnapshot {
   inboxPending: number
 }
 
-/** live → worker 的可撤销订阅（turn/end 旁白后 dispose）。 */
+/** 测试可见：当前未撤销的 live→worker 监听。 */
 export interface LiveWorkerWatch {
   liveSessionId: string
   workerSessionId: string
@@ -40,41 +40,32 @@ export interface LiveWorkerWatch {
   watchedAt: number
 }
 
-interface ArmedWatch extends LiveWorkerWatch {
-  dispose: () => void
-}
+type Stop = () => void
 
-/** liveId\\0workerId → 当前订阅；插件卸载 / turn/end 时撤销 */
-const armedWatches = new Map<string, ArmedWatch>()
+/** key=live\\0worker → stop；仅用于去重 / 测试 / 插件卸载清理 */
+const pendingStops = new Map<string, { watch: LiveWorkerWatch; stop: Stop }>()
 
-type ArmWatch = (liveSessionId: string, workerSessionId: string, sinceSeq?: number) => LiveWorkerWatch | undefined
+let watchImpl:
+  | ((liveSessionId: string, workerSessionId: string, sinceSeq?: number) => LiveWorkerWatch | undefined)
+  | null = null
 
-let armWatch: ArmWatch | null = null
-
-function watchKey(liveSessionId: string, workerSessionId: string) {
-  return `${liveSessionId}\0${workerSessionId}`
-}
-
-/** 测试用：撤销并清空所有派遣订阅。 */
+/** 测试用：撤销并清空。 */
 export function resetLiveWatchesForTests() {
-  for (const arm of armedWatches.values()) arm.dispose()
-  armedWatches.clear()
+  for (const item of pendingStops.values()) item.stop()
+  pendingStops.clear()
 }
 
 /** 测试用：查看某 worker 当前被谁盯着。 */
 export function listLiveWatchesForTests(workerSessionId?: string): LiveWorkerWatch[] {
-  const all = [...armedWatches.values()].map(({ dispose: _dispose, ...rest }) => rest)
+  const all = [...pendingStops.values()].map((item) => item.watch)
   if (workerSessionId) return all.filter((item) => item.workerSessionId === workerSessionId)
   return all
 }
 
-/**
- * 订阅 worker 的下一轮 turn/end（可撤销）。
- * 需在 live-sessions apply 之后调用；结束时会自动 dispose。
- */
+/** 测试用：手动挂一个 turn/end 监听（需已 apply）。 */
 export function watchWorker(liveSessionId: string, workerSessionId: string, sinceSeq = -1) {
-  if (!armWatch) throw new Error('live-sessions is not applied')
-  return armWatch(liveSessionId, workerSessionId, sinceSeq)
+  if (!watchImpl) throw new Error('live-sessions is not applied')
+  return watchImpl(liveSessionId, workerSessionId, sinceSeq)
 }
 
 function formatWorkerLabel(title: string | undefined, workerSessionId: string) {
@@ -248,46 +239,40 @@ export const name = 'live-sessions'
 export const inject = ['tools', 'sessions', 'agents', 'systemPrompt']
 
 export function apply(ctx: Context) {
-  const arm: ArmWatch = (liveSessionId, workerSessionId, sinceSeq = -1) => {
+  const watch = (liveSessionId: string, workerSessionId: string, sinceSeq = -1) => {
     if (!liveSessionId || !workerSessionId || liveSessionId === workerSessionId) return
-    const key = watchKey(liveSessionId, workerSessionId)
-    armedWatches.get(key)?.dispose()
+    const key = `${liveSessionId}\0${workerSessionId}`
+    pendingStops.get(key)?.stop()
 
-    let disposed = false
-    const dispose = () => {
-      if (disposed) return
-      disposed = true
+    const stopListener = ctx.on('session/event', ({ sessionId, event }) => {
+      if (sessionId !== workerSessionId) return
+      if (event.type !== 'turn/end') return
       stop()
-      if (armedWatches.get(key)?.dispose === dispose) armedWatches.delete(key)
+      void appendLiveTurnEndNote(ctx, liveSessionId, workerSessionId, event, sinceSeq)
+    })
+
+    const stop = () => {
+      stopListener()
+      if (pendingStops.get(key)?.stop === stop) pendingStops.delete(key)
     }
 
-    // 挂在 live 插件 fiber 上：插件卸载自动撤销；turn/end 时手动撤销
-    const stop = ctx.sessions.subscribe(
-      workerSessionId,
-      (event) => {
-        if (event.type !== 'turn/end') return
-        const since = armedWatches.get(key)?.sinceSeq ?? sinceSeq
-        dispose()
-        void appendLiveTurnEndNote(ctx, liveSessionId, workerSessionId, event, since)
+    const entry = {
+      watch: {
+        liveSessionId,
+        workerSessionId,
+        sinceSeq,
+        watchedAt: Date.now(),
       },
-      ctx,
-    )
-
-    const watch: ArmedWatch = {
-      liveSessionId,
-      workerSessionId,
-      sinceSeq,
-      watchedAt: Date.now(),
-      dispose,
+      stop,
     }
-    armedWatches.set(key, watch)
-    return watch
+    pendingStops.set(key, entry)
+    return entry.watch
   }
 
-  armWatch = arm
+  watchImpl = watch
   ctx.effect(() => () => {
     resetLiveWatchesForTests()
-    if (armWatch === arm) armWatch = null
+    if (watchImpl === watch) watchImpl = null
   })
 
   ctx.systemPrompt.register('live.persona', () => {
@@ -424,7 +409,7 @@ export function apply(ctx: Context) {
       const agent = await ctx.agents.create(targetId)
       if (!wait) {
         // 先订阅再派工，避免极快完成时丢掉 turn/end；结束后自动 dispose
-        arm(selfId, targetId, target.events.at(-1)?.seq ?? -1)
+        watch(selfId, targetId, target.events.at(-1)?.seq ?? -1)
         void agent.send(text, { wait: false })
         return { sessionId: targetId, queued: true, wait: false, watched: true }
       }
@@ -458,7 +443,7 @@ export function apply(ctx: Context) {
       if (!text) throw new Error('text required')
       if (targetId === selfId) throw new Error('cannot inject into the current live session')
       const target = await ctx.sessions.require(targetId)
-      arm(selfId, targetId, target.events.at(-1)?.seq ?? -1)
+      watch(selfId, targetId, target.events.at(-1)?.seq ?? -1)
       const agent = await ctx.agents.create(targetId)
       agent.inject(text)
       return { sessionId: targetId, queued: true, watched: true }

@@ -175,22 +175,3 @@ test('sqlite persists session type across reopen', async () => {
   assert.equal((await ctx2.sessions.listSummaries())[0]?.type, 'live')
 })
 
-
-test('sessions.subscribe filters by session and is disposable', async () => {
-  const ctx = new Context()
-  await ctx.plugin(sessionStore, { driver: 'memory' })
-  await ctx.plugin(sessions)
-  const a = await ctx.sessions.create()
-  const b = await ctx.sessions.create()
-  const seen: string[] = []
-  const stop = ctx.sessions.subscribe(a.id, (event) => {
-    seen.push(event.type)
-  }, ctx)
-  await ctx.sessions.append(a.id, { type: 'user/message', text: 'a1', kind: 'wake' })
-  await ctx.sessions.append(b.id, { type: 'user/message', text: 'b1', kind: 'wake' })
-  await ctx.sessions.append(a.id, { type: 'assistant/message', text: 'a2' })
-  assert.deepEqual(seen, ['user/message', 'assistant/message'])
-  stop()
-  await ctx.sessions.append(a.id, { type: 'assistant/message', text: 'a3' })
-  assert.deepEqual(seen, ['user/message', 'assistant/message'])
-})
