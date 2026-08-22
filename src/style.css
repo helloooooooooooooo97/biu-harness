@@ -297,6 +297,14 @@ body {
   grid-template-columns: 48px minmax(0, 1fr);
 }
 
+.app-shell-agent.is-inspector-open {
+  grid-template-columns: 48px 280px minmax(0, 1fr) 320px;
+}
+
+.app-shell-agent.is-sidebar-collapsed.is-inspector-open {
+  grid-template-columns: 48px minmax(0, 1fr) 320px;
+}
+
 .app-shell-module {
   grid-template-columns: 48px minmax(0, 1fr);
 }
@@ -2412,4 +2420,286 @@ body {
   .dash-root {
     padding: 20px 18px 32px;
   }
+}
+
+
+/* —— Session inspector (right sidebar) —— */
+.session-inspector {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  border-left: 1px solid var(--dsw-border);
+  background: var(--dsw-sidebar);
+  color: var(--dsw-label);
+}
+
+.session-inspector-head {
+  display: flex;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--dsw-border);
+  padding: 0 10px;
+}
+
+.session-inspector-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.session-inspector-type {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dsw-business) 16%, transparent);
+  color: var(--dsw-business);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  text-transform: uppercase;
+}
+
+.session-inspector-close {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-label-3);
+  cursor: pointer;
+}
+
+.session-inspector-close:hover {
+  background: var(--dsw-hover);
+  color: var(--dsw-business);
+}
+
+.session-inspector-tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+  border-bottom: 1px solid var(--dsw-border);
+  padding: 6px 8px;
+}
+
+.session-inspector-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-label-3);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 8px;
+}
+
+.session-inspector-tab:hover {
+  background: var(--dsw-hover);
+  color: var(--dsw-label);
+}
+
+.session-inspector-tab.is-active {
+  background: color-mix(in srgb, var(--dsw-business) 14%, transparent);
+  color: var(--dsw-business);
+}
+
+.session-inspector-body {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 10px;
+}
+
+.session-inspector-error {
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #c44 16%, transparent);
+  color: #f08888;
+  font-size: 11px;
+  padding: 8px;
+}
+
+.session-inspector-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.session-inspector-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--dsw-label-3);
+  font-size: 11px;
+}
+
+.session-inspector-field select {
+  border: 1px solid var(--dsw-border);
+  border-radius: 8px;
+  background: var(--dsw-surface);
+  color: var(--dsw-label);
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.session-inspector-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.session-inspector-source {
+  border-radius: 8px;
+  border: 1px solid var(--dsw-border);
+  padding: 8px;
+}
+
+.session-inspector-source-label {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.session-inspector-source-desc {
+  margin-top: 2px;
+  color: var(--dsw-label-3);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.inspector-source-minimal {
+  border-color: color-mix(in srgb, #3b82f6 35%, var(--dsw-border));
+}
+
+.inspector-source-live {
+  border-color: color-mix(in srgb, #10b981 35%, var(--dsw-border));
+}
+
+.inspector-source-plugin {
+  border-color: color-mix(in srgb, #a855f7 35%, var(--dsw-border));
+}
+
+.session-inspector-tools,
+.session-inspector-workers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-inspector-tool,
+.session-inspector-worker {
+  border: 1px solid var(--dsw-border);
+  border-radius: 10px;
+  background: var(--dsw-surface);
+  padding: 8px;
+}
+
+.session-inspector-tool.is-active {
+  border-color: color-mix(in srgb, var(--dsw-business) 40%, var(--dsw-border));
+}
+
+.session-inspector-tool-top,
+.session-inspector-worker-top {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.session-inspector-tool-top code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.session-inspector-tool-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--dsw-border);
+}
+
+.session-inspector-tool p,
+.session-inspector-worker-text,
+.session-inspector-hint,
+.session-inspector-empty {
+  margin: 6px 0 0;
+  color: var(--dsw-label-3);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.session-inspector-badge {
+  flex-shrink: 0;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  text-transform: uppercase;
+}
+
+.session-inspector-badge.inspector-source-minimal {
+  background: color-mix(in srgb, #3b82f6 18%, transparent);
+  color: #60a5fa;
+}
+
+.session-inspector-badge.inspector-source-live {
+  background: color-mix(in srgb, #10b981 18%, transparent);
+  color: #34d399;
+}
+
+.session-inspector-badge.inspector-source-plugin {
+  background: color-mix(in srgb, #a855f7 18%, transparent);
+  color: #c084fc;
+}
+
+.session-inspector-state {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--dsw-label-3);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.session-inspector-state.is-on {
+  color: var(--dsw-ok, #34d399);
+}
+
+.session-inspector-worker-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.session-inspector-worker-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--dsw-label-3);
+  font-size: 10px;
+}
+
+.chat-view-header-expand.is-active {
+  background: color-mix(in srgb, var(--dsw-business) 16%, transparent);
+  color: var(--dsw-business);
 }

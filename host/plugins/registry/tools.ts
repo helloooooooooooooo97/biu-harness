@@ -39,6 +39,8 @@ export class ToolsService extends Service {
   private tools = new Map<string, ToolSpec>()
   private guards: ToolGuard[] = []
   private mode: AgentToolMode = 'standard'
+  /** 极简模式下常驻额外工具（配置面板勾选，跨回合生效）。 */
+  private pinnedExtras: string[] = []
 
   constructor(ctx: Context) {
     super(ctx, 'tools')
@@ -55,9 +57,38 @@ export class ToolsService extends Service {
     this.ctx.emit('hub/change')
   }
 
+  getPinnedExtras() {
+    return [...this.pinnedExtras]
+  }
+
+  setPinnedExtras(names: readonly string[]) {
+    const liveSet = new Set<string>([
+      'session_list',
+      'session_inspect',
+      'session_progress',
+      'session_wake',
+      'session_inject',
+    ])
+    const cleaned = [
+      ...new Set(
+        names
+          .map((name) => name.trim())
+          .filter(Boolean)
+          .filter((name) => !(MINIMAL_TOOL_NAMES as readonly string[]).includes(name))
+          .filter((name) => !liveSet.has(name)),
+      ),
+    ]
+    const same =
+      cleaned.length === this.pinnedExtras.length && cleaned.every((name, i) => name === this.pinnedExtras[i])
+    if (same) return
+    this.pinnedExtras = cleaned
+    this.ctx.emit('hub/change')
+  }
+
   private visible(name: string) {
     if (this.mode === 'standard') return true
     if ((MINIMAL_TOOL_NAMES as readonly string[]).includes(name)) return true
+    if (this.pinnedExtras.includes(name)) return true
     return extraToolsStorage.getStore()?.has(name) ?? false
   }
 
