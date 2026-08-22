@@ -43,7 +43,7 @@ const SessionRow = memo(function SessionRow({
         className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-[12px] leading-4"
       >
         <SidebarMascot
-          size={20}
+          size={24}
           sessionId={item.id}
           identity={identity}
           busy={busy}

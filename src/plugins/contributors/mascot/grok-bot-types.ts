@@ -72,9 +72,20 @@ declare global {
     GrokCharacter?: GrokCharacterCtor
     GROK_GEO?: {
       Re: number
+      G9e?: number
+      VJt?: number
       viewBox: { minX: number; minY: number; width: number; height: number }
-      shapes: Record<string, { path: string; tiltScale?: number }>
+      shapes: Record<
+        string,
+        {
+          path: string
+          tiltScale?: number
+          face?: { x?: number; y?: number; sx?: number; sy?: number; eye?: number; leftDX?: number }
+        }
+      >
       palette: Record<string, { light: string; dark: string }>
+      /** 各 morph 帧的左右眼多边形 */
+      eyes?: number[][][][]
     }
   }
 }
