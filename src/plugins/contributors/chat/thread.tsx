@@ -324,6 +324,12 @@ function ReplyActions({
 }
 
 /** 挂在发起本回合的用户消息下：Details + 统计 */
+function replyToolCount(reply: Extract<ChatNode, { kind: 'reply' }>) {
+  const fromParts = reply.parts.reduce((count, part) => count + (part.kind === 'tool' ? 1 : 0), 0)
+  if (fromParts > 0) return fromParts
+  return (reply.steps ?? []).reduce((count, step) => count + step.toolCount, 0)
+}
+
 function UserTurnBar({
   reply,
   detailsOpen,
@@ -335,7 +341,13 @@ function UserTurnBar({
 }) {
   if (reply.streaming) return null
   const { hasDetails } = splitReplyForDisplay(reply)
-  const hasMeta = reply.turn != null || reply.stepCount != null || reply.durationMs != null || Boolean(reply.usage)
+  const toolCount = replyToolCount(reply)
+  const hasMeta =
+    reply.turn != null ||
+    reply.stepCount != null ||
+    reply.durationMs != null ||
+    Boolean(reply.usage) ||
+    toolCount > 0
   if (!hasDetails && !hasMeta) return null
 
   return (
@@ -364,6 +376,11 @@ function UserTurnBar({
             title={`本回合 ${reply.stepCount} 个 step`}
           />
         ) : null}
+        <MetaItem
+          icon={<LuWrench className="size-3" />}
+          value={<span data-testid="user-tool-count">{toolCount}</span>}
+          title={`本回合 ${toolCount} 次工具调用`}
+        />
         {reply.durationMs != null ? (
           <MetaItem
             icon={<LuTimer className="size-3" />}

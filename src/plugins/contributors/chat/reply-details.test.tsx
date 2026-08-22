@@ -72,5 +72,6 @@ describe('Details collapse UI', () => {
     fireEvent.click(screen.getByTestId('details-toggle'))
     expect(screen.getByTestId('reply-details')).toHaveProperty('hidden', false)
     expect(screen.getByText('read_file')).toBeTruthy()
+    expect(screen.getByTestId('user-tool-count').textContent).toBe('1')
   })
 })

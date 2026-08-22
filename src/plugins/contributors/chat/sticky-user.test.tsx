@@ -70,6 +70,7 @@ describe('sticky user message markers', () => {
     const user1 = document.querySelector('[data-node-id="u-1"]')
     const reply1 = document.querySelector('[data-node-id="r-1"]')
     expect(user1?.querySelector('[data-testid="user-turn-bar"]')).toBeTruthy()
+    expect(user1?.querySelector('[data-testid="user-tool-count"]')?.textContent).toBe('0')
     expect(user1?.querySelector('[aria-label="回合操作"]')).toBeNull()
     expect(reply1?.querySelector('[aria-label="回合操作"]')).toBeTruthy()
     expect(document.querySelectorAll('.chat-reply-bar')).toHaveLength(0)
