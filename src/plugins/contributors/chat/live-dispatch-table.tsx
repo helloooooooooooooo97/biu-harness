@@ -66,9 +66,9 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
       </div>
       <table className="w-full table-fixed border-collapse text-left text-[11px]">
         <colgroup>
-          <col className="w-auto" />
-          <col className="w-[7.5rem]" />
-          <col className="w-[4.5rem]" />
+          <col />
+          <col style={{ width: '7.5rem' }} />
+          <col style={{ width: '4.75rem' }} />
         </colgroup>
         <thead>
           <tr className="text-[10px] uppercase tracking-wide text-[var(--dsw-label-3)]">
