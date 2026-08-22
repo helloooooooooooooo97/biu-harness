@@ -4,8 +4,6 @@ import {
   UNGROUPED_PROJECT_KEY,
   folderNameFromPath,
   groupSessionsByProject,
-  readCollapsedProjects,
-  writeCollapsedProjects,
 } from './session-groups.ts'
 import type { SessionListItem } from './session-view.ts'
 
@@ -61,16 +59,4 @@ test('groupSessionsByProject groups by path and puts bare chats in Ungrouped', (
 test('folderNameFromPath takes the last segment', () => {
   assert.equal(folderNameFromPath('/Users/me/work/cordis-web/'), 'cordis-web')
   assert.equal(folderNameFromPath('C:\\repos\\demo'), 'demo')
-})
-
-test('collapsed project map round-trips through storage', () => {
-  const store = new Map<string, string>()
-  const storage = {
-    getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      store.set(key, value)
-    },
-  }
-  writeCollapsedProjects({ '/tmp/a': true }, storage)
-  assert.deepEqual(readCollapsedProjects(storage), { '/tmp/a': true })
 })

@@ -9,9 +9,8 @@ import { parseAppPath } from '../infrastructure/session-route.ts'
 import {
   UNGROUPED_PROJECT_KEY,
   groupSessionsByProject,
-  readCollapsedProjects,
-  writeCollapsedProjects,
 } from '../infrastructure/session-groups.ts'
+import { useSidebarCollapseStore } from '../infrastructure/sidebar-collapse-store.ts'
 import {
   APP_MODULES,
   moduleIdFromPath,
@@ -214,9 +213,9 @@ function Shell(props: SlotProps) {
   const agentBusy = useSessionView((state) => state.agentStatus === 'running')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>(() =>
-    readCollapsedProjects(),
-  )
+  const collapsedProjects = useSidebarCollapseStore((state) => state.collapsed)
+  const toggleProjectGroup = useSidebarCollapseStore((state) => state.toggle)
+  const expandProjectGroup = useSidebarCollapseStore((state) => state.expand)
   const activeModule = moduleIdFromPath(location.pathname)
   const appRoute = parseAppPath(location.pathname)
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
@@ -233,21 +232,8 @@ function Shell(props: SlotProps) {
     if (!routeSessionId || prev === routeSessionId) return
     const group = projectGroups.find((item) => item.sessions.some((row) => row.id === routeSessionId))
     if (!group || !collapsedProjects[group.key]) return
-    setCollapsedProjects((prevCollapsed) => {
-      if (!prevCollapsed[group.key]) return prevCollapsed
-      const next = { ...prevCollapsed, [group.key]: false }
-      writeCollapsedProjects(next)
-      return next
-    })
-  }, [routeSessionId, projectGroups, collapsedProjects])
-
-  function toggleProjectGroup(key: string) {
-    setCollapsedProjects((prev) => {
-      const next = { ...prev, [key]: !prev[key] }
-      writeCollapsedProjects(next)
-      return next
-    })
-  }
+    expandProjectGroup(group.key)
+  }, [routeSessionId, projectGroups, collapsedProjects, expandProjectGroup])
 
   function createChat(opts: { type?: 'chat' | 'live'; projectPath?: string } = {}) {
     void sessionView.newSession(opts).then((id) => navigate(`/s/${id}`))
