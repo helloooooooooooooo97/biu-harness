@@ -357,6 +357,7 @@ function UserTurnBar({
   canExpand,
   expanded,
   onToggleExpand,
+  sessions,
 }: {
   user: Extract<ChatNode, { kind: 'user' }>
   reply?: Extract<ChatNode, { kind: 'reply' }>
@@ -365,6 +366,7 @@ function UserTurnBar({
   canExpand?: boolean
   expanded?: boolean
   onToggleExpand?: () => void
+  sessions: SessionListItem[]
 }) {
   const streaming = Boolean(reply?.streaming)
   const { hasDetails } = reply && !streaming ? splitReplyForDisplay(reply) : { hasDetails: false }
@@ -378,7 +380,6 @@ function UserTurnBar({
       Boolean(reply.usage) ||
       toolCount > 0)
   const sentLabel = user.ts != null ? formatSentAt(user.ts) : ''
-  if (!hasDetails && !hasMeta && !sentLabel && !canExpand) return null
 
   return (
     <div className="chat-user-turn-bar" aria-label="回合摘要" data-testid="user-turn-bar">
@@ -439,6 +440,7 @@ function UserTurnBar({
             {expanded ? <LuChevronUp className="size-3.5" /> : <LuChevronDown className="size-3.5" />}
           </button>
         ) : null}
+        <UserSenderAvatar sender={user.sender} sessions={sessions} />
         {sentLabel ? (
           <span className="chat-user-turn-sent" title="发送时间" data-testid="user-sent-at">
             <LuClock className="size-3" aria-hidden />
@@ -462,13 +464,13 @@ function UserSenderAvatar({
     const identity = resolveSessionMascot(sender.sessionId, hit?.mascot)
     return (
       <span className="chat-user-avatar" title={hit?.title || 'Live session'} data-testid="user-sender-mascot">
-        <StaticMascotMark identity={identity} size={22} title={hit?.title || identity.shape} />
+        <StaticMascotMark identity={identity} size={16} title={hit?.title || identity.shape} />
       </span>
     )
   }
   return (
     <span className="chat-user-avatar is-human" title="你" data-testid="user-sender-human" aria-hidden>
-      <LuUser className="size-3.5" />
+      <LuUser className="size-3" />
     </span>
   )
 }
@@ -540,14 +542,12 @@ function NodeView({
     return (
       <div className="chat-user-row">
         <div className={`chat-user-shell${expanded ? ' is-expanded' : ''}`}>
-          <UserSenderAvatar sender={node.sender} sessions={sessions} />
           <div
             ref={bodyRef}
             className={`chat-user-bubble${expanded ? ' is-expanded' : ''}${canExpand && !expanded ? ' is-clamped' : ''}`}
             data-testid="user-bubble"
           >
             {node.kindTag === 'inject' ? <div className="chat-user-tag">inject</div> : null}
-            {node.sender?.type === 'session' ? <div className="chat-user-tag">from live</div> : null}
             <MarkdownBody text={node.text} />
           </div>
         </div>
@@ -559,6 +559,7 @@ function NodeView({
           canExpand={canExpand}
           expanded={expanded}
           onToggleExpand={() => setExpanded((value) => !value)}
+          sessions={sessions}
         />
       </div>
     )

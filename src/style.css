@@ -1414,11 +1414,9 @@ body {
 }
 
 .chat-user-shell {
-  display: flex;
+  display: block;
   width: 100%;
   max-width: 100%;
-  align-items: flex-start;
-  gap: 8px;
   padding: 10px 12px;
   border: 0;
   border-radius: var(--dsw-radius-bubble);
@@ -1432,23 +1430,22 @@ body {
 
 .chat-user-avatar {
   display: grid;
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
   place-items: center;
-  margin-top: 1px;
   color: var(--dsw-label-3);
 }
 
 .chat-user-avatar.is-human {
-  border-radius: 6px;
+  border-radius: 5px;
   background: color-mix(in srgb, var(--dsw-label-3) 14%, transparent);
 }
 
 .chat-user-bubble {
   --chat-user-max-height: 160px;
-  min-width: 0;
-  flex: 1;
+  width: 100%;
+  max-width: 100%;
   padding: 0;
   border: 0;
   border-radius: 0;
