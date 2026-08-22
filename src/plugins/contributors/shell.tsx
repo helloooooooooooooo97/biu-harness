@@ -161,6 +161,7 @@ function SessionRow({
       >
         <SidebarMascot
           size={28}
+          sessionId={item.id}
           identity={identity}
           busy={busy}
           title={`${identity.shape} · ${identity.color}`}

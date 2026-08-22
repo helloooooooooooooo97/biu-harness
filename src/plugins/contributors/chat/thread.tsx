@@ -332,13 +332,27 @@ function NodeView({
 
 const NodeViewMemo = memo(NodeView)
 
-function EmptyHero({ identity, busy }: { identity: SessionMascotIdentity; busy: boolean }) {
+function EmptyHero({
+  identity,
+  busy,
+  sessionId,
+}: {
+  identity: SessionMascotIdentity
+  busy: boolean
+  sessionId?: string
+}) {
   return (
     <div className="chat-empty-hero">
       <div className="chat-empty-hero-glow" aria-hidden />
       <div className="chat-empty-hero-inner">
         <div className="chat-empty-hero-mascot">
-          <SidebarMascot size={112} identity={identity} busy={busy} title={`${identity.shape} · ${identity.color}`} />
+          <SidebarMascot
+            size={112}
+            sessionId={sessionId}
+            identity={identity}
+            busy={busy}
+            title={`${identity.shape} · ${identity.color}`}
+          />
         </div>
         <h2 className="chat-empty-hero-title">Need a hand?</h2>
       </div>
@@ -498,7 +512,13 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     const identity = sessionId
       ? resolveSessionMascot(sessionId, session?.mascot)
       : DEFAULT_SESSION_MASCOT
-    return <EmptyHero identity={identity} busy={agentStatus === 'running'} />
+    return (
+      <EmptyHero
+        identity={identity}
+        busy={agentStatus === 'running'}
+        sessionId={sessionId ?? undefined}
+      />
+    )
   }
 
   const rowHydrated = (node: ChatNode) => {

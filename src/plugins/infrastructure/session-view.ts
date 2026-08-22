@@ -9,6 +9,7 @@ import {
   type TrajectoryRow,
 } from './session-project.ts'
 import type { AppRoute } from './session-route.ts'
+import { markSidebarMascotFresh } from './session-mascot-fresh.ts'
 
 export interface ApprovalItem {
   id: string
@@ -360,6 +361,7 @@ export class SessionViewService extends Service {
         throw new Error(err.error || `绑定项目失败：${bind.status}`)
       }
     }
+    markSidebarMascotFresh(body.id)
     await this.load(body.id, { view: 'chat' })
     await this.refreshSessions()
     return body.id
