@@ -50,25 +50,3 @@ export function folderNameFromPath(path: string) {
   const parts = cleaned.split(/[\\/]/).filter(Boolean)
   return parts.at(-1) || path
 }
-
-export function readCollapsedProjects(storage: Pick<Storage, 'getItem'> = localStorage): Record<string, boolean> {
-  try {
-    const raw = storage.getItem('cordis.sidebar.projectCollapsed')
-    if (!raw) return {}
-    const parsed = JSON.parse(raw) as Record<string, boolean>
-    return parsed && typeof parsed === 'object' ? parsed : {}
-  } catch {
-    return {}
-  }
-}
-
-export function writeCollapsedProjects(
-  value: Record<string, boolean>,
-  storage: Pick<Storage, 'setItem'> = localStorage,
-) {
-  try {
-    storage.setItem('cordis.sidebar.projectCollapsed', JSON.stringify(value))
-  } catch {
-    /* ignore quota */
-  }
-}
