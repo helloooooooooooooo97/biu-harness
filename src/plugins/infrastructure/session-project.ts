@@ -154,10 +154,13 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
         streamingId: null,
         tools: new Map(),
         usage: { input: 0, output: 0, total: 0, cache: 0, hit: false },
-        streaming: false,
+        // 回合未结束前保持 streaming，Details 不因中间 tool/message 收起
+        streaming: currentTurn != null,
         steps: new Map(),
         ...(currentTurn != null ? { turn: currentTurn } : {}),
       }
+    } else if (currentTurn != null) {
+      reply.streaming = true
     }
     return reply
   }
@@ -235,7 +238,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
 
   for (const event of events) {
     if (event.type === 'turn/start') {
-      flushReply()
+      flushReply(undefined, true)
       turnStartTs = event.ts
       currentTurn = event.turn
       currentStep = undefined
@@ -246,7 +249,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     } else if (event.type === 'step/end') {
       if (currentStep === event.step) currentStep = undefined
     } else if (event.type === 'user/message') {
-      flushReply()
+      flushReply(undefined, true)
       nodes.push({
         id: `u-${event.seq}`,
         kind: 'user',
@@ -296,7 +299,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
           }
         }
         r.streamingId = null
-        r.streaming = false
+        // 不在这里清 reply.streaming：整轮 turn/end 前 Details 保持展开
       } else if (event.text || !event.tool_calls?.length) {
         r.parts.push({
           id: `a-${event.seq}`,
@@ -305,10 +308,11 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
           ...(currentStep != null ? { step: currentStep } : {}),
         })
       }
+      if (currentTurn != null) r.streaming = true
     } else if (event.type === 'tool/call') {
       const r = ensureReply(event.seq)
       r.streamingId = null
-      r.streaming = false
+      if (currentTurn != null) r.streaming = true
       if (currentStep != null) ensureStepStat(currentStep).toolCount += 1
       const part: ChatToolPart = {
         id: `t-${event.id}`,
@@ -322,6 +326,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       r.parts.push(part)
     } else if (event.type === 'tool/result') {
       const r = ensureReply(event.seq)
+      if (currentTurn != null) r.streaming = true
       const existing = r.tools.get(event.id)
       if (existing) {
         const next = { ...existing, result: { ok: event.ok, detail: event.detail } }
@@ -352,7 +357,8 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       }
     }
   }
-  flushReply()
+  // 仍在 open turn 内：未结束，继续 streaming；否则按历史定稿收尾
+  flushReply(undefined, currentTurn == null)
   return nodes
 }
 
