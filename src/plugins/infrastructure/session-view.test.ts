@@ -225,7 +225,7 @@ test('fetchEventDetail and fetchEventRequest hit fine-grained APIs', async () =>
   assert.equal(calls.some((url) => url.includes('/events/4/request')), true)
 })
 
-test('load clears previous chat immediately and does not wait on network', async () => {
+test('load keeps previous chat visible until new session fetch resolves', async () => {
   let release!: (value: unknown) => void
   const gate = new Promise((resolve) => {
     release = resolve
@@ -239,7 +239,12 @@ test('load clears previous chat immediately and does not wait on network', async
       return {
         ok: true,
         status: 200,
-        json: async () => ({ id: 'empty', events: [{ type: 'session/open', version: 1, seq: 0, ts: 1 }], hasMore: false, totalTurns: 0 }),
+        json: async () => ({
+          id: 'empty',
+          events: [{ type: 'session/open', version: 1, seq: 0, ts: 1 }],
+          hasMore: false,
+          totalTurns: 0,
+        }),
       } as Response
     }
     if (url.includes('/api/sessions/busy?turns=')) {
@@ -272,15 +277,19 @@ test('load clears previous chat immediately and does not wait on network', async
   const view = ctx.sessionView as SessionViewService
   await view.load('busy', { view: 'chat', wait: true })
   assert.equal(view.get().nodes.length > 0, true)
+  const prevNodes = view.get().nodes.length
 
-  // 切到空会话：load 在网络返回前就 resolve；UI 已清空
+  // 切到空会话：网络返回前不闪空；仍立刻换 sessionId 并开始拉取
   await view.load('empty', { view: 'chat' })
   assert.equal(view.get().sessionId, 'empty')
-  assert.equal(view.get().nodes.length, 0)
+  assert.equal(view.get().switchingSession, true)
+  assert.equal(view.get().nodes.length, prevNodes)
   assert.equal(emptyFetchStarted, true)
   release(undefined)
   await new Promise((r) => setTimeout(r, 0))
   assert.equal(view.get().sessionId, 'empty')
+  assert.equal(view.get().switchingSession, false)
+  assert.equal(view.get().nodes.some((node) => node.kind === 'user'), false)
 })
 
 test('second load of same session hits memory cache without waiting on fetch', async () => {

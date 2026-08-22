@@ -55,6 +55,8 @@ export interface SessionViewState {
   trajectoryHasMore: boolean
   trajectoryLoading: boolean
   totalTurns: number
+  /** 切会话且无缓存：保留上一段画面直到新数据到齐，避免先闪 EmptyHero */
+  switchingSession: boolean
   error?: string
 }
 
@@ -74,6 +76,7 @@ const empty: SessionViewState = {
   trajectoryHasMore: false,
   trajectoryLoading: false,
   totalTurns: 0,
+  switchingSession: false,
 }
 
 type SessionPayload = {
@@ -180,6 +183,7 @@ export class SessionViewService extends Service {
         trajectoryHasMore: false,
         trajectoryLoading: false,
         totalTurns: 0,
+        switchingSession: false,
         error: undefined,
       })
       return
@@ -201,6 +205,7 @@ export class SessionViewService extends Service {
           trajectoryHasMore: false,
           trajectoryLoading: false,
           totalTurns: 0,
+          switchingSession: false,
         })
         throw error
       }
@@ -215,6 +220,11 @@ export class SessionViewService extends Service {
 
   ingest(sessionId: string, event: SessionEvent) {
     if (this.value.sessionId && this.value.sessionId !== sessionId) {
+      void this.refreshSessions()
+      return
+    }
+    // 切会话过渡期仍挂着上一段 nodes，勿把新 session 的流式事件混进去
+    if (this.value.switchingSession) {
       void this.refreshSessions()
       return
     }
@@ -380,6 +390,7 @@ export class SessionViewService extends Service {
 
     const cached = this.cache.get(sessionId)
     const needSwap = this.value.sessionId !== sessionId
+    const listedProject = this.value.sessions.find((item) => item.id === sessionId)?.project
 
     // 路由切换（含空会话 / 冷启动）：立刻换壳，网络只后台校对，绝不 await
     if (!wait) {
@@ -393,42 +404,76 @@ export class SessionViewService extends Service {
       }
       if (needSwap) {
         this.loadGen += 1
-        this.replace({
-          sessionId,
-          events: [],
-          nodes: [],
-          trajectory: [],
-          project: undefined,
-          view,
-          focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
-          error: undefined,
-          pending: false,
-          agentStatus: 'idle',
-          hasMoreOlder: false,
-          loadingOlder: false,
-          trajectoryHasMore: false,
-          trajectoryLoading: false,
-          totalTurns: 0,
-        })
+        // 有上一段内容时先保留画面，只换 sessionId；无缓存清空会闪 EmptyHero
+        if (this.value.sessionId && (this.value.nodes.length > 0 || this.value.events.length > 0)) {
+          this.replace({
+            sessionId,
+            trajectory: [],
+            project: listedProject,
+            view,
+            focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
+            error: undefined,
+            pending: false,
+            agentStatus: 'idle',
+            loadingOlder: false,
+            trajectoryHasMore: false,
+            trajectoryLoading: false,
+            switchingSession: true,
+          })
+        } else {
+          this.replace({
+            sessionId,
+            events: [],
+            nodes: [],
+            trajectory: [],
+            project: listedProject,
+            view,
+            focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
+            error: undefined,
+            pending: false,
+            agentStatus: 'idle',
+            hasMoreOlder: false,
+            loadingOlder: false,
+            trajectoryHasMore: false,
+            trajectoryLoading: false,
+            totalTurns: 0,
+            switchingSession: true,
+          })
+        }
         if (view === 'debug') void this.ensureTrajectory()
         void this.revalidate(sessionId, view)
         return
       }
     }
 
-    // wait：发送后等同会话刷新，必须等网络；切会话时也先乐观换壳再 await
+    // wait：发送后等同会话刷新，必须等网络；切会话时也先换目标再 await
     this.loadGen += 1
     if (needSwap) {
       if (cached) {
         this.touchCache(sessionId)
         this.applyCached(sessionId, cached, view)
+      } else if (this.value.sessionId && (this.value.nodes.length > 0 || this.value.events.length > 0)) {
+        this.replace({
+          sessionId,
+          trajectory: [],
+          project: listedProject,
+          view,
+          focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
+          error: undefined,
+          pending: false,
+          agentStatus: 'idle',
+          loadingOlder: false,
+          trajectoryHasMore: false,
+          trajectoryLoading: false,
+          switchingSession: true,
+        })
       } else {
         this.replace({
           sessionId,
           events: [],
           nodes: [],
           trajectory: [],
-          project: undefined,
+          project: listedProject,
           view,
           focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
           error: undefined,
@@ -439,6 +484,7 @@ export class SessionViewService extends Service {
           trajectoryHasMore: false,
           trajectoryLoading: false,
           totalTurns: 0,
+          switchingSession: true,
         })
       }
     }
@@ -464,6 +510,7 @@ export class SessionViewService extends Service {
             focusCallId: undefined,
             hasMoreOlder: false,
             totalTurns: 0,
+            switchingSession: false,
           })
         }
         return
@@ -486,7 +533,13 @@ export class SessionViewService extends Service {
         hasMoreOlder,
         totalTurns,
       })
-      if (sameTail && body.project?.path === this.value.project?.path && this.value.totalTurns === totalTurns) {
+      // 切会话 hold 期间即使 tail「碰巧相同」也必须落地，否则会一直停在上一段画面
+      if (
+        !this.value.switchingSession &&
+        sameTail &&
+        body.project?.path === this.value.project?.path &&
+        this.value.totalTurns === totalTurns
+      ) {
         return
       }
       this.replace({
@@ -497,6 +550,7 @@ export class SessionViewService extends Service {
         hasMoreOlder,
         totalTurns,
         trajectory: view === 'debug' ? this.value.trajectory : [],
+        switchingSession: false,
         error: undefined,
       })
       if (view === 'debug') void this.ensureTrajectory()
@@ -522,6 +576,7 @@ export class SessionViewService extends Service {
       trajectoryHasMore: false,
       trajectoryLoading: false,
       totalTurns: cached.totalTurns,
+      switchingSession: false,
     })
   }
 
@@ -730,6 +785,7 @@ export class SessionViewService extends Service {
             trajectoryHasMore: false,
             trajectoryLoading: false,
             totalTurns: 0,
+            switchingSession: false,
             error: undefined,
           }
         : {}),
@@ -768,6 +824,7 @@ export class SessionViewService extends Service {
       trajectoryHasMore: false,
       trajectoryLoading: false,
       totalTurns: 0,
+      switchingSession: false,
       error: undefined,
     })
   }

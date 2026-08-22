@@ -389,6 +389,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const sessionId = useSessionView((state) => state.sessionId)
   const sessions = useSessionView((state) => state.sessions)
   const error = useSessionView((state) => state.error)
+  const switchingSession = useSessionView((state) => state.switchingSession)
   const hasMoreOlder = useSessionView((state) => state.hasMoreOlder)
   const loadingOlder = useSessionView((state) => state.loadingOlder)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -507,7 +508,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     if (parent) parent.scrollTop = parent.scrollHeight
   }, [stickKey, nodes.length])
 
-  if (nodes.length === 0 && !pending && !error) {
+  if (nodes.length === 0 && !pending && !error && !switchingSession) {
     const session = sessions.find((item) => item.id === sessionId)
     const identity = sessionId
       ? resolveSessionMascot(sessionId, session?.mascot)
@@ -537,7 +538,13 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   }
 
   return (
-    <div ref={rootRef} className="w-full" data-chat-virtual={virtualize ? '1' : '0'}>
+    <div
+      ref={rootRef}
+      className="w-full"
+      data-chat-virtual={virtualize ? '1' : '0'}
+      data-switching={switchingSession ? '1' : undefined}
+      style={switchingSession ? { opacity: 0.72, transition: 'opacity 120ms ease' } : undefined}
+    >
       <StatusRow agentStatus={agentStatus} agentStep={agentStep} />
       {loadingOlder ? (
         <div className="mb-3 text-center text-[11px] text-[var(--dsw-label-3)]">加载更早消息…</div>
