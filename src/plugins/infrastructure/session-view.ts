@@ -300,17 +300,16 @@ export class SessionViewService extends Service {
       if (status === 'running') busySessions[id] = true
       else delete busySessions[id]
     }
-    const currentId = this.value.sessionId
-    const affectsCurrent = Boolean(id) && id === currentId
-    if (affectsCurrent) {
-      if (status === 'running') {
-        this.replace({ busySessions, agentStatus: 'running', agentStep: step, pending: true })
-        return
-      }
-      this.replace({ busySessions, agentStatus: 'idle', agentStep: step, pending: false })
+    // 显式指向「其它」session：只改 busySessions，不动当前会话 chrome
+    if (sessionId && this.value.sessionId && sessionId !== this.value.sessionId) {
+      this.replace({ busySessions })
       return
     }
-    this.replace({ busySessions })
+    if (status === 'running') {
+      this.replace({ busySessions, agentStatus: 'running', agentStep: step, pending: true })
+      return
+    }
+    this.replace({ busySessions, agentStatus: 'idle', agentStep: step, pending: false })
   }
 
   /** 切会话时按 busySessions 恢复当前栏 pending/agentStatus */
@@ -474,8 +473,7 @@ export class SessionViewService extends Service {
             view,
             focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
             error: undefined,
-            pending: false,
-            agentStatus: 'idle',
+            ...this.busyFlagsFor(sessionId),
             loadingOlder: false,
             trajectoryHasMore: false,
             trajectoryLoading: false,
@@ -491,8 +489,7 @@ export class SessionViewService extends Service {
             view,
             focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
             error: undefined,
-            pending: false,
-            agentStatus: 'idle',
+            ...this.busyFlagsFor(sessionId),
             hasMoreOlder: false,
             loadingOlder: false,
             trajectoryHasMore: false,
@@ -521,8 +518,7 @@ export class SessionViewService extends Service {
           view,
           focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
           error: undefined,
-          pending: false,
-          agentStatus: 'idle',
+          ...this.busyFlagsFor(sessionId),
           loadingOlder: false,
           trajectoryHasMore: false,
           trajectoryLoading: false,
@@ -538,8 +534,7 @@ export class SessionViewService extends Service {
           view,
           focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
           error: undefined,
-          pending: false,
-          agentStatus: 'idle',
+          ...this.busyFlagsFor(sessionId),
           hasMoreOlder: false,
           loadingOlder: false,
           trajectoryHasMore: false,
@@ -604,7 +599,7 @@ export class SessionViewService extends Service {
         return
       }
       this.replace({
-        sessionId: body.id,
+        sessionId: body.id || sessionId,
         events,
         nodes,
         project: body.project,
@@ -630,8 +625,7 @@ export class SessionViewService extends Service {
       view,
       focusCallId: view === 'chat' ? undefined : this.value.focusCallId,
       error: undefined,
-      pending: false,
-      agentStatus: 'idle',
+      ...this.busyFlagsFor(sessionId),
       hasMoreOlder: cached.hasMoreOlder,
       loadingOlder: false,
       trajectoryHasMore: false,
@@ -830,8 +824,11 @@ export class SessionViewService extends Service {
     const wasActive = this.value.sessionId === id
     // 乐观更新：先从侧栏拿掉，避免等网络才「卡一下消失」
     this.dropCache(id)
+    const busySessions = { ...this.value.busySessions }
+    delete busySessions[id]
     this.replace({
       sessions: prevSessions.filter((item) => item.id !== id),
+      busySessions,
       ...(wasActive
         ? {
             sessionId: null,
