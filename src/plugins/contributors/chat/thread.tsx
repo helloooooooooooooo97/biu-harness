@@ -21,12 +21,14 @@ const NEAR_BOTTOM_PX = 96
 const PREFETCH_OLDER_PX = 720
 const ROW_GAP_PX = 16
 const ESTIMATE_ROW_PX = 220
-/** 消息很少时全量渲染更简单，也避免虚表测量抖动 */
-const VIRTUALIZE_AFTER = 12
-/** 加大 overscan：快速上滑时预挂载更多行，减少白屏 */
-const OVERSCAN = 18
+/** 超过该条数才上虚表；过低阈值会抖，过高则短会话也会一次挂满 Markdown */
+const VIRTUALIZE_AFTER = 4
+/** overscan 过大时可视区外仍挂大量 remark DOM，拖死主线程 */
+const OVERSCAN = 6
 /** 滚动停下多久后，给尚未 hydrate 的行补上完整渲染 */
 const SCROLL_IDLE_MS = 120
+/** 停下后每帧最多新 hydrate 几行，避免一次补齐打爆主线程 */
+const HYDRATE_PER_IDLE = 2
 
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
   let node = el?.parentElement ?? null
@@ -401,6 +403,8 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const hydratedRef = useRef(new Set<string>())
   const [scrollEpoch, setScrollEpoch] = useState(0)
   const [isScrolling, setIsScrolling] = useState(false)
+  /** 允许从列表末尾往前 hydrate 的条数；idle 时递增，避免一次挂满 Markdown */
+  const [hydrateQuota, setHydrateQuota] = useState(4)
 
   const virtualize = nodes.length >= VIRTUALIZE_AFTER
 
@@ -421,7 +425,28 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   useEffect(() => {
     hydratedRef.current = new Set()
     setIsScrolling(false)
+    setHydrateQuota(4)
   }, [sessionId])
+
+  useEffect(() => {
+    if (isScrolling) return
+    if (hydrateQuota >= nodes.length) return
+    let cancelled = false
+    let handle = 0
+    const bump = () => {
+      if (cancelled) return
+      setHydrateQuota((value) => Math.min(nodes.length, value + HYDRATE_PER_IDLE))
+    }
+    handle =
+      typeof requestIdleCallback === 'function'
+        ? requestIdleCallback(bump, { timeout: 200 })
+        : window.setTimeout(bump, 32)
+    return () => {
+      cancelled = true
+      if (typeof cancelIdleCallback === 'function') cancelIdleCallback(handle)
+      else window.clearTimeout(handle)
+    }
+  }, [isScrolling, hydrateQuota, nodes.length, sessionId])
 
   useLayoutEffect(() => {
     const parent = findScrollParent(rootRef.current)
@@ -522,15 +547,18 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     )
   }
 
-  const rowHydrated = (node: ChatNode) => {
+  const rowHydrated = (node: ChatNode, index: number) => {
     if (hydratedRef.current.has(node.id)) return true
     // 流式回复：直接展示，不走 loading
     if (node.kind === 'reply' && node.streaming) {
       hydratedRef.current.add(node.id)
       return true
     }
-    // 静止或非虚表：完整渲染，并记下，下次滚动不再拆掉
-    if (!virtualize || !isScrolling) {
+    // 滚动中：新进视口的行先 stub，避免一边滑一边 remark
+    if (virtualize && isScrolling) return false
+    // 从底部往上按配额 hydrate（用户通常看最新）
+    const fromEnd = nodes.length - 1 - index
+    if (fromEnd < hydrateQuota) {
       hydratedRef.current.add(node.id)
       return true
     }
@@ -554,7 +582,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
           {virtualizer.getVirtualItems().map((item) => {
             const node = nodes[item.index]
             if (!node) return null
-            const hydrated = rowHydrated(node)
+            const hydrated = rowHydrated(node, item.index)
             return (
               <div
                 key={item.key}
@@ -575,13 +603,13 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {nodes.map((node) => (
+          {nodes.map((node, index) => (
             <NodeViewMemo
               key={node.id}
               node={node}
               onInspect={onInspect}
               onFork={onFork}
-              hydrated
+              hydrated={rowHydrated(node, index)}
             />
           ))}
         </div>

@@ -297,6 +297,13 @@ body {
   grid-template-columns: 48px minmax(0, 1fr);
 }
 
+/* 侧栏独立合成层：右侧 Markdown 重绘时少拖累左侧 :hover */
+.app-side-bar {
+  contain: layout paint style;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
 .app-side-actions {
   display: flex;
   flex-direction: column;
@@ -305,6 +312,8 @@ body {
 }
 
 .app-side-actions-item {
+  position: relative;
+  isolation: isolate;
   display: flex;
   width: 100%;
   align-items: center;
@@ -317,6 +326,31 @@ body {
   line-height: 1.2;
   text-align: left;
   text-decoration: none;
+  /* 禁止任何 transition，hover 必须跟手 */
+  transition: none;
+}
+
+.app-side-actions-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: transparent;
+}
+
+.app-side-actions-item > * {
+  position: relative;
+  z-index: 1;
+}
+
+.app-side-actions-item:hover {
+  color: var(--dsw-label);
+}
+
+.app-side-actions-item:hover::before {
+  background: var(--dsw-hover);
 }
 
 .app-side-actions-icon {
@@ -336,13 +370,65 @@ body {
   white-space: nowrap;
 }
 
-.app-side-actions-item:hover {
-  background: var(--dsw-hover);
+.app-side-actions-item:hover .app-side-actions-icon {
   color: var(--dsw-label);
 }
 
-.app-side-actions-item:hover .app-side-actions-icon {
-  color: var(--dsw-label);
+/* Session 行：高亮画在 ::before，避免每次 hover 重绘头像 SVG */
+.chat-session-row {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: 100%;
+  align-items: stretch;
+  margin-bottom: 1px;
+  border-radius: 6px;
+  contain: layout style;
+  transition: none;
+}
+
+.chat-session-row::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: transparent;
+}
+
+.chat-session-row > * {
+  position: relative;
+  z-index: 1;
+}
+
+.chat-session-row:hover:not(.is-active)::before {
+  background: var(--dsw-hover);
+}
+
+.chat-session-row.is-active {
+  color: var(--dsw-business);
+}
+
+.chat-session-row.is-active::before {
+  background: var(--dsw-business-soft);
+}
+
+.chat-session-row-delete {
+  flex-shrink: 0;
+  padding: 0 6px;
+  color: var(--dsw-label-3);
+  opacity: 0;
+  transition: none;
+}
+
+.chat-session-row:hover .chat-session-row-delete,
+.chat-session-row-delete:focus {
+  opacity: 1;
+}
+
+.chat-session-row-delete:hover {
+  color: var(--dsw-danger);
 }
 
 .app-activity-bar {
@@ -372,6 +458,8 @@ body {
   flex-shrink: 0;
   overflow: visible;
   line-height: 0;
+  /* 侧栏行 hover 时不要跟着父级背景一起重绘 */
+  contain: layout paint;
 }
 
 .sidebar-mascot-status {
@@ -1520,6 +1608,8 @@ body {
 .chat-md {
   max-width: 100%;
   overflow-wrap: anywhere;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 }
 
 .chat-md-stream-pre {

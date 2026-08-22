@@ -37,11 +37,7 @@ const SessionRow = memo(function SessionRow({
 }) {
   const identity = resolveSessionMascot(item.id, item.mascot)
   return (
-    <div
-      className={`group mb-px flex w-full items-stretch rounded-[6px] ${
-        active ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'hover:bg-[var(--dsw-hover)]'
-      }`}
-    >
+    <div className={`chat-session-row group${active ? ' is-active' : ''}`}>
       <Link
         to={`/s/${item.id}${view === 'debug' ? '/debug' : ''}`}
         className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-[12px] leading-4"
@@ -64,7 +60,7 @@ const SessionRow = memo(function SessionRow({
       </Link>
       <button
         type="button"
-        className="shrink-0 px-1.5 text-[var(--dsw-label-3)] opacity-0 hover:text-[var(--dsw-danger)] group-hover:opacity-100 focus:opacity-100"
+        className="chat-session-row-delete"
         aria-label={`Delete session ${item.title}`}
         title="Delete"
         onClick={(event) => {
