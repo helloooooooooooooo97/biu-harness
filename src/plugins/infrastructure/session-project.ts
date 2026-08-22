@@ -444,6 +444,54 @@ export function sumTrajectoryRowUsage(rows: Array<{ usage?: TrajectoryUsage }>):
   }
 }
 
+/** 把 Live 派工到其它 session 的 turn usage 叠到对应 Live turn 的 reply 上。 */
+export function mergeDispatchedUsageIntoNodes(
+  nodes: ChatNode[],
+  byTurn?: Record<string, TrajectoryUsage> | null,
+): ChatNode[] {
+  if (!byTurn || !Object.keys(byTurn).length) return nodes
+  return nodes.map((node) => {
+    if (node.kind !== 'reply' || node.turn == null) return node
+    const extra = byTurn[String(node.turn)]
+    if (!extra) return node
+    const base = node.usage
+    return {
+      ...node,
+      usage: {
+        inputTokens: (base?.inputTokens ?? 0) + extra.inputTokens,
+        outputTokens: (base?.outputTokens ?? 0) + extra.outputTokens,
+        totalTokens:
+          (base?.totalTokens ?? (base ? base.inputTokens + base.outputTokens : 0)) +
+          (extra.totalTokens ?? extra.inputTokens + extra.outputTokens),
+        ...(((base?.cacheReadTokens ?? 0) + (extra.cacheReadTokens ?? 0))
+          ? {
+              cacheReadTokens: (base?.cacheReadTokens ?? 0) + (extra.cacheReadTokens ?? 0),
+            }
+          : {}),
+      },
+    }
+  })
+}
+
+/** 本地合计 + Live 派工合计。 */
+export function sumUsageParts(
+  local: TrajectoryUsage | undefined,
+  dispatched: TrajectoryUsage | undefined,
+): TrajectoryUsage | undefined {
+  if (!local && !dispatched) return undefined
+  if (!local) return dispatched
+  if (!dispatched) return local
+  const cache = (local.cacheReadTokens ?? 0) + (dispatched.cacheReadTokens ?? 0)
+  return {
+    inputTokens: local.inputTokens + dispatched.inputTokens,
+    outputTokens: local.outputTokens + dispatched.outputTokens,
+    totalTokens:
+      (local.totalTokens ?? local.inputTokens + local.outputTokens) +
+      (dispatched.totalTokens ?? dispatched.inputTokens + dispatched.outputTokens),
+    ...(cache ? { cacheReadTokens: cache } : {}),
+  }
+}
+
 function assistantSummary(event: Extract<SessionEvent, { type: 'assistant/message' }>): string {
   const tools = event.tool_calls?.length ?? 0
   if (event.text.trim()) return event.text.slice(0, 160)

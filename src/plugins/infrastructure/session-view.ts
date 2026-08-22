@@ -2,11 +2,13 @@ import { useSyncExternalStore } from 'react'
 import { Service, type Context } from 'cordis'
 import {
   compactSessionEvents,
+  mergeDispatchedUsageIntoNodes,
   projectNodes,
   type ChatNode,
   type DerivedMessage,
   type SessionEvent,
   type TrajectoryRow,
+  type TrajectoryUsage,
 } from './session-project.ts'
 import type { AppRoute } from './session-route.ts'
 import { markSidebarMascotFresh } from './session-mascot-fresh.ts'
@@ -61,6 +63,10 @@ export interface SessionViewState {
   trajectoryHasMore: boolean
   trajectoryLoading: boolean
   totalTurns: number
+  /** Live：其它 session 被本席 wake 的 turn usage（按 Live turn 号） */
+  dispatchedUsageByTurn: Record<string, TrajectoryUsage>
+  /** Live：派工 turn usage 合计 */
+  dispatchedUsage?: TrajectoryUsage
   /** 切会话且无缓存：保留上一段画面直到新数据到齐，避免先闪 EmptyHero */
   switchingSession: boolean
   error?: string
@@ -83,16 +89,20 @@ const empty: SessionViewState = {
   trajectoryHasMore: false,
   trajectoryLoading: false,
   totalTurns: 0,
+  dispatchedUsageByTurn: {},
   switchingSession: false,
 }
 
 type SessionPayload = {
   id: string
   events: SessionEvent[]
+  type?: 'chat' | 'live'
   hasMore?: boolean
   totalTurns?: number
   totalEvents?: number
   project?: { name: string; path?: string; boundAt: number }
+  dispatchedUsage?: TrajectoryUsage
+  dispatchedUsageByTurn?: Record<string, TrajectoryUsage>
 }
 
 type TrajectoryPayload = {
@@ -108,6 +118,8 @@ type SessionCacheEntry = {
   project?: { name: string; path?: string; boundAt: number }
   hasMoreOlder: boolean
   totalTurns: number
+  dispatchedUsageByTurn: Record<string, TrajectoryUsage>
+  dispatchedUsage?: TrajectoryUsage
 }
 
 const SESSION_CACHE_MAX = 16
@@ -143,11 +155,64 @@ export class SessionViewService extends Service {
   private cache = new Map<string, SessionCacheEntry>()
   private cacheOrder: string[] = []
   private loadGen = 0
+  private dispatchedPoll: ReturnType<typeof setInterval> | null = null
 
   constructor(ctx: Context) {
     super(ctx, 'sessionView')
     void this.refreshSessions()
     void this.refreshApprovals()
+    this.ctx.on('dispose', () => this.stopDispatchedPoll())
+  }
+
+  private buildNodes(events: SessionEvent[], byTurn = this.value.dispatchedUsageByTurn) {
+    return mergeDispatchedUsageIntoNodes(projectNodes(events), byTurn)
+  }
+
+  private stopDispatchedPoll() {
+    if (this.dispatchedPoll) {
+      clearInterval(this.dispatchedPoll)
+      this.dispatchedPoll = null
+    }
+  }
+
+  private syncDispatchedPoll() {
+    this.stopDispatchedPoll()
+    const id = this.value.sessionId
+    if (!id) return
+    const type = this.value.sessions.find((item) => item.id === id)?.type ?? 'chat'
+    if (type !== 'live') return
+    this.dispatchedPoll = setInterval(() => {
+      void this.refreshDispatchedUsage()
+    }, 2000)
+  }
+
+  async refreshDispatchedUsage() {
+    const sessionId = this.value.sessionId
+    if (!sessionId) return
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/dispatched-usage`)
+      if (!res.ok || this.value.sessionId !== sessionId) return
+      const body = (await res.json()) as {
+        dispatchedUsage?: TrajectoryUsage | null
+        dispatchedUsageByTurn?: Record<string, TrajectoryUsage>
+      }
+      const byTurn = body.dispatchedUsageByTurn ?? {}
+      const dispatchedUsage = body.dispatchedUsage ?? undefined
+      if (
+        JSON.stringify(byTurn) === JSON.stringify(this.value.dispatchedUsageByTurn) &&
+        JSON.stringify(dispatchedUsage) === JSON.stringify(this.value.dispatchedUsage)
+      ) {
+        return
+      }
+      this.replace({
+        dispatchedUsageByTurn: byTurn,
+        dispatchedUsage,
+        nodes: this.buildNodes(this.value.events, byTurn),
+      })
+      this.stashCurrent()
+    } catch {
+      /* 静默 */
+    }
   }
 
   subscribe = (listener: () => void) => {
@@ -245,7 +310,7 @@ export class SessionViewService extends Service {
     this.replace({
       sessionId,
       events,
-      nodes: projectNodes(events),
+      nodes: this.buildNodes(events),
       error: undefined,
     })
     this.stashCurrent()
@@ -260,7 +325,7 @@ export class SessionViewService extends Service {
     const nodes =
       chunk?.type === 'assistant/chunk'
         ? patchStreamingNodes(this.value.nodes, chunk)
-        : projectNodes(events)
+        : this.buildNodes(events)
     this.value = {
       ...this.value,
       sessionId,
@@ -613,7 +678,9 @@ export class SessionViewService extends Service {
       const body = (await res.json()) as SessionPayload
       if (gen !== this.loadGen || this.value.sessionId !== sessionId) return
       const events = compactSessionEvents(Array.isArray(body.events) ? body.events : [])
-      const nodes = projectNodes(events)
+      const byTurn = body.dispatchedUsageByTurn ?? {}
+      const dispatchedUsage = body.dispatchedUsage
+      const nodes = this.buildNodes(events, byTurn)
       const hasMoreOlder = Boolean(body.hasMore)
       const totalTurns = typeof body.totalTurns === 'number' ? body.totalTurns : 0
       const sameLen = events.length === this.value.events.length
@@ -627,6 +694,8 @@ export class SessionViewService extends Service {
         project: body.project,
         hasMoreOlder,
         totalTurns,
+        dispatchedUsageByTurn: byTurn,
+        ...(dispatchedUsage ? { dispatchedUsage } : {}),
       })
       // 切会话 hold 期间即使 tail「碰巧相同」也必须落地，否则会一直停在上一段画面
       if (
@@ -635,6 +704,12 @@ export class SessionViewService extends Service {
         body.project?.path === this.value.project?.path &&
         this.value.totalTurns === totalTurns
       ) {
+        this.replace({
+          dispatchedUsageByTurn: byTurn,
+          dispatchedUsage,
+          nodes,
+        })
+        this.syncDispatchedPoll()
         return
       }
       this.replace({
@@ -644,10 +719,13 @@ export class SessionViewService extends Service {
         project: body.project,
         hasMoreOlder,
         totalTurns,
+        dispatchedUsageByTurn: byTurn,
+        dispatchedUsage,
         trajectory: view === 'debug' ? this.value.trajectory : [],
         switchingSession: false,
         error: undefined,
       })
+      this.syncDispatchedPoll()
       if (view === 'debug') void this.ensureTrajectory()
     } catch {
       /* 静默 */
@@ -670,8 +748,11 @@ export class SessionViewService extends Service {
       trajectoryHasMore: false,
       trajectoryLoading: false,
       totalTurns: cached.totalTurns,
+      dispatchedUsageByTurn: cached.dispatchedUsageByTurn,
+      dispatchedUsage: cached.dispatchedUsage,
       switchingSession: false,
     })
+    this.syncDispatchedPoll()
   }
 
   private stashCurrent() {
@@ -683,6 +764,8 @@ export class SessionViewService extends Service {
       project: this.value.project,
       hasMoreOlder: this.value.hasMoreOlder,
       totalTurns: this.value.totalTurns,
+      dispatchedUsageByTurn: this.value.dispatchedUsageByTurn,
+      ...(this.value.dispatchedUsage ? { dispatchedUsage: this.value.dispatchedUsage } : {}),
     })
   }
 
@@ -731,7 +814,7 @@ export class SessionViewService extends Service {
       )
       this.replace({
         events: merged,
-        nodes: projectNodes(merged),
+        nodes: this.buildNodes(merged),
         hasMoreOlder: Boolean(body.hasMore),
         loadingOlder: false,
         totalTurns: typeof body.totalTurns === 'number' ? body.totalTurns : this.value.totalTurns,

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
 import type { SlotProps } from '../registry/slots.ts'
@@ -188,6 +188,15 @@ function Shell(props: SlotProps) {
       return false
     }
   })
+  const [inspectorWidth, setInspectorWidth] = useState(() => {
+    try {
+      const n = Number(localStorage.getItem('cordis.inspector.width'))
+      if (Number.isFinite(n) && n >= 240 && n <= 720) return n
+    } catch {
+      /* ignore */
+    }
+    return 320
+  })
   const toggleInspector = useCallback(() => {
     setInspectorOpen((prev) => {
       const next = !prev
@@ -203,6 +212,15 @@ function Shell(props: SlotProps) {
     setInspectorOpen(false)
     try {
       localStorage.setItem('cordis.inspector.open', '0')
+    } catch {
+      /* ignore */
+    }
+  }, [])
+  const onInspectorWidthChange = useCallback((width: number) => {
+    const next = Math.min(720, Math.max(240, Math.round(width)))
+    setInspectorWidth(next)
+    try {
+      localStorage.setItem('cordis.inspector.width', String(next))
     } catch {
       /* ignore */
     }
@@ -254,6 +272,11 @@ function Shell(props: SlotProps) {
             }`
           : ' app-shell-module'
       }`}
+      style={
+        inspectorOpen
+          ? ({ ['--inspector-width' as string]: `${inspectorWidth}px` } as CSSProperties)
+          : undefined
+      }
     >
       <ModuleRail
         active={activeModule}
@@ -357,6 +380,8 @@ function Shell(props: SlotProps) {
       {activeModule === 'agent' ? (
         <SessionInspector
           open={inspectorOpen}
+          width={inspectorWidth}
+          onWidthChange={onInspectorWidthChange}
           onClose={closeInspector}
           useSessionView={useSessionView}
           sessionView={sessionView}

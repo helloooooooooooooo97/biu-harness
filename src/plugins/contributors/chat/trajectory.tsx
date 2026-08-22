@@ -4,6 +4,7 @@ import { bindSessionView, type SessionViewService } from '../../infrastructure/s
 import {
   formatTrajectoryUsage,
   sumTrajectoryRowUsage,
+  sumUsageParts,
   type DerivedMessage,
   type SessionEvent,
   type TrajectoryRow,
@@ -134,7 +135,12 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   const [collapsedSteps, setCollapsedSteps] = useState<Record<string, boolean>>({})
 
   const groups = useMemo(() => groupByTurn(rows), [rows])
-  const cumulative = useMemo(() => sumTrajectoryRowUsage(rows), [rows])
+  const localUsage = useMemo(() => sumTrajectoryRowUsage(rows), [rows])
+  const dispatchedUsage = useSessionView((state) => state.dispatchedUsage)
+  const cumulative = useMemo(
+    () => sumUsageParts(localUsage, dispatchedUsage),
+    [localUsage, dispatchedUsage],
+  )
 
   useEffect(() => {
     if (!focusCallId) return
@@ -207,7 +213,7 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
           <span>{rows.length} events</span>
           <span className="traj-meta-sep">·</span>
           <span>{groups.length} turns</span>
-          <span className="traj-meta-usage" title="Sum of assistant/message usage in this session">
+          <span className="traj-meta-usage" title="本会话 + Live 派工到其它 session 的 turn usage">
             <span className="traj-meta-usage-label">usage</span>
             <UsageInline usage={cumulative} />
           </span>

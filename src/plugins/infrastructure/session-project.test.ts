@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   compactSessionEvents,
   formatTrajectoryUsage,
+  mergeDispatchedUsageIntoNodes,
   projectNodes,
   projectRequestMessages,
   projectTrajectory,
@@ -292,6 +293,33 @@ test('assistant/message with empty text still has a visible tool_calls summary a
     outputTokens: 11,
     totalTokens: 42,
     cacheReadTokens: 4,
+  })
+})
+
+test('mergeDispatchedUsageIntoNodes adds live-dispatched worker usage onto reply turn', () => {
+  const nodes = projectNodes([
+    { type: 'turn/start', turn: 2, seq: 1, ts: 1 },
+    { type: 'user/message', text: 'go', kind: 'wake', seq: 2, ts: 2 },
+    {
+      type: 'assistant/message',
+      text: 'queued',
+      usage: { inputTokens: 3, outputTokens: 1 },
+      seq: 3,
+      ts: 3,
+    },
+    { type: 'turn/end', turn: 2, reason: 'complete', seq: 4, ts: 4 },
+  ])
+  const reply = nodes.find((node) => node.kind === 'reply')
+  assert.ok(reply && reply.kind === 'reply')
+  const merged = mergeDispatchedUsageIntoNodes(nodes, {
+    '2': { inputTokens: 40, outputTokens: 10, totalTokens: 50 },
+  })
+  const next = merged.find((node) => node.kind === 'reply')
+  assert.ok(next && next.kind === 'reply')
+  assert.deepEqual(next.usage, {
+    inputTokens: 43,
+    outputTokens: 11,
+    totalTokens: 54,
   })
 })
 

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LuPanelRightClose, LuRadio, LuWrench } from 'react-icons/lu'
 import {
   bindSessionView,
@@ -51,6 +51,8 @@ interface InspectorPayload {
 
 export type SessionInspectorProps = {
   open: boolean
+  width: number
+  onWidthChange: (width: number) => void
   onClose: () => void
   useSessionView: ReturnType<typeof bindSessionView>
   sessionView: SessionViewService
@@ -65,6 +67,8 @@ const tabClass = (active: boolean) =>
 
 export const SessionInspector = memo(function SessionInspector({
   open,
+  width,
+  onWidthChange,
   onClose,
   useSessionView,
 }: SessionInspectorProps) {
@@ -79,6 +83,7 @@ export const SessionInspector = memo(function SessionInspector({
   const [data, setData] = useState<InspectorPayload | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
   useEffect(() => {
     setTab(sessionType === 'live' ? 'live' : 'tools')
@@ -105,6 +110,27 @@ export const SessionInspector = memo(function SessionInspector({
     }, 2000)
     return () => window.clearInterval(timer)
   }, [open, sessionId, refresh])
+
+  useEffect(() => {
+    const onMove = (event: PointerEvent) => {
+      const drag = dragRef.current
+      if (!drag) return
+      // 从右缘向左拖变宽
+      const next = drag.startWidth + (drag.startX - event.clientX)
+      onWidthChange(next)
+    }
+    const onUp = () => {
+      dragRef.current = null
+      document.body.style.removeProperty('cursor')
+      document.body.style.removeProperty('user-select')
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+  }, [onWidthChange])
 
   async function patchConfig(next: { agentMode?: AgentMode; extraTools?: string[] }) {
     setBusy(true)
@@ -141,16 +167,46 @@ export const SessionInspector = memo(function SessionInspector({
 
   return (
     <aside
-      className="flex min-h-0 min-w-0 flex-col border-l border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] text-[var(--dsw-label)]"
+      className="relative flex min-h-0 min-w-0 flex-col border-l border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] text-[var(--dsw-label)]"
       data-testid="session-inspector"
       aria-label="会话检查器"
     >
+      <div
+        className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize touch-none hover:bg-[color-mix(in_srgb,var(--dsw-business)_35%,transparent)]"
+        data-testid="inspector-resize"
+        title="拖动调整宽度"
+        onPointerDown={(event) => {
+          event.preventDefault()
+          dragRef.current = { startX: event.clientX, startWidth: width }
+          document.body.style.cursor = 'col-resize'
+          document.body.style.userSelect = 'none'
+        }}
+      />
+
       <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-[var(--dsw-border)] px-2.5">
-        <div className="flex min-w-0 items-center gap-2 text-[12px] font-semibold">
-          <span>检查器</span>
-          <span className="rounded-full bg-[var(--dsw-muted-fill)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--dsw-label-3)] uppercase">
-            {sessionType}
-          </span>
+        <div className="flex min-w-0 items-center gap-1" role="tablist" aria-label="检查器分区">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'tools'}
+            className={tabClass(tab === 'tools')}
+            onClick={() => setTab('tools')}
+          >
+            <LuWrench className="size-3.5" />
+            工具
+          </button>
+          {sessionType === 'live' ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'live'}
+              className={tabClass(tab === 'live')}
+              onClick={() => setTab('live')}
+            >
+              <LuRadio className="size-3.5" />
+              指挥台
+            </button>
+          ) : null}
         </div>
         <button
           type="button"
@@ -161,31 +217,6 @@ export const SessionInspector = memo(function SessionInspector({
         >
           <LuPanelRightClose className="size-3.5" />
         </button>
-      </div>
-
-      <div className="flex shrink-0 gap-1 border-b border-[var(--dsw-border)] px-2 py-1.5" role="tablist" aria-label="检查器分区">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'tools'}
-          className={tabClass(tab === 'tools')}
-          onClick={() => setTab('tools')}
-        >
-          <LuWrench className="size-3.5" />
-          工具
-        </button>
-        {sessionType === 'live' ? (
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === 'live'}
-            className={tabClass(tab === 'live')}
-            onClick={() => setTab('live')}
-          >
-            <LuRadio className="size-3.5" />
-            指挥台
-          </button>
-        ) : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto p-2.5">

@@ -13,6 +13,8 @@ import {
   findEvent,
 } from '../core/trajectory-index.ts'
 import { readArtifactFile } from '../core/artifacts.ts'
+import { collectLiveDispatchedUsage } from '../seams/live-dispatched-usage.ts'
+import { normalizeSessionType } from '../core/session-types.ts'
 
 export type { ChatMessage }
 
@@ -242,7 +244,7 @@ export function apply(ctx: Context) {
           ? 0
           : Math.max(0, Number(turnsRaw) || DEFAULT_TAIL_TURNS)
     const window = sliceTailTurns(record.events, limitTurns)
-    route.send(200, {
+    const payload: Record<string, unknown> = {
       id: record.id,
       version: record.version,
       type: record.type ?? 'chat',
@@ -254,7 +256,21 @@ export function apply(ctx: Context) {
       newestSeq: window.newestSeq,
       ...(record.project ? { project: record.project } : {}),
       ...(record.mascot ? { mascot: record.mascot } : {}),
-    })
+    }
+    if ((record.type ?? 'chat') === 'live') {
+      const summaries = await ctx.sessions.listSummaries()
+      const workers = []
+      for (const item of summaries) {
+        if (item.id === record.id) continue
+        if (normalizeSessionType(item.type) === 'live') continue
+        const worker = await ctx.sessions.require(item.id)
+        workers.push({ id: item.id, events: worker.events })
+      }
+      const dispatched = collectLiveDispatchedUsage(record.id, record.events, workers)
+      payload.dispatchedUsage = dispatched.total
+      payload.dispatchedUsageByTurn = dispatched.byLiveTurn
+    }
+    route.send(200, payload)
   })
   ctx.http.route('GET', '/api/sessions/:id/events', async (route) => {
     const record = await ctx.sessions.get(route.params.id)

@@ -2,6 +2,7 @@ import type { Context } from 'cordis'
 import '../../types.ts'
 import { MINIMAL_TOOL_NAMES, type AgentToolMode } from '../registry/tools.ts'
 import { LIVE_TOOL_NAMES, buildSessionProgress } from './live-sessions.ts'
+import { collectLiveDispatchedUsage } from './live-dispatched-usage.ts'
 import { normalizeSessionType, type SessionType } from '../core/session-types.ts'
 
 export type ToolSourceId = 'minimal' | 'live' | 'plugin'
@@ -162,7 +163,41 @@ export function apply(ctx: Context) {
     }
     if (sessionType === 'live') {
       body.workers = await buildLiveWorkers(ctx, id)
+      const dispatched = await loadDispatchedUsage(ctx, id, record.events)
+      body.dispatchedUsage = dispatched.total
+      body.dispatchedUsageByTurn = dispatched.byLiveTurn
     }
     route.send(200, body)
   })
+
+  ctx.http.route('GET', '/api/sessions/:id/dispatched-usage', async (route) => {
+    const id = route.params.id
+    const record = await ctx.sessions.get(id)
+    if (!record) return route.send(404, { error: 'unknown session' })
+    if (normalizeSessionType(record.type) !== 'live') {
+      return route.send(200, { sessionId: id, dispatchedUsage: null, dispatchedUsageByTurn: {} })
+    }
+    const dispatched = await loadDispatchedUsage(ctx, id, record.events)
+    route.send(200, {
+      sessionId: id,
+      dispatchedUsage: dispatched.total,
+      dispatchedUsageByTurn: dispatched.byLiveTurn,
+    })
+  })
+}
+
+async function loadDispatchedUsage(
+  ctx: Context,
+  liveId: string,
+  liveEvents: import('../core/session-types.ts').SessionEvent[],
+) {
+  const summaries = await ctx.sessions.listSummaries()
+  const workers: Array<{ id: string; events: import('../core/session-types.ts').SessionEvent[] }> = []
+  for (const item of summaries) {
+    if (item.id === liveId) continue
+    if (normalizeSessionType(item.type) === 'live') continue
+    const worker = await ctx.sessions.require(item.id)
+    workers.push({ id: item.id, events: worker.events })
+  }
+  return collectLiveDispatchedUsage(liveId, liveEvents, workers)
 }
