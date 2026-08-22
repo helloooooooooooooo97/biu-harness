@@ -1,7 +1,7 @@
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
 import type { AssistantReply, ChatOptions, LlmClient, LlmConfig, LlmMessage } from './llm.ts'
-import type { InboxKind } from '../core/session-types.ts'
+import type { InboxKind, MessageSender } from '../core/session-types.ts'
 import { normalizeSessionType } from '../core/session-types.ts'
 import { runWithSession } from '../core/session-scope.ts'
 import { runWithExtraTools } from '../registry/tools.ts'
@@ -17,6 +17,8 @@ export interface ClaimedInput {
   text: string
   /** slash 为本回合临时放开的额外工具（极简模式） */
   extraTools?: string[]
+  /** 写入 user/message 的来源；缺省为真人用户 */
+  sender?: MessageSender
 }
 
 export interface PreStepReq {
@@ -71,7 +73,12 @@ export class AgentLoop implements AgentRunner {
     }
 
     for (const item of req.messages) {
-      await session.append(this.sessionId, { type: 'user/message', text: item.text, kind: item.kind })
+      await session.append(this.sessionId, {
+        type: 'user/message',
+        text: item.text,
+        kind: item.kind,
+        ...(item.sender ? { sender: item.sender } : {}),
+      })
     }
 
     // 分段 prompt 只在 turn 开头写入一次，避免每 step 污染权威日志；derive 取最后一条 system/prompt。

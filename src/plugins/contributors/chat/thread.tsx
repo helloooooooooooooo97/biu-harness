@@ -4,6 +4,7 @@ import {
   LuCheck,
   LuChevronDown,
   LuChevronRight,
+  LuChevronUp,
   LuClock,
   LuCoins,
   LuCopy,
@@ -12,10 +13,11 @@ import {
   LuLayers,
   LuTimer,
   LuType,
+  LuUser,
   LuWrench,
 } from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
-import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
+import { bindSessionView, type SessionListItem, type SessionViewService } from '../../infrastructure/session-view.ts'
 import {
   formatTrajectoryUsage,
   type ChatNode,
@@ -24,6 +26,7 @@ import {
   type TrajectoryUsage,
 } from '../../infrastructure/session-project.ts'
 import { SidebarMascot } from '../mascot/sidebar-mascot.tsx'
+import { StaticMascotMark } from '../mascot/static-mascot-mark.tsx'
 import { DEFAULT_SESSION_MASCOT, resolveSessionMascot } from '../mascot/session-mascot.ts'
 import type { SessionMascotIdentity } from '../mascot/grok-bot-types.ts'
 import { MarkdownBody } from './markdown.tsx'
@@ -351,11 +354,17 @@ function UserTurnBar({
   reply,
   detailsOpen,
   onToggleDetails,
+  canExpand,
+  expanded,
+  onToggleExpand,
 }: {
   user: Extract<ChatNode, { kind: 'user' }>
   reply?: Extract<ChatNode, { kind: 'reply' }>
   detailsOpen: boolean
   onToggleDetails: (replyId: string) => void
+  canExpand?: boolean
+  expanded?: boolean
+  onToggleExpand?: () => void
 }) {
   const streaming = Boolean(reply?.streaming)
   const { hasDetails } = reply && !streaming ? splitReplyForDisplay(reply) : { hasDetails: false }
@@ -369,7 +378,7 @@ function UserTurnBar({
       Boolean(reply.usage) ||
       toolCount > 0)
   const sentLabel = user.ts != null ? formatSentAt(user.ts) : ''
-  if (!hasDetails && !hasMeta && !sentLabel) return null
+  if (!hasDetails && !hasMeta && !sentLabel && !canExpand) return null
 
   return (
     <div className="chat-user-turn-bar" aria-label="回合摘要" data-testid="user-turn-bar">
@@ -417,13 +426,50 @@ function UserTurnBar({
           </div>
         ) : null}
       </div>
-      {sentLabel ? (
-        <span className="chat-user-turn-sent" title="发送时间" data-testid="user-sent-at">
-          <LuClock className="size-3" aria-hidden />
-          <span>{sentLabel}</span>
-        </span>
-      ) : null}
+      <div className="chat-user-turn-bar-end">
+        {canExpand && onToggleExpand ? (
+          <button
+            type="button"
+            className="chat-user-expand"
+            aria-expanded={Boolean(expanded)}
+            aria-label={expanded ? '收起请求全文' : '展开请求全文'}
+            data-testid="user-expand-toggle"
+            onClick={onToggleExpand}
+          >
+            {expanded ? <LuChevronUp className="size-3.5" /> : <LuChevronDown className="size-3.5" />}
+          </button>
+        ) : null}
+        {sentLabel ? (
+          <span className="chat-user-turn-sent" title="发送时间" data-testid="user-sent-at">
+            <LuClock className="size-3" aria-hidden />
+            <span>{sentLabel}</span>
+          </span>
+        ) : null}
+      </div>
     </div>
+  )
+}
+
+function UserSenderAvatar({
+  sender,
+  sessions,
+}: {
+  sender?: Extract<ChatNode, { kind: 'user' }>['sender']
+  sessions: SessionListItem[]
+}) {
+  if (sender?.type === 'session') {
+    const hit = sessions.find((item) => item.id === sender.sessionId)
+    const identity = resolveSessionMascot(sender.sessionId, hit?.mascot)
+    return (
+      <span className="chat-user-avatar" title={hit?.title || 'Live session'} data-testid="user-sender-mascot">
+        <StaticMascotMark identity={identity} size={22} title={hit?.title || identity.shape} />
+      </span>
+    )
+  }
+  return (
+    <span className="chat-user-avatar is-human" title="你" data-testid="user-sender-human" aria-hidden>
+      <LuUser className="size-3.5" />
+    </span>
   )
 }
 
@@ -445,6 +491,7 @@ function NodeView({
   onToggleDetails = noopToggleDetails,
   onInspect,
   onFork,
+  sessions = [],
 }: {
   node: ChatNode
   /** 用户消息发起的本回合回复（统计挂在用户气泡下） */
@@ -453,19 +500,45 @@ function NodeView({
   onToggleDetails?: (replyId: string) => void
   onInspect: (callId: string) => void
   onFork: () => void | Promise<void>
+  sessions?: SessionListItem[]
 }) {
+  const [expanded, setExpanded] = useState(false)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const [overflows, setOverflows] = useState(false)
+
+  useLayoutEffect(() => {
+    if (node.kind !== 'user') return
+    const el = bodyRef.current
+    if (!el) return
+    // 展开时也用 scrollHeight 对比上限，避免收起后漏掉按钮
+    const limit = Number.parseFloat(getComputedStyle(el).getPropertyValue('--chat-user-max-height')) || 160
+    setOverflows(el.scrollHeight > limit + 1)
+  }, [node.kind === 'user' ? node.text : '', expanded, node.kind])
+
   if (node.kind === 'user') {
+    const canExpand = overflows || expanded
     return (
       <div className="chat-user-row">
-        <div className="chat-user-bubble">
-          {node.kindTag === 'inject' ? <div className="chat-user-tag">inject</div> : null}
-          <MarkdownBody text={node.text} />
+        <div className={`chat-user-shell${expanded ? ' is-expanded' : ''}`}>
+          <UserSenderAvatar sender={node.sender} sessions={sessions} />
+          <div
+            ref={bodyRef}
+            className={`chat-user-bubble${expanded ? ' is-expanded' : ''}${canExpand && !expanded ? ' is-clamped' : ''}`}
+            data-testid="user-bubble"
+          >
+            {node.kindTag === 'inject' ? <div className="chat-user-tag">inject</div> : null}
+            {node.sender?.type === 'session' ? <div className="chat-user-tag">from live</div> : null}
+            <MarkdownBody text={node.text} />
+          </div>
         </div>
         <UserTurnBar
           user={node}
           reply={replyForUser}
           detailsOpen={Boolean(detailsOpen)}
           onToggleDetails={onToggleDetails}
+          canExpand={canExpand}
+          expanded={expanded}
+          onToggleExpand={() => setExpanded((value) => !value)}
         />
       </div>
     )
@@ -505,10 +578,12 @@ export function ChatNodeList({
   nodes,
   onInspect,
   onFork,
+  sessions = [],
 }: {
   nodes: ChatNode[]
   onInspect: (callId: string) => void
   onFork: () => void | Promise<void>
+  sessions?: SessionListItem[]
 }) {
   const [detailsOpenByReply, setDetailsOpenByReply] = useState<Record<string, boolean>>({})
 
@@ -536,6 +611,7 @@ export function ChatNodeList({
               onToggleDetails={onToggleDetails}
               onInspect={onInspect}
               onFork={onFork}
+              sessions={sessions}
             />
           </div>
         )
@@ -711,7 +787,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       {loadingOlder ? (
         <div className="mb-3 text-center text-[11px] text-[var(--dsw-label-3)]">加载更早消息…</div>
       ) : null}
-      <ChatNodeList nodes={nodes} onInspect={onInspect} onFork={onFork} />
+      <ChatNodeList nodes={nodes} onInspect={onInspect} onFork={onFork} sessions={sessions} />
       {error ? (
         <div className="mt-4 rounded-[12px] bg-[var(--dsw-danger-soft)] px-3 py-2 text-sm text-[var(--dsw-danger)]">{error}</div>
       ) : null}

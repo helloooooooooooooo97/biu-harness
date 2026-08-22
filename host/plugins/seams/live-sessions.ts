@@ -309,13 +309,14 @@ export function apply(ctx: Context) {
         throw new Error('cannot wake another live session; target a chat session')
       }
       const agent = await ctx.agents.create(targetId)
+      const sender = { type: 'session' as const, sessionId: selfId }
       if (!wait) {
         // 先订阅再派工，避免极快完成时丢掉 turn/end；结束后自动 dispose
         watchTurnEnd(selfId, targetId)
-        void agent.send(text, { wait: false })
+        void agent.send(text, { wait: false, sender })
         return { sessionId: targetId, queued: true, wait: false }
       }
-      const turn = await agent.send(text, { wait: true })
+      const turn = await agent.send(text, { wait: true, sender })
       return {
         sessionId: targetId,
         queued: false,
@@ -347,7 +348,7 @@ export function apply(ctx: Context) {
       const target = await ctx.sessions.require(targetId)
       watchTurnEnd(selfId, targetId)
       const agent = await ctx.agents.create(targetId)
-      agent.inject(text)
+      agent.inject(text, { sender: { type: 'session', sessionId: selfId } })
       return { sessionId: targetId, queued: true }
     },
   })
