@@ -33,7 +33,7 @@ export type ApprovalMode = 'auto' | 'hold'
 /** 与 host DEFAULT_TAIL_TURNS 对齐；仅 loadOlder 分页仍用窗口拉取 */
 export const SESSION_TAIL_TURNS = 24
 export const TRAJECTORY_TAIL_TURNS = 48
-/** 打开会话一次拉全量：上滑不再等网络；渲染仍靠虚表只挂可见行 */
+/** 打开会话一次拉全量：上滑不再等网络；列表行常驻 DOM（content-visibility 跳过屏外绘制） */
 export const SESSION_LOAD_TURNS = 'all' as const
 
 export interface SessionViewState {

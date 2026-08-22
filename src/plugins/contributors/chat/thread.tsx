@@ -1,6 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual'
 import { LuCheck, LuCoins, LuCopy, LuGitFork, LuHash, LuLayers, LuTimer, LuType, LuWrench } from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
@@ -19,14 +18,6 @@ import { ToolCard } from './tool-card.tsx'
 const NEAR_BOTTOM_PX = 96
 /** 提早预取更早消息，避免滑到顶才开始请求 */
 const PREFETCH_OLDER_PX = 720
-const ROW_GAP_PX = 16
-const ESTIMATE_ROW_PX = 220
-/** 超过该条数才上虚表；短会话直接全量挂载，避免来回滚卸 DOM */
-const VIRTUALIZE_AFTER = 12
-/** overscan：来回小幅滚动时尽量别卸刚看过的行 */
-const OVERSCAN = 12
-/** 看过的行继续挂在树上（LRU），滚回去不再重建 Markdown DOM */
-const KEEP_MOUNTED_MAX = 80
 
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
   let node = el?.parentElement ?? null
@@ -54,7 +45,6 @@ function formatTok(n: number) {
 }
 
 function stepLabel(step: number) {
-  // event.step 从 0 起；展示用 Step 1 / Step 2
   return `Step ${step + 1}`
 }
 
@@ -313,6 +303,31 @@ function NodeView({
 
 const NodeViewMemo = memo(NodeView)
 
+/**
+ * 消息列表：会话内全部挂在 DOM 上（不虚表卸行）。
+ * 屏外绘制交给 CSS content-visibility；来回滑不会整行 remount。
+ * 导出供回归测试断言「跳回不重新挂载」。
+ */
+export function ChatNodeList({
+  nodes,
+  onInspect,
+  onFork,
+}: {
+  nodes: ChatNode[]
+  onInspect: (callId: string) => void
+  onFork: () => void | Promise<void>
+}) {
+  return (
+    <div className="chat-node-list flex flex-col gap-4">
+      {nodes.map((node) => (
+        <div key={node.id} className="chat-msg-row" data-node-id={node.id}>
+          <NodeViewMemo node={node} onInspect={onInspect} onFork={onFork} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function EmptyHero({
   identity,
   busy,
@@ -348,13 +363,11 @@ function StatusRow({
   agentStatus: 'idle' | 'running'
   agentStep?: number
 }) {
+  if (agentStatus !== 'running') return null
   return (
     <div className="mb-4 flex items-center gap-2 text-xs text-[var(--dsw-label-3)]">
-      <span
-        className={`size-2 rounded-full ${agentStatus === 'running' ? 'bg-[var(--dsw-ok)]' : 'bg-[var(--dsw-hover-strong)]'}`}
-        aria-hidden
-      />
-      <span>{agentStatus === 'running' ? `Running${agentStep != null ? ` · step ${agentStep}` : ''}` : 'Idle'}</span>
+      <span className="inline-block size-1.5 animate-pulse rounded-full bg-[var(--dsw-ok)]" />
+      Running{agentStep != null ? ` · step ${agentStep + 1}` : ''}
     </div>
   )
 }
@@ -377,55 +390,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const scrollRef = useRef<HTMLElement | null>(null)
   const stickToBottomRef = useRef(true)
   const prefetchingRef = useRef(false)
-  /** 看过的消息按 id 保活（不能按 index：loadOlder 前置后下标会漂） */
-  const keptIdOrderRef = useRef<string[]>([])
-  const keptIdSetRef = useRef(new Set<string>())
   const [scrollEpoch, setScrollEpoch] = useState(0)
-  const nodesRef = useRef(nodes)
-  nodesRef.current = nodes
-
-  const virtualize = nodes.length >= VIRTUALIZE_AFTER
-
-  const clearKept = useCallback(() => {
-    keptIdOrderRef.current = []
-    keptIdSetRef.current = new Set()
-  }, [])
-
-  const touchKeptId = useCallback((id: string) => {
-    const set = keptIdSetRef.current
-    let order = keptIdOrderRef.current
-    if (set.has(id)) {
-      order = order.filter((item) => item !== id)
-      order.push(id)
-      keptIdOrderRef.current = order
-      return
-    }
-    while (order.length >= KEEP_MOUNTED_MAX) {
-      const drop = order.shift()
-      if (drop != null) set.delete(drop)
-    }
-    order.push(id)
-    set.add(id)
-    keptIdOrderRef.current = order
-  }, [])
-
-  const rangeExtractor = useCallback((range: Range) => {
-    const defaults = defaultRangeExtractor(range)
-    const merged = new Set(defaults)
-    const list = nodesRef.current
-    const idToIndex = new Map<string, number>()
-    for (let index = 0; index < list.length; index += 1) {
-      idToIndex.set(list[index]!.id, index)
-    }
-    for (const id of keptIdSetRef.current) {
-      const index = idToIndex.get(id)
-      if (index != null) merged.add(index)
-    }
-    const last = list.length - 1
-    const lastNode = last >= 0 ? list[last] : null
-    if (lastNode?.kind === 'reply' && lastNode.streaming) merged.add(last)
-    return [...merged].sort((a, b) => a - b)
-  }, [])
 
   const onInspect = useCallback(
     (callId: string) => {
@@ -441,10 +406,6 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     })
   }, [sessionView, navigate])
 
-  useEffect(() => {
-    clearKept()
-  }, [sessionId, clearKept])
-
   useLayoutEffect(() => {
     const parent = findScrollParent(rootRef.current)
     if (parent && parent !== scrollRef.current) {
@@ -452,28 +413,6 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       setScrollEpoch((value) => value + 1)
     }
   }, [sessionId])
-
-  const virtualizer = useVirtualizer({
-    count: virtualize ? nodes.length : 0,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => ESTIMATE_ROW_PX,
-    overscan: OVERSCAN,
-    gap: ROW_GAP_PX,
-    getItemKey: (index) => nodes[index]?.id ?? index,
-    rangeExtractor,
-  })
-
-  const rangeStart = virtualizer.range?.startIndex
-  const rangeEnd = virtualizer.range?.endIndex
-  useLayoutEffect(() => {
-    if (!virtualize) return
-    if (rangeStart == null || rangeEnd == null) return
-    const list = nodesRef.current
-    for (let index = rangeStart; index <= rangeEnd; index += 1) {
-      const id = list[index]?.id
-      if (id) touchKeptId(id)
-    }
-  }, [virtualize, rangeStart, rangeEnd, touchKeptId, sessionId, nodes.length])
 
   useEffect(() => {
     stickToBottomRef.current = true
@@ -516,10 +455,9 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     return () => {
       parent.removeEventListener('scroll', onScroll)
     }
-  }, [sessionId, scrollEpoch, virtualize, hasMoreOlder, loadingOlder, sessionView])
+  }, [sessionId, scrollEpoch, hasMoreOlder, loadingOlder, sessionView])
 
   const lastNode = nodes.at(-1)
-  // 流式时按 ~96 字符步进 stickKey，避免每个 delta 都触发布局滚动
   const stickKey =
     lastNode?.kind === 'reply' && lastNode.streaming
       ? `${lastNode.id}:${Math.floor(lastNode.copyText.length / 96)}:1`
@@ -528,7 +466,6 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   useLayoutEffect(() => {
     if (!stickToBottomRef.current || nodes.length === 0) return
     const parent = scrollRef.current
-    // 流式时直接改 scrollTop，避免 virtualizer.scrollToIndex 每帧重测布局
     if (parent) parent.scrollTop = parent.scrollHeight
   }, [stickKey, nodes.length])
 
@@ -550,7 +487,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     <div
       ref={rootRef}
       className="w-full"
-      data-chat-virtual={virtualize ? '1' : '0'}
+      data-chat-virtual="0"
       data-switching={switchingSession ? '1' : undefined}
       style={switchingSession ? { opacity: 0.72, transition: 'opacity 120ms ease' } : undefined}
     >
@@ -558,31 +495,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       {loadingOlder ? (
         <div className="mb-3 text-center text-[11px] text-[var(--dsw-label-3)]">加载更早消息…</div>
       ) : null}
-      {virtualize ? (
-        <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-          {virtualizer.getVirtualItems().map((item) => {
-            const node = nodes[item.index]
-            if (!node) return null
-            return (
-              <div
-                key={item.key}
-                data-index={item.index}
-                ref={virtualizer.measureElement}
-                className="chat-virt-row absolute top-0 left-0 w-full"
-                style={{ transform: `translateY(${item.start}px)` }}
-              >
-                <NodeViewMemo node={node} onInspect={onInspect} onFork={onFork} />
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {nodes.map((node) => (
-            <NodeViewMemo key={node.id} node={node} onInspect={onInspect} onFork={onFork} />
-          ))}
-        </div>
-      )}
+      <ChatNodeList nodes={nodes} onInspect={onInspect} onFork={onFork} />
       {error ? (
         <div className="mt-4 rounded-[12px] bg-[var(--dsw-danger-soft)] px-3 py-2 text-sm text-[var(--dsw-danger)]">{error}</div>
       ) : null}

@@ -1608,7 +1608,8 @@ body {
   color: var(--dsw-ok);
 }
 
-/* Virtualized chat rows — hint browser to skip offscreen paint work */
+/* 消息行常驻 DOM；屏外跳过绘制，来回滑不 remount */
+.chat-msg-row,
 .chat-virt-row {
   content-visibility: auto;
   contain-intrinsic-size: auto 160px;
