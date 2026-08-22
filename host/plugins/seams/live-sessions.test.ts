@@ -46,14 +46,17 @@ test('live tools list/inspect/inject; reject from chat sessions', async () => {
   )) as { recent: Array<{ text: string }> }
   assert.equal(inspected.recent.some((item) => item.text.includes('hello worker')), true)
 
+  liveSessions.resetLiveWatchesForTests()
   const injected = (await runWithSession(live.id, () =>
     ctx.tools.invoke(
       'session_inject',
       { sessionId: chat.id, text: 'keep going' },
       new AbortController().signal,
     ),
-  )) as { queued: boolean }
+  )) as { queued: boolean; watched: boolean }
   assert.equal(injected.queued, true)
+  assert.equal(injected.watched, true)
+  assert.equal(liveSessions.listLiveWatchesForTests(chat.id).length, 1)
 })
 
 test('live session turn unlocks session_* tools on top of minimal mode', async () => {
@@ -160,3 +163,134 @@ test('session_progress and async wake work for live caller', async () => {
   )) as { sessions: Array<{ id: string; status: string }> }
   assert.equal(listed.sessions.find((item) => item.id === chat.id)?.status, 'idle')
 })
+
+test('formatLiveTurnEndNote summarizes complete vs other reasons', () => {
+  const done = liveSessions.formatLiveTurnEndNote({
+    title: 'Worker A',
+    workerSessionId: 'abcdefgh-1234',
+    turn: 2,
+    reason: 'complete',
+    assistantText: '  shipped the fix  ',
+  })
+  assert.equal(done, '[指挥席] Worker A 已完成 · turn 2\nshipped the fix')
+
+  const aborted = liveSessions.formatLiveTurnEndNote({
+    workerSessionId: 'abcdefgh-1234',
+    turn: 3,
+    reason: 'abort',
+  })
+  assert.equal(aborted, '[指挥席] abcdefgh 结束（abort） · turn 3')
+})
+
+test('worker turn/end appends a live旁白 once per turn', async () => {
+  liveSessions.resetLiveWatchesForTests()
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  await ctx.plugin(tools)
+  await ctx.plugin(systemPrompt)
+  await ctx.plugin(llm)
+  await ctx.plugin(agentLoop)
+  await ctx.plugin(agents)
+  await ctx.plugin(liveSessions)
+
+  const live = await ctx.sessions.create(undefined, { type: 'live' })
+  const chat = await ctx.sessions.create()
+  liveSessions.watchWorker(live.id, chat.id, -1)
+
+  await ctx.sessions.append(chat.id, { type: 'turn/start', turn: 1 })
+  await ctx.sessions.append(chat.id, { type: 'assistant/message', text: 'all green' })
+  await ctx.sessions.append(chat.id, { type: 'turn/end', turn: 1, reason: 'complete' })
+
+  await waitFor(async () => {
+    const events = (await ctx.sessions.require(live.id)).events
+    return events.some(
+      (item) =>
+        item.type === 'assistant/message' &&
+        item.text.includes('[指挥席]') &&
+        item.text.includes('已完成') &&
+        item.text.includes('all green'),
+    )
+  })
+
+  const before = (await ctx.sessions.require(live.id)).events.filter(
+    (item) => item.type === 'assistant/message' && item.text.includes('[指挥席]'),
+  ).length
+  await ctx.sessions.append(chat.id, { type: 'turn/end', turn: 1, reason: 'complete' })
+  await new Promise((resolve) => setImmediate(resolve))
+  const after = (await ctx.sessions.require(live.id)).events.filter(
+    (item) => item.type === 'assistant/message' && item.text.includes('[指挥席]'),
+  ).length
+  assert.equal(after, before)
+})
+
+test('session_wake wait=false watches; wait=true does not; turn/end notifies live', async () => {
+  liveSessions.resetLiveWatchesForTests()
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  await ctx.plugin(tools)
+  await ctx.plugin(systemPrompt)
+  await ctx.plugin(llm)
+  await ctx.plugin(agentLoop)
+  await ctx.plugin(agents)
+  await ctx.plugin(liveSessions)
+
+  ctx.agentLoop.setFactory((_llm, sessionId) => ({
+    run: async () => {
+      await ctx.sessions.append(sessionId, { type: 'turn/start', turn: 1 })
+      await ctx.sessions.append(sessionId, {
+        type: 'assistant/message',
+        text: 'task finished from factory',
+      })
+      await ctx.sessions.append(sessionId, { type: 'turn/end', turn: 1, reason: 'complete' })
+      return { text: 'task finished from factory', steps: [] }
+    },
+  }))
+  ctx.agents.configure({ provider: 'deepseek', apiKey: '', model: 'x' })
+
+  const live = await ctx.sessions.create(undefined, { type: 'live' })
+  const chat = await ctx.sessions.create()
+
+  const queued = (await runWithSession(live.id, () =>
+    ctx.tools.invoke(
+      'session_wake',
+      { sessionId: chat.id, text: 'please finish', wait: false },
+      new AbortController().signal,
+    ),
+  )) as { queued: boolean; watched: boolean }
+  assert.equal(queued.queued, true)
+  assert.equal(queued.watched, true)
+  assert.equal(liveSessions.listLiveWatchesForTests(chat.id).length, 1)
+
+  await waitFor(async () => {
+    const events = (await ctx.sessions.require(live.id)).events
+    return events.some(
+      (item) =>
+        item.type === 'assistant/message' &&
+        item.text.includes('[指挥席]') &&
+        item.text.includes('task finished from factory'),
+    )
+  })
+
+  liveSessions.resetLiveWatchesForTests()
+  const chat2 = await ctx.sessions.create()
+  const waited = (await runWithSession(live.id, () =>
+    ctx.tools.invoke(
+      'session_wake',
+      { sessionId: chat2.id, text: 'sync please', wait: true },
+      new AbortController().signal,
+    ),
+  )) as { wait: boolean; text: string }
+  assert.equal(waited.wait, true)
+  assert.match(waited.text, /task finished from factory/)
+  assert.equal(liveSessions.listLiveWatchesForTests(chat2.id).length, 0)
+})
+
+async function waitFor(check: () => Promise<boolean>, tries = 40) {
+  for (let i = 0; i < tries; i += 1) {
+    if (await check()) return
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
+  assert.fail('timed out waiting for live turn-end note')
+}
