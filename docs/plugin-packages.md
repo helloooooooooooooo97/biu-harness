@@ -29,6 +29,15 @@
 
 主仓 `src/` / `host/` 里搜不到 `@hmr/greeter` 字样才算合格。
 
+## 已有示范
+
+| id | 包 | 能力 |
+|---|---|---|
+| greeter | `@hmr/greeter-host` + `@hmr/greeter-ui` | greet tool + demos 卡片 |
+| tasks | `@hmr/tasks-host` + `@hmr/tasks-ui` | SQLite 任务；Table/Board；Activity `/tasks` + 右侧检查器「任务」Tab；tools：`tasks_list/get/create/update/delete` |
+
+Tasks 入口：左侧 Activity 清单图标 → `/tasks`；Agent 视图右侧检查器 →「任务」。
+
 ## 热插拔
 
 Settings 开关仍走 hub `fiber.dispose` / ui-hub 同步；卸掉配置项并重启即等于主仓从未安装过该插件。

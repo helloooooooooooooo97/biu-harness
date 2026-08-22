@@ -1,14 +1,15 @@
-/** `/` | `/s/:id` | `/s/:id/debug` | `/dashboard`（兼容旧 `/trajectory`） */
+/** `/` | `/s/:id` | `/s/:id/debug` | `/dashboard` | `/tasks`（兼容旧 `/trajectory`） */
 export type RouteView = 'chat' | 'debug'
 
 export type AppRoute =
   | { kind: 'home' }
   | { kind: 'session'; sessionId: string; view: RouteView }
-  | { kind: 'module'; moduleId: 'dashboard' }
+  | { kind: 'module'; moduleId: 'dashboard' | 'tasks' }
 
 export function parseAppPath(pathname: string): AppRoute {
   const path = normalizePath(pathname)
   if (path === '/dashboard') return { kind: 'module', moduleId: 'dashboard' }
+  if (path === '/tasks') return { kind: 'module', moduleId: 'tasks' }
   if (path === '/') return { kind: 'home' }
   const match = path.match(/^\/s\/([^/]+)(?:\/(chat|debug|trajectory))?$/)
   if (!match?.[1]) return { kind: 'home' }
@@ -23,7 +24,7 @@ export function parseAppPath(pathname: string): AppRoute {
 /** 已知应用 path（未知则 Navigate 回 `/`，且不拆 Shell）。 */
 export function isKnownAppPath(pathname: string): boolean {
   const path = normalizePath(pathname)
-  if (path === '/' || path === '/dashboard') return true
+  if (path === '/' || path === '/dashboard' || path === '/tasks') return true
   return /^\/s\/[^/]+(?:\/(chat|debug|trajectory))?$/.test(path)
 }
 
@@ -31,6 +32,7 @@ export function buildAppPath(route: AppRoute): string {
   if (route.kind === 'home') return '/'
   if (route.kind === 'module') {
     if (route.moduleId === 'dashboard') return '/dashboard'
+    if (route.moduleId === 'tasks') return '/tasks'
     return '/'
   }
   if (route.view === 'debug') return `/s/${encodeURIComponent(route.sessionId)}/debug`

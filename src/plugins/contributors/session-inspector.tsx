@@ -1,5 +1,5 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { LuListTree, LuPanelRightClose, LuWrench } from 'react-icons/lu'
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { LuListChecks, LuListTree, LuPanelRightClose, LuWrench } from 'react-icons/lu'
 import {
   bindSessionView,
   type SessionViewService,
@@ -8,7 +8,7 @@ import { TrajectoryView } from './chat/trajectory.tsx'
 
 type ToolSourceId = 'minimal' | 'live' | 'plugin'
 type AgentMode = 'standard' | 'minimal'
-type InspectorTab = 'tools' | 'traj'
+type InspectorTab = 'tools' | 'traj' | 'tasks'
 
 interface InspectorTool {
   name: string
@@ -40,6 +40,7 @@ export type SessionInspectorProps = {
   onClose: () => void
   useSessionView: ReturnType<typeof bindSessionView>
   sessionView: SessionViewService
+  renderSlot?: (name: string) => ReactNode
 }
 
 const tabClass = (active: boolean) =>
@@ -56,6 +57,7 @@ export const SessionInspector = memo(function SessionInspector({
   onClose,
   useSessionView,
   sessionView,
+  renderSlot,
 }: SessionInspectorProps) {
   const sessionId = useSessionView((state) => state.sessionId)
   const focusCallId = useSessionView((state) => state.focusCallId)
@@ -195,6 +197,17 @@ export const SessionInspector = memo(function SessionInspector({
             <LuListTree className="size-3.5" />
             轨迹
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'tasks'}
+            className={tabClass(tab === 'tasks')}
+            onClick={() => setTab('tasks')}
+            data-testid="inspector-tab-tasks"
+          >
+            <LuListChecks className="size-3.5" />
+            任务
+          </button>
         </div>
         <button
           type="button"
@@ -208,9 +221,11 @@ export const SessionInspector = memo(function SessionInspector({
       </div>
 
       <div
-        className={`min-h-0 flex-1 ${tab === 'traj' ? 'flex flex-col overflow-hidden' : 'overflow-auto p-2.5'}`}
+        className={`min-h-0 flex-1 ${
+          tab === 'traj' || tab === 'tasks' ? 'flex flex-col overflow-hidden' : 'overflow-auto p-2.5'
+        }`}
       >
-        {error && tab !== 'traj' ? (
+        {error && tab !== 'traj' && tab !== 'tasks' ? (
           <div className="mb-2 rounded-[8px] bg-[color-mix(in_srgb,#c44_16%,transparent)] p-2 text-[11px] text-[#f08888]">
             {error}
           </div>
@@ -292,6 +307,16 @@ export const SessionInspector = memo(function SessionInspector({
         {tab === 'traj' ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid="inspector-trajectory">
             <TrajectoryView useSessionView={useSessionView} sessionView={sessionView} />
+          </div>
+        ) : null}
+
+        {tab === 'tasks' ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid="inspector-tasks">
+            {renderSlot?.('inspector-tasks') ?? (
+              <div className="p-3 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
+                任务插件未启用。在 cordis.plugins.json 打开 @hmr/tasks-* 后刷新。
+              </div>
+            )}
           </div>
         ) : null}
       </div>
