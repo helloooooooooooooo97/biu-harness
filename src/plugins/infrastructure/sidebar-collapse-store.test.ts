@@ -76,6 +76,8 @@ test('zustand persist round-trips collapse map via custom storage', async () => 
   useStore.getState().expand('/tmp/legacy')
   assert.equal(useStore.getState().isCollapsed('/tmp/legacy'), false)
 
+  await new Promise((resolve) => setTimeout(resolve, 150))
+
   const saved = JSON.parse(mem.get(SIDEBAR_PROJECT_COLLAPSE_KEY)!) as {
     state: { collapsed: Record<string, boolean> }
   }

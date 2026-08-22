@@ -29,10 +29,29 @@ export function parseSidebarCollapsePersisted(raw: string | null): string | null
 }
 
 export function createSidebarCollapseStorage(base: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>): StateStorage {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let pending: { name: string; value: string } | null = null
   return {
     getItem: (name) => parseSidebarCollapsePersisted(base.getItem(name)),
-    setItem: (name, value) => base.setItem(name, value),
-    removeItem: (name) => base.removeItem(name),
+    setItem: (name, value) => {
+      pending = { name, value }
+      if (timer) clearTimeout(timer)
+      // 折叠点得很快时合并写盘，避免同步 localStorage 顶掉点击帧
+      timer = setTimeout(() => {
+        timer = null
+        if (!pending) return
+        base.setItem(pending.name, pending.value)
+        pending = null
+      }, 120)
+    },
+    removeItem: (name) => {
+      if (timer) {
+        clearTimeout(timer)
+        timer = null
+      }
+      pending = null
+      base.removeItem(name)
+    },
   }
 }
 
