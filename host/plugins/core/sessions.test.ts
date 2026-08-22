@@ -126,6 +126,41 @@ test('reload heals open step/turn left by crash', async () => {
   assert.equal(persisted?.events.filter((item) => item.type === 'step/end').length, 1)
 })
 
+test('reload heals orphan tool_calls so next LLM round is valid', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'cordis-heal-tools-'))
+  const path = join(dir, 'sessions.sqlite')
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx.plugin(sessions)
+  await ctx.sessions.create('heal-tools')
+  await ctx.sessions.append('heal-tools', { type: 'user/message', text: 'wake workers', kind: 'wake' })
+  await ctx.sessions.append('heal-tools', { type: 'turn/start', turn: 1 })
+  await ctx.sessions.append('heal-tools', { type: 'step/start', turn: 1, step: 0 })
+  await ctx.sessions.append('heal-tools', {
+    type: 'assistant/message',
+    text: '',
+    tool_calls: [{ id: 'call_1', name: 'session_wake', arguments: '{"text":"hi"}' }],
+  })
+  // crash before tool/result
+
+  const ctx2 = new Context()
+  await ctx2.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx2.plugin(sessions)
+  const loaded = await ctx2.sessions.get('heal-tools')
+  assert.ok(loaded)
+  const result = loaded!.events.find((item) => item.type === 'tool/result')
+  assert.equal(result?.type, 'tool/result')
+  if (result?.type === 'tool/result') {
+    assert.equal(result.id, 'call_1')
+    assert.equal(result.ok, false)
+  }
+  const history = ctx2.sessions.deriveMessages('heal-tools')
+  const assistant = history.find((item) => item.role === 'assistant' && item.tool_calls?.length)
+  const tool = history.find((item) => item.role === 'tool' && item.tool_call_id === 'call_1')
+  assert.ok(assistant)
+  assert.ok(tool)
+})
+
 test('sqlite migrates legacy json sessions once', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cordis-migrate-'))
   const jsonDir = join(dir, 'sessions')

@@ -28,12 +28,29 @@ export { findOpenTurnStep, healInterruptedTurnBodies } from './session-heal.ts'
 export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
   let system = ''
   const messages: LlmMessage[] = []
+  /** 最近一条带 tool_calls 的 assistant 之后，尚未配齐的 tool_call_id */
+  const pendingToolCalls = new Map<string, string>()
+
+  const flushOrphanTools = () => {
+    if (!pendingToolCalls.size) return
+    for (const [id, name] of pendingToolCalls) {
+      messages.push({
+        role: 'tool',
+        tool_call_id: id,
+        content: `interrupted: missing tool result for ${name}`,
+      })
+    }
+    pendingToolCalls.clear()
+  }
+
   for (const event of events) {
     if (event.type === 'system/prompt') {
       system = event.text
     } else if (event.type === 'user/message') {
+      flushOrphanTools()
       messages.push({ role: 'user', content: event.text })
     } else if (event.type === 'assistant/message') {
+      flushOrphanTools()
       const hasToolCalls = Boolean(event.tool_calls?.length)
       messages.push({
         role: 'assistant',
@@ -48,10 +65,15 @@ export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
             }
           : {}),
       })
+      if (hasToolCalls) {
+        for (const call of event.tool_calls!) pendingToolCalls.set(call.id, call.name)
+      }
     } else if (event.type === 'tool/result') {
       messages.push({ role: 'tool', tool_call_id: event.id, content: event.detail })
+      pendingToolCalls.delete(event.id)
     }
   }
+  flushOrphanTools()
   return system ? [{ role: 'system', content: system }, ...messages] : messages
 }
 
@@ -112,7 +134,7 @@ export class SessionsService extends Service {
       this.ctx.emit('session/event', { sessionId: record.id, event })
     }
     this.ctx.logger('sessions').info(
-      `healed open turn/step on load session=${record.id} +${appended.map((e) => e.type).join(',')}`,
+      `healed interrupted session log session=${record.id} +${appended.map((e) => e.type).join(',')}`,
     )
     return record
   }
