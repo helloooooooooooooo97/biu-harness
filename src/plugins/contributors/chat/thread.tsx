@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useVirtualizer } from '@tanstack/react-virtual'
+import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual'
 import { LuCheck, LuCoins, LuCopy, LuGitFork, LuHash, LuLayers, LuTimer, LuType, LuWrench } from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
@@ -21,12 +21,12 @@ const NEAR_BOTTOM_PX = 96
 const PREFETCH_OLDER_PX = 720
 const ROW_GAP_PX = 16
 const ESTIMATE_ROW_PX = 220
-/** 超过该条数才上虚表；过低阈值会抖，过高则短会话也会一次挂满 Markdown */
-const VIRTUALIZE_AFTER = 4
-/** overscan：只挂可视区附近行；太大拖死主线程，太小快速滑动会闪空白 */
-const OVERSCAN = 4
-/** 滚动中暂停 measure，停下后再量真实高度（虚表常见做法） */
-const SCROLL_IDLE_MS = 140
+/** 超过该条数才上虚表；短会话直接全量挂载，避免来回滚卸 DOM */
+const VIRTUALIZE_AFTER = 12
+/** overscan：来回小幅滚动时尽量别卸刚看过的行 */
+const OVERSCAN = 12
+/** 看过的行继续挂在树上（LRU），滚回去不再重建 Markdown DOM */
+const KEEP_MOUNTED_MAX = 80
 
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
   let node = el?.parentElement ?? null
@@ -376,13 +376,56 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLElement | null>(null)
   const stickToBottomRef = useRef(true)
-  const scrollIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prefetchingRef = useRef(false)
+  /** 看过的消息按 id 保活（不能按 index：loadOlder 前置后下标会漂） */
+  const keptIdOrderRef = useRef<string[]>([])
+  const keptIdSetRef = useRef(new Set<string>())
   const [scrollEpoch, setScrollEpoch] = useState(0)
-  /** 滚动中暂停 measure，避免每帧重测；停下后再量真实高度 */
-  const [isScrolling, setIsScrolling] = useState(false)
+  const nodesRef = useRef(nodes)
+  nodesRef.current = nodes
 
   const virtualize = nodes.length >= VIRTUALIZE_AFTER
+
+  const clearKept = useCallback(() => {
+    keptIdOrderRef.current = []
+    keptIdSetRef.current = new Set()
+  }, [])
+
+  const touchKeptId = useCallback((id: string) => {
+    const set = keptIdSetRef.current
+    let order = keptIdOrderRef.current
+    if (set.has(id)) {
+      order = order.filter((item) => item !== id)
+      order.push(id)
+      keptIdOrderRef.current = order
+      return
+    }
+    while (order.length >= KEEP_MOUNTED_MAX) {
+      const drop = order.shift()
+      if (drop != null) set.delete(drop)
+    }
+    order.push(id)
+    set.add(id)
+    keptIdOrderRef.current = order
+  }, [])
+
+  const rangeExtractor = useCallback((range: Range) => {
+    const defaults = defaultRangeExtractor(range)
+    const merged = new Set(defaults)
+    const list = nodesRef.current
+    const idToIndex = new Map<string, number>()
+    for (let index = 0; index < list.length; index += 1) {
+      idToIndex.set(list[index]!.id, index)
+    }
+    for (const id of keptIdSetRef.current) {
+      const index = idToIndex.get(id)
+      if (index != null) merged.add(index)
+    }
+    const last = list.length - 1
+    const lastNode = last >= 0 ? list[last] : null
+    if (lastNode?.kind === 'reply' && lastNode.streaming) merged.add(last)
+    return [...merged].sort((a, b) => a - b)
+  }, [])
 
   const onInspect = useCallback(
     (callId: string) => {
@@ -399,8 +442,8 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   }, [sessionView, navigate])
 
   useEffect(() => {
-    setIsScrolling(false)
-  }, [sessionId])
+    clearKept()
+  }, [sessionId, clearKept])
 
   useLayoutEffect(() => {
     const parent = findScrollParent(rootRef.current)
@@ -417,7 +460,20 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     overscan: OVERSCAN,
     gap: ROW_GAP_PX,
     getItemKey: (index) => nodes[index]?.id ?? index,
+    rangeExtractor,
   })
+
+  const rangeStart = virtualizer.range?.startIndex
+  const rangeEnd = virtualizer.range?.endIndex
+  useLayoutEffect(() => {
+    if (!virtualize) return
+    if (rangeStart == null || rangeEnd == null) return
+    const list = nodesRef.current
+    for (let index = rangeStart; index <= rangeEnd; index += 1) {
+      const id = list[index]?.id
+      if (id) touchKeptId(id)
+    }
+  }, [virtualize, rangeStart, rangeEnd, touchKeptId, sessionId, nodes.length])
 
   useEffect(() => {
     stickToBottomRef.current = true
@@ -430,15 +486,6 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   useEffect(() => {
     const parent = scrollRef.current
     if (!parent) return
-
-    const markScrolling = () => {
-      setIsScrolling(true)
-      if (scrollIdleTimer.current != null) clearTimeout(scrollIdleTimer.current)
-      scrollIdleTimer.current = setTimeout(() => {
-        scrollIdleTimer.current = null
-        setIsScrolling(false)
-      }, SCROLL_IDLE_MS)
-    }
 
     const maybePrefetchOlder = () => {
       if (!hasMoreOlder || loadingOlder || prefetchingRef.current) return
@@ -460,7 +507,6 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     }
 
     const onScroll = () => {
-      markScrolling()
       const distance = parent.scrollHeight - parent.scrollTop - parent.clientHeight
       stickToBottomRef.current = distance <= NEAR_BOTTOM_PX
       maybePrefetchOlder()
@@ -469,7 +515,6 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     parent.addEventListener('scroll', onScroll, { passive: true })
     return () => {
       parent.removeEventListener('scroll', onScroll)
-      if (scrollIdleTimer.current != null) clearTimeout(scrollIdleTimer.current)
     }
   }, [sessionId, scrollEpoch, virtualize, hasMoreOlder, loadingOlder, sessionView])
 
@@ -522,7 +567,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
               <div
                 key={item.key}
                 data-index={item.index}
-                ref={isScrolling ? undefined : virtualizer.measureElement}
+                ref={virtualizer.measureElement}
                 className="chat-virt-row absolute top-0 left-0 w-full"
                 style={{ transform: `translateY(${item.start}px)` }}
               >
