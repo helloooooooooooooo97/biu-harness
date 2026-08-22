@@ -67,6 +67,7 @@ test('collectLiveDispatchedTasks includes status and usage per wake', () => {
   assert.equal(result.tasks.length, 1)
   assert.equal(result.tasks[0]?.status, 'complete')
   assert.equal(result.tasks[0]?.workerTurn, 1)
+  assert.equal(result.tasks[0]?.preview, 'run tests')
   assert.deepEqual(result.tasks[0]?.usage, {
     inputTokens: 40,
     outputTokens: 10,

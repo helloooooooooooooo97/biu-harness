@@ -55,7 +55,8 @@ function parseWakeArgs(argumentsJson: string): { sessionId: string; preview?: st
     const text = String(args.text || '').trim().replace(/\s+/g, ' ')
     return {
       sessionId,
-      ...(text ? { preview: text.slice(0, 80) } : {}),
+      // 派工表主文案：来自当次 wake/inject，不是 worker session 标题
+      ...(text ? { preview: text.slice(0, 240) } : {}),
     }
   } catch {
     return { sessionId: '' }
