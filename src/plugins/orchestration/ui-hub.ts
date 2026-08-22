@@ -1,15 +1,11 @@
 import type { Context, Fiber, Plugin } from 'cordis'
-import * as notes from '../contributors/notes.tsx'
 import * as clock from '../contributors/clock.tsx'
-import * as quotes from '../contributors/quotes.tsx'
 import * as chat from '../contributors/chat/index.ts'
 import { uiPackageLoaders } from 'virtual:cordis-ui-loaders'
 
 /** 仍留在主仓的内置 UI 插件（未拆包）。外部 UI 只来自 virtual:cordis-ui-loaders（由配置生成）。 */
 const builtinUi: Record<string, Plugin> = {
-  notes,
   clock,
-  quotes,
   chat,
 }
 

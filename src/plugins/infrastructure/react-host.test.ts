@@ -21,6 +21,6 @@ test('paints shell into el', async () => {
     await ctx.plugin(reactHost, { el })
     await ctx.plugin(shell)
   })
-  assert.match(el.innerHTML, /deepseek/i)
-  assert.match(el.innerHTML, /HARNESS/)
+  assert.match(el.innerHTML, /Activity bar/)
+  assert.match(el.innerHTML, /Agent/)
 })

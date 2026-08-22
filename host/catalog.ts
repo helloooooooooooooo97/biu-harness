@@ -1,12 +1,9 @@
 import type { Plugin } from 'cordis'
 import * as uppercase from './plugins/contributors/uppercase.ts'
-import * as notes from './plugins/contributors/notes.ts'
 import * as clock from './plugins/contributors/clock.ts'
-import * as quotes from './plugins/contributors/quotes.ts'
 import * as chat from './plugins/contributors/chat.ts'
 import * as dashboard from './plugins/contributors/dashboard.ts'
 import * as logger from './plugins/contributors/logger.ts'
-import * as polite from './plugins/contributors/polite.ts'
 
 export interface CatalogEntry {
   id: string
@@ -56,16 +53,6 @@ export const builtinCatalog: CatalogEntry[] = [
     enabled: true,
   },
   {
-    id: 'notes',
-    name: '便签',
-    layer: 'capability',
-    blurb: 'GET/POST /api/notes。',
-    plugin: notes,
-    inject: notes.inject,
-    togglable: true,
-    enabled: true,
-  },
-  {
     id: 'clock',
     name: '心跳时钟',
     layer: 'capability',
@@ -74,26 +61,6 @@ export const builtinCatalog: CatalogEntry[] = [
     inject: clock.inject,
     togglable: true,
     enabled: true,
-  },
-  {
-    id: 'quotes',
-    name: '旁白',
-    layer: 'capability',
-    blurb: 'notes/filter 旁白。',
-    plugin: quotes,
-    inject: quotes.inject,
-    togglable: true,
-    enabled: false,
-  },
-  {
-    id: 'polite',
-    name: '礼貌过滤器',
-    layer: 'capability',
-    blurb: '另一条 notes/filter。',
-    plugin: polite,
-    inject: polite.inject,
-    togglable: true,
-    enabled: false,
   },
   {
     id: 'logger',
