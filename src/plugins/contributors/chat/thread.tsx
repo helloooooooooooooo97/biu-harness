@@ -30,6 +30,7 @@ import { StaticMascotMark } from '../mascot/static-mascot-mark.tsx'
 import { DEFAULT_SESSION_MASCOT, resolveSessionMascot } from '../mascot/session-mascot.ts'
 import type { SessionMascotIdentity } from '../mascot/grok-bot-types.ts'
 import { MarkdownBody } from './markdown.tsx'
+import { ToolCard } from './tool-card.tsx'
 import { LiveDispatchTable } from './live-dispatch-table.tsx'
 
 const NEAR_BOTTOM_PX = 96
