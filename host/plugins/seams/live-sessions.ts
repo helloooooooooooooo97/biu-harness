@@ -13,8 +13,8 @@ export const LIVE_TOOL_NAMES = [
 
 const LIVE_PROMPT = `你是 Live 指挥席（文字版）：调度其他 chat session，而不是亲自改代码或跑长任务。
 工作流：session_list / session_inspect 了解现场 → session_wake（wait=false 可先派工）或 session_inject → session_progress 抽查进度。
-异步派工（wait=false / inject）后，worker turn/end 会旁白回本会话。
-向用户汇报要克制：只在关键节点、明显卡住、或用户追问时旁白，不要刷屏。
+异步派工后不要等待对方完成：完成态在目标 session 自己的 turn 里，需要时再 inspect / progress。
+向用户汇报要克制：只在关键节点、明显卡住、或用户追问时说明，不要刷屏。
 回答简洁：说明调度了谁、当前状态、下一步。`
 
 export interface SessionProgressSnapshot {
@@ -151,32 +151,6 @@ export const name = 'live-sessions'
 export const inject = ['tools', 'sessions', 'agents', 'systemPrompt']
 
 export function apply(ctx: Context) {
-  /** wait=false / inject：听目标 session 的 turn/end，旁白后停掉 */
-  const watchTurnEnd = (liveId: string, workerId: string) => {
-    if (!liveId || !workerId || liveId === workerId) return
-    const stop = ctx.on('session/event', ({ sessionId, event }) => {
-      if (sessionId !== workerId || event.type !== 'turn/end') return
-      stop()
-      void (async () => {
-        const worker = await ctx.sessions.get(workerId)
-        if (!worker) return
-        const last = [...worker.events].reverse().find((e) => e.type === 'assistant/message' && e.text.trim())
-        const summary = (last && 'text' in last ? String(last.text) : '').trim().replace(/\s+/g, ' ').slice(0, 280)
-        const done = event.reason === 'complete' || event.reason === 'completed'
-        const status = done ? '已完成' : `结束（${event.reason}）`
-        const label = workerId.slice(0, 8)
-        const note = summary
-          ? `[指挥席] ${label} ${status} · turn ${event.turn}\n${summary}`
-          : `[指挥席] ${label} ${status} · turn ${event.turn}`
-        try {
-          await ctx.sessions.append(liveId, { type: 'assistant/message', text: note })
-        } catch (error) {
-          console.warn('[live-sessions] turn/end note failed', error)
-        }
-      })()
-    })
-  }
-
   ctx.systemPrompt.register('live.persona', () => {
     const sessionId = currentSessionId()
     if (!sessionId) return ''
@@ -248,7 +222,7 @@ export function apply(ctx: Context) {
   ctx.tools.register({
     name: 'session_progress',
     description:
-      '抽查目标 session 的运行进度（turn/step/status/最近 assistant 摘要）。派工后用于旁白，勿高频刷屏。',
+      '抽查目标 session 的运行进度（turn/step/status/最近 assistant 摘要）。派工后按需查看，勿高频刷屏。',
     parameters: {
       type: 'object',
       properties: {
@@ -283,7 +257,7 @@ export function apply(ctx: Context) {
   ctx.tools.register({
     name: 'session_wake',
     description:
-      '向目标 chat session 发送 wake 并启动 agent。wait=false 时立即返回，完成时自动旁白回 Live。',
+      '向目标 chat session 发送 wake 并启动 agent。wait=false 时立即返回 queued；完成态在目标 session，不回写 Live。',
     parameters: {
       type: 'object',
       properties: {
@@ -311,8 +285,6 @@ export function apply(ctx: Context) {
       const agent = await ctx.agents.create(targetId)
       const sender = { type: 'session' as const, sessionId: selfId }
       if (!wait) {
-        // 先订阅再派工，避免极快完成时丢掉 turn/end；结束后自动 dispose
-        watchTurnEnd(selfId, targetId)
         void agent.send(text, { wait: false, sender })
         return { sessionId: targetId, queued: true, wait: false }
       }
@@ -329,7 +301,8 @@ export function apply(ctx: Context) {
 
   ctx.tools.register({
     name: 'session_inject',
-    description: '向目标 session 注入补充指示（inject）；若对方正在跑会进入 inbox。完成后旁白回 Live。',
+    description:
+      '向目标 session 注入补充指示（inject）；若对方正在跑会进入 inbox。完成态在目标 session，不回写 Live。',
     parameters: {
       type: 'object',
       properties: {
@@ -345,8 +318,7 @@ export function apply(ctx: Context) {
       if (!targetId) throw new Error('sessionId required')
       if (!text) throw new Error('text required')
       if (targetId === selfId) throw new Error('cannot inject into the current live session')
-      const target = await ctx.sessions.require(targetId)
-      watchTurnEnd(selfId, targetId)
+      await ctx.sessions.require(targetId)
       const agent = await ctx.agents.create(targetId)
       agent.inject(text, { sender: { type: 'session', sessionId: selfId } })
       return { sessionId: targetId, queued: true }

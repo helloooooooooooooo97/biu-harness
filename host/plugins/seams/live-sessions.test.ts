@@ -161,7 +161,7 @@ test('session_progress and async wake work for live caller', async () => {
   assert.equal(listed.sessions.find((item) => item.id === chat.id)?.status, 'idle')
 })
 
-test('wait=false wake: worker turn/end appends one live note', async () => {
+test('wait=false wake: queues worker and does not append note to live', async () => {
   const ctx = new Context()
   await ctx.plugin(sessionStore, { driver: 'memory' })
   await ctx.plugin(sessions)
@@ -172,11 +172,13 @@ test('wait=false wake: worker turn/end appends one live note', async () => {
   await ctx.plugin(agents)
   await ctx.plugin(liveSessions)
 
+  let workerFinished = false
   ctx.agentLoop.setFactory((_llm, sessionId) => ({
     run: async () => {
       await ctx.sessions.append(sessionId, { type: 'turn/start', turn: 1 })
       await ctx.sessions.append(sessionId, { type: 'assistant/message', text: 'task done' })
       await ctx.sessions.append(sessionId, { type: 'turn/end', turn: 1, reason: 'complete' })
+      workerFinished = true
       return { text: 'task done', steps: [] }
     },
   }))
@@ -184,23 +186,31 @@ test('wait=false wake: worker turn/end appends one live note', async () => {
 
   const live = await ctx.sessions.create(undefined, { type: 'live' })
   const chat = await ctx.sessions.create()
-  await runWithSession(live.id, () =>
+  const liveEventCountBefore = (await ctx.sessions.require(live.id)).events.length
+
+  const result = (await runWithSession(live.id, () =>
     ctx.tools.invoke(
       'session_wake',
       { sessionId: chat.id, text: 'go', wait: false },
       new AbortController().signal,
     ),
-  )
+  )) as { queued: boolean; wait: boolean }
+
+  assert.equal(result.queued, true)
+  assert.equal(result.wait, false)
 
   for (let i = 0; i < 40; i += 1) {
-    const notes = (await ctx.sessions.require(live.id)).events.filter(
-      (item) => item.type === 'assistant/message' && item.text.includes('[指挥席]') && item.text.includes('task done'),
-    )
-    if (notes.length >= 1) {
-      assert.equal(notes.length, 1)
-      return
-    }
+    if (workerFinished) break
     await new Promise((r) => setTimeout(r, 25))
   }
-  assert.fail('timed out waiting for turn/end note')
+  assert.equal(workerFinished, true)
+
+  const liveEvents = (await ctx.sessions.require(live.id)).events
+  assert.equal(liveEvents.length, liveEventCountBefore)
+  assert.equal(
+    liveEvents.some(
+      (item) => item.type === 'assistant/message' && item.text.includes('[指挥席]'),
+    ),
+    false,
+  )
 })
