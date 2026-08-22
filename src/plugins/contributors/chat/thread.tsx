@@ -234,18 +234,11 @@ function ReplyActions({
   )
 }
 
-/** 挂在发起本回合的用户消息下：用量 / 步数 / 复制 Fork */
-function UserTurnBar({
-  reply,
-  onFork,
-}: {
-  reply: Extract<ChatNode, { kind: 'reply' }>
-  onFork: () => void | Promise<void>
-}) {
+/** 挂在发起本回合的用户消息下：仅统计（轮次 / step / 耗时 / token） */
+function UserTurnBar({ reply }: { reply: Extract<ChatNode, { kind: 'reply' }> }) {
   if (reply.streaming) return null
   const hasMeta = reply.turn != null || reply.stepCount != null || reply.durationMs != null || Boolean(reply.usage)
-  const hasActions = Boolean(reply.copyText.trim())
-  if (!hasMeta && !hasActions) return null
+  if (!hasMeta) return null
 
   return (
     <div className="chat-user-turn-bar" aria-label="回合摘要" data-testid="user-turn-bar">
@@ -271,7 +264,6 @@ function UserTurnBar({
           <MetaItem icon={<LuCoins className="size-3" />} value={<UsageInline usage={reply.usage} />} title="Token 用量" />
         ) : null}
       </div>
-      {hasActions ? <ReplyActions text={reply.copyText} onFork={onFork} /> : null}
     </div>
   )
 }
@@ -304,7 +296,7 @@ function NodeView({
           {node.kindTag === 'inject' ? <div className="chat-user-tag">inject</div> : null}
           <MarkdownBody text={node.text} />
         </div>
-        {replyForUser ? <UserTurnBar reply={replyForUser} onFork={onFork} /> : null}
+        {replyForUser ? <UserTurnBar reply={replyForUser} /> : null}
       </div>
     )
   }
@@ -316,6 +308,11 @@ function NodeView({
         <div className="chat-reply-body">
           <ReplyParts node={node} onInspect={onInspect} />
         </div>
+        {!streaming && node.copyText.trim() ? (
+          <div className="chat-reply-actions-row">
+            <ReplyActions text={node.copyText} onFork={onFork} />
+          </div>
+        ) : null}
       </div>
     )
   }

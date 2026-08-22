@@ -62,14 +62,16 @@ describe('sticky user message markers', () => {
     expect(document.querySelector('[data-node-id="u-2"]')?.getAttribute('data-chat-kind')).toBe('user')
   })
 
-  it('moves turn stats under the user message and drops reply footer/box chrome', () => {
+  it('puts stats under user message; copy/fork stay on reply', () => {
     const onInspect = vi.fn()
     const onFork = vi.fn(async () => {})
     render(<ChatNodeList nodes={sampleNodes()} onInspect={onInspect} onFork={onFork} />)
 
     const user1 = document.querySelector('[data-node-id="u-1"]')
+    const reply1 = document.querySelector('[data-node-id="r-1"]')
     expect(user1?.querySelector('[data-testid="user-turn-bar"]')).toBeTruthy()
+    expect(user1?.querySelector('[aria-label="回合操作"]')).toBeNull()
+    expect(reply1?.querySelector('[aria-label="回合操作"]')).toBeTruthy()
     expect(document.querySelectorAll('.chat-reply-bar')).toHaveLength(0)
-    expect(document.querySelector('.chat-reply-card')).toBeNull()
   })
 })

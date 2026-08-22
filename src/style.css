@@ -1418,14 +1418,21 @@ body {
   font-size: 10px;
 }
 
-/* 回合统计挂在发起请求的用户消息下 */
+/* 回合统计挂在发起请求的用户消息下（不含复制/Fork） */
 .chat-user-turn-bar {
   display: flex;
-  min-height: 28px;
+  min-height: 24px;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   padding: 0 4px 0 2px;
+}
+
+.chat-reply-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-top: 6px;
+  padding: 0;
 }
 
 .chat-assistant-row {
@@ -1553,11 +1560,9 @@ body {
   flex-shrink: 0;
   align-items: center;
   gap: 2px;
-  margin-left: auto;
-  opacity: 0.82;
+  opacity: 0.72;
 }
 
-.chat-user-row:hover .chat-reply-actions,
 .chat-reply-block:hover .chat-reply-actions {
   opacity: 1;
 }
