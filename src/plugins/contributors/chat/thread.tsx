@@ -1,11 +1,24 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LuCheck, LuCoins, LuCopy, LuGitFork, LuHash, LuLayers, LuTimer, LuType, LuWrench } from 'react-icons/lu'
+import {
+  LuCheck,
+  LuChevronDown,
+  LuChevronRight,
+  LuCoins,
+  LuCopy,
+  LuGitFork,
+  LuHash,
+  LuLayers,
+  LuTimer,
+  LuType,
+  LuWrench,
+} from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import {
   formatTrajectoryUsage,
   type ChatNode,
+  type ChatReplyPart,
   type ChatStepStat,
   type TrajectoryUsage,
 } from '../../infrastructure/session-project.ts'
@@ -97,17 +110,23 @@ function StepBar({ stat }: { stat: ChatStepStat }) {
 function ReplyParts({
   node,
   onInspect,
+  expanded,
 }: {
   node: Extract<ChatNode, { kind: 'reply' }>
   onInspect: (callId: string) => void
+  /** true：完整 agent loop；false：只渲染最终 Message */
+  expanded: boolean
 }) {
+  const { detailParts, finalParts } = splitReplyForDisplay(node)
+  const parts = expanded || node.streaming ? node.parts : finalParts
   const stepMap = new Map((node.steps ?? []).map((item) => [item.step, item]))
   const elements: ReactNode[] = []
   let lastStep: number | undefined
+  const showSteps = expanded || Boolean(node.streaming)
 
-  for (const part of node.parts) {
+  for (const part of parts) {
     const step = part.step
-    if (step != null && step !== lastStep) {
+    if (showSteps && step != null && step !== lastStep) {
       const stat = stepMap.get(step) ?? {
         step,
         inputTokens: 0,
@@ -122,7 +141,7 @@ function ReplyParts({
     if (part.kind === 'assistant') {
       const partStreaming = Boolean(part.streaming)
       elements.push(
-        <div key={part.id} className="chat-assistant-body">
+        <div key={part.id} className="chat-assistant-body" data-reply-final={detailParts.length && !expanded ? '1' : undefined}>
           {part.text ? (
             <MarkdownBody text={part.text} streaming={partStreaming} />
           ) : partStreaming ? (
@@ -139,6 +158,42 @@ function ReplyParts({
   }
 
   return <>{elements}</>
+}
+
+/**
+ * Agent loop：最后一条有正文的 assistant 是最终 Message；
+ * 之前的 step / 工具 / 中间草稿都算 Details。
+ */
+export function splitReplyForDisplay(node: Extract<ChatNode, { kind: 'reply' }>): {
+  detailParts: ChatReplyPart[]
+  finalParts: ChatReplyPart[]
+  hasDetails: boolean
+} {
+  const parts = node.parts
+  let finalIndex = -1
+  for (let i = parts.length - 1; i >= 0; i -= 1) {
+    const part = parts[i]!
+    if (part.kind === 'assistant' && part.text.trim()) {
+      finalIndex = i
+      break
+    }
+  }
+  if (finalIndex < 0) {
+    for (let i = parts.length - 1; i >= 0; i -= 1) {
+      if (parts[i]!.kind === 'assistant') {
+        finalIndex = i
+        break
+      }
+    }
+  }
+  if (finalIndex <= 0) {
+    return { detailParts: [], finalParts: parts, hasDetails: false }
+  }
+  return {
+    detailParts: parts.slice(0, finalIndex),
+    finalParts: parts.slice(finalIndex),
+    hasDetails: true,
+  }
 }
 
 function cacheHitPct(usage: TrajectoryUsage): number | null {
@@ -234,14 +289,36 @@ function ReplyActions({
   )
 }
 
-/** 挂在发起本回合的用户消息下：仅统计（轮次 / step / 耗时 / token） */
-function UserTurnBar({ reply }: { reply: Extract<ChatNode, { kind: 'reply' }> }) {
+/** 挂在发起本回合的用户消息下：Details + 统计 */
+function UserTurnBar({
+  reply,
+  detailsOpen,
+  onToggleDetails,
+}: {
+  reply: Extract<ChatNode, { kind: 'reply' }>
+  detailsOpen: boolean
+  onToggleDetails: () => void
+}) {
   if (reply.streaming) return null
+  const { hasDetails } = splitReplyForDisplay(reply)
   const hasMeta = reply.turn != null || reply.stepCount != null || reply.durationMs != null || Boolean(reply.usage)
-  if (!hasMeta) return null
+  if (!hasDetails && !hasMeta) return null
 
   return (
     <div className="chat-user-turn-bar" aria-label="回合摘要" data-testid="user-turn-bar">
+      {hasDetails ? (
+        <button
+          type="button"
+          className={`chat-details-toggle${detailsOpen ? ' is-open' : ''}`}
+          aria-expanded={detailsOpen}
+          aria-controls={`reply-details-${reply.id}`}
+          data-testid="details-toggle"
+          onClick={onToggleDetails}
+        >
+          {detailsOpen ? <LuChevronDown className="size-3.5" /> : <LuChevronRight className="size-3.5" />}
+          <span>Details</span>
+        </button>
+      ) : null}
       <div className="chat-reply-meta">
         {reply.turn != null ? (
           <MetaItem icon={<LuHash className="size-3" />} value={reply.turn} title={`第 ${reply.turn} 轮`} />
@@ -280,12 +357,16 @@ function findReplyForUser(nodes: ChatNode[], userIndex: number): Extract<ChatNod
 function NodeView({
   node,
   replyForUser,
+  detailsOpen,
+  onToggleDetails,
   onInspect,
   onFork,
 }: {
   node: ChatNode
   /** 用户消息发起的本回合回复（统计挂在用户气泡下） */
   replyForUser?: Extract<ChatNode, { kind: 'reply' }>
+  detailsOpen?: boolean
+  onToggleDetails?: () => void
   onInspect: (callId: string) => void
   onFork: () => void | Promise<void>
 }) {
@@ -296,17 +377,27 @@ function NodeView({
           {node.kindTag === 'inject' ? <div className="chat-user-tag">inject</div> : null}
           <MarkdownBody text={node.text} />
         </div>
-        {replyForUser ? <UserTurnBar reply={replyForUser} /> : null}
+        {replyForUser && onToggleDetails ? (
+          <UserTurnBar
+            reply={replyForUser}
+            detailsOpen={Boolean(detailsOpen)}
+            onToggleDetails={onToggleDetails}
+          />
+        ) : null}
       </div>
     )
   }
 
   if (node.kind === 'reply') {
     const streaming = Boolean(node.streaming)
+    const expanded = streaming || Boolean(detailsOpen)
     return (
-      <div className={`chat-reply-block${streaming ? ' is-streaming' : ''}`}>
+      <div
+        className={`chat-reply-block${streaming ? ' is-streaming' : ''}${expanded ? ' is-details-open' : ''}`}
+        id={`reply-details-${node.id}`}
+      >
         <div className="chat-reply-body">
-          <ReplyParts node={node} onInspect={onInspect} />
+          <ReplyParts node={node} onInspect={onInspect} expanded={expanded} />
         </div>
         {!streaming && node.copyText.trim() ? (
           <div className="chat-reply-actions-row">
@@ -336,23 +427,38 @@ export function ChatNodeList({
   onInspect: (callId: string) => void
   onFork: () => void | Promise<void>
 }) {
+  const [detailsOpenByReply, setDetailsOpenByReply] = useState<Record<string, boolean>>({})
+
+  const toggleDetails = useCallback((replyId: string) => {
+    setDetailsOpenByReply((prev) => ({ ...prev, [replyId]: !prev[replyId] }))
+  }, [])
+
   return (
     <div className="chat-node-list flex flex-col gap-4">
-      {nodes.map((node, index) => (
-        <div
-          key={node.id}
-          className="chat-msg-row"
-          data-node-id={node.id}
-          data-chat-kind={node.kind}
-        >
-          <NodeViewMemo
-            node={node}
-            replyForUser={node.kind === 'user' ? findReplyForUser(nodes, index) : undefined}
-            onInspect={onInspect}
-            onFork={onFork}
-          />
-        </div>
-      ))}
+      {nodes.map((node, index) => {
+        const replyForUser = node.kind === 'user' ? findReplyForUser(nodes, index) : undefined
+        const replyIdForDetails = node.kind === 'reply' ? node.id : replyForUser?.id
+        const detailsOpen = replyIdForDetails ? Boolean(detailsOpenByReply[replyIdForDetails]) : false
+        return (
+          <div
+            key={node.id}
+            className="chat-msg-row"
+            data-node-id={node.id}
+            data-chat-kind={node.kind}
+          >
+            <NodeViewMemo
+              node={node}
+              replyForUser={replyForUser}
+              detailsOpen={detailsOpen}
+              onToggleDetails={
+                replyIdForDetails ? () => toggleDetails(replyIdForDetails) : undefined
+              }
+              onInspect={onInspect}
+              onFork={onFork}
+            />
+          </div>
+        )
+      })}
     </div>
   )
 }

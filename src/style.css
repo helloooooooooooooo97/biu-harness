@@ -1427,6 +1427,29 @@ body {
   padding: 0 4px 0 2px;
 }
 
+.chat-details-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 2px 8px 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-label-3);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chat-details-toggle:hover,
+.chat-details-toggle.is-open {
+  color: var(--dsw-label-2);
+  background: var(--dsw-hover);
+  border-color: color-mix(in srgb, var(--dsw-border) 80%, transparent);
+}
+
 .chat-reply-actions-row {
   display: flex;
   align-items: center;
