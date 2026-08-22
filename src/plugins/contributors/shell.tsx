@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useState, type CSSProperties } from 'react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
 import type { SlotProps } from '../registry/slots.ts'
 import { bindSnapshot, type Snapshot, type SnapshotService } from '../infrastructure/snapshot.ts'
@@ -17,8 +17,6 @@ import { SessionInspector } from './session-inspector.tsx'
 import { FolderGlyph } from './chat/project-panel.tsx'
 import { DashboardModule } from './dashboard-module.tsx'
 import {
-  LuBug,
-  LuMessageSquare,
   LuPanelLeft,
   LuPanelRight,
 } from 'react-icons/lu'
@@ -124,26 +122,15 @@ function WorkspaceModule() {
   )
 }
 
-/** 主区与侧栏折叠态解耦：组折叠时不重跑 stage/composer。 */
+/** 主区固定聊天；轨迹改在右侧检查器。 */
 const AgentMainPanels = memo(function AgentMainPanels({
-  view,
   renderSlot,
 }: {
-  view: string
   renderSlot: SlotProps['renderSlot']
 }) {
   return (
     <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-      {/*
-        不用 display:none：大 Markdown DOM 被隐藏后再显示会重算布局（数百 ms longtask）。
-        absolute + visibility 保活布局，Chat↔Debug 只切可见性。
-      */}
-      <div
-        className={`absolute inset-0 min-h-0 overflow-hidden ${
-          view === 'chat' ? 'z-[1] flex' : 'pointer-events-none invisible z-0 flex'
-        }`}
-        aria-hidden={view !== 'chat'}
-      >
+      <div className="absolute inset-0 z-[1] flex min-h-0 overflow-hidden">
         <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
           <div className="chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 py-4 pb-44 md:px-8 lg:px-10">
             {renderSlot('stage')}
@@ -155,14 +142,6 @@ const AgentMainPanels = memo(function AgentMainPanels({
             </div>
           </div>
         </div>
-      </div>
-      <div
-        className={`absolute inset-0 min-h-0 overflow-hidden ${
-          view === 'debug' ? 'z-[1] flex flex-col' : 'pointer-events-none invisible z-0 flex flex-col'
-        }`}
-        aria-hidden={view !== 'debug'}
-      >
-        {renderSlot('trajectory')}
       </div>
     </div>
   )
@@ -178,7 +157,8 @@ function Shell(props: SlotProps) {
   const live = useSnapshot((state: Snapshot) => state.plugins.some((plugin) => plugin.enabled))
   const sessionId = useSessionView((state) => state.sessionId)
   const project = useSessionView((state) => state.project)
-  const view = useSessionView((state) => state.view)
+  const focusCallId = useSessionView((state) => state.focusCallId)
+  const routeView = useSessionView((state) => state.view)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [inspectorOpen, setInspectorOpen] = useState(() => {
@@ -229,10 +209,21 @@ function Shell(props: SlotProps) {
   const appRoute = parseAppPath(location.pathname)
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
-  const agentHref = sessionId ? `/s/${sessionId}${view === 'debug' ? '/debug' : ''}` : '/'
+  const agentHref = sessionId ? `/s/${sessionId}` : '/'
   const showChatSidebar = activeModule === 'agent' && !sidebarCollapsed
   const collapseSidebar = useCallback(() => setSidebarCollapsed(true), [])
   const expandSidebar = useCallback(() => setSidebarCollapsed(false), [])
+
+  // 工具检查 /debuginspect：打开右侧轨迹 Tab（主区不再切 Debug 页）
+  useEffect(() => {
+    if (!focusCallId && routeView !== 'debug') return
+    setInspectorOpen(true)
+    try {
+      localStorage.setItem('cordis.inspector.open', '1')
+    } catch {
+      /* ignore */
+    }
+  }, [focusCallId, routeView])
 
   // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
   useEffect(() => {
@@ -241,6 +232,13 @@ function Shell(props: SlotProps) {
       if (location.pathname !== '/') navigate('/', { replace: true })
     })
   }, [location.pathname, navigate, sessionView])
+
+  // /debug 兼容：主区仍聊天，轨迹在右侧；URL 收成 /s/:id
+  useEffect(() => {
+    const route = parseAppPath(location.pathname)
+    if (route.kind !== 'session' || route.view !== 'debug') return
+    navigate(`/s/${encodeURIComponent(route.sessionId)}`, { replace: true })
+  }, [location.pathname, navigate])
 
   useEffect(() => {
     void sessionView.refreshSessions()
@@ -318,35 +316,6 @@ function Shell(props: SlotProps) {
                 </div>
               ) : null}
             </div>
-            <nav className="chat-view-header-tabs" aria-label="View">
-              <NavLink
-                to={sessionId ? `/s/${sessionId}` : '/'}
-                end
-                title="Chat"
-                aria-label="Chat"
-                className={({ isActive }) => `chat-view-tab${isActive ? ' is-active' : ''}`}
-              >
-                {({ isActive }) => (
-                  <>
-                    <LuMessageSquare className="size-3.5" />
-                    {isActive ? <span className="chat-view-tab-underline" /> : null}
-                  </>
-                )}
-              </NavLink>
-              <NavLink
-                to={sessionId ? `/s/${sessionId}/debug` : '/'}
-                title="Debug"
-                aria-label="Debug"
-                className={({ isActive }) => `chat-view-tab${isActive ? ' is-active' : ''}`}
-              >
-                {({ isActive }) => (
-                  <>
-                    <LuBug className="size-3.5" />
-                    {isActive ? <span className="chat-view-tab-underline" /> : null}
-                  </>
-                )}
-              </NavLink>
-            </nav>
             <div className="chat-view-header-right">
               <button
                 type="button"
@@ -361,7 +330,7 @@ function Shell(props: SlotProps) {
               </button>
             </div>
           </header>
-          <AgentMainPanels view={view} renderSlot={props.renderSlot} />
+          <AgentMainPanels renderSlot={props.renderSlot} />
         </div>
         <div
           className={activeModule === 'dashboard' ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : 'hidden'}

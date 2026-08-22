@@ -755,9 +755,8 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const onInspect = useCallback(
     (callId: string) => {
       sessionView.inspectCall(callId)
-      if (sessionId) navigate(`/s/${sessionId}/debug`)
     },
-    [sessionView, sessionId, navigate],
+    [sessionView],
   )
 
   const onFork = useCallback(() => {

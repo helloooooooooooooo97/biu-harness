@@ -251,7 +251,7 @@ export class SessionViewService extends Service {
   }
 
   inspectCall(callId: string) {
-    this.replace({ view: 'debug', focusCallId: callId })
+    this.replace({ focusCallId: callId })
     void this.ensureTrajectory()
   }
 

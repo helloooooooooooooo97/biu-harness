@@ -1,15 +1,16 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LuPanelRightClose, LuRadio, LuWrench } from 'react-icons/lu'
+import { LuListTree, LuPanelRightClose, LuRadio, LuWrench } from 'react-icons/lu'
 import {
   bindSessionView,
   type SessionViewService,
 } from '../infrastructure/session-view.ts'
 import { SidebarMascot } from './mascot/sidebar-mascot.tsx'
 import { resolveSessionMascot } from './mascot/session-mascot.ts'
+import { TrajectoryView } from './chat/trajectory.tsx'
 
 type ToolSourceId = 'minimal' | 'live' | 'plugin'
 type AgentMode = 'standard' | 'minimal'
-type InspectorTab = 'tools' | 'live'
+type InspectorTab = 'tools' | 'live' | 'traj'
 
 interface InspectorTool {
   name: string
@@ -71,9 +72,11 @@ export const SessionInspector = memo(function SessionInspector({
   onWidthChange,
   onClose,
   useSessionView,
+  sessionView,
 }: SessionInspectorProps) {
   const sessionId = useSessionView((state) => state.sessionId)
   const sessions = useSessionView((state) => state.sessions)
+  const focusCallId = useSessionView((state) => state.focusCallId)
   const sessionType = useMemo(() => {
     const hit = sessions.find((item) => item.id === sessionId)
     return (hit?.type ?? 'chat') as 'chat' | 'live'
@@ -86,8 +89,17 @@ export const SessionInspector = memo(function SessionInspector({
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
   useEffect(() => {
+    if (focusCallId) {
+      setTab('traj')
+      return
+    }
     setTab(sessionType === 'live' ? 'live' : 'tools')
-  }, [sessionType, sessionId])
+  }, [sessionType, sessionId, focusCallId])
+
+  useEffect(() => {
+    if (!open || tab !== 'traj') return
+    void sessionView.ensureTrajectory()
+  }, [open, tab, sessionId, sessionView])
 
   const refresh = useCallback(async () => {
     if (!sessionId || !open) return
@@ -207,6 +219,17 @@ export const SessionInspector = memo(function SessionInspector({
               指挥台
             </button>
           ) : null}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'traj'}
+            className={tabClass(tab === 'traj')}
+            onClick={() => setTab('traj')}
+            data-testid="inspector-tab-traj"
+          >
+            <LuListTree className="size-3.5" />
+            轨迹
+          </button>
         </div>
         <button
           type="button"
@@ -219,8 +242,10 @@ export const SessionInspector = memo(function SessionInspector({
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto p-2.5">
-        {error ? (
+      <div
+        className={`min-h-0 flex-1 ${tab === 'traj' ? 'flex flex-col overflow-hidden' : 'overflow-auto p-2.5'}`}
+      >
+        {error && tab !== 'traj' ? (
           <div className="mb-2 rounded-[8px] bg-[color-mix(in_srgb,#c44_16%,transparent)] p-2 text-[11px] text-[#f08888]">
             {error}
           </div>
@@ -297,7 +322,9 @@ export const SessionInspector = memo(function SessionInspector({
               ))}
             </ul>
           </div>
-        ) : (
+        ) : null}
+
+        {tab === 'live' ? (
           <div className="flex flex-col gap-2.5">
             <p className="m-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
               其它 chat session 的现场（只读，约 2s 刷新）。
@@ -346,7 +373,13 @@ export const SessionInspector = memo(function SessionInspector({
               </ul>
             )}
           </div>
-        )}
+        ) : null}
+
+        {tab === 'traj' ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid="inspector-trajectory">
+            <TrajectoryView useSessionView={useSessionView} sessionView={sessionView} />
+          </div>
+        ) : null}
       </div>
     </aside>
   )

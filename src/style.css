@@ -191,11 +191,12 @@ body {
 
 .chat-view-header {
   position: relative;
-  display: grid;
+  display: flex;
   height: 36px;
   flex-shrink: 0;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   border-bottom: 1px solid var(--dsw-border);
   padding: 0 12px;
 }
@@ -790,6 +791,19 @@ body {
 
 .traj-root-split {
   flex-direction: row;
+}
+
+/* 右侧检查器内：详情改上下堆叠，避免过窄 */
+[data-testid='inspector-trajectory'] .traj-root-split {
+  flex-direction: column;
+}
+
+[data-testid='inspector-trajectory'] .traj-detail {
+  width: 100%;
+  min-width: 0;
+  max-height: 42%;
+  border-left: 0;
+  border-top: 1px solid var(--dsw-border);
 }
 
 .traj-pane {

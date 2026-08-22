@@ -42,7 +42,7 @@ const SessionRow = memo(function SessionRow({
   return (
     <div className={`chat-session-row group${active ? ' is-active' : ''}`}>
       <Link
-        to={`/s/${item.id}${view === 'debug' ? '/debug' : ''}`}
+        to={`/s/${item.id}`}
         className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-[12px] leading-4"
       >
         <SidebarMascot
@@ -102,7 +102,6 @@ export const ChatSidebar = memo(function ChatSidebar({
   const navigate = useNavigate()
   const sessions = useSessionView((state) => state.sessions)
   const sessionId = useSessionView((state) => state.sessionId)
-  const view = useSessionView((state) => state.view)
   const agentBusy = useSessionView(
     (state) => state.agentStatus === 'running' || state.pending,
   )
