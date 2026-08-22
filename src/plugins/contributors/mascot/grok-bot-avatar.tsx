@@ -12,8 +12,10 @@ export type GrokBotAvatarProps = {
   shape: GrokShape
   color: GrokColor
   size?: number
-  /** Agent running → thinking; else onboarding expression playlist */
+  /** Agent running → thinking + green status dot */
   busy?: boolean
+  /** 刚创建：播放 intro 动画（毫秒），默认 0 表示不播 */
+  introMs?: number
   /** Force-pause (e.g. offscreen). Visibility also auto-pauses. */
   paused?: boolean
   followPointer?: boolean
@@ -32,15 +34,22 @@ type BotInternal = GrokCharacterLike & {
   hopAt?: number
 }
 
+function moodFor(busy: boolean, intro: boolean): 'static' | 'intro' | 'busy' {
+  if (busy) return 'busy'
+  if (intro) return 'intro'
+  return 'static'
+}
+
 /**
- * Animated Grok Bot for the session list.
- * Shared ~30fps ticker; onboarding cycles rich expressions; hop/spin tricks stay off.
+ * Sidebar / hero Grok bot.
+ * 默认静止；仅 busy 或 intro 窗口内才跑 shared ticker，减轻侧栏开销。
  */
 export const GrokBotAvatar = memo(function GrokBotAvatar({
   shape,
   color,
   size = 44,
   busy = false,
+  introMs = 0,
   paused = false,
   followPointer = false,
   className,
@@ -51,12 +60,27 @@ export const GrokBotAvatar = memo(function GrokBotAvatar({
   const botRef = useRef<GrokCharacterLike | null>(null)
   const [ready, setReady] = useState(false)
   const [visible, setVisible] = useState(true)
+  const [introActive, setIntroActive] = useState(introMs > 0)
   const shapeRef = useRef(shape)
   const colorRef = useRef(color)
   const busyRef = useRef(busy)
+  const introRef = useRef(introActive)
   shapeRef.current = shape
   colorRef.current = color
   busyRef.current = busy
+  introRef.current = introActive
+
+  const shouldAnimate = busy || introActive
+
+  useEffect(() => {
+    if (introMs <= 0) {
+      setIntroActive(false)
+      return
+    }
+    setIntroActive(true)
+    const timer = window.setTimeout(() => setIntroActive(false), introMs)
+    return () => window.clearTimeout(timer)
+  }, [introMs])
 
   useEffect(() => {
     const el = wrapRef.current
@@ -90,21 +114,23 @@ export const GrokBotAvatar = memo(function GrokBotAvatar({
         detachSharedTicker(botRef.current)
         botRef.current.destroy()
       }
+      const mood = moodFor(busyRef.current, introRef.current)
       const bot = new window.GrokCharacter(svgRef.current, {
         shape: shapeRef.current,
         color: colorRef.current,
         scheme: 'light',
         loginWrap: true,
         sizePx: size,
-        mode: busyRef.current ? 'hold' : 'onboarding',
-        state: busyRef.current ? 'thinking' : 'idle',
+        mode: mood === 'intro' ? 'onboarding' : 'hold',
+        state: mood === 'busy' ? 'thinking' : 'idle',
         followPointer,
         paused: true,
         eyeColor: '#f3efe6',
       }) as BotInternal
-      applySidebarMood(bot, busyRef.current)
+      applySidebarMood(bot, mood)
       attachSharedTicker(bot)
-      bot.setPaused(paused || !visible)
+      const animate = busyRef.current || introRef.current
+      bot.setPaused(paused || !visible || !animate)
       botRef.current = bot
       setReady(true)
     })
@@ -125,27 +151,27 @@ export const GrokBotAvatar = memo(function GrokBotAvatar({
     if (!bot || !ready) return
     bot.setShape(shape)
     bot.setColor(color, 'light')
-    // setShape can re-arm tricks — keep them off.
     suppressSidebarTricks(bot)
-    applySidebarMood(bot, busy)
-  }, [shape, color, ready, busy])
+    applySidebarMood(bot, moodFor(busy, introActive))
+  }, [shape, color, ready, busy, introActive])
 
   useEffect(() => {
     const bot = botRef.current
     if (!bot || !ready) return
-    applySidebarMood(bot, busy)
-  }, [busy, ready])
+    applySidebarMood(bot, moodFor(busy, introActive))
+  }, [busy, introActive, ready])
 
   useEffect(() => {
-    botRef.current?.setPaused(paused || !visible)
-  }, [paused, visible, ready])
+    botRef.current?.setPaused(paused || !visible || !shouldAnimate)
+  }, [paused, visible, ready, shouldAnimate])
 
   return (
     <span
       ref={wrapRef}
-      className={`sidebar-mascot grok-bot-avatar${className ? ` ${className}` : ''}`}
+      className={`sidebar-mascot grok-bot-avatar${busy ? ' is-busy' : ''}${className ? ` ${className}` : ''}`}
       style={{ width: size, height: size, display: 'inline-grid', placeItems: 'center' }}
       title={title}
+      data-busy={busy ? 'true' : undefined}
     >
       <svg
         ref={svgRef}
@@ -160,9 +186,9 @@ export const GrokBotAvatar = memo(function GrokBotAvatar({
           colorScheme: 'light',
           opacity: ready ? 1 : 0.35,
           transform: 'translateZ(0)',
-          willChange: 'transform',
         }}
       />
+      {busy ? <span className="sidebar-mascot-status" aria-hidden /> : null}
     </span>
   )
 })

@@ -14,24 +14,31 @@ let lastDrive = 0
 const FRAME_MS = 1000 / 30
 
 function drive(now: number) {
-  rafId = requestAnimationFrame(drive)
-  if (now - lastDrive < FRAME_MS) return
-  lastDrive = now
+  if (now - lastDrive >= FRAME_MS) {
+    lastDrive = now
+    for (const bot of bots) {
+      if (bot.paused) continue
+      bot._tick(now)
+    }
+  }
+  let anyActive = false
   for (const bot of bots) {
-    if (bot.paused) continue
-    bot._tick(now)
+    if (!bot.paused) {
+      anyActive = true
+      break
+    }
   }
-  if (bots.size === 0 && rafId) {
-    cancelAnimationFrame(rafId)
+  if (!anyActive || bots.size === 0) {
     rafId = 0
+    return
   }
+  rafId = requestAnimationFrame(drive)
 }
 
 function ensureLoop() {
-  if (!rafId) {
-    lastDrive = 0
-    rafId = requestAnimationFrame(drive)
-  }
+  if (rafId) return
+  lastDrive = 0
+  rafId = requestAnimationFrame(drive)
 }
 
 /**
@@ -39,7 +46,7 @@ function ensureLoop() {
  * Safe to call once per instance after construction.
  */
 export function attachSharedTicker(bot: object) {
-  const raw = bot as Tickable
+  const raw = bot as Tickable & { setPaused?: (v: boolean) => void }
   if (raw.__shared) return
   if (raw._raf) {
     cancelAnimationFrame(raw._raf)
@@ -54,6 +61,14 @@ export function attachSharedTicker(bot: object) {
     if (raw._raf && raw._raf !== prevRaf) {
       cancelAnimationFrame(raw._raf)
       raw._raf = 0
+    }
+  }
+
+  const innerSetPaused = raw.setPaused?.bind(raw)
+  if (innerSetPaused) {
+    raw.setPaused = (value: boolean) => {
+      innerSetPaused(value)
+      if (!value) ensureLoop()
     }
   }
 
@@ -91,17 +106,22 @@ export function suppressSidebarTricks(bot: object) {
   raw.hopAt = -1
 }
 
-/** Idle: onboarding mood playlist (curious/happy/playful/…). Busy: thinking. */
-export function applySidebarMood(bot: object, busy: boolean) {
+/** Idle static / intro onboarding / busy thinking. */
+export function applySidebarMood(bot: object, mood: 'static' | 'intro' | 'busy') {
   const raw = bot as {
     setMode?: (m: string) => void
     setState?: (s: string, o?: { resetEyes?: boolean }) => void
   }
   suppressSidebarTricks(bot)
-  if (busy) {
+  if (mood === 'busy') {
     raw.setMode?.('hold')
     raw.setState?.('thinking', { resetEyes: false })
     return
   }
-  raw.setMode?.('onboarding')
+  if (mood === 'intro') {
+    raw.setMode?.('onboarding')
+    return
+  }
+  raw.setMode?.('hold')
+  raw.setState?.('idle', { resetEyes: false })
 }

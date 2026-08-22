@@ -369,9 +369,23 @@ body {
 }
 
 .sidebar-mascot {
+  position: relative;
   flex-shrink: 0;
   overflow: visible;
   line-height: 0;
+}
+
+.sidebar-mascot-status {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dsw-ok, #22c55e);
+  border: 1.5px solid var(--dsw-sidebar, #fff);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--dsw-ok, #22c55e) 35%, transparent);
+  pointer-events: none;
 }
 
 .grok-bot-avatar svg,
