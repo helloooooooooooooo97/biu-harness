@@ -27,7 +27,6 @@ const SessionRow = memo(function SessionRow({
   active,
   busy,
   animateBusy,
-  view,
   onDelete,
 }: {
   item: SessionListItem
@@ -35,7 +34,6 @@ const SessionRow = memo(function SessionRow({
   busy: boolean
   /** 仅当前打开会话才跑完整 mascot 动画 */
   animateBusy: boolean
-  view: string
   onDelete: (item: SessionListItem) => void
 }) {
   const identity = resolveSessionMascot(item.id, item.mascot)
@@ -265,7 +263,6 @@ export const ChatSidebar = memo(function ChatSidebar({
                         active={item.id === routeSessionId}
                         busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
                         animateBusy={item.id === routeSessionId && agentBusy}
-                        view={view}
                         onDelete={deleteChat}
                       />
                     ))}
