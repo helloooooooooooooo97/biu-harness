@@ -30,9 +30,25 @@ export const MINIMAL_TOOL_NAMES = ['bash', 'str_replace_editor'] as const
 /** 本回合 slash 选中的额外工具（极简模式下临时放开）。 */
 const extraToolsStorage = new AsyncLocalStorage<ReadonlySet<string>>()
 
+/** 回合级工具策略（会话 config 覆盖全局 mode/extras）。 */
+const toolPolicyStorage = new AsyncLocalStorage<{
+  mode: AgentToolMode
+  extras: ReadonlySet<string>
+}>()
+
 export function runWithExtraTools<T>(names: readonly string[], fn: () => T): T {
   const cleaned = [...new Set(names.map((n) => n.trim()).filter(Boolean))]
   return extraToolsStorage.run(new Set(cleaned), fn)
+}
+
+export function runWithToolPolicy<T>(
+  policy: { mode: AgentToolMode; extras?: readonly string[] },
+  fn: () => T,
+): T {
+  const extras = [...new Set((policy.extras ?? []).map((n) => n.trim()).filter(Boolean))]
+  return toolPolicyStorage.run({ mode: policy.mode, extras: new Set(extras) }, () =>
+    runWithExtraTools(extras, fn),
+  )
 }
 
 export class ToolsService extends Service {
@@ -68,6 +84,9 @@ export class ToolsService extends Service {
       'session_progress',
       'session_wake',
       'session_inject',
+      'session_create',
+      'session_rename',
+      'session_configure',
     ])
     const cleaned = [
       ...new Set(
@@ -86,9 +105,12 @@ export class ToolsService extends Service {
   }
 
   private visible(name: string) {
-    if (this.mode === 'standard') return true
+    const policy = toolPolicyStorage.getStore()
+    const mode = policy?.mode ?? this.mode
+    if (mode === 'standard') return true
     if ((MINIMAL_TOOL_NAMES as readonly string[]).includes(name)) return true
-    if (this.pinnedExtras.includes(name)) return true
+    if ((policy?.extras ?? new Set()).has(name)) return true
+    if (!policy && this.pinnedExtras.includes(name)) return true
     return extraToolsStorage.getStore()?.has(name) ?? false
   }
 

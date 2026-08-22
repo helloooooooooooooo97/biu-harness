@@ -4,7 +4,7 @@ import type { AssistantReply, ChatOptions, LlmClient, LlmConfig, LlmMessage } fr
 import type { InboxKind, MessageSender } from '../core/session-types.ts'
 import { normalizeSessionType } from '../core/session-types.ts'
 import { runWithSession } from '../core/session-scope.ts'
-import { runWithExtraTools } from '../registry/tools.ts'
+import { runWithToolPolicy, type AgentToolMode } from '../registry/tools.ts'
 import { LIVE_TOOL_NAMES } from '../seams/live-sessions.ts'
 
 export interface AgentTurn {
@@ -48,13 +48,33 @@ export class AgentLoop implements AgentRunner {
     const extras = [
       ...new Set(claimed.flatMap((item) => item.extraTools ?? []).map((name) => name.trim()).filter(Boolean)),
     ]
+    const peek = this.ctx.sessions.peek(this.sessionId)
+    const chat = this.ctx.get('chat') as
+      | {
+          resolveEffective?: (id?: string | null) => {
+            effective: {
+              agentMode: AgentToolMode
+              extraTools: string[]
+            }
+          }
+        }
+      | undefined
+    const effective = chat?.resolveEffective?.(this.sessionId)?.effective
+    const mode: AgentToolMode = effective?.agentMode ?? 'standard'
+    if (mode === 'minimal' && effective?.extraTools?.length) {
+      for (const name of effective.extraTools) {
+        if (!extras.includes(name)) extras.push(name)
+      }
+    }
     // 极简是底座；Slash / Live 都是增量放开。live session 回合自动加上调度工具。
-    if (normalizeSessionType(this.ctx.sessions.peek(this.sessionId)?.type) === 'live') {
+    if (normalizeSessionType(peek?.type) === 'live') {
       for (const name of LIVE_TOOL_NAMES) {
         if (!extras.includes(name)) extras.push(name)
       }
     }
-    return runWithSession(this.sessionId, () => runWithExtraTools(extras, () => this.runInSession(claimed)))
+    return runWithSession(this.sessionId, () =>
+      runWithToolPolicy({ mode, extras }, () => this.runInSession(claimed)),
+    )
   }
 
   private async runInSession(claimed: ClaimedInput[]): Promise<AgentTurn> {

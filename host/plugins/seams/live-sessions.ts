@@ -9,10 +9,13 @@ export const LIVE_TOOL_NAMES = [
   'session_progress',
   'session_wake',
   'session_inject',
+  'session_create',
+  'session_rename',
+  'session_configure',
 ] as const
 
 const LIVE_PROMPT = `你是 Live 指挥席（文字版）：调度其他 chat session，而不是亲自改代码或跑长任务。
-工作流：session_list / session_inspect 了解现场 → session_wake（wait=false 可先派工）或 session_inject → session_progress 抽查进度。
+工作流：session_list / session_inspect 了解现场 → 需要时可 session_create 新建、session_rename / session_configure 调整目标 → session_wake（wait=false 可先派工）或 session_inject → session_progress 抽查进度。
 异步派工后不要等待对方完成：完成态在目标 session 自己的 turn 里，需要时再 inspect / progress。
 向用户汇报要克制：只在关键节点、明显卡住、或用户追问时说明，不要刷屏。
 回答简洁：说明调度了谁、当前状态、下一步。`
@@ -212,6 +215,8 @@ export function apply(ctx: Context) {
         id: record.id,
         type: normalizeSessionType(record.type),
         status: ctx.agents.isBusy(targetId) ? 'running' : 'idle',
+        title: record.config?.title,
+        config: record.config ?? null,
         project: record.project,
         eventCount: record.events.length,
         recent: recentMessages(record.events, limit),
@@ -322,6 +327,107 @@ export function apply(ctx: Context) {
       const agent = await ctx.agents.create(targetId)
       agent.inject(text, { sender: { type: 'session', sessionId: selfId } })
       return { sessionId: targetId, queued: true }
+    },
+  })
+
+  ctx.tools.register({
+    name: 'session_create',
+    description: '创建新的 chat session（可带标题与初始配置）。Live 指挥席专用。',
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: '会话显示名' },
+        type: { type: 'string', description: "默认 'chat'；一般不要创建 live" },
+        model: { type: 'string' },
+        provider: { type: 'string', enum: ['deepseek', 'openai'] },
+        systemPrompt: { type: 'string' },
+        agentMode: { type: 'string', enum: ['standard', 'minimal'] },
+        extraTools: { type: 'array', items: { type: 'string' } },
+      },
+    },
+    execute: async (args) => {
+      await requireLiveCaller(ctx)
+      const type = args.type === 'live' ? 'live' : 'chat'
+      const record = await ctx.sessions.create(undefined, {
+        type,
+        ...(typeof args.title === 'string' ? { title: args.title } : {}),
+        config: {
+          ...(typeof args.model === 'string' ? { model: args.model } : {}),
+          ...(args.provider === 'deepseek' || args.provider === 'openai' ? { provider: args.provider } : {}),
+          ...(typeof args.systemPrompt === 'string' ? { systemPrompt: args.systemPrompt } : {}),
+          ...(args.agentMode === 'standard' || args.agentMode === 'minimal'
+            ? { agentMode: args.agentMode }
+            : {}),
+          ...(Array.isArray(args.extraTools)
+            ? { extraTools: args.extraTools.map((name) => String(name)) }
+            : {}),
+        },
+      })
+      return {
+        id: record.id,
+        type: normalizeSessionType(record.type),
+        title: record.config?.title ?? record.id.slice(0, 8),
+        config: record.config ?? null,
+      }
+    },
+  })
+
+  ctx.tools.register({
+    name: 'session_rename',
+    description: '重命名目标 session 的显示标题。',
+    parameters: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string' },
+        title: { type: 'string' },
+      },
+      required: ['sessionId', 'title'],
+    },
+    execute: async (args) => {
+      await requireLiveCaller(ctx)
+      const targetId = String(args.sessionId || '').trim()
+      const title = String(args.title || '').trim()
+      if (!targetId) throw new Error('sessionId required')
+      if (!title) throw new Error('title required')
+      const record = await ctx.sessions.rename(targetId, title)
+      return { id: record.id, title: record.config?.title ?? title }
+    },
+  })
+
+  ctx.tools.register({
+    name: 'session_configure',
+    description:
+      '修改目标 session 的配置覆盖（model/provider/systemPrompt/agentMode/extraTools）。未传字段保持不变；systemPrompt 传空串可清回默认。',
+    parameters: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string' },
+        title: { type: 'string' },
+        model: { type: 'string' },
+        provider: { type: 'string', enum: ['deepseek', 'openai'] },
+        systemPrompt: { type: 'string' },
+        agentMode: { type: 'string', enum: ['standard', 'minimal'] },
+        extraTools: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['sessionId'],
+    },
+    execute: async (args) => {
+      await requireLiveCaller(ctx)
+      const targetId = String(args.sessionId || '').trim()
+      if (!targetId) throw new Error('sessionId required')
+      const record = await ctx.sessions.patchConfig(targetId, {
+        ...(typeof args.title === 'string' ? { title: args.title } : {}),
+        ...(typeof args.model === 'string' ? { model: args.model } : {}),
+        ...(args.provider === 'deepseek' || args.provider === 'openai' ? { provider: args.provider } : {}),
+        ...(typeof args.systemPrompt === 'string' ? { systemPrompt: args.systemPrompt } : {}),
+        ...(args.agentMode === 'standard' || args.agentMode === 'minimal'
+          ? { agentMode: args.agentMode }
+          : {}),
+        ...(Array.isArray(args.extraTools)
+          ? { extraTools: args.extraTools.map((name) => String(name)) }
+          : {}),
+      })
+      return { id: record.id, config: record.config ?? null }
     },
   })
 }

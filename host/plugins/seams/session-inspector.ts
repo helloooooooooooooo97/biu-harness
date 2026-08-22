@@ -97,18 +97,43 @@ export function apply(ctx: Context) {
     const record = await ctx.sessions.get(id)
     if (!record) return route.send(404, { error: 'unknown session' })
     const sessionType = normalizeSessionType(record.type)
-    const view = ctx.chat.publicView() as {
-      agentMode?: string
-      extraTools?: string[]
+    const resolved = ctx.chat.resolveEffective(id) as {
+      defaults: {
+        provider: string
+        model: string
+        systemPrompt: string
+        agentMode: string
+        extraTools: string[]
+      }
+      config?: {
+        title?: string
+        provider?: string
+        model?: string
+        systemPrompt?: string
+        agentMode?: string
+        extraTools?: string[]
+      }
+      effective: {
+        provider: string
+        model: string
+        systemPrompt: string
+        agentMode: string
+        extraTools: string[]
+        title?: string
+      }
     }
-    const mode: AgentToolMode = view.agentMode === 'minimal' ? 'minimal' : 'standard'
-    const pinnedExtras = Array.isArray(view.extraTools) ? view.extraTools : []
+    const mode: AgentToolMode = resolved.effective.agentMode === 'minimal' ? 'minimal' : 'standard'
+    const pinnedExtras = Array.isArray(resolved.effective.extraTools) ? resolved.effective.extraTools : []
     const tools = buildInspectorTools(ctx.tools.catalog(), { mode, sessionType, pinnedExtras })
     const body: Record<string, unknown> = {
       sessionId: id,
       type: sessionType,
+      title: resolved.effective.title ?? record.config?.title ?? null,
       agentMode: mode,
       extraTools: pinnedExtras,
+      defaults: resolved.defaults,
+      config: resolved.config ?? null,
+      effective: resolved.effective,
       sources: SOURCE_INFO,
       tools,
     }

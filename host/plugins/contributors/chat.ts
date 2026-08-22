@@ -4,6 +4,9 @@ import { Service, type Context } from 'cordis'
 import '../../types.ts'
 import type { ChatMessage } from './chat-types.ts'
 import type { AgentToolMode } from '../registry/tools.ts'
+import type { LlmConfig } from '../orchestration/llm.ts'
+import { currentSessionId } from '../core/session-scope.ts'
+import type { SessionConfig } from '../core/session-types.ts'
 import { DEFAULT_TAIL_TURNS, sliceBeforeTurns, sliceTailTurns } from '../core/session-window.ts'
 import {
   DEFAULT_TRAJECTORY_TURNS,
@@ -106,7 +109,14 @@ export class ChatService extends Service {
 
   constructor(ctx: Context) {
     super(ctx, 'chat')
-    ctx.systemPrompt.register('chat.persona', () => this.config.systemPrompt)
+    ctx.systemPrompt.register('chat.persona', () => {
+      const sessionId = currentSessionId()
+      if (sessionId) {
+        const override = this.ctx.sessions.peek(sessionId)?.config?.systemPrompt
+        if (typeof override === 'string' && override.trim()) return override
+      }
+      return this.config.systemPrompt
+    })
     this.syncLlm()
     this.syncToolsMode()
   }
@@ -122,6 +132,38 @@ export class ChatService extends Service {
       tools: this.ctx.tools.names(),
       toolCatalog: this.ctx.tools.catalog(),
       extraTools: this.config.extraTools,
+    }
+  }
+
+  /** 全局默认 + 会话覆盖（不含 apiKey）。 */
+  resolveEffective(sessionId?: string | null) {
+    const defaultsView = {
+      provider: this.config.provider,
+      model: this.config.model,
+      systemPrompt: this.config.systemPrompt,
+      agentMode: this.config.agentMode,
+      extraTools: [...this.config.extraTools],
+    }
+    if (!sessionId) return { defaults: defaultsView, config: undefined as SessionConfig | undefined, effective: defaultsView }
+    const config = this.ctx.sessions.peek(sessionId)?.config
+    const effective = {
+      provider: config?.provider ?? defaultsView.provider,
+      model: config?.model ?? defaultsView.model,
+      systemPrompt:
+        typeof config?.systemPrompt === 'string' ? config.systemPrompt : defaultsView.systemPrompt,
+      agentMode: config?.agentMode ?? defaultsView.agentMode,
+      extraTools: config?.extraTools ? [...config.extraTools] : [...defaultsView.extraTools],
+      ...(config?.title ? { title: config.title } : {}),
+    }
+    return { defaults: defaultsView, config, effective }
+  }
+
+  resolveLlm(sessionId?: string | null): LlmConfig {
+    const { effective } = this.resolveEffective(sessionId)
+    return {
+      provider: effective.provider,
+      apiKey: this.config.apiKey,
+      model: effective.model,
     }
   }
 
@@ -207,15 +249,55 @@ export function apply(ctx: Context) {
     route.send(200, chat.patch(payload ?? {}))
   })
   ctx.http.route('POST', '/api/sessions', async (route) => {
-    const payload = ((await route.json().catch(() => null)) ?? {}) as { type?: string }
+    const payload = ((await route.json().catch(() => null)) ?? {}) as {
+      type?: string
+      title?: string
+    }
     const type = payload?.type === 'live' ? 'live' : 'chat'
-    const record = await ctx.sessions.create(undefined, { type })
+    const record = await ctx.sessions.create(undefined, {
+      type,
+      ...(typeof payload.title === 'string' ? { title: payload.title } : {}),
+    })
     route.send(201, {
       id: record.id,
       version: record.version,
       type: record.type ?? type,
+      title: record.config?.title,
       ...(record.mascot ? { mascot: record.mascot } : {}),
+      ...(record.config ? { config: record.config } : {}),
     })
+  })
+  ctx.http.route('PATCH', '/api/sessions/:id/config', async (route) => {
+    try {
+      const payload = ((await route.json().catch(() => null)) ?? {}) as Record<string, unknown>
+      const record = await ctx.sessions.patchConfig(route.params.id, {
+        ...(typeof payload.title === 'string' || payload.title === null
+          ? { title: payload.title as string | null }
+          : {}),
+        ...(typeof payload.model === 'string' ? { model: payload.model } : {}),
+        ...(payload.provider === 'deepseek' || payload.provider === 'openai'
+          ? { provider: payload.provider }
+          : {}),
+        ...(typeof payload.systemPrompt === 'string' || payload.systemPrompt === null
+          ? { systemPrompt: payload.systemPrompt as string | null }
+          : {}),
+        ...(payload.agentMode === 'standard' || payload.agentMode === 'minimal'
+          ? { agentMode: payload.agentMode }
+          : {}),
+        ...(Array.isArray(payload.extraTools)
+          ? { extraTools: payload.extraTools.map((name) => String(name)) }
+          : {}),
+      })
+      const resolved = chat.resolveEffective(record.id)
+      route.send(200, {
+        id: record.id,
+        config: record.config ?? null,
+        defaults: resolved.defaults,
+        effective: resolved.effective,
+      })
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
   })
   ctx.http.route('GET', '/api/sessions', async (route) => {
     const items = await ctx.sessions.listSummaries()
@@ -230,6 +312,7 @@ export function apply(ctx: Context) {
         busy: ctx.agents.isBusy(item.id),
         ...(item.project ? { project: item.project } : {}),
         ...(item.mascot ? { mascot: item.mascot } : {}),
+        ...(item.config ? { config: item.config } : {}),
       })),
     })
   })

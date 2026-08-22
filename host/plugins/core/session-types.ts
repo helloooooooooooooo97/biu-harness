@@ -58,6 +58,58 @@ export function normalizeSessionType(value: unknown): SessionType {
   return value === 'live' ? 'live' : 'chat'
 }
 
+/** 会话级覆盖配置；未设字段回落到全局 chat-config。 */
+export interface SessionConfig {
+  /** 侧栏显示名；未设则仍用最近 user/message 推导 */
+  title?: string
+  provider?: 'deepseek' | 'openai'
+  model?: string
+  systemPrompt?: string
+  agentMode?: 'standard' | 'minimal'
+  /** 极简模式下常驻额外工具 */
+  extraTools?: string[]
+}
+
+export function normalizeSessionConfig(value: unknown): SessionConfig | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const raw = value as Record<string, unknown>
+  const next: SessionConfig = {}
+  if (typeof raw.title === 'string' && raw.title.trim()) next.title = raw.title.trim().slice(0, 80)
+  if (raw.provider === 'deepseek' || raw.provider === 'openai') next.provider = raw.provider
+  if (typeof raw.model === 'string' && raw.model.trim()) next.model = raw.model.trim()
+  if (typeof raw.systemPrompt === 'string') next.systemPrompt = raw.systemPrompt
+  if (raw.agentMode === 'standard' || raw.agentMode === 'minimal') next.agentMode = raw.agentMode
+  if (Array.isArray(raw.extraTools)) {
+    next.extraTools = [...new Set(raw.extraTools.map((name) => String(name).trim()).filter(Boolean))]
+  }
+  return Object.keys(next).length ? next : undefined
+}
+
+export function mergeSessionConfig(
+  base: SessionConfig | undefined,
+  patch: SessionConfig & { title?: string | null; systemPrompt?: string | null },
+): SessionConfig | undefined {
+  const next: SessionConfig = { ...(base ?? {}) }
+  if ('title' in patch) {
+    if (patch.title == null || !String(patch.title).trim()) delete next.title
+    else next.title = String(patch.title).trim().slice(0, 80)
+  }
+  if (patch.provider === 'deepseek' || patch.provider === 'openai') next.provider = patch.provider
+  if (typeof patch.model === 'string') {
+    if (!patch.model.trim()) delete next.model
+    else next.model = patch.model.trim()
+  }
+  if ('systemPrompt' in patch) {
+    if (patch.systemPrompt == null) delete next.systemPrompt
+    else next.systemPrompt = String(patch.systemPrompt)
+  }
+  if (patch.agentMode === 'standard' || patch.agentMode === 'minimal') next.agentMode = patch.agentMode
+  if (Array.isArray(patch.extraTools)) {
+    next.extraTools = [...new Set(patch.extraTools.map((name) => String(name).trim()).filter(Boolean))]
+  }
+  return Object.keys(next).length ? next : undefined
+}
+
 export interface SessionRecord {
   id: string
   version: number
@@ -65,6 +117,7 @@ export interface SessionRecord {
   project?: SessionProject
   mascot?: SessionMascot
   type?: SessionType
+  config?: SessionConfig
 }
 
 /** 侧栏列表用：不必加载整段 events。 */
@@ -77,6 +130,25 @@ export interface SessionSummary {
   project?: SessionProject
   mascot?: SessionMascot
   type?: SessionType
+  config?: SessionConfig
+}
+
+export function deriveEventTitle(events: SessionEvent[], fallbackId: string): string {
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    const event = events[i]
+    if (event?.type === 'user/message' && event.text.trim()) return event.text.slice(0, 48)
+  }
+  return fallbackId.slice(0, 8)
+}
+
+export function sessionDisplayTitle(record: {
+  id: string
+  events: SessionEvent[]
+  config?: SessionConfig
+}): string {
+  const named = record.config?.title?.trim()
+  if (named) return named.slice(0, 80)
+  return deriveEventTitle(record.events, record.id)
 }
 
 export interface SessionStore {
