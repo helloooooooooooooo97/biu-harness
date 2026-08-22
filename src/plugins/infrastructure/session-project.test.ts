@@ -41,6 +41,41 @@ test('projects user, streaming assistant, tool call/result from session events',
   if (user?.kind === 'user') assert.equal(user.ts, 2)
 })
 
+test('keeps reply streaming across tools until turn/end (Details stay open)', () => {
+  const base: SessionEvent[] = [
+    { type: 'turn/start', turn: 1, seq: 0, ts: 1 },
+    { type: 'step/start', turn: 1, step: 0, seq: 1, ts: 2 },
+    { type: 'assistant/chunk', text: 'thinking', seq: 2, ts: 3 },
+    { type: 'assistant/message', text: 'thinking', tool_calls: [{ id: 'c1', name: 'bash', arguments: '{}' }], seq: 3, ts: 4 },
+    { type: 'tool/call', id: 'c1', name: 'bash', arguments: '{}', seq: 4, ts: 5 },
+    { type: 'tool/result', id: 'c1', name: 'bash', ok: true, detail: 'ok', seq: 5, ts: 6 },
+    { type: 'step/end', turn: 1, step: 0, seq: 6, ts: 7 },
+  ]
+
+  const mid = projectNodes(base)
+  const midReply = mid.find((node) => node.kind === 'reply')
+  assert.equal(midReply?.kind, 'reply')
+  if (midReply?.kind === 'reply') {
+    assert.equal(midReply.streaming, true)
+    assert.equal(midReply.finished, false)
+  }
+
+  const done = projectNodes([
+    ...base,
+    { type: 'step/start', turn: 1, step: 1, seq: 7, ts: 8 },
+    { type: 'assistant/message', text: 'final answer', seq: 8, ts: 9 },
+    { type: 'step/end', turn: 1, step: 1, seq: 9, ts: 10 },
+    { type: 'turn/end', turn: 1, reason: 'complete', seq: 10, ts: 11 },
+  ])
+  const doneReply = done.find((node) => node.kind === 'reply')
+  assert.equal(doneReply?.kind, 'reply')
+  if (doneReply?.kind === 'reply') {
+    assert.equal(doneReply.streaming, false)
+    assert.equal(doneReply.finished, true)
+    assert.equal(doneReply.copyText.includes('final answer'), true)
+  }
+})
+
 test('turn/end non-complete becomes a status row', () => {
   const nodes = projectNodes([
     { type: 'turn/start', turn: 1, seq: 0, ts: 1 },
