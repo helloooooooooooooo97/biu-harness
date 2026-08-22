@@ -1186,6 +1186,31 @@ export class SessionViewService extends Service {
     this.setAgentStatus('idle', undefined, sessionId)
   }
 
+  /** 空回车：abort 当前回合并立刻 claim 队列（需队列里有 wake） */
+  async flushInbox() {
+    const sessionId = this.value.sessionId
+    if (!sessionId) return false
+    if (!this.value.inbox.some((item) => item.kind === 'wake')) return false
+    this.setAgentStatus('running', undefined, sessionId)
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/inbox/flush`, { method: 'POST' })
+      const data = (await res.json()) as {
+        error?: string
+        flushed?: boolean
+        inbox?: InboxQueueItem[]
+      }
+      if (!res.ok) {
+        this.replace({ error: data.error || `冲刷队列失败：${res.status}` })
+        return false
+      }
+      if (Array.isArray(data.inbox)) this.setInbox(data.inbox, sessionId)
+      return Boolean(data.flushed)
+    } catch (error) {
+      this.replace({ error: String(error) })
+      return false
+    }
+  }
+
   async decideApproval(id: string, allow: boolean) {
     await fetch(`/api/approvals/${id}`, {
       method: 'POST',

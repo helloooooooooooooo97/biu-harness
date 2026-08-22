@@ -479,6 +479,22 @@ export function apply(ctx: Context) {
     ctx.agents.get(route.params.id)?.cancel()
     route.send(200, { ok: true })
   })
+  ctx.http.route('POST', '/api/sessions/:id/inbox/flush', async (route) => {
+    const id = route.params.id
+    if (!(await ctx.sessions.get(id))) return route.send(404, { error: 'unknown session' })
+    const agent = await ctx.agents.create(id)
+    chat.patch({}, { persist: false })
+    try {
+      const result = await agent.flush({ wait: false })
+      route.send(200, {
+        sessionId: id,
+        flushed: result.flushed,
+        inbox: ctx.agents.listInbox(id),
+      })
+    } catch (error) {
+      route.send(500, { error: String(error) })
+    }
+  })
   ctx.http.route('POST', '/api/chat', async (route) => {
     const payload = (await route.json()) as { messages?: ChatMessage[]; sessionId?: string; text?: string }
     const messages = Array.isArray(payload?.messages)

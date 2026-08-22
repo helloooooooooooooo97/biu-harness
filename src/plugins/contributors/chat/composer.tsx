@@ -274,7 +274,17 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       debounceRef.current = null
     }
     const content = (textareaRef.current?.value ?? '').trim()
-    if (!content && !picked.length) return
+    // 空回车 + 队列有 wake：abort 当前回合并立刻 claim
+    if (!content && !picked.length) {
+      if (inbox.some((item) => item.kind === 'wake')) {
+        try {
+          await sessionView.flushInbox()
+        } catch {
+          /* error 已写入 sessionView */
+        }
+      }
+      return
+    }
     const tools = [...picked]
     const text = content || (tools.length ? `请使用工具：${tools.join(', ')}` : '')
     clearInput()
