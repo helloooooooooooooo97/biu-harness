@@ -127,9 +127,6 @@ type HostCtx = Context & {
     peek: (id: string) => SessionPeek | undefined
     get?: (id: string) => Promise<SessionPeek | undefined>
   }
-  agents?: {
-    isBusy?: (id: string) => boolean
-  }
 }
 
 const STATUSES = new Set<TaskStatus>(['todo', 'doing', 'done'])
@@ -352,13 +349,14 @@ function mapRow(row: Record<string, unknown>): TaskRow {
   }
 }
 
-/** 从 assignee session 的 turn 事件推导执行情况（对齐 request/response 成对回合）。 */
-function deriveExecution(
-  events: SessionEventLite[] | undefined,
-  busy: boolean,
-): TaskExecution {
+/**
+ * 从 assignee session 事件流推导执行情况。
+ * 只看 turn/start…turn/end；不查询 agents.isBusy（任务层不耦合 agent 运行时）。
+ * 已分配但尚无 turn → idle（空窗期由任务自身 status/doing 表达）。
+ */
+export function deriveExecution(events: SessionEventLite[] | undefined): TaskExecution {
   if (!events?.length) {
-    return { status: busy ? 'running' : 'idle', turn: null, assistantText: '', updatedAt: 0 }
+    return { status: 'idle', turn: null, assistantText: '', updatedAt: 0 }
   }
   let turn: number | null = null
   let openTurn = false
@@ -387,7 +385,7 @@ function deriveExecution(
   if (assistantText.length > 240) assistantText = `${assistantText.slice(0, 240)}…`
   const newest = events.at(-1)
   return {
-    status: busy || openTurn ? 'running' : 'idle',
+    status: openTurn ? 'running' : 'idle',
     ...(reason ? { reason } : {}),
     turn,
     assistantText,
@@ -401,8 +399,7 @@ async function enrichExecution(host: HostCtx, task: TaskRow): Promise<TaskRow> {
     return { ...task, execution: { status: 'unassigned', turn: null, assistantText: '', updatedAt: 0 } }
   }
   const record = host.sessions?.peek(sid) ?? (await host.sessions?.get?.(sid))
-  const busy = Boolean(host.agents?.isBusy?.(sid))
-  return { ...task, execution: deriveExecution(record?.events, busy) }
+  return { ...task, execution: deriveExecution(record?.events) }
 }
 
 export class TasksService extends Service {
