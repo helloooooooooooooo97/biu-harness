@@ -11,7 +11,6 @@ import {
   moduleIdFromPath,
   type AppModuleId,
 } from '../infrastructure/app-modules.ts'
-import { FishLogo } from './brand.tsx'
 import { ChatSidebar } from './chat-sidebar.tsx'
 import { SessionInspector } from './session-inspector.tsx'
 import { FolderGlyph } from './chat/project-panel.tsx'
@@ -363,7 +362,6 @@ function Shell(props: SlotProps) {
         >
           <nav className="w-48 shrink-0 border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] p-4">
             <div className="mb-4 flex items-center gap-2 text-[var(--dsw-label)]">
-              <FishLogo size={18} />
               <span className="text-sm font-semibold">Settings</span>
             </div>
             <ul className="space-y-1 text-sm text-[var(--dsw-label-2)]">

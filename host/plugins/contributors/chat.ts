@@ -15,6 +15,7 @@ import {
   buildTrajectoryWindow,
   findEvent,
 } from '../core/trajectory-index.ts'
+import { estimateTokens } from '../core/sessions.ts'
 import { readArtifactFile } from '../core/artifacts.ts'
 import { collectLiveDispatchedTasks } from '../seams/live-dispatched-usage.ts'
 import { normalizeSessionType } from '../core/session-types.ts'
@@ -425,6 +426,32 @@ export function apply(ctx: Context) {
       newestSeq: window.newestSeq,
     })
   })
+  // 全量 usage 趋势：提取本会话所有 step（assistant/message 带 usage）的 input/output/cacheRead，供前端折线图。
+  ctx.http.route('GET', '/api/sessions/:id/usage-trend', async (route) => {
+    const record = await ctx.sessions.get(route.params.id)
+    if (!record) return route.send(404, { error: 'unknown session' })
+    const points: Array<{ seq: number; turn: number; input: number; output: number; cache: number }> = []
+    const compactions: number[] = []
+    let turn = 0
+    for (const event of record.events) {
+      if (event.type === 'step/start') turn = event.turn
+      if (event.type === 'tool/call' && event.name === 'context_compact_submit') {
+        // 压缩点：仅「真正提交上下文压缩」的 context_compact_submit 调用；
+        // session_compact（旧压缩）与其它的 status/brief 查询类不算压缩点。
+        compactions.push(event.seq)
+        continue
+      }
+      if (event.type !== 'assistant/message' || !event.usage) continue
+      points.push({
+        seq: event.seq,
+        turn,
+        input: event.usage.inputTokens || 0,
+        output: event.usage.outputTokens || 0,
+        cache: event.usage.cacheReadTokens || 0,
+      })
+    }
+    route.send(200, { points, compactions })
+  })
   ctx.http.route('GET', '/api/sessions/:id/artifacts/:name', async (route) => {
     const record = await ctx.sessions.get(route.params.id)
     if (!record) return route.send(404, { error: 'unknown session' })
@@ -457,10 +484,14 @@ export function apply(ctx: Context) {
     if (event.type !== 'assistant/message') {
       return route.send(400, { error: 'request derivation only for assistant/message' })
     }
+    // 工具定义 token 估算：当前可见工具集合 schema 序列化后的估算值（轨迹回放时各 step 近似恒定）。
+    // 与 agent-loop 实际传给 LLM 的 ctx.tools.schemas() 对齐，作为第 4 类「工具定义」占比基线。
+    const toolsSchemaTokens = estimateTokens(JSON.stringify(ctx.tools.schemas()))
     route.send(200, {
       id: record.id,
       seq,
       messages: buildRequestMessages(record.events, seq),
+      toolsTokens: toolsSchemaTokens,
     })
   })
   ctx.http.route('PUT', '/api/sessions/:id/project', async (route) => {

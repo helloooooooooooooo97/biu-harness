@@ -287,13 +287,12 @@ export function apply(ctx: Context) {
       if (normalizeSessionType(target.type) === 'live') {
         throw new Error('cannot wake another live session; target a chat session')
       }
-      const agent = await ctx.agents.create(targetId)
       const sender = { type: 'session' as const, sessionId: selfId }
       if (!wait) {
-        void agent.send(text, { wait: false, sender })
+        void ctx.sessions.sendMessage(targetId, text, { wait: false, sender })
         return { sessionId: targetId, queued: true, wait: false }
       }
-      const turn = await agent.send(text, { wait: true, sender })
+      const turn = await ctx.sessions.sendMessage(targetId, text, { wait: true, sender })
       return {
         sessionId: targetId,
         queued: false,
@@ -324,8 +323,7 @@ export function apply(ctx: Context) {
       if (!text) throw new Error('text required')
       if (targetId === selfId) throw new Error('cannot inject into the current live session')
       await ctx.sessions.require(targetId)
-      const agent = await ctx.agents.create(targetId)
-      agent.inject(text, { sender: { type: 'session', sessionId: selfId } })
+      ctx.sessions.injectMessage(targetId, text, { sender: { type: 'session', sessionId: selfId } })
       return { sessionId: targetId, queued: true }
     },
   })

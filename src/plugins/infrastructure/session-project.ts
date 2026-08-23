@@ -444,6 +444,19 @@ export function sumTrajectoryRowUsage(rows: Array<{ usage?: TrajectoryUsage }>):
   }
 }
 
+/** 从轨迹行提取每个 step（assistant/message + usage）的 input/output 序列，供折线图使用。 */
+export function extractUsagePoints(rows: TrajectoryRow[]): { input: number; output: number }[] {
+  const out: { input: number; output: number }[] = []
+  for (const row of rows) {
+    if (row.type !== 'assistant/message' || !row.usage) continue
+    out.push({
+      input: row.usage.inputTokens || 0,
+      output: row.usage.outputTokens || 0,
+    })
+  }
+  return out
+}
+
 /** 把 Live 派工到其它 session 的 turn usage 叠到对应 Live turn 的 reply 上。 */
 export function mergeDispatchedUsageIntoNodes(
   nodes: ChatNode[],

@@ -2,6 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import {
   compactSessionEvents,
+  extractUsagePoints,
   formatTrajectoryUsage,
   mergeDispatchedUsageIntoNodes,
   projectNodes,
@@ -339,4 +340,42 @@ test('projectRequestMessages derives llm.chat input from event prefix', () => {
   )
   assert.equal(request[0]?.content, 'you are helpful')
   assert.equal(request[1]?.content, 'hi')
+})
+
+test('extractUsagePoints keeps only assistant/message rows with usage, mapped to input/output', () => {
+  const events: SessionEvent[] = [
+    {
+      type: 'assistant/message',
+      text: 'a',
+      usage: { inputTokens: 100, outputTokens: 20 },
+      seq: 1,
+      ts: 1,
+    },
+    { type: 'tool/call', name: 'clock_now', arguments: '{}', id: 'x', seq: 2, ts: 2 },
+    { type: 'tool/result', name: 'clock_now', ok: true, detail: '', id: 'x', seq: 3, ts: 3 },
+    {
+      type: 'assistant/message',
+      text: 'b',
+      usage: { inputTokens: 250, outputTokens: 60, cacheReadTokens: 40 },
+      seq: 4,
+      ts: 4,
+    },
+    // 无 usage 的 assistant/message 应被过滤
+    { type: 'assistant/message', text: 'c', seq: 5, ts: 5 },
+    { type: 'step/start', turn: 1, step: 1, seq: 6, ts: 6 },
+  ]
+  const rows = projectTrajectory(events)
+  const points = extractUsagePoints(rows)
+  assert.deepEqual(points, [
+    { input: 100, output: 20 },
+    { input: 250, output: 60 },
+  ])
+})
+
+test('extractUsagePoints returns empty when no usage-bearing rows', () => {
+  const rows = projectTrajectory([
+    { type: 'assistant/message', text: 'x', seq: 1, ts: 1 },
+    { type: 'user/message', text: 'hi', seq: 2, ts: 2 },
+  ])
+  assert.deepEqual(extractUsagePoints(rows), [])
 })

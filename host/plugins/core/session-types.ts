@@ -15,6 +15,7 @@ export type SessionEventBody =
   | { type: 'step/start'; turn: number; step: number }
   | { type: 'step/end'; turn: number; step: number }
   | { type: 'system/prompt'; text: string }
+  | { type: 'system/compact'; text: string }
   | { type: 'user/message'; text: string; kind: InboxKind; sender?: MessageSender }
   | {
       type: 'assistant/message'

@@ -63,6 +63,20 @@ export const TRAJECTORY_TAIL_TURNS = 48
 /** 打开会话一次拉全量：上滑不再等网络；列表行常驻 DOM（content-visibility 跳过屏外绘制） */
 export const SESSION_LOAD_TURNS = 'all' as const
 
+export interface UsageTrendPoint {
+  seq: number
+  turn: number
+  input: number
+  output: number
+  cache: number
+}
+
+export interface UsageTrend {
+  points: UsageTrendPoint[]
+  /** 压缩点 seq：上下文在此重置的位置 */
+  compactions: number[]
+}
+
 export interface SessionViewState {
   sessionId: string | null
   events: SessionEvent[]
@@ -959,14 +973,30 @@ export class SessionViewService extends Service {
     return body.event ?? null
   }
 
-  /** 详情懒加载：assistant/message 的 derived request */
-  async fetchEventRequest(seq: number): Promise<DerivedMessage[]> {
+  /** 详情懒加载：assistant/message 的 derived request（含工具 schema 估算 token，供 4 类占比展示） */
+  /** 拉取全量 usage 趋势（所有 step 的 input/output/cacheRead + 压缩点 seq），供用量面板折线图使用。 */
+  async fetchUsageTrend(): Promise<UsageTrend> {
     const sessionId = this.value.sessionId
-    if (!sessionId) return []
+    if (!sessionId) return { points: [], compactions: [] }
+    const res = await fetch(`/api/sessions/${sessionId}/usage-trend`)
+    if (!res.ok) throw new Error(`加载 usage 趋势失败：${res.status}`)
+    const body = (await res.json()) as { points?: UsageTrendPoint[]; compactions?: number[] }
+    return {
+      points: Array.isArray(body.points) ? body.points : [],
+      compactions: Array.isArray(body.compactions) ? body.compactions : [],
+    }
+  }
+
+  async fetchEventRequest(seq: number): Promise<{ messages: DerivedMessage[]; toolsTokens: number }> {
+    const sessionId = this.value.sessionId
+    if (!sessionId) return { messages: [], toolsTokens: 0 }
     const res = await fetch(`/api/sessions/${sessionId}/events/${seq}/request`)
     if (!res.ok) throw new Error(`加载 request 失败：${res.status}`)
-    const body = (await res.json()) as { messages?: DerivedMessage[] }
-    return Array.isArray(body.messages) ? body.messages : []
+    const body = (await res.json()) as { messages?: DerivedMessage[]; toolsTokens?: number }
+    return {
+      messages: Array.isArray(body.messages) ? body.messages : [],
+      toolsTokens: typeof body.toolsTokens === 'number' ? body.toolsTokens : 0,
+    }
   }
 
   setProjectMeta(project?: { name: string; path?: string; boundAt: number }) {

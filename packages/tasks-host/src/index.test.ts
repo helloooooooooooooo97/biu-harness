@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from 'cordis'
-import { coerceAssigneeArg, deriveExecution, TasksService } from './index.ts'
+import { coerceAssigneeArg, computeBlocked, computeBlockedBy, depsSatisfied, deriveExecution, deriveExecutionFromReports, TasksService } from './index.ts'
 
 test('tasks sqlite crud and status move', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
@@ -102,4 +102,184 @@ test('deriveExecution only uses session turn events, not agents.isBusy', () => {
   assert.equal(idle.status, 'idle')
   assert.equal(idle.reason, 'complete')
   assert.equal(idle.assistantText, 'done')
+})
+
+test('deriveExecutionFromReports uses latest report status', () => {
+  // 无任何上报：绝不推断为完成（无 complete reason）
+  const none = deriveExecutionFromReports([])
+  assert.equal(none.status, 'idle')
+  assert.equal(none.reason, undefined)
+  const none2 = deriveExecutionFromReports(undefined)
+  assert.equal(none2.status, 'idle')
+  assert.equal(none2.reason, undefined)
+
+  // 只有 doing -> running
+  const doing = deriveExecutionFromReports([
+    { sessionId: 's1', turn: 1, status: 'doing', note: '排查中', ts: 1 },
+  ])
+  assert.equal(doing.status, 'running')
+  assert.equal(doing.turn, 1)
+  assert.equal(doing.assistantText, '排查中')
+
+  // 最新是 done -> idle + complete
+  const done = deriveExecutionFromReports([
+    { sessionId: 's1', turn: 1, status: 'doing', note: '排查中', ts: 1 },
+    { sessionId: 's1', turn: 2, status: 'done', note: '搞定', ts: 2 },
+  ])
+  assert.equal(done.status, 'idle')
+  assert.equal(done.reason, 'complete')
+  assert.equal(done.turn, 2)
+  assert.equal(done.assistantText, '搞定')
+
+  // 后 report 覆盖前一个 done
+  const reopened = deriveExecutionFromReports([
+    { sessionId: 's1', turn: 2, status: 'done', note: '搞定', ts: 2 },
+    { sessionId: 's1', turn: 3, status: 'doing', note: '又发现新问题', ts: 3 },
+  ])
+  assert.equal(reopened.status, 'running')
+})
+
+test('task_report persists reports_json via report()', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const t = tasks.create({
+      title: '实现 task_report',
+      creator: { kind: 'user', name: '用户' },
+    })
+
+    const afterDoing = tasks.report(t.id, {
+      sessionId: 'sess-agent-1',
+      sessionName: 'Agent-A',
+      turn: 1,
+      status: 'doing',
+      note: '第一轮：写工具声明',
+      ts: 100,
+    })
+    assert.equal(afterDoing.reports?.length, 1)
+    assert.equal(afterDoing.reports?.[0]?.status, 'doing')
+
+    const afterDone = tasks.report(t.id, {
+      sessionId: 'sess-agent-1',
+      sessionName: 'Agent-A',
+      turn: 2,
+      status: 'done',
+      note: '第二轮：完成并验证',
+      ts: 200,
+    })
+    assert.equal(afterDone.reports?.length, 2)
+    assert.equal(afterDone.reports?.[1]?.status, 'done')
+
+    // 持久化后可重新读取（独立 Context，模拟宿主重启）
+    const reopened = new TasksService(new Context(), path).open().get(t.id)
+    assert.equal(reopened?.reports?.length, 2)
+    assert.equal(reopened?.reports?.[1]?.status, 'done')
+    assert.equal(reopened?.reports?.[1]?.note, '第二轮：完成并验证')
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('blocked derives from unfinished dependency', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const a = tasks.create({ title: '前置A', creator: { kind: 'user', name: '用户' } })
+    const b = tasks.create({ title: '后置B', creator: { kind: 'user', name: '用户' }, dependsOn: [a.id] })
+    const byId = (id: string) => tasks.get(id)
+
+    // B 依赖 A；A 是 todo（未完成）→ B blocked
+    assert.equal(computeBlocked(b, byId), true)
+    // 完成 A 后（通过新查询读到 done），B 解除阻塞
+    tasks.update(a.id, { status: 'done' })
+    const bAfter = tasks.get(b.id)!
+    assert.equal(computeBlocked(bAfter, byId), false)
+    // A 的依赖清空后 B 也不阻塞（无依赖）
+    assert.equal(computeBlocked({ ...b, dependsOn: [] }, byId), false)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('blocked only applies to todo, never doing/done', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const a = tasks.create({ title: '前置', creator: { kind: 'user', name: '用户' } })
+    const b = tasks.create({ title: '后置', creator: { kind: 'user', name: '用户' }, dependsOn: [a.id] })
+    const byId = (id: string) => tasks.get(id)
+    // 即使依赖都未完成，doing/done 也不阻塞
+    assert.equal(computeBlocked({ ...b, status: 'doing' }, byId), false)
+    assert.equal(computeBlocked({ ...b, status: 'done' }, byId), false)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('dependency cycle is rejected', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const a = tasks.create({ title: 'A', creator: { kind: 'user', name: '用户' } })
+    const b = tasks.create({ title: 'B', creator: { kind: 'user', name: '用户' }, dependsOn: [a.id] })
+    // 给 A 加依赖 B 会成环 A->B->A → 应抛错
+    assert.throws(() => tasks.update(a.id, { dependsOn: [b.id] }), /cycle/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('tree depth limited to MAX_DEPTH', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const n0 = tasks.create({ title: 'L0', creator: { kind: 'user', name: '用户' } })
+    const n1 = tasks.create({ title: 'L1', creator: { kind: 'user', name: '用户' }, parentId: n0.id })
+    const n2 = tasks.create({ title: 'L2', creator: { kind: 'user', name: '用户' }, parentId: n1.id })
+    const n3 = tasks.create({ title: 'L3', creator: { kind: 'user', name: '用户' }, parentId: n2.id })
+    assert.equal(n0.depth, 0)
+    assert.equal(n1.depth, 1)
+    assert.equal(n2.depth, 2)
+    assert.equal(n3.depth, 3)
+    // 超出 MAX_DEPTH=3：L4 挂到 L3 下应抛错
+    assert.throws(() => tasks.create({ title: 'L4', creator: { kind: 'user', name: '用户' }, parentId: n3.id }), /MAX_DEPTH/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('blockedBy lists the blocking chain (recursive)', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const a = tasks.create({ title: 'A', creator: { kind: 'user', name: '用户' } })
+    const b = tasks.create({ title: 'B', creator: { kind: 'user', name: '用户' }, dependsOn: [a.id] })
+    const c = tasks.create({ title: 'C', creator: { kind: 'user', name: '用户' }, dependsOn: [b.id] })
+    const byId = (id: string) => tasks.get(id)
+
+    // C 依赖 B，B 依赖 A；A 未完成 → C 的阻塞链包含 B 和 A
+    const cBlocker = tasks.get(c.id)!
+    assert.deepEqual(computeBlockedBy(cBlocker, byId), [b.id, a.id])
+    // B 被阻塞：只有 A
+    const bBlocker = tasks.get(b.id)!
+    assert.deepEqual(computeBlockedBy(bBlocker, byId), [a.id])
+    // 完成 A 后，B 不再阻塞，C 只被 B 阻塞
+    tasks.update(a.id, { status: 'done' })
+    const c2 = tasks.get(c.id)!
+    assert.deepEqual(computeBlockedBy(c2, byId), [b.id])
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
 })

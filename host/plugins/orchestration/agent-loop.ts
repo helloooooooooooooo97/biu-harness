@@ -4,6 +4,7 @@ import type { AssistantReply, ChatOptions, LlmClient, LlmConfig, LlmMessage } fr
 import type { InboxKind, MessageSender } from '../core/session-types.ts'
 import { normalizeSessionType } from '../core/session-types.ts'
 import { runWithSession } from '../core/session-scope.ts'
+import { applyContextBudget } from '../core/sessions.ts'
 import { runWithToolPolicy, type AgentToolMode } from '../registry/tools.ts'
 import { LIVE_TOOL_NAMES } from '../seams/live-sessions.ts'
 
@@ -79,7 +80,12 @@ export class AgentLoop implements AgentRunner {
 
   private async runInSession(claimed: ClaimedInput[]): Promise<AgentTurn> {
     const session = this.ctx.sessions
-    const turn = session.deriveMessages(this.sessionId).filter((item) => item.role === 'user').length + 1
+    // turn = 已有 turn/start 数 + 1，即「回合」序号（每次用户输入=一个回合）。
+    // 不用 deriveMessages 的 user 数：会受上下文压缩影响而回跳；也不用 user/message 数：
+    // 一个回合可能 append 多条 user/message（多段输入/派工），不等价于回合数。
+    // turn/start 是唯一可靠的回合边界。
+    const record = await session.get(this.sessionId)
+    const turn = record ? record.events.filter((event) => event.type === 'turn/start').length + 1 : 1
     await session.append(this.sessionId, { type: 'turn/start', turn })
 
     let req: PreStepReq = { sessionId: this.sessionId, messages: claimed }
@@ -145,7 +151,11 @@ export class AgentLoop implements AgentRunner {
       this.ctx.emit('agent/status', { sessionId: this.sessionId, status: 'running', step })
       await session.append(this.sessionId, { type: 'step/start', turn, step })
 
-      const messages = session.deriveMessages(this.sessionId)
+      const rawMessages = session.deriveMessages(this.sessionId)
+      // 预算默认 100 万 token（约 1M），仅在显式超界时才考虑截断；不主动压缩/不偷跑窗口丢弃。
+      // 压缩只应发生：你显式调用 compact_submit 写入压缩点。设 CTX_BUDGET=0 可完全禁用预算保护（原样发送）。
+      const budget = Number(process.env.CTX_BUDGET ?? 1000000)
+      const messages = budget > 0 ? applyContextBudget(rawMessages, budget) : rawMessages
       let reply: AssistantReply
       try {
         reply = await this.llm.chat(messages, this.ctx.tools.schemas(), this.signal, {

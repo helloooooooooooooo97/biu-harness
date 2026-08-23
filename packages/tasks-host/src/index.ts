@@ -5,6 +5,7 @@ import { Service, type Context } from 'cordis'
 import { currentSessionId } from '../../../host/plugins/core/session-scope.ts'
 
 type DatabaseSync = import('node:sqlite').DatabaseSync
+type SQLInputValue = import('node:sqlite').SQLInputValue
 
 const require = createRequire(import.meta.url)
 
@@ -27,6 +28,16 @@ export type TaskExecution = {
   updatedAt: number
 }
 
+/** agent 通过 task_report 主动提交的一条执行报告 */
+export type TaskReport = {
+  sessionId: string
+  sessionName?: string
+  turn: number | null
+  status: 'doing' | 'done'
+  note?: string
+  ts: number
+}
+
 export type TaskRow = {
   id: string
   title: string
@@ -37,13 +48,31 @@ export type TaskRow = {
   description: string
   /** 备忘 */
   notes: string
+  /** 归属项目（可为空） */
+  project: string | null
+  /** 标签（类型/性质） */
+  tags: string[]
+  /** 父任务 id（树：最大 MAX_DEPTH 层） */
+  parentId: string | null
+  /** 依赖的任务 id 列表（DAG：无环） */
+  dependsOn: string[]
+  /** 树深度（根=0） */
+  depth: number
+  /** 阻塞状态（派生）：todo 且存在未完成的依赖任务 */
+  blocked?: boolean
+  /** 阻塞来源任务 id（派生）：哪些未完成的依赖（含递归）阻塞了它 */
+  blockedBy?: string[]
+  /** report 中 done 的次数（派生） */
+  doneCount?: number
   sort: number
   createdAt: number
   updatedAt: number
   creator: TaskActor
   assignee: TaskActor | null
   assignedAt: number | null
-  /** 列表接口按需附带：从 assignee session 事件推导 */
+  /** agent 通过 task_report 提交的执行报告历史 */
+  reports?: TaskReport[]
+  /** 列表接口按需附带：优先从 reports 派生，无 reports 时才从事件推导 */
   execution?: TaskExecution
 }
 
@@ -57,6 +86,10 @@ export type TaskCreateInput = {
   description?: string
   notes?: string
   creator?: TaskActor
+  project?: string | null
+  tags?: string[]
+  parentId?: string | null
+  dependsOn?: string[]
 }
 
 export type TaskUpdateInput = Partial<{
@@ -69,6 +102,10 @@ export type TaskUpdateInput = Partial<{
   description: string
   notes: string
   sort: number
+  project: string | null
+  tags: string[]
+  parentId: string | null
+  dependsOn: string[]
 }>
 
 export type TaskListFilter = {
@@ -140,6 +177,56 @@ function nextId() {
   return `task_${now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
 }
 
+/** 树的嵌套最大深度（根=0，叶子到 MAX_DEPTH 为止） */
+const MAX_DEPTH = 3
+
+/**
+ * 判断依赖链是否全部完成（递归，沿 dependsOn 向下）。
+ * seen 用于防御环（create/update 已防环，这里作为兜底）。
+ */
+export function depsSatisfied(row: TaskRow, getById: (id: string) => TaskRow | undefined, seen: Set<string> = new Set()): boolean {
+  for (const depId of row.dependsOn ?? []) {
+    if (seen.has(depId)) continue
+    seen.add(depId)
+    const dep = getById(depId)
+    if (!dep || dep.status !== 'done') return false
+    if (!depsSatisfied(dep, getById, seen)) return false
+  }
+  return true
+}
+
+/** 派生阻塞：任务处于待办状态 且 存在未完成的依赖 → true */
+export function computeBlocked(row: TaskRow, getById: (id: string) => TaskRow | undefined): boolean {
+  if (row.status !== 'todo') return false
+  return !depsSatisfied(row, getById)
+}
+
+/**
+ * 计算阻塞该任务的具体来源任务 id 列表（递归沿 dependsOn 收集所有未完成的依赖及其依赖）。
+ * 返回顺序即阻塞链从近到远。
+ */
+export function computeBlockedBy(row: TaskRow, getById: (id: string) => TaskRow | undefined, seen: Set<string> = new Set()): string[] {
+  if (row.status !== 'todo') return []
+  const out: string[] = []
+  for (const depId of row.dependsOn ?? []) {
+    if (seen.has(depId)) continue
+    const dep = getById(depId)
+    if (!dep) {
+      out.push(depId)
+      continue
+    }
+    if (dep.status !== 'done') {
+      out.push(depId)
+      seen.add(depId)
+      // 递归：依赖任务若也被阻塞（它的依赖未完成），一并加入，说明阻塞链路
+      for (const sub of computeBlockedBy(dep, getById, seen)) {
+        if (!out.includes(sub)) out.push(sub)
+      }
+    }
+  }
+  return out
+}
+
 function asStatus(value: unknown, fallback: TaskStatus = 'todo'): TaskStatus {
   const raw = String(value ?? fallback)
   return STATUSES.has(raw as TaskStatus) ? (raw as TaskStatus) : fallback
@@ -209,9 +296,12 @@ function actorFromSession(record: SessionPeek): TaskActor {
 async function resolveCreator(host: HostCtx, explicit?: TaskActor): Promise<TaskActor> {
   if (explicit) return normalizeActor(explicit, '用户') ?? { kind: 'user', name: '用户' }
   const sessionId = currentSessionId()
-  if (sessionId && host.sessions) {
-    const peeked = host.sessions.peek(sessionId) ?? (await host.sessions.get?.(sessionId))
-    if (peeked) return actorFromSession(peeked)
+  // 只要有调用方 session，就以该 agent 为创建人；不因 sessions service 未就绪而回退成"用户"。
+  if (sessionId) {
+    if (host.sessions) {
+      const peeked = host.sessions.peek(sessionId) ?? (await host.sessions.get?.(sessionId))
+      if (peeked) return actorFromSession(peeked)
+    }
     return { kind: 'agent', sessionId, name: sessionId.slice(0, 8) }
   }
   return { kind: 'user', name: '用户' }
@@ -332,6 +422,60 @@ function mapRow(row: Record<string, unknown>): TaskRow {
         : null
       : Number(row.assigned_at)
 
+  const reports: TaskReport[] = []
+  if (typeof row.reports_json === 'string' && row.reports_json) {
+    try {
+      const parsed = JSON.parse(row.reports_json)
+      if (Array.isArray(parsed)) {
+        for (const r of parsed) {
+          if (r && typeof r === 'object' && typeof r.sessionId === 'string') {
+            reports.push({
+              sessionId: String(r.sessionId),
+              ...(typeof r.sessionName === 'string' ? { sessionName: r.sessionName } : {}),
+              turn: typeof r.turn === 'number' ? r.turn : null,
+              status: r.status === 'doing' || r.status === 'done' ? r.status : 'doing',
+              ...(typeof r.note === 'string' ? { note: r.note } : {}),
+              ts: typeof r.ts === 'number' ? r.ts : Number(row.updated_at ?? 0),
+            })
+          }
+        }
+      }
+    } catch {
+      /* ignore malformed reports */
+    }
+  }
+
+  const tags: string[] = []
+  if (typeof row.tags_json === 'string' && row.tags_json) {
+    try {
+      const parsed = JSON.parse(row.tags_json)
+      if (Array.isArray(parsed)) {
+        for (const tag of parsed) {
+          if (typeof tag === 'string' && tag.trim()) {
+            const t = tag.trim()
+            if (!tags.includes(t)) tags.push(t)
+          }
+        }
+      }
+    } catch {
+      /* ignore malformed tags */
+    }
+  }
+
+  const dependsOn: string[] = []
+  if (typeof row.depends_on === 'string' && row.depends_on) {
+    try {
+      const parsed = JSON.parse(row.depends_on)
+      if (Array.isArray(parsed)) {
+        for (const d of parsed) {
+          if (typeof d === 'string' && d && !dependsOn.includes(d)) dependsOn.push(d)
+        }
+      }
+    } catch {
+      /* ignore malformed depends_on */
+    }
+  }
+
   return {
     id: String(row.id),
     title: String(row.title ?? ''),
@@ -340,12 +484,18 @@ function mapRow(row: Record<string, unknown>): TaskRow {
     dueAt: row.due_at == null ? null : Number(row.due_at),
     description: String(row.description ?? ''),
     notes: String(row.notes ?? ''),
+    project: typeof row.project === 'string' && row.project.trim() ? row.project.trim() : null,
+    tags,
+    parentId: typeof row.parent_id === 'string' && row.parent_id ? row.parent_id : null,
+    dependsOn,
+    depth: typeof row.depth === 'number' ? Number(row.depth) : 0,
     sort: Number(row.sort ?? 0),
     createdAt: Number(row.created_at ?? 0),
     updatedAt: Number(row.updated_at ?? 0),
     creator,
     assignee,
     assignedAt: assignee ? assignedAt : null,
+    reports,
   }
 }
 
@@ -393,13 +543,26 @@ export function deriveExecution(events: SessionEventLite[] | undefined): TaskExe
   }
 }
 
-async function enrichExecution(host: HostCtx, task: TaskRow): Promise<TaskRow> {
-  const sid = task.assignee?.sessionId
-  if (!sid) {
-    return { ...task, execution: { status: 'unassigned', turn: null, assistantText: '', updatedAt: 0 } }
+/**
+ * 从 agent 通过 task_report 提交的报告历史派生执行状态。
+ * 任务当前状态 = 最新一次 report 的 status：
+ *  - 最新为 done  -> idle + reason 'complete'（已完成）
+ *  - 最新为 doing -> running（进行中）
+ *  - 没有 report  -> unassigned？不：任务已分配但 agent 尚未开始，应视为 idle（等进行）。
+ * 用最新的 done/doing 判定，后一个 report 天然覆盖前一个状态。
+ */
+export function deriveExecutionFromReports(reports: TaskReport[] | undefined): TaskExecution {
+  if (!reports?.length) {
+    return { status: 'idle', turn: null, assistantText: '', updatedAt: 0 }
   }
-  const record = host.sessions?.peek(sid) ?? (await host.sessions?.get?.(sid))
-  return { ...task, execution: deriveExecution(record?.events) }
+  const last = reports[reports.length - 1]
+  return {
+    status: last.status === 'done' ? 'idle' : 'running',
+    ...(last.status === 'done' ? { reason: 'complete' } : {}),
+    turn: last.turn,
+    assistantText: typeof last.note === 'string' && last.note ? last.note.slice(0, 240) : '',
+    updatedAt: last.ts,
+  }
 }
 
 export class TasksService extends Service {
@@ -438,6 +601,13 @@ export class TasksService extends Service {
       'ALTER TABLE tasks ADD COLUMN assignee_json TEXT',
       'ALTER TABLE tasks ADD COLUMN assigned_at INTEGER',
       "ALTER TABLE tasks ADD COLUMN description TEXT NOT NULL DEFAULT ''",
+      "ALTER TABLE tasks ADD COLUMN reports_json TEXT NOT NULL DEFAULT '[]'",
+      'ALTER TABLE tasks ADD COLUMN start_at INTEGER',
+      "ALTER TABLE tasks ADD COLUMN project TEXT NOT NULL DEFAULT ''",
+      "ALTER TABLE tasks ADD COLUMN tags_json TEXT NOT NULL DEFAULT '[]'",
+      "ALTER TABLE tasks ADD COLUMN parent_id TEXT DEFAULT ''",
+      "ALTER TABLE tasks ADD COLUMN depends_on TEXT NOT NULL DEFAULT '[]'",
+      'ALTER TABLE tasks ADD COLUMN depth INTEGER NOT NULL DEFAULT 0',
     ]) {
       try {
         this.db.exec(sql)
@@ -459,7 +629,7 @@ export class TasksService extends Service {
 
   list(filter: TaskListFilter = {}): TaskRow[] {
     const clauses: string[] = []
-    const params: unknown[] = []
+    const params: SQLInputValue[] = []
     if (filter.status) {
       clauses.push('status = ?')
       params.push(filter.status)
@@ -476,7 +646,7 @@ export class TasksService extends Service {
       .prepare(
         `SELECT * FROM tasks ${where} ORDER BY
           CASE status WHEN 'doing' THEN 0 WHEN 'todo' THEN 1 ELSE 2 END,
-          sort ASC, updated_at DESC`,
+          sort DESC, updated_at DESC`,
       )
       .all(...params) as Array<Record<string, unknown>>
     return rows.map(mapRow)
@@ -499,6 +669,22 @@ export class TasksService extends Service {
     const dueAt = input.dueAt == null || Number.isNaN(Number(input.dueAt)) ? null : Number(input.dueAt)
     const description = String(input.description ?? '')
     const notes = String(input.notes ?? '')
+    const project = typeof input.project === 'string' && input.project.trim() ? input.project.trim() : ''
+    const tags = (Array.isArray(input.tags) ? input.tags : []).map((t) => String(t).trim()).filter((t) => t)
+
+    // 树：父任务存在 + 深度不超 MAX_DEPTH；否则抛错
+    const parentId = typeof input.parentId === 'string' && input.parentId ? input.parentId : null
+    let depth = 0
+    if (parentId) {
+      const parent = this.get(parentId)
+      if (!parent) throw new Error(`unknown parent task: ${parentId}`)
+      if (parent.depth + 1 > MAX_DEPTH) throw new Error(`depth exceeds MAX_DEPTH=${MAX_DEPTH}`)
+      depth = parent.depth + 1
+    }
+    const dependsOn = (Array.isArray(input.dependsOn) ? input.dependsOn : [])
+      .map((d) => String(d))
+      .filter((d) => d && d !== id)
+
     const creator = normalizeActor(input.creator, '用户') ?? { kind: 'user', name: '用户' }
     const assignee = input.assignee ? normalizeActor(input.assignee) : null
     const assignedAt = assignee ? (input.assignedAt ?? ts) : null
@@ -511,8 +697,9 @@ export class TasksService extends Service {
       .prepare(
         `INSERT INTO tasks (
           id, title, status, priority, assignee, due_at, description, notes, sort,
-          created_at, updated_at, creator_json, assignee_json, assigned_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          created_at, updated_at, creator_json, assignee_json, assigned_at,
+          project, tags_json, parent_id, depends_on, depth
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -529,6 +716,11 @@ export class TasksService extends Service {
         JSON.stringify(creator),
         assignee ? JSON.stringify(assignee) : null,
         assignedAt,
+        project,
+        JSON.stringify(tags),
+        parentId,
+        JSON.stringify(dependsOn),
+        depth,
       )
     this.emitChange()
     return this.get(id)!
@@ -549,6 +741,16 @@ export class TasksService extends Service {
           : Number(patch.dueAt)
     const notes = patch.notes != null ? String(patch.notes) : current.notes
     const description = patch.description != null ? String(patch.description) : current.description
+    const project =
+      patch.project === undefined
+        ? (current.project ?? '')
+        : typeof patch.project === 'string' && patch.project.trim()
+          ? patch.project.trim()
+          : ''
+    const tags =
+      Array.isArray(patch.tags)
+        ? (patch.tags.map((t) => String(t).trim()).filter((t) => t))
+        : current.tags
     let sort = patch.sort != null ? Number(patch.sort) : current.sort
     if (status !== current.status && patch.sort == null) {
       const maxSort = this.db
@@ -566,12 +768,36 @@ export class TasksService extends Service {
       }
     }
 
+    // 树：改父任务时重算 depth（并级联更新其下所有子树）
+    let parentId = current.parentId
+    let depth = current.depth
+    if ('parentId' in patch) {
+      parentId = typeof patch.parentId === 'string' && patch.parentId ? patch.parentId : null
+      if (parentId) {
+        if (parentId === id) throw new Error('cannot set a task as its own parent')
+        const parent = this.get(parentId)
+        if (!parent) throw new Error(`unknown parent task: ${parentId}`)
+        if (parent.depth + 1 > MAX_DEPTH) throw new Error(`depth exceeds MAX_DEPTH=${MAX_DEPTH}`)
+        depth = parent.depth + 1
+      } else {
+        depth = 0
+      }
+    }
+
+    // DAG：改依赖时做环检测（从本节点沿依赖反向 DFS，若遇到自己则成环）
+    let dependsOn = current.dependsOn
+    if (patch.dependsOn !== undefined) {
+      dependsOn = (patch.dependsOn as string[]).map(String).filter((d) => d && d !== id)
+      this.assertNoCycle(id, dependsOn)
+    }
+
     const ts = now()
     this.db
       .prepare(
         `UPDATE tasks SET
           title = ?, status = ?, priority = ?, assignee = ?, due_at = ?, description = ?, notes = ?, sort = ?,
-          updated_at = ?, assignee_json = ?, assigned_at = ?
+          updated_at = ?, assignee_json = ?, assigned_at = ?, project = ?, tags_json = ?,
+          parent_id = ?, depends_on = ?, depth = ?
          WHERE id = ?`,
       )
       .run(
@@ -586,6 +812,11 @@ export class TasksService extends Service {
         ts,
         assignee ? JSON.stringify(assignee) : null,
         assignedAt,
+        project,
+        JSON.stringify(tags),
+        parentId,
+        JSON.stringify(dependsOn),
+        depth,
         id,
       )
     this.emitChange()
@@ -596,6 +827,33 @@ export class TasksService extends Service {
     const result = this.db.prepare('DELETE FROM tasks WHERE id = ?').run(id) as { changes: number }
     if (result.changes > 0) this.emitChange()
     return result.changes > 0
+  }
+
+  /** DAG 环检测：从每个依赖任务沿其依赖链 DFS，若回溯到本任务则成环 */
+  private assertNoCycle(id: string, dependsOn: string[]): void {
+    const visited = new Set<string>()
+    const dfs = (nodeId: string) => {
+      if (nodeId === id) throw new Error('dependency cycle detected')
+      if (visited.has(nodeId)) return
+      visited.add(nodeId)
+      const node = this.get(nodeId)
+      if (!node) return
+      for (const d of node.dependsOn) dfs(d)
+    }
+    for (const d of dependsOn) dfs(d)
+  }
+
+  /** 追加一条 agent 通过 task_report 提交的执行报告（不可篡改式累积） */
+  report(id: string, report: TaskReport): TaskRow {
+    const current = this.get(id)
+    if (!current) throw new Error('unknown task')
+    const reports = [...(current.reports ?? []), report]
+    const ts = now()
+    this.db
+      .prepare('UPDATE tasks SET reports_json = ?, updated_at = ? WHERE id = ?')
+      .run(JSON.stringify(reports), ts, id)
+    this.emitChange()
+    return this.get(id)!
   }
 }
 
@@ -608,7 +866,20 @@ export function apply(ctx: Context) {
   const tasks = new TasksService(ctx, dbPath).open()
 
   async function present(row: TaskRow): Promise<TaskRow> {
-    return enrichExecution(host, row)
+    // 完成状态（todo/doing/done）尊重已存储的 row.status：它由 task_report 上报 或 人/AI 手动 update 维护（last-write-wins）。
+    // 无任何信号时默认 todo。
+    const counts = (row.reports ?? []).filter((r) => r.status === 'done').length
+    const base = { ...row, status: row.status || 'todo' }
+    return {
+      ...base,
+      doneCount: counts,
+      // 阻塞始终派生：待办 + 存在未完成依赖；并给出阻塞来源链
+      blocked: computeBlocked({ ...row, status: base.status }, (id) => tasks.get(id)),
+      blockedBy: computeBlockedBy({ ...row, status: base.status }, (id) => tasks.get(id)),
+      execution: (row.reports ?? []).length
+        ? deriveExecutionFromReports(row.reports)
+        : { status: 'idle', turn: null, assistantText: '', updatedAt: 0 },
+    }
   }
 
   async function presentMany(rows: TaskRow[]): Promise<TaskRow[]> {
@@ -671,6 +942,10 @@ export function apply(ctx: Context) {
         dueAt: { type: 'number', description: '截止时间戳 ms' },
         description: { type: 'string', description: '任务描述' },
         notes: { type: 'string', description: '备忘' },
+        project: { type: 'string', description: '归属项目（如 cordis-web）' },
+        tags: { type: 'array', items: { type: 'string' }, description: '标签（类型/性质）' },
+        parentId: { type: 'string', description: '父任务 id（树层级，深度上限 3）' },
+        dependsOn: { type: 'array', items: { type: 'string' }, description: '依赖的任务 id 列表（DAG，自动防环）' },
       },
       required: ['title'],
     },
@@ -690,6 +965,10 @@ export function apply(ctx: Context) {
         ...(args.dueAt != null ? { dueAt: Number(args.dueAt) } : {}),
         ...(args.description != null ? { description: String(args.description) } : {}),
         ...(args.notes != null ? { notes: String(args.notes) } : {}),
+        ...(args.project != null ? { project: String(args.project) } : {}),
+        ...(Array.isArray(args.tags) ? { tags: args.tags.map(String).filter(Boolean) } : {}),
+        ...(args.parentId != null ? { parentId: String(args.parentId) || null } : {}),
+        ...(Array.isArray(args.dependsOn) ? { dependsOn: args.dependsOn.map(String).filter(Boolean) } : {}),
         creator,
         assignee,
       })
@@ -714,6 +993,10 @@ export function apply(ctx: Context) {
         description: { type: 'string', description: '任务描述' },
         notes: { type: 'string', description: '备忘' },
         sort: { type: 'number' },
+        project: { type: ['string', 'null'], description: '归属项目（如 cordis-web），传 null 清除' },
+        tags: { type: 'array', items: { type: 'string' }, description: '标签（类型/性质），替换整个列表' },
+        parentId: { type: ['string', 'null'], description: '父任务 id（树层级，深度上限 3），传 null 移到根' },
+        dependsOn: { type: 'array', items: { type: 'string' }, description: '依赖的任务 id 列表（DAG，自动防环），替换整个列表' },
       },
       required: ['id'],
     },
@@ -727,6 +1010,14 @@ export function apply(ctx: Context) {
       if (args.description != null) patch.description = String(args.description)
       if (args.notes != null) patch.notes = String(args.notes)
       if (args.sort != null) patch.sort = Number(args.sort)
+      if (args.project !== undefined) {
+        patch.project = args.project == null ? null : String(args.project).trim() || null
+      }
+      if (Array.isArray(args.tags)) patch.tags = args.tags.map(String).filter(Boolean)
+      if (args.parentId !== undefined) {
+        patch.parentId = args.parentId == null ? null : String(args.parentId) || null
+      }
+      if (Array.isArray(args.dependsOn)) patch.dependsOn = args.dependsOn.map(String).filter(Boolean)
       if (args.assigneeSessionId !== undefined) {
         const resolved = await resolveAssignee(host, {
           assigneeSessionId: args.assigneeSessionId == null ? null : String(args.assigneeSessionId),
@@ -736,6 +1027,52 @@ export function apply(ctx: Context) {
         patch.assignee = await coerceAssigneeArg(host, args.assignee)
       }
       return present(tasks.update(id, patch))
+    },
+  })
+
+  host.tools.register({
+    name: 'task_report',
+    description:
+      'agent 在执行任务时主动上报进度。每完成一轮(一个 turn)，调用一次并关联到任务：未搞定传 status=doing，彻底搞定传 status=done。任务执行视图会累积这份报告历史（次数、每次的 turn/状态/说明）。任务当前状态 = 最新一次 report 的 status。',
+    parameters: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'string', description: '任务 id' },
+        status: { type: 'string', enum: ['doing', 'done'], description: 'doing=还在做；done=本任务已彻底完成' },
+        note: { type: 'string', description: '本轮做了什么/当前进度（可选 payload）' },
+      },
+      required: ['taskId'],
+    },
+    execute: async (args) => {
+      const id = String(args.taskId ?? '')
+      const row = tasks.get(id)
+      if (!row) throw new Error('unknown task')
+      const status = args.status === 'done' ? 'done' : 'doing'
+      const sessionId = currentSessionId()
+      // 取当前 session 最新 turn
+      let turn: number | null = null
+      if (sessionId) {
+        const record = host.sessions?.peek(sessionId) ?? (await host.sessions?.get?.(sessionId))
+        if (record?.events?.length) {
+          for (const ev of record.events) {
+            if (ev.type === 'turn/start' || ev.type === 'turn/end') {
+              if (typeof ev.turn === 'number') turn = ev.turn
+            }
+          }
+        }
+      }
+      const report: TaskReport = {
+        sessionId: sessionId ?? 'unknown',
+        ...(sessionId ? { sessionName: sessionId.slice(0, 8) } : {}),
+        turn,
+        status,
+        ...(typeof args.note === 'string' && args.note.trim() ? { note: String(args.note).trim() } : {}),
+        ts: now(),
+      }
+      tasks.report(id, report)
+      // report 同时推进完成状态（doing/done），last-write-wins
+      tasks.update(id, { status })
+      return present(tasks.get(id)!)
     },
   })
 
@@ -751,6 +1088,157 @@ export function apply(ctx: Context) {
       const ok = tasks.delete(String(args.id ?? ''))
       if (!ok) throw new Error('unknown task')
       return { ok: true }
+    },
+  })
+
+  host.tools.register({
+    name: 'tasks_update_many',
+    description:
+      '批量更新任务（一次更新多个任务）。每个 update 含 id 与要更新的字段（title/status/priority/description/notes/project/tags/parentId/dependsOn/dueAt），未传字段保持不变。',
+    parameters: {
+      type: 'object',
+      properties: {
+        updates: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              status: { type: 'string', enum: ['todo', 'doing', 'done'] },
+              priority: { type: 'string', enum: ['low', 'med', 'high'] },
+              dueAt: { type: ['number', 'null'] },
+              description: { type: 'string' },
+              notes: { type: 'string' },
+              project: { type: ['string', 'null'] },
+              tags: { type: 'array', items: { type: 'string' } },
+              parentId: { type: ['string', 'null'] },
+              dependsOn: { type: 'array', items: { type: 'string' } },
+              assigneeSessionId: ASSIGNEE_SESSION_PARAM,
+            },
+            required: ['id'],
+          },
+          description: '更新项列表',
+        },
+      },
+      required: ['updates'],
+    },
+    execute: async (args) => {
+      const updates = (Array.isArray(args.updates) ? args.updates : []) as Array<Record<string, unknown>>
+      const updated: TaskRow[] = []
+      const errors: { id: string; error: string }[] = []
+      for (const u of updates) {
+        const id = String(u.id ?? '')
+        if (!tasks.get(id)) {
+          errors.push({ id, error: 'unknown task' })
+          continue
+        }
+        const patch: TaskUpdateInput & { assignee?: TaskActor | null } = {}
+        if (u.title != null) patch.title = String(u.title)
+        if (u.status != null) patch.status = asStatus(u.status as TaskStatus)
+        if (u.priority != null) patch.priority = asPriority(u.priority as TaskPriority)
+        if (u.dueAt !== undefined) patch.dueAt = u.dueAt == null ? null : Number(u.dueAt)
+        if (u.description != null) patch.description = String(u.description)
+        if (u.notes != null) patch.notes = String(u.notes)
+        if (u.project !== undefined) patch.project = u.project == null ? null : String(u.project).trim() || null
+        if (Array.isArray(u.tags)) patch.tags = u.tags.map(String).filter(Boolean)
+        if (u.parentId !== undefined) patch.parentId = u.parentId == null ? null : String(u.parentId) || null
+        if (Array.isArray(u.dependsOn)) patch.dependsOn = u.dependsOn.map(String).filter(Boolean)
+        if (u.assigneeSessionId !== undefined) {
+          const resolved = await resolveAssignee(host, {
+            assigneeSessionId: u.assigneeSessionId == null ? null : String(u.assigneeSessionId),
+          })
+          patch.assignee = resolved.assignee
+        }
+        try {
+          updated.push(await present(tasks.update(id, patch)))
+        } catch (error) {
+          errors.push({ id, error: String(error) })
+        }
+      }
+      return { ok: true, updated, errors }
+    },
+  })
+
+  host.tools.register({
+    name: 'tasks_delete_many',
+    description: '批量删除任务（一次可删多个）',
+    parameters: {
+      type: 'object',
+      properties: { ids: { type: 'array', items: { type: 'string' }, description: '要删除的任务 id 列表' } },
+      required: ['ids'],
+    },
+    execute: (args) => {
+      const ids = (Array.isArray(args.ids) ? args.ids : []).map(String)
+      let deleted = 0
+      const missing: string[] = []
+      for (const id of ids) {
+        if (tasks.delete(id)) deleted++
+        else missing.push(id)
+      }
+      return { ok: true, deleted, missing }
+    },
+  })
+
+  host.tools.register({
+    name: 'tasks_create_many',
+    description: '批量创建任务（一次建多个，各任务可独立设置 项目/标签/父任务/依赖/分配人/状态/优先级/截止）',
+    parameters: {
+      type: 'object',
+      properties: {
+        tasks: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              status: { type: 'string', enum: ['todo', 'doing', 'done'] },
+              priority: { type: 'string', enum: ['low', 'med', 'high'] },
+              assigneeSessionId: ASSIGNEE_SESSION_PARAM,
+              project: { type: 'string' },
+              tags: { type: 'array', items: { type: 'string' } },
+              parentId: { type: 'string' },
+              dependsOn: { type: 'array', items: { type: 'string' } },
+              dueAt: { type: 'number' },
+              description: { type: 'string' },
+              notes: { type: 'string' },
+            },
+            required: ['title'],
+          },
+          description: '任务列表',
+        },
+      },
+      required: ['tasks'],
+    },
+    execute: async (args) => {
+      const items = (Array.isArray(args.tasks) ? args.tasks : []) as Array<Record<string, unknown>>
+      const creator = await resolveCreator(host)
+      const created: TaskRow[] = []
+      for (const item of items) {
+        let assignee: TaskActor | null = null
+        if (item.assigneeSessionId) {
+          const resolved = await resolveAssignee(host, { assigneeSessionId: String(item.assigneeSessionId) })
+          assignee = resolved.assignee
+        } else if (item.assignee !== undefined) {
+          assignee = await coerceAssigneeArg(host, item.assignee as unknown)
+        }
+        const row = tasks.create({
+          title: String(item.title ?? ''),
+          ...(item.status != null ? { status: asStatus(item.status as TaskStatus) } : {}),
+          ...(item.priority != null ? { priority: asPriority(item.priority as TaskPriority) } : {}),
+          ...(item.dueAt != null ? { dueAt: Number(item.dueAt) } : {}),
+          ...(item.project != null ? { project: String(item.project) } : {}),
+          ...(Array.isArray(item.tags) ? { tags: item.tags.map(String).filter(Boolean) } : {}),
+          ...(item.parentId != null ? { parentId: String(item.parentId) || null } : {}),
+          ...(Array.isArray(item.dependsOn) ? { dependsOn: item.dependsOn.map(String).filter(Boolean) } : {}),
+          ...(item.description != null ? { description: String(item.description) } : {}),
+          ...(item.notes != null ? { notes: String(item.notes) } : {}),
+          creator,
+          assignee,
+        })
+        created.push(row)
+      }
+      return { created: presentMany(created) }
     },
   })
 
@@ -810,5 +1298,43 @@ export function apply(ctx: Context) {
     const ok = tasks.delete(route.params.id)
     if (!ok) return route.send(404, { error: 'unknown task' })
     route.send(200, { ok: true })
+  })
+
+  // 批量创建
+  host.http.route('POST', '/api/tasks/batch', async (route) => {
+    try {
+      const body = (await route.json()) as { tasks: TaskCreateInput[] }
+      const items = Array.isArray(body.tasks) ? body.tasks : []
+      const creator = await resolveCreator(host)
+      const created: TaskRow[] = []
+      for (const input of items) {
+        const resolved = await resolveAssignee(host, {
+          ...(input.assigneeSessionId !== undefined ? { assigneeSessionId: input.assigneeSessionId } : {}),
+          ...(input.assignee !== undefined ? { assignee: input.assignee } : {}),
+        })
+        const row = tasks.create({ ...input, creator, assignee: resolved.touchAssignedAt ? resolved.assignee : input.assignee ?? null })
+        created.push(row)
+      }
+      route.send(201, { tasks: await presentMany(created) })
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
+  })
+
+  // 批量删除
+  host.http.route('DELETE', '/api/tasks', async (route) => {
+    try {
+      const body = (await route.json()) as { ids: string[] }
+      const ids = Array.isArray(body.ids) ? body.ids.map(String) : []
+      let deleted = 0
+      const missing: string[] = []
+      for (const id of ids) {
+        if (tasks.delete(id)) deleted++
+        else missing.push(id)
+      }
+      route.send(200, { ok: true, deleted, missing })
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
   })
 }

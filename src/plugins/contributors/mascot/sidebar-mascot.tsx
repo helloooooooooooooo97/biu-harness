@@ -39,7 +39,7 @@ export const SidebarMascot = memo(function SidebarMascot({
   animate,
   sessionId,
   className,
-  title = 'Harness',
+  title = 'Biu',
   identity = DEFAULT_SESSION_MASCOT,
   paused = false,
   followPointer = false,

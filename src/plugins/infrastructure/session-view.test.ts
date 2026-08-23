@@ -237,7 +237,12 @@ test('fetchEventDetail and fetchEventRequest hit fine-grained APIs', async () =>
       return {
         ok: true,
         status: 200,
-        json: async () => ({ id: 's1', seq: 4, messages: [{ role: 'user', content: 'hi' }] }),
+        json: async () => ({
+          id: 's1',
+          seq: 4,
+          messages: [{ role: 'user', content: 'hi' }],
+          toolsTokens: 42,
+        }),
       } as Response
     }
     if (url.endsWith('/api/sessions/s1/events/4')) {
@@ -265,7 +270,8 @@ test('fetchEventDetail and fetchEventRequest hit fine-grained APIs', async () =>
   const event = await view.fetchEventDetail(4)
   assert.equal(event?.type, 'assistant/message')
   const request = await view.fetchEventRequest(4)
-  assert.equal(request[0]?.content, 'hi')
+  assert.equal(request.messages[0]?.content, 'hi')
+  assert.equal(request.toolsTokens, 42)
   assert.equal(calls.some((url) => url.includes('/events/4/request')), true)
 })
 

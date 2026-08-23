@@ -3,6 +3,7 @@ import { basename, isAbsolute, resolve } from 'node:path'
 import { realpath, stat } from 'node:fs/promises'
 import '../../types.ts'
 import { assistantContentForApi, type LlmMessage } from '../orchestration/llm.ts'
+import type { AgentSendOptions, AgentHandle, AgentTurn } from '../orchestration/agents.ts'
 import {
   SESSION_FORMAT_VERSION,
   type SessionEvent,
@@ -12,6 +13,7 @@ import {
   type SessionRecord,
   type SessionType,
   type SessionConfig,
+  type MessageSender,
   mergeSessionConfig,
   normalizeSessionConfig,
   normalizeSessionType,
@@ -52,7 +54,22 @@ export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
   }
 
   for (const event of events) {
-    if (event.type === 'system/prompt') {
+    // 压缩点：某次 context_compact_submit / session_compact 的 tool/call 即压缩点。
+    // 从此处重起，丢弃该点之前的历史（避免重复发送旧 token）；摘要取该 tool 调用的 text 参数。
+    if (event.type === 'tool/call' && (event.name === 'context_compact_submit' || event.name === 'session_compact')) {
+      messages.length = 0
+      pendingToolCalls.clear()
+      let text = ''
+      try {
+        const args = JSON.parse(event.arguments || '{}') as { text?: string }
+        text = String(args.text ?? '').trim()
+      } catch {
+        text = ''
+      }
+      if (text) {
+        messages.push({ role: 'system', content: `[已压缩的历史摘要] ${text}` })
+      }
+    } else if (event.type === 'system/prompt') {
       system = event.text
     } else if (event.type === 'user/message') {
       flushOrphanTools()
@@ -85,6 +102,38 @@ export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
   }
   flushOrphanTools()
   return system ? [{ role: 'system', content: system }, ...messages] : messages
+}
+
+/** 粗略估算一段文本的 token 数（英文 ~1/4 字符，中日韩 ~1/1.5 字符）。 */
+export function estimateTokens(text: string): number {
+  let ascii = 0
+  let cjk = 0
+  for (const ch of text) {
+    const c = ch.charCodeAt(0)
+    if ((c >= 0x2e80 && c <= 0x9fff) || c >= 0x20000) cjk++
+    else ascii++
+  }
+  return Math.ceil(ascii / 4 + cjk / 1.5)
+}
+
+function msgTokens(m: LlmMessage): number {
+  const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content ?? '')
+  return estimateTokens(content) + (typeof m.tool_calls?.length === 'number' ? m.tool_calls.length * 6 : 0)
+}
+
+/**
+ * 滑动窗口 + 预算：消息总量超过预算时，保留"开头稳定锚点 + 最近 N 条"，丢弃中间旧消息。
+ * 开头保留使 system/前缀相对稳定（利于缓存命中）；最近保留当前上下文。不影响短会话（不超预算原样返回）。
+ */
+export function applyContextBudget(messages: LlmMessage[], budgetTokens: number, keepRecent = 14): LlmMessage[] {
+  if (budgetTokens <= 0 || messages.length === 0) return messages
+  const total = messages.reduce((s, m) => s + msgTokens(m), 0)
+  if (total <= budgetTokens) return messages
+  // 保留最前 1 条(system/锚点) + 最近 N 条；其余丢弃
+  const head = Math.max(1, messages[0]?.role === 'system' ? 1 : 0)
+  const start = messages.slice(0, head)
+  const tail = messages.slice(-keepRecent)
+  return [...start, ...tail]
 }
 
 export class SessionsService extends Service {
@@ -152,6 +201,38 @@ export class SessionsService extends Service {
     if (!record) throw new Error(`unknown session: ${id}`)
     return record
   }
+
+  /**
+   * 对外派工：向指定 session 的 agent 发送一条消息并启动回合。
+   * 遵循封装原则——外部只依赖 Session，不直接操控 Agent。
+   */
+  async sendMessage(id: string, text: string, opts?: { wait?: boolean; sender?: MessageSender }): Promise<AgentTurn> {
+    const handle = await this.agentHandle(id)
+    return handle.send(text, opts as AgentSendOptions | undefined)
+  }
+
+  /** 对外注入：向指定 session 的 agent 注入一条待处理消息（不立即 start；忙时进 inbox）。 */
+  async injectMessage(id: string, text: string, opts?: { sender?: MessageSender }): Promise<void> {
+    const handle = await this.agentHandle(id)
+    handle.inject(text, opts as AgentSendOptions | undefined)
+  }
+
+  /** 内部：拿到某 session 的 AgentHandle（封装在 session 层面，外部不可见 Agent 细节）。 */
+  private async agentHandle(id: string): Promise<AgentHandle> {
+    if (this.agentFactory) return this.agentFactory(id)
+    throw new Error('agent factory not installed: agents 插件未就绪')
+  }
+
+  /**
+   * 由 agents 插件在启动时安装"按 session 取 AgentHandle"的工厂。
+   * 通过回调解耦，避免 sessions ↔ agents 的循环依赖：agents 依赖 sessions（单向），
+   * 反向能力由 agents 通过此方法注入。
+   */
+  installAgentFactory(factory: (id: string) => Promise<AgentHandle> | AgentHandle): void {
+    this.agentFactory = factory
+  }
+
+  private agentFactory: ((id: string) => Promise<AgentHandle> | AgentHandle) | null = null
 
   /** 合并写入会话配置；传 null/空字符串可清除 title / systemPrompt。 */
   async patchConfig(

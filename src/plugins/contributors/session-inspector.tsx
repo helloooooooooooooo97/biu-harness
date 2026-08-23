@@ -1,15 +1,16 @@
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { LuListChecks, LuListTree, LuPanelRightClose, LuSettings2, LuWrench } from 'react-icons/lu'
+import { LuActivity, LuListChecks, LuListTree, LuPanelRightClose, LuSettings2, LuWrench } from 'react-icons/lu'
 import {
   bindSessionView,
   type SessionViewService,
 } from '../infrastructure/session-view.ts'
 import { TrajectoryView } from './chat/trajectory.tsx'
+import { UsagePanel } from './chat/usage-panel.tsx'
 
 type ToolSourceId = 'minimal' | 'live' | 'plugin'
 type AgentMode = 'standard' | 'minimal'
 type ChatProvider = 'deepseek' | 'openai'
-type InspectorTab = 'config' | 'traj' | 'tasks'
+type InspectorTab = 'config' | 'traj' | 'tasks' | 'usage'
 
 interface InspectorTool {
   name: string
@@ -57,6 +58,19 @@ export type SessionInspectorProps = {
   renderSlot?: (name: string) => ReactNode
 }
 
+const TABS: InspectorTab[] = ['config', 'traj', 'tasks', 'usage']
+
+function inspectorStoredTab(sid: string | null | undefined): InspectorTab | undefined {
+  if (!sid) return undefined
+  try {
+    const raw = localStorage.getItem(`inspector.tab:${sid}`)
+    if (raw && (TABS as string[]).includes(raw)) return raw as InspectorTab
+  } catch {
+    /* ignore */
+  }
+  return undefined
+}
+
 const tabClass = (active: boolean) =>
   `inline-flex cursor-pointer items-center gap-1.5 rounded-[6px] border-0 px-2 py-1.5 text-[11px] font-semibold ${
     active
@@ -79,7 +93,19 @@ export const SessionInspector = memo(function SessionInspector({
   const sessionId = useSessionView((state) => state.sessionId)
   const focusCallId = useSessionView((state) => state.focusCallId)
 
-  const [tab, setTab] = useState<InspectorTab>('config')
+  const [tab, setTabState] = useState<InspectorTab>(() => inspectorStoredTab(sessionId) ?? 'config')
+  const setTab = useCallback(
+    (next: InspectorTab) => {
+      setTabState(next)
+      if (!sessionId) return
+      try {
+        localStorage.setItem(`inspector.tab:${sessionId}`, next)
+      } catch {
+        /* ignore */
+      }
+    },
+    [sessionId],
+  )
   const [data, setData] = useState<InspectorPayload | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -94,7 +120,8 @@ export const SessionInspector = memo(function SessionInspector({
       setTab('traj')
       return
     }
-    setTab('config')
+    // 会话变化：优先恢复该会话已存的 tab；无则默认 config
+    setTabState(inspectorStoredTab(sessionId) ?? 'config')
   }, [sessionId, focusCallId])
 
   useEffect(() => {
@@ -241,6 +268,17 @@ export const SessionInspector = memo(function SessionInspector({
           >
             <LuListChecks className="size-3.5" />
             任务
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'usage'}
+            className={tabClass(tab === 'usage')}
+            onClick={() => setTab('usage')}
+            data-testid="inspector-tab-usage"
+          >
+            <LuActivity className="size-3.5" />
+            用量
           </button>
         </div>
         <button
@@ -444,6 +482,12 @@ export const SessionInspector = memo(function SessionInspector({
                 任务插件未启用。在 cordis.plugins.json 打开 @hmr/tasks-* 后刷新。
               </div>
             )}
+          </div>
+        ) : null}
+
+        {tab === 'usage' ? (
+          <div className="min-h-0 flex-1 overflow-y-auto p-2.5" data-testid="inspector-usage">
+            <UsagePanel useSessionView={useSessionView} sessionView={sessionView} />
           </div>
         ) : null}
       </div>

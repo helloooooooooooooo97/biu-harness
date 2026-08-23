@@ -231,5 +231,8 @@ export const name = 'agents'
 export const inject = ['agentLoop', 'sessions']
 
 export function apply(ctx: Context) {
-  new AgentsService(ctx)
+  const agents = new AgentsService(ctx)
+  // 无循环依赖地把"按 session 取 AgentHandle"的能力装进 SessionsService：
+  // agents 依赖 sessions（单向）；反向派工能力通过 sessions.installAgentFactory 回调注入。
+  ctx.sessions.installAgentFactory((id) => agents.create(id))
 }

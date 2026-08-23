@@ -7,7 +7,7 @@ import { Context } from 'cordis'
 import '../../types.ts'
 import * as sessionStore from '../storage/session-store.ts'
 import * as sessions from './sessions.ts'
-import { SESSION_FORMAT_VERSION, deriveMessages } from './sessions.ts'
+import { SESSION_FORMAT_VERSION, deriveMessages, applyContextBudget, estimateTokens } from './sessions.ts'
 
 test('append-only log projects model history; version is 1', async () => {
   const ctx = new Context()
@@ -248,3 +248,52 @@ test('sqlite persists session type across reopen', async () => {
   assert.equal((await ctx2.sessions.listSummaries())[0]?.type, 'live')
 })
 
+
+test('estimateTokens approximates ascii and cjk', () => {
+  // 英文 ~1/4 字符；800 英文 → ~200 token
+  const ascii = estimateTokens('a'.repeat(800))
+  assert.ok(ascii >= 150 && ascii <= 250, `ascii tokens=${ascii}`)
+  // 中文 ~1/1.5 字符；150 中文 → ~100 token
+  const cjk = estimateTokens('测'.repeat(150))
+  assert.ok(cjk >= 70 && cjk <= 130, `cjk tokens=${cjk}`)
+})
+
+test('applyContextBudget: within budget returns unchanged (cache-friendly)', () => {
+  const msgs: LlmMessage[] = [
+    { role: 'system', content: 'sys' },
+    { role: 'user', content: 'hello'.repeat(100) },
+    { role: 'assistant', content: 'hi' },
+  ]
+  const out = applyContextBudget(msgs, 1_000_000)
+  assert.equal(out, msgs) // 引用相同 → 原样返回
+})
+
+test('applyContextBudget: over budget keeps head + recent tail', () => {
+  const mk = (i: number): LlmMessage => ({ role: i % 2 === 0 ? 'user' : 'assistant', content: ('block-' + i).padEnd(400, 'x') })
+  const msgs: LlmMessage[] = [{ role: 'system', content: 'SYS' }, ...Array.from({ length: 20 }, (_, i) => mk(i))]
+  const out = applyContextBudget(msgs, 100, 4)
+  // 保留 system + 最近 4 条，其余丢弃
+  assert.equal(out[0]?.role, 'system')
+  assert.ok(out.length <= 5)
+  assert.equal(out[out.length - 1], msgs[msgs.length - 1]) // 最新保留
+  // 中间的旧消息被丢弃
+  assert.ok(out.length < msgs.length)
+})
+
+test('deriveMessages honors context_compact_submit tool/call as new prefix', () => {
+  const events: SessionEvent[] = [
+    { type: 'session/open', version: 1, seq: 0, ts: 0 },
+    { type: 'system/prompt', text: 'SYS', seq: 1, ts: 1 },
+    { type: 'user/message', text: '旧的早期消息A', kind: 'normal', seq: 2, ts: 2 },
+    { type: 'assistant/message', text: '早期回答B', seq: 3, ts: 3 },
+    { type: 'tool/call', id: 't1', name: 'context_compact_submit', arguments: JSON.stringify({ text: '摘要：聊了早期内容' }), seq: 4, ts: 4 },
+    { type: 'user/message', text: '压缩后的新问题', kind: 'normal', seq: 5, ts: 5 },
+  ]
+  const out = deriveMessages(events as any)
+  const joined = out.map((m) => typeof m.content === 'string' ? m.content : '').join('|')
+  // 压缩点后的新对话保留；摘要作为前缀；旧历史不重复出现
+  assert.ok(joined.includes('压缩后的新问题'))
+  assert.ok(joined.includes('摘要：聊了早期内容'))
+  assert.ok(!joined.includes('旧早期消息A'))
+  assert.ok(!joined.includes('早期回答B'))
+})

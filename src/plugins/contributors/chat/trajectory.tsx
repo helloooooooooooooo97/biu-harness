@@ -1,4 +1,5 @@
-import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { memo, type ReactNode, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { LuArrowUp } from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import {
@@ -116,6 +117,7 @@ function FoldCaret({ open }: { open: boolean }) {
   )
 }
 
+
 export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
@@ -126,7 +128,9 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   const trajectoryLoading = useSessionView((state) => state.trajectoryLoading)
   const [selectedSeq, setSelectedSeq] = useState<number | null>(null)
   const [detailEvent, setDetailEvent] = useState<SessionEvent | null>(null)
-  const [detailRequest, setDetailRequest] = useState<DerivedMessage[] | null>(null)
+  const [detailRequest, setDetailRequest] = useState<{ messages: DerivedMessage[]; toolsTokens: number } | null>(
+    null,
+  )
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | undefined>()
   /** turn key → collapsed */
@@ -210,27 +214,28 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
     <div className={`traj-root${selectedSeq != null ? ' traj-root-split' : ''}`}>
       <div className="traj-pane">
         <div className="traj-meta">
-          <span>{rows.length} events</span>
-          <span className="traj-meta-sep">·</span>
-          <span>{groups.length} turns</span>
+          {trajectoryHasMore ? (
+            <button
+              type="button"
+              className="traj-meta-earlier"
+              title="加载更早的轮次"
+              aria-label="加载更早的轮次"
+              disabled={trajectoryLoading}
+              onClick={() => void sessionView.loadOlderTrajectory()}
+            >
+              <LuArrowUp size={12} aria-hidden />
+            </button>
+          ) : null}
+          <span className="traj-meta-stat">
+            {rows.length} events
+            <span className="traj-meta-sep">·</span>
+            {groups.length} turns
+          </span>
           <span className="traj-meta-usage" title="本会话 + Live 派工到其它 session 的 turn usage">
             <span className="traj-meta-usage-label">usage</span>
             <UsageInline usage={cumulative} />
           </span>
         </div>
-
-        {trajectoryHasMore ? (
-          <div className="traj-meta">
-            <button
-              type="button"
-              className="traj-detail-close"
-              disabled={trajectoryLoading}
-              onClick={() => void sessionView.loadOlderTrajectory()}
-            >
-              {trajectoryLoading ? 'Loading…' : 'Load earlier turns'}
-            </button>
-          </div>
-        ) : null}
 
         <div className="traj-head" role="row">
           <span className="traj-col-seq">#</span>
@@ -364,14 +369,14 @@ function filterCollapsedSteps(
   return out
 }
 
-function EventDetailBody({
+export function EventDetailBody({
   event,
   request,
 }: {
   event: SessionEvent
-  request?: DerivedMessage[]
+  request?: { messages: DerivedMessage[]; toolsTokens: number }
 }) {
-  const fields = detailFields(event, request)
+  const fields = detailFields(event, request?.messages)
   const usage = event.type === 'assistant/message' ? event.usage : undefined
   return (
     <div className="traj-detail-body">
@@ -392,7 +397,7 @@ function EventDetailBody({
         ))}
       </dl>
       {usage ? <UsageCard usage={usage} /> : null}
-      {request ? <RequestPanel messages={request} /> : null}
+      {request ? <RequestDetail request={request.messages} toolsTokens={request.toolsTokens} /> : null}
       {event.type === 'assistant/message' ? (
         <ResponsePanel event={event} />
       ) : (
@@ -402,33 +407,167 @@ function EventDetailBody({
   )
 }
 
-function RequestPanel({ messages }: { messages: DerivedMessage[] }) {
+function msgContent(m: DerivedMessage): string {
+  if (typeof m.content === 'string' && m.content) return m.content
+  if (m.tool_calls?.length) return JSON.stringify(m.tool_calls)
+  if (m.tool_call_id) return `#${m.tool_call_id}`
+  return ''
+}
+
+interface SplitRequest {
+  system?: DerivedMessage
+  toolsTokens: number
+  history: DerivedMessage[]
+  current?: DerivedMessage
+}
+
+/** 把 request 切分为 系统提示 / 工具定义 / 历史上下文 / 本轮消息 四类。 */
+function splitRequest(messages: DerivedMessage[], toolsTokens: number): SplitRequest {
+  let system: DerivedMessage | undefined
+  let lastUserIndex = -1
+  for (let i = 0; i < messages.length; i++) {
+    const m = messages[i]
+    if (m.role === 'system' && !system) system = m
+    if (m.role === 'user') lastUserIndex = i
+  }
+  const history: DerivedMessage[] = []
+  let current: DerivedMessage | undefined
+  for (let i = 0; i < messages.length; i++) {
+    const m = messages[i]
+    if (m === system) continue
+    if (i === lastUserIndex) current = m
+    else history.push(m)
+  }
+  return { system, toolsTokens, history, current }
+}
+
+/** 单个 message 的内容块（含 role 标签与摘要）。 */
+function MessageEntry({ message, index }: { message: DerivedMessage; index: number }) {
+  const isTool = message.role === 'tool' || !!message.tool_call_id
+  const preview = msgContent(message)
+  const truncated = preview.length > 240 ? `${preview.slice(0, 240)}…` : preview
+  const expanded = preview.length <= 240
   return (
-    <section className="traj-io-card" aria-label="LLM request">
-      <div className="traj-io-card-title">Request · derived ({messages.length})</div>
-      <div className="traj-io-list">
-        {messages.map((message, index) => (
-          <article key={`${message.role}-${index}`} className="traj-io-msg">
-            <header className="traj-io-msg-head">
-              <span className={`traj-io-role traj-io-role-${message.role}`}>{message.role}</span>
-              {message.tool_call_id ? <span className="traj-io-meta">#{message.tool_call_id}</span> : null}
-              {message.tool_calls?.length ? (
-                <span className="traj-io-meta">{message.tool_calls.length} tool_calls</span>
-              ) : null}
-            </header>
-            {message.content ? <pre className="traj-io-msg-body">{message.content}</pre> : null}
-            {message.tool_calls?.length ? (
-              <pre className="traj-io-msg-body traj-io-msg-tools">
-                {JSON.stringify(message.tool_calls, null, 2)}
-              </pre>
-            ) : null}
-            {!message.content && !message.tool_calls?.length ? (
-              <pre className="traj-io-msg-body traj-io-msg-empty">(empty content)</pre>
-            ) : null}
-          </article>
-        ))}
+    <article key={`${message.role}-${index}`} className="traj-io-msg">
+      <header className="traj-io-msg-head">
+        <span className={`traj-io-role traj-io-role-${message.role}`}>{message.role}</span>
+        {message.tool_call_id ? <span className="traj-io-meta">#{message.tool_call_id}</span> : null}
+        {message.tool_calls?.length ? (
+          <span className="traj-io-meta">{message.tool_calls.length} tool_calls</span>
+        ) : null}
+      </header>
+      {expanded ? (
+        <>
+          {message.content ? <pre className="traj-io-msg-body">{message.content}</pre> : null}
+          {message.tool_calls?.length ? (
+            <pre className="traj-io-msg-body traj-io-msg-tools">{JSON.stringify(message.tool_calls, null, 2)}</pre>
+          ) : null}
+          {!message.content && !message.tool_calls?.length ? (
+            <pre className="traj-io-msg-body traj-io-msg-empty">(empty content)</pre>
+          ) : null}
+        </>
+      ) : (
+        <details className="traj-io-msg-folds">
+          <summary className="traj-io-msg-folds-summary">（{preview.length} chars）</summary>
+          <pre className="traj-io-msg-body">{truncated}</pre>
+          {message.tool_calls?.length ? (
+            <pre className="traj-io-msg-body traj-io-msg-tools">{JSON.stringify(message.tool_calls, null, 2)}</pre>
+          ) : null}
+        </details>
+      )}
+    </article>
+  )
+}
+
+/** 折叠块：标题 + 可展开内容。 */
+function CollapseSection({
+  label,
+  badge,
+  children,
+}: {
+  label: string
+  badge?: string | number
+  children: ReactNode
+}) {
+  return (
+    <details className="traj-sec" open>
+      <summary className="traj-sec-summary">
+        <span className="traj-sec-label">{label}</span>
+        {badge != null ? <span className="traj-sec-badge">{badge}</span> : null}
+      </summary>
+      <div className="traj-sec-body">{children}</div>
+    </details>
+  )
+}
+
+/** 历史上下文：默认展示最近 HISTORY_PAGE 条，向下滚动加载更早（分页）。 */
+const HISTORY_PAGE = 10
+function HistorySection({ history }: { history: DerivedMessage[] }) {
+  const [shown, setShown] = useState(HISTORY_PAGE)
+  // 倒序：最近的在前
+  const desc = useMemo(() => [...history].reverse(), [history])
+  const visible = desc.slice(0, shown)
+  const hasMore = shown < desc.length
+  const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget
+    // 距底部较近时加载更多（更早的记录）
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 80 && hasMore) {
+      setShown((p) => Math.min(desc.length, p + HISTORY_PAGE))
+    }
+  }
+  return (
+    <div className="traj-sec-history" onScroll={onScroll}>
+      {visible.map((m, i) => (
+        <MessageEntry key={`h-${i}`} message={m} index={i} />
+      ))}
+      <div className="traj-sec-history-more">
+        {hasMore ? (
+          <button type="button" onClick={() => setShown((p) => Math.min(desc.length, p + HISTORY_PAGE))}>
+            向上加载更早（{history.length - shown} 条）
+          </button>
+        ) : (
+          <span>已全部加载（{history.length} 条）</span>
+        )}
       </div>
-    </section>
+    </div>
+  )
+}
+
+/** 详情：4 个可折叠区块（系统提示 / 工具定义 / 历史上下文 / 本轮消息）。 */
+function RequestDetail({ request, toolsTokens }: { request: DerivedMessage[]; toolsTokens: number }) {
+  const split = useMemo(() => splitRequest(request, toolsTokens), [request, toolsTokens])
+  return (
+    <div className="traj-detail-sections">
+      <CollapseSection label="系统提示" badge={split.system ? `${split.system.content?.length ?? 0} chars` : '—'}>
+        {split.system ? (
+          <pre className="traj-io-msg-body">{split.system.content}</pre>
+        ) : (
+          <pre className="traj-io-msg-body traj-io-msg-empty">（无系统提示）</pre>
+        )}
+      </CollapseSection>
+
+      <CollapseSection label="工具定义" badge={`≈ ${formatTok(toolsTokens)}`}>
+        <pre className="traj-io-msg-body traj-io-msg-empty">
+          工具 schema 未下发展示，估算 token ≈ {formatTok(toolsTokens)}
+        </pre>
+      </CollapseSection>
+
+      <CollapseSection label={`历史上下文`} badge={`${split.history.length} 条`}>
+        {split.history.length ? (
+          <HistorySection history={split.history} />
+        ) : (
+          <pre className="traj-io-msg-body traj-io-msg-empty">（无历史上下文）</pre>
+        )}
+      </CollapseSection>
+
+      <CollapseSection label="本轮消息" badge={split.current ? `${split.current.content?.length ?? 0} chars` : '—'}>
+        {split.current ? (
+          <pre className="traj-io-msg-body">{split.current.content}</pre>
+        ) : (
+          <pre className="traj-io-msg-body traj-io-msg-empty">（无本轮消息）</pre>
+        )}
+      </CollapseSection>
+    </div>
   )
 }
 

@@ -20,6 +20,7 @@ import * as agentLoop from './plugins/orchestration/agent-loop.ts'
 import * as agents from './plugins/orchestration/agents.ts'
 import * as subagents from './plugins/seams/subagents.ts'
 import * as liveSessions from './plugins/seams/live-sessions.ts'
+import * as contextSeam from './plugins/seams/context.ts'
 import * as sessionInspector from './plugins/seams/session-inspector.ts'
 import * as hub from './plugins/registry/hub.ts'
 
@@ -54,6 +55,7 @@ async function boot() {
   await ctx.plugin(mcp)
   await ctx.plugin(terminal)
   await ctx.plugin(lsp)
+  await ctx.plugin(contextSeam)
   await ctx.plugin(approvals)
   await ctx.plugin(agentLoop)
   await ctx.plugin(agents)
