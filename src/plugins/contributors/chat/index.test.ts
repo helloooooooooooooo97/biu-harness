@@ -9,7 +9,7 @@ import * as projectView from '../../infrastructure/project-view.ts'
 import * as chat from './index.ts'
 import * as shell from '../shell.tsx'
 
-test('one plugin fills thread, trajectory, composer, approvals dock and settings', async () => {
+test('one plugin fills thread, trajectory, composer, approvals dock and models', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
   await ctx.plugin(sessionView)
@@ -23,5 +23,5 @@ test('one plugin fills thread, trajectory, composer, approvals dock and settings
   assert.equal(ctx.slots.list('trajectory').some((item) => item.id === 'trajectory'), true)
   assert.equal(ctx.slots.list('project').length, 0)
   assert.equal(ctx.slots.list('dock').some((item) => item.id === 'approvals'), true)
-  assert.equal(ctx.slots.list('settings')[0]?.id, 'chat-config')
+  assert.equal(ctx.slots.list('models')[0]?.id, 'chat-config')
 })

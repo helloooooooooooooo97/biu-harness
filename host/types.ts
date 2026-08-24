@@ -80,7 +80,7 @@ declare module 'cordis' {
     'session/event'(payload: { sessionId: string; event: SessionEvent }): void
     'tools/pre-execute'(req: ToolRequest, next: () => ToolRequest): ToolRequest
     'tools/post-execute'(payload: { name: string; ok: boolean; detail: string }): void
-    'llm/request'(payload: { model: string }): void
+    'llm/request'(payload: { model: string; provider?: string }): void
     'llm/stream'(payload: { text: string }): void
     'fs/read'(path: string): void
     'fs/write'(path: string): void

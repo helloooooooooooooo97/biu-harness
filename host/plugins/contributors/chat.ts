@@ -5,6 +5,9 @@ import '../../types.ts'
 import type { ChatMessage } from './chat-types.ts'
 import type { AgentToolMode } from '../registry/tools.ts'
 import type { LlmConfig } from '../orchestration/llm.ts'
+import { LLM_MODEL_CATALOG, describeProvider, defaultModelFor, CHAT_PROVIDERS } from './model-catalog.ts'
+import type { ChatProvider, LlmModelDef } from './model-catalog.ts'
+export type { ChatProvider, LlmModelDef } from './model-catalog.ts'
 import { currentSessionId } from '../core/session-scope.ts'
 import type { SessionConfig } from '../core/session-types.ts'
 import { DEFAULT_TAIL_TURNS, sliceBeforeTurns, sliceTailTurns } from '../core/session-window.ts'
@@ -22,12 +25,14 @@ import { normalizeSessionType } from '../core/session-types.ts'
 
 export type { ChatMessage }
 
-export type ChatProvider = 'deepseek' | 'openai'
 export type { AgentToolMode }
+
+const DEFAULT_PROVIDER: ChatProvider = 'deepseek'
 
 interface ChatConfig {
   provider: ChatProvider
-  apiKey: string
+  /** 每个 provider 独立存一份 apiKey；未配置的为空串。 */
+  apiKeys: Record<ChatProvider, string>
   model: string
   systemPrompt: string
   agentMode: AgentToolMode
@@ -39,12 +44,25 @@ function configPath() {
   return join(process.cwd(), '.cordis', 'chat-config.json')
 }
 
+function emptyKeys(): Record<ChatProvider, string> {
+  return { deepseek: '', openai: '', anthropic: '' }
+}
+
 function defaults(): ChatConfig {
-  const deepseek = Boolean(process.env.DEEPSEEK_API_KEY)
+  const envKeys = emptyKeys()
+  if (process.env.DEEPSEEK_API_KEY) envKeys.deepseek = process.env.DEEPSEEK_API_KEY
+  if (process.env.OPENAI_API_KEY) envKeys.openai = process.env.OPENAI_API_KEY
+  if (process.env.ANTHROPIC_API_KEY) envKeys.anthropic = process.env.ANTHROPIC_API_KEY
+  const deepseek = Boolean(envKeys.deepseek)
+  const openai = Boolean(envKeys.openai)
+  const anthropic = Boolean(envKeys.anthropic)
+  const provider: ChatProvider = deepseek ? 'deepseek' : openai ? 'openai' : anthropic ? 'anthropic' : 'deepseek'
   return {
-    provider: deepseek || !process.env.OPENAI_API_KEY ? 'deepseek' : 'openai',
-    apiKey: process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '',
-    model: process.env.CHAT_MODEL || (deepseek || !process.env.OPENAI_API_KEY ? 'deepseek-chat' : 'gpt-4o-mini'),
+    provider,
+    apiKeys: envKeys,
+    model:
+      process.env.CHAT_MODEL ||
+      (provider === 'openai' ? 'gpt-4o-mini' : provider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'deepseek-chat'),
     systemPrompt: '你是控制台里的助手。需要时调用当前已注册的 tools；插件卸载后对应 tool 会消失。回答简洁。',
     agentMode: 'standard',
     extraTools: [],
@@ -77,7 +95,7 @@ function writePersisted(config: ChatConfig) {
         systemPrompt: config.systemPrompt,
         agentMode: config.agentMode,
         extraTools: config.extraTools,
-        apiKey: config.apiKey,
+        apiKeys: config.apiKeys,
       },
       null,
       2,
@@ -90,18 +108,57 @@ function parseAgentMode(value: unknown, fallback: AgentToolMode): AgentToolMode 
   return value === 'minimal' || value === 'standard' ? value : fallback
 }
 
+function parseProvider(value: unknown): ChatProvider | null {
+  return CHAT_PROVIDERS.includes(value as ChatProvider) ? (value as ChatProvider) : null
+}
+
+/** 取某个 provider 的持久化 key；环境变量始终优先（不会被磁盘文件覆盖 UI 清空）。 */
+function keyFor(provider: ChatProvider, saved: Partial<ChatConfig> | null): string {
+  const envMap: Record<ChatProvider, string | undefined> = {
+    deepseek: process.env.DEEPSEEK_API_KEY,
+    openai: process.env.OPENAI_API_KEY,
+    anthropic: process.env.ANTHROPIC_API_KEY,
+  }
+  if (envMap[provider]) return envMap[provider]
+  const savedKeys = saved?.apiKeys
+  if (savedKeys && typeof savedKeys === 'object' && typeof (savedKeys as Record<string, unknown>)[provider] === 'string') {
+    const key = (savedKeys as Record<string, string>)[provider] || ''
+    if (key.trim()) return key.trim()
+  }
+  // 老格式：单一 apiKey 迁移到 deepseek（或默认 provider 所在）
+  const legacy = saved as unknown as { apiKey?: unknown; provider?: unknown } | null
+  if (legacy && typeof legacy.apiKey === 'string' && legacy.apiKey.trim()) {
+    const owner =
+      legacy.provider && CHAT_PROVIDERS.includes(legacy.provider as ChatProvider)
+        ? (legacy.provider as ChatProvider)
+        : DEFAULT_PROVIDER
+    if (provider === owner) return legacy.apiKey.trim()
+  }
+  return ''
+}
+
 function mergePersisted(base: ChatConfig, saved: Partial<ChatConfig> | null): ChatConfig {
   if (!saved) return base
-  const envKey = Boolean(process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY)
+  const apiKeys = emptyKeys()
+  for (const provider of CHAT_PROVIDERS) apiKeys[provider] = keyFor(provider, saved)
   return {
-    provider: saved.provider === 'openai' || saved.provider === 'deepseek' ? saved.provider : base.provider,
+    provider: parseProvider(saved.provider) ?? (base.provider in apiKeys && apiKeys[base.provider] ? base.provider : DEFAULT_PROVIDER),
+    apiKeys,
     model: !process.env.CHAT_MODEL && typeof saved.model === 'string' && saved.model.trim() ? saved.model.trim() : base.model,
     systemPrompt: typeof saved.systemPrompt === 'string' ? saved.systemPrompt : base.systemPrompt,
     agentMode: parseAgentMode(saved.agentMode, base.agentMode),
-    apiKey: !envKey && typeof saved.apiKey === 'string' && saved.apiKey.trim() ? saved.apiKey.trim() : base.apiKey,
     extraTools: Array.isArray(saved.extraTools)
       ? [...new Set(saved.extraTools.map((name) => String(name).trim()).filter(Boolean))]
       : base.extraTools,
+  }
+}
+
+/** 返回某 provider 是否已配置 key（用于前端「只有配了 token 的模型可选」）。 */
+function providerConfigured(keys: Record<ChatProvider, string>): Record<ChatProvider, boolean> {
+  return {
+    deepseek: Boolean(keys.deepseek.trim()),
+    openai: Boolean(keys.openai.trim()),
+    anthropic: Boolean(keys.anthropic.trim()),
   }
 }
 
@@ -123,13 +180,22 @@ export class ChatService extends Service {
   }
 
   publicView() {
+    const configured = providerConfigured(this.config.apiKeys)
     return {
       provider: this.config.provider,
       model: this.config.model,
       systemPrompt: this.config.systemPrompt,
       agentMode: this.config.agentMode,
-      configured: Boolean(this.config.apiKey),
-      hint: hint(this.config.apiKey),
+      /** 当前默认 provider 是否已配置（兼容旧语义，供 banner 等使用）。 */
+      configured: configured[this.config.provider],
+      hint: hint(this.config.apiKeys[this.config.provider]),
+      /** 各 provider 是否已配置 key。 */
+      providers: {
+        deepseek: { label: describeProvider('deepseek'), configured: configured.deepseek, hint: hint(this.config.apiKeys.deepseek) },
+        openai: { label: describeProvider('openai'), configured: configured.openai, hint: hint(this.config.apiKeys.openai) },
+        anthropic: { label: describeProvider('anthropic'), configured: configured.anthropic, hint: hint(this.config.apiKeys.anthropic) },
+      },
+      modelCatalog: LLM_MODEL_CATALOG,
       tools: this.ctx.tools.names(),
       toolCatalog: this.ctx.tools.catalog(),
       extraTools: this.config.extraTools,
@@ -159,15 +225,24 @@ export class ChatService extends Service {
     return { defaults: defaultsView, config, effective }
   }
 
+  resolverKey(provider: ChatProvider): string {
+    return this.config.apiKeys[provider]
+  }
+
+  /** 根据有效 provider 取对应 apiKey；未配置则返回空（LLM 层会因鉴权失败抛错，友好提示）。 */
   resolveLlm(sessionId?: string | null): LlmConfig {
     const { effective } = this.resolveEffective(sessionId)
     return {
       provider: effective.provider,
-      apiKey: this.config.apiKey,
+      apiKey: this.config.apiKeys[effective.provider] ?? '',
       model: effective.model,
     }
   }
 
+  /**
+   * 更新配置。provider/model/systemPrompt/agentMode/extraTools 直接覆盖；
+   * setApiKey(provider, key) 按 provider 独立写入 key；空串表示保留原值，仅非空时更新。
+   */
   patch(
     next: Partial<{
       provider: ChatProvider
@@ -176,13 +251,30 @@ export class ChatService extends Service {
       systemPrompt: string
       agentMode: AgentToolMode
       extraTools: string[]
+      /** 按 provider 更新 key：{ deepseek?: '…', openai?: '…', anthropic?: '…' } */
+      setApiKey: Partial<Record<ChatProvider, string>>
     }>,
     opts?: { persist?: boolean },
   ) {
-    if (next.provider) this.config.provider = next.provider
+    if (next.provider) {
+      this.config.provider = next.provider
+      // 未指定 model 时，默认模型跟随 provider 的默认模型
+      if (typeof next.model !== 'string' || !next.model.trim()) {
+        this.config.model = defaultModelFor(next.provider)
+      }
+    }
     if (typeof next.model === 'string' && next.model.trim()) this.config.model = next.model.trim()
     if (typeof next.systemPrompt === 'string') this.config.systemPrompt = next.systemPrompt
-    if (typeof next.apiKey === 'string' && next.apiKey.trim()) this.config.apiKey = next.apiKey.trim()
+    if (next.setApiKey && typeof next.setApiKey === 'object') {
+      for (const provider of CHAT_PROVIDERS) {
+        const key = next.setApiKey[provider]
+        if (typeof key === 'string' && key.trim()) this.config.apiKeys[provider] = key.trim()
+      }
+    }
+    // 兼容旧调用：单一 apiKey 写入当前 provider
+    if (typeof next.apiKey === 'string' && next.apiKey.trim()) {
+      this.config.apiKeys[this.config.provider] = next.apiKey.trim()
+    }
     if (next.agentMode === 'standard' || next.agentMode === 'minimal') this.config.agentMode = next.agentMode
     if (Array.isArray(next.extraTools)) {
       this.config.extraTools = [...new Set(next.extraTools.map((name) => String(name).trim()).filter(Boolean))]
@@ -209,11 +301,8 @@ export class ChatService extends Service {
   }
 
   private syncLlm() {
-    this.ctx.agents.configure({
-      provider: this.config.provider,
-      apiKey: this.config.apiKey,
-      model: this.config.model,
-    })
+    const llm = this.resolveLlm()
+    this.ctx.agents.configure(llm)
   }
 
   private syncToolsMode() {
@@ -246,6 +335,7 @@ export function apply(ctx: Context) {
       systemPrompt: string
       agentMode: AgentToolMode
       extraTools: string[]
+      setApiKey: Partial<Record<ChatProvider, string>>
     }>
     route.send(200, chat.patch(payload ?? {}))
   })
@@ -271,24 +361,28 @@ export function apply(ctx: Context) {
   ctx.http.route('PATCH', '/api/sessions/:id/config', async (route) => {
     try {
       const payload = ((await route.json().catch(() => null)) ?? {}) as Record<string, unknown>
-      const record = await ctx.sessions.patchConfig(route.params.id, {
-        ...(typeof payload.title === 'string' || payload.title === null
-          ? { title: payload.title as string | null }
-          : {}),
-        ...(typeof payload.model === 'string' ? { model: payload.model } : {}),
-        ...(payload.provider === 'deepseek' || payload.provider === 'openai'
-          ? { provider: payload.provider }
-          : {}),
-        ...(typeof payload.systemPrompt === 'string' || payload.systemPrompt === null
-          ? { systemPrompt: payload.systemPrompt as string | null }
-          : {}),
-        ...(payload.agentMode === 'standard' || payload.agentMode === 'minimal'
-          ? { agentMode: payload.agentMode }
-          : {}),
-        ...(Array.isArray(payload.extraTools)
-          ? { extraTools: payload.extraTools.map((name) => String(name)) }
-          : {}),
-      })
+      const patch: {
+        title?: string | null
+        model?: string
+        provider?: SessionConfig['provider']
+        systemPrompt?: string | null
+        agentMode?: 'standard' | 'minimal'
+        extraTools?: string[]
+      } = {}
+      if (typeof payload.title === 'string' || payload.title === null) patch.title = payload.title as string | null
+      if (typeof payload.model === 'string') patch.model = payload.model
+      if (payload.provider === 'deepseek' || payload.provider === 'openai' || payload.provider === 'anthropic') {
+        patch.provider = payload.provider
+      }
+      if (typeof payload.systemPrompt === 'string' || payload.systemPrompt === null) {
+        patch.systemPrompt = payload.systemPrompt as string | null
+      }
+      if (payload.agentMode === 'standard' || payload.agentMode === 'minimal') patch.agentMode = payload.agentMode
+      if (Array.isArray(payload.extraTools)) patch.extraTools = payload.extraTools.map((name) => String(name))
+      const record = await ctx.sessions.patchConfig(
+        route.params.id,
+        patch as SessionConfig & { title?: string | null; systemPrompt?: string | null },
+      )
       const resolved = chat.resolveEffective(record.id)
       route.send(200, {
         id: record.id,

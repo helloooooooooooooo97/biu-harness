@@ -8,21 +8,15 @@ import { bindSessionView, type SessionViewService } from '../../infrastructure/s
 const INPUT_DEBOUNCE_MS = 120
 
 type ToolCatalogItem = { name: string; description: string }
-type ChatProvider = 'deepseek' | 'openai'
+type ChatProvider = 'deepseek' | 'openai' | 'anthropic'
 
 type ModelOption = {
   id: string
   label: string
   provider: ChatProvider
   model: string
+  note?: string
 }
-
-const MODEL_OPTIONS: ModelOption[] = [
-  { id: 'deepseek-chat', label: 'DeepSeek Chat', provider: 'deepseek', model: 'deepseek-chat' },
-  { id: 'deepseek-reasoner', label: 'DeepSeek Reasoner', provider: 'deepseek', model: 'deepseek-reasoner' },
-  { id: 'gpt-4o-mini', label: 'GPT-4o mini', provider: 'openai', model: 'gpt-4o-mini' },
-  { id: 'gpt-4o', label: 'GPT-4o', provider: 'openai', model: 'gpt-4o' },
-]
 
 type SlashState = {
   open: boolean
@@ -40,13 +34,13 @@ function readSlashAtCursor(value: string, cursor: number): SlashState | null {
   return { open: true, query: token, start, end: cursor }
 }
 
-function matchModelOption(provider: string, model: string): ModelOption {
+function matchModelOption(catalog: ModelOption[], provider: string, model: string): ModelOption {
   return (
-    MODEL_OPTIONS.find((item) => item.provider === provider && item.model === model) ??
-    MODEL_OPTIONS.find((item) => item.model === model) ?? {
+    catalog.find((item) => item.provider === provider && item.model === model) ??
+    catalog.find((item) => item.model === model) ?? {
       id: `${provider}:${model}`,
       label: model,
-      provider: provider === 'openai' ? 'openai' : 'deepseek',
+      provider: (provider as ChatProvider) ?? 'deepseek',
       model,
     }
   )
@@ -63,8 +57,17 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   const [slash, setSlash] = useState<SlashState | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const [modelOpen, setModelOpen] = useState(false)
-  const [modelOption, setModelOption] = useState<ModelOption>(MODEL_OPTIONS[0]!)
+  const [modelOption, setModelOption] = useState<ModelOption>({
+    id: 'deepseek-flash',
+    label: 'DeepSeek Flash',
+    provider: 'deepseek',
+    model: 'deepseek-chat',
+  })
   const [modelBusy, setModelBusy] = useState(false)
+  /** 全部目录模型（含未配置的），用于下拉只展示已配置 provider，但当前选中可能来自任一。 */
+  const [allModels, setAllModels] = useState<ModelOption[]>([])
+  /** 各 provider 是否已配置 token。 */
+  const [modelProviders, setModelProviders] = useState<Record<string, boolean> | null>(null)
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const pending = useSessionView((state) => state.pending)
   const inbox = useSessionView((state) => state.inbox)
@@ -98,12 +101,38 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     let cancelled = false
     void fetch('/api/chat/config')
       .then((res) => res.json())
-      .then((data: { toolCatalog?: ToolCatalogItem[]; provider?: string; model?: string }) => {
-        if (cancelled) return
-        const items = Array.isArray(data.toolCatalog) ? data.toolCatalog : []
-        setCatalog(items.filter((item) => item?.name))
-        if (data.provider && data.model) setModelOption(matchModelOption(data.provider, data.model))
-      })
+      .then(
+        (data: {
+          toolCatalog?: ToolCatalogItem[]
+          provider?: string
+          model?: string
+          providers?: Record<string, { configured?: boolean }>
+          modelCatalog?: Array<{ id: string; label: string; provider: string; model: string; note?: string }>
+        }) => {
+          if (cancelled) return
+          const items = Array.isArray(data.toolCatalog) ? data.toolCatalog : []
+          setCatalog(items.filter((item) => item?.name))
+          if (Array.isArray(data.modelCatalog) && data.modelCatalog.length) {
+            const catalog = data.modelCatalog.map((m) => ({
+              id: m.id,
+              label: m.label,
+              provider: m.provider as ChatProvider,
+              model: m.model,
+              ...(m.note ? { note: m.note } : {}),
+            }))
+            setAllModels(catalog)
+            if (data.provider && data.model)
+              setModelOption(matchModelOption(catalog, data.provider, data.model))
+          } else if (data.provider && data.model) {
+            setModelOption(matchModelOption([], data.provider, data.model))
+          }
+          if (data.providers) {
+            const cfg: Record<string, boolean> = {}
+            for (const [k, v] of Object.entries(data.providers)) cfg[k] = Boolean(v?.configured)
+            setModelProviders(cfg)
+          }
+        },
+      )
       .catch(() => {
         /* ignore */
       })
@@ -254,7 +283,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       })
       if (!res.ok) return
       const data = (await res.json()) as { provider?: string; model?: string }
-      if (data.provider && data.model) setModelOption(matchModelOption(data.provider, data.model))
+      if (data.provider && data.model) setModelOption(matchModelOption(allModels, data.provider, data.model))
       else setModelOption(option)
       setModelOpen(false)
     } finally {
@@ -453,18 +482,25 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
             </button>
             {modelOpen ? (
               <div className="composer-model-menu" role="listbox" aria-label="模型">
-                {MODEL_OPTIONS.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    role="option"
-                    aria-selected={option.id === modelOption.id}
-                    className={`composer-model-item${option.id === modelOption.id ? ' is-active' : ''}`}
-                    onClick={() => void selectModel(option)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+                {allModels
+                  .filter((m) => modelProviders?.[m.provider])
+                  .map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      role="option"
+                      aria-selected={option.id === modelOption.id}
+                      className={`composer-model-item${option.id === modelOption.id ? ' is-active' : ''}`}
+                      onClick={() => void selectModel(option)}
+                    >
+                      <span className="composer-model-item-label">{option.label}</span>
+                      {option.note ? <span className="composer-model-item-note">{option.note}</span> : null}
+                    </button>
+                  ))}
+                {allModels.length === 0 ||
+                !allModels.some((m) => modelProviders?.[m.provider]) ? (
+                  <div className="composer-model-empty">请在 Settings → 模型与 Token 配置 API Key 后选择模型</div>
+                ) : null}
               </div>
             ) : null}
           </div>

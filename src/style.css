@@ -2476,6 +2476,28 @@ body {
   color: var(--dsw-label);
 }
 
+.composer-model-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.composer-model-item-label {
+  font-size: 12px;
+}
+
+.composer-model-item-note {
+  font-size: 11px;
+  color: var(--dsw-label-3);
+}
+
+.composer-model-empty {
+  padding: 10px 12px;
+  color: var(--dsw-label-3);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .composer-send,
 .composer-stop {
   display: grid;

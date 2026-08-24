@@ -63,7 +63,7 @@ export function normalizeSessionType(value: unknown): SessionType {
 export interface SessionConfig {
   /** 侧栏显示名；未设则仍用最近 user/message 推导 */
   title?: string
-  provider?: 'deepseek' | 'openai'
+  provider?: 'deepseek' | 'openai' | 'anthropic'
   model?: string
   systemPrompt?: string
   agentMode?: 'standard' | 'minimal'
@@ -76,7 +76,7 @@ export function normalizeSessionConfig(value: unknown): SessionConfig | undefine
   const raw = value as Record<string, unknown>
   const next: SessionConfig = {}
   if (typeof raw.title === 'string' && raw.title.trim()) next.title = raw.title.trim().slice(0, 80)
-  if (raw.provider === 'deepseek' || raw.provider === 'openai') next.provider = raw.provider
+  if (raw.provider === 'deepseek' || raw.provider === 'openai' || raw.provider === 'anthropic') next.provider = raw.provider
   if (typeof raw.model === 'string' && raw.model.trim()) next.model = raw.model.trim()
   if (typeof raw.systemPrompt === 'string') next.systemPrompt = raw.systemPrompt
   if (raw.agentMode === 'standard' || raw.agentMode === 'minimal') next.agentMode = raw.agentMode
@@ -95,7 +95,7 @@ export function mergeSessionConfig(
     if (patch.title == null || !String(patch.title).trim()) delete next.title
     else next.title = String(patch.title).trim().slice(0, 80)
   }
-  if (patch.provider === 'deepseek' || patch.provider === 'openai') next.provider = patch.provider
+  if (patch.provider === 'deepseek' || patch.provider === 'openai' || patch.provider === 'anthropic') next.provider = patch.provider
   if (typeof patch.model === 'string') {
     if (!patch.model.trim()) delete next.model
     else next.model = patch.model.trim()

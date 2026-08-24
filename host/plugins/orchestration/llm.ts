@@ -1,8 +1,10 @@
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
 
+export type ChatProvider = 'deepseek' | 'openai' | 'anthropic'
+
 export interface LlmConfig {
-  provider: 'deepseek' | 'openai'
+  provider: ChatProvider
   apiKey: string
   model: string
 }
@@ -240,6 +242,197 @@ export class OpenAiCompatLlm implements LlmClient {
   }
 }
 
+/**
+ * Anthropic Messages API（/v1/messages，SSE）。请求体与事件格式均不同于 OpenAI 兼容接口：
+ *  - 鉴权用 `x-api-key` + `anthropic-version` 头，不带 `authorization: Bearer`；
+ *  - 顶层字段 `system`（字符串，放 system 消息）、`max_tokens`；
+ *  - 工具参数通过 `content_block_delta` 里的 `input_json_delta.partial_json` 增量累积；
+ *  - 结束由 `message_stop` 标志，无 `[DONE]`。
+ */
+export class AnthropicLlm implements LlmClient {
+  private endpoint = 'https://api.anthropic.com/v1/messages'
+
+  constructor(private config: LlmConfig) {}
+
+  async chat(
+    messages: LlmMessage[],
+    tools: unknown[] = [],
+    signal?: AbortSignal,
+    options?: ChatOptions,
+  ): Promise<AssistantReply> {
+    const system = messages
+      .filter((m) => m.role === 'system')
+      .map((m) => m.content ?? '')
+      .filter((c) => c)
+      .join('\n\n')
+    const body: Record<string, unknown> = {
+      model: this.config.model,
+      max_tokens: 4096,
+      ...(system ? { system } : {}),
+      messages: messages
+        .filter((m) => m.role !== 'system')
+        .map((m) => ({
+          role: m.role,
+          ...(m.content ? { content: m.content } : {}),
+          ...(m.tool_call_id
+            ? {
+                content: [
+                  { type: 'tool_result' as const, tool_use_id: m.tool_call_id, content: m.content ?? '' },
+                ],
+              }
+            : {}),
+          ...(m.tool_calls?.length
+            ? {
+                content: m.tool_calls.map((call) => ({
+                  type: 'tool_use' as const,
+                  id: call.id,
+                  name: call.function.name,
+                  input: parseToolJson(call.function.arguments),
+                })),
+              }
+            : {}),
+        })),
+      stream: true,
+    }
+    if (tools.length) {
+      body.tools = tools.map((item) => {
+        const fn = (item as { function?: { name: string; description?: string; parameters?: unknown } })
+          .function
+        return {
+          name: fn?.name ?? 'unknown',
+          description: fn?.description ?? '',
+          input_schema: (fn?.parameters as Record<string, unknown>) ?? { type: 'object', properties: {} },
+        }
+      })
+    }
+    const res = await fetch(this.endpoint, {
+      method: 'POST',
+      headers: {
+        'x-api-key': this.config.apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        accept: 'text/event-stream',
+      },
+      body: JSON.stringify(body),
+      signal,
+    })
+    if (!res.ok) {
+      let detail = `llm http ${res.status}`
+      try {
+        const err = (await res.json()) as { error?: { message?: string } }
+        if (err.error?.message) detail = err.error.message
+      } catch {
+        /* ignore */
+      }
+      throw new Error(detail)
+    }
+    if (!res.body) throw new Error('llm stream missing body')
+    return consumeMessagesSse(res.body, { onDelta: options?.onDelta, signal })
+  }
+}
+
+function parseToolJson(text: string): unknown {
+  try {
+    return JSON.parse(text)
+  } catch {
+    // 返回暂存原串，避免构造请求直接抛出
+    return { _raw: text }
+  }
+}
+
+/** 解析 Anthropic Messages SSE：text（text_delta）+ 工具参数（input_json_delta）累积。 */
+async function consumeMessagesSse(
+  stream: ReadableStream<Uint8Array>,
+  options: { onDelta?: (text: string) => void | Promise<void>; signal?: AbortSignal } = {},
+): Promise<AssistantReply> {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let content = ''
+  let usage: LlmUsage | undefined
+  const toolBlocks: Array<{ id?: string; name?: string; input: string }> = []
+  let sawStop = false
+
+  const onAbort = () => void reader.cancel().catch(() => undefined)
+  options.signal?.addEventListener('abort', onAbort, { once: true })
+
+  try {
+    while (true) {
+      if (options.signal?.aborted) throw new Error('cancelled')
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split(/\r?\n/)
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue
+        const payloadLine = line.slice(5).trim()
+        if (!payloadLine) continue
+        let evt: Record<string, unknown>
+        try {
+          evt = JSON.parse(payloadLine) as Record<string, unknown>
+        } catch {
+          continue
+        }
+        switch (evt.type) {
+          case 'message_start': {
+            const message = evt.message as { usage?: unknown } | undefined
+            const nextUsage = parseProviderUsage(message?.usage)
+            if (nextUsage) usage = nextUsage
+            break
+          }
+          case 'message_delta': {
+            const nextUsage = parseProviderUsage(evt.usage)
+            if (nextUsage) usage = nextUsage
+            break
+          }
+          case 'content_block_start': {
+            const block = evt.content_block as { type?: string; id?: string; name?: string } | undefined
+            if (block?.type === 'tool_use') {
+              toolBlocks.push({ id: block.id, name: block.name, input: '' })
+            }
+            break
+          }
+          case 'content_block_delta': {
+            const delta = evt.delta as { type?: string; text?: string; partial_json?: string } | undefined
+            if (delta?.type === 'text_delta' && typeof delta.text === 'string' && delta.text.length) {
+              content += delta.text
+              await options.onDelta?.(delta.text)
+            } else if (delta?.type === 'input_json_delta' && typeof delta.partial_json === 'string') {
+              const last = toolBlocks[toolBlocks.length - 1]
+              if (last) last.input += delta.partial_json
+            }
+            break
+          }
+          case 'message_stop':
+            sawStop = true
+            break
+        }
+      }
+      if (sawStop) break
+    }
+  } finally {
+    options.signal?.removeEventListener('abort', onAbort)
+    reader.releaseLock()
+  }
+
+  if (options.signal?.aborted) throw new Error('cancelled')
+
+  const toolCalls: ToolCall[] = toolBlocks
+    .filter((block) => block.name)
+    .map((block) => ({
+      id: block.id || `call_${Math.random().toString(36).slice(2, 10)}`,
+      name: block.name ?? '',
+      arguments: block.input.trim() || '{}',
+    }))
+
+  return {
+    content: content || null,
+    toolCalls,
+    ...(usage ? { usage } : {}),
+  }
+}
+
 export class LlmService extends Service {
   constructor(ctx: Context) {
     super(ctx, 'llm')
@@ -247,10 +440,13 @@ export class LlmService extends Service {
 
   forConfig(config: LlmConfig): LlmClient {
     const ctx = this.ctx
-    const client = new OpenAiCompatLlm(config)
+    const client =
+      config.provider === 'anthropic'
+        ? new AnthropicLlm(config)
+        : new OpenAiCompatLlm(config)
     return {
       chat: async (messages, tools = [], signal, options) => {
-        ctx.emit('llm/request', { model: config.model })
+        ctx.emit('llm/request', { model: config.model, provider: config.provider })
         const reply = await client.chat(messages, tools, signal, {
           onDelta: async (text) => {
             ctx.emit('llm/stream', { text })

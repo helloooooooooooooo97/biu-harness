@@ -151,6 +151,7 @@ function Shell(props: SlotProps) {
   const focusCallId = useSessionView((state) => state.focusCallId)
   const routeView = useSessionView((state) => state.view)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<string>('plugins')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [inspectorOpen, setInspectorOpen] = useState(() => {
     try {
@@ -365,15 +366,32 @@ function Shell(props: SlotProps) {
               <span className="text-sm font-semibold">Settings</span>
             </div>
             <ul className="space-y-1 text-sm text-[var(--dsw-label-2)]">
-              <li className="rounded-[8px] bg-[var(--dsw-business-soft)] px-3 py-2 text-[var(--dsw-business)]">Plugins</li>
-              <li className="px-3 py-2">Assistant</li>
-              <li className="px-3 py-2">Demos</li>
-              <li className="px-3 py-2">Developer</li>
+              {[
+                { key: 'plugins', label: 'Plugins' },
+                { key: 'models', label: 'Models' },
+                { key: 'demos', label: 'Demos' },
+                { key: 'routes', label: 'Routes' },
+                { key: 'events', label: 'Events' },
+              ].map((item) => (
+                <li key={item.key}>
+                  <button
+                    type="button"
+                    className={`w-full rounded-[8px] px-3 py-2 text-left transition-colors ${
+                      settingsTab === item.key
+                        ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
+                        : 'hover:bg-[var(--dsw-hover)]'
+                    }`}
+                    onClick={() => setSettingsTab(item.key)}
+                  >
+                    {item.label}
+                  </button>
+                </li>
+              ))}
             </ul>
           </nav>
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center justify-between border-b border-[var(--dsw-border)] px-5 py-3">
-              <h2 className="text-sm font-medium">Plugins & demos</h2>
+              <h2 className="text-sm font-medium">{settingsTab}</h2>
               <button
                 type="button"
                 className="rounded-full px-2 py-1 text-sm text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)]"
@@ -383,26 +401,23 @@ function Shell(props: SlotProps) {
               </button>
             </div>
             <div className="flex-1 space-y-6 overflow-y-auto px-5 py-4">
-              <section>
-                <h3 className="mb-3 text-xs font-semibold tracking-widest text-[var(--dsw-label-3)] uppercase">Plugins</h3>
-                {props.renderSlot('sidebar')}
-              </section>
-              <section>
-                <h3 className="mb-3 text-xs font-semibold tracking-widest text-[var(--dsw-label-3)] uppercase">Assistant</h3>
-                {props.renderSlot('settings')}
-              </section>
-              <section>
-                <h3 className="mb-3 text-xs font-semibold tracking-widest text-[var(--dsw-label-3)] uppercase">Demos</h3>
-                <div className="space-y-3">{props.renderSlot('demos')}</div>
-              </section>
-              <section>
-                <h3 className="mb-3 text-xs font-semibold tracking-widest text-[var(--dsw-label-3)] uppercase">Routes</h3>
-                {props.renderSlot('routes')}
-              </section>
-              <section>
-                <h3 className="mb-3 text-xs font-semibold tracking-widest text-[var(--dsw-label-3)] uppercase">Events</h3>
-                {props.renderSlot('log')}
-              </section>
+              {settingsTab === 'plugins' ? (
+                <section>{props.renderSlot('sidebar')}</section>
+              ) : null}
+              {settingsTab === 'models' ? (
+                <section className="relative min-h-[400px]">{props.renderSlot('models')}</section>
+              ) : null}
+              {settingsTab === 'demos' ? (
+                <section>
+                  <div className="space-y-3">{props.renderSlot('demos')}</div>
+                </section>
+              ) : null}
+              {settingsTab === 'routes' ? (
+                <section>{props.renderSlot('routes')}</section>
+              ) : null}
+              {settingsTab === 'events' ? (
+                <section>{props.renderSlot('log')}</section>
+              ) : null}
             </div>
           </div>
         </div>
@@ -429,6 +444,7 @@ export function apply(ctx: Context) {
       project: { kind: 'single' },
       composer: { kind: 'single' },
       settings: { kind: 'list' },
+      models: { kind: 'single' },
       log: { kind: 'single' },
       routes: { kind: 'single' },
       tasks: { kind: 'single' },
