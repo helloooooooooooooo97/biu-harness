@@ -24,10 +24,10 @@ const BIU_GLYPHS: string[][] = [
     '#...#',
     '####.',
   ],
-  // I（窄柱居中）
+  // I（小写 i：头顶一点 + 空行 + 一竖 3 点）
   [
     '..#..',
-    '..#..',
+    '.....',
     '..#..',
     '..#..',
     '..#..',
@@ -64,15 +64,18 @@ function biuPixels(): { x: number; y: number }[] {
 export function danceSlot(shape: MascotDanceShape, i: number, n: number): { x: number; y: number } {
   if (shape === 'biu') {
     const pts = biuPixels()
-    const H = 5
-    const W = 3 * 5 + 2 * 1 // 3 字母 × 5 宽 + 2 个间隙 × 1
-    const scaleX = 30 // 横向格距：更大，让字形横向舒展（"宽"）
-    const scaleY = 22 // 纵向格距：更小，压低高度（"扁"），整体矮胖块面感
+    const maxY = Math.max(...pts.map((p) => p.y), 0)
+    const minY = Math.min(...pts.map((p) => p.y), 0)
+    const maxX = Math.max(...pts.map((p) => p.x), 0)
+    const minX = Math.min(...pts.map((p) => p.x), 0)
+    const scaleX = 46 // 横向格距：≥ 单个 mascot 直径，相邻不重叠又能拉开字母宽度
+    const scaleY = 38 // 纵向格距：比横向略小，整体矮胖块面感
     // 依次落位：第 i 个 mascot 排在点阵第 i 个像素（mascot 多余则取模环绕填满）
+    // 用实际像素范围的中心做锚点，B比U胖导致的"重心偏左"也能整体居中
     const p = pts[i % pts.length]
     return {
-      x: (p.x - (W - 1) / 2) * scaleX,
-      y: (p.y - (H - 1) / 2) * scaleY,
+      x: (p.x - (minX + maxX) / 2) * scaleX,
+      y: (p.y - (minY + maxY) / 2) * scaleY,
     }
   }
   if (shape === 'heart') {
@@ -157,8 +160,8 @@ export const DanceStage = memo(function DanceStage({
     >
       {dancers.map((d, i) => {
         const { x, y } = danceSlot(shape, i, dancers.length)
-        // 拼字母（biu）时用紧凑圆点，让点阵能识别出字形
-        const dancerSize = shape === 'biu' ? Math.min(size, 26) : size
+        // 拼字母（biu）时仍追求可读的字形，但放大到更清晰可见的尺寸
+        const dancerSize = shape === 'biu' ? Math.min(size, 46) : size
         return (
           <span
             key={d.id}

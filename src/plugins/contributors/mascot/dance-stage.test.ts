@@ -51,8 +51,8 @@ test('row: 单行时水平带内展开且左右对称', () => {
 })
 
 test('biu: 拼出 B-I-U 三字母、整体居中、从左到右排布', () => {
-  // 取足够多点占满点阵
-  const n = 60
+  // 取点数阵像素数(32)的整数倍，保证完整采样、均值真正归零
+  const n = 64
   const slots = Array.from({ length: n }, (_, i) => danceSlot('biu', i, n))
   const xs = slots.map((p) => p.x)
   const ys = slots.map((p) => p.y)
