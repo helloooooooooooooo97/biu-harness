@@ -26,6 +26,7 @@ import {
   LuGitBranch,
   LuGauge,
   LuSearch,
+  LuSlidersHorizontal,
   LuStickyNote,
   LuTable2,
   LuTags,
@@ -728,6 +729,16 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
   }, [tasks])
   const [projectFilter, setProjectFilter] = useState('')
   const [tagFilter, setTagFilter] = useState('')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!filterOpen) return
+    const onDown = (event: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) setFilterOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [filterOpen])
   const filteredTasks = useMemo(() => {
     if (!projectFilter && !tagFilter) return tasks
     return tasks.filter(
@@ -848,36 +859,6 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
               </button>
             ))}
           </div>
-          {!compact ? (
-            <select
-              className="tasks-filter"
-              aria-label="按项目筛选"
-              value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
-            >
-              <option value="">全部项目</option>
-              {allProjects.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          ) : null}
-          {!compact ? (
-            <select
-              className="tasks-filter"
-              aria-label="按标签筛选"
-              value={tagFilter}
-              onChange={(e) => setTagFilter(e.target.value)}
-            >
-              <option value="">全部标签</option>
-              {allTags.map((t) => (
-                <option key={t} value={t}>
-                  #{t}
-                </option>
-              ))}
-            </select>
-          ) : null}
           <label className="tasks-search-wrap">
             <LuSearch size={14} aria-hidden />
             <input
@@ -888,6 +869,65 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
+          <div className="tasks-filter-btn-wrap" ref={filterRef}>
+            <button
+              type="button"
+              className={`tasks-refresh tasks-rbar-btn${filterOpen ? ' is-active' : ''}${projectFilter || tagFilter ? ' is-active' : ''}`}
+              aria-label="筛选任务"
+              title="筛选"
+              aria-haspopup="menu"
+              aria-expanded={filterOpen}
+              onClick={() => setFilterOpen((v) => !v)}
+            >
+              <LuSlidersHorizontal size={14} aria-hidden />
+              {(projectFilter || tagFilter) ? <span className="tasks-filter-dot" aria-hidden /> : null}
+            </button>
+            {filterOpen ? (
+              <div className="tasks-filter-menu" role="menu">
+                <label className="tasks-filter-menu-label">
+                  <span>按项目</span>
+                  <select
+                    className="tasks-filter"
+                    aria-label="按项目筛选"
+                    value={projectFilter}
+                    onChange={(e) => setProjectFilter(e.target.value)}
+                  >
+                    <option value="">全部项目</option>
+                    {allProjects.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="tasks-filter-menu-label">
+                  <span>按标签</span>
+                  <select
+                    className="tasks-filter"
+                    aria-label="按标签筛选"
+                    value={tagFilter}
+                    onChange={(e) => setTagFilter(e.target.value)}
+                  >
+                    <option value="">全部标签</option>
+                    {allTags.map((t) => (
+                      <option key={t} value={t}>
+                        #{t}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {(projectFilter || tagFilter) ? (
+                  <button
+                    type="button"
+                    className="tasks-filter-clear"
+                    onClick={() => { setProjectFilter(''); setTagFilter(''); }}
+                  >
+                    清除筛选
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
           <button
             type="button"
             className="tasks-refresh"
@@ -1777,6 +1817,15 @@ if (typeof document !== 'undefined') {
 .tasks-search-wrap { flex:0 1 180px; margin-left:auto; display:flex; align-items:center; gap:6px; border:1px solid var(--dsw-border); border-radius:8px; padding:0 8px; background:var(--dsw-input); color:var(--dsw-label-3); min-width:0; }
 .tasks-refresh { display:inline-flex; align-items:center; justify-content:center; flex:none; width:28px; height:26px; border:1px solid var(--dsw-border); border-radius:8px; padding:0; background:var(--dsw-input); color:var(--dsw-label-2); font:inherit; cursor:pointer; }
 .tasks-refresh:hover { background:var(--dsw-hover); }
+.tasks-refresh.is-active { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 10%, var(--dsw-input)); }
+.tasks-filter-btn-wrap { position:relative; display:inline-flex; flex:none; }
+.tasks-filter-btn-wrap .tasks-refresh { position:relative; }
+.tasks-filter-dot { position:absolute; top:4px; right:4px; width:5px; height:5px; border-radius:50%; background:var(--dsw-business); box-shadow:0 0 0 1px var(--dsw-surface); }
+.tasks-filter-menu { position:absolute; top:calc(100% + 6px); right:0; z-index:40; min-width:180px; padding:8px; background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:8px; }
+.tasks-filter-menu-label { display:flex; flex-direction:column; gap:4px; font-size:10.5px; font-weight:600; color:var(--dsw-label-3); }
+.tasks-filter-menu-label .tasks-filter { width:100%; max-width:none; }
+.tasks-filter-clear { width:100%; border:0; border-radius:7px; padding:6px 8px; background:transparent; color:var(--dsw-danger); font:inherit; font-size:11px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+.tasks-filter-clear:hover { background:var(--dsw-danger-soft); }
 .tasks-search-wrap .tasks-search { flex:1; border:0; padding-left:0; background:transparent; }
 .tasks-filter { flex:0 0 auto; border:1px solid var(--dsw-border); border-radius:7px; padding:5px 7px; background:var(--dsw-input); color:var(--dsw-label); font:inherit; font-size:11px; outline:none; max-width:140px; }
 .tasks-viewtabs { display:flex; gap:2px; padding:2px; border:1px solid var(--dsw-border); border-radius:8px; background:var(--dsw-input); }
