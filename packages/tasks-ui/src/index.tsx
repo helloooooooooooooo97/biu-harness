@@ -1403,6 +1403,28 @@ function TasksQueue({
   }, [tasks])
   const colOf = (t: Task): QueueKey => (t.blocked ? 'blocked' : (t.status === 'done' ? 'done' : (t.status === 'doing' ? 'doing' : 'todo')))
 
+  // 父链构建：按 id 索引，向上回溯出一串祖先（根 … 直接父），用「根 / 父 / …」拼接展示
+  const byId = useMemo(() => {
+    const m = new Map<string, Task>()
+    for (const t of tasks) m.set(t.id, t)
+    return m
+  }, [tasks])
+  // 拼接叶任务所在父链：形如「根节点 / 中间节点」（不含当前叶任务自身标题）
+  const chainOf = useCallback(
+    (task: Task): string => {
+      const parts: string[] = []
+      let cur: Task | undefined = task
+      for (let guard = 0; guard < 16 && cur?.parentId; guard++) {
+        const parent = byId.get(cur.parentId)
+        if (!parent) break
+        parts.unshift(parent.title)
+        cur = parent
+      }
+      return parts.join(' / ')
+    },
+    [byId],
+  )
+
   // 分组（仅叶节点）
   const grouped = useMemo(() => {
     const map: Record<string, Task[]> = { doing: [], todo: [], blocked: [], done: [] }
@@ -1445,7 +1467,10 @@ function TasksQueue({
                       onClick={() => onOpenDetail(task.id)}
                       aria-current={isActive ? 'true' : undefined}
                     >
-                      <span className="tasks-queue-item-title">{task.title}</span>
+                      <span className="tasks-queue-item-title">
+                        {chainOf(task) ? <span className="tasks-queue-chain">{chainOf(task)} / </span> : null}
+                        {task.title}
+                      </span>
                       <span className={`tasks-queue-pill is-p-${task.priority}`} title={`优先级：${PRIORITY_LABEL[task.priority]}`}>
                         <LuFlag size={10} aria-hidden />
                         {PRIORITY_LABEL[task.priority]}
@@ -2523,7 +2548,8 @@ if (typeof document !== 'undefined') {
 .tasks-queue-item-main { display:flex; align-items:center; gap:8px; width:100%; text-align:left; border:0; border-radius:7px; padding:7px 10px; background:color-mix(in srgb, var(--dsw-surface) 94%, transparent); color:var(--dsw-label); font:inherit; cursor:pointer; box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 65%, transparent); transition:box-shadow .12s ease, background .12s ease; }
 .tasks-queue-item-main:hover { background:color-mix(in srgb, var(--dsw-hover) 55%, var(--dsw-surface)); box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 90%, transparent); }
 .tasks-queue-item.is-active .tasks-queue-item-main { background:color-mix(in srgb, var(--dsw-business) 8%, var(--dsw-surface)); box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-business) 50%, transparent); }
-.tasks-queue-item-title { flex:1; min-width:0; font-size:12px; font-weight:600; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tasks-queue-item-title { flex:1; min-width:0; font-size:11px; font-weight:600; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tasks-queue-chain { color:var(--dsw-label-3); font-weight:500; }
 .tasks-queue-item.is-done .tasks-queue-item-title { text-decoration:line-through; color:var(--dsw-label-3); }
 .tasks-queue-pill { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:9.5px; font-weight:700; white-space:nowrap; }
 .tasks-queue-pill.is-p-high { color:var(--dsw-danger); background:color-mix(in srgb, var(--dsw-danger) 12%, transparent); }
