@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.10",
+    "@xyflow/react": "^12.11.3",
     "antd": "^6.6.1",
     "cordis": "4.0.0-rc.8",
     "dompurify": "^3.4.14",
