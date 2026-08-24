@@ -10,37 +10,35 @@ type Dancer = {
   identity: SessionMascotIdentity
 }
 
-/** 产品名「biu」的 3×7 字母点阵：各自是 B-I-U 的 '#' 像素。 */
+/**
+ * 产品名「biu」的 5×5 方块点阵（宽 5、高 5）。'#' 为像素。
+ * 相比原 3×7（瘦高），改用宽高比 1:1 的方块点阵，横向更舒展、纵向更矮，
+ * 再配合 danceSlot 里 scaleX>scaleY 的横拉，整体观感"扁、宽、块面感强"。
+ */
 const BIU_GLYPHS: string[][] = [
   // B
   [
-    '###',
-    '# #',
-    '# #',
-    '###',
-    '# #',
-    '# #',
-    '###',
+    '####.',
+    '#...#',
+    '####.',
+    '#...#',
+    '####.',
   ],
-  // I
+  // I（窄柱居中）
   [
-    '#',
-    '#',
-    '#',
-    '#',
-    '#',
-    '#',
-    '#',
+    '..#..',
+    '..#..',
+    '..#..',
+    '..#..',
+    '..#..',
   ],
   // U
   [
-    '# #',
-    '# #',
-    '# #',
-    '# #',
-    '# #',
-    '# #',
-    '###',
+    '#...#',
+    '#...#',
+    '#...#',
+    '#...#',
+    '.####',
   ],
 ]
 
@@ -57,7 +55,7 @@ function biuPixels(): { x: number; y: number }[] {
         if (glyph[r][c] === '#') pts.push({ x: colOffset + c, y: r })
       }
     }
-    colOffset += 3 + 2 // 字母宽 3，间隔 2
+    colOffset += 5 + 1 // 字母宽 5，间隙 1（更紧凑、横向更宽）
   }
   return pts
 }
@@ -66,14 +64,15 @@ function biuPixels(): { x: number; y: number }[] {
 export function danceSlot(shape: MascotDanceShape, i: number, n: number): { x: number; y: number } {
   if (shape === 'biu') {
     const pts = biuPixels()
-    const H = 7
-    const W = 3 * 3 + 2 * 2 // 3 字母 × 3 宽 + 2 个间隔 × 2
-    const scale = 26 // 每个像素的格子边长（px），放大铺开便于识别
+    const H = 5
+    const W = 3 * 5 + 2 * 1 // 3 字母 × 5 宽 + 2 个间隙 × 1
+    const scaleX = 30 // 横向格距：更大，让字形横向舒展（"宽"）
+    const scaleY = 22 // 纵向格距：更小，压低高度（"扁"），整体矮胖块面感
     // 依次落位：第 i 个 mascot 排在点阵第 i 个像素（mascot 多余则取模环绕填满）
     const p = pts[i % pts.length]
     return {
-      x: (p.x - (W - 1) / 2) * scale,
-      y: (p.y - (H - 1) / 2) * scale,
+      x: (p.x - (W - 1) / 2) * scaleX,
+      y: (p.y - (H - 1) / 2) * scaleY,
     }
   }
   if (shape === 'heart') {
@@ -158,8 +157,8 @@ export const DanceStage = memo(function DanceStage({
     >
       {dancers.map((d, i) => {
         const { x, y } = danceSlot(shape, i, dancers.length)
-        // 拼字母（biu）时用紧凑尺寸，让点阵能识别出字形
-        const dancerSize = shape === 'biu' ? Math.min(size, 34) : size
+        // 拼字母（biu）时用紧凑圆点，让点阵能识别出字形
+        const dancerSize = shape === 'biu' ? Math.min(size, 26) : size
         return (
           <span
             key={d.id}
