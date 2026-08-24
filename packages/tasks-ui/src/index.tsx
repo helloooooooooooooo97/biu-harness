@@ -14,15 +14,17 @@ import {
   LuClock,
   LuFlag,
   LuLock,
+  LuMaximize2,
   LuLoaderCircle,
   LuNotebookPen,
   LuColumns3,
   LuPanelRight,
   LuPencilLine,
   LuPanelsTopLeft,
-  LuChartColumnBig,
   LuChevronDown,
   LuChevronRight,
+  LuGitBranch,
+  LuGauge,
   LuSearch,
   LuStickyNote,
   LuTable2,
@@ -32,6 +34,18 @@ import {
   LuUserRound,
   LuX,
 } from 'react-icons/lu'
+import {
+  ReactFlow,
+  Background,
+  BackgroundVariant,
+  Controls,
+  Handle,
+  Position,
+  type Node as RFNode,
+  type Edge,
+  type NodeProps,
+} from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
 
 export type SlotProps = Record<string, unknown> & {
   renderSlot?: (name: string) => unknown
@@ -43,6 +57,7 @@ type SlotsService = {
 
 export type TaskStatus = 'todo' | 'doing' | 'done'
 export type TaskPriority = 'low' | 'med' | 'high'
+export type TaskDifficulty = 'low' | 'med' | 'high'
 
 export type TaskActor = {
   kind: 'user' | 'agent'
@@ -73,6 +88,7 @@ export type Task = {
   title: string
   status: TaskStatus
   priority: TaskPriority
+  difficulty: TaskDifficulty
   dueAt: number | null
   description: string
   notes: string
@@ -100,6 +116,12 @@ const STATUS_META: Array<{ id: TaskStatus; label: string; icon: ReactNode }> = [
 ]
 
 const PRIORITY_LABEL: Record<TaskPriority, string> = {
+  low: '低',
+  med: '中',
+  high: '高',
+}
+
+const DIFFICULTY_LABEL: Record<TaskDifficulty, string> = {
   low: '低',
   med: '中',
   high: '高',
@@ -680,10 +702,10 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
   const { tasks, setTasks, error, loading, refresh, query, setQuery } = useTasks(compact ? 3000 : 2500)
   const { agents, loading: agentsLoading } = useAgents()
   const [detailId, setDetailId] = useState<string | null>(null)
-  const [view, setView] = useState<'table' | 'board' | 'gantt'>(() => {
+  const [view, setView] = useState<'table' | 'board' | 'graph'>(() => {
     try {
       const saved = window.localStorage.getItem('tasks.view')
-      if (saved === 'table' || saved === 'board' || saved === 'gantt') return saved
+      if (saved === 'table' || saved === 'board' || saved === 'graph') return saved
     } catch {
       /* ignore */
     }
@@ -723,7 +745,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
   // 弹窗内键盘导航：↑/↓（或 ←/→）切换任务，Esc 关闭
   // 键盘导航（感知视图语义）：
   //  - board：↓/↑ 同一列内移动；←/→ 切换列
-  //  - table/gantt：↓/→ 下一个可见任务，↑/← 上一个
+  //  - table：↓/→ 下一个可见任务，↑/← 上一个
   useEffect(() => {
     if (!detailId) return
     const onKey = (e: KeyboardEvent) => {
@@ -762,7 +784,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
           }
         }
       } else {
-        // 表格 / 甘特图：按树的 DFS 顺序（父在前、子随后）
+        // 表格：按树的 DFS 顺序（父在前、子随后）
         const tree = buildTreeRows(filteredTasks, {})
         const idx = tree.findIndex((t) => t.id === detailId)
         if (idx < 0) return
@@ -810,7 +832,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
               [
                 ['table', '表格', <LuTable2 key="table" size={13} aria-hidden />],
                 ['board', '看板', <LuColumns3 key="board" size={13} aria-hidden />],
-                ['gantt', '甘特图', <LuChartColumnBig key="gantt" size={13} aria-hidden />],
+                ['graph', '依赖', <LuGitBranch key="graph" size={13} aria-hidden />],
               ] as const
             ).map(([key, label, icon]) => (
               <button
@@ -890,8 +912,8 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
             agents={agents}
             agentsLoading={agentsLoading}
           />
-        ) : view === 'gantt' ? (
-          <TasksGantt tasks={filteredTasks} onOpenDetail={setDetailId} compact={compact} />
+        ) : view === 'graph' ? (
+          <TasksGraph tasks={filteredTasks} onOpenDetail={setDetailId} detailId={detailId} compact={compact} />
         ) : (
           <TasksTable
             tasks={filteredTasks}
@@ -1002,7 +1024,14 @@ function TasksBoard({
                   {task.blocked ? (
                     <span className="tasks-card-blocked" title="被依赖任务阻塞，无法开工"><LuLock size={11} aria-hidden /></span>
                   ) : null}
-                  <span className={`tasks-card-pri is-p-${task.priority}`} title={`优先级：${task.priority}`} aria-hidden />
+                  <span className={`tasks-card-badge is-p-${task.priority}`} title={`优先级：${PRIORITY_LABEL[task.priority]}`}>
+                    <LuFlag size={10} aria-hidden />
+                    {PRIORITY_LABEL[task.priority]}
+                  </span>
+                  <span className={`tasks-card-badge is-d-${task.difficulty}`} title={`难度：${DIFFICULTY_LABEL[task.difficulty]}`}>
+                    <LuGauge size={10} aria-hidden />
+                    {DIFFICULTY_LABEL[task.difficulty]}
+                  </span>
                 </div>
                 {task.description ? <div className="tasks-card-desc">{task.description}</div> : null}
                 <div className="tasks-card-meta">
@@ -1039,223 +1068,140 @@ function TasksBoard({
   )
 }
 
-const MS = 1000
-const MIN = 60 * MS
-const HOUR = 60 * MIN
-const DAY = 24 * HOUR
+// ---- DAG 依赖图视图（ReactFlow）----
+const GNODE_W = 176
+const GNODE_H = 64
+const GLAYER_GAP_X = 96
+const GLAYER_GAP_Y = 28
 
-// 根据可视跨度选择刻度间隔（秒/分钟/5/10/30分钟/小时/天）
-function pickTick(spanMs: number): number {
-  const cands = [1 * MS, 5 * MS, 10 * MS, 30 * MS, 1 * MIN, 5 * MIN, 10 * MIN, 30 * MIN, 1 * HOUR, 3 * HOUR, 6 * HOUR, 12 * HOUR, 1 * DAY, 3 * DAY, 7 * DAY, 14 * DAY, 30 * DAY]
-  for (const c of cands) {
-    if (spanMs / c <= 40) return c
+function buildGraph(tasks: Task[]): { nodes: RFNode[]; edges: Edge[] } {
+  const byId = new Map(tasks.map((t) => [t.id, t]))
+  const layerOf = new Map<string, number>()
+  const visit = (id: string, visited: Set<string>): number => {
+    if (layerOf.has(id)) return layerOf.get(id)!
+    if (visited.has(id)) return 0
+    visited.add(id)
+    const t = byId.get(id)
+    let layer = 0
+    for (const d of t?.dependsOn ?? []) {
+      if (byId.has(d)) layer = Math.max(layer, visit(d, visited) + 1)
+      else layer = Math.max(layer, 1)
+    }
+    layerOf.set(id, layer)
+    return layer
   }
-  return 30 * DAY
-}
-
-const MIN_SPAN = 15 * MS
-const MAX_SPAN = 365 * DAY
-
-function fmtTick(ts: number, tick: number): string {
-  const d = new Date(ts)
-  if (tick >= DAY) {
-    const opts: Intl.DateTimeFormatOptions = tick >= 7 * DAY ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', hour: '2-digit' }
-    return d.toLocaleString(undefined, opts)
+  const layerGroups: Task[][] = []
+  for (const t of tasks) {
+    const layer = visit(t.id, new Set())
+    ;(layerGroups[layer] ??= []).push(t)
   }
-  if (tick >= HOUR) return d.toLocaleString(undefined, { hour: '2-digit', minute: '2-digit' })
-  return d.toLocaleString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-}
-
-function TasksGantt({
-  tasks,
-  onOpenDetail,
-  compact,
-}: {
-  tasks: Task[]
-  onOpenDetail: (id: string) => void
-  compact: boolean
-}) {
-  const nowTs = Date.now()
-
-  const rows = useMemo(() => {
-    const grouped = new Map<string, Task[]>()
-    for (const t of tasks) {
-      const key = t.assignee?.name || '未分配'
-      if (!grouped.has(key)) grouped.set(key, [])
-      grouped.get(key)!.push(t)
+  for (const g of layerGroups) {
+    if (g) {
+      g.sort((a, b) => {
+        const order = { doing: 0, todo: 1, done: 2 } as Record<TaskStatus, number>
+        return order[a.status] - order[b.status] || a.sort - b.sort
+      })
     }
-    const flat: { assignee: string; task: Task }[] = []
-    const assigneeOrder = [...grouped.keys()].sort((a, b) => a.localeCompare(b, 'zh'))
-    for (const key of assigneeOrder) {
-      const list = [...(grouped.get(key)!)].sort(
-        (a, b) => (eventStartOf(a) ?? a.updatedAt) - (eventStartOf(b) ?? b.updatedAt),
-      )
-      for (const t of list) flat.push({ assignee: key, task: t })
-    }
-    return flat
-  }, [tasks])
-
-  // 默认可视窗口：覆盖最靠前的开始 ~ "现在+缓冲"，聚焦任务发生的时间
-  const defaultView = useMemo(() => {
-    let lo = Infinity
-    let hi = -Infinity
-    for (const { task: t } of rows) {
-      const s = eventStartOf(t)
-      if (s != null && s < lo) lo = s
-      const e = eventEndOf(t) ?? t.dueAt ?? s
-      if (e != null && e > hi) hi = e
-    }
-    const now = Date.now()
-    if (!isFinite(lo)) lo = now - 30 * MIN
-    if (hi < now) hi = now
-    // 给前后留些缓冲；若跨度太小则扩到至少 15 分钟
-    let slo = lo - Math.max(15 * MIN, (hi - lo) * 0.08)
-    let shi = hi + Math.max(15 * MIN, (hi - lo) * 0.08)
-    if (shi - slo < 15 * MIN) shi = slo + 15 * MIN
-    return { slo, shi }
-  }, [rows])
-
-  const [view, setView] = useState(defaultView)
-  useEffect(() => setView(defaultView), [defaultView])
-
-  const trackRef = useRef<HTMLDivElement | null>(null)
-  const span = Math.max(1, view.shi - view.slo)
-  const toPct = (ts: number) => ((ts - view.slo) / span) * 100
-  const tick = pickTick(span)
-
-  const zoomAt = useCallback((factor: number, anchorTs: number) => {
-    setView((v) => {
-      const curSpan = v.shi - v.slo
-      const nextSpan = Math.min(MAX_SPAN, Math.max(MIN_SPAN, curSpan * factor))
-      if (Math.abs(nextSpan - curSpan) < 1) return v
-      // 保持 anchor 点不动：anchor 在视图内的比例不变
-      const ratio = (anchorTs - v.slo) / curSpan
-      const nlo = anchorTs - ratio * nextSpan
-      const nhi = nlo + nextSpan
-      return { slo: isFinite(nlo) ? nlo : v.slo, shi: isFinite(nhi) ? nhi : v.shi }
+  }
+  const nodes: RFNode[] = []
+  layerGroups.forEach((group, li) => {
+    const totalW = group.length * (GNODE_W + GLAYER_GAP_X) - GLAYER_GAP_X
+    let x = -totalW / 2
+    const y = li * (GNODE_H + GLAYER_GAP_Y)
+    group.forEach((t) => {
+      nodes.push({ id: t.id, position: { x, y }, width: GNODE_W, height: GNODE_H, data: { task: t } } as RFNode)
+      x += GNODE_W + GLAYER_GAP_X
     })
-  }, [])
-
-  const viewRef = useRef({ slo: view.slo, span })
-  viewRef.current = { slo: view.slo, span }
-
-  // 原生 wheel 监听（passive:false）以阻止浏览器页面缩放/滚动，并驱动甘特图缩放
-  const zoomRef = useRef(zoomAt)
-  zoomRef.current = zoomAt
-  useEffect(() => {
-    const track = trackRef.current
-    if (!track) return
-    const onWheel = (e: globalThis.WheelEvent) => {
-      e.preventDefault()
-      const rect = track.getBoundingClientRect()
-      const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
-      const anchorTs = viewRef.current.slo + ratio * viewRef.current.span
-      const factor = e.deltaY > 0 ? 1.25 : 1 / 1.25
-      zoomRef.current(factor, anchorTs)
+  })
+  const edges: Edge[] = []
+  for (const group of layerGroups) {
+    for (const t of group) {
+      for (const depId of t.dependsOn ?? []) {
+        if (!byId.has(depId)) continue
+        const dep = byId.get(depId)!
+        const blocked = dep.status !== 'done'
+        edges.push({
+          id: `${depId}->${t.id}`,
+          source: depId,
+          target: t.id,
+          animated: blocked,
+          style: { stroke: blocked ? '#d9822b' : '#3b6fd9', strokeWidth: 2.2 },
+          markerEnd: { type: 'arrowclosed', color: blocked ? '#d9822b' : '#3b6fd9' },
+        })
+      }
     }
-    track.addEventListener('wheel', onWheel, { passive: false })
-    return () => track.removeEventListener('wheel', onWheel)
-  }, [])
+  }
+  return { nodes, edges }
+}
 
-  // 渲染刻度
-  const ticks = useMemo(() => {
-    const out: number[] = []
-    const first = Math.floor(view.slo / tick) * tick
-    for (let v = first; v <= view.shi + tick; v += tick) out.push(v)
-    return out
-  }, [view.slo, view.shi, tick])
-
-  const unitLabel = tick >= DAY ? '天' : tick >= HOUR ? '时' : tick >= MIN ? '分' : '秒'
-
+function GraphTaskNode({ data }: NodeProps) {
+  const { task } = data as { task: Task }
+  const blocked = task.blocked
+  const statusLabel = blocked ? '阻塞' : (STATUS_META.find((s) => s.id === task.status)?.label ?? task.status)
   return (
-    <div className={`tasks-gantt${compact ? ' is-compact' : ''}`} onClick={(e) => e.stopPropagation()}>
-      <div className="tasks-gantt-toolbar">
-        <span className="tasks-gantt-unit">{unitLabel}级</span>
-        <button type="button" className="tasks-gantt-zoombtn" onClick={() => zoomAt(1 / 1.6, view.slo + span / 2)}>放大</button>
-        <button type="button" className="tasks-gantt-zoombtn" onClick={() => zoomAt(1.6, view.slo + span / 2)}>缩小</button>
-        <button type="button" className="tasks-gantt-zoombtn" onClick={() => setView({ slo: nowTs - 30 * MIN, shi: nowTs + 30 * MIN })}>近30分</button>
-        <button type="button" className="tasks-gantt-zoombtn" onClick={() => setView(defaultView)}>适应全部</button>
-      </div>
-      <div className="tasks-gantt-head">
-        <div className="tasks-gantt-label">负责人 / 任务</div>
-        <div className="tasks-gantt-track tasks-gantt-body" ref={trackRef}>
-          {ticks.map((v) => (
-            <span key={v} className="tasks-gantt-tick" style={{ left: toPct(v) + '%' }} aria-hidden>
-              <span className="tasks-gantt-ticklabel">{fmtTick(v, tick)}</span>
-            </span>
-          ))}
-        </div>
-      </div>
-      {rows.map(({ assignee, task: t }) => {
-        const start = eventStartOf(t)
-        const end = eventEndOf(t)
-        // 是否有真实执行（agent 已通过 task_report 开工）：有开始时间才画执行条
-        const started = start != null && (t.status === 'doing' || t.status === 'done')
-        // 进行中（有开始、未结束）：画到"现在"；已完成：开始→结束
-        // 未开始（todo / blocked）：不画宽条，只显示"未开始"占位
-        if (!started || start == null) {
-          // 未开始：在行内显示"未开始"状态标签（无时间宽度）
-          return (
-            <div key={t.id} className={`tasks-gantt-row${assignee === '未分配' ? ' is-unassigned' : ''}`}>
-              <div className="tasks-gantt-label">
-                {t.assignee?.mascot ? (
-                  <MascotAvatar shape={t.assignee.mascot.shape} color={t.assignee.mascot.color} eye={t.assignee.mascot.eye} size={14} busy={t.status === 'doing'} />
-                ) : (
-                  <span className="tasks-gantt-na" aria-hidden>—</span>
-                )}
-                <span className="tasks-gantt-group">{assignee}</span>
-              </div>
-              <div className="tasks-gantt-track">
-                <button
-                  type="button"
-                  className={`tasks-gantt-bar is-${t.blocked ? 'blocked' : t.status} tasks-gantt-notstarted is-p-${t.priority}`}
-                  style={{ left: '0%', width: 'auto' }}
-                  title={`${t.title}${t.blocked ? '\n🔒 被依赖阻塞，尚未开始' : '\n尚未开始（无执行上报）'}${t.dueAt != null ? `\n截止: ${new Date(t.dueAt).toLocaleDateString()}` : ''}`}
-                  onClick={(e) => { e.stopPropagation(); onOpenDetail(t.id) }}
-                >
-                  <span className="tasks-gantt-barname">{t.title}</span>
-                </button>
-              </div>
-            </div>
-          )
-        }
-        // 已开始：draw→ 到结束(如有) 否则到现在(进行中)
-        const drawEnd = end ?? nowTs
-        const drawLeft = toPct(start)
-        const drawWidth = Math.max(1.5, toPct(drawEnd) - drawLeft)
-        return (
-          <div key={t.id} className={`tasks-gantt-row${assignee === '未分配' ? ' is-unassigned' : ''}`}>
-            <div className="tasks-gantt-label">
-              {t.assignee?.mascot ? (
-                <MascotAvatar shape={t.assignee.mascot.shape} color={t.assignee.mascot.color} eye={t.assignee.mascot.eye} size={14} busy={t.status === 'doing'} />
-              ) : (
-                <span className="tasks-gantt-na" aria-hidden>—</span>
-              )}
-              <span className="tasks-gantt-group">{assignee}</span>
-            </div>
-            <div className="tasks-gantt-track">
-              <button
-                type="button"
-                className={`tasks-gantt-bar is-${t.blocked ? 'blocked' : t.status} is-p-${t.priority}`}
-                style={{ left: drawLeft + '%', width: drawWidth + '%' }}
-                title={`${t.title}${start != null ? `\n开始: ${new Date(start).toLocaleString()}` : ''}${end != null ? `\n结束: ${new Date(end).toLocaleString()}` : `\n进行中`}`}
-                onClick={(e) => { e.stopPropagation(); onOpenDetail(t.id) }}
-              >
-                <span className="tasks-gantt-barname">{t.title}</span>
-              </button>
-            </div>
-          </div>
-        )
-      })}
-      {rows.length === 0 ? <div className="tasks-empty">暂无任务</div> : null}
+    <div className="tasks-graph-node-wrap">
+      <button
+        type="button"
+        className={`tasks-graph-node is-p-${task.priority}${blocked ? ' is-blocked' : ''}`}
+      >
+        <span className="tasks-graph-node-title" title={task.title}>{task.title}</span>
+        <span className="tasks-graph-node-meta">
+          <span className={`tasks-graph-status is-${blocked ? 'blocked' : task.status}`}>{statusLabel}</span>
+          <span className={`tasks-card-badge is-p-${task.priority}`} title={`优先级：${PRIORITY_LABEL[task.priority]}`}>
+            <LuFlag size={9} aria-hidden />
+            {PRIORITY_LABEL[task.priority]}
+          </span>
+          <span className={`tasks-card-badge is-d-${task.difficulty}`} title={`难度：${DIFFICULTY_LABEL[task.difficulty]}`}>
+            <LuGauge size={9} aria-hidden />
+            {DIFFICULTY_LABEL[task.difficulty]}
+          </span>
+        </span>
+      </button>
+      <Handle type="target" position={Position.Left} />
+      <Handle type="source" position={Position.Right} />
     </div>
   )
 }
 
-/** 任务开始时间 = 首次 report（doing）的时间；无 report 用 createdAt */
-function eventStartOf(t: Task): number | null {
-  const first = t.reports?.[0]
-  return first?.ts ?? t.createdAt ?? null
+function TasksGraph({
+  tasks,
+  onOpenDetail,
+  detailId,
+  compact,
+}: {
+  tasks: Task[]
+  onOpenDetail: (id: string) => void
+  detailId: string | null
+  compact: boolean
+}) {
+  const tree = useMemo(() => buildGraph(tasks), [tasks])
+  const nodeTypes = useMemo(() => ({ task: GraphTaskNode }), [])
+  const usedNodes = useMemo(() => tree.nodes.map((n) => ({ ...n, type: 'task' as const })), [tree])
+
+  if (tasks.length === 0) return <div className="tasks-empty">暂无任务</div>
+  return (
+    <div className={`tasks-graph${compact ? ' is-compact' : ''}`}>
+      <ReactFlow
+        nodes={usedNodes}
+        edges={tree.edges}
+        nodeTypes={nodeTypes}
+        fitView
+        fitViewOptions={{ padding: 0.15, maxZoom: 1.2 }}
+        minZoom={0.1}
+        maxZoom={3}
+        nodesDraggable
+        panOnScroll
+        zoomOnScroll
+        zoomOnPinch
+        proOptions={{ hideAttribution: true }}
+        onNodeClick={(_, node) => onOpenDetail(node.id)}
+        className="tasks-graph-rf"
+      >
+        <Background variant={BackgroundVariant.Dots} gap={20} color="color-mix(in srgb, var(--dsw-border) 45%, transparent)" />
+        <Controls position="bottom-right" />
+      </ReactFlow>
+    </div>
+  )
 }
 
 /** 任务结束时间 = 最后一次 report done 的时间；进行中无 done 返回 null */
@@ -1330,6 +1276,7 @@ function TasksTable({
             <ThIcon icon={<LuText size={12} aria-hidden />}>标题</ThIcon>
             <ThIcon icon={<LuCircleDashed size={12} aria-hidden />}>状态</ThIcon>
             <ThIcon icon={<LuFlag size={12} aria-hidden />}>优先级</ThIcon>
+            <ThIcon icon={<LuGauge size={12} aria-hidden />}>难度</ThIcon>
             {!compact ? <ThIcon icon={<LuUserRound size={12} aria-hidden />}>创建人</ThIcon> : null}
             {!compact ? <ThIcon icon={<LuClock size={12} aria-hidden />}>创建时间</ThIcon> : null}
             <ThIcon icon={<LuUserRound size={12} aria-hidden />}>实施人</ThIcon>
@@ -1371,6 +1318,15 @@ function TasksTable({
                       if (title && title !== task.title) void onUpdate(task.id, { title })
                     }}
                   />
+                  <button
+                    type="button"
+                    className="tasks-title-open"
+                    aria-label="查看详情"
+                    title="查看详情"
+                    onClick={() => onOpenDetail(task.id)}
+                  >
+                    <LuMaximize2 size={12} aria-hidden />
+                  </button>
                 </div>
               </td>
               <td className="tasks-col-status">
@@ -1390,6 +1346,24 @@ function TasksTable({
                     <>
                       <LuFlag size={12} aria-hidden />
                       <span className="tasks-chip-text">{cur?.label ?? task.priority}</span>
+                    </>
+                  )}
+                />
+              </td>
+              <td className="tasks-col-priority" onClick={(e) => e.stopPropagation()}>
+                <CellSelect<TaskDifficulty>
+                  value={task.difficulty}
+                  options={(Object.keys(DIFFICULTY_LABEL) as TaskDifficulty[]).map((k) => ({
+                    value: k,
+                    label: DIFFICULTY_LABEL[k],
+                    icon: <LuGauge size={12} aria-hidden />,
+                  }))}
+                  onSelect={(difficulty) => void onUpdate(task.id, { difficulty })}
+                  valueClass={`is-d-${task.difficulty}`}
+                  renderValue={(cur) => (
+                    <>
+                      <LuGauge size={12} aria-hidden />
+                      <span className="tasks-chip-text">{cur?.label ?? task.difficulty}</span>
                     </>
                   )}
                 />
@@ -1533,6 +1507,28 @@ function TaskDetailPanel({
                 <>
                   {cur?.icon ?? null}
                   <span className="tasks-chip-text">{cur?.label ?? task.priority}</span>
+                </>
+              )}
+            />
+          </label>
+        </div>
+
+        <div className="tasks-field-row">
+          <label className="tasks-field">
+            <span>难度</span>
+            <CellSelect<TaskDifficulty>
+              value={task.difficulty}
+              options={(Object.keys(DIFFICULTY_LABEL) as TaskDifficulty[]).map((k) => ({
+                value: k,
+                label: DIFFICULTY_LABEL[k],
+                icon: <LuGauge size={12} aria-hidden />,
+              }))}
+              onSelect={(difficulty) => void onUpdate(task.id, { difficulty })}
+              valueClass={`is-d-${task.difficulty}`}
+              renderValue={(cur) => (
+                <>
+                  {cur?.icon ?? null}
+                  <span className="tasks-chip-text">{cur?.label ?? task.difficulty}</span>
                 </>
               )}
             />
@@ -1806,9 +1802,15 @@ if (typeof document !== 'undefined') {
 .tasks-card-titletext { flex:1; min-width:0; word-break:break-word; }
 .tasks-card-pri { flex:none; position:relative; top:4px; width:6px; height:6px; border-radius:50%; }
 .tasks-card-blocked { flex:none; display:inline-flex; position:relative; top:3px; color:#9a6700; }
-.tasks-card-pri.is-p-high { background:var(--dsw-danger); }
-.tasks-card-pri.is-p-med { background:color-mix(in srgb, var(--dsw-business) 85%, transparent); }
-.tasks-card-pri.is-p-low { background:var(--dsw-label-3); }
+/* ---- 优先级 / 难度 徽标（icon + 文字，配色）---- */
+.tasks-card-badge { flex:none; display:inline-flex; align-items:center; gap:2px; border-radius:999px; padding:1px 5px; font-size:9px; font-weight:700; line-height:1.4; white-space:nowrap; }
+.tasks-card-badge.is-p-high { color:var(--dsw-danger); background:color-mix(in srgb, var(--dsw-danger) 12%, transparent); }
+.tasks-card-badge.is-p-med { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 12%, transparent); }
+.tasks-card-badge.is-p-low { color:var(--dsw-label-3); background:color-mix(in srgb, var(--dsw-label-3) 12%, transparent); }
+/* ---- 难度（高红 / 中橙 / 低绿）---- */
+.tasks-card-badge.is-d-high { color:#d64545; background:color-mix(in srgb, #d64545 12%, transparent); }
+.tasks-card-badge.is-d-med { color:#e07a2f; background:color-mix(in srgb, #e07a2f 12%, transparent); }
+.tasks-card-badge.is-d-low { color:#3d9a5f; background:color-mix(in srgb, #3d9a5f 12%, transparent); }
 .tasks-card-desc { font-size:11px; color:var(--dsw-label-2); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .tasks-card-meta { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--dsw-label-3); margin-top:2px; }
 .tasks-card-assignee { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -1817,39 +1819,6 @@ if (typeof document !== 'undefined') {
 .tasks-card-due.is-overdue { color:var(--dsw-danger); font-weight:650; }
 .tasks-board-empty { color:var(--dsw-label-3); font-size:11px; padding:14px 6px; text-align:center; }
 
-/* ---- 甘特图视图 ---- */
-.tasks-gantt { display:flex; flex-direction:column; margin-top:8px; border:1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent); border-radius:10px; background:color-mix(in srgb, var(--dsw-muted-fill) 26%, transparent); overflow:hidden; }
-.tasks-gantt-toolbar { display:flex; align-items:center; gap:6px; padding:6px 8px; border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 70%, transparent); background:color-mix(in srgb, var(--dsw-surface) 60%, transparent); flex-wrap:wrap; }
-.tasks-gantt-unit { font-size:10px; font-weight:700; color:var(--dsw-label-2); background:var(--dsw-muted-fill); border-radius:8px; padding:2px 7px; }
-.tasks-gantt-zoombtn { font:inherit; font-size:10px; font-weight:600; color:var(--dsw-label-2); border:1px solid var(--dsw-border); border-radius:6px; padding:2px 8px; background:transparent; cursor:pointer; }
-.tasks-gantt-zoombtn:hover { background:var(--dsw-hover); }
-.tasks-gantt-head, .tasks-gantt-row { display:flex; align-items:center; }
-.tasks-gantt-label { flex:0 0 130px; display:flex; align-items:center; gap:6px; padding:6px 10px; font-size:11px; font-weight:650; color:var(--dsw-label); border-right:1px solid var(--dsw-border); min-width:0; }
-.tasks-gantt-label .tasks-gantt-group { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.tasks-gantt-track { position:relative; flex:1; min-width:0; height:34px; }
-.tasks-gantt-body { cursor:grab; touch-action:pan-y; background:
-  repeating-linear-gradient(90deg, transparent 0, transparent calc(1px), color-mix(in srgb, var(--dsw-border) 40%, transparent) calc(1px)); }
-.tasks-gantt-head { position:sticky; top:0; z-index:2; background:color-mix(in srgb, var(--dsw-surface) 70%, transparent); border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 70%, transparent); }
-.tasks-gantt-head .tasks-gantt-track { height:30px; overflow:hidden; }
-.tasks-gantt-tick { position:absolute; top:0; bottom:0; font-size:10px; color:var(--dsw-label-3); white-space:nowrap; pointer-events:none; }
-.tasks-gantt-tick::before { content:''; position:absolute; left:0; top:0; bottom:0; width:1px; background:color-mix(in srgb, var(--dsw-border) 70%, transparent); }
-.tasks-gantt-ticklabel { position:absolute; top:2px; left:4px; }
-.tasks-gantt-bar { position:absolute; top:50%; transform:translateY(-50%); display:flex; align-items:center; gap:4px; min-width:0; height:22px; border:0; border-radius:5px; padding:0 5px; font:inherit; font-size:10px; color:#fff; cursor:pointer; overflow:hidden; }
-.tasks-gantt-bar.is-doing { background:var(--dsw-business); }
-.tasks-gantt-bar.is-done { background:color-mix(in srgb, #3d9a5f 85%, transparent); }
-.tasks-gantt-bar.is-todo { background:var(--dsw-label-3); opacity:.8; }
-.tasks-gantt-bar.is-blocked { background:#9a6700; opacity:.85; }
-.tasks-gantt-bar.tasks-gantt-notstarted { position:relative; left:6px !important; width:auto !important; max-width:160px; background:transparent; color:var(--dsw-label-2); padding:0; box-shadow:none; }
-.tasks-gantt-bar.tasks-gantt-notstarted::before { content:''; display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--dsw-label-3); margin-right:5px; flex:none; }
-.tasks-gantt-bar.tasks-gantt-notstarted.is-blocked::before { background:#9a6700; }
-.tasks-gantt-bar.tasks-gantt-notstarted:hover { filter:none; background:color-mix(in srgb, var(--dsw-muted-fill) 40%, transparent); border-radius:4px; }
-.tasks-gantt-bar.is-p-med { opacity:.92; }
-.tasks-gantt-bar:hover { filter:brightness(1.08); }
-.tasks-gantt-barname { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.tasks-gantt-row { border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 60%, transparent); }
-.tasks-gantt-row:last-child { border-bottom:0; }
-.tasks-gantt-row.is-unassigned .tasks-gantt-label .tasks-gantt-group { color:var(--dsw-label-3); font-style:italic; }
-.tasks-gantt-na { color:var(--dsw-label-3); font-size:12px; }
 .tasks-create-btn:disabled { opacity:.35; cursor:default; }
 .tasks-error { border-radius:7px; padding:6px 8px; background:var(--dsw-danger-soft); color:var(--dsw-danger); font-size:11px; }
 .tasks-empty { color:var(--dsw-label-3); font-size:12px; line-height:1.45; }
@@ -1877,6 +1846,9 @@ if (typeof document !== 'undefined') {
 .tasks-col-action { width:56px; }
 .tasks-col-tree { width:20px; }
 .tasks-title-cell { display:flex; align-items:center; gap:2px; min-width:0; }
+.tasks-title-open { flex:none; width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; border:0; background:transparent; color:var(--dsw-label-3); border-radius:4px; cursor:pointer; padding:0; opacity:0; }
+.tasks-title-cell:hover .tasks-title-open { opacity:1; }
+.tasks-title-open:hover { opacity:1; color:var(--dsw-label); background:var(--dsw-hover); }
 .tasks-tree-toggle { width:20px; height:20px; flex:none; display:inline-flex; align-items:center; justify-content:center; border:0; background:transparent; color:var(--dsw-label-3); border-radius:4px; cursor:pointer; padding:0; }
 .tasks-tree-toggle:hover { background:var(--dsw-hover); }
 .tasks-tree-toggle.is-empty { cursor:default; }
@@ -1906,6 +1878,9 @@ if (typeof document !== 'undefined') {
 .tasks-cellselect-trigger.is-p-high { color:var(--dsw-danger); }
 .tasks-cellselect-trigger.is-p-med { color:var(--dsw-business); }
 .tasks-cellselect-trigger.is-p-low { color:var(--dsw-label-3); }
+.tasks-cellselect-trigger.is-d-high { color:#d64545; }
+.tasks-cellselect-trigger.is-d-med { color:#e07a2f; }
+.tasks-cellselect-trigger.is-d-low { color:#3d9a5f; }
 .tasks-status-cell { display:flex; align-items:center; gap:4px; min-width:0; }
 .tasks-status-cell .tasks-cell-select { flex:1; min-width:0; }
 .tasks-priority-select { max-width:3.5rem; }
@@ -1991,6 +1966,31 @@ if (typeof document !== 'undefined') {
 .tasks-detail-foot { padding:10px 12px; border-top:1px solid var(--dsw-border); }
 .tasks-danger-btn { border:1px solid color-mix(in srgb, var(--dsw-danger) 35%, var(--dsw-border)); border-radius:8px; padding:6px 10px; background:transparent; color:var(--dsw-danger); cursor:pointer; font:inherit; font-size:11px; font-weight:650; display:inline-flex; align-items:center; gap:5px; }
 .tasks-danger-btn:hover { background:var(--dsw-danger-soft); }
+
+/* ---- 依赖（DAG）视图 ---- */
+/* ---- DAG 依赖图（自绘 SVG + 缩放）---- */
+.tasks-graph { margin-top:8px; border:1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent); border-radius:10px; background:color-mix(in srgb, var(--dsw-muted-fill) 26%, transparent); overflow:hidden; flex:1; min-height:320px; display:flex; flex-direction:column; }
+.tasks-graph.is-compact { min-height:200px; }
+.tasks-graph-rf { width:100%; flex:1; min-height:0; }
+.tasks-graph .react-flow__attribution { display:none; }
+.tasks-graph .react-flow__controls { overflow:hidden; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.14); }
+.tasks-graph .react-flow__control-button { background:var(--dsw-surface); color:var(--dsw-label-2); border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 60%, transparent); }
+.tasks-graph-node-wrap { position:relative; width:100%; height:100%; }
+.tasks-graph-node-wrap .react-flow__handle { width:8px; height:8px; border:2px solid var(--dsw-surface); border-radius:50%; background:var(--dsw-border); }
+.tasks-graph-node-wrap .react-flow__handle-left { left:-5px; }
+.tasks-graph-node-wrap .react-flow__handle-right { right:-5px; }
+.tasks-graph-node { display:flex; flex-direction:column; gap:3px; width:100%; height:100%; text-align:left; border:1px solid color-mix(in srgb, var(--dsw-border) 78%, transparent); border-radius:8px; padding:6px 8px; background:var(--dsw-surface); color:var(--dsw-label); font:inherit; cursor:pointer; box-sizing:border-box; box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 60%, transparent); }
+.tasks-graph-node:hover { border-color:color-mix(in srgb, var(--dsw-business) 55%, transparent); }
+.tasks-graph-node.is-active { outline:2px solid color-mix(in srgb, var(--dsw-business) 65%, transparent); background:color-mix(in srgb, var(--dsw-business) 8%, var(--dsw-surface)); }
+.tasks-graph-node.is-blocked { box-shadow:0 0 0 1px #d9822b; }
+.tasks-graph-node-title { font-size:11px; font-weight:620; line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; word-break:break-word; padding-right:16px; }
+.tasks-graph-node-meta { margin-top:auto; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.tasks-graph-status { font-size:9.5px; font-weight:650; color:var(--dsw-label-3); }
+.tasks-graph-status.is-todo { color:var(--dsw-label-3); }
+.tasks-graph-status.is-doing { color:var(--dsw-business); }
+.tasks-graph-status.is-done { color:#2f7d4c; }
+.tasks-graph-status.is-blocked { color:#d9822b; }
+.tasks-graph-node-meta .tasks-card-badge { font-size:8.5px; padding:0 4px; }
 `
   if (!style.parentNode) document.head.appendChild(style)
 }
