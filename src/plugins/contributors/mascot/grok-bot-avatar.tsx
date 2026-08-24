@@ -16,6 +16,8 @@ export type GrokBotAvatarProps = {
   busy?: boolean
   /** 刚创建：播放 intro 动画（毫秒），默认 0 表示不播 */
   introMs?: number
+  /** 彩蛋：进入持续庆祝/跳舞动画（spinWild 循环） */
+  dancing?: boolean
   /** Force-pause (e.g. offscreen). Visibility also auto-pauses. */
   paused?: boolean
   followPointer?: boolean
@@ -34,7 +36,12 @@ type BotInternal = GrokCharacterLike & {
   hopAt?: number
 }
 
-function moodFor(busy: boolean, intro: boolean): 'static' | 'intro' | 'busy' {
+function moodFor(
+  busy: boolean,
+  intro: boolean,
+  dancing: boolean,
+): 'static' | 'intro' | 'busy' | 'dancing' {
+  if (dancing) return 'dancing'
   if (busy) return 'busy'
   if (intro) return 'intro'
   return 'static'
@@ -50,6 +57,7 @@ export const GrokBotAvatar = memo(function GrokBotAvatar({
   size = 44,
   busy = false,
   introMs = 0,
+  dancing = false,
   paused = false,
   followPointer = false,
   className,
@@ -65,12 +73,14 @@ export const GrokBotAvatar = memo(function GrokBotAvatar({
   const colorRef = useRef(color)
   const busyRef = useRef(busy)
   const introRef = useRef(introActive)
+  const danceRef = useRef(dancing)
   shapeRef.current = shape
   colorRef.current = color
   busyRef.current = busy
   introRef.current = introActive
+  danceRef.current = dancing
 
-  const shouldAnimate = busy || introActive
+  const shouldAnimate = busy || introActive || dancing
 
   useEffect(() => {
     if (introMs <= 0) {
@@ -114,7 +124,7 @@ export const GrokBotAvatar = memo(function GrokBotAvatar({
         detachSharedTicker(botRef.current)
         botRef.current.destroy()
       }
-      const mood = moodFor(busyRef.current, introRef.current)
+      const mood = moodFor(busyRef.current, introRef.current, danceRef.current)
       const bot = new window.GrokCharacter(svgRef.current, {
         shape: shapeRef.current,
         color: colorRef.current,
@@ -129,7 +139,7 @@ export const GrokBotAvatar = memo(function GrokBotAvatar({
       }) as BotInternal
       applySidebarMood(bot, mood)
       attachSharedTicker(bot)
-      const animate = busyRef.current || introRef.current
+      const animate = busyRef.current || introRef.current || danceRef.current
       bot.setPaused(paused || !visible || !animate)
       botRef.current = bot
       setReady(true)
@@ -152,14 +162,14 @@ export const GrokBotAvatar = memo(function GrokBotAvatar({
     bot.setShape(shape)
     bot.setColor(color, 'light')
     suppressSidebarTricks(bot)
-    applySidebarMood(bot, moodFor(busy, introActive))
-  }, [shape, color, ready, busy, introActive])
+    applySidebarMood(bot, moodFor(busy, introActive, dancing))
+  }, [shape, color, ready, busy, introActive, dancing])
 
   useEffect(() => {
     const bot = botRef.current
     if (!bot || !ready) return
-    applySidebarMood(bot, moodFor(busy, introActive))
-  }, [busy, introActive, ready])
+    applySidebarMood(bot, moodFor(busy, introActive, dancing))
+  }, [busy, introActive, dancing, ready])
 
   useEffect(() => {
     botRef.current?.setPaused(paused || !visible || !shouldAnimate)

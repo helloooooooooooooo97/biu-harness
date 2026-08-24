@@ -4,6 +4,7 @@ import * as clock from './plugins/contributors/clock.ts'
 import * as chat from './plugins/contributors/chat.ts'
 import * as dashboard from './plugins/contributors/dashboard.ts'
 import * as logger from './plugins/contributors/logger.ts'
+import * as mascotEasterEgg from './plugins/contributors/mascot-easter-egg.ts'
 
 export interface CatalogEntry {
   id: string
@@ -69,6 +70,16 @@ export const builtinCatalog: CatalogEntry[] = [
     blurb: '旁观 internal/dispatch。',
     plugin: logger,
     inject: logger.inject,
+    togglable: true,
+    enabled: true,
+  },
+  {
+    id: 'mascot-easter-egg',
+    name: 'Mascot 彩蛋',
+    layer: 'capability',
+    blurb: 'mascot_dance 工具：让所有 mascot 一起跳舞。',
+    plugin: mascotEasterEgg,
+    inject: mascotEasterEgg.inject,
     togglable: true,
     enabled: true,
   },

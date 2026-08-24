@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { memo, useCallback, useEffect, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
 import type { SlotProps } from '../registry/slots.ts'
@@ -7,17 +7,25 @@ import { bindSessionView, type SessionViewService } from '../infrastructure/sess
 import { bindProjectView, type ProjectViewService } from '../infrastructure/project-view.ts'
 import { parseAppPath } from '../infrastructure/session-route.ts'
 import {
+  isMascotDancing,
+  mascotDanceShape,
+  subscribeMascotDance,
+} from '../infrastructure/mascot-dance.ts'
+import {
   APP_MODULES,
   moduleIdFromPath,
   type AppModuleId,
 } from '../infrastructure/app-modules.ts'
 import { ChatSidebar } from './chat-sidebar.tsx'
+import { DanceStage } from './mascot/dance-stage.tsx'
 import { SessionInspector } from './session-inspector.tsx'
+import { SessionConfigDialog } from './chat/session-config-dialog.tsx'
 import { FolderGlyph } from './chat/project-panel.tsx'
 import { DashboardModule } from './dashboard-module.tsx'
 import {
   LuPanelLeft,
   LuPanelRight,
+  LuSettings2,
 } from 'react-icons/lu'
 
 export const name = 'shell'
@@ -147,11 +155,23 @@ function Shell(props: SlotProps) {
   const location = useLocation()
   const live = useSnapshot((state: Snapshot) => state.plugins.some((plugin) => plugin.enabled))
   const sessionId = useSessionView((state) => state.sessionId)
+  const danceSessions = useSessionView((state) => state.sessions)
+  const dancing = useSyncExternalStore(
+    subscribeMascotDance,
+    () => isMascotDancing(),
+    () => false,
+  )
+  const danceShape = useSyncExternalStore(
+    subscribeMascotDance,
+    () => mascotDanceShape(),
+    () => 'circle' as const,
+  )
   const project = useSessionView((state) => state.project)
   const focusCallId = useSessionView((state) => state.focusCallId)
   const routeView = useSessionView((state) => state.view)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<string>('plugins')
+  const [configOpen, setConfigOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [inspectorOpen, setInspectorOpen] = useState(() => {
     try {
@@ -163,7 +183,7 @@ function Shell(props: SlotProps) {
   const [inspectorWidth, setInspectorWidth] = useState(() => {
     try {
       const n = Number(localStorage.getItem('cordis.inspector.width'))
-      if (Number.isFinite(n) && n >= 240 && n <= 720) return n
+      if (Number.isFinite(n) && n >= 240 && n <= 1000) return n
     } catch {
       /* ignore */
     }
@@ -189,7 +209,7 @@ function Shell(props: SlotProps) {
     }
   }, [])
   const onInspectorWidthChange = useCallback((width: number) => {
-    const next = Math.min(720, Math.max(240, Math.round(width)))
+    const next = Math.min(1000, Math.max(240, Math.round(width)))
     setInspectorWidth(next)
     try {
       localStorage.setItem('cordis.inspector.width', String(next))
@@ -283,6 +303,8 @@ function Shell(props: SlotProps) {
         onCollapse={collapseSidebar}
       />
 
+      <DanceStage sessions={danceSessions} on={dancing} shape={danceShape} />
+
       <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
         <div
           className={`min-h-0 min-w-0 flex-col overflow-hidden ${activeModule === 'agent' ? 'flex flex-1' : 'hidden'}`}
@@ -309,6 +331,16 @@ function Shell(props: SlotProps) {
               ) : null}
             </div>
             <div className="chat-view-header-right">
+              <button
+                type="button"
+                className="chat-view-header-expand"
+                title="配置"
+                aria-label="配置"
+                data-testid="header-config-toggle"
+                onClick={() => setConfigOpen(true)}
+              >
+                <LuSettings2 className="size-3.5" />
+              </button>
               <button
                 type="button"
                 className={`chat-view-header-expand${inspectorOpen ? ' is-active' : ''}`}
@@ -350,6 +382,13 @@ function Shell(props: SlotProps) {
           renderSlot={props.renderSlot}
         />
       ) : null}
+
+      <SessionConfigDialog
+        open={configOpen}
+        onClose={() => setConfigOpen(false)}
+        useSessionView={useSessionView}
+        sessionView={sessionView}
+      />
 
       <div
         className={`fixed inset-0 z-20 flex items-center justify-center bg-[var(--dsw-overlay)] ${settingsOpen ? '' : 'hidden'}`}

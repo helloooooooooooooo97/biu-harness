@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { Service, type Context } from 'cordis'
+import { startMascotDance } from './mascot-dance.ts'
 
 export interface PluginRow {
   id: string
@@ -84,6 +85,14 @@ export class SnapshotService extends Service {
           })
         }
         if (parsed.type === 'clock') this.replace({ clockIso: (parsed.payload as { iso: string }).iso })
+        if (parsed.type === 'mascot') {
+          const payload = parsed.payload as
+            | { action?: string; durationMs?: number; shape?: import('./mascot-dance.ts').MascotDanceShape }
+            | undefined
+          if (payload?.action === 'dance') {
+            startMascotDance(payload.durationMs, payload.shape)
+          }
+        }
         if (parsed.type === 'session') {
           const detail = parsed.payload as { sessionId?: string; event?: SessionEventLike }
           if (detail.sessionId && detail.event && typeof detail.event.seq === 'number') {

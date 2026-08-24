@@ -7,11 +7,15 @@ type Tickable = {
 }
 
 const bots = new Set<Tickable>()
+/** 正在跳舞的 bot：每帧重新武装 celebrate，让 spinWild/庆祝动画连续循环。 */
+const dancingBots = new Set<Tickable>()
 let rafId = 0
 let lastDrive = 0
 
 /** Sidebar bots share one clock (~30fps) instead of N×60 RAF loops. */
 const FRAME_MS = 1000 / 30
+
+type Danceable = Tickable & { celebrateAt?: number }
 
 function drive(now: number) {
   if (now - lastDrive >= FRAME_MS) {
@@ -19,6 +23,12 @@ function drive(now: number) {
     for (const bot of bots) {
       if (bot.paused) continue
       bot._tick(now)
+      // 跳舞中：帧结束后把 celebrate 触发点设回过去时，
+      // 一旦当帧的 spinWild 转完（this.trick 清空），下一帧立刻连续触发庆祝 → 持续跳舞。
+      if (dancingBots.has(bot)) {
+        const raw = bot as Danceable
+        if (typeof raw.celebrateAt === 'number') raw.celebrateAt = now - 50
+      }
     }
   }
   let anyActive = false
@@ -81,6 +91,7 @@ export function detachSharedTicker(bot: object) {
   const raw = bot as Tickable
   if (!raw.__shared) return
   bots.delete(raw)
+  dancingBots.delete(raw)
   raw.__shared = false
   if (raw._raf) {
     cancelAnimationFrame(raw._raf)
@@ -106,13 +117,17 @@ export function suppressSidebarTricks(bot: object) {
   raw.hopAt = -1
 }
 
-/** Idle static / intro onboarding / busy thinking. */
-export function applySidebarMood(bot: object, mood: 'static' | 'intro' | 'busy') {
+/** Idle static / intro onboarding / busy thinking / dancing. */
+export function applySidebarMood(
+  bot: object,
+  mood: 'static' | 'intro' | 'busy' | 'dancing',
+) {
   const raw = bot as {
     setMode?: (m: string) => void
     setState?: (s: string, o?: { resetEyes?: boolean }) => void
   }
   suppressSidebarTricks(bot)
+  if (mood !== 'dancing') dancingBots.delete(bot as Tickable)
   if (mood === 'busy') {
     raw.setMode?.('hold')
     raw.setState?.('thinking', { resetEyes: false })
@@ -120,6 +135,15 @@ export function applySidebarMood(bot: object, mood: 'static' | 'intro' | 'busy')
   }
   if (mood === 'intro') {
     raw.setMode?.('onboarding')
+    return
+  }
+  if (mood === 'dancing') {
+    // 让 celebrate 状态驱动旋转庆祝，并注册到持续跳舞循环
+    const danceable = bot as Danceable
+    danceable.celebrateAt = 0
+    dancingBots.add(bot as Tickable)
+    raw.setMode?.('hold')
+    raw.setState?.('celebrate', { resetEyes: false })
     return
   }
   raw.setMode?.('hold')

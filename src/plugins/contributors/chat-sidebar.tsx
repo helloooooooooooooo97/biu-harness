@@ -1,5 +1,6 @@
-import { memo, useCallback, useLayoutEffect, useMemo, useRef } from 'react'
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { isMascotDancing, subscribeMascotDance } from '../infrastructure/mascot-dance.ts'
 import {
   bindSessionView,
   type SessionListItem,
@@ -25,11 +26,13 @@ const SessionRow = memo(function SessionRow({
   item,
   active,
   busy,
+  dancing,
   onDelete,
 }: {
   item: SessionListItem
   active: boolean
   busy: boolean
+  dancing: boolean
   onDelete: (item: SessionListItem) => void
 }) {
   const identity = resolveSessionMascot(item.id, item.mascot)
@@ -45,7 +48,8 @@ const SessionRow = memo(function SessionRow({
           identity={identity}
           busy={busy}
           animate={false}
-          title={`${identity.shape} · ${identity.color}`}
+          dancing={dancing}
+          title={dancing ? '跳舞中 🎉' : `${identity.shape} · ${identity.color}`}
         />
         <span className="min-w-0 flex-1 truncate font-medium">
           {(item.type ?? 'chat') === 'live' ? (
@@ -117,6 +121,11 @@ export const ChatSidebar = memo(function ChatSidebar({
   const toggleProjectGroup = useSidebarCollapseStore((state) => state.toggle)
   const expandProjectGroup = useSidebarCollapseStore((state) => state.expand)
   const projectGroups = useMemo(() => groupSessionsByProject(sessions), [sessions])
+  const dancing = useSyncExternalStore(
+    subscribeMascotDance,
+    () => isMascotDancing(),
+    () => false,
+  )
   const prevRouteSessionRef = useRef<string | null>(null)
 
   // 仅在「切到」另一会话时展开其所在组；列表刷新不会顶开用户刚折叠的组
@@ -252,6 +261,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                         item={item}
                         active={item.id === routeSessionId}
                         busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
+                        dancing={dancing}
                         onDelete={deleteChat}
                       />
                     ))}

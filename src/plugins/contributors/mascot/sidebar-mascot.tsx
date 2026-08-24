@@ -19,6 +19,8 @@ export type SidebarMascotProps = {
    * 侧栏非当前会话请传 false：只亮静态绿点，避免多 bot 抢 RAF。
    */
   animate?: boolean
+  /** 彩蛋：所有 mascot 一起跳舞。即使 animate=false 也强开完整动画并进入 celebrate 循环。 */
+  dancing?: boolean
   /** 用于匹配 markSidebarMascotFresh；有剩余 intro 时才播放动画 */
   sessionId?: string
   className?: string
@@ -37,6 +39,7 @@ export const SidebarMascot = memo(function SidebarMascot({
   size = 44,
   busy = false,
   animate,
+  dancing = false,
   sessionId,
   className,
   title = 'Biu',
@@ -57,8 +60,8 @@ export const SidebarMascot = memo(function SidebarMascot({
     return () => window.clearTimeout(timer)
   }, [sessionId])
 
-  const allowMotion = animate !== false
-  const animated = allowMotion && (busy || introMs > 0)
+  const allowMotion = animate !== false || dancing
+  const animated = allowMotion && (busy || introMs > 0 || dancing)
 
   if (!animated) {
     return (
@@ -79,6 +82,7 @@ export const SidebarMascot = memo(function SidebarMascot({
       size={size}
       busy={busy}
       introMs={introMs}
+      dancing={dancing}
       paused={paused}
       followPointer={followPointer}
       className={className}
