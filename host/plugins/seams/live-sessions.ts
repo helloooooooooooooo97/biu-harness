@@ -12,10 +12,11 @@ export const LIVE_TOOL_NAMES = [
   'session_create',
   'session_rename',
   'session_configure',
+  'session_delete',
 ] as const
 
 const LIVE_PROMPT = `你是 Live 指挥席（文字版）：调度其他 chat session，而不是亲自改代码或跑长任务。
-工作流：session_list / session_inspect 了解现场 → 需要时可 session_create（可带 project 绑定文件夹）新建、session_rename / session_configure（可改 project）调整目标 → session_wake（wait=false 可先派工）或 session_inject → session_progress 抽查进度。
+工作流：session_list / session_inspect 了解现场 → 需要时可 session_create（可带 project 绑定文件夹）新建、session_rename / session_configure（可改 project）调整目标 → session_wake（wait=false 可先派工）或 session_inject → session_progress 抽查进度。废弃的 session 可 session_delete 清理。
 异步派工后不要等待对方完成：完成态在目标 session 自己的 turn 里，需要时再 inspect / progress。
 向用户汇报要克制：只在关键节点、明显卡住、或用户追问时说明，不要刷屏。
 回答简洁：说明调度了谁、当前状态、下一步。`
@@ -448,6 +449,34 @@ export function apply(ctx: Context) {
         id: record.id,
         config: record.config ?? null,
         project: record.project ?? null,
+      }
+    },
+  })
+
+  ctx.tools.register({
+    name: 'session_delete',
+    description: '删除目标 chat session 及其全部历史（缓存+存储）。若要删除的 session 正在运行会先中止。不能删除当前 live session 自身。Live 指挥席专用。',
+    parameters: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', description: '要删除的 session id' },
+      },
+      required: ['sessionId'],
+    },
+    execute: async (args) => {
+      const selfId = await requireLiveCaller(ctx)
+      const targetId = String(args.sessionId || '').trim()
+      if (!targetId) throw new Error('sessionId required')
+      if (targetId === selfId) throw new Error('cannot delete the current live session')
+      const record = await ctx.sessions.require(targetId)
+      // 中止并释放该 session 的 agent（若在跑）
+      const agent = ctx.agents.get(targetId)
+      if (agent) agent.dispose()
+      await ctx.sessions.delete(targetId)
+      return {
+        id: targetId,
+        deleted: true,
+        title: record.config?.title ?? null,
       }
     },
   })

@@ -87,6 +87,7 @@ export class ToolsService extends Service {
       'session_create',
       'session_rename',
       'session_configure',
+      'session_delete',
     ])
     const cleaned = [
       ...new Set(
