@@ -11,6 +11,7 @@ const require = createRequire(import.meta.url)
 
 export type TaskStatus = 'todo' | 'doing' | 'done'
 export type TaskPriority = 'low' | 'med' | 'high'
+export type TaskDifficulty = 'low' | 'med' | 'high'
 export type TaskActorKind = 'user' | 'agent'
 
 export type TaskActor = {
@@ -43,6 +44,8 @@ export type TaskRow = {
   title: string
   status: TaskStatus
   priority: TaskPriority
+  /** 难度（高/中/低） */
+  difficulty: TaskDifficulty
   dueAt: number | null
   /** 任务描述 */
   description: string
@@ -80,6 +83,7 @@ export type TaskCreateInput = {
   title: string
   status?: TaskStatus
   priority?: TaskPriority
+  difficulty?: TaskDifficulty
   assignee?: TaskActor | null
   assigneeSessionId?: string
   dueAt?: number | null
@@ -96,6 +100,7 @@ export type TaskUpdateInput = Partial<{
   title: string
   status: TaskStatus
   priority: TaskPriority
+  difficulty: TaskDifficulty
   assignee: TaskActor | null
   assigneeSessionId: string | null
   dueAt: number | null
@@ -168,6 +173,7 @@ type HostCtx = Context & {
 
 const STATUSES = new Set<TaskStatus>(['todo', 'doing', 'done'])
 const PRIORITIES = new Set<TaskPriority>(['low', 'med', 'high'])
+const DIFFICULTIES = new Set<TaskDifficulty>(['low', 'med', 'high'])
 
 function now() {
   return Date.now()
@@ -235,6 +241,11 @@ function asStatus(value: unknown, fallback: TaskStatus = 'todo'): TaskStatus {
 function asPriority(value: unknown, fallback: TaskPriority = 'med'): TaskPriority {
   const raw = String(value ?? fallback)
   return PRIORITIES.has(raw as TaskPriority) ? (raw as TaskPriority) : fallback
+}
+
+function asDifficulty(value: unknown, fallback: TaskDifficulty = 'med'): TaskDifficulty {
+  const raw = String(value ?? fallback)
+  return DIFFICULTIES.has(raw as TaskDifficulty) ? (raw as TaskDifficulty) : fallback
 }
 
 function normalizeActor(value: unknown, fallbackName = '用户'): TaskActor | null {
@@ -481,6 +492,7 @@ function mapRow(row: Record<string, unknown>): TaskRow {
     title: String(row.title ?? ''),
     status: asStatus(row.status),
     priority: asPriority(row.priority),
+    difficulty: asDifficulty(row.difficulty),
     dueAt: row.due_at == null ? null : Number(row.due_at),
     description: String(row.description ?? ''),
     notes: String(row.notes ?? ''),
@@ -584,6 +596,7 @@ export class TasksService extends Service {
         title TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'todo',
         priority TEXT NOT NULL DEFAULT 'med',
+        difficulty TEXT NOT NULL DEFAULT 'med',
         assignee TEXT NOT NULL DEFAULT '',
         due_at INTEGER,
         notes TEXT NOT NULL DEFAULT '',
@@ -608,6 +621,7 @@ export class TasksService extends Service {
       "ALTER TABLE tasks ADD COLUMN parent_id TEXT DEFAULT ''",
       "ALTER TABLE tasks ADD COLUMN depends_on TEXT NOT NULL DEFAULT '[]'",
       'ALTER TABLE tasks ADD COLUMN depth INTEGER NOT NULL DEFAULT 0',
+      "ALTER TABLE tasks ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'med'",
     ]) {
       try {
         this.db.exec(sql)
@@ -666,6 +680,7 @@ export class TasksService extends Service {
     const ts = now()
     const status = asStatus(input.status)
     const priority = asPriority(input.priority)
+    const difficulty = asDifficulty(input.difficulty)
     const dueAt = input.dueAt == null || Number.isNaN(Number(input.dueAt)) ? null : Number(input.dueAt)
     const description = String(input.description ?? '')
     const notes = String(input.notes ?? '')
@@ -696,16 +711,17 @@ export class TasksService extends Service {
     this.db
       .prepare(
         `INSERT INTO tasks (
-          id, title, status, priority, assignee, due_at, description, notes, sort,
+          id, title, status, priority, difficulty, assignee, due_at, description, notes, sort,
           created_at, updated_at, creator_json, assignee_json, assigned_at,
           project, tags_json, parent_id, depends_on, depth
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
         title,
         status,
         priority,
+        difficulty,
         assigneeLabel,
         dueAt,
         description,
@@ -733,6 +749,7 @@ export class TasksService extends Service {
     if (!title) throw new Error('title required')
     const status = patch.status != null ? asStatus(patch.status) : current.status
     const priority = patch.priority != null ? asPriority(patch.priority) : current.priority
+    const difficulty = patch.difficulty != null ? asDifficulty(patch.difficulty) : current.difficulty
     const dueAt =
       patch.dueAt === undefined
         ? current.dueAt
@@ -795,7 +812,7 @@ export class TasksService extends Service {
     this.db
       .prepare(
         `UPDATE tasks SET
-          title = ?, status = ?, priority = ?, assignee = ?, due_at = ?, description = ?, notes = ?, sort = ?,
+          title = ?, status = ?, priority = ?, difficulty = ?, assignee = ?, due_at = ?, description = ?, notes = ?, sort = ?,
           updated_at = ?, assignee_json = ?, assigned_at = ?, project = ?, tags_json = ?,
           parent_id = ?, depends_on = ?, depth = ?
          WHERE id = ?`,
@@ -804,6 +821,7 @@ export class TasksService extends Service {
         title,
         status,
         priority,
+        difficulty,
         assignee?.name ?? '',
         dueAt,
         description,
@@ -937,6 +955,7 @@ export function apply(ctx: Context) {
         title: { type: 'string' },
         status: { type: 'string', enum: ['todo', 'doing', 'done'] },
         priority: { type: 'string', enum: ['low', 'med', 'high'] },
+        difficulty: { type: 'string', enum: ['low', 'med', 'high'], description: '难度（low=低, med=中, high=高）' },
         assigneeSessionId: ASSIGNEE_SESSION_PARAM,
         assignee: ASSIGNEE_PARAM,
         dueAt: { type: 'number', description: '截止时间戳 ms' },
@@ -962,6 +981,7 @@ export function apply(ctx: Context) {
         title: String(args.title ?? ''),
         ...(args.status != null ? { status: asStatus(args.status) } : {}),
         ...(args.priority != null ? { priority: asPriority(args.priority) } : {}),
+        ...(args.difficulty != null ? { difficulty: asDifficulty(args.difficulty) } : {}),
         ...(args.dueAt != null ? { dueAt: Number(args.dueAt) } : {}),
         ...(args.description != null ? { description: String(args.description) } : {}),
         ...(args.notes != null ? { notes: String(args.notes) } : {}),
@@ -987,6 +1007,7 @@ export function apply(ctx: Context) {
         title: { type: 'string' },
         status: { type: 'string', enum: ['todo', 'doing', 'done'] },
         priority: { type: 'string', enum: ['low', 'med', 'high'] },
+        difficulty: { type: 'string', enum: ['low', 'med', 'high'], description: '难度（low=低, med=中, high=高）' },
         assigneeSessionId: ASSIGNEE_SESSION_PARAM,
         assignee: ASSIGNEE_PARAM,
         dueAt: { type: ['number', 'null'] },
@@ -1006,6 +1027,7 @@ export function apply(ctx: Context) {
       if (args.title != null) patch.title = String(args.title)
       if (args.status != null) patch.status = asStatus(args.status)
       if (args.priority != null) patch.priority = asPriority(args.priority)
+      if (args.difficulty != null) patch.difficulty = asDifficulty(args.difficulty)
       if (args.dueAt !== undefined) patch.dueAt = args.dueAt == null ? null : Number(args.dueAt)
       if (args.description != null) patch.description = String(args.description)
       if (args.notes != null) patch.notes = String(args.notes)
@@ -1094,7 +1116,7 @@ export function apply(ctx: Context) {
   host.tools.register({
     name: 'tasks_update_many',
     description:
-      '批量更新任务（一次更新多个任务）。每个 update 含 id 与要更新的字段（title/status/priority/description/notes/project/tags/parentId/dependsOn/dueAt），未传字段保持不变。',
+      '批量更新任务（一次更新多个任务）。每个 update 含 id 与要更新的字段（title/status/priority/difficulty/description/notes/project/tags/parentId/dependsOn/dueAt），未传字段保持不变。',
     parameters: {
       type: 'object',
       properties: {
@@ -1107,6 +1129,7 @@ export function apply(ctx: Context) {
               title: { type: 'string' },
               status: { type: 'string', enum: ['todo', 'doing', 'done'] },
               priority: { type: 'string', enum: ['low', 'med', 'high'] },
+              difficulty: { type: 'string', enum: ['low', 'med', 'high'], description: '难度（low=低, med=中, high=高）' },
               dueAt: { type: ['number', 'null'] },
               description: { type: 'string' },
               notes: { type: 'string' },
@@ -1137,6 +1160,7 @@ export function apply(ctx: Context) {
         if (u.title != null) patch.title = String(u.title)
         if (u.status != null) patch.status = asStatus(u.status as TaskStatus)
         if (u.priority != null) patch.priority = asPriority(u.priority as TaskPriority)
+        if (u.difficulty != null) patch.difficulty = asDifficulty(u.difficulty as TaskDifficulty)
         if (u.dueAt !== undefined) patch.dueAt = u.dueAt == null ? null : Number(u.dueAt)
         if (u.description != null) patch.description = String(u.description)
         if (u.notes != null) patch.notes = String(u.notes)
@@ -1182,7 +1206,7 @@ export function apply(ctx: Context) {
 
   host.tools.register({
     name: 'tasks_create_many',
-    description: '批量创建任务（一次建多个，各任务可独立设置 项目/标签/父任务/依赖/分配人/状态/优先级/截止）',
+    description: '批量创建任务（一次建多个，各任务可独立设置 项目/标签/父任务/依赖/分配人/状态/优先级/难度/截止）',
     parameters: {
       type: 'object',
       properties: {
@@ -1194,6 +1218,7 @@ export function apply(ctx: Context) {
               title: { type: 'string' },
               status: { type: 'string', enum: ['todo', 'doing', 'done'] },
               priority: { type: 'string', enum: ['low', 'med', 'high'] },
+              difficulty: { type: 'string', enum: ['low', 'med', 'high'], description: '难度（low=低, med=中, high=高）' },
               assigneeSessionId: ASSIGNEE_SESSION_PARAM,
               project: { type: 'string' },
               tags: { type: 'array', items: { type: 'string' } },
@@ -1226,6 +1251,7 @@ export function apply(ctx: Context) {
           title: String(item.title ?? ''),
           ...(item.status != null ? { status: asStatus(item.status as TaskStatus) } : {}),
           ...(item.priority != null ? { priority: asPriority(item.priority as TaskPriority) } : {}),
+          ...(item.difficulty != null ? { difficulty: asDifficulty(item.difficulty as TaskDifficulty) } : {}),
           ...(item.dueAt != null ? { dueAt: Number(item.dueAt) } : {}),
           ...(item.project != null ? { project: String(item.project) } : {}),
           ...(Array.isArray(item.tags) ? { tags: item.tags.map(String).filter(Boolean) } : {}),
