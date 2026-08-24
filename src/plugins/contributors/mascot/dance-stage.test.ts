@@ -49,3 +49,24 @@ test('row: 单行时水平带内展开且左右对称', () => {
   assert.ok(slots[0].x < 0 && slots[4].x > 0, '应跨中心两侧展开')
   assert.ok(Math.abs(slots[0].x) < 1e-6 + 200, '最左 x 应为 -200 量级')
 })
+
+test('biu: 拼出 B-I-U 三字母、整体居中、从左到右排布', () => {
+  // 取足够多点占满点阵
+  const n = 60
+  const slots = Array.from({ length: n }, (_, i) => danceSlot('biu', i, n))
+  const xs = slots.map((p) => p.x)
+  const ys = slots.map((p) => p.y)
+  // 整体水平居中：x 均值≈0
+  const cx = xs.reduce((s, v) => s + v, 0) / xs.length
+  assert.ok(Math.abs(cx) < 60, `biu 应水平居中，实际 x 均值=${cx.toFixed(1)}`)
+  // 高度方向也居中：y 均值≈0
+  const cy = ys.reduce((s, v) => s + v, 0) / ys.length
+  assert.ok(Math.abs(cy) < 60, `biu 应垂直居中，实际 y 均值=${cy.toFixed(1)}`)
+  // 从左到右：字母 B（最左）早于 I（中）早于 U（右）
+  // 取每个字母的代表点：B 的左侧像素、U 的右侧像素
+  const minX = Math.min(...xs)
+  const maxX = Math.max(...xs)
+  assert.ok(maxX - minX > 300, `biu 应有的横向宽度，实际 ${(maxX - minX).toFixed(0)}px`)
+  // 按点阵顺序第一个点应在左侧（B 字母起点）
+  assert.ok(slots[0].x < 0, '点阵首像素应在左侧（B 起点）')
+})

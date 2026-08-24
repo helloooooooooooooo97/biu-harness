@@ -24,8 +24,8 @@ export function apply(ctx: Context) {
         },
         shape: {
           type: 'string',
-          enum: ['heart', 'circle', 'square', 'row'],
-          description: '跳舞队形：heart=心形、circle=圆形、square=方形、row=一排。默认 circle。',
+          enum: ['heart', 'circle', 'square', 'row', 'biu'],
+          description: '跳舞队形：heart=心形、circle=圆形、square=方形、row=一排、biu=拼出产品名"biu"。默认 circle。',
         },
       },
     },
@@ -35,8 +35,8 @@ export function apply(ctx: Context) {
           ? Math.min(Math.round(args.durationMs), 60_000)
           : DANCE_DEFAULT_MS
       const rawShape = (args as { shape?: string }).shape
-      const shape: 'heart' | 'circle' | 'square' | 'row' =
-        rawShape === 'heart' || rawShape === 'circle' || rawShape === 'square' || rawShape === 'row'
+      const shape: 'heart' | 'circle' | 'square' | 'row' | 'biu' =
+        rawShape === 'heart' || rawShape === 'circle' || rawShape === 'square' || rawShape === 'row' || rawShape === 'biu'
           ? rawShape
           : 'circle'
       ctx.http.broadcast('mascot', { action: 'dance', durationMs, shape })

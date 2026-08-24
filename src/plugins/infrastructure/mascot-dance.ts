@@ -1,7 +1,7 @@
 /** 全局彩蛋：所有 session 的 mascot 一起跳舞。 */
 export const MASCOT_DANCE_DEFAULT_MS = 8000
 
-export type MascotDanceShape = 'heart' | 'circle' | 'square' | 'row'
+export type MascotDanceShape = 'heart' | 'circle' | 'square' | 'row' | 'biu'
 
 const danceUntilById: Record<string, number> = {}
 let danceShape: MascotDanceShape = 'circle'
@@ -20,7 +20,7 @@ export function startMascotDance(
   durationMs = MASCOT_DANCE_DEFAULT_MS,
   shape: MascotDanceShape = 'circle',
 ) {
-  if (!shape || !['heart', 'circle', 'square', 'row'].includes(shape)) shape = 'circle'
+  if (!shape || !['heart', 'circle', 'square', 'row', 'biu'].includes(shape)) shape = 'circle'
   danceShape = shape
   const until = Date.now() + Math.max(1500, durationMs)
   // 取较晚的结束点，让连续触发顺延结束

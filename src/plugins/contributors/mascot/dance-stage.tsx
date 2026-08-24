@@ -10,8 +10,72 @@ type Dancer = {
   identity: SessionMascotIdentity
 }
 
+/** 产品名「biu」的 3×7 字母点阵：各自是 B-I-U 的 '#' 像素。 */
+const BIU_GLYPHS: string[][] = [
+  // B
+  [
+    '###',
+    '# #',
+    '# #',
+    '###',
+    '# #',
+    '# #',
+    '###',
+  ],
+  // I
+  [
+    '#',
+    '#',
+    '#',
+    '#',
+    '#',
+    '#',
+    '#',
+  ],
+  // U
+  [
+    '# #',
+    '# #',
+    '# #',
+    '# #',
+    '# #',
+    '# #',
+    '###',
+  ],
+]
+
+/**
+ * 把「B-I-U」拼成一行像素点序列（按列→行、字母从左到右），返回每个像素的 (x, y)。
+ * 全局列号跨字母连续推进（含间隙），行从顶部向下。
+ */
+function biuPixels(): { x: number; y: number }[] {
+  const pts: { x: number; y: number }[] = []
+  let colOffset = 0
+  for (const glyph of BIU_GLYPHS) {
+    for (let r = 0; r < glyph.length; r++) {
+      for (let c = 0; c < glyph[r].length; c++) {
+        if (glyph[r][c] === '#') pts.push({ x: colOffset + c, y: r })
+      }
+    }
+    colOffset += 3 + 2 // 字母宽 3，间隔 2
+  }
+  return pts
+}
+
 /** 计算某 shape 队形下第 i 个 dancer（共 n 个）的 (x, y) 偏移（px，中心为锚点）。 */
 export function danceSlot(shape: MascotDanceShape, i: number, n: number): { x: number; y: number } {
+  if (shape === 'biu') {
+    const pts = biuPixels()
+    const H = 7
+    const W = 3 * 3 + 2 * 2 // 3 字母 × 3 宽 + 2 个间隔 × 2
+    const scale = 26 // 每个像素的格子边长（px），放大铺开便于识别
+    // 依次落位：第 i 个 mascot 排在点阵第 i 个像素（mascot 多余则取模环绕填满）
+    const p = pts[i % pts.length]
+    return {
+      x: (p.x - (W - 1) / 2) * scale,
+      y: (p.y - (H - 1) / 2) * scale,
+    }
+  }
   if (shape === 'heart') {
     // 心形参数方程，但沿轮廓「弧长均匀」采样——否则点在凹槽/顶点分布不均会被误认成圆形。
     const heartPt = (t: number) => {
@@ -94,6 +158,8 @@ export const DanceStage = memo(function DanceStage({
     >
       {dancers.map((d, i) => {
         const { x, y } = danceSlot(shape, i, dancers.length)
+        // 拼字母（biu）时用紧凑尺寸，让点阵能识别出字形
+        const dancerSize = shape === 'biu' ? Math.min(size, 34) : size
         return (
           <span
             key={d.id}
@@ -102,16 +168,16 @@ export const DanceStage = memo(function DanceStage({
               {
                 '--dancer-x': `${x}px`,
                 '--dancer-y': `${y}px`,
-                animationDelay: `${(i % 10) * 45}ms, ${520 + (i % 10) * 45}ms`,
+                animationDelay: `${(i % 10) * 20}ms, ${420 + (i % 10) * 20}ms`,
               } as React.CSSProperties
             }
           >
             <SidebarMascot
-              size={size}
+              size={dancerSize}
               identity={d.identity}
               dancing
               animate={false}
-              title="跳舞中 🎉"
+              title={shape === 'biu' ? 'biu 🎉' : '跳舞中 🎉'}
             />
           </span>
         )
