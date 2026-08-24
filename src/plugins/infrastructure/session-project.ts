@@ -390,10 +390,18 @@ export interface TrajectoryRow {
   callId?: string
 }
 
+/** token 友好缩写：<1k 原样，<1M 用 k(>10k 取整)，≥1M 用 M，例 1500→1.5k、345678→346k。 */
+export function formatTokens(n: number): string {
+  if (!n) return '0'
+  if (n < 1000) return String(n)
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`
+  return `${(n / 1_000_000).toFixed(2)}M`
+}
+
 export function formatTrajectoryUsage(usage: TrajectoryUsage | undefined): string {
   if (!usage) return ''
-  const parts = [`${usage.inputTokens}→${usage.outputTokens}`]
-  if (usage.cacheReadTokens) parts.push(`c${usage.cacheReadTokens}`)
+  const parts = [`${formatTokens(usage.inputTokens)}→${formatTokens(usage.outputTokens)}`]
+  if (usage.cacheReadTokens) parts.push(`c${formatTokens(usage.cacheReadTokens)}`)
   return parts.join(' ')
 }
 

@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from 'cordis'
-import { coerceAssigneeArg, computeBlocked, computeBlockedBy, depsSatisfied, deriveExecution, deriveExecutionFromReports, TasksService } from './index.ts'
+import { buildDeliverText, coerceAssigneeArg, computeBlocked, computeBlockedBy, depsSatisfied, deriveExecution, deriveExecutionFromReports, reportBackToCreator, TasksService } from './index.ts'
 
 test('tasks sqlite crud and status move', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
@@ -282,4 +282,95 @@ test('blockedBy lists the blocking chain (recursive)', async () => {
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
+})
+
+test('buildDeliverText renders a派工 message with task key fields', () => {
+  const text = buildDeliverText({
+    id: 'task_x',
+    title: '写需求文档',
+    status: 'todo',
+    priority: 'high',
+    difficulty: 'med',
+    dueAt: 1700000000000,
+    description: '要把需求写清楚',
+    notes: '明天跟进',
+    project: 'cordis-web',
+    tags: ['后端', '文档'],
+    parentId: null,
+    dependsOn: [],
+    depth: 1,
+    sort: 1,
+    createdAt: 1,
+    updatedAt: 1,
+    creator: { kind: 'agent', sessionId: 'boss', name: 'Boss' },
+    assignee: { kind: 'agent', sessionId: 'worker', name: 'Worker' },
+    assignedAt: 1,
+  })
+  assert.match(text, /写需求文档/)
+  assert.match(text, /状态：todo/)
+  assert.match(text, /优先级：high/)
+  assert.match(text, /难度：med/)
+  assert.match(text, /项目：cordis-web/)
+  assert.match(text, /要把需求写清楚/)
+  assert.match(text, /明天跟进/)
+  assert.match(text, /task_x/)
+})
+
+test('reportBackToCreator sends a progress message to the assigner session via sendMessage (wake-first)', async () => {
+  const sent: Array<{ target: string; text: string; wait: boolean }> = []
+  const host = {
+    sessions: {
+      sendMessage: async (target: string, text: string, opts: { wait?: boolean }) => {
+        sent.push({ target, text, wait: opts?.wait ?? true })
+        return { text: '', steps: [] }
+      },
+    },
+  }
+  const row = {
+    id: 'task_y',
+    title: '后端改造',
+    creator: { kind: 'agent' as const, sessionId: 'assigner-session', name: '分配人' },
+  }
+  const res = await reportBackToCreator(
+    host as never,
+    row as never,
+    { sessionId: 'worker-session', sessionName: 'worker', turn: 3, status: 'done', note: '改造完成', ts: 1 },
+  )
+  assert.equal(res.ok, true)
+  assert.equal(res.sessionId, 'assigner-session')
+  assert.equal(sent.length, 1)
+  assert.equal(sent[0]!.target, 'assigner-session')
+  // 与前端 sendMessage 同语义，wait=false 入队后立即返回、不阻塞上报方回合
+  assert.equal(sent[0]!.wait, false)
+  assert.match(sent[0]!.text, /后端改造/)
+  assert.match(sent[0]!.text, /worker/)
+  assert.match(sent[0]!.text, /已完成/)
+  assert.match(sent[0]!.text, /改造完成/)
+})
+
+test('reportBackToCreator skips when creator has no session or is the reporter itself', async () => {
+  let calls = 0
+  const host = {
+    sessions: {
+      sendMessage: async () => {
+        calls++
+        return { text: '', steps: [] }
+      },
+    },
+  }
+  // 纯用户创建：无 session，跳过
+  const userCreated = await reportBackToCreator(
+    host as never,
+    { creator: { kind: 'user' as const, name: '用户' } } as never,
+    { sessionId: 'w', status: 'doing', turn: 1, ts: 1 },
+  )
+  assert.equal(userCreated.ok, false)
+  // 分配人即上报人：跳过
+  const self = await reportBackToCreator(
+    host as never,
+    { creator: { kind: 'agent' as const, sessionId: 'me', name: 'Me' } } as never,
+    { sessionId: 'me', status: 'doing', turn: 1, ts: 1 },
+  )
+  assert.equal(self.ok, false)
+  assert.equal(calls, 0)
 })

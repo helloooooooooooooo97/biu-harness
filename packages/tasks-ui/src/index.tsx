@@ -12,6 +12,7 @@ import {
   LuCircleCheck,
   LuCircleDashed,
   LuClock,
+  LuCoins,
   LuFlag,
   LuLock,
   LuMaximize2,
@@ -189,6 +190,75 @@ async function removeTask(id: string): Promise<void> {
     const body = (await res.json().catch(() => ({}))) as { error?: string }
     throw new Error(body.error || `HTTP ${res.status}`)
   }
+}
+
+export type TurnStats = {
+  turn: number
+  stepCount: number
+  startTs?: number
+  endTs?: number
+  durationMs?: number
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  totalTokens: number
+}
+
+async function fetchTurnStats(sessionId: string, turn: number | null): Promise<TurnStats | null> {
+  if (!sessionId || turn == null) return null
+  const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/turn-stats?turn=${encodeURIComponent(String(turn))}`)
+  if (!res.ok || res.status === 404) return null
+  const body = (await res.json()) as Partial<TurnStats>
+  if (typeof body?.turn !== 'number') return null
+  return {
+    turn: body.turn,
+    stepCount: body.stepCount ?? 0,
+    ...(typeof body.startTs === 'number' ? { startTs: body.startTs } : {}),
+    ...(typeof body.endTs === 'number' ? { endTs: body.endTs } : {}),
+    ...(typeof body.durationMs === 'number' ? { durationMs: body.durationMs } : {}),
+    inputTokens: body.inputTokens ?? 0,
+    outputTokens: body.outputTokens ?? 0,
+    cacheReadTokens: body.cacheReadTokens ?? 0,
+    totalTokens: body.totalTokens ?? (body.inputTokens ?? 0) + (body.outputTokens ?? 0),
+  }
+}
+
+function formatTurnDuration(durationMs?: number): string {
+  if (typeof durationMs !== 'number' || !Number.isFinite(durationMs)) return '—'
+  const s = Math.round(durationMs / 1000)
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${m}m${sec}s`
+}
+
+function formatTokens(n: number): string {
+  if (!n) return '0'
+  if (n < 1000) return String(n)
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`
+  return `${(n / 1_000_000).toFixed(2)}M`
+}
+
+/** 消耗明细聚合：input/output/cacheRead/total 分开累加，供胶囊(aligned .traj-usage)展示。 */
+type SumUsage = {
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  totalTokens: number
+}
+const ZERO_USAGE: SumUsage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, totalTokens: 0 }
+function sumUsage(...usages: SumUsage[]): SumUsage {
+  let inputTokens = 0
+  let outputTokens = 0
+  let cacheReadTokens = 0
+  let totalTokens = 0
+  for (const u of usages) {
+    inputTokens += u.inputTokens
+    outputTokens += u.outputTokens
+    cacheReadTokens += u.cacheReadTokens
+    totalTokens += u.totalTokens
+  }
+  return { inputTokens, outputTokens, cacheReadTokens, totalTokens }
 }
 
 function formatWhen(ts: number | null | undefined): string {
@@ -1254,6 +1324,34 @@ function eventEndOf(t: Task): number | null {
   return null
 }
 
+/** 消耗胶囊：与 Live/thread 的 .traj-usage 对齐——绿色缓冲背景(=cache hit 覆盖) + 两侧 in/out 数值 + 分隔箭头。 */
+function UsageCapsule({ usage, aggregate }: { usage: SumUsage; aggregate: boolean }) {
+  if (usage.totalTokens <= 0) return <span className="tasks-usage-empty">—</span>
+  const pct =
+    usage.inputTokens && usage.cacheReadTokens ? Math.min(100, Math.round((usage.cacheReadTokens / usage.inputTokens) * 100)) : null
+  const inStyle: CSSProperties | undefined = pct
+    ? {
+        backgroundImage: `linear-gradient(90deg, rgba(34,140,90,0.30) 0%, rgba(34,140,90,0.30) ${pct}%, transparent ${pct}%, transparent 100%)`,
+      }
+    : undefined
+  return (
+    <span
+      className={`tasks-usage-capsule${aggregate ? ' is-agg' : ''}`}
+      title={
+        aggregate
+          ? `子树聚合：in ${formatTokens(usage.inputTokens)} / out ${formatTokens(usage.outputTokens)}`
+          : `本任务各回合消耗：in ${formatTokens(usage.inputTokens)} / out ${formatTokens(usage.outputTokens)}${usage.cacheReadTokens ? ` / cache ${formatTokens(usage.cacheReadTokens)}` : ''}`
+      }
+    >
+      <span className={`tasks-usage-input${pct != null ? ' has-cache' : ''}`} style={inStyle}>
+        {formatTokens(usage.inputTokens)}
+      </span>
+      <span className="tasks-usage-arrow">→</span>
+      <span className="tasks-usage-output">{formatTokens(usage.outputTokens)}</span>
+    </span>
+  )
+}
+
 function TasksTable({
   tasks,
   detailId,
@@ -1304,6 +1402,84 @@ function TasksTable({
     return s
   }, [tasks])
 
+  // usage 消耗列：只有叶节点才具有真实 usage（来自本任务各 report 的 turn-stats 求和），
+  // 上层节点仅做子树聚合。明细(input/output/cacheRead/total)各自累加，供胶囊展示。
+  const [leafUsage, setLeafUsage] = useState<Record<string, SumUsage>>({})
+  useEffect(() => {
+    let cancelled = false
+    const keys = new Set<string>()
+    for (const t of tasks) {
+      for (const r of t.reports ?? []) {
+        if (r.sessionId && r.turn != null) keys.add(`${r.sessionId}:${r.turn}`)
+      }
+    }
+    if (keys.size === 0) {
+      setLeafUsage({})
+      return
+    }
+    Promise.all(
+      [...keys].map(async (key) => {
+        const sep = key.indexOf(':')
+        const sid = key.slice(0, sep)
+        const turn = Number(key.slice(sep + 1))
+        const stats = await fetchTurnStats(sid, Number.isFinite(turn) ? turn : null)
+        return [
+          key,
+          stats
+            ? {
+                inputTokens: stats.inputTokens,
+                outputTokens: stats.outputTokens,
+                cacheReadTokens: stats.cacheReadTokens,
+                totalTokens: stats.totalTokens,
+              }
+            : ZERO_USAGE,
+        ] as const
+      }),
+    ).then((results) => {
+      if (cancelled) return
+      const byKey: Record<string, SumUsage> = {}
+      for (const [key, v] of results) byKey[key] = v
+      const leaf: Record<string, SumUsage> = {}
+      for (const t of tasks) {
+        const seen = new Set<string>()
+        const parts: SumUsage[] = []
+        for (const r of t.reports ?? []) {
+          if (!r.sessionId || r.turn == null) continue
+          const key = `${r.sessionId}:${r.turn}`
+          if (seen.has(key)) continue
+          seen.add(key)
+          parts.push(byKey[key] ?? ZERO_USAGE)
+        }
+        leaf[t.id] = sumUsage(...parts)
+      }
+      setLeafUsage(leaf)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [tasks])
+
+  // 聚合消耗：叶节点=自身 turn 消耗；上层=子树全部叶节点消耗之和。
+  const usageByTask = useMemo(() => {
+    const childMap = new Map<string, Task[]>()
+    for (const t of tasks) {
+      const p = t.parentId ?? ''
+      if (!childMap.has(p)) childMap.set(p, [])
+      childMap.get(p)!.push(t)
+    }
+    const memo = new Map<string, SumUsage>()
+    const compute = (id: string): SumUsage => {
+      const hit = memo.get(id)
+      if (hit) return hit
+      const kids = childMap.get(id) ?? []
+      const total = sumUsage(leafUsage[id] ?? ZERO_USAGE, ...kids.map((k) => compute(k.id)))
+      memo.set(id, total)
+      return total
+    }
+    for (const t of tasks) compute(t.id)
+    return memo
+  }, [tasks, leafUsage])
+
   if (rows.length === 0) {
     return <div className="tasks-empty" />
   }
@@ -1317,6 +1493,7 @@ function TasksTable({
             <ThIcon icon={<LuCircleDashed size={12} aria-hidden />}>状态</ThIcon>
             <ThIcon icon={<LuFlag size={12} aria-hidden />}>优先级</ThIcon>
             <ThIcon icon={<LuGauge size={12} aria-hidden />}>难度</ThIcon>
+            <ThIcon icon={<LuCoins size={12} aria-hidden />}>消耗</ThIcon>
             {!compact ? <ThIcon icon={<LuUserRound size={12} aria-hidden />}>创建人</ThIcon> : null}
             {!compact ? <ThIcon icon={<LuClock size={12} aria-hidden />}>创建时间</ThIcon> : null}
             <ThIcon icon={<LuUserRound size={12} aria-hidden />}>实施人</ThIcon>
@@ -1408,6 +1585,16 @@ function TasksTable({
                   )}
                 />
               </td>
+              <td className="tasks-col-usage">
+                {(() => {
+                  const usage = usageByTask.get(task.id)
+                  return usage && usage.totalTokens > 0 ? (
+                    <UsageCapsule usage={usage} aggregate={hasChildren.has(task.id)} />
+                  ) : (
+                    <span className="tasks-usage-empty">—</span>
+                  )
+                })()}
+              </td>
               {!compact ? (
                 <td className="tasks-col-actor">
                   <ActorChip actor={task.creator} empty="—" />
@@ -1479,6 +1666,8 @@ function TaskDetailPanel({
   const [project, setProject] = useState(task.project ?? '')
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>(task.tags ?? [])
+  // 跨 session：每个 report 定位到其 agent 所属 session 的该 turn 统计（step 数 / 耗时 / 额度消耗）。
+  const [turnStats, setTurnStats] = useState<Record<string, TurnStats | null | undefined>>({})
 
   useEffect(() => {
     setTitle(task.title)
@@ -1488,6 +1677,27 @@ function TaskDetailPanel({
     setProject(task.project ?? '')
     setTags(task.tags ?? [])
   }, [task.id, task.updatedAt])
+
+  const reports = useMemo(() => (task.reports ?? []).filter((r) => r.sessionId && r.turn != null), [task.reports])
+
+  useEffect(() => {
+    let cancelled = false
+    const cache: Record<string, TurnStats | null | undefined> = {}
+    const pending = reports
+      .map((r) => ({ key: `${r.sessionId}:${r.turn}`, sessionId: r.sessionId, turn: r.turn as number }))
+      .filter((entry, i, arr) => arr.findIndex((e) => e.key === entry.key) === i)
+    Promise.all(
+      pending.map(async (entry) => {
+        const stats = await fetchTurnStats(entry.sessionId, entry.turn)
+        cache[entry.key] = stats
+      }),
+    ).then(() => {
+      if (!cancelled) setTurnStats(cache)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [reports])
 
   return (
     <div className="tasks-detail-modal" aria-label="任务详情" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
@@ -1729,17 +1939,37 @@ function TaskDetailPanel({
           ) : null}
           {task.reports?.length ? (
             <ul className="tasks-detail-reports">
-              {[...task.reports].reverse().map((r, i) => (
-                <li key={`${r.ts}-${i}`} className={`tasks-report-item is-${r.status}`}>
-                  <span className="tasks-report-status">
-                    {r.status === 'done' ? <LuCircleCheck size={11} aria-hidden /> : <LuLoaderCircle size={11} aria-hidden />}
-                    {r.status === 'done' ? '完成' : '进行中'}
-                  </span>
-                  {r.turn != null ? <span className="tasks-report-turn">T{r.turn}</span> : null}
-                  {r.note ? <span className="tasks-report-note">{r.note}</span> : null}
-                  <span className="tasks-report-time">{formatWhen(r.ts)}</span>
-                </li>
-              ))}
+              {[...task.reports].reverse().map((r, i) => {
+                const stats =
+                  r.sessionId && r.turn != null ? turnStats[`${r.sessionId}:${r.turn}`] ?? null : null
+                const consumed = stats && stats.totalTokens > 0
+                return (
+                  <li key={`${r.ts}-${i}`} className={`tasks-report-item is-${r.status}`}>
+                    <span className="tasks-report-line">
+                      <span className="tasks-report-status">
+                        {r.status === 'done' ? <LuCircleCheck size={11} aria-hidden /> : <LuLoaderCircle size={11} aria-hidden />}
+                        {r.status === 'done' ? '完成' : '进行中'}
+                      </span>
+                      {r.turn != null ? <span className="tasks-report-turn">T{r.turn}</span> : null}
+                      <span className="tasks-report-stats">
+                        {stats
+                          ? `${stats.stepCount} step · 耗时 ${formatTurnDuration(stats.durationMs)}`
+                          : null}
+                      </span>
+                      {r.note ? <span className="tasks-report-note">{r.note}</span> : null}
+                      <span className="tasks-report-time">{formatWhen(r.ts)}</span>
+                    </span>
+                    {consumed ? (
+                      <span className="tasks-report-usage">
+                        消耗 {formatTokens(stats.totalTokens)} tokens
+                        {stats.inputTokens > 0 || stats.outputTokens > 0
+                          ? `（in ${formatTokens(stats.inputTokens)} / out ${formatTokens(stats.outputTokens)}${stats.cacheReadTokens > 0 ? ` / cache ${formatTokens(stats.cacheReadTokens)}` : ''}）`
+                          : ''}
+                      </span>
+                    ) : null}
+                  </li>
+                )
+              })}
             </ul>
           ) : null}
         </div>
@@ -1761,6 +1991,8 @@ function TaskDetailPanel({
   )
 }
 
+// tasks-ui 根节点：模块主舞台，渲染工作区
+// tasks-dispatch-test-round2
 function TasksModulePage(_props: SlotProps) {
   return (
     <div className="tasks-module-page">
@@ -1889,6 +2121,40 @@ if (typeof document !== 'undefined') {
 .tasks-status-label { white-space:nowrap; }
 .tasks-status-reports { display:inline-flex; align-items:center; justify-content:center; min-width:14px; height:14px; padding:0 3px; border-radius:999px; background:color-mix(in srgb, var(--dsw-border) 50%, transparent); font-size:9.5px; font-weight:700; color:var(--dsw-label-2); }
 .tasks-col-priority { width:76px; }
+.tasks-col-usage { width:96px; min-width:96px; color:var(--dsw-label-2); font-variant-numeric:tabular-nums; }
+.tasks-usage-empty { color:var(--dsw-label-4); }
+
+/* 消耗胶囊：与 Live/thread 的 .traj-usage 对齐的设计 */
+.tasks-usage-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tasks-usage-sigma {
+  color: var(--dsw-label-3);
+  font-size: 10px;
+  font-weight: 700;
+  flex: none;
+}
+/* 输入胶囊：绿色缓冲背景(缓存命中覆盖)+左侧内边距留白给 ∑ */
+.tasks-usage-input {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 26px;
+  border-radius: 999px;
+  background: var(--dsw-hover);
+  padding: 1px 7px;
+  color: var(--dsw-label-2);
+  font-weight: 600;
+}
+.tasks-usage-input.has-cache { color: var(--dsw-label); }
+.tasks-usage-arrow { color: var(--dsw-label-3); opacity: 0.7; flex: none; }
+.tasks-usage-output { color: var(--dsw-label); font-weight: 600; flex: none; }
 .tasks-col-actor { width:130px; }
 .tasks-col-time { width:130px; }
 .tasks-col-exec { width:96px; }
@@ -2003,15 +2269,18 @@ if (typeof document !== 'undefined') {
 .tasks-blocked-list { margin:6px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:5px; border:1px solid color-mix(in srgb, #9a6700 26%, transparent); border-radius:8px; padding:8px 10px; background:color-mix(in srgb, #9a6700 5%, transparent); }
 .tasks-blocked-item { display:flex; align-items:center; gap:7px; font-size:11px; color:var(--dsw-label-2); line-height:1.4; }
 .tasks-blocked-dot { flex:none; width:6px; height:6px; border-radius:50%; background:#9a6700; }
-.tasks-report-item { display:flex; align-items:center; gap:6px; font-size:11px; line-height:1.4; padding:3px 4px; border-radius:5px; }
+.tasks-report-item { display:flex; flex-direction:column; align-items:stretch; gap:2px; font-size:11px; line-height:1.4; padding:3px 4px; border-radius:5px; }
 .tasks-report-item.is-done { background:color-mix(in srgb, #3d9a5f 12%, transparent); }
 .tasks-report-item.is-doing { background:color-mix(in srgb, var(--dsw-business) 10%, transparent); }
-.tasks-report-status { display:inline-flex; align-items:center; gap:3px; font-weight:650; color:var(--dsw-label); }
+.tasks-report-line { display:flex; align-items:center; gap:6px; min-width:0; }
+.tasks-report-status { display:inline-flex; align-items:center; gap:3px; font-weight:650; color:var(--dsw-label); flex:none; }
 .tasks-report-item.is-done .tasks-report-status { color:#2f7d4c; }
 .tasks-report-item.is-doing .tasks-report-status { color:var(--dsw-business); }
-.tasks-report-turn { color:var(--dsw-label-2); font-weight:600; }
+.tasks-report-turn { color:var(--dsw-label-2); font-weight:600; flex:none; }
+.tasks-report-stats { color:var(--dsw-label-2); flex:none; }
 .tasks-report-note { color:var(--dsw-label-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 .tasks-report-time { margin-left:auto; flex:none; color:var(--dsw-label-3); font-size:10px; white-space:nowrap; }
+.tasks-report-usage { color:var(--dsw-label-3); font-size:10px; padding-left:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .tasks-detail-foot { padding:10px 12px; border-top:1px solid var(--dsw-border); }
 .tasks-danger-btn { border:1px solid color-mix(in srgb, var(--dsw-danger) 35%, var(--dsw-border)); border-radius:8px; padding:6px 10px; background:transparent; color:var(--dsw-danger); cursor:pointer; font:inherit; font-size:11px; font-weight:650; display:inline-flex; align-items:center; gap:5px; }
 .tasks-danger-btn:hover { background:var(--dsw-danger-soft); }

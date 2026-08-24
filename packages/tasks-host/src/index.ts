@@ -168,6 +168,12 @@ type HostCtx = Context & {
   sessions?: {
     peek: (id: string) => SessionPeek | undefined
     get?: (id: string) => Promise<SessionPeek | undefined>
+    /** 派发消息（与前端 sendMessage 同语义）：wake 优先，目标忙碌且已有 wake 排队时后端自动退化为 inject。wait=false 时入队后立即返回。 */
+    sendMessage: (
+      id: string,
+      text: string,
+      opts?: { wait?: boolean; sender?: { type: 'session'; sessionId: string } },
+    ) => Promise<{ text: string; steps: unknown[] }>
   }
 }
 
@@ -403,6 +409,66 @@ function actorsEqual(a: TaskActor | null, b: TaskActor | null): boolean {
   if (a === b) return true
   if (!a || !b) return false
   return a.kind === b.kind && a.name === b.name && (a.sessionId ?? '') === (b.sessionId ?? '')
+}
+
+/**
+ * 生成 task_deliver 派工消息的默认文案：把任务关键信息整理成一段给执行 agent 的指令。
+ */
+export function buildDeliverText(row: TaskRow): string {
+  const lines: string[] = []
+  lines.push(`【任务派发】${row.title}`)
+  if (row.status) lines.push(`状态：${row.status}`)
+  if (row.priority) lines.push(`优先级：${row.priority}`)
+  if (row.difficulty) lines.push(`难度：${row.difficulty}`)
+  if (row.dueAt) lines.push(`截止：${new Date(row.dueAt).toLocaleString()}`)
+  if (row.project) lines.push(`项目：${row.project}`)
+  if (row.tags?.length) lines.push(`标签：${row.tags.join(', ')}`)
+  if (row.description?.trim()) lines.push(`\n描述：\n${row.description.trim()}`)
+  if (row.notes?.trim()) lines.push(`\n备忘：\n${row.notes.trim()}`)
+  lines.push(`\n任务 id：${row.id}`)
+  return lines.join('\n')
+}
+
+/**
+ * task_report 上报后，把子 agent（上报方 session）的进度/info 返回给"分配任务的人"（任务的 creator session）。
+ * 与前端 sendMessage 同语义：wake 优先，目标忙碌且已有 wake 排队时后端自动退回为 inject（并入下一回合），
+ * 不阻塞子 agent 当前回合（wait:false 入队后立即返回）。若 creator 无 session（如纯用户创建的），则跳过。
+ */
+export async function reportBackToCreator(
+  host: HostCtx,
+  row: TaskRow,
+  report: TaskReport,
+): Promise<{ ok: boolean; reason?: string; sessionId?: string }> {
+  const creator = row.creator
+  const assignerSessionId = creator?.kind === 'agent' ? creator.sessionId : undefined
+  if (!assignerSessionId) {
+    return { ok: false, reason: 'creator 无 session，无需回传' }
+  }
+  if (!host.sessions?.sendMessage) {
+    return { ok: false, reason: 'sessions.sendMessage 不可用' }
+  }
+  // 不要回传给上报者自己（分配人不能是执行人自己）
+  if (assignerSessionId === report.sessionId) {
+    return { ok: false, reason: '分配人即上报人，无需回传' }
+  }
+  const who = report.sessionName || report.sessionId.slice?.(0, 8) || report.sessionId
+  const statusLabel = report.status === 'done' ? '✅ 已完成' : '🔵 进行中'
+  const text = [
+    `【任务进度回传】${row.title}`,
+    `任务 id：${row.id}`,
+    `执行 agent：${who}`,
+    `状态：${statusLabel}`,
+    ...(report.turn != null ? [`回合：${report.turn}`] : []),
+    ...(report.note ? [`说明：${report.note}`] : []),
+  ].join('\n')
+  try {
+    const sender = { type: 'session' as const, sessionId: report.sessionId }
+    // 和前端 sendMessage 同一接口：wake 优先，忙碌且已有 wake 排队时自动退化为 inject
+    await host.sessions.sendMessage(assignerSessionId, text, { wait: false, sender })
+    return { ok: true, sessionId: assignerSessionId }
+  } catch (error) {
+    return { ok: false, reason: String(error) }
+  }
 }
 
 function mapRow(row: Record<string, unknown>): TaskRow {
@@ -1055,7 +1121,7 @@ export function apply(ctx: Context) {
   host.tools.register({
     name: 'task_report',
     description:
-      'agent 在执行任务时主动上报进度。每完成一轮(一个 turn)，调用一次并关联到任务：未搞定传 status=doing，彻底搞定传 status=done。任务执行视图会累积这份报告历史（次数、每次的 turn/状态/说明）。任务当前状态 = 最新一次 report 的 status。',
+      'agent 在执行任务时主动上报进度。每完成一轮(一个 turn)，调用一次并关联到任务：未搞定传 status=doing，彻底搞定传 status=done。任务执行视图会累积这份报告历史（次数、每次的 turn/状态/说明）。任务当前状态 = 最新一次 report 的 status。上报后会通过 session 机制把子 agent(上报方)的进度/info 返回给分配该任务的人(任务的 creator session)。',
     parameters: {
       type: 'object',
       properties: {
@@ -1094,7 +1160,59 @@ export function apply(ctx: Context) {
       tasks.report(id, report)
       // report 同时推进完成状态（doing/done），last-write-wins
       tasks.update(id, { status })
-      return present(tasks.get(id)!)
+      // 把子 agent 的信息返回给分配任务的人（creator session）——通过 session inject 机制
+      const delivered = await reportBackToCreator(host, row, report)
+      return { ...(await present(tasks.get(id)!)), delivered }
+    },
+  })
+
+  host.tools.register({
+    name: 'task_deliver',
+    description:
+      '把已经分配了 session 的任务作为 wake 消息发送到被分配 session 的队列里去（派工）。任务需已用 assigneeSessionId 分配好负责 session；无负责人 session 时需先 tasks_update 指派。text 可自定义派工措辞（默认带上任务标题/描述/优先级等）。wait=false 时入队后立即返回 queued，不阻塞当前回合。',
+    parameters: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'string', description: '任务 id' },
+        text: {
+          type: 'string',
+          description:
+            '可选自定义 wake 内容；缺省时自动生成：把任务标题/描述/优先级/难度/截止/父任务等整理成派工消息发给执行的 agent session',
+        },
+        wait: {
+          type: 'boolean',
+          description: '默认 true 等目标 session 回合结束；false 则入队后立即返回 queued',
+        },
+      },
+      required: ['taskId'],
+    },
+    execute: async (args) => {
+      const id = String(args.taskId ?? '')
+      const row = tasks.get(id)
+      if (!row) throw new Error('unknown task')
+      const targetSessionId = row.assignee?.sessionId
+      if (!targetSessionId) {
+        throw new Error(`task ${id} 未分配负责 session（assignee 无 sessionId），请先用 tasks_update 的 assigneeSessionId 指派`)
+      }
+      if (!host.sessions?.sendMessage) {
+        throw new Error('sessions.sendMessage 不可用：sessions 服务未就绪')
+      }
+      const text = String(args.text ?? '').trim() || buildDeliverText(row)
+      const sender = { type: 'session' as const, sessionId: currentSessionId() ?? 'unknown' }
+      const wait = args.wait !== false && args.wait !== 'false'
+      if (!wait) {
+        void host.sessions.sendMessage(targetSessionId, text, { wait: false, sender })
+        return { taskId: id, sessionId: targetSessionId, queued: true, wait: false, text }
+      }
+      const turn = await host.sessions.sendMessage(targetSessionId, text, { wait: true, sender })
+      return {
+        taskId: id,
+        sessionId: targetSessionId,
+        queued: false,
+        wait: true,
+        text: turn.text.slice(0, 1200),
+        steps: turn.steps.length,
+      }
     },
   })
 

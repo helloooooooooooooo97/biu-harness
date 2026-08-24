@@ -9,7 +9,7 @@ import { LLM_MODEL_CATALOG, describeProvider, defaultModelFor, CHAT_PROVIDERS } 
 import type { ChatProvider, LlmModelDef } from './model-catalog.ts'
 export type { ChatProvider, LlmModelDef } from './model-catalog.ts'
 import { currentSessionId } from '../core/session-scope.ts'
-import type { SessionConfig } from '../core/session-types.ts'
+import type { SessionConfig, SessionEvent } from '../core/session-types.ts'
 import { DEFAULT_TAIL_TURNS, sliceBeforeTurns, sliceTailTurns } from '../core/session-window.ts'
 import {
   DEFAULT_TRAJECTORY_TURNS,
@@ -311,6 +311,77 @@ export class ChatService extends Service {
   }
 }
 
+export interface TurnStat {
+  turn: number
+  stepCount: number
+  startTs?: number
+  endTs?: number
+  durationMs?: number
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  totalTokens: number
+}
+
+/**
+ * 按 turn 计算会话运行统计（纯函数）：
+ * - stepCount：该 turn 内 step/start 数
+ * - startTs/endTs/durationMs：turn/start → turn/end 的起止与耗时
+ * - 额度消耗：该 turn 内所有 assistant/message 事件 usage 的 input/output/cacheRead 汇总
+ * targetTurn 传入时只计算/返回该 turn 的单条统计；否则返回 { turn → stat } 映射。
+ */
+export function computeTurnStats(events: SessionEvent[], targetTurn?: number): Record<string, TurnStat> | TurnStat {
+  const stats: Record<string, TurnStat> = {}
+  let turn: number | null = null
+  let stepCount = 0
+  let startTs: number | null = null
+  let endTs: number | null = null
+  let inputTokens = 0
+  let outputTokens = 0
+  let cacheReadTokens = 0
+  let totalTokens = 0
+  const flush = (t: number) => {
+    if (!turn || turn !== t) return
+    if (targetTurn != null && turn !== targetTurn) return
+    stats[String(turn)] = {
+      turn,
+      stepCount,
+      ...(startTs != null ? { startTs } : {}),
+      ...(endTs != null ? { endTs } : {}),
+      ...(startTs != null && endTs != null ? { durationMs: endTs - startTs } : {}),
+      inputTokens,
+      outputTokens,
+      cacheReadTokens,
+      totalTokens,
+    }
+  }
+  for (const event of events) {
+    if (event.type === 'turn/start') {
+      if (turn != null) flush(turn)
+      turn = event.turn
+      stepCount = 0
+      startTs = event.ts
+      endTs = null
+      inputTokens = 0
+      outputTokens = 0
+      cacheReadTokens = 0
+      totalTokens = 0
+    } else if (event.type === 'turn/end' && turn === event.turn) {
+      endTs = event.ts
+    } else if (event.type === 'step/start' && turn === event.turn) {
+      stepCount += 1
+    } else if (event.type === 'assistant/message' && event.usage && turn != null) {
+      inputTokens += event.usage.inputTokens || 0
+      outputTokens += event.usage.outputTokens || 0
+      cacheReadTokens += event.usage.cacheReadTokens || 0
+      totalTokens += event.usage.totalTokens || (event.usage.inputTokens || 0) + (event.usage.outputTokens || 0)
+    }
+  }
+  if (turn != null) flush(turn)
+  if (targetTurn != null) return stats[String(targetTurn)]
+  return stats
+}
+
 export const name = 'chat'
 export const inject = ['http', 'hub', 'agents', 'sessions', 'systemPrompt', 'tools']
 
@@ -545,6 +616,21 @@ export function apply(ctx: Context) {
       })
     }
     route.send(200, { points, compactions })
+  })
+  // 按 turn 取跨 session 统计：给定某 turn，返回 step 数 / 起止 / 耗时 / token 与额度消耗。
+  // 供任务面板在展示 task_report 回传条时定位到 report.sessionId 所属 session 的该 turn 运行统计。
+  ctx.http.route('GET', '/api/sessions/:id/turn-stats', async (route) => {
+    const record = await ctx.sessions.get(route.params.id)
+    if (!record) return route.send(404, { error: 'unknown session' })
+    const turnsRaw = route.query.get('turn')
+    const targetTurn =
+      turnsRaw != null && turnsRaw !== '' && Number.isFinite(Number(turnsRaw)) ? Number(turnsRaw) : undefined
+    const result = computeTurnStats(record.events, targetTurn)
+    if (targetTurn != null) {
+      if (!result) return route.send(404, { error: 'unknown turn' })
+      return route.send(200, result)
+    }
+    route.send(200, { turns: result as Record<string, TurnStat> })
   })
   ctx.http.route('GET', '/api/sessions/:id/artifacts/:name', async (route) => {
     const record = await ctx.sessions.get(route.params.id)

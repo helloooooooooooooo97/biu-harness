@@ -1,6 +1,7 @@
 import { memo, type CSSProperties } from 'react'
 import { LuCircleCheck, LuCircleDashed, LuCircleX, LuLoaderCircle } from 'react-icons/lu'
 import {
+  formatTokens,
   formatTrajectoryUsage,
   type TrajectoryUsage,
 } from '../../infrastructure/session-project.ts'
@@ -12,7 +13,7 @@ import { FolderGlyph } from './project-panel.tsx'
 export type LiveDispatchTaskRow = DispatchedTaskRow
 
 function formatTok(n: number) {
-  return n.toLocaleString('en-US')
+  return formatTokens(n)
 }
 
 function cacheHitPct(usage: TrajectoryUsage): number | null {

@@ -2,6 +2,7 @@
   "name": "hmr-dev",
   "version": "0.1.0",
   "private": true,
+  "description": "cordis-web 工作区（round3-suite）",
   "type": "module",
   "workspaces": [
     "packages/*"

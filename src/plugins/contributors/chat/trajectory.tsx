@@ -3,6 +3,7 @@ import { LuArrowUp } from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
 import {
+  formatTokens,
   formatTrajectoryUsage,
   sumTrajectoryRowUsage,
   sumUsageParts,
@@ -34,7 +35,7 @@ const toneClass: Record<TagTone, string> = {
 }
 
 function formatTok(n: number) {
-  return n.toLocaleString('en-US')
+  return formatTokens(n)
 }
 
 function cacheHitPct(usage: TrajectoryUsage): number | null {

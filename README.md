@@ -16,3 +16,5 @@ make stop     # 端口被占用时先停旧进程
 若出现 `EADDRINUSE` / `Port 5173 is in use`，说明上次 `make dev` 还在跑：先 `make stop` 再 `make dev`。
 
 侧栏开关 host 插件时，`ui-hub` 会装卸对应卡片。问候/便签在卡片里直接 `fetch`。
+
+// task-dispatch-test 20250101

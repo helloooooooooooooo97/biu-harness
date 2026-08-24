@@ -19,6 +19,7 @@ import {
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionListItem, type SessionViewService } from '../../infrastructure/session-view.ts'
 import {
+  formatTokens,
   formatTrajectoryUsage,
   type ChatNode,
   type ChatReplyPart,
@@ -59,7 +60,7 @@ function formatDuration(ms: number) {
 }
 
 function formatTok(n: number) {
-  return n.toLocaleString('en-US')
+  return formatTokens(n)
 }
 
 function stepLabel(step: number) {
