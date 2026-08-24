@@ -29,6 +29,14 @@ export type TaskExecution = {
   updatedAt: number
 }
 
+/** 一次消费额度（input/output/cacheRead/total，单位 token）。与任务面板 .traj-usage 对齐。 */
+export type TaskUsage = {
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  totalTokens: number
+}
+
 /** agent 通过 task_report 主动提交的一条执行报告 */
 export type TaskReport = {
   sessionId: string
@@ -37,6 +45,8 @@ export type TaskReport = {
   status: 'doing' | 'done'
   note?: string
   ts: number
+  /** 该 report 所在（session, turn）当回合消耗的固化解像：task_report 落库时固化，删 session 也不丢。 */
+  usage?: TaskUsage
 }
 
 export type TaskRow = {
@@ -77,6 +87,10 @@ export type TaskRow = {
   reports?: TaskReport[]
   /** 列表接口按需附带：优先从 reports 派生，无 reports 时才从事件推导 */
   execution?: TaskExecution
+  /** 本任务持久化消耗：由各 report.usage 聚合（后端在 present 时固化，删 session 不丢）。 */
+  usage?: TaskUsage
+  /** 本任务总消耗 token（= usage.totalTokens），方便前端/列表直接展示。 */
+  totalTokens?: number
 }
 
 export type TaskCreateInput = {
@@ -506,14 +520,29 @@ function mapRow(row: Record<string, unknown>): TaskRow {
       if (Array.isArray(parsed)) {
         for (const r of parsed) {
           if (r && typeof r === 'object' && typeof r.sessionId === 'string') {
-            reports.push({
+            const report: TaskReport = {
               sessionId: String(r.sessionId),
               ...(typeof r.sessionName === 'string' ? { sessionName: r.sessionName } : {}),
               turn: typeof r.turn === 'number' ? r.turn : null,
               status: r.status === 'doing' || r.status === 'done' ? r.status : 'doing',
               ...(typeof r.note === 'string' ? { note: r.note } : {}),
               ts: typeof r.ts === 'number' ? r.ts : Number(row.updated_at ?? 0),
-            })
+            }
+            if (r.usage && typeof r.usage === 'object') {
+              const u = r.usage as Record<string, unknown>
+              if (typeof u.inputTokens === 'number' && typeof u.outputTokens === 'number') {
+                const inputTokens = Number(u.inputTokens) || 0
+                const outputTokens = Number(u.outputTokens) || 0
+                const cacheReadTokens = Number(u.cacheReadTokens) || 0
+                report.usage = {
+                  inputTokens,
+                  outputTokens,
+                  cacheReadTokens,
+                  totalTokens: Number(u.totalTokens) || inputTokens + outputTokens,
+                }
+              }
+            }
+            reports.push(report)
           }
         }
       }
@@ -641,6 +670,69 @@ export function deriveExecutionFromReports(reports: TaskReport[] | undefined): T
     assistantText: typeof last.note === 'string' && last.note ? last.note.slice(0, 240) : '',
     updatedAt: last.ts,
   }
+}
+
+const ZERO_USAGE: TaskUsage = {
+  inputTokens: 0,
+  outputTokens: 0,
+  cacheReadTokens: 0,
+  totalTokens: 0,
+}
+
+/** 把一组 usage 相加（input/output/cacheRead/total 各自累加）。 */
+export function sumUsageSum(...usages: TaskUsage[]): TaskUsage {
+  let inputTokens = 0
+  let outputTokens = 0
+  let cacheReadTokens = 0
+  let totalTokens = 0
+  for (const u of usages) {
+    inputTokens += u.inputTokens
+    outputTokens += u.outputTokens
+    cacheReadTokens += u.cacheReadTokens
+    totalTokens += u.totalTokens
+  }
+  return { inputTokens, outputTokens, cacheReadTokens, totalTokens }
+}
+
+/** 聚合一个任务全部 report 的 usage（同名 session+turn 去重后加总）→ 任务持久消耗。
+ *  同一 (session, turn) 取后一次上报（覆盖，避免 peer 反复上报导致重复计费）。 */
+export function sumReportUsage(reports: TaskReport[] | undefined): TaskUsage | undefined {
+  if (!reports?.length) return undefined
+  const byKey = new Map<string, TaskUsage>()
+  for (const r of reports) {
+    if (!r.usage) continue
+    byKey.set(`${r.sessionId}:${r.turn ?? ''}`, r.usage)
+  }
+  return byKey.size ? sumUsageSum(...byKey.values()) : undefined
+}
+
+/** 从 session 事件流计算某 turn 的消耗（assistant/message usage 汇总），纯函数。 */
+export function computeTurnUsage(
+  events: Array<Record<string, unknown>> | undefined,
+  turn: number | null | undefined,
+): TaskUsage | undefined {
+  if (!events?.length || turn == null) return undefined
+  let inputTokens = 0
+  let outputTokens = 0
+  let cacheReadTokens = 0
+  let totalTokens = 0
+  let curTurn: number | null = null
+  for (const event of events) {
+    if (event?.type === 'turn/start' && typeof event.turn === 'number') {
+      curTurn = event.turn
+    } else if (event?.type === 'assistant/message' && curTurn === turn && event.usage && typeof event.usage === 'object') {
+      const u = event.usage as Record<string, unknown>
+      const input = Number(u.inputTokens) || 0
+      const output = Number(u.outputTokens) || 0
+      const cache = Number(u.cacheReadTokens) || 0
+      inputTokens += input
+      outputTokens += output
+      cacheReadTokens += cache
+      totalTokens += Number(u.totalTokens) || input + output
+    }
+  }
+  if (inputTokens === 0 && outputTokens === 0 && cacheReadTokens === 0) return undefined
+  return { inputTokens, outputTokens, cacheReadTokens, totalTokens }
 }
 
 export class TasksService extends Service {
@@ -927,7 +1019,8 @@ export class TasksService extends Service {
     for (const d of dependsOn) dfs(d)
   }
 
-  /** 追加一条 agent 通过 task_report 提交的执行报告（不可篡改式累积） */
+  /** 追加一条 agent 通过 task_report 提交的执行报告（不可篡改式累积）。
+   *  同名 (sessionId, turn) 的 usage 取后一次上报（覆盖，避免 peer report 叠加重复计费）。 */
   report(id: string, report: TaskReport): TaskRow {
     const current = this.get(id)
     if (!current) throw new Error('unknown task')
@@ -954,6 +1047,8 @@ export function apply(ctx: Context) {
     // 无任何信号时默认 todo。
     const counts = (row.reports ?? []).filter((r) => r.status === 'done').length
     const base = { ...row, status: row.status || 'todo' }
+    // 持久化消耗：聚合本任务各 report 固化的 usage（同名 session+turn 去重），删 session 也不丢。
+    const usage = sumReportUsage(row.reports)
     return {
       ...base,
       doneCount: counts,
@@ -963,6 +1058,8 @@ export function apply(ctx: Context) {
       execution: (row.reports ?? []).length
         ? deriveExecutionFromReports(row.reports)
         : { status: 'idle', turn: null, assistantText: '', updatedAt: 0 },
+      // 消耗持久化字段：有 usage 才附上；无则为 undefined（前端据此 fallback 到实时 query）。
+      ...(usage ? { usage, totalTokens: usage.totalTokens } : {}),
     }
   }
 
@@ -1149,12 +1246,22 @@ export function apply(ctx: Context) {
           }
         }
       }
+      // 持久化该 report 当回合的消耗：取 (sessionId, turn) 的 turn-stats 固化进 usage，删 session 也不丢。
+      // 若 session 仍存在可从事件流计算出 usage（assistant/message 的 usage 汇总）；否则 use 保持 undefined。
+      let usage: TaskUsage | undefined
+      if (sessionId && turn != null) {
+        const rec: { events?: Array<Record<string, unknown>> } | undefined =
+          (host.sessions?.get ? await host.sessions.get(sessionId) : undefined) ??
+          (host.sessions?.peek(sessionId) as { events?: Array<Record<string, unknown>> } | undefined)
+        usage = computeTurnUsage(rec?.events, turn)
+      }
       const report: TaskReport = {
         sessionId: sessionId ?? 'unknown',
         ...(sessionId ? { sessionName: sessionId.slice(0, 8) } : {}),
         turn,
         status,
         ...(typeof args.note === 'string' && args.note.trim() ? { note: String(args.note).trim() } : {}),
+        ...(usage ? { usage } : {}),
         ts: now(),
       }
       tasks.report(id, report)

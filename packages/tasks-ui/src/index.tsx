@@ -25,6 +25,7 @@ import {
   LuChevronDown,
   LuChevronRight,
   LuGitBranch,
+  LuListChecks,
   LuGauge,
   LuSearch,
   LuSlidersHorizontal,
@@ -83,6 +84,8 @@ export type TaskReport = {
   status: 'doing' | 'done'
   note?: string
   ts: number
+  /** 该 report 当回合固化的消耗（task_report 落库，删 session 不丢）；旧数据可能缺失。 */
+  usage?: { inputTokens: number; outputTokens: number; cacheReadTokens: number; totalTokens: number }
 }
 
 export type Task = {
@@ -109,6 +112,10 @@ export type Task = {
   blockedBy?: string[]
   reports?: TaskReport[]
   execution?: TaskExecution
+  /** 本任务持久化消耗（后端 task 表固化，删 session 不丢）；旧数据可能缺失。 */
+  usage?: { inputTokens: number; outputTokens: number; cacheReadTokens: number; totalTokens: number }
+  /** 本任务总消耗 token（= usage.totalTokens）。 */
+  totalTokens?: number
 }
 
 const STATUS_META: Array<{ id: TaskStatus; label: string; icon: ReactNode }> = [
@@ -773,10 +780,10 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
   const { tasks, setTasks, error, loading, refresh, query, setQuery } = useTasks(compact ? 3000 : 2500)
   const { agents, loading: agentsLoading } = useAgents()
   const [detailId, setDetailId] = useState<string | null>(null)
-  const [view, setView] = useState<'table' | 'board' | 'graph'>(() => {
+  const [view, setView] = useState<'queue' | 'table' | 'board' | 'graph'>(() => {
     try {
       const saved = window.localStorage.getItem('tasks.view')
-      if (saved === 'table' || saved === 'board' || saved === 'graph') return saved
+      if (saved === 'queue' || saved === 'table' || saved === 'board' || saved === 'graph') return saved
     } catch {
       /* ignore */
     }
@@ -837,7 +844,17 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
       if (!isVertical && !isHorizontal) return
 
       // 构建当前视图的可导航任务视图
-      if (view === 'board') {
+      if (view === 'queue') {
+        // 队列：只含叶节点，按 4 状态组顺序展开成线性列表导航（↑/↓ 或 ←/→ 均可）
+        const queue = buildQueueRows(filteredTasks)
+        const idx = queue.findIndex((t) => t.id === detailId)
+        if (idx < 0) return
+        const dir = (isVertical ? isVertical2(e.key) : (e.key === 'ArrowRight' ? 1 : -1))
+        const n = queue.length
+        if (n === 0) return
+        const target = queue[(idx + dir + n) % n]
+        if (target) { e.preventDefault(); setDetailId(target.id) }
+      } else if (view === 'board') {
         // 看板：按列（todo/blocked/doing/done）分组，列内保持顺序
         const cols: BoardKey[] = ['todo', 'blocked', 'doing', 'done']
         const colOf = (t: Task): BoardKey => (t.blocked ? 'blocked' : t.status)
@@ -911,6 +928,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
           <div className="tasks-viewtabs tasks-viewtabs-left" role="tablist" aria-label="视图切换">
             {(
               [
+                ['queue', '队列', <LuListChecks key="queue" size={13} aria-hidden />],
                 ['table', '表格', <LuTable2 key="table" size={13} aria-hidden />],
                 ['board', '看板', <LuColumns3 key="board" size={13} aria-hidden />],
                 ['graph', '依赖', <LuGitBranch key="graph" size={13} aria-hidden />],
@@ -1012,7 +1030,17 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
         {error ? <div className="tasks-error">{error}</div> : null}
         {loading && tasks.length === 0 ? <div className="tasks-empty">加载中…</div> : null}
 
-        {view === 'board' ? (
+        {view === 'queue' ? (
+          <TasksQueue
+            tasks={filteredTasks}
+            detailId={detailId}
+            onOpenDetail={setDetailId}
+            onUpdate={onUpdate}
+            compact={compact}
+            agents={agents}
+            agentsLoading={agentsLoading}
+          />
+        ) : view === 'board' ? (
           <TasksBoard
             tasks={filteredTasks}
             detailId={detailId}
@@ -1076,6 +1104,42 @@ function buildTreeRows(tasks: Task[], collapsed: Record<string, boolean>): Task[
     }
   }
   visit('')
+  return out
+}
+
+// 队列视图分组键：进行中 → 待办 → 阻塞 → 已完成
+type QueueKey = 'doing' | 'todo' | 'blocked' | 'done'
+const QUEUE_GROUPS: { key: QueueKey; label: string; icon: ReactNode }[] = [
+  { key: 'doing', label: '进行中', icon: <LuLoaderCircle size={13} aria-hidden /> },
+  { key: 'todo', label: '待办', icon: <LuCircleDashed size={13} aria-hidden /> },
+  { key: 'blocked', label: '阻塞', icon: <LuLock size={13} aria-hidden /> },
+  { key: 'done', label: '已完成', icon: <LuCircleCheck size={13} aria-hidden /> },
+]
+
+/**
+ * 叶节点判定：任务无任何子任务（不在任何任务的 parentId 中）即为叶节点。
+ * 队列视图仅展示叶节点，并按状态分组排序。
+ * 时间排序：同一状态内用 scheduledAt/dueAt (若有) 优先，否则回退 createdAt（无稳定 dueAt 的用创建时间保证稳定可辨序）。
+ */
+function buildQueueRows(tasks: Task[]): Task[] {
+  const childSet = new Set<string>()
+  for (const t of tasks) if (t.parentId) childSet.add(t.parentId)
+  const leafs = tasks.filter((t) => !childSet.has(t.id))
+  // 时间排序：最近优先（时间倒序，最新任务排最前）。dueAt(若有) 优先，否则 createdAt。
+  const timeKey = (t: Task): number => t.dueAt ?? t.createdAt
+  const colOf = (t: Task): QueueKey => (t.blocked ? 'blocked' : (t.status === 'done' ? 'done' : (t.status === 'doing' ? 'doing' : 'todo')))
+  const group = new Map<QueueKey, Task[]>()
+  for (const t of leafs) {
+    const k = colOf(t)
+    if (!group.has(k)) group.set(k, [])
+    group.get(k)!.push(t)
+  }
+  const out: Task[] = []
+  for (const { key } of QUEUE_GROUPS) {
+    const list = group.get(key) ?? []
+    list.sort((a, b) => timeKey(b) - timeKey(a) || b.sort - a.sort)
+    out.push(...list)
+  }
   return out
 }
 
@@ -1314,6 +1378,100 @@ function TasksGraph({
   )
 }
 
+function TasksQueue({
+  tasks,
+  detailId,
+  onOpenDetail,
+  onUpdate,
+  compact,
+  agents,
+  agentsLoading,
+}: {
+  tasks: Task[]
+  detailId: string | null
+  onOpenDetail: (id: string) => void
+  onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>
+  compact: boolean
+  agents: AgentOption[]
+  agentsLoading: boolean
+}) {
+  // 叶节点集合：用于识别并选中当前叶任务
+  const childSet = useMemo(() => {
+    const s = new Set<string>()
+    for (const t of tasks) if (t.parentId) s.add(t.parentId)
+    return s
+  }, [tasks])
+  const colOf = (t: Task): QueueKey => (t.blocked ? 'blocked' : (t.status === 'done' ? 'done' : (t.status === 'doing' ? 'doing' : 'todo')))
+
+  // 分组（仅叶节点）
+  const grouped = useMemo(() => {
+    const map: Record<string, Task[]> = { doing: [], todo: [], blocked: [], done: [] }
+    for (const t of tasks) {
+      if (childSet.has(t.id)) continue // 有子任务 → 父节点，不展示
+      const k = colOf(t)
+      ;(map[k] ??= []).push(t)
+    }
+    // 组内时间排序：最近优先（时间倒序），dueAt(若有)优先，否则 createdAt
+    const timeKey = (a: Task) => a.dueAt ?? a.createdAt
+    for (const k of Object.keys(map)) {
+      map[k]!.sort((a, b) => timeKey(b) - timeKey(a) || b.sort - a.sort)
+    }
+    return map
+  }, [tasks, childSet])
+
+  const total = QUEUE_GROUPS.reduce((acc, g) => acc + (grouped[g.key]?.length ?? 0), 0)
+  if (total === 0) return <div className="tasks-empty" />
+
+  return (
+    <div className={`tasks-queue${compact ? ' is-compact' : ''}`}>
+      {QUEUE_GROUPS.map((group) => {
+        const items = grouped[group.key] ?? []
+        if (!items.length) return null
+        return (
+          <section key={group.key} className={`tasks-queue-group is-${group.key}`}>
+            <header className={`tasks-queue-ghead is-${group.key}`}>
+              {group.icon}
+              <span className="tasks-queue-glabel">{group.label}</span>
+              <span className="tasks-queue-count">{items.length}</span>
+            </header>
+            <ul className="tasks-queue-list">
+              {items.map((task) => {
+                const isActive = detailId === task.id
+                return (
+                  <li key={task.id} className={`tasks-queue-item${isActive ? ' is-active' : ''} is-${colOf(task)} is-p-${task.priority}`}>
+                    <button
+                      type="button"
+                      className="tasks-queue-item-main"
+                      onClick={() => onOpenDetail(task.id)}
+                      aria-current={isActive ? 'true' : undefined}
+                    >
+                      <span className="tasks-queue-item-title">{task.title}</span>
+                      <span className={`tasks-queue-pill is-p-${task.priority}`} title={`优先级：${PRIORITY_LABEL[task.priority]}`}>
+                        <LuFlag size={10} aria-hidden />
+                        {PRIORITY_LABEL[task.priority]}
+                      </span>
+                      {task.blocked ? (
+                        <span className="tasks-queue-lock" title="被依赖任务阻塞"><LuLock size={11} aria-hidden /></span>
+                      ) : null}
+                      <UsageCapsule usage={task.usage ?? ZERO_USAGE} aggregate={false} />
+                      <span className="tasks-queue-meta">
+                        {task.assignee?.name ? <span className="tasks-queue-assignee">{task.assignee.name}</span> : null}
+                        {task.project ? <span className="tasks-proj-tag">{task.project}</span> : null}
+                        <TagChips tags={task.tags} />
+                        {task.createdAt ? <TimeLabel ts={task.createdAt} /> : null}
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )
+      })}
+    </div>
+  )
+}
+
 /** 任务结束时间 = 最后一次 report done 的时间；进行中无 done 返回 null */
 function eventEndOf(t: Task): number | null {
   const reports = t.reports
@@ -1409,6 +1567,8 @@ function TasksTable({
     let cancelled = false
     const keys = new Set<string>()
     for (const t of tasks) {
+      // 已有持久 usage 的任务不再实时回退 query（持久字段为准）；仅对缺失的旧数据做兜底。
+      if (t.usage) continue
       for (const r of t.reports ?? []) {
         if (r.sessionId && r.turn != null) keys.add(`${r.sessionId}:${r.turn}`)
       }
@@ -1459,7 +1619,17 @@ function TasksTable({
     }
   }, [tasks])
 
-  // 聚合消耗：叶节点=自身 turn 消耗；上层=子树全部叶节点消耗之和。
+  // 本任务"自己"的消耗（不含子树）：优先读 task 持久字段 usage（删 session 也不丢），
+  // 仅当 usage 缺失（存量旧数据）时 fallback 到实时 query 的 leafUsage。
+  const selfUsage = useMemo(() => {
+    const m: Record<string, SumUsage> = {}
+    for (const t of tasks) {
+      m[t.id] = t.usage ?? leafUsage[t.id] ?? ZERO_USAGE
+    }
+    return m
+  }, [tasks, leafUsage])
+
+  // 聚合消耗：叶节点=自身消耗（持久 usage 优先）；上层=子树全部节点消耗之和。
   const usageByTask = useMemo(() => {
     const childMap = new Map<string, Task[]>()
     for (const t of tasks) {
@@ -1472,13 +1642,13 @@ function TasksTable({
       const hit = memo.get(id)
       if (hit) return hit
       const kids = childMap.get(id) ?? []
-      const total = sumUsage(leafUsage[id] ?? ZERO_USAGE, ...kids.map((k) => compute(k.id)))
+      const total = sumUsage(selfUsage[id] ?? ZERO_USAGE, ...kids.map((k) => compute(k.id)))
       memo.set(id, total)
       return total
     }
     for (const t of tasks) compute(t.id)
     return memo
-  }, [tasks, leafUsage])
+  }, [tasks, selfUsage])
 
   if (rows.length === 0) {
     return <div className="tasks-empty" />
@@ -1683,9 +1853,15 @@ function TaskDetailPanel({
   useEffect(() => {
     let cancelled = false
     const cache: Record<string, TurnStats | null | undefined> = {}
+    // 只有缺少持久 usage 的 report 才回退回实时 session turn-stats（session 已删则跳过，展示 task 表持久值）。
     const pending = reports
+      .filter((r) => !r.usage)
       .map((r) => ({ key: `${r.sessionId}:${r.turn}`, sessionId: r.sessionId, turn: r.turn as number }))
       .filter((entry, i, arr) => arr.findIndex((e) => e.key === entry.key) === i)
+    if (!pending.length) {
+      setTurnStats(cache)
+      return
+    }
     Promise.all(
       pending.map(async (entry) => {
         const stats = await fetchTurnStats(entry.sessionId, entry.turn)
@@ -1937,12 +2113,30 @@ function TaskDetailPanel({
               </ul>
             </div>
           ) : null}
+          {task.usage && task.usage.totalTokens > 0 ? (
+            <div className="tasks-detail-usage-total">
+              <span className="tasks-meta-label">消耗</span>
+              <span className="tasks-detail-usage-total-capsule">
+                <LuCoins size={12} aria-hidden />
+                共 {formatTokens(task.usage.totalTokens)} tokens
+                <span className="tasks-detail-usage-breakdown">
+                  in {formatTokens(task.usage.inputTokens)} / out {formatTokens(task.usage.outputTokens)}
+                  {task.usage.cacheReadTokens > 0 ? ` / cache ${formatTokens(task.usage.cacheReadTokens)}` : ''}
+                </span>
+              </span>
+            </div>
+          ) : null}
           {task.reports?.length ? (
             <ul className="tasks-detail-reports">
               {[...task.reports].reverse().map((r, i) => {
-                const stats =
-                  r.sessionId && r.turn != null ? turnStats[`${r.sessionId}:${r.turn}`] ?? null : null
-                const consumed = stats && stats.totalTokens > 0
+                // 优先读该 report 固化的持久 usage（删 session 不丢）；缺失则 fallback 实时 turn-stats。
+                const persistUsage = r.usage ?? null
+                const realtimeStat =
+                  !persistUsage && r.sessionId && r.turn != null
+                    ? turnStats[`${r.sessionId}:${r.turn}`] ?? null
+                    : null
+                const usage = persistUsage ?? (realtimeStat && realtimeStat.totalTokens > 0 ? realtimeStat : null)
+                const consumed = !!usage && usage.totalTokens > 0
                 return (
                   <li key={`${r.ts}-${i}`} className={`tasks-report-item is-${r.status}`}>
                     <span className="tasks-report-line">
@@ -1952,8 +2146,8 @@ function TaskDetailPanel({
                       </span>
                       {r.turn != null ? <span className="tasks-report-turn">T{r.turn}</span> : null}
                       <span className="tasks-report-stats">
-                        {stats
-                          ? `${stats.stepCount} step · 耗时 ${formatTurnDuration(stats.durationMs)}`
+                        {realtimeStat
+                          ? `${realtimeStat.stepCount} step · 耗时 ${formatTurnDuration(realtimeStat.durationMs)}`
                           : null}
                       </span>
                       {r.note ? <span className="tasks-report-note">{r.note}</span> : null}
@@ -1961,9 +2155,9 @@ function TaskDetailPanel({
                     </span>
                     {consumed ? (
                       <span className="tasks-report-usage">
-                        消耗 {formatTokens(stats.totalTokens)} tokens
-                        {stats.inputTokens > 0 || stats.outputTokens > 0
-                          ? `（in ${formatTokens(stats.inputTokens)} / out ${formatTokens(stats.outputTokens)}${stats.cacheReadTokens > 0 ? ` / cache ${formatTokens(stats.cacheReadTokens)}` : ''}）`
+                        消耗 {formatTokens(usage.totalTokens)} tokens
+                        {usage.inputTokens > 0 || usage.outputTokens > 0
+                          ? `（in ${formatTokens(usage.inputTokens)} / out ${formatTokens(usage.outputTokens)}${usage.cacheReadTokens > 0 ? ` / cache ${formatTokens(usage.cacheReadTokens)}` : ''}）`
                           : ''}
                       </span>
                     ) : null}
@@ -2264,6 +2458,10 @@ if (typeof document !== 'undefined') {
 .tasks-time { display:inline-flex; align-items:center; gap:4px; font-size:10.5px; color:var(--dsw-label-3); }
 .tasks-detail-exec-text { color:var(--dsw-label-3); font-size:11px; line-height:1.45; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
 .tasks-detail-reports { margin:6px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:3px; }
+.tasks-detail-usage-total { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--dsw-label-2); margin-top:2px; }
+.tasks-detail-usage-total-capsule { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 10px; background:color-mix(in srgb, var(--dsw-business) 12%, transparent); color:var(--dsw-label); font-weight:650; white-space:nowrap; }
+.tasks-detail-usage-total-capsule svg { color:var(--dsw-business); }
+.tasks-detail-usage-breakdown { color:var(--dsw-label-3); font-weight:500; }
 .tasks-detail-blocked { padding-top:2px; }
 .tasks-blocked-head { display:flex; align-items:center; gap:6px; font-size:11px; font-weight:650; color:#9a6700; }
 .tasks-blocked-list { margin:6px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:5px; border:1px solid color-mix(in srgb, #9a6700 26%, transparent); border-radius:8px; padding:8px 10px; background:color-mix(in srgb, #9a6700 5%, transparent); }
@@ -2309,6 +2507,34 @@ if (typeof document !== 'undefined') {
 .tasks-graph-status.is-done { color:#2f7d4c; }
 .tasks-graph-status.is-blocked { color:#d9822b; }
 .tasks-graph-node-meta .tasks-card-badge { font-size:8.5px; padding:0 4px; }
+
+/* ---- 队列视图（清单风格：只展示叶节点，按状态分组）---- */
+.tasks-queue { display:flex; flex-direction:column; gap:14px; margin-top:10px; overflow:auto; flex:1; min-height:0; padding-bottom:4px; }
+.tasks-queue.is-compact { gap:10px; margin-top:6px; }
+.tasks-queue-group { display:flex; flex-direction:column; gap:6px; }
+.tasks-queue-ghead { display:flex; align-items:center; gap:6px; padding:4px 6px; color:var(--dsw-label-2); font-size:11px; font-weight:650; letter-spacing:.01em; }
+.tasks-queue-ghead.is-doing { color:var(--dsw-business); }
+.tasks-queue-ghead.is-blocked { color:#9a6700; }
+.tasks-queue-ghead.is-done { color:#2f7d4c; }
+.tasks-queue-glabel { font-weight:650; }
+.tasks-queue-count { margin-left:auto; color:var(--dsw-label-3); font-size:10px; font-weight:600; background:var(--dsw-muted-fill); border-radius:8px; padding:1px 7px; }
+.tasks-queue-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+.tasks-queue-item { display:flex; border:0; border-radius:7px; }
+.tasks-queue-item-main { display:flex; align-items:center; gap:8px; width:100%; text-align:left; border:0; border-radius:7px; padding:7px 10px; background:color-mix(in srgb, var(--dsw-surface) 94%, transparent); color:var(--dsw-label); font:inherit; cursor:pointer; box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 65%, transparent); transition:box-shadow .12s ease, background .12s ease; }
+.tasks-queue-item-main:hover { background:color-mix(in srgb, var(--dsw-hover) 55%, var(--dsw-surface)); box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 90%, transparent); }
+.tasks-queue-item.is-active .tasks-queue-item-main { background:color-mix(in srgb, var(--dsw-business) 8%, var(--dsw-surface)); box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-business) 50%, transparent); }
+.tasks-queue-item-title { flex:1; min-width:0; font-size:12px; font-weight:600; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tasks-queue-item.is-done .tasks-queue-item-title { text-decoration:line-through; color:var(--dsw-label-3); }
+.tasks-queue-pill { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+.tasks-queue-pill.is-p-high { color:var(--dsw-danger); background:color-mix(in srgb, var(--dsw-danger) 12%, transparent); }
+.tasks-queue-pill.is-p-med { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 12%, transparent); }
+.tasks-queue-pill.is-p-low { color:var(--dsw-label-3); background:color-mix(in srgb, var(--dsw-label-3) 12%, transparent); }
+.tasks-queue-lock { flex:none; display:inline-flex; color:#9a6700; }
+.tasks-queue-meta { flex:none; display:flex; align-items:center; gap:8px; color:var(--dsw-label-3); font-size:10px; min-width:0; overflow:hidden; }
+.tasks-queue-assignee { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; color:var(--dsw-label-2); }
+.tasks-queue-meta .tasks-time { font-size:10px; }
+/* 队列视图用量胶囊与表格视图同大：固定 11px（与 .tasks-table 一致），胶囊 input→output 数字同尺寸 */
+.tasks-queue-item-main .tasks-usage-capsule { font-size:11px; }
 `
   if (!style.parentNode) document.head.appendChild(style)
 }

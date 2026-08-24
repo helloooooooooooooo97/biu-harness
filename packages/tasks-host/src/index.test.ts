@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from 'cordis'
-import { buildDeliverText, coerceAssigneeArg, computeBlocked, computeBlockedBy, depsSatisfied, deriveExecution, deriveExecutionFromReports, reportBackToCreator, TasksService } from './index.ts'
+import { buildDeliverText, coerceAssigneeArg, computeBlocked, computeBlockedBy, computeTurnUsage, depsSatisfied, deriveExecution, deriveExecutionFromReports, reportBackToCreator, sumReportUsage, TasksService } from './index.ts'
 
 test('tasks sqlite crud and status move', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
@@ -373,4 +373,37 @@ test('reportBackToCreator skips when creator has no session or is the reporter i
   )
   assert.equal(self.ok, false)
   assert.equal(calls, 0)
+})
+
+test('computeTurnUsage aggregates assistant/message usage for a turn', () => {
+  const events = [
+    { type: 'turn/start', turn: 1, ts: 1 },
+    { type: 'assistant/message', turn: 1, usage: { inputTokens: 10, outputTokens: 4, cacheReadTokens: 2, totalTokens: 16 } },
+    { type: 'step/start', turn: 1, ts: 2 },
+    { type: 'assistant/message', turn: 1, usage: { inputTokens: 3, outputTokens: 1 } },
+    { type: 'turn/end', turn: 1, ts: 3 },
+  ]
+  const u = computeTurnUsage(events as unknown as Array<Record<string, unknown>>, 1)
+  assert.deepEqual(u, { inputTokens: 13, outputTokens: 5, cacheReadTokens: 2, totalTokens: 20 })
+  // non-matching turn / missing usage -> undefined
+  assert.equal(computeTurnUsage(events as unknown as Array<Record<string, unknown>>, 2), undefined)
+  assert.equal(computeTurnUsage([], 1), undefined)
+})
+
+test('sumReportUsage sums per-report usage with same (session,turn) dedupe', () => {
+  const reports = [
+    { sessionId: 's1', turn: 1, usage: { inputTokens: 10, outputTokens: 2, cacheReadTokens: 1, totalTokens: 13 } },
+    // 同名 (s1, turn=1)：取后一次（覆盖，避免重复计费）
+    { sessionId: 's1', turn: 1, usage: { inputTokens: 20, outputTokens: 4, cacheReadTokens: 2, totalTokens: 26 } },
+    { sessionId: 's2', turn: 2, usage: { inputTokens: 5, outputTokens: 1, cacheReadTokens: 0, totalTokens: 6 } },
+    // 无 usage（旧数据）跳过
+    { sessionId: 's3', turn: 3 },
+  ] as never
+  assert.deepEqual(sumReportUsage(reports), {
+    inputTokens: 25,
+    outputTokens: 5,
+    cacheReadTokens: 2,
+    totalTokens: 32,
+  })
+  assert.equal(sumReportUsage(undefined), undefined)
 })
