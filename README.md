@@ -19,7 +19,11 @@
   <a href="#5-运行时怎么拆">设计</a>
   ·
   <a href="#6-跑起来">上手</a>
+  ·
+  <a href="#许可">许可</a>
 </p>
+
+> **Grok Bot 头像可能侵权。** 侧栏那个机器人外形来自 xAI Grok Bot 的学习向几何副本（`public/grok-bot/`），**不在 MIT 授权里**。克隆、演示可以，二次分发或商用前请自己评估，或换成自己的角色。详见 [NOTICE.md](NOTICE.md)。
 
 ---
 
@@ -223,8 +227,8 @@ export CHAT_MODEL=deepseek-chat # 可选
 
 ## 许可
 
-源码公开，允许学习、修改、非商业分发；**禁止商用**。
+仓库里 **Biu 自己写的代码和文档** 使用 [MIT License](LICENSE)：可以学习、修改、分发，**也可以商用**，保留版权声明和许可文本即可。
 
-采用 [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0)（全文见 [LICENSE](LICENSE)）。个人学习、爱好项目、教学与公益研究可以用；把本软件作为产品出售、对客户提供收费服务、或用于以营利为目的的内部业务，都不在许可范围内。需要商用请另行联系维护者。
+**例外：Grok Bot 机器人。** `public/grok-bot/` 里的几何、动画和角色外形 **不是 MIT**。它们改编自对 Grok Bot.app 的学习向抽取，权利属于 xAI 等权利人，继续使用、打包上线或当产品吉祥物，**有商标 / 版权侵权风险**。本项目不授予这部分的任何权利。说明见 [NOTICE.md](NOTICE.md)。
 
-这不是 OSI 意义上的 “Open Source”（OSI 定义不允许限制商业用途）。
+MIT 软件「按原样」提供，作者不承担质量担保。
