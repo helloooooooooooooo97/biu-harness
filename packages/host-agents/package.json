@@ -1,0 +1,13 @@
+{
+  "name": "@biu/host-agents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent 句柄与 inbox",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

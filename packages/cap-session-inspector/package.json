@@ -1,0 +1,13 @@
+{
+  "name": "@biu/cap-session-inspector",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "会话检查器 API",
+  "exports": {
+    "./host": "./src/host.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

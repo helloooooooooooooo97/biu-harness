@@ -1,0 +1,8 @@
+import type { Context } from 'cordis'
+
+export const name = 'uppercase'
+export const inject = ['greet']
+
+export function apply(ctx: Context) {
+  ctx.on('greet/transform', (_text, next) => next().toUpperCase())
+}

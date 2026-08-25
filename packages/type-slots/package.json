@@ -1,0 +1,14 @@
+{
+  "name": "@biu/type-slots",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SlotProps 等 UI 缝契约",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "react": "^19.1.1"
+  }
+}

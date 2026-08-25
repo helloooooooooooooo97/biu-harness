@@ -1,0 +1,14 @@
+{
+  "name": "@biu/host-http",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "HTTP / WS 内核",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "ws": "^8.18.3"
+  }
+}

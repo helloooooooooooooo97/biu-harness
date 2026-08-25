@@ -1,2 +1,2 @@
-import '../packages/host-runtime/types.ts'
-export type { Method, PageSpec, RouteContext, RouteHandler } from '../packages/host-runtime/types.ts'
+import '@biu/type-host-context'
+export type { Method, PageSpec, RouteContext, RouteHandler } from '@biu/type-http'

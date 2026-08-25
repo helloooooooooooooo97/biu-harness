@@ -1,0 +1,14 @@
+{
+  "name": "@biu/web-plugin-tree",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "插件树面板",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "react": "^19.1.1"
+  }
+}

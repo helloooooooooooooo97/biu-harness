@@ -1,0 +1,146 @@
+import { Service, type Context, type Fiber, type Plugin } from 'cordis'
+import type { CatalogEntry } from './catalog.ts'
+import { resolveCatalog } from './resolve-catalog.ts'
+import type { PageSpec } from '@biu/type-http'
+import { HUB_CHANGE, HUB_CHANNEL_EVENT, HUB_CHANNEL_SNAPSHOT } from '@biu/type-http'
+
+export { HUB_CHANGE, HUB_CHANNEL_EVENT, HUB_CHANNEL_SNAPSHOT }
+
+const STATE = ['pending', 'loading', 'active', 'failed', 'disposed', 'unloading']
+
+interface ForkRecord {
+  entry: CatalogEntry
+  fiber?: Fiber
+}
+
+export class HubService extends Service {
+  private forks = new Map<string, ForkRecord>()
+  private pages: PageSpec[] = []
+  private events: Array<{ ts: number; mode: string; name: string; args: unknown[] }> = []
+  private seq = 0
+
+  constructor(ctx: Context, catalog: CatalogEntry[]) {
+    super(ctx, 'hub')
+    ctx.on('internal/dispatch', (mode, name, args) => {
+      if (name.startsWith('internal/')) return
+      // 流式 delta 极高频，不进 hub event 总线（避免 Settings EventLog 拖垮主线程）
+      if (name === 'llm/stream') return
+      if (name === 'session/event') {
+        const payload = args[0] as { event?: { type?: string } } | undefined
+        if (payload?.event?.type === 'assistant/chunk') return
+      }
+      this.events.unshift({ ts: Date.now(), mode, name, args: clone(args) })
+      this.events.splice(80)
+      ctx.http.broadcast(HUB_CHANNEL_EVENT, this.events[0])
+    })
+    ctx.on('internal/status', () => {
+      ctx.http.broadcast(HUB_CHANNEL_SNAPSHOT, this.snapshot())
+    })
+    ctx.on(HUB_CHANGE, () => {
+      ctx.http.broadcast(HUB_CHANNEL_SNAPSHOT, this.snapshot())
+    })
+    for (const entry of catalog) {
+      this.forks.set(entry.id, { entry })
+    }
+  }
+
+  /** 等内核插件 ACTIVE 后再对外提供 snapshot，避免前端拿到 enabled:false 而不挂 chat-ui。 */
+  async mountEnabled() {
+    for (const record of this.forks.values()) {
+      if (record.entry.enabled) await this.mount(record.entry.id)
+    }
+  }
+
+  // 在hub注册对应的插件
+  register(page: PageSpec) {
+    return this.ctx.effect(() => {
+      this.pages.push(page)
+      this.ctx.emit(HUB_CHANGE)
+      return () => {
+        this.pages = this.pages.filter((item) => item !== page)
+        this.ctx.emit(HUB_CHANGE)
+      }
+    }, `hub.registerPage ${page.id}`)
+  }
+
+  snapshot() {
+    const plugins = [...this.forks.values()].map(({ entry, fiber }) => ({
+      id: entry.id,
+      name: entry.name,
+      layer: entry.layer,
+      blurb: entry.blurb,
+      inject: entry.inject ?? [],
+      togglable: entry.togglable,
+      enabled: Boolean(fiber && fiber.uid !== null),
+      state: fiber ? STATE[fiber.state] ?? String(fiber.state) : 'off',
+      ...(entry.ui ? { ui: entry.ui } : {}),
+      ...(entry.packageName ? { packageName: entry.packageName } : {}),
+    }))
+    return {
+      seq: ++this.seq,
+      plugins,
+      pages: [...this.pages],
+      routes: this.ctx.http.listRoutes(),
+      events: this.events,
+      tools: this.ctx.tools.names(),
+      services: [
+        'http', 'hub', 'tools', 'llm', 'agentLoop', 'agents', 'approvals',
+        'sessionStore', 'sessions', 'systemPrompt', 'fs', 'subprocess', 'sandbox',
+        'shell', 'jobs', 'mcp', 'terminals', 'lsp', 'subagents', 'chat',
+      ].filter((name) => Boolean(this.ctx.get(name))),
+    }
+  }
+
+  async setEnabled(id: string, enabled: boolean) {
+    const record = this.forks.get(id)
+    if (!record) throw new Error(`unknown plugin: ${id}`)
+    if (!record.entry.togglable) throw new Error(`${id} 是核心层，不能卸载`)
+    if (enabled) await this.mount(id)
+    else await this.unmount(id)
+    this.ctx.emit(HUB_CHANGE)
+    return this.snapshot()
+  }
+
+  private async mount(id: string) {
+    const record = this.forks.get(id)
+    if (!record || (record.fiber && record.fiber.uid !== null)) return
+    record.fiber = this.ctx.plugin(record.entry.plugin as Plugin, record.entry.config)
+    await record.fiber
+  }
+
+  private async unmount(id: string) {
+    const record = this.forks.get(id)
+    if (!record?.fiber) return
+    await record.fiber.dispose()
+    record.fiber = undefined
+  }
+}
+
+function clone(value: unknown): unknown[] {
+  try {
+    return JSON.parse(JSON.stringify(value, (_key, item) => (typeof item === 'function' ? '[fn]' : item)))
+  } catch {
+    return ['[unserializable]']
+  }
+}
+
+export const name = 'hub'
+export const inject = ['http', 'tools']
+
+export async function apply(ctx: Context) {
+  const catalog = await resolveCatalog()
+  const hub = new HubService(ctx, catalog)
+  await hub.mountEnabled()
+  ctx.http.route('GET', '/api/snapshot', (route) => {
+    route.send(200, ctx.hub.snapshot())
+  })
+  ctx.http.broadcast(HUB_CHANNEL_SNAPSHOT, ctx.hub.snapshot())
+  ctx.http.route('POST', '/api/plugins/:id', async (route) => {
+    const payload = (await route.json()) as { enabled?: boolean }
+    try {
+      route.send(200, await ctx.hub.setEnabled(route.params.id, Boolean(payload.enabled)))
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
+  })
+}

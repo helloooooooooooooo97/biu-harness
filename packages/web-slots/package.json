@@ -1,0 +1,14 @@
+{
+  "name": "@biu/web-slots",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "UI 缝运行时",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "react": "^19.1.1"
+  }
+}

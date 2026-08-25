@@ -1,0 +1,15 @@
+{
+  "name": "@biu/cap-clock",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "心跳时钟",
+  "exports": {
+    "./host": "./src/host.ts",
+    "./ui": "./src/ui.tsx"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "react": "^19.1.1"
+  }
+}

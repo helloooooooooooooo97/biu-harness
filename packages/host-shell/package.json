@@ -1,0 +1,13 @@
+{
+  "name": "@biu/host-shell",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "命令行缝",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

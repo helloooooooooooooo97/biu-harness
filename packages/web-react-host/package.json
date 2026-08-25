@@ -1,0 +1,15 @@
+{
+  "name": "@biu/web-react-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "React 挂载",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  }
+}

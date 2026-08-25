@@ -1,0 +1,17 @@
+{
+  "name": "@biu/cap-chat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "对话能力（host + ui 分入口）",
+  "exports": {
+    "./host": "./src/host.ts",
+    "./ui": "./src/ui.ts",
+    "./trajectory": "./src/ui/trajectory.tsx",
+    "./usage-panel": "./src/ui/usage-panel.tsx"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "react": "^19.1.1"
+  }
+}

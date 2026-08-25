@@ -1,0 +1,13 @@
+{
+  "name": "@biu/type-host-context",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cordis Context 增强（加载器用；插件不要依赖它形成环）",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}
