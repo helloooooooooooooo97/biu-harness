@@ -5,8 +5,8 @@
   "type": "module",
   "description": "Live 派工（不是任务插件）",
   "exports": {
-    ".": "./src/index.ts",
-    "./usage": "./src/live-dispatched-usage.ts"
+    ".": "./src/host/index.ts",
+    "./usage": "./src/host/live-dispatched-usage.ts"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8"

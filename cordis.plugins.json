@@ -40,9 +40,9 @@
       "id": "chat",
       "name": "对话",
       "layer": "capability",
-      "blurb": "@biu/cap-chat/host + @biu/cap-chat/ui。会话与 composer。",
+      "blurb": "@biu/cap-chat/host + @biu/cap-chat/web。会话与 composer。",
       "package": "@biu/cap-chat/host",
-      "ui": "@biu/cap-chat/ui",
+      "ui": "@biu/cap-chat/web",
       "togglable": true,
       "enabled": true
     },
@@ -59,9 +59,9 @@
       "id": "clock",
       "name": "心跳时钟",
       "layer": "capability",
-      "blurb": "@biu/cap-clock/host + @biu/cap-clock/ui。",
+      "blurb": "@biu/cap-clock/host + @biu/cap-clock/web。",
       "package": "@biu/cap-clock/host",
-      "ui": "@biu/cap-clock/ui",
+      "ui": "@biu/cap-clock/web",
       "togglable": true,
       "enabled": true
     },
@@ -78,9 +78,9 @@
       "id": "greeter",
       "name": "问候服务",
       "layer": "capability",
-      "blurb": "@biu/cap-greeter/host + @biu/cap-greeter/ui。",
+      "blurb": "@biu/cap-greeter/host + @biu/cap-greeter/web。",
       "package": "@biu/cap-greeter/host",
-      "ui": "@biu/cap-greeter/ui",
+      "ui": "@biu/cap-greeter/web",
       "togglable": true,
       "enabled": true
     },
@@ -108,7 +108,7 @@
       "layer": "capability",
       "blurb": "@biu/cap-dashboard。用量概览。",
       "package": "@biu/cap-dashboard/host",
-      "ui": "@biu/cap-dashboard/ui",
+      "ui": "@biu/cap-dashboard/web",
       "togglable": true,
       "enabled": true
     },
@@ -118,7 +118,7 @@
       "layer": "capability",
       "blurb": "@biu/cap-tasks。",
       "package": "@biu/cap-tasks/host",
-      "ui": "@biu/cap-tasks/ui",
+      "ui": "@biu/cap-tasks/web",
       "togglable": true,
       "enabled": true
     },
@@ -128,7 +128,7 @@
       "layer": "capability",
       "blurb": "@biu/cap-channels。",
       "package": "@biu/cap-channels/host",
-      "ui": "@biu/cap-channels/ui",
+      "ui": "@biu/cap-channels/web",
       "togglable": true,
       "enabled": true
     }

@@ -5,7 +5,7 @@
   "type": "module",
   "description": "会话检查器 API",
   "exports": {
-    "./host": "./src/host.ts"
+    "./host": "./src/host/index.ts"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8"

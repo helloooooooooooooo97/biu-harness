@@ -25,8 +25,7 @@ export default defineConfig({
     environmentMatchGlobs: [
       ['host/**', 'node'],
       ['packages/host-*/**', 'node'],
-      ['packages/cap-*/src/host.ts', 'node'],
-      ['packages/cap-*/src/host.test.ts', 'node'],
+      ['packages/cap-*/src/host/**', 'node'],
       ['packages/type-*/**', 'node'],
     ],
   },

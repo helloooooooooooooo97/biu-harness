@@ -5,7 +5,7 @@
   "type": "module",
   "description": "大写拦截器",
   "exports": {
-    "./host": "./src/host.ts"
+    "./host": "./src/host/index.ts"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8"

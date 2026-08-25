@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "对话能力（host + ui 分入口）",
+      "description": "对话能力（host + web 分入口）",
   "exports": {
-    "./host": "./src/host.ts",
-    "./ui": "./src/ui.ts",
-    "./trajectory": "./src/ui/trajectory.tsx",
-    "./usage-panel": "./src/ui/usage-panel.tsx"
+    "./host": "./src/host/index.ts",
+    "./web": "./src/web/index.ts",
+    "./web/trajectory": "./src/web/trajectory.tsx",
+    "./web/usage-panel": "./src/web/usage-panel.tsx"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8",

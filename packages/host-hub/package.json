@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Host 插件 hub",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/host/index.ts"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8"
