@@ -9,11 +9,30 @@ import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-function readPlugins() {
+function splitPackageRef(specifier) {
+  if (specifier.startsWith('@')) {
+    const parts = specifier.split('/')
+    if (parts.length <= 2) return { name: specifier }
+    return { name: `${parts[0]}/${parts[1]}` }
+  }
+  const slash = specifier.indexOf('/')
+  if (slash === -1) return { name: specifier }
+  return { name: specifier.slice(0, slash) }
+}
+
+function allConfiguredNames() {
   const path = join(root, 'cordis.plugins.json')
   if (!existsSync(path)) return []
   const body = JSON.parse(readFileSync(path, 'utf8'))
-  return Array.isArray(body.plugins) ? body.plugins : []
+  const names = new Set()
+  for (const list of [body.host, body.web, body.plugins]) {
+    if (!Array.isArray(list)) continue
+    for (const item of list) {
+      if (item.package) names.add(splitPackageRef(item.package).name)
+      if (item.ui) names.add(splitPackageRef(item.ui).name)
+    }
+  }
+  return names
 }
 
 function findPkg(name) {
@@ -32,13 +51,7 @@ function findPkg(name) {
   return null
 }
 
-const names = new Set()
-for (const item of readPlugins()) {
-  if (item.package) names.add(item.package)
-  if (item.ui) names.add(item.ui)
-}
-
-for (const name of names) {
+for (const name of allConfiguredNames()) {
   const dir = findPkg(name)
   if (!dir) {
     console.warn(`[link-cordis-plugins] missing packages/* for ${name}`)

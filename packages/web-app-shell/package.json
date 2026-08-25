@@ -1,0 +1,15 @@
+{
+  "name": "@biu/web-app-shell",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "应用壳",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "react": "^19.1.1",
+    "react-router-dom": "^7.18.2"
+  }
+}

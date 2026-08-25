@@ -1,0 +1,14 @@
+{
+  "name": "@biu/host-fs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "文件系统缝",
+  "exports": {
+    ".": "./src/index.ts",
+    "./workspace-pick": "./src/workspace-pick.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@biu/host-system-prompt",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "系统提示",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

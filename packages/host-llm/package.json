@@ -1,0 +1,13 @@
+{
+  "name": "@biu/host-llm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "LLM 客户端",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

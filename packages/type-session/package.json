@@ -1,0 +1,13 @@
+{
+  "name": "@biu/type-session",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Session 事件 / 配置契约（可被任意包直接 import）",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

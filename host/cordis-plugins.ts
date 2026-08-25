@@ -180,17 +180,5 @@ export function cordisPluginsVite(root = process.cwd()): VitePlugin {
       }
       return null
     },
-    config() {
-      const alias: Record<string, string> = {}
-      for (const item of allConfiguredEntries(root)) {
-        for (const name of [item.package, item.ui]) {
-          if (!name || alias[name]) continue
-          const dir = findWorkspacePackageDir(root, name)
-          if (!dir) continue
-          alias[name] = packageEntryFile(dir, name)
-        }
-      }
-      return { resolve: { alias } }
-    },
   }
 }

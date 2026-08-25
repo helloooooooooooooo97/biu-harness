@@ -1,0 +1,13 @@
+{
+  "name": "@biu/host-hub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Host 插件 hub",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

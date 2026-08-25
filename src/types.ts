@@ -1,1 +1,1 @@
-import '../packages/web-runtime/types.ts'
+import '@biu/type-host-context'

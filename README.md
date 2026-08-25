@@ -1,4 +1,4 @@
-# hmr-dev
+# biu
 
 Cordis 插槽壳 + host 控制台。前端按 registry / contributors / orchestration / infrastructure 分插件；host 同类目录提供 `/api` 与 snapshot。
 

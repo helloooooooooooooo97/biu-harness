@@ -1,0 +1,13 @@
+{
+  "name": "@biu/type-http",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "HTTP 路由与 hub 频道常量",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

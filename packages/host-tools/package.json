@@ -1,0 +1,13 @@
+{
+  "name": "@biu/host-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "工具注册表",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

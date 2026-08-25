@@ -1,0 +1,13 @@
+{
+  "name": "@biu/cap-uppercase",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "大写拦截器",
+  "exports": {
+    "./host": "./src/host.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

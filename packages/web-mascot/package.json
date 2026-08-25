@@ -1,0 +1,13 @@
+{
+  "name": "@biu/web-mascot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Mascot 共享 UI（非插件；壳与 chat 共用）",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.1.1"
+  }
+}

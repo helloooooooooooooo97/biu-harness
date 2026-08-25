@@ -1,0 +1,13 @@
+{
+  "name": "@biu/type-agent-loop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AgentTurn / ClaimedInput / PreStepReq",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}
