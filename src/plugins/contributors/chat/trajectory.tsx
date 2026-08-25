@@ -1,4 +1,4 @@
-import { memo, type ReactNode, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { memo, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { LuArrowUp } from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
@@ -12,6 +12,7 @@ import {
   type TrajectoryRow,
   type TrajectoryUsage,
 } from '../../infrastructure/session-project.ts'
+import { UsageInline } from './usage-inline.tsx'
 
 type TagTone = 'user' | 'assistant' | 'tool' | 'system' | 'turn' | 'step'
 
@@ -41,66 +42,6 @@ function formatTok(n: number) {
 function cacheHitPct(usage: TrajectoryUsage): number | null {
   if (!usage.inputTokens || !usage.cacheReadTokens) return null
   return Math.min(100, Math.round((usage.cacheReadTokens / usage.inputTokens) * 100))
-}
-
-/** 历史占比是 0~1 的有限数值才纳入合成背景。 */
-function isHistPct(v: unknown): v is number {
-  return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1
-}
-
-/**
- * Input 包成胶囊；绿色(cache hit)与红色(历史占比)各自从左→右铺设，多段 linear-gradient
- * 合成在同一背景上：红色层在下、绿色层在上，alpha 混合呈现叠加色，两段互不强制铺满。
- */
-function UsageInline({
-  usage,
-  empty = '—',
-  histPct,
-}: {
-  usage?: TrajectoryUsage
-  empty?: string
-  /** 历史 turn 输入占比（0~1）；缺省为 undefined（仅绿）。可显式传入。 */
-  histPct?: number
-}) {
-  if (!usage) return <span className="traj-usage-empty">{empty}</span>
-  const pct = cacheHitPct(usage)
-  const hist = isHistPct(histPct) ? Math.round(histPct * 100) : null
-
-  // 红、绿各 0~100%，独立叠加；任一存在才设背景。红层在下、绿层在上。
-  const layers: string[] = []
-  if (hist != null) layers.push(`linear-gradient(90deg, rgba(229, 72, 77, 0.3) 0%, rgba(229, 72, 77, 0.3) ${hist}%, transparent ${hist}%)`)
-  if (pct != null)
-    layers.push(
-      `linear-gradient(90deg, rgba(34, 140, 90, 0.28) 0%, rgba(34, 140, 90, 0.28) ${pct}%, rgba(15, 17, 21, 0.06) ${pct}%, rgba(15, 17, 21, 0.06) 100%)`,
-    )
-  const inStyle: CSSProperties | undefined =
-    layers.length > 0 ? { backgroundImage: layers.join(', ') } : undefined
-
-  const title = hist != null
-    ? `input ${formatTok(usage.inputTokens)} · cache hit ${pct ?? 0}% · 历史占比 ${hist}%`
-    : pct != null
-      ? `input ${formatTok(usage.inputTokens)} · cache hit ${pct}% (${formatTok(usage.cacheReadTokens!)})`
-      : `input ${formatTok(usage.inputTokens)}`
-
-  return (
-    <span className="traj-usage" title={formatTrajectoryUsage(usage)}>
-      <span
-        className={`traj-usage-in-wrap${pct != null ? ' has-cache' : ''}${hist != null ? ' has-hist' : ''}`}
-        style={inStyle}
-        title={title}
-      >
-        {hist != null ? <span className="traj-usage-hist-pct">{hist}%</span> : null}
-        <span className="traj-usage-in">{formatTok(usage.inputTokens)}</span>
-        {pct != null ? <span className="traj-usage-cache-pct">{pct}%</span> : null}
-      </span>
-      <span className="traj-usage-arrow" aria-hidden>
-        →
-      </span>
-      <span className="traj-usage-out" title="output tokens">
-        {formatTok(usage.outputTokens)}
-      </span>
-    </span>
-  )
 }
 
 function UsageCard({ usage, label = 'Token usage' }: { usage: TrajectoryUsage; label?: string }) {
@@ -144,6 +85,8 @@ function FoldCaret({ open }: { open: boolean }) {
   )
 }
 
+const TRAJ_NEAR_BOTTOM_PX = 96
+
 
 export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
@@ -172,6 +115,38 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
     () => sumUsageParts(localUsage, dispatchedUsage),
     [localUsage, dispatchedUsage],
   )
+
+  // 自动滚动到最新：当轨迹更新且用户靠近底部时，滚动到最新部分
+  const listRef = useRef<HTMLDivElement>(null)
+  const stickToBottomRef = useRef(true)
+
+  useEffect(() => {
+    stickToBottomRef.current = true
+  }, [sessionId])
+
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+
+    const onScroll = () => {
+      const distance = el.scrollHeight - el.scrollTop - el.clientHeight
+      stickToBottomRef.current = distance <= TRAJ_NEAR_BOTTOM_PX
+    }
+    onScroll()
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+    }
+  }, [sessionId, rows.length > 0])
+
+  const sticksKey = `${rows.length}:${groups.length}`
+
+  useLayoutEffect(() => {
+    if (!stickToBottomRef.current || rows.length === 0) return
+    const el = listRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+  }, [sticksKey, rows.length, groups.length])
 
   useEffect(() => {
     if (!focusCallId) return
@@ -271,7 +246,7 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
           <span className="traj-col-usage">usage</span>
         </div>
 
-        <div className="traj-list" role="rowgroup">
+        <div ref={listRef} className="traj-list" role="rowgroup">
           {groups.map((group) => {
             const turnKey = group.key
             const turnCollapsed = Boolean(collapsedTurns[turnKey])

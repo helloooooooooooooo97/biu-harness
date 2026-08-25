@@ -267,6 +267,24 @@ test('deriveMessages honors context_compact_submit tool/call as new prefix', () 
   assert.ok(!joined.includes('早期回答B'))
 })
 
+test('deriveMessages context_clear wipes history with no summary prefix', () => {
+  const events: SessionEvent[] = [
+    { type: 'session/open', version: 1, seq: 0, ts: 0 },
+    { type: 'system/prompt', text: 'SYS', seq: 1, ts: 1 },
+    { type: 'user/message', text: '旧的早期消息A', kind: 'wake', seq: 2, ts: 2 },
+    { type: 'assistant/message', text: '早期回答B', seq: 3, ts: 3 },
+    { type: 'tool/call', id: 't1', name: 'context_clear', arguments: '{}', seq: 4, ts: 4 },
+    { type: 'user/message', text: '清空后的新问题', kind: 'wake', seq: 5, ts: 5 },
+  ]
+  const out = deriveMessages(events as any)
+  const joined = out.map((m) => typeof m.content === 'string' ? m.content : '').join('|')
+  // 清空后：旧历史与任何摘要前缀都不该出现，只保留清空点之后的新消息
+  assert.ok(joined.includes('清空后的新问题'))
+  assert.ok(!joined.includes('旧的早期消息A'))
+  assert.ok(!joined.includes('早期回答B'))
+  assert.ok(!joined.includes('摘要'))
+})
+
 function ev(partial: Partial<SessionEvent> & { type: string; seq: number }): SessionEvent {
   return { ...(partial as SessionEvent), ts: partial.seq ?? partial.ts ?? 0 }
 }

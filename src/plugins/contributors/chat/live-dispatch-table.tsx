@@ -1,58 +1,13 @@
-import { memo, type CSSProperties } from 'react'
+import { memo } from 'react'
 import { LuCircleCheck, LuCircleDashed, LuCircleX, LuLoaderCircle } from 'react-icons/lu'
-import {
-  formatTokens,
-  formatTrajectoryUsage,
-  type TrajectoryUsage,
-} from '../../infrastructure/session-project.ts'
+import type { TrajectoryUsage } from '../../infrastructure/session-project.ts'
 import type { DispatchedTaskRow } from '../../infrastructure/session-view.ts'
 import { SidebarMascot } from '../mascot/sidebar-mascot.tsx'
 import { resolveSessionMascot } from '../mascot/session-mascot.ts'
 import { FolderGlyph } from './project-panel.tsx'
+import { UsageInline } from './usage-inline.tsx'
 
 export type LiveDispatchTaskRow = DispatchedTaskRow
-
-function formatTok(n: number) {
-  return formatTokens(n)
-}
-
-function cacheHitPct(usage: TrajectoryUsage): number | null {
-  if (!usage.inputTokens || !usage.cacheReadTokens) return null
-  return Math.min(100, Math.round((usage.cacheReadTokens / usage.inputTokens) * 100))
-}
-
-/** 与 thread / trajectory 的 UsageInline 同一套外壳 */
-function UsageInline({ usage }: { usage: TrajectoryUsage }) {
-  const pct = cacheHitPct(usage)
-  const inStyle: CSSProperties | undefined =
-    pct != null
-      ? {
-          backgroundImage: `linear-gradient(90deg, rgba(34, 140, 90, 0.28) 0%, rgba(34, 140, 90, 0.28) ${pct}%, rgba(15, 17, 21, 0.06) ${pct}%, rgba(15, 17, 21, 0.06) 100%)`,
-        }
-      : undefined
-  return (
-    <span className="traj-usage" title={formatTrajectoryUsage(usage)}>
-      <span
-        className={`traj-usage-in-wrap${pct != null ? ' has-cache' : ''}`}
-        style={inStyle}
-        title={
-          pct != null
-            ? `input ${formatTok(usage.inputTokens)} · cache hit ${pct}% (${formatTok(usage.cacheReadTokens!)})`
-            : `input ${formatTok(usage.inputTokens)}`
-        }
-      >
-        <span className="traj-usage-in">{formatTok(usage.inputTokens)}</span>
-        {pct != null ? <span className="traj-usage-cache-pct">{pct}%</span> : null}
-      </span>
-      <span className="traj-usage-arrow" aria-hidden>
-        →
-      </span>
-      <span className="traj-usage-out" title="output tokens">
-        {formatTok(usage.outputTokens)}
-      </span>
-    </span>
-  )
-}
 
 function statusMeta(status: LiveDispatchTaskRow['status'], reason?: string) {
   if (status === 'complete') {

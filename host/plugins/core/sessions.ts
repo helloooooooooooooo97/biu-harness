@@ -54,9 +54,12 @@ export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
   }
 
   for (const event of events) {
-    // 压缩点：某次 context_compact_submit / session_compact 的 tool/call 即压缩点。
+    // 压缩点：某次 context_compact_submit / session_compact / context_clear 的 tool/call 即压缩点。
     // 从此处重起，丢弃该点之前的历史（避免重复发送旧 token）；摘要取该 tool 调用的 text 参数。
-    if (event.type === 'tool/call' && (event.name === 'context_compact_submit' || event.name === 'session_compact')) {
+    if (
+      event.type === 'tool/call' &&
+      (event.name === 'context_compact_submit' || event.name === 'session_compact' || event.name === 'context_clear')
+    ) {
       messages.length = 0
       pendingToolCalls.clear()
       let text = ''
@@ -126,7 +129,8 @@ export interface InputComposition {
 export function statInputComposition(events: SessionEvent[]): InputComposition {
   const len = (s: string | null | undefined) => (s ? s.length : 0)
   const isCompact = (e: SessionEvent) =>
-    e.type === 'tool/call' && (e.name === 'context_compact_submit' || e.name === 'session_compact')
+    e.type === 'tool/call' &&
+    (e.name === 'context_compact_submit' || e.name === 'session_compact' || e.name === 'context_clear')
 
   // —— 第一遍：定位「本次(最近一次) turn」。
   //     与 deriveMessages 一致：仅统计最后一个压缩点之后的事件（无压缩点则全量）。

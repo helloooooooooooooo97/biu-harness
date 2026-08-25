@@ -24,6 +24,8 @@ export type SessionEvent = {
         outputTokens: number
         totalTokens?: number
         cacheReadTokens?: number
+        /** 该次 llm.chat 输入中「历史 turn」占比（0~1）；后端 agent-loop 在 derive 时挂载。 */
+        histPct?: number
       }
     }
   | { type: 'assistant/chunk'; text: string }
@@ -69,6 +71,8 @@ export type ChatStepStat = {
   cacheReadTokens?: number
   toolCount: number
   messageChars: number
+  /** 该 step 内按 input token 加权的历史占比（0~1）；仅当该 step 有 llm.chat usage 才存在。 */
+  histPct?: number
 }
 
 export type ChatNode =
@@ -156,10 +160,14 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     streamingId: string | null
     tools: Map<string, ChatToolPart>
     usage: { input: number; output: number; total: number; cache: number; hit: boolean }
-    histPct?: number
+    /** 历史占比加权累加器：Σ(histPct × inputTokens) / Σ(inputTokens)。 */
+    histSum: number
+    histWeight: number
     streaming: boolean
     turn?: number
     steps: Map<number, ChatStepStat>
+    /** step → 该 step 历史占比累加器 {sum, weight}。 */
+    stepHist: Map<number, { sum: number; weight: number }>
   } | null = null
 
   function ensureReply(seq: number) {
@@ -170,9 +178,12 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
         streamingId: null,
         tools: new Map(),
         usage: { input: 0, output: 0, total: 0, cache: 0, hit: false },
+        histSum: 0,
+        histWeight: 0,
         // 回合未结束前保持 streaming，Details 不因中间 tool/message 收起
         streaming: currentTurn != null,
         steps: new Map(),
+        stepHist: new Map(),
         ...(currentTurn != null ? { turn: currentTurn } : {}),
       }
     } else if (currentTurn != null) {
@@ -204,14 +215,24 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     r.usage.output += usage.outputTokens
     r.usage.total += usage.totalTokens ?? usage.inputTokens + usage.outputTokens
     r.usage.cache += usage.cacheReadTokens ?? 0
-    // 保留最后一条 assistant/message 的 histPct（该 reply 的"本次/历史"占比取最后一次 llm.chat 时刻）
-    if (usage.histPct !== undefined) r.histPct = usage.histPct
+    // 历史占比：按 input token 加权累计，而非覆盖（replay 计入本回合全部 llm.chat usage）
+    if (usage.histPct !== undefined && usage.inputTokens > 0) {
+      r.histSum += usage.histPct * usage.inputTokens
+      r.histWeight += usage.inputTokens
+    }
     if (currentStep != null) {
       const stat = ensureStepStat(currentStep)
       stat.inputTokens += usage.inputTokens
       stat.outputTokens += usage.outputTokens
       if (usage.cacheReadTokens) {
         stat.cacheReadTokens = (stat.cacheReadTokens ?? 0) + usage.cacheReadTokens
+      }
+      // 该 step 自身的历史占比也同样按 token 加权累计
+      if (usage.histPct !== undefined && usage.inputTokens > 0) {
+        const acc = r.stepHist.get(currentStep) ?? { sum: 0, weight: 0 }
+        acc.sum += usage.histPct * usage.inputTokens
+        acc.weight += usage.inputTokens
+        r.stepHist.set(currentStep, acc)
       }
     }
   }
@@ -227,18 +248,24 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       .map((part) => part.text.trim())
       .filter(Boolean)
       .join('\n\n')
+    const histPct = reply.histWeight > 0 ? reply.histSum / reply.histWeight : undefined
     const usage: TrajectoryUsage | undefined = reply.usage.hit
       ? {
           inputTokens: reply.usage.input,
           outputTokens: reply.usage.output,
           totalTokens: reply.usage.total,
           ...(reply.usage.cache ? { cacheReadTokens: reply.usage.cache } : {}),
-          ...(reply.histPct !== undefined ? { histPct: reply.histPct } : {}),
+          ...(histPct !== undefined ? { histPct } : {}),
         }
       : undefined
     const durationMs =
       finished && turnStartTs != null && endTs != null ? Math.max(0, endTs - turnStartTs) : undefined
     const steps = [...reply.steps.values()].sort((a, b) => a.step - b.step)
+    // 每个 step 单独写回其按 token 加权的历史占比，供 step 横条的 histPct 胶囊展示
+    for (const stat of steps) {
+      const acc = reply.stepHist.get(stat.step)
+      if (acc && acc.weight > 0) stat.histPct = acc.sum / acc.weight
+    }
     nodes.push({
       id: reply.id,
       kind: 'reply',

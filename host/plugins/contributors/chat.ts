@@ -600,8 +600,11 @@ export function apply(ctx: Context) {
     let turn = 0
     for (const event of record.events) {
       if (event.type === 'step/start') turn = event.turn
-      if (event.type === 'tool/call' && event.name === 'context_compact_submit') {
-        // 压缩点：仅「真正提交上下文压缩」的 context_compact_submit 调用；
+      if (
+        event.type === 'tool/call' &&
+        (event.name === 'context_compact_submit' || event.name === 'context_clear')
+      ) {
+        // 压缩点：仅「真正提交上下文压缩」的 context_compact_submit / context_clear 调用；
         // session_compact（旧压缩）与其它的 status/brief 查询类不算压缩点。
         compactions.push(event.seq)
         continue
@@ -772,6 +775,18 @@ export function apply(ctx: Context) {
   ctx.http.route('POST', '/api/sessions/:id/cancel', (route) => {
     ctx.agents.get(route.params.id)?.cancel()
     route.send(200, { ok: true })
+  })
+  // 清空上下文：不经过大模型，仅向会话事件日志插入一条 context_clear tool/call 记录（作为压缩点）。
+  ctx.http.route('POST', '/api/sessions/:id/clear-context', async (route) => {
+    const id = route.params.id
+    if (!(await ctx.sessions.get(id))) return route.send(404, { error: 'unknown session' })
+    const event = await ctx.sessions.append(id, {
+      type: 'tool/call',
+      id: crypto.randomUUID(),
+      name: 'context_clear',
+      arguments: '{}',
+    })
+    route.send(200, { ok: true, sessionId: id, seq: event.seq, ts: event.ts })
   })
   ctx.http.route('POST', '/api/sessions/:id/inbox/flush', async (route) => {
     const id = route.params.id

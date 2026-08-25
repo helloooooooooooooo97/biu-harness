@@ -1,18 +1,42 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { LuEraser } from 'react-icons/lu'
 import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionViewService } from '../../infrastructure/session-view.ts'
+import { formatTokens, type ChatNode } from '../../infrastructure/session-project.ts'
 import { SessionProjectPanel } from './project-panel.tsx'
 
 type AgentMode = 'standard' | 'minimal'
+
+/** 最新一条 thread（reply）的历史上下文信息：占比 histPct + 历史 token 数（inputTokens×histPct）。 */
+function latestHistInfo(
+  nodes: ChatNode[],
+): { ratio: number; histTokens: number } | null {
+  const last = nodes.at(-1)
+  if (!last || last.kind !== 'reply') return null
+  const usage = last.usage
+  const hist = usage?.histPct
+  if (typeof hist !== 'number' || !Number.isFinite(hist)) return null
+  const input = usage?.inputTokens ?? 0
+  return {
+    ratio: Math.min(1, Math.max(0, hist)),
+    histTokens: Math.round(input * hist),
+  }
+}
 
 /** Dock 顶栏：左侧文件 + 标准/极简胶囊，右侧 auto/hold；同一水平线。 */
 export function ApprovalsRail(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
+  const sessionId = useSessionView((state) => state.sessionId)
   const approvals = useSessionView((state) => state.approvals)
   const approvalMode = useSessionView((state) => state.approvalMode)
+  const nodes = useSessionView((state) => state.nodes)
   const [agentMode, setAgentMode] = useState<AgentMode>('standard')
   const [modeBusy, setModeBusy] = useState(false)
+  const [clearBusy, setClearBusy] = useState(false)
+
+  // 红色占比 = 最新一条 thread（reply）的 usage.histPct（历史输入占比）。
+  const histInfo = useMemo(() => latestHistInfo(nodes), [nodes])
 
   const refreshAgentMode = useCallback(async () => {
     try {
@@ -29,6 +53,28 @@ export function ApprovalsRail(props: SlotProps) {
     void refreshAgentMode()
   }, [refreshAgentMode])
 
+  // 快捷键：command+e / ctrl+e 触发清空上下文（在输入框中同样生效）
+  const clearContextRef = useRef<() => void>(() => {})
+  useEffect(() => {
+    clearContextRef.current = clearContext
+  })
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const isE = event.key === 'e' || event.key === 'E'
+      const isMod = event.metaKey || event.ctrlKey
+      if (!isE || !isMod || event.shiftKey || event.altKey) return
+      event.preventDefault()
+      clearContextRef.current()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    console.log('[approvals] Command+E shortcut registered')
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      console.log('[approvals] Command+E shortcut unregistered')
+    }
+  }, [])
+
   async function setMode(next: AgentMode) {
     if (next === agentMode || modeBusy) return
     setModeBusy(true)
@@ -43,6 +89,22 @@ export function ApprovalsRail(props: SlotProps) {
       setAgentMode(data.agentMode === 'minimal' ? 'minimal' : 'standard')
     } finally {
       setModeBusy(false)
+    }
+  }
+
+  // 清空上下文：不经过大模型，仅向后端写入一条 context_clear 日志（压缩点）。
+  async function clearContext() {
+    console.log('[approvals] clearContext triggered, sessionId =', sessionId, ', clearBusy =', clearBusy)
+    
+    if (!sessionId || clearBusy) return
+    setClearBusy(true)
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/clear-context`, { method: 'POST' })
+      if (!res.ok) return
+      // 后台校对拉取最新事件，使新插入的日志记录立即出现在会话视图中。
+      await sessionView.load(sessionId, { view: 'chat', wait: false })
+    } finally {
+      setClearBusy(false)
     }
   }
 
@@ -108,6 +170,30 @@ export function ApprovalsRail(props: SlotProps) {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            disabled={!sessionId || clearBusy}
+            aria-label="清空上下文"
+            title="清空上下文（不经过大模型，写入一条日志）"
+            className="relative flex items-center gap-1 overflow-hidden rounded-full border border-[var(--dsw-border)] px-2 py-1 text-[var(--dsw-label-3)] transition-colors hover:bg-[var(--dsw-hover)] disabled:opacity-40"
+            onClick={() => void clearContext()}
+          >
+            {histInfo != null && histInfo.ratio > 0 ? (
+              <span
+                className="pointer-events-none absolute inset-0 bg-[var(--dsw-danger)]/20 transition-[width] duration-200"
+                style={{ width: `${Math.round(histInfo.ratio * 100)}%` }}
+                aria-hidden
+              />
+            ) : null}
+            <LuEraser className="relative h-3 w-3" aria-hidden />
+            {histInfo != null ? (
+              <span className="relative tabular-nums" title={`历史上下文占比 ${Math.round(histInfo.ratio * 100)}% · ${formatTokens(histInfo.histTokens)} token`}>
+                {Math.round(histInfo.ratio * 100)}%·{formatTokens(histInfo.histTokens)}
+              </span>
+            ) : (
+              <span className="relative tabular-nums">0</span>
+            )}
+          </button>
         </div>
         <div className="dock-seg">
           <span className="sr-only">Tool approval mode</span>

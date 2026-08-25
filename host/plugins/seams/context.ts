@@ -173,7 +173,9 @@ export function apply(ctx: Context) {
       const tokens = usage.inputTokens
       const budget = Number(process.env.CTX_BUDGET ?? 1000000)
       const compacted = events.filter(
-        (e) => e.type === 'tool/call' && (e.name === 'context_compact_submit' || e.name === 'session_compact'),
+        (e) =>
+          e.type === 'tool/call' &&
+          (e.name === 'context_compact_submit' || e.name === 'session_compact' || e.name === 'context_clear'),
       )
       return {
         ok: true,
@@ -263,6 +265,25 @@ export function apply(ctx: Context) {
       }
     },
   })
+
+  ctx.tools.register({
+    name: 'context_clear',
+    description:
+      '[session·清空] 直接清空当前会话上下文：本次工具调用即作为压缩点，deriveMessages 从该调用续读，此前的全部历史（含摘要）不再发送、也不保留任何前缀——等价于一个不带 text 的压缩点提交。清空后如需旧细节，仍可用 history_retrieve 从历史检索。与 context_compact_submit(带摘要压缩) 的区别：本工具不做摘要。',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+    execute: async () => {
+      const sessionId = currentSessionId()
+      if (!sessionId) throw new Error('no active session')
+      return {
+        ok: true,
+        sessionId,
+        note: '已清空上下文：本次调用即作为压缩点，此前历史不再发送，后续从空上下文继续。如需旧细节可用 history_retrieve 检索。',
+      }
+    },
+  })
 }
 
 /* ---- compact 辅助函数 ---- */
@@ -286,7 +307,10 @@ export function lastUsageBeforeCompact(events: SessionEvent[]): {
 } {
   let last: (typeof events)[number]['usage'] & { totalTokens?: number } | undefined
   for (const ev of events) {
-    if (ev.type === 'tool/call' && (ev.name === 'context_compact_submit' || ev.name === 'session_compact')) {
+    if (
+      ev.type === 'tool/call' &&
+      (ev.name === 'context_compact_submit' || ev.name === 'session_compact' || ev.name === 'context_clear')
+    ) {
       // 遇到压缩点，重置为"压缩点之后"的视野，只读压缩后最近一次调用
       last = undefined
       continue

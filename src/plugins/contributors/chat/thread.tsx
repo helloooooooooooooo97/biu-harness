@@ -20,7 +20,6 @@ import type { SlotProps } from '../../registry/slots.ts'
 import { bindSessionView, type SessionListItem, type SessionViewService } from '../../infrastructure/session-view.ts'
 import {
   formatTokens,
-  formatTrajectoryUsage,
   type ChatNode,
   type ChatReplyPart,
   type ChatStepStat,
@@ -33,6 +32,7 @@ import type { SessionMascotIdentity } from '../mascot/grok-bot-types.ts'
 import { MarkdownBody } from './markdown.tsx'
 import { ToolCard } from './tool-card.tsx'
 import { LiveDispatchTable } from './live-dispatch-table.tsx'
+import { UsageInline } from './usage-inline.tsx'
 
 const NEAR_BOTTOM_PX = 96
 /** 提早预取更早消息，避免滑到顶才开始请求 */
@@ -92,6 +92,7 @@ function StepBar({ stat }: { stat: ChatStepStat }) {
     outputTokens: stat.outputTokens,
     totalTokens: stat.inputTokens + stat.outputTokens,
     ...(stat.cacheReadTokens ? { cacheReadTokens: stat.cacheReadTokens } : {}),
+    ...(stat.histPct !== undefined ? { histPct: stat.histPct } : {}),
   }
   return (
     <div className="chat-step-bar" role="group" aria-label={stepLabel(stat.step)}>
@@ -235,43 +236,6 @@ export function splitReplyForDisplay(node: Extract<ChatNode, { kind: 'reply' }>)
     finalParts: parts.slice(finalIndex),
     hasDetails: true,
   }
-}
-
-function cacheHitPct(usage: TrajectoryUsage): number | null {
-  if (!usage.inputTokens || !usage.cacheReadTokens) return null
-  return Math.min(100, Math.round((usage.cacheReadTokens / usage.inputTokens) * 100))
-}
-
-function UsageInline({ usage }: { usage: TrajectoryUsage }) {
-  const pct = cacheHitPct(usage)
-  const inStyle: CSSProperties | undefined =
-    pct != null
-      ? {
-          backgroundImage: `linear-gradient(90deg, rgba(34, 140, 90, 0.28) 0%, rgba(34, 140, 90, 0.28) ${pct}%, rgba(15, 17, 21, 0.06) ${pct}%, rgba(15, 17, 21, 0.06) 100%)`,
-        }
-      : undefined
-  return (
-    <span className="traj-usage" title={formatTrajectoryUsage(usage)}>
-      <span
-        className={`traj-usage-in-wrap${pct != null ? ' has-cache' : ''}`}
-        style={inStyle}
-        title={
-          pct != null
-            ? `input ${formatTok(usage.inputTokens)} · cache hit ${pct}% (${formatTok(usage.cacheReadTokens!)})`
-            : `input ${formatTok(usage.inputTokens)}`
-        }
-      >
-        <span className="traj-usage-in">{formatTok(usage.inputTokens)}</span>
-        {pct != null ? <span className="traj-usage-cache-pct">{pct}%</span> : null}
-      </span>
-      <span className="traj-usage-arrow" aria-hidden>
-        →
-      </span>
-      <span className="traj-usage-out" title="output tokens">
-        {formatTok(usage.outputTokens)}
-      </span>
-    </span>
-  )
 }
 
 function ReplyActions({

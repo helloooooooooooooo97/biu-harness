@@ -1054,6 +1054,8 @@ body {
   justify-content: flex-end;
   gap: 4px;
   max-width: 100%;
+  font-size: 10px;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1069,9 +1071,10 @@ body {
   max-width: 100%;
   border-radius: 999px;
   background: var(--dsw-hover);
-  padding: 1px 7px;
+  padding: 2px 7px;
   color: var(--dsw-label-2);
   font-weight: 600;
+  line-height: 1;
 }
 
 .traj-usage-in-wrap.has-cache {
