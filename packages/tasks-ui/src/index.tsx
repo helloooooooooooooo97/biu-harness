@@ -3171,8 +3171,8 @@ if (typeof document !== 'undefined') {
 .tasks-queue-meta { flex:none; display:flex; align-items:center; gap:8px; color:var(--dsw-label-3); font-size:10px; min-width:0; overflow:hidden; }
 .tasks-queue-assignee { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; color:var(--dsw-label-2); }
 .tasks-queue-meta .tasks-time { font-size:10px; }
-/* 队列视图用量胶囊与表格视图同大：固定 11px（与 .tasks-table 一致），胶囊 input→output 数字同尺寸 */
-.tasks-queue-item-main .tasks-usage-capsule { font-size:11px; }
+/* 队列视图用量胶囊字号与队列其他 meta 文本统一：10px；胶囊内 input→output 数字同尺寸 */
+.tasks-queue-item-main .tasks-usage-capsule { font-size:10px; }
 /* ---- Trigger 自动触发 ---- */
 .tasks-status-cell { display:flex; align-items:center; gap:5px; min-width:0; }
 .tasks-trigger-mark { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:9px; font-weight:700; white-space:nowrap; color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 12%, transparent); }
