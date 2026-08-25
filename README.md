@@ -221,4 +221,10 @@ export CHAT_MODEL=deepseek-chat # 可选
 
 ---
 
-本仓库暂未声明开源许可证，默认保留版权。使用或分发前请与维护者确认。
+## 许可
+
+源码公开，允许学习、修改、非商业分发；**禁止商用**。
+
+采用 [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0)（全文见 [LICENSE](LICENSE)）。个人学习、爱好项目、教学与公益研究可以用；把本软件作为产品出售、对客户提供收费服务、或用于以营利为目的的内部业务，都不在许可范围内。需要商用请另行联系维护者。
+
+这不是 OSI 意义上的 “Open Source”（OSI 定义不允许限制商业用途）。
