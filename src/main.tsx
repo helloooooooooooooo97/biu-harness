@@ -11,5 +11,5 @@ const ctx = new Context()
 for (const item of webRuntimeLoaders) {
   const mod = await item.load()
   const extra = item.id === 'react-host' ? { el } : item.config ?? undefined
-  ctx.plugin(mod, extra)
+  await ctx.plugin(mod, extra)
 }

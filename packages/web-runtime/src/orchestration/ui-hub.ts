@@ -24,7 +24,11 @@ export function apply(ctx: Context) {
     running = true
     try {
       const rows = ctx.snapshot.get().plugins
-      const enabledRows = rows.filter((plugin) => plugin.enabled)
+      const enabledRows = rows.filter((plugin) => {
+        if (!plugin.ui) return false
+        if (plugin.enabled) return true
+        return plugin.state === 'pending' || plugin.state === 'loading' || plugin.state === 'active'
+      })
       const enabledIds = new Set(enabledRows.map((plugin) => plugin.id))
 
       for (const row of enabledRows) {

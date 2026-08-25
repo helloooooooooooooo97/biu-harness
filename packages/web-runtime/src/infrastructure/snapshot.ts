@@ -62,12 +62,27 @@ export class SnapshotService extends Service {
     for (const fn of this.listeners) fn()
   }
 
-  private async boot() {
+  private async pull() {
     try {
       const res = await fetch('/api/snapshot')
       if (res.ok) this.replace(await res.json())
     } catch {
       /* 无 host 时控制台为空 */
+    }
+  }
+
+  private async boot() {
+    for (let i = 0; i < 30; i++) {
+      try {
+        const res = await fetch('/api/snapshot')
+        if (res.ok) {
+          this.replace(await res.json())
+          break
+        }
+      } catch {
+        /* host 尚未就绪 */
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100))
     }
     this.connect()
   }
@@ -76,6 +91,9 @@ export class SnapshotService extends Service {
     try {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws'
       const ws = new WebSocket(`${proto}://${location.host}/ws`)
+      ws.onopen = () => {
+        void this.pull()
+      }
       ws.onmessage = (message) => {
         const parsed = JSON.parse(message.data) as { type: string; payload: unknown }
         if (parsed.type === 'snapshot') this.replace(parsed.payload as Snapshot)

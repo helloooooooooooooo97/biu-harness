@@ -43,10 +43,15 @@ export class HubService extends Service {
     ctx.on(HUB_CHANGE, () => {
       ctx.http.broadcast(HUB_CHANNEL_SNAPSHOT, this.snapshot())
     })
-    // 自动挂载所有的插件（内置 + cordis.plugins.json）
     for (const entry of catalog) {
       this.forks.set(entry.id, { entry })
-      if (entry.enabled) this.mount(entry.id)
+    }
+  }
+
+  /** 等内核插件 ACTIVE 后再对外提供 snapshot，避免前端拿到 enabled:false 而不挂 chat-ui。 */
+  async mountEnabled() {
+    for (const record of this.forks.values()) {
+      if (record.entry.enabled) await this.mount(record.entry.id)
     }
   }
 
@@ -128,10 +133,12 @@ export const inject = ['http', 'tools']
 
 export async function apply(ctx: Context) {
   const catalog = await resolveCatalog()
-  new HubService(ctx, catalog)
+  const hub = new HubService(ctx, catalog)
+  await hub.mountEnabled()
   ctx.http.route('GET', '/api/snapshot', (route) => {
     route.send(200, ctx.hub.snapshot())
   })
+  ctx.http.broadcast(HUB_CHANNEL_SNAPSHOT, ctx.hub.snapshot())
   ctx.http.route('POST', '/api/plugins/:id', async (route) => {
     const payload = (await route.json()) as { enabled?: boolean }
     try {
