@@ -115,8 +115,9 @@ export interface InputComposition {
 /**
  * 统计发给 LLM 的输入中「历史 turn」与「本次 turn」的字数占比。
  * 独立纯函数，不改 deriveMessages 投影逻辑。
- * - 划分：turn/start..turn/end 为一个 turn；已完成 turn 的内容 = 历史(hist)，
- *   当前进行中 turn 的内容 + system prompt = 本次(cur)。
+ * - 划分：turn/start..turn/end 为一个 turn。「本次(cur)」= 最近一次 turn
+ *   （进行中优先；若无进行中即 session idle 则取最后一个已完成的 turn），
+ *   system prompt 计入本次。「历史(hist)」= 本次之前更早的所有 turn。
  * - 角色归类：user/message、assistant/message(含 tool_calls 的 arguments)、
  *   assistant/chunk、tool/call、tool/result 按所在 turn 计入；system/prompt、system/compact 计入当前 turn。
  * - 压缩点语义与 deriveMessages 对齐：context_compact_submit / session_compact 的
@@ -128,19 +129,27 @@ export function statInputComposition(events: SessionEvent[]): InputComposition {
   const isCompact = (e: SessionEvent) =>
     e.type === 'tool/call' && (e.name === 'context_compact_submit' || e.name === 'session_compact')
 
-  // —— 第一遍：定位「当前进行中 turn」= 有 turn/start 但尚无 turn/end 的最新 turn。
-  //     与 deriveMessages 一致：仅统计最后一个压缩点之后的事件（无压缩点则全量）。 ——
+  // —— 第一遍：定位「本次(最近一次) turn」。
+  //     与 deriveMessages 一致：仅统计最后一个压缩点之后的事件（无压缩点则全量）。
+  //     语义：优先取「当前进行中 turn」(有 turn/start 无 turn/end)；
+  //     若无进行中 turn（session idle），则取最后一个已开始的 turn 作为本次，
+  //     而非把历史全部计为历史（否则 idle 时 histPct≈99%，失真）。
+  //     本次之前更早的 turn = 历史(hist)。system prompt 始终计入本次(cur)。 ——
   const lastCompactIdx = events.reduce((acc, e, i) => (isCompact(e) ? i : acc), -1)
-  const started = new Set<number>()
+  const started: number[] = []
   const ended = new Set<number>()
   for (let i = lastCompactIdx >= 0 ? lastCompactIdx + 1 : 0; i < events.length; i++) {
     const e = events[i]
-    if (e.type === 'turn/start') started.add(e.turn)
+    if (e.type === 'turn/start') started.push(e.turn)
     else if (e.type === 'turn/end') ended.add(e.turn)
   }
+  // 本次 turn = 进行中的最新 turn；若无进行中，取最后一个开始的 turn。
   let curTurn: number | null = null
   for (const t of started) {
     if (!ended.has(t) && (curTurn == null || t > curTurn)) curTurn = t
+  }
+  if (curTurn == null && started.length > 0) {
+    curTurn = started[started.length - 1]
   }
 
   // —— 第二遍：按归属 turn 累计输入字数 ——
@@ -193,8 +202,8 @@ export function statInputComposition(events: SessionEvent[]): InputComposition {
     }
   }
 
-  // 历史 = 非当前 turn 的内容（含 turn 边界外孤立内容的 -1 键，无进行中 turn 时全部为历史）；
-  // 本次 = 当前进行中 turn 的内容 + system prompt。
+  // 历史 = 本次 turn 之前更早的 turn 内容（含 turn 边界外孤立内容的 -1 键）；
+  // 本次 = 最近一次 turn（进行中或最后一个已结束）的内容 + system prompt。
   let histChars = 0
   for (const [turn, chars] of byTurn) {
     if (turn !== curTurn) histChars += chars

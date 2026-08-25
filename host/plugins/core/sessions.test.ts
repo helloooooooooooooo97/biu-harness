@@ -324,7 +324,7 @@ test('statInputComposition: pure current turn (hist=0, cur=1)', () => {
   assert.equal(out.curChars, out.totalChars)
 })
 
-test('statInputComposition: pure history (no in-progress turn -> all hist)', () => {
+test('statInputComposition: idle single completed turn -> that turn is "this" (not all hist)', () => {
   const events = [
     ev({ type: 'turn/start', turn: 1, seq: 0 }),
     ev({ type: 'user/message', text: 'what-is-this', kind: 'wake', seq: 1 }),
@@ -332,11 +332,11 @@ test('statInputComposition: pure history (no in-progress turn -> all hist)', () 
     ev({ type: 'turn/end', turn: 1, reason: 'complete', seq: 3 }),
   ]
   const out = statInputComposition(events)
-  // 无进行中 turn：内容全部计历史
-  assert.equal(out.curChars, 0)
-  assert.equal(out.histChars, 'what-is-this'.length + 'answer'.length)
-  assert.equal(out.histPct, 1)
-  assert.equal(out.curPct, 0)
+  // idle 时最近一次已完成 turn 即「本次」，而非全部算历史（否则 histPct 失真≈99%）
+  assert.equal(out.curChars, 'what-is-this'.length + 'answer'.length)
+  assert.equal(out.histChars, 0)
+  assert.equal(out.curPct, 1)
+  assert.equal(out.histPct, 0)
 })
 
 test('statInputComposition: mixed history + current turn (sum to 1)', () => {
@@ -367,10 +367,32 @@ test('statInputComposition: system prompt counts toward current turn', () => {
     ev({ type: 'turn/end', turn: 1, reason: 'complete', seq: 2 }),
     ev({ type: 'system/compact', text: 'COMPACTED-META', seq: 3 }),
   ]
-  // 无进行中 turn：system/compact 仍归当前(cur)，不归历史
+  // idle：本次 = 最近已完成 turn(1)，system/compact 计入本次(cur)，不归历史
   const out = statInputComposition(events)
-  assert.equal(out.curChars, 'COMPACTED-META'.length)
-  assert.equal(out.histChars, 'u'.length)
+  assert.equal(out.curChars, 'COMPACTED-META'.length + 'u'.length)
+  assert.equal(out.histChars, 0)
+})
+
+test('statInputComposition: idle with multiple turns -> latest turn is "this", earlier are hist', () => {
+  const events = [
+    // 更早的历史 turn 1（已完成）
+    ev({ type: 'turn/start', turn: 1, seq: 0 }),
+    ev({ type: 'user/message', text: 'early-qq', kind: 'wake', seq: 1 }),
+    ev({ type: 'assistant/message', text: 'early-aa', seq: 2 }),
+    ev({ type: 'turn/end', turn: 1, reason: 'complete', seq: 3 }),
+    // 最近一次 turn 2（已完成，idle）
+    ev({ type: 'turn/start', turn: 2, seq: 4 }),
+    ev({ type: 'user/message', text: 'latest-qq', kind: 'wake', seq: 5 }),
+    ev({ type: 'assistant/message', text: 'latest-aa', seq: 6 }),
+    ev({ type: 'turn/end', turn: 2, reason: 'complete', seq: 7 }),
+    ev({ type: 'system/prompt', text: 'SYS', seq: 8 }),
+  ]
+  const out = statInputComposition(events)
+  // 本次(cur) = turn2 + system；历史 = turn1
+  assert.equal(out.histChars, 'early-qq'.length + 'early-aa'.length)
+  assert.equal(out.curChars, 'SYS'.length + 'latest-qq'.length + 'latest-aa'.length)
+  assert.ok(out.totalChars > out.histChars) // 本次占比 >50%（最近一次交互为主），非 99% 历史
+  assert.ok(out.curPct > 0.5 && out.curPct < 1)
 })
 
 test('statInputComposition: honors compact point (starts counting after it)', () => {
