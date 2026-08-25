@@ -7,7 +7,9 @@ import { Context } from 'cordis'
 import '../../types.ts'
 import * as sessionStore from '../storage/session-store.ts'
 import * as sessions from './sessions.ts'
-import { SESSION_FORMAT_VERSION, deriveMessages, applyContextBudget, estimateTokens } from './sessions.ts'
+import { SESSION_FORMAT_VERSION, deriveMessages, applyContextBudget, estimateTokens, statInputComposition } from './sessions.ts'
+import type { SessionEvent } from './sessions.ts'
+import type { LlmMessage } from '../orchestration/llm.ts'
 
 test('append-only log projects model history; version is 1', async () => {
   const ctx = new Context()
@@ -284,10 +286,10 @@ test('deriveMessages honors context_compact_submit tool/call as new prefix', () 
   const events: SessionEvent[] = [
     { type: 'session/open', version: 1, seq: 0, ts: 0 },
     { type: 'system/prompt', text: 'SYS', seq: 1, ts: 1 },
-    { type: 'user/message', text: '旧的早期消息A', kind: 'normal', seq: 2, ts: 2 },
+    { type: 'user/message', text: '旧的早期消息A', kind: 'wake', seq: 2, ts: 2 },
     { type: 'assistant/message', text: '早期回答B', seq: 3, ts: 3 },
     { type: 'tool/call', id: 't1', name: 'context_compact_submit', arguments: JSON.stringify({ text: '摘要：聊了早期内容' }), seq: 4, ts: 4 },
-    { type: 'user/message', text: '压缩后的新问题', kind: 'normal', seq: 5, ts: 5 },
+    { type: 'user/message', text: '压缩后的新问题', kind: 'wake', seq: 5, ts: 5 },
   ]
   const out = deriveMessages(events as any)
   const joined = out.map((m) => typeof m.content === 'string' ? m.content : '').join('|')
@@ -297,3 +299,91 @@ test('deriveMessages honors context_compact_submit tool/call as new prefix', () 
   assert.ok(!joined.includes('旧早期消息A'))
   assert.ok(!joined.includes('早期回答B'))
 })
+
+function ev(partial: Partial<SessionEvent> & { type: string; seq: number }): SessionEvent {
+  return { ...(partial as SessionEvent), ts: partial.seq ?? partial.ts ?? 0 }
+}
+
+test('statInputComposition: empty events returns zeros', () => {
+  assert.deepEqual(statInputComposition([]), { totalChars: 0, histChars: 0, curChars: 0, histPct: 0, curPct: 0 })
+})
+
+test('statInputComposition: pure current turn (hist=0, cur=1)', () => {
+  const events = [
+    ev({ type: 'system/prompt', text: 'sys-prompt', seq: 0 }),
+    ev({ type: 'turn/start', turn: 2, seq: 1 }),
+    ev({ type: 'user/message', text: 'hello', kind: 'wake', seq: 2 }),
+    ev({ type: 'assistant/message', text: 'hi!', seq: 3 }),
+    // 无更早 turn，turn2 进行中（未 end）：全部计入本次(cur)
+  ]
+  const out = statInputComposition(events)
+  assert.equal(out.histChars, 0)
+  assert.equal(out.curChars, 'sys-prompt'.length + 'hello'.length + 'hi!'.length)
+  assert.equal(out.curPct, 1)
+  assert.equal(out.histPct, 0)
+  assert.equal(out.curChars, out.totalChars)
+})
+
+test('statInputComposition: pure history (no in-progress turn -> all hist)', () => {
+  const events = [
+    ev({ type: 'turn/start', turn: 1, seq: 0 }),
+    ev({ type: 'user/message', text: 'what-is-this', kind: 'wake', seq: 1 }),
+    ev({ type: 'assistant/message', text: 'answer', seq: 2 }),
+    ev({ type: 'turn/end', turn: 1, reason: 'complete', seq: 3 }),
+  ]
+  const out = statInputComposition(events)
+  // 无进行中 turn：内容全部计历史
+  assert.equal(out.curChars, 0)
+  assert.equal(out.histChars, 'what-is-this'.length + 'answer'.length)
+  assert.equal(out.histPct, 1)
+  assert.equal(out.curPct, 0)
+})
+
+test('statInputComposition: mixed history + current turn (sum to 1)', () => {
+  const events = [
+    ev({ type: 'turn/start', turn: 1, seq: 0 }),
+    ev({ type: 'user/message', text: 'old-question', kind: 'wake', seq: 1 }),
+    ev({ type: 'tool/call', id: 'c1', name: 'clock_now', arguments: '{"a":1}', seq: 2 }),
+    ev({ type: 'tool/result', id: 'c1', name: 'clock_now', ok: true, detail: '2024', seq: 3 }),
+    ev({ type: 'assistant/message', text: 'old-answer', tool_calls: [{ id: 'c1', name: 'clock_now', arguments: '{"a":1}' }], seq: 4 }),
+    ev({ type: 'turn/end', turn: 1, reason: 'complete', seq: 5 }),
+    // 当前进行中的 turn 2（未 end）
+    ev({ type: 'turn/start', turn: 2, seq: 6 }),
+    ev({ type: 'system/prompt', text: 'SYS', seq: 7 }),
+    ev({ type: 'user/message', text: 'new-question', kind: 'wake', seq: 8 }),
+  ]
+  const out = statInputComposition(events)
+  assert.equal(out.histChars, 'old-question'.length + '{"a":1}'.length + '2024'.length + 'old-answer'.length + '{"a":1}'.length)
+  assert.equal(out.curChars, 'SYS'.length + 'new-question'.length)
+  assert.equal(out.totalChars, out.histChars + out.curChars)
+  assert.ok(Math.abs(out.histPct + out.curPct - 1) < 1e-9)
+  assert.ok(out.histPct > 0 && out.curPct > 0)
+})
+
+test('statInputComposition: system prompt counts toward current turn', () => {
+  const events = [
+    ev({ type: 'turn/start', turn: 1, seq: 0 }),
+    ev({ type: 'user/message', text: 'u', kind: 'wake', seq: 1 }),
+    ev({ type: 'turn/end', turn: 1, reason: 'complete', seq: 2 }),
+    ev({ type: 'system/compact', text: 'COMPACTED-META', seq: 3 }),
+  ]
+  // 无进行中 turn：system/compact 仍归当前(cur)，不归历史
+  const out = statInputComposition(events)
+  assert.equal(out.curChars, 'COMPACTED-META'.length)
+  assert.equal(out.histChars, 'u'.length)
+})
+
+test('statInputComposition: honors compact point (starts counting after it)', () => {
+  const events = [
+    ev({ type: 'turn/start', turn: 1, seq: 0 }),
+    ev({ type: 'user/message', text: 'early-msg-aaaa', kind: 'wake', seq: 1 }),
+    ev({ type: 'tool/call', id: 't1', name: 'context_compact_submit', arguments: JSON.stringify({ text: '摘要' }), seq: 2 }),
+    ev({ type: 'turn/start', turn: 2, seq: 3 }),
+    ev({ type: 'user/message', text: 'after-compact', kind: 'wake', seq: 4 }),
+  ]
+  const out = statInputComposition(events)
+  // 压缩点前的 early-msg-aaaa 不计入；只从压缩点后开算
+  assert.equal(out.histChars + out.curChars, 'after-compact'.length)
+  assert.equal(out.curChars, 'after-compact'.length)
+})
+

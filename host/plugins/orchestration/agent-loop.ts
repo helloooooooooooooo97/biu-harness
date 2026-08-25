@@ -1,6 +1,6 @@
 import { Service, type Context } from 'cordis'
 import '../../types.ts'
-import type { AssistantReply, ChatOptions, LlmClient, LlmConfig, LlmMessage } from './llm.ts'
+import type { AssistantReply, ChatOptions, LlmClient, LlmConfig, LlmMessage, LlmUsage } from './llm.ts'
 import type { InboxKind, MessageSender } from '../core/session-types.ts'
 import { normalizeSessionType } from '../core/session-types.ts'
 import { runWithSession } from '../core/session-scope.ts'
@@ -152,6 +152,11 @@ export class AgentLoop implements AgentRunner {
       await session.append(this.sessionId, { type: 'step/start', turn, step })
 
       const rawMessages = session.deriveMessages(this.sessionId)
+      const inputComp = session.statInputComposition(this.sessionId)
+      const attachUsage = (usage?: LlmUsage) =>
+        usage !== undefined
+          ? { ...usage, histPct: inputComp.histPct, curPct: inputComp.curPct }
+          : undefined
       // 预算默认 100 万 token（约 1M），仅在显式超界时才考虑截断；不主动压缩/不偷跑窗口丢弃。
       // 压缩只应发生：你显式调用 compact_submit 写入压缩点。设 CTX_BUDGET=0 可完全禁用预算保护（原样发送）。
       const budget = Number(process.env.CTX_BUDGET ?? 1000000)
@@ -182,10 +187,11 @@ export class AgentLoop implements AgentRunner {
 
       if (!reply.toolCalls.length) {
         final = reply.content?.trim() || '（空回复）'
+        const usage = attachUsage(reply.usage)
         await session.append(this.sessionId, {
           type: 'assistant/message',
           text: final,
-          ...(reply.usage ? { usage: reply.usage } : {}),
+          ...(usage ? { usage } : {}),
         })
         await session.append(this.sessionId, { type: 'step/end', turn, step })
         await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'complete' })
@@ -193,11 +199,12 @@ export class AgentLoop implements AgentRunner {
         return { text: final, steps }
       }
 
+      const usage = attachUsage(reply.usage)
       await session.append(this.sessionId, {
         type: 'assistant/message',
         text: reply.content ?? '',
         tool_calls: reply.toolCalls,
-        ...(reply.usage ? { usage: reply.usage } : {}),
+        ...(usage ? { usage } : {}),
       })
 
       for (const call of reply.toolCalls) {

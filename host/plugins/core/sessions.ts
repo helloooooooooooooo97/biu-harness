@@ -104,6 +104,114 @@ export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
   return system ? [{ role: 'system', content: system }, ...messages] : messages
 }
 
+export interface InputComposition {
+  totalChars: number
+  histChars: number
+  curChars: number
+  histPct: number
+  curPct: number
+}
+
+/**
+ * 统计发给 LLM 的输入中「历史 turn」与「本次 turn」的字数占比。
+ * 独立纯函数，不改 deriveMessages 投影逻辑。
+ * - 划分：turn/start..turn/end 为一个 turn；已完成 turn 的内容 = 历史(hist)，
+ *   当前进行中 turn 的内容 + system prompt = 本次(cur)。
+ * - 角色归类：user/message、assistant/message(含 tool_calls 的 arguments)、
+ *   assistant/chunk、tool/call、tool/result 按所在 turn 计入；system/prompt、system/compact 计入当前 turn。
+ * - 压缩点语义与 deriveMessages 对齐：context_compact_submit / session_compact 的
+ *   tool/call 即压缩点，仅统计该点之后的事件（从压缩点重起）。
+ * - 字数用字符长度。total 为 0 时各 pct 返回 0。
+ */
+export function statInputComposition(events: SessionEvent[]): InputComposition {
+  const len = (s: string | null | undefined) => (s ? s.length : 0)
+  const isCompact = (e: SessionEvent) =>
+    e.type === 'tool/call' && (e.name === 'context_compact_submit' || e.name === 'session_compact')
+
+  // —— 第一遍：定位「当前进行中 turn」= 有 turn/start 但尚无 turn/end 的最新 turn。
+  //     与 deriveMessages 一致：仅统计最后一个压缩点之后的事件（无压缩点则全量）。 ——
+  const lastCompactIdx = events.reduce((acc, e, i) => (isCompact(e) ? i : acc), -1)
+  const started = new Set<number>()
+  const ended = new Set<number>()
+  for (let i = lastCompactIdx >= 0 ? lastCompactIdx + 1 : 0; i < events.length; i++) {
+    const e = events[i]
+    if (e.type === 'turn/start') started.add(e.turn)
+    else if (e.type === 'turn/end') ended.add(e.turn)
+  }
+  let curTurn: number | null = null
+  for (const t of started) {
+    if (!ended.has(t) && (curTurn == null || t > curTurn)) curTurn = t
+  }
+
+  // —— 第二遍：按归属 turn 累计输入字数 ——
+  let openTurn: number | null = null
+  let systemChars = 0
+  const byTurn = new Map<number, number>()
+
+  const add = (owner: number | null, n: number) => {
+    const key = owner ?? -1 // -1 表示 turn 边界外的孤立内容（归历史）
+    byTurn.set(key, (byTurn.get(key) ?? 0) + n)
+  }
+
+  for (const event of events) {
+    if (isCompact(event)) {
+      // 压缩点：从点之后重算，丢弃点前历史（与 deriveMessages 一致）
+      openTurn = null
+      systemChars = 0
+      byTurn.clear()
+      continue
+    }
+    if (event.type === 'turn/start') {
+      openTurn = event.turn
+      continue
+    }
+    if (event.type === 'turn/end') {
+      openTurn = null
+      continue
+    }
+    switch (event.type) {
+      case 'system/prompt':
+      case 'system/compact':
+        systemChars += len(event.text)
+        break
+      case 'user/message':
+        add(openTurn, len(event.text))
+        break
+      case 'assistant/message':
+        add(openTurn, len(event.text))
+        for (const call of event.tool_calls ?? []) add(openTurn, len(call.arguments))
+        break
+      case 'assistant/chunk':
+        add(openTurn, len(event.text))
+        break
+      case 'tool/call':
+        add(openTurn, len(event.arguments))
+        break
+      case 'tool/result':
+        add(openTurn, len(event.detail))
+        break
+    }
+  }
+
+  // 历史 = 非当前 turn 的内容（含 turn 边界外孤立内容的 -1 键，无进行中 turn 时全部为历史）；
+  // 本次 = 当前进行中 turn 的内容 + system prompt。
+  let histChars = 0
+  for (const [turn, chars] of byTurn) {
+    if (turn !== curTurn) histChars += chars
+  }
+  let curChars = systemChars
+  if (curTurn != null) curChars += byTurn.get(curTurn) ?? 0
+
+  const totalChars = histChars + curChars
+  if (totalChars === 0) {
+    return { totalChars: 0, histChars: 0, curChars: 0, histPct: 0, curPct: 0 }
+  }
+  const histPct = histChars / totalChars
+  const curPct = curChars / totalChars
+  return { totalChars, histChars, curChars, histPct, curPct }
+}
+
+
 /** 粗略估算一段文本的 token 数（英文 ~1/4 字符，中日韩 ~1/1.5 字符）。 */
 export function estimateTokens(text: string): number {
   let ascii = 0
@@ -271,6 +379,13 @@ export class SessionsService extends Service {
     const record = this.cache.get(id)
     if (!record) throw new Error(`unknown session: ${id}`)
     return deriveMessages(record.events)
+  }
+
+  /** 统计当前事件日志的输入构成（历史/本次 turn 占比），与 deriveMessages 一致从压缩点后算。 */
+  statInputComposition(id: string) {
+    const record = this.cache.get(id)
+    if (!record) throw new Error(`unknown session: ${id}`)
+    return statInputComposition(record.events)
   }
 
   async fork(sourceId: string, childId: string = crypto.randomUUID()) {

@@ -26,6 +26,10 @@ export type SessionEventBody =
         outputTokens: number
         totalTokens?: number
         cacheReadTokens?: number
+        /** 本次 LLM 输入中「历史 turn」占比（0..1）；由 agent-loop 在 derive 时统计挂载。 */
+        histPct?: number
+        /** 本次 LLM 输入中「本次 turn」占比（0..1）。 */
+        curPct?: number
       }
     }
   | { type: 'assistant/chunk'; text: string }
