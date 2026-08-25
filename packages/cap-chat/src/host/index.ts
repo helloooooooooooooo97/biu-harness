@@ -21,6 +21,7 @@ import { estimateTokens } from '@biu/host-sessions'
 import { readArtifactFile } from '@biu/host-sessions/artifacts'
 import { collectLiveDispatchedTasks } from '@biu/host-live-sessions/usage'
 import { normalizeSessionType } from '@biu/type-session'
+import { registerChatInspectorRoutes } from './inspector.ts'
 
 export type { ChatMessage }
 
@@ -820,4 +821,5 @@ export function apply(ctx: Context) {
       route.send(500, { error: String(error) })
     }
   })
+  registerChatInspectorRoutes(ctx)
 }

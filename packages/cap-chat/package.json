@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-      "description": "对话能力（host + web 分入口）",
+  "description": "对话能力（host + web 分入口）",
   "exports": {
     "./host": "./src/host/index.ts",
     "./web": "./src/web/index.ts",

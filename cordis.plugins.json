@@ -47,15 +47,6 @@
       "enabled": true
     },
     {
-      "id": "session-inspector",
-      "name": "会话检查器 API",
-      "layer": "capability",
-      "blurb": "@biu/cap-session-inspector。依赖 chat。",
-      "package": "@biu/cap-session-inspector/host",
-      "togglable": false,
-      "enabled": true
-    },
-    {
       "id": "clock",
       "name": "心跳时钟",
       "layer": "capability",
