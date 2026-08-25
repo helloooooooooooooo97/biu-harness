@@ -1,0 +1,13 @@
+{
+  "name": "@biu/host-plugin-loader",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "读 cordis.plugins.json、解析 workspace 包、Vite virtual 模块",
+  "exports": {
+    ".": "./src/host/index.ts"
+  },
+  "peerDependencies": {
+    "vite": "^7.1.2"
+  }
+}

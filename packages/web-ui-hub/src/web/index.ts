@@ -9,9 +9,9 @@ export function apply(ctx: Context) {
   let pending = false
   let running = false
 
-  async function resolvePlugin(_id: string, ui?: string): Promise<Plugin | undefined> {
-    if (!ui) return undefined
-    const loader = uiPackageLoaders[ui]
+  async function resolvePlugin(_id: string, web?: string): Promise<Plugin | undefined> {
+    if (!web) return undefined
+    const loader = uiPackageLoaders[web]
     if (loader) return loader()
     return undefined
   }
@@ -25,7 +25,7 @@ export function apply(ctx: Context) {
     try {
       const rows = ctx.snapshot.get().plugins
       const enabledRows = rows.filter((plugin) => {
-        if (!plugin.ui) return false
+        if (!plugin.web) return false
         if (plugin.enabled) return true
         return plugin.state === 'pending' || plugin.state === 'loading' || plugin.state === 'active'
       })
@@ -33,7 +33,7 @@ export function apply(ctx: Context) {
 
       for (const row of enabledRows) {
         if (forks.has(row.id)) continue
-        const loaded = await resolvePlugin(row.id, row.ui)
+        const loaded = await resolvePlugin(row.id, row.web)
         if (!loaded) continue
         const plugin =
           loaded && typeof loaded === 'object' && 'default' in loaded && (loaded as { default?: Plugin }).default

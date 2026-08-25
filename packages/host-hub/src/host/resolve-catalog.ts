@@ -1,18 +1,19 @@
 import type { Plugin } from 'cordis'
-import { builtinCatalog, type CatalogEntry } from './catalog.ts'
+import type { CatalogEntry } from './catalog.ts'
 import {
+  findRepoRoot,
   importConfiguredPackage,
+  pluginWebSpecifier,
   readCordisPlugins,
-  rootDirFrom,
   type CordisPluginEntry,
-} from '../../../../host/cordis-plugins.ts'
+} from '@biu/host-plugin-loader'
 
-const rootDir = rootDirFrom()
+const rootDir = findRepoRoot()
 
-/** 内置 catalog + cordis.plugins.json（主仓代码不出现具体外部包名）。 */
+/** 只读 cordis.plugins.json 的 plugins 表。 */
 export async function resolveCatalog(): Promise<CatalogEntry[]> {
   const external = readCordisPlugins(rootDir)
-  const externalEntries: CatalogEntry[] = []
+  const entries: CatalogEntry[] = []
   const seen = new Set<string>()
 
   for (const item of external) {
@@ -23,18 +24,11 @@ export async function resolveCatalog(): Promise<CatalogEntry[]> {
       throw new Error(`duplicate plugin id in cordis.plugins.json: ${item.id}`)
     }
     const mod = (await importConfiguredPackage(rootDir, item.package)) as Plugin & { inject?: string[] }
-    externalEntries.push(toCatalogEntry(item, mod))
+    entries.push(toCatalogEntry(item, mod))
     seen.add(item.id)
   }
 
-  for (const item of builtinCatalog) {
-    if (seen.has(item.id)) {
-      throw new Error(`duplicate plugin id with cordis.plugins.json: ${item.id}`)
-    }
-    seen.add(item.id)
-  }
-
-  return [...externalEntries, ...builtinCatalog]
+  return entries
 }
 
 function toCatalogEntry(item: CordisPluginEntry, mod: Plugin & { inject?: string[] }): CatalogEntry {
@@ -48,7 +42,7 @@ function toCatalogEntry(item: CordisPluginEntry, mod: Plugin & { inject?: string
     togglable: item.togglable !== false,
     enabled: item.enabled !== false,
     config: item.config,
-    ui: item.ui,
+    web: pluginWebSpecifier(item),
     packageName: item.package,
   }
 }

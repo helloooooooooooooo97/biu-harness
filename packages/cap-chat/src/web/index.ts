@@ -1,20 +1,42 @@
+import { createElement } from 'react'
 import type { Context } from 'cordis'
+import { LuActivity, LuListTree } from 'react-icons/lu'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
+import type { SlotProps } from '@biu/web-slots'
 import { ApprovalsRail } from './approvals.tsx'
 import { ChatComposer } from './composer.tsx'
 import { ChatConfig } from './config.tsx'
 import { ChatConfigBanner } from './config-banner.tsx'
 import { ChatThread } from './thread.tsx'
 import { TrajectoryView } from './trajectory.tsx'
+import { UsagePanel } from './usage-panel.tsx'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
 
 export const name = 'chat-ui'
 export const inject = ['slots', 'sessionView', 'projectView']
 
+function InspectorTrajectory(props: SlotProps) {
+  return createElement(
+    'div',
+    { className: 'flex min-h-0 flex-1 flex-col overflow-hidden', 'data-testid': 'inspector-trajectory' },
+    createElement(TrajectoryView, props),
+  )
+}
+
+function InspectorUsage(props: SlotProps) {
+  return createElement(
+    'div',
+    { className: 'min-h-0 flex-1 overflow-y-auto p-2.5', 'data-testid': 'inspector-usage' },
+    createElement(UsagePanel, {
+      useSessionView: props.useSessionView as ReturnType<typeof bindSessionView>,
+      sessionView: props.sessionView as SessionViewService,
+    }),
+  )
+}
+
 export function apply(ctx: Context) {
   const view = ctx.sessionView as SessionViewService
   const project = ctx.projectView as ProjectViewService
-  // 稳定 props：避免 Shell 重绘时 bind* 新函数打穿 memo（重 Markdown 切换卡顿）
   const slotProps = {
     useSessionView: bindSessionView(view),
     sessionView: view,
@@ -24,9 +46,25 @@ export function apply(ctx: Context) {
   const props = () => slotProps
   ctx.slots.place('stage', ChatThread, { key: 'chat-thread', order: 1, props })
   ctx.slots.place('trajectory', TrajectoryView, { key: 'trajectory', order: 1, props })
-  // project 胶囊嵌在 dock ApprovalsRail 胶囊行，不再单独占顶栏
   ctx.slots.place('composer', ChatComposer, { key: 'chat', order: 10, props })
   ctx.slots.place('dock', ChatConfigBanner, { key: 'chat-config-banner', order: 1 })
   ctx.slots.place('dock', ApprovalsRail, { key: 'approvals', order: 5, props })
   ctx.slots.place('models', ChatConfig, { key: 'chat-config', order: 10 })
+  ctx.slots.place('inspector-panels', InspectorTrajectory, {
+    key: 'chat-traj',
+    order: 1,
+    props: () => ({
+      ...slotProps,
+      tabId: 'traj',
+      tabLabel: '轨迹',
+      tabIcon: LuListTree,
+      ensureTrajectory: true,
+      focusOnCall: true,
+    }),
+  })
+  ctx.slots.place('inspector-panels', InspectorUsage, {
+    key: 'chat-usage',
+    order: 2,
+    props: () => ({ ...slotProps, tabId: 'usage', tabLabel: '用量', tabIcon: LuActivity }),
+  })
 }

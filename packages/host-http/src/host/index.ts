@@ -51,11 +51,25 @@ function parseBody(req: IncomingMessage): Promise<unknown> {
   })
 }
 
+export type HttpListenConfig = {
+  port?: number
+  host?: string
+  publicDir?: string
+}
+
+function resolveListenConfig(config?: HttpListenConfig) {
+  return {
+    port: Number(config?.port ?? process.env.PORT ?? 3141),
+    host: config?.host ?? process.env.HTTP_HOST ?? '127.0.0.1',
+    publicDir: config?.publicDir ?? join(process.cwd(), 'public'),
+  }
+}
+
 export class HttpService extends Service {
   private routes: Route[] = []
   private sockets = new Set<WebSocket>()
 
-  constructor(ctx: Context, public config: { port: number; host?: string; publicDir: string }) {
+  constructor(ctx: Context, public config: { port: number; host: string; publicDir: string }) {
     super(ctx, 'http')
     ctx.effect(() => {
       const server = createServer((req, res) => {
@@ -198,6 +212,6 @@ export class HttpService extends Service {
 export const name = 'http'
 export const inject = [] as const
 
-export function apply(ctx: Context, config: { port: number; host?: string; publicDir: string }) {
-  new HttpService(ctx, config)
+export function apply(ctx: Context, config?: HttpListenConfig) {
+  new HttpService(ctx, resolveListenConfig(config))
 }

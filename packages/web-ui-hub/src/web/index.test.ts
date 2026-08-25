@@ -11,7 +11,7 @@ import { uiPackageLoaders } from 'virtual:cordis-ui-loaders'
 
 const Dummy = () => null
 
-function plugin(id: string, enabled: boolean, ui?: string) {
+function plugin(id: string, enabled: boolean, web?: string) {
   return {
     id,
     name: id,
@@ -21,7 +21,7 @@ function plugin(id: string, enabled: boolean, ui?: string) {
     togglable: true,
     enabled,
     state: enabled ? 'active' : 'off',
-    ...(ui ? { ui } : {}),
+    ...(web ? { web } : {}),
   }
 }
 

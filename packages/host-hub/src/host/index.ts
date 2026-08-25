@@ -73,7 +73,7 @@ export class HubService extends Service {
       togglable: entry.togglable,
       enabled: Boolean(fiber && fiber.uid !== null),
       state: fiber ? STATE[fiber.state] ?? String(fiber.state) : 'off',
-      ...(entry.ui ? { ui: entry.ui } : {}),
+      ...(entry.web ? { web: entry.web } : {}),
       ...(entry.packageName ? { packageName: entry.packageName } : {}),
     }))
     return {

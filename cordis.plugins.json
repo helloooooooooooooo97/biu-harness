@@ -42,7 +42,7 @@
       "layer": "capability",
       "blurb": "@biu/cap-chat/host + @biu/cap-chat/web。会话与 composer。",
       "package": "@biu/cap-chat/host",
-      "ui": "@biu/cap-chat/web",
+      "web": "@biu/cap-chat/web",
       "togglable": true,
       "enabled": true
     },
@@ -61,7 +61,7 @@
       "layer": "capability",
       "blurb": "@biu/cap-clock/host + @biu/cap-clock/web。",
       "package": "@biu/cap-clock/host",
-      "ui": "@biu/cap-clock/web",
+      "web": "@biu/cap-clock/web",
       "togglable": true,
       "enabled": true
     },
@@ -80,7 +80,7 @@
       "layer": "capability",
       "blurb": "@biu/cap-greeter/host + @biu/cap-greeter/web。",
       "package": "@biu/cap-greeter/host",
-      "ui": "@biu/cap-greeter/web",
+      "web": "@biu/cap-greeter/web",
       "togglable": true,
       "enabled": true
     },
@@ -108,7 +108,7 @@
       "layer": "capability",
       "blurb": "@biu/cap-dashboard。用量概览。",
       "package": "@biu/cap-dashboard/host",
-      "ui": "@biu/cap-dashboard/web",
+      "web": "@biu/cap-dashboard/web",
       "togglable": true,
       "enabled": true
     },
@@ -118,7 +118,7 @@
       "layer": "capability",
       "blurb": "@biu/cap-tasks。",
       "package": "@biu/cap-tasks/host",
-      "ui": "@biu/cap-tasks/web",
+      "web": "@biu/cap-tasks/web",
       "togglable": true,
       "enabled": true
     },
@@ -128,7 +128,7 @@
       "layer": "capability",
       "blurb": "@biu/cap-channels。",
       "package": "@biu/cap-channels/host",
-      "ui": "@biu/cap-channels/web",
+      "web": "@biu/cap-channels/web",
       "togglable": true,
       "enabled": true
     }

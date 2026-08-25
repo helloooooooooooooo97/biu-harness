@@ -29,6 +29,12 @@ type HostCtx = Context & {
   waterfall: (name: string, value: string, fallback: () => string) => string
 }
 
+declare module 'cordis' {
+  interface Events {
+    'greet/transform'(text: string, next: () => string): string
+  }
+}
+
 export class GreetService extends Service {
   constructor(ctx: Context) {
     super(ctx, 'greet')

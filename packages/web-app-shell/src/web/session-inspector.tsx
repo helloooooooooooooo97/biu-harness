@@ -1,15 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
-import { LuActivity, LuLayoutGrid, LuListTree, LuPanelRightClose } from 'react-icons/lu'
+import { LuLayoutGrid, LuPanelRightClose } from 'react-icons/lu'
 import {
   bindSessionView,
   type SessionViewService,
 } from '@biu/web-session-view'
-import { TrajectoryView } from '@biu/cap-chat/web/trajectory'
-import { UsagePanel } from '@biu/cap-chat/web/usage-panel'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
-
-const BUILTIN_TABS = ['traj', 'usage'] as const
 
 export type SessionInspectorProps = {
   open: boolean
@@ -64,13 +60,16 @@ export const SessionInspector = memo(function SessionInspector({
             id: String(extra.tabId ?? entry.id),
             label: String(extra.tabLabel ?? '插件'),
             Icon: extra.tabIcon as ComponentType<{ className?: string }> | undefined,
+            ensureTrajectory: Boolean(extra.ensureTrajectory),
+            focusOnCall: Boolean(extra.focusOnCall),
           }
         }),
     [extras],
   )
-  const allowedTabs = useMemo(() => [...extraTabs.map((item) => item.id), ...BUILTIN_TABS], [extraTabs])
+  const allowedTabs = useMemo(() => extraTabs.map((item) => item.id), [extraTabs])
+  const defaultTab = extraTabs[0]?.id ?? ''
 
-  const [tab, setTabState] = useState(() => inspectorStoredTab(sessionId, allowedTabs) ?? extraTabs[0]?.id ?? 'traj')
+  const [tab, setTabState] = useState(() => inspectorStoredTab(sessionId, allowedTabs) ?? defaultTab)
   const setTab = useCallback(
     (next: string) => {
       setTabState(next)
@@ -87,16 +86,18 @@ export const SessionInspector = memo(function SessionInspector({
 
   useEffect(() => {
     if (focusCallId) {
-      setTab('traj')
+      const focus = extraTabs.find((item) => item.focusOnCall)
+      if (focus) setTab(focus.id)
       return
     }
-    setTabState(inspectorStoredTab(sessionId, allowedTabs) ?? extraTabs[0]?.id ?? 'traj')
-  }, [sessionId, focusCallId, allowedTabs.join('|'), extraTabs[0]?.id, setTab])
+    setTabState(inspectorStoredTab(sessionId, allowedTabs) ?? defaultTab)
+  }, [sessionId, focusCallId, allowedTabs.join('|'), defaultTab, setTab, extraTabs])
 
   useEffect(() => {
-    if (!open || tab !== 'traj') return
-    void sessionView.ensureTrajectory()
-  }, [open, tab, sessionId, sessionView])
+    if (!open) return
+    const current = extraTabs.find((item) => item.id === tab)
+    if (current?.ensureTrajectory) void sessionView.ensureTrajectory()
+  }, [open, tab, sessionId, sessionView, extraTabs])
 
   useEffect(() => {
     const onMove = (event: PointerEvent) => {
@@ -157,28 +158,6 @@ export const SessionInspector = memo(function SessionInspector({
               {item.label}
             </button>
           ))}
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === 'traj'}
-            className={tabClass(tab === 'traj')}
-            onClick={() => setTab('traj')}
-            data-testid="inspector-tab-traj"
-          >
-            <LuListTree className="size-3.5" />
-            轨迹
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === 'usage'}
-            className={tabClass(tab === 'usage')}
-            onClick={() => setTab('usage')}
-            data-testid="inspector-tab-usage"
-          >
-            <LuActivity className="size-3.5" />
-            用量
-          </button>
         </div>
         <button
           type="button"
@@ -191,26 +170,10 @@ export const SessionInspector = memo(function SessionInspector({
         </button>
       </div>
 
-      <div
-        className={`min-h-0 flex-1 ${
-          tab === 'traj' || extraActive ? 'flex flex-col overflow-hidden' : 'overflow-auto p-2.5'
-        }`}
-      >
-        {tab === 'traj' ? (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid="inspector-trajectory">
-            <TrajectoryView useSessionView={useSessionView} sessionView={sessionView} renderSlot={() => null} />
-          </div>
-        ) : null}
-
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {extraActive && ExtraComponent ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid={`inspector-${extraActive.id}`}>
             <ExtraComponent {...(extraActive.entry.props?.() ?? {})} renderSlot={renderSlot} />
-          </div>
-        ) : null}
-
-        {tab === 'usage' ? (
-          <div className="min-h-0 flex-1 overflow-y-auto p-2.5" data-testid="inspector-usage">
-            <UsagePanel useSessionView={useSessionView} sessionView={sessionView} />
           </div>
         ) : null}
       </div>

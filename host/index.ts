@@ -1,13 +1,8 @@
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
 import { Context } from 'cordis'
-import { importConfiguredPackage, readCordisConfig, rootDirFrom } from './cordis-plugins.ts'
+import { importConfiguredPackage, readCordisConfig, findRepoRoot } from '@biu/host-plugin-loader'
 import './types.ts'
 
-const publicDir = join(dirname(fileURLToPath(import.meta.url)), '../public')
-const port = Number(process.env.PORT ?? 3141)
-const host = process.env.HTTP_HOST ?? '127.0.0.1'
-const rootDir = rootDirFrom(import.meta.url)
+const rootDir = findRepoRoot()
 
 const ctx = new Context()
 ctx.logger.exporter({
@@ -26,8 +21,7 @@ async function boot() {
   for (const item of config.host ?? []) {
     if (!item.package || item.enabled === false) continue
     const mod = await importConfiguredPackage(rootDir, item.package)
-    const extra = item.id === 'http' ? { port, host, publicDir } : item.config
-    await ctx.plugin(mod, extra)
+    await ctx.plugin(mod, item.config)
   }
 }
 

@@ -1,5 +1,11 @@
 import type { Context } from 'cordis'
 
+declare module 'cordis' {
+  interface Events {
+    'clock/tick'(iso: string): void
+  }
+}
+
 export const name = 'clock'
 export const inject = ['http', 'hub', 'tools']
 
