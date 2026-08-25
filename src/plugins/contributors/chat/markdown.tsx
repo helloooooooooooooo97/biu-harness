@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import 'highlight.js/styles/github-dark.css'
 import { getCachedMarkdownHtml, parseMarkdownSync } from './markdown-render.ts'
 
 /**

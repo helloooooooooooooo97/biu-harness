@@ -1,12 +1,14 @@
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import type { MarkdownWorkerRequest, MarkdownWorkerResponse } from './markdown.worker.ts'
+import { markdownHighlight } from './markdown-highlight.ts'
 
 marked.setOptions({
   gfm: true,
   breaks: false,
   async: false,
 })
+marked.use(markdownHighlight)
 
 if (typeof window !== 'undefined') {
   DOMPurify.addHook('afterSanitizeAttributes', (node) => {

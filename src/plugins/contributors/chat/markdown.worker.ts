@@ -1,11 +1,13 @@
 /// <reference lib="webworker" />
 import { marked } from 'marked'
+import { markdownHighlight } from './markdown-highlight.ts'
 
 marked.setOptions({
   gfm: true,
   breaks: false,
   async: false,
 })
+marked.use(markdownHighlight)
 
 export type MarkdownWorkerRequest = {
   id: number

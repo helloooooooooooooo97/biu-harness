@@ -2274,6 +2274,19 @@ body {
   background: transparent;
 }
 
+/* 代码高亮：与 `pre` 气泡背景融合，去掉 highlight.js 自己补的底色/padding */
+.chat-md pre code.hljs {
+  display: block;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+/* highlight.js 深色主题默认会滚动条很小，这里让 pre 内部横向滚动自然 */
+.chat-md pre code.hljs {
+  white-space: pre;
+}
+
 .chat-md blockquote {
   border-left: 3px solid color-mix(in srgb, var(--dsw-business) 45%, transparent);
   padding-left: 0.8em;
