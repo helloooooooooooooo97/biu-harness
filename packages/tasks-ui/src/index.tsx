@@ -840,7 +840,6 @@ function TriggerToggle({ task, onUpdate }: { task: Task; onUpdate: (id: string, 
       }}
     >
       <LuClock size={12} aria-hidden />
-      <span>{enabled ? '开' : '关'}</span>
       {count > 0 ? <span className="tasks-trigger-count">{count}</span> : null}
     </button>
   )
@@ -3059,8 +3058,8 @@ if (typeof document !== 'undefined') {
 .tasks-trigger-mark-state { line-height:1; }
 .tasks-trigger-count { display:inline-flex; align-items:center; justify-content:center; min-width:13px; height:13px; padding:0 3px; border-radius:999px; font-size:8.5px; font-weight:800; line-height:1; color:#fff; background:color-mix(in srgb, #9a6700 78%, transparent); }
 .tasks-trigger-mark.is-off .tasks-trigger-count { background:var(--dsw-label-3); }
-/* ---- 自动触发开关（紧凑 Notion 风格 switch）---- */
-.tasks-trigger-toggle { flex:none; display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:2px 8px; border:0; cursor:pointer; font-size:10.5px; font-weight:600; white-space:nowrap; line-height:1.3; font-family:inherit; color:var(--dsw-label-3); background:var(--dsw-muted-fill); box-shadow:inset 0 0 0 1px var(--dsw-border); transition:background .15s ease, color .15s ease; }
+/* ---- 自动触发开关（紧凑 Notion 风格，icon + 触发源数量）---- */
+.tasks-trigger-toggle { flex:none; display:inline-flex; align-items:center; gap:2px; border-radius:999px; padding:2px 6px; border:0; cursor:pointer; white-space:nowrap; line-height:1.3; font-family:inherit; color:var(--dsw-label-3); background:var(--dsw-muted-fill); box-shadow:inset 0 0 0 1px var(--dsw-border); transition:background .15s ease, color .15s ease; }
 .tasks-trigger-toggle:hover { background:var(--dsw-hover); }
 .tasks-trigger-toggle.is-on { color:var(--dsw-ok); background:color-mix(in srgb, var(--dsw-ok) 18%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--dsw-ok) 30%, transparent); }
 .tasks-trigger-toggle.is-on:hover { background:color-mix(in srgb, var(--dsw-ok) 28%, transparent); }
