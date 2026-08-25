@@ -98,11 +98,11 @@ npm run dev:web    # Vite :5173，/api 和 /ws 代理到 host
 
 ```
 BIU
-├── host/                 # host 加载器 + cordis 解析
+├── host/                 # host 加载器
 ├── web/                  # 前端加载器（main.tsx / 样式）
 ├── packages/
 │   ├── type-*            # 共享契约（不是插件，不进 json）
-│   ├── host-*            # host 内核  → src/host/
+│   ├── host-*            # host 内核  → src/host/（含 host-plugin-loader）
 │   ├── web-*             # web 内核   → src/web/
 │   └── cap-*             # 能力插件   → src/host + src/web
 ├── cordis.plugins.json   # 唯一插件清单
