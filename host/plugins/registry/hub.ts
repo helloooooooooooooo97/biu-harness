@@ -1,11 +1,14 @@
 import { Service, type Context, type Fiber, type Plugin } from 'cordis'
 import type { CatalogEntry } from '../../catalog.ts'
 import { resolveCatalog } from '../../resolve-catalog.ts'
-import type { PageSpec } from '../../types.ts'
+import type { PageSpec } from '../../../packages/host-runtime/types.ts'
+import {
+  HUB_CHANGE,
+  HUB_CHANNEL_EVENT,
+  HUB_CHANNEL_SNAPSHOT,
+} from '../../../packages/host-runtime/src/registry/hub-events.ts'
 
-export const HUB_CHANGE = 'hub/change' as const
-export const HUB_CHANNEL_SNAPSHOT = 'snapshot' as const
-export const HUB_CHANNEL_EVENT = 'event' as const
+export { HUB_CHANGE, HUB_CHANNEL_EVENT, HUB_CHANNEL_SNAPSHOT }
 
 const STATE = ['pending', 'loading', 'active', 'failed', 'disposed', 'unloading']
 

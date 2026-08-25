@@ -1,15 +1,1 @@
-import { SnapshotService } from './plugins/infrastructure/snapshot.ts'
-import { SessionViewService } from './plugins/infrastructure/session-view.ts'
-import { ProjectViewService } from './plugins/infrastructure/project-view.ts'
-import { AppModulesService } from './plugins/infrastructure/app-modules.ts'
-import { SlotsService } from './plugins/registry/slots.ts'
-
-declare module 'cordis' {
-  interface Context {
-    slots: SlotsService
-    snapshot: SnapshotService
-    sessionView: SessionViewService
-    projectView: ProjectViewService
-    appModules: AppModulesService
-  }
-}
+import '../packages/web-runtime/types.ts'

@@ -1,5 +1,106 @@
 {
+  "host": [
+    { "id": "http", "package": "@hmr/host-runtime/http", "togglable": false, "enabled": true },
+    { "id": "session-store", "package": "@hmr/host-runtime/session-store", "togglable": false, "enabled": true },
+    { "id": "sessions", "package": "@hmr/host-runtime/sessions", "togglable": false, "enabled": true },
+    { "id": "tools", "package": "@hmr/host-runtime/tools", "togglable": false, "enabled": true },
+    { "id": "system-prompt", "package": "@hmr/host-runtime/system-prompt", "togglable": false, "enabled": true },
+    { "id": "llm", "package": "@hmr/host-runtime/llm", "togglable": false, "enabled": true },
+    { "id": "fs", "package": "@hmr/host-runtime/fs", "togglable": false, "enabled": true },
+    { "id": "sandbox", "package": "@hmr/host-runtime/sandbox", "togglable": false, "enabled": true },
+    { "id": "subprocess", "package": "@hmr/host-runtime/subprocess", "togglable": false, "enabled": true },
+    { "id": "shell", "package": "@hmr/host-runtime/shell", "togglable": false, "enabled": true },
+    { "id": "jobs", "package": "@hmr/host-runtime/jobs", "togglable": false, "enabled": true },
+    { "id": "mcp", "package": "@hmr/host-runtime/mcp", "togglable": false, "enabled": true },
+    { "id": "terminal", "package": "@hmr/host-runtime/terminal", "togglable": false, "enabled": true },
+    { "id": "lsp", "package": "@hmr/host-runtime/lsp", "togglable": false, "enabled": true },
+    { "id": "context", "package": "@hmr/host-runtime/context", "togglable": false, "enabled": true },
+    { "id": "approvals", "package": "@hmr/host-runtime/approvals", "togglable": false, "enabled": true },
+    { "id": "agent-loop", "package": "@hmr/host-runtime/agent-loop", "togglable": false, "enabled": true },
+    { "id": "agents", "package": "@hmr/host-runtime/agents", "togglable": false, "enabled": true },
+    { "id": "subagents", "package": "@hmr/host-runtime/subagents", "togglable": false, "enabled": true },
+    { "id": "live-sessions", "package": "@hmr/host-runtime/live-sessions", "togglable": false, "enabled": true }
+  ],
+  "web": [
+    { "id": "slots", "package": "@hmr/web-runtime/slots", "togglable": false, "enabled": true },
+    { "id": "app-modules", "package": "@hmr/web-runtime/app-modules", "togglable": false, "enabled": true },
+    { "id": "session-view", "package": "@hmr/web-runtime/session-view", "togglable": false, "enabled": true },
+    { "id": "project-view", "package": "@hmr/web-runtime/project-view", "togglable": false, "enabled": true },
+    { "id": "snapshot", "package": "@hmr/web-runtime/snapshot", "togglable": false, "enabled": true },
+    { "id": "react-host", "package": "@hmr/web-runtime/react-host", "togglable": false, "enabled": true },
+    { "id": "shell", "package": "@hmr/web-runtime/shell", "togglable": false, "enabled": true },
+    { "id": "plugin-tree", "package": "@hmr/web-runtime/plugin-tree", "togglable": false, "enabled": true },
+    { "id": "event-log", "package": "@hmr/web-runtime/event-log", "togglable": false, "enabled": true },
+    { "id": "routes-panel", "package": "@hmr/web-runtime/routes-panel", "togglable": false, "enabled": true },
+    { "id": "ui-hub", "package": "@hmr/web-runtime/ui-hub", "togglable": false, "enabled": true }
+  ],
   "plugins": [
+    {
+      "id": "chat",
+      "name": "对话",
+      "layer": "capability",
+      "blurb": "@hmr/host-runtime/chat + @hmr/web-runtime/chat。会话与 composer。",
+      "package": "@hmr/host-runtime/chat",
+      "ui": "@hmr/web-runtime/chat",
+      "togglable": true,
+      "enabled": true
+    },
+    {
+      "id": "session-inspector",
+      "name": "会话检查器 API",
+      "layer": "capability",
+      "blurb": "@hmr/host-runtime/session-inspector。依赖 chat。",
+      "package": "@hmr/host-runtime/session-inspector",
+      "togglable": false,
+      "enabled": true
+    },
+    {
+      "id": "clock",
+      "name": "心跳时钟",
+      "layer": "capability",
+      "blurb": "@hmr/host-runtime/clock + @hmr/web-runtime/clock。",
+      "package": "@hmr/host-runtime/clock",
+      "ui": "@hmr/web-runtime/clock",
+      "togglable": true,
+      "enabled": true
+    },
+    {
+      "id": "logger",
+      "name": "事件日志",
+      "layer": "capability",
+      "blurb": "@hmr/host-runtime/logger。旁观 internal/dispatch。",
+      "package": "@hmr/host-runtime/logger",
+      "togglable": true,
+      "enabled": true
+    },
+    {
+      "id": "greeter",
+      "name": "问候服务",
+      "layer": "capability",
+      "blurb": "独立包：@hmr/greeter-host + @hmr/greeter-ui。",
+      "package": "@hmr/greeter-host",
+      "ui": "@hmr/greeter-ui",
+      "togglable": true,
+      "enabled": true
+    },
+    {
+      "id": "uppercase",
+      "name": "大写拦截器",
+      "layer": "capability",
+      "blurb": "@hmr/host-runtime/uppercase。挂在 greet/transform 上。",
+      "package": "@hmr/host-runtime/uppercase",
+      "togglable": true,
+      "enabled": true
+    },
+    {
+      "id": "mascot-easter-egg",
+      "name": "Mascot 彩蛋",
+      "layer": "capability",
+      "blurb": "@hmr/host-runtime/mascot-easter-egg。mascot_dance 工具。",
+      "package": "@hmr/host-runtime/mascot-easter-egg",
+      "togglable": true,
+      "enabled": true
+    },
     {
       "id": "dashboard",
       "name": "控制台",
@@ -11,20 +112,10 @@
       "enabled": true
     },
     {
-      "id": "greeter",
-      "name": "问候服务",
-      "layer": "capability",
-      "blurb": "独立包：@hmr/greeter-host + @hmr/greeter-ui（cordis.plugins.json 引入）。",
-      "package": "@hmr/greeter-host",
-      "ui": "@hmr/greeter-ui",
-      "togglable": true,
-      "enabled": true
-    },
-    {
       "id": "tasks",
       "name": "任务",
       "layer": "capability",
-      "blurb": "独立包：@hmr/tasks-host + @hmr/tasks-ui。Table/Board + SQLite + Agent tools。",
+      "blurb": "独立包：@hmr/tasks-host + @hmr/tasks-ui。",
       "package": "@hmr/tasks-host",
       "ui": "@hmr/tasks-ui",
       "togglable": true,
@@ -34,7 +125,7 @@
       "id": "channels",
       "name": "频道",
       "layer": "capability",
-      "blurb": "独立包：@hmr/channel-host + @hmr/channel-ui。内网分布式群聊：有序消息流 + 成员 + 邀请。",
+      "blurb": "独立包：@hmr/channel-host + @hmr/channel-ui。",
       "package": "@hmr/channel-host",
       "ui": "@hmr/channel-ui",
       "togglable": true,

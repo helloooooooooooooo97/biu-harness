@@ -22,6 +22,10 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    environmentMatchGlobs: [['host/**', 'node']],
+    environmentMatchGlobs: [
+      ['host/**', 'node'],
+      ['packages/host-runtime/**', 'node'],
+      ['packages/*-host/**', 'node'],
+    ],
   },
 })
