@@ -272,7 +272,7 @@ function ev(partial: Partial<SessionEvent> & { type: string; seq: number }): Ses
 }
 
 test('statInputComposition: empty events returns zeros', () => {
-  assert.deepEqual(statInputComposition([]), { totalChars: 0, histChars: 0, curChars: 0, histPct: 0, curPct: 0 })
+  assert.deepEqual(statInputComposition([]), { totalChars: 0, histChars: 0, curChars: 0, histPct: 0 })
 })
 
 test('statInputComposition: pure current turn (hist=0, cur=1)', () => {
@@ -286,8 +286,8 @@ test('statInputComposition: pure current turn (hist=0, cur=1)', () => {
   const out = statInputComposition(events)
   assert.equal(out.histChars, 0)
   assert.equal(out.curChars, 'sys-prompt'.length + 'hello'.length + 'hi!'.length)
-  assert.equal(out.curPct, 1)
   assert.equal(out.histPct, 0)
+  assert.equal(1 - out.histPct, 1) // curPct 由 1-histPct 推出
   assert.equal(out.curChars, out.totalChars)
 })
 
@@ -302,8 +302,8 @@ test('statInputComposition: idle single completed turn -> that turn is "this" (n
   // idle 时最近一次已完成 turn 即「本次」，而非全部算历史（否则 histPct 失真≈99%）
   assert.equal(out.curChars, 'what-is-this'.length + 'answer'.length)
   assert.equal(out.histChars, 0)
-  assert.equal(out.curPct, 1)
   assert.equal(out.histPct, 0)
+  assert.equal(1 - out.histPct, 1)
 })
 
 test('statInputComposition: mixed history + current turn (sum to 1)', () => {
@@ -323,8 +323,7 @@ test('statInputComposition: mixed history + current turn (sum to 1)', () => {
   assert.equal(out.histChars, 'old-question'.length + '{"a":1}'.length + '2024'.length + 'old-answer'.length + '{"a":1}'.length)
   assert.equal(out.curChars, 'SYS'.length + 'new-question'.length)
   assert.equal(out.totalChars, out.histChars + out.curChars)
-  assert.ok(Math.abs(out.histPct + out.curPct - 1) < 1e-9)
-  assert.ok(out.histPct > 0 && out.curPct > 0)
+  assert.ok(out.histPct > 0 && out.histPct < 1) // curPct=1-histPct 亦 >0
 })
 
 test('statInputComposition: system prompt counts toward current turn', () => {
@@ -359,7 +358,7 @@ test('statInputComposition: idle with multiple turns -> latest turn is "this", e
   assert.equal(out.histChars, 'early-qq'.length + 'early-aa'.length)
   assert.equal(out.curChars, 'SYS'.length + 'latest-qq'.length + 'latest-aa'.length)
   assert.ok(out.totalChars > out.histChars) // 本次占比 >50%（最近一次交互为主），非 99% 历史
-  assert.ok(out.curPct > 0.5 && out.curPct < 1)
+  assert.ok(out.histPct < 0.5) // curPct=1-histPct > 0.5
 })
 
 test('statInputComposition: honors compact point (starts counting after it)', () => {

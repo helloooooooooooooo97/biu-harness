@@ -109,7 +109,6 @@ export interface InputComposition {
   histChars: number
   curChars: number
   histPct: number
-  curPct: number
 }
 
 /**
@@ -213,11 +212,10 @@ export function statInputComposition(events: SessionEvent[]): InputComposition {
 
   const totalChars = histChars + curChars
   if (totalChars === 0) {
-    return { totalChars: 0, histChars: 0, curChars: 0, histPct: 0, curPct: 0 }
+    return { totalChars: 0, histChars: 0, curChars: 0, histPct: 0 }
   }
   const histPct = histChars / totalChars
-  const curPct = curChars / totalChars
-  return { totalChars, histChars, curChars, histPct, curPct }
+  return { totalChars, histChars, curChars, histPct }
 }
 
 

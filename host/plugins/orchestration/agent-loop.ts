@@ -155,7 +155,7 @@ export class AgentLoop implements AgentRunner {
       const inputComp = session.statInputComposition(this.sessionId)
       const attachUsage = (usage?: LlmUsage) =>
         usage !== undefined
-          ? { ...usage, histPct: inputComp.histPct, curPct: inputComp.curPct }
+          ? { ...usage, histPct: inputComp.histPct }
           : undefined
       // 预算默认 100 万 token（约 1M），仅在显式超界时才考虑截断；不主动压缩/不偷跑窗口丢弃。
       // 压缩只应发生：你显式调用 compact_submit 写入压缩点。设 CTX_BUDGET=0 可完全禁用预算保护（原样发送）。
