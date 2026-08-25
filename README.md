@@ -1,8 +1,6 @@
 # biu
 
-Cordis 插槽壳 + host 控制台。前端按 registry / contributors / orchestration / infrastructure 分插件；host 同类目录提供 `/api` 与 snapshot。
-
-对标 DeepSeek Harness 时只吸收其优点，见 [`docs/dsh-advantages.md`](docs/dsh-advantages.md)。对话主舞台由 **session/event 投影**，经 **agents** 发送，rail 承接审批。
+Cordis 插槽壳 + host 控制台。插件约定见 [`docs/plugin-packages.md`](docs/plugin-packages.md)。
 
 ```bash
 make          # 或 make dev：host + Vite
@@ -15,6 +13,4 @@ make stop     # 端口被占用时先停旧进程
 
 若出现 `EADDRINUSE` / `Port 5173 is in use`，说明上次 `make dev` 还在跑：先 `make stop` 再 `make dev`。
 
-侧栏开关 host 插件时，`ui-hub` 会装卸对应卡片。问候/便签在卡片里直接 `fetch`。
-
-// task-dispatch-test 20250101
+侧栏开关插件时，`ui-hub` 会装卸对应卡片。
