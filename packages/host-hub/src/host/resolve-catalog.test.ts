@@ -8,7 +8,7 @@ import { findRepoRoot, pluginWebSpecifier } from '@biu/host-plugin-loader'
 test('resolveCatalog loads only packages declared in cordis.plugins.json', async () => {
   const root = findRepoRoot()
   const raw = JSON.parse(await readFile(join(root, 'cordis.plugins.json'), 'utf8')) as {
-    plugins: Array<{ id: string; package: string; web?: string; ui?: string }>
+    plugins: Array<{ id: string; package: string; web?: string }>
   }
   const catalog = await resolveCatalog()
   for (const item of raw.plugins) {

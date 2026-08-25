@@ -75,25 +75,6 @@
       "enabled": true
     },
     {
-      "id": "greeter",
-      "name": "问候服务",
-      "layer": "capability",
-      "blurb": "@biu/cap-greeter/host + @biu/cap-greeter/web。",
-      "package": "@biu/cap-greeter/host",
-      "web": "@biu/cap-greeter/web",
-      "togglable": true,
-      "enabled": true
-    },
-    {
-      "id": "uppercase",
-      "name": "大写拦截器",
-      "layer": "capability",
-      "blurb": "@biu/cap-uppercase。挂在 greet/transform 上。",
-      "package": "@biu/cap-uppercase/host",
-      "togglable": true,
-      "enabled": true
-    },
-    {
       "id": "mascot-easter-egg",
       "name": "Mascot 彩蛋",
       "layer": "capability",
