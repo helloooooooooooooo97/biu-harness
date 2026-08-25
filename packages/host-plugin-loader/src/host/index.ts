@@ -7,6 +7,9 @@ export interface CordisPluginEntry {
   id: string
   name?: string
   package?: string
+  /** 前端入口 specifier，如 @biu/cap-chat/web */
+  web?: string
+  /** @deprecated 用 web */
   ui?: string
   layer?: string
   blurb?: string
@@ -26,8 +29,25 @@ const RESOLVED_UI = `\0${VIRTUAL_UI}`
 const VIRTUAL_WEB = 'virtual:cordis-web-runtime'
 const RESOLVED_WEB = `\0${VIRTUAL_WEB}`
 
-export function rootDirFrom(metaUrl = import.meta.url) {
-  return join(dirname(fileURLToPath(metaUrl)), '..')
+/** 能力插件的前端 specifier（json 的 `web`，兼容旧字段 `ui`）。 */
+export function pluginWebSpecifier(item: CordisPluginEntry): string | undefined {
+  return item.web || item.ui
+}
+
+export function findRepoRoot(start = fileURLToPath(import.meta.url)): string {
+  let dir = dirname(start)
+  for (let i = 0; i < 10; i++) {
+    if (existsSync(join(dir, 'cordis.plugins.json'))) return dir
+    const parent = dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+  return process.cwd()
+}
+
+/** @deprecated 用 findRepoRoot */
+export function rootDirFrom(_metaUrl?: string) {
+  return findRepoRoot()
 }
 
 export function splitPackageRef(specifier: string): { name: string; subpath: string } {
@@ -52,7 +72,6 @@ export function readCordisConfig(root: string): CordisConfig {
   }
 }
 
-/** 可热插拔能力插件（hub / ui-hub）。 */
 export function readCordisPlugins(root: string): CordisPluginEntry[] {
   return readCordisConfig(root).plugins ?? []
 }
@@ -62,7 +81,6 @@ export function allConfiguredEntries(root: string): CordisPluginEntry[] {
   return [...(config.host ?? []), ...(config.web ?? []), ...(config.plugins ?? [])]
 }
 
-/** 按 package.json name 在 packages/* 里找目录；主仓不写死任何插件包名。 */
 export function findWorkspacePackageDir(root: string, packageName: string): string | null {
   const { name } = splitPackageRef(packageName)
   const base = join(root, 'packages')
@@ -113,7 +131,8 @@ export function linkConfiguredPackages(root: string) {
   const names = new Set<string>()
   for (const item of allConfiguredEntries(root)) {
     if (item.package) names.add(splitPackageRef(item.package).name)
-    if (item.ui) names.add(splitPackageRef(item.ui).name)
+    const web = pluginWebSpecifier(item)
+    if (web) names.add(splitPackageRef(web).name)
   }
   for (const name of names) {
     const dir = findWorkspacePackageDir(root, name)
@@ -139,7 +158,7 @@ function posix(path: string) {
   return path.replace(/\\/g, '/')
 }
 
-/** Vite：能力 UI loaders + web 内核加载列表。主仓源码不出现具体包名。 */
+/** Vite：能力 web loaders + web 内核加载列表。主仓源码不出现具体包名。 */
 export function cordisPluginsVite(root = process.cwd()): VitePlugin {
   return {
     name: 'cordis-plugins',
@@ -151,14 +170,15 @@ export function cordisPluginsVite(root = process.cwd()): VitePlugin {
       if (id === RESOLVED_UI) {
         const lines: string[] = []
         for (const item of readCordisPlugins(root)) {
-          if (!item.ui) continue
-          const dir = findWorkspacePackageDir(root, item.ui)
+          const web = pluginWebSpecifier(item)
+          if (!web) continue
+          const dir = findWorkspacePackageDir(root, web)
           if (!dir) {
-            console.warn(`[cordis-plugins] ui package missing: ${item.ui}`)
+            console.warn(`[cordis-plugins] web package missing: ${web}`)
             continue
           }
-          const entry = posix(packageEntryFile(dir, item.ui))
-          lines.push(`  ${JSON.stringify(item.ui)}: () => import(${JSON.stringify(entry)}),`)
+          const entry = posix(packageEntryFile(dir, web))
+          lines.push(`  ${JSON.stringify(web)}: () => import(${JSON.stringify(entry)}),`)
         }
         return `export const uiPackageLoaders = {\n${lines.join('\n')}\n}\n`
       }

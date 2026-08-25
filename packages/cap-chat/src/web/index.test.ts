@@ -26,4 +26,6 @@ test('one plugin fills thread, trajectory, composer, approvals dock and models',
   assert.equal(ctx.slots.list('project').length, 0)
   assert.equal(ctx.slots.list('dock').some((item) => item.id === 'approvals'), true)
   assert.equal(ctx.slots.list('models')[0]?.id, 'chat-config')
+  assert.equal(ctx.slots.list('inspector-panels').some((item) => item.id === 'chat-traj'), true)
+  assert.equal(ctx.slots.list('inspector-panels').some((item) => item.id === 'chat-usage'), true)
 })

@@ -88,7 +88,7 @@ npm run dev:web    # Vite :5173，/api 和 /ws 代理到 host
 |----|--------|------|
 | `host` | `host/index.ts` | HTTP、sessions、tools、llm、hub … |
 | `web` | `web/main.tsx` | slots、app-shell、ui-hub … |
-| `plugins` | `@biu/host-hub` + `@biu/web-ui-hub` | 可热插拔能力；`ui` 指向 `@biu/cap-*/web` |
+| `plugins` | `@biu/host-hub` + `@biu/web-ui-hub` | 可热插拔能力；`web` 指向 `@biu/cap-*/web` |
 
 壳不认识具体 cap 插件。json 的 `id` 用短名（`chat`、`http`）；包名一律 `@biu/<prefix>-<id>`。
 
@@ -98,11 +98,11 @@ npm run dev:web    # Vite :5173，/api 和 /ws 代理到 host
 
 ```
 BIU
-├── host/                 # host 加载器 + cordis 解析
+├── host/                 # host 加载器
 ├── web/                  # 前端加载器（main.tsx / 样式）
 ├── packages/
 │   ├── type-*            # 共享契约（不是插件，不进 json）
-│   ├── host-*            # host 内核  → src/host/
+│   ├── host-*            # host 内核  → src/host/（含 host-plugin-loader）
 │   ├── web-*             # web 内核   → src/web/
 │   └── cap-*             # 能力插件   → src/host + src/web
 ├── cordis.plugins.json   # 唯一插件清单
@@ -138,7 +138,7 @@ BIU
 {
   "id": "greeter",
   "package": "@biu/cap-greeter/host",
-  "ui": "@biu/cap-greeter/web",
+  "web": "@biu/cap-greeter/web",
   "togglable": true,
   "enabled": true
 }

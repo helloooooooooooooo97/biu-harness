@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { cordisPluginsVite, linkConfiguredPackages } from './host/cordis-plugins.ts'
+import { cordisPluginsVite, linkConfiguredPackages } from './packages/host-plugin-loader/src/host/index.ts'
 
 const root = dirname(fileURLToPath(import.meta.url))
 linkConfiguredPackages(root)

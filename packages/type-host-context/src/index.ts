@@ -6,7 +6,6 @@ import type { AgentLoopService } from '@biu/host-agent-loop'
 import type { PreStepReq } from '@biu/type-agent-loop'
 import type { AgentsService } from '@biu/host-agents'
 import type { ApprovalsService } from '@biu/host-approvals'
-import type { ChatService } from '@biu/cap-chat/host'
 import type { SessionsService } from '@biu/host-sessions'
 import type { SessionEvent } from '@biu/type-session'
 import type { SessionStoreService } from '@biu/host-session-store'
@@ -37,7 +36,6 @@ declare module 'cordis' {
     agentLoop: AgentLoopService
     agents: AgentsService
     approvals: ApprovalsService
-    chat: ChatService
     sessionStore: SessionStoreService
     sessions: SessionsService
     systemPrompt: SystemPromptService
@@ -75,7 +73,5 @@ declare module 'cordis' {
     'fs/write'(path: string): void
     'fs/list'(path: string): void
     'sandbox/wrap'(payload: { argv: string[]; cwd: string }): void
-    'clock/tick'(iso: string): void
-    'greet/transform'(text: string, next: () => string): string
   }
 }

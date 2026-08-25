@@ -10,9 +10,6 @@ export interface CatalogEntry {
   togglable: boolean
   enabled: boolean
   config?: unknown
-  ui?: string
+  web?: string
   packageName?: string
 }
-
-/** 能力插件只来自 cordis.plugins.json；此文件不再静态 import 任何插件。 */
-export const builtinCatalog: CatalogEntry[] = []

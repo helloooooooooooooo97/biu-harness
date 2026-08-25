@@ -384,6 +384,12 @@ export function computeTurnStats(events: SessionEvent[], targetTurn?: number): R
 export const name = 'chat'
 export const inject = ['http', 'hub', 'agents', 'sessions', 'systemPrompt', 'tools']
 
+declare module 'cordis' {
+  interface Context {
+    chat: ChatService
+  }
+}
+
 export function apply(ctx: Context) {
   const chat = new ChatService(ctx)
   ctx.hub.register({
