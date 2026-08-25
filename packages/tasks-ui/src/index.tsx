@@ -971,9 +971,19 @@ function StatusIcon({ status }: { status: TaskStatus }) {
   return <span className={`tasks-status-icon is-${status}`}>{meta?.icon}</span>
 }
 
-function StatusPill({ status, reportCount, blocked }: { status: TaskStatus; reportCount: number; blocked?: boolean }) {
+function StatusPill({ status, reportCount, blocked, dueAt, now = Date.now() }: { status: TaskStatus; reportCount: number; blocked?: boolean; dueAt?: number | null; now?: number }) {
   const meta = STATUS_META.find((s) => s.id === status)
   const label = (meta?.label as string | undefined) ?? status
+  // 逾期派生：未完成且已过截止时间（比 blocked/普通状态更紧迫，优先展示）
+  const overdue = status !== 'done' && !!dueAt && dueAt <= now
+  if (overdue) {
+    return (
+      <span className="tasks-status-pill is-overdue" title={blocked ? '已过截止时间（且被前置任务阻塞）' : '已过截止时间'}>
+        <LuClock size={12} aria-hidden />
+        <span className="tasks-status-label">已逾期</span>
+      </span>
+    )
+  }
   // 阻塞是待办的派生：显示"被阻塞"，不加报告计数（还没开工，不可能有 report）
   if (blocked) {
     return (
@@ -1087,9 +1097,9 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
         const target = queue[(idx + dir + n) % n]
         if (target) { e.preventDefault(); setDetailId(target.id) }
       } else if (view === 'board') {
-        // 看板：按列（todo/blocked/doing/done）分组，列内保持顺序
-        const cols: BoardKey[] = ['todo', 'blocked', 'doing', 'done']
-        const colOf = (t: Task): BoardKey => (t.blocked ? 'blocked' : t.status)
+        // 看板：按列（overdue/todo/blocked/doing/done）分组，列内保持顺序
+        const cols: BoardKey[] = ['overdue', 'todo', 'blocked', 'doing', 'done']
+        const colOf = (t: Task): BoardKey => (isOverdue(t) ? 'overdue' : t.blocked ? 'blocked' : t.status)
         const matrix: { key: BoardKey; items: Task[] }[] = cols.map((c) => ({
           key: c,
           items: filteredTasks.filter((t) => colOf(t) === c),
@@ -1349,9 +1359,15 @@ function buildTreeRows(tasks: Task[], collapsed: Record<string, boolean>): Task[
   return out
 }
 
-// 队列视图分组键：进行中 → 待办 → 阻塞 → 已完成
-type QueueKey = 'doing' | 'todo' | 'blocked' | 'done'
+// 逾期判定：未完成且已过截止时间
+function isOverdue(t: Task, now = Date.now()): boolean {
+  return t.status !== 'done' && !!t.dueAt && t.dueAt <= now
+}
+
+// 队列视图分组键：已逾期 → 进行中 → 待办 → 阻塞 → 已完成
+type QueueKey = 'overdue' | 'doing' | 'todo' | 'blocked' | 'done'
 const QUEUE_GROUPS: { key: QueueKey; label: string; icon: ReactNode }[] = [
+  { key: 'overdue', label: '已逾期', icon: <LuClock size={13} aria-hidden /> },
   { key: 'doing', label: '进行中', icon: <LuLoaderCircle size={13} aria-hidden /> },
   { key: 'todo', label: '待办', icon: <LuCircleDashed size={13} aria-hidden /> },
   { key: 'blocked', label: '阻塞', icon: <LuLock size={13} aria-hidden /> },
@@ -1369,7 +1385,7 @@ function buildQueueRows(tasks: Task[]): Task[] {
   const leafs = tasks.filter((t) => !childSet.has(t.id))
   // 时间排序：最近优先（时间倒序，最新任务排最前）。dueAt(若有) 优先，否则 createdAt。
   const timeKey = (t: Task): number => t.dueAt ?? t.createdAt
-  const colOf = (t: Task): QueueKey => (t.blocked ? 'blocked' : (t.status === 'done' ? 'done' : (t.status === 'doing' ? 'doing' : 'todo')))
+  const colOf = (t: Task): QueueKey => (isOverdue(t) ? 'overdue' : t.blocked ? 'blocked' : (t.status === 'done' ? 'done' : (t.status === 'doing' ? 'doing' : 'todo')))
   const group = new Map<QueueKey, Task[]>()
   for (const t of leafs) {
     const k = colOf(t)
@@ -1385,8 +1401,9 @@ function buildQueueRows(tasks: Task[]): Task[] {
   return out
 }
 
-type BoardKey = 'todo' | 'blocked' | 'doing' | 'done'
+type BoardKey = 'overdue' | 'todo' | 'blocked' | 'doing' | 'done'
 const BOARD_COLUMNS: { key: BoardKey; label: string; icon: ReactNode }[] = [
+  { key: 'overdue', label: '已逾期', icon: <LuClock size={13} aria-hidden /> },
   { key: 'todo', label: '待办', icon: <LuCircleDashed size={13} aria-hidden /> },
   { key: 'blocked', label: '阻塞', icon: <LuLock size={13} aria-hidden /> },
   { key: 'doing', label: '进行中', icon: <LuLoaderCircle size={13} aria-hidden /> },
@@ -1409,10 +1426,10 @@ function TasksBoard({
   agentsLoading: boolean
 }) {
   const byStatus = useMemo(() => {
-    const map: Record<string, Task[]> = { todo: [], blocked: [], doing: [], done: [] }
+    const map: Record<string, Task[]> = { overdue: [], todo: [], blocked: [], doing: [], done: [] }
     for (const t of tasks) {
-      // 阻塞是待办的派生：todo + blocked → 阻塞列
-      const key = t.blocked ? 'blocked' : t.status
+      // 逾期优先；阻塞是待办的派生：todo + blocked → 阻塞列
+      const key = isOverdue(t) ? 'overdue' : t.blocked ? 'blocked' : t.status
       ;(map[key] ??= []).push(t)
     }
     return map
@@ -1644,7 +1661,7 @@ function TasksQueue({
     for (const t of tasks) if (t.parentId) s.add(t.parentId)
     return s
   }, [tasks])
-  const colOf = (t: Task): QueueKey => (t.blocked ? 'blocked' : (t.status === 'done' ? 'done' : (t.status === 'doing' ? 'doing' : 'todo')))
+  const colOf = (t: Task): QueueKey => (isOverdue(t) ? 'overdue' : t.blocked ? 'blocked' : (t.status === 'done' ? 'done' : (t.status === 'doing' ? 'doing' : 'todo')))
 
   // 父链构建：按 id 索引，向上回溯出一串祖先（根 … 直接父），用「根 / 父 / …」拼接展示
   const byId = useMemo(() => {
@@ -1670,7 +1687,7 @@ function TasksQueue({
 
   // 分组（仅叶节点）
   const grouped = useMemo(() => {
-    const map: Record<string, Task[]> = { doing: [], todo: [], blocked: [], done: [] }
+    const map: Record<string, Task[]> = { overdue: [], doing: [], todo: [], blocked: [], done: [] }
     for (const t of tasks) {
       if (childSet.has(t.id)) continue // 有子任务 → 父节点，不展示
       const k = colOf(t)
@@ -1718,6 +1735,9 @@ function TasksQueue({
                         <LuFlag size={10} aria-hidden />
                         {PRIORITY_LABEL[task.priority]}
                       </span>
+                      {task.status !== 'done' && task.dueAt && task.dueAt <= Date.now() ? (
+                        <span className="tasks-queue-overdue" title="已过截止时间"><LuClock size={10} aria-hidden />逾期</span>
+                      ) : null}
                       {task.blocked ? (
                         <span className="tasks-queue-lock" title="被依赖任务阻塞"><LuLock size={11} aria-hidden /></span>
                       ) : null}
@@ -1986,7 +2006,7 @@ function TasksTable({
               </td>
               <td className="tasks-col-status">
                 <div className="tasks-status-cell">
-                  <StatusPill status={task.status} reportCount={task.reports?.length ?? 0} blocked={task.blocked} />
+                  <StatusPill status={task.status} reportCount={task.reports?.length ?? 0} blocked={task.blocked} dueAt={task.dueAt} />
                   {triggerSourceCount(task.trigger) > 0 ? <TriggerToggle task={task} onUpdate={onUpdate} /> : null}
                 </div>
               </td>
@@ -2893,6 +2913,7 @@ if (typeof document !== 'undefined') {
 .tasks-board.is-compact { gap:8px; }
 .tasks-board-col { display:flex; flex-direction:column; min-height:120px; background:color-mix(in srgb, var(--dsw-muted-fill) 38%, transparent); border-radius:10px; padding:6px; }
 .tasks-board-colhead { display:flex; align-items:center; gap:6px; padding:4px 6px 8px; color:var(--dsw-label-2); font-size:11px; font-weight:600; }
+.tasks-board-col.is-overdue .tasks-board-colhead { color:var(--dsw-danger); font-weight:700; }
 .tasks-board-col.is-blocked .tasks-board-colhead { color:#9a6700; }
 .tasks-board-col.is-doing .tasks-board-colhead { color:var(--dsw-business); }
 .tasks-board-col.is-done .tasks-board-colhead { color:#2f7d4c; }
@@ -2940,6 +2961,7 @@ if (typeof document !== 'undefined') {
 .tasks-status-pill.is-doing { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 12%, transparent); }
 .tasks-status-pill.is-done { color:#2f7d4c; background:color-mix(in srgb, #2f7d4c 12%, transparent); }
 .tasks-status-pill.is-blocked { color:#9a6700; background:color-mix(in srgb, #9a6700 12%, transparent); }
+.tasks-status-pill.is-overdue { color:var(--dsw-danger); background:color-mix(in srgb, var(--dsw-danger) 12%, transparent); font-weight:700; }
 .tasks-status-label { white-space:nowrap; }
 .tasks-status-reports { display:inline-flex; align-items:center; justify-content:center; min-width:14px; height:14px; padding:0 3px; border-radius:999px; background:color-mix(in srgb, var(--dsw-border) 50%, transparent); font-size:9.5px; font-weight:700; color:var(--dsw-label-2); }
 .tasks-col-priority { width:76px; }
@@ -3150,6 +3172,7 @@ if (typeof document !== 'undefined') {
 .tasks-queue.is-compact { gap:10px; margin-top:6px; }
 .tasks-queue-group { display:flex; flex-direction:column; gap:6px; }
 .tasks-queue-ghead { display:flex; align-items:center; gap:6px; padding:4px 6px; color:var(--dsw-label-2); font-size:11px; font-weight:650; letter-spacing:.01em; }
+.tasks-queue-ghead.is-overdue { color:var(--dsw-danger); font-weight:700; }
 .tasks-queue-ghead.is-doing { color:var(--dsw-business); }
 .tasks-queue-ghead.is-blocked { color:#9a6700; }
 .tasks-queue-ghead.is-done { color:#2f7d4c; }
@@ -3168,6 +3191,7 @@ if (typeof document !== 'undefined') {
 .tasks-queue-pill.is-p-med { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 12%, transparent); }
 .tasks-queue-pill.is-p-low { color:var(--dsw-label-3); background:color-mix(in srgb, var(--dsw-label-3) 12%, transparent); }
 .tasks-queue-lock { flex:none; display:inline-flex; color:#9a6700; }
+.tasks-queue-overdue { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:9px; font-weight:700; white-space:nowrap; color:var(--dsw-danger); background:color-mix(in srgb, var(--dsw-danger) 12%, transparent); }
 .tasks-queue-meta { flex:none; display:flex; align-items:center; gap:8px; color:var(--dsw-label-3); font-size:10px; min-width:0; overflow:hidden; }
 .tasks-queue-assignee { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; color:var(--dsw-label-2); }
 .tasks-queue-meta .tasks-time { font-size:10px; }
