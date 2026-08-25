@@ -19,6 +19,7 @@ test('parseAppPath covers home, session chat, debug, dashboard and tasks', () =>
   })
   assert.deepEqual(parseAppPath('/dashboard'), { kind: 'module', moduleId: 'dashboard' })
   assert.deepEqual(parseAppPath('/tasks'), { kind: 'module', moduleId: 'tasks' })
+  assert.deepEqual(parseAppPath('/channels'), { kind: 'module', moduleId: 'channels' })
   assert.deepEqual(parseAppPath('/unknown'), { kind: 'home' })
 })
 
@@ -26,6 +27,7 @@ test('isKnownAppPath accepts app surfaces and rejects noise', () => {
   assert.equal(isKnownAppPath('/'), true)
   assert.equal(isKnownAppPath('/dashboard'), true)
   assert.equal(isKnownAppPath('/tasks'), true)
+  assert.equal(isKnownAppPath('/channels'), true)
   assert.equal(isKnownAppPath('/workspace'), false)
   assert.equal(isKnownAppPath('/s/abc'), true)
   assert.equal(isKnownAppPath('/s/abc/chat'), true)
@@ -42,6 +44,7 @@ test('buildAppPath round-trips with parseAppPath', () => {
     { kind: 'session' as const, sessionId: 's1', view: 'debug' as const },
     { kind: 'module' as const, moduleId: 'dashboard' as const },
     { kind: 'module' as const, moduleId: 'tasks' as const },
+    { kind: 'module' as const, moduleId: 'channels' as const },
   ]
   for (const route of routes) {
     assert.deepEqual(parseAppPath(buildAppPath(route)), route)

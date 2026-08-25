@@ -19,6 +19,16 @@
       "ui": "@hmr/tasks-ui",
       "togglable": true,
       "enabled": true
+    },
+    {
+      "id": "channels",
+      "name": "频道",
+      "layer": "capability",
+      "blurb": "独立包：@hmr/channel-host + @hmr/channel-ui。内网分布式群聊：有序消息流 + 成员 + 邀请。",
+      "package": "@hmr/channel-host",
+      "ui": "@hmr/channel-ui",
+      "togglable": true,
+      "enabled": true
     }
   ]
 }

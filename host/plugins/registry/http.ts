@@ -55,7 +55,7 @@ export class HttpService extends Service {
   private routes: Route[] = []
   private sockets = new Set<WebSocket>()
 
-  constructor(ctx: Context, public config: { port: number; publicDir: string }) {
+  constructor(ctx: Context, public config: { port: number; host?: string; publicDir: string }) {
     super(ctx, 'http')
     ctx.effect(() => {
       const server = createServer((req, res) => {
@@ -80,9 +80,10 @@ export class HttpService extends Service {
         }
         process.exit(1)
       })
-      server.listen(config.port, () => {
+      const host = config.host ?? '127.0.0.1'
+      server.listen(config.port, host, () => {
         ctx.emit('http/ready', { port: config.port })
-        ctx.logger('http').info(`listening on http://127.0.0.1:${config.port}`)
+        ctx.logger('http').info(`listening on http://${host}:${config.port}${host === '0.0.0.0' ? ' (内网可达)' : ''}`)
       })
       return () =>
         new Promise<void>((resolve) => {
@@ -121,6 +122,18 @@ export class HttpService extends Service {
   private async dispatch(req: IncomingMessage, res: ServerResponse) {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
     const method = (req.method ?? 'GET').toUpperCase() as Method
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+    }
+    // CORS 预检：跨内网机器的浏览器请求，先给 OPTIONS 放行
+    if ((req.method ?? '').toUpperCase() === 'OPTIONS') {
+      res.writeHead(204, corsHeaders)
+      res.end()
+      return
+    }
     // 静态段优先于 :param，避免 `/api/approvals/mode` 被 `/api/approvals/:id` 吃掉
     const match = this.routes
       .filter((route) => route.method === method && route.regexp.test(url.pathname))
@@ -138,7 +151,7 @@ export class HttpService extends Service {
         query: url.searchParams,
         json: <T = unknown>() => parseBody(req) as Promise<T>,
         send: (status, body) => {
-          res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' })
+          res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', ...corsHeaders })
           res.end(JSON.stringify(body))
         },
       }
@@ -154,7 +167,7 @@ export class HttpService extends Service {
       await this.serveStatic(url.pathname, res)
       return
     }
-    res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
+    res.writeHead(404, { 'content-type': 'application/json; charset=utf-8', ...corsHeaders })
     res.end(JSON.stringify({ error: 'not found' }))
   }
 
@@ -185,6 +198,6 @@ export class HttpService extends Service {
 export const name = 'http'
 export const inject = [] as const
 
-export function apply(ctx: Context, config: { port: number; publicDir: string }) {
+export function apply(ctx: Context, config: { port: number; host?: string; publicDir: string }) {
   new HttpService(ctx, config)
 }

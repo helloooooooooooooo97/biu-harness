@@ -1,0 +1,13 @@
+{
+  "name": "@hmr/channel-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "频道插件 host：单一事实来源的有序消息流 + 成员 + 邀请 + /api/channels",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

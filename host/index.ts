@@ -26,6 +26,8 @@ import * as hub from './plugins/registry/hub.ts'
 
 const publicDir = join(dirname(fileURLToPath(import.meta.url)), '../public')
 const port = Number(process.env.PORT ?? 3141)
+// 默认只绑本机；要内网可达设置 HTTP_HOST=0.0.0.0（对等互连的机器必须开）
+const host = process.env.HTTP_HOST ?? '127.0.0.1'
 
 const ctx = new Context()
 ctx.logger.exporter({
@@ -41,7 +43,7 @@ ctx.on('http/ready', ({ port: ready }) => {
 
 async function boot() {
   // 按依赖顺序 await，避免 inject 读到未 ACTIVE 的服务
-  await ctx.plugin(http, { port, publicDir })
+  await ctx.plugin(http, { port, host, publicDir })
   await ctx.plugin(sessionStore)
   await ctx.plugin(sessions)
   await ctx.plugin(tools)

@@ -50,6 +50,18 @@ function ModuleIcon({ id }: { id: AppModuleId }) {
       </svg>
     )
   }
+  if (id === 'channels') {
+    return (
+      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M4 6h16M4 12h16M4 18h10M7 3v4M11 3v4M15 3v4M19 3v4"
+        />
+        <circle cx="19" cy="18" r="2.4" />
+      </svg>
+    )
+  }
   return (
     <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
       <path
@@ -369,6 +381,13 @@ function Shell(props: SlotProps) {
         >
           {props.renderSlot('tasks')}
         </div>
+        <div
+          className={activeModule === 'channels' ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : 'hidden'}
+          aria-hidden={activeModule !== 'channels'}
+          data-testid="channels-module"
+        >
+          {props.renderSlot('channels')}
+        </div>
       </main>
 
       {activeModule === 'agent' ? (
@@ -488,6 +507,7 @@ export function apply(ctx: Context) {
       routes: { kind: 'single' },
       tasks: { kind: 'single' },
       'inspector-tasks': { kind: 'single' },
+      channels: { kind: 'single' },
     },
     props: () => shellProps,
   })
