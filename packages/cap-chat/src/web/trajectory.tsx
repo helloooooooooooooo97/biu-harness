@@ -647,7 +647,3 @@ function groupByTurn(rows: TrajectoryRow[]) {
   }
   return groups
 }
-
-export function trajectoryProps(view: SessionViewService) {
-  return { useSessionView: bindSessionView(view) }
-}

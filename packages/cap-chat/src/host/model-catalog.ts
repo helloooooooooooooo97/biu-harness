@@ -43,7 +43,3 @@ export function defaultModelFor(provider: ChatProvider): string {
   const first = LLM_MODEL_CATALOG.find((m) => m.provider === provider)
   return first?.model ?? 'deepseek-chat'
 }
-
-export function modelsForProvider(provider: ChatProvider): LlmModelDef[] {
-  return LLM_MODEL_CATALOG.filter((m) => m.provider === provider)
-}
