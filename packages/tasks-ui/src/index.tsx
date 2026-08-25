@@ -825,6 +825,7 @@ function TriggerMark({ trigger }: { trigger?: Task['trigger'] }) {
 /** 自动触发开关：表格行内一键启停 task.trigger.enabled。乐观更新 + 落库确认。 */
 function TriggerToggle({ task, onUpdate }: { task: Task; onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void> }) {
   const enabled = !!task.trigger?.enabled
+  const count = triggerSourceCount(task.trigger)
   return (
     <button
       type="button"
@@ -838,7 +839,9 @@ function TriggerToggle({ task, onUpdate }: { task: Task; onUpdate: (id: string, 
         void onUpdate(task.id, { trigger: { enabled: !enabled } })
       }}
     >
-      <span className="tasks-trigger-toggle-knob" />
+      <LuClock size={9} aria-hidden />
+      <span>{enabled ? '开' : '关'}</span>
+      {count > 0 ? <span className="tasks-trigger-count">{count}</span> : null}
     </button>
   )
 }
@@ -1966,7 +1969,6 @@ function TasksTable({
               <td className="tasks-col-status">
                 <div className="tasks-status-cell">
                   <StatusPill status={task.status} reportCount={task.reports?.length ?? 0} blocked={task.blocked} />
-                  <TriggerMark trigger={task.trigger} />
                   <TriggerToggle task={task} onUpdate={onUpdate} />
                 </div>
               </td>
@@ -3055,15 +3057,14 @@ if (typeof document !== 'undefined') {
 /* 未启用但有配置 → 弱化灰 */
 .tasks-trigger-mark.is-off { color:var(--dsw-label-3); background:var(--dsw-muted-fill); border:1px dashed color-mix(in srgb, var(--dsw-border) 70%, transparent); }
 .tasks-trigger-mark-state { line-height:1; }
-.tasks-trigger-count { display:inline-flex; align-items:center; justify-content:center; min-width:13px; height:13px; padding:0 3px; border-radius:999px; font-size:8.5px; font-weight:800; line-height:1; color:#fff; background:color-mix(in srgb, var(--dsw-label) 78%, transparent); }
+.tasks-trigger-count { display:inline-flex; align-items:center; justify-content:center; min-width:13px; height:13px; padding:0 3px; border-radius:999px; font-size:8.5px; font-weight:800; line-height:1; color:#fff; background:color-mix(in srgb, #9a6700 78%, transparent); }
 .tasks-trigger-mark.is-off .tasks-trigger-count { background:var(--dsw-label-3); }
 /* ---- 自动触发开关（紧凑 Notion 风格 switch）---- */
-.tasks-trigger-toggle { flex:none; position:relative; width:34px; height:20px; border-radius:999px; border:0; cursor:pointer; background:color-mix(in srgb, var(--dsw-label-3) 26%, transparent); padding:0; transition:background .2s ease; box-shadow:none; }
-.tasks-trigger-toggle:hover { background:color-mix(in srgb, var(--dsw-label-3) 38%, transparent); }
-.tasks-trigger-toggle.is-on { background:hsl(145, 80%, 42%); box-shadow:none; }
-.tasks-trigger-toggle.is-on:hover { background:hsl(145, 75%, 38%); }
-.tasks-trigger-toggle-knob { position:absolute; top:3px; left:3px; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.22); transition:left .2s cubic-bezier(.4,0,.2,1); }
-.tasks-trigger-toggle.is-on .tasks-trigger-toggle-knob { left:17px; }
+.tasks-trigger-toggle { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; border:0; cursor:pointer; font-size:9px; font-weight:700; white-space:nowrap; color:var(--dsw-label-3); background:var(--dsw-muted-fill); font-family:inherit; line-height:1; transition:background .15s ease; }
+.tasks-trigger-toggle:hover { background:color-mix(in srgb, var(--dsw-label-3) 18%, transparent); }
+.tasks-trigger-toggle.is-on { color:#2f7d4c; background:color-mix(in srgb, #2f7d4c 14%, transparent); }
+.tasks-trigger-toggle.is-on:hover { background:color-mix(in srgb, #2f7d4c 24%, transparent); }
+.tasks-trigger-toggle .tasks-trigger-count { min-width:12px; height:12px; font-size:8px; }
 .tasks-status-cell .tasks-trigger-toggle { margin-left:2px; }
 .tasks-trigger-block { grid-column:1 / -1; order:1; display:flex; flex-direction:column; gap:8px; padding:10px 12px; border:1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent); border-radius:9px; background:color-mix(in srgb, var(--dsw-muted-fill) 30%, transparent); }
 .tasks-trigger-block > span { display:inline-flex; align-items:center; gap:5px; font-weight:650; font-size:10.5px; color:var(--dsw-label-2); letter-spacing:.02em; }
