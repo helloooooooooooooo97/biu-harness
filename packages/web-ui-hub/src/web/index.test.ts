@@ -47,14 +47,14 @@ test('ui-hub mounts configured ui packages including chat', async () => {
   })
   const uiIds = Object.keys(uiPackageLoaders)
   assert.ok(uiIds.length >= 1, 'virtual loaders should come from cordis.plugins.json')
-  const clockUi = uiIds.find((id) => id.includes('cap-clock/web'))
-  assert.ok(clockUi, 'clock-web loader missing')
+  const tasksUi = uiIds.find((id) => id.includes('cap-tasks/web'))
+  assert.ok(tasksUi, 'tasks-web loader missing')
   const chatUi = uiIds.find((id) => id === '@biu/cap-chat/web' || id.includes('cap-chat/web'))
   assert.ok(chatUi, `chat-ui loader missing in ${uiIds.join(',')}`)
   const base = ctx.snapshot.get()
   ctx.snapshot.get = () => ({
     ...base,
-    plugins: [plugin('clock', true, clockUi), plugin('chat', true, chatUi)],
+    plugins: [plugin('tasks', true, tasksUi), plugin('chat', true, chatUi)],
   })
   await ctx.plugin(uiHub)
   const deadline = Date.now() + 5000

@@ -47,16 +47,6 @@
       "enabled": true
     },
     {
-      "id": "clock",
-      "name": "心跳时钟",
-      "layer": "capability",
-      "blurb": "@biu/cap-clock/host + @biu/cap-clock/web。",
-      "package": "@biu/cap-clock/host",
-      "web": "@biu/cap-clock/web",
-      "togglable": true,
-      "enabled": true
-    },
-    {
       "id": "logger",
       "name": "事件日志",
       "layer": "capability",
@@ -88,7 +78,7 @@
       "id": "tasks",
       "name": "任务",
       "layer": "capability",
-      "blurb": "@biu/cap-tasks。",
+      "blurb": "@biu/cap-tasks。任务与秒级心跳。",
       "package": "@biu/cap-tasks/host",
       "web": "@biu/cap-tasks/web",
       "togglable": true,

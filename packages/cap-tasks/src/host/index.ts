@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import { Service, type Context } from 'cordis'
 import { currentSessionId } from '@biu/host-sessions/scope'
+import { startTaskClock } from './clock.ts'
 
 type DatabaseSync = import('node:sqlite').DatabaseSync
 type SQLInputValue = import('node:sqlite').SQLInputValue
@@ -1330,6 +1331,7 @@ export const name = 'tasks'
 export const inject = ['http', 'hub', 'tools', 'sessions']
 
 export function apply(ctx: Context) {
+  startTaskClock(ctx)
   const host = ctx as HostCtx
   const dbPath = join(process.cwd(), '.cordis', 'tasks.sqlite')
   const tasks = new TasksService(ctx, dbPath).open()
@@ -2050,7 +2052,7 @@ export function apply(ctx: Context) {
     return fired
   }
 
-  // 定时触发：订阅 clock/tick（外部时钟每秒心跳）——自包含、事件驱动，不依赖独立调度器。
+  // 定时触发：订阅同包 clock/tick（每秒心跳）——事件驱动，不另起调度器。
   ctx.on('clock/tick', () => {
     try {
       void driveTimers()

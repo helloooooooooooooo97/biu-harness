@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { Context } from 'cordis'
+import { bindSnapshot, type Snapshot, type SnapshotService } from '@biu/web-snapshot'
 
 // ---- mascot 静态形状：引用外部 grok-bot 包的同源 geometry（/grok-bot/geometry-data.js 暴露 window.GROK_GEO）----
 // 类型取自主应用 grok-bot-types 的 Window.GROK_GEO 声明，tasks-ui 不重复声明。
@@ -2855,8 +2856,28 @@ function TasksInspectorPanel(_props: SlotProps) {
   )
 }
 
+function formatClock(iso?: string) {
+  if (!iso) return 'waiting…'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return date.toLocaleTimeString('zh-CN', { hour12: false })
+}
+
+function ClockBadge(props: SlotProps) {
+  const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
+  const iso = useSnapshot((state: Snapshot) => state.clockIso)
+  return (
+    <article className="space-y-1 rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-3 py-3">
+      <h2 className="text-sm font-medium">Heartbeat</h2>
+      <time className="font-mono text-sm tracking-wide text-[var(--dsw-label-3)]" dateTime={iso}>
+        {formatClock(iso)}
+      </time>
+    </article>
+  )
+}
+
 export const name = 'tasks-ui'
-export const inject = ['slots', 'appModules']
+export const inject = ['slots', 'appModules', 'snapshot']
 
 const tasksModuleProps = { moduleId: 'tasks' }
 const tasksInspectorProps = { tabId: 'tasks', tabLabel: '任务', tabIcon: TasksRailIcon }
@@ -2902,6 +2923,11 @@ export function apply(ctx: Context) {
     key: 'tasks-inspector',
     order: 10,
     props: () => tasksInspectorProps,
+  })
+  slots.place('demos', ClockBadge, {
+    key: 'clock',
+    order: 5,
+    props: () => ({ useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService) }),
   })
 }
 

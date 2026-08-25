@@ -6,10 +6,8 @@ declare module 'cordis' {
   }
 }
 
-export const name = 'clock'
-export const inject = ['http', 'hub', 'tools']
-
-export function apply(ctx: Context) {
+/** 任务包内的秒级心跳：驱动 cron/at，并向前端广播 clockIso。 */
+export function startTaskClock(ctx: Context) {
   let lastIso = new Date().toISOString()
   ctx.tools.register({
     name: 'clock_now',
@@ -20,8 +18,8 @@ export function apply(ctx: Context) {
   ctx.hub.register({
     id: 'clock',
     title: '心跳',
-    subtitle: '定时器包在 ctx.effect 里',
-    plugin: 'clock',
+    subtitle: '定时器在任务包 ctx.effect 里',
+    plugin: 'tasks',
     kind: 'clock',
   })
   ctx.effect(() => {
@@ -34,5 +32,5 @@ export function apply(ctx: Context) {
     tick()
     const timer = setInterval(tick, 1000)
     return () => clearInterval(timer)
-  }, 'clock.interval')
+  }, 'tasks.clock.interval')
 }

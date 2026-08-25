@@ -136,9 +136,9 @@ BIU
 
 ```json
 {
-  "id": "clock",
-  "package": "@biu/cap-clock/host",
-  "web": "@biu/cap-clock/web",
+  "id": "tasks",
+  "package": "@biu/cap-tasks/host",
+  "web": "@biu/cap-tasks/web",
   "togglable": true,
   "enabled": true
 }
