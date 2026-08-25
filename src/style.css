@@ -1099,6 +1099,17 @@ body {
   font-weight: 600;
 }
 
+.traj-usage-hist-pct {
+  color: var(--dsw-danger);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* 历史占比红色层与 cache 绿色层都由 .traj-usage-in-wrap 的 backgroundImage 多段渐变合成 */
+.traj-usage-in-wrap.has-hist {
+  color: var(--dsw-label);
+}
+
 .traj-usage-card {
   border: 1px solid var(--dsw-border);
   border-radius: 12px;

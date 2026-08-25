@@ -36,6 +36,10 @@ export interface TrajectoryUsage {
   outputTokens: number
   totalTokens?: number
   cacheReadTokens?: number
+  /** 该次 LLM 输入中「历史 turn」占比（0~1）；后端 agent-loop 在 derive 时挂载。 */
+  histPct?: number
+  /** 该次 LLM 输入中「本次 turn」占比（0~1）。 */
+  curPct?: number
 }
 
 /** 精简 ConversationNode：事件 → 可渲染行。 */
