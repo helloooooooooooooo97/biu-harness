@@ -8,6 +8,8 @@
 <p align="center">多 Agent 不靠群聊轮流说话，靠任务看板协作。</p>
 
 <p align="center">
+  <a href="#产品演示">演示</a>
+  ·
   <a href="#1-它是什么">它是什么</a>
   ·
   <a href="#2-三条原则">原则</a>
@@ -208,7 +210,8 @@ BIU
 ├── LICENSE                    # MIT（不含 Grok Bot 角色资产）
 ├── NOTICE.md                  # 第三方角色声明
 ├── docs/
-│   └── plugin-packages.md     # 包前缀与入口约定
+│   ├── plugin-packages.md     # 包前缀与入口约定
+│   └── demo/                  # README 产品 GIF
 ├── scripts/
 │   └── link-cordis-plugins.mjs
 ├── public/
