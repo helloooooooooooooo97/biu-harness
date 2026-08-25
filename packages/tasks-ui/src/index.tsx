@@ -1047,7 +1047,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
     return [...new Set(tasks.flatMap((t) => t.tags))].sort()
   }, [tasks])
   const [projectFilter, setProjectFilter] = useState('')
-  const [tagFilter, setTagFilter] = useState('')
+  const [tagFilter, setTagFilter] = useState<string[]>([])
   const [filterOpen, setFilterOpen] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -1059,11 +1059,11 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
     return () => document.removeEventListener('mousedown', onDown)
   }, [filterOpen])
   const filteredTasks = useMemo(() => {
-    if (!projectFilter && !tagFilter) return tasks
+    if (!projectFilter && !tagFilter.length) return tasks
     return tasks.filter(
       (t) =>
         (!projectFilter || t.project === projectFilter) &&
-        (!tagFilter || (t.tags ?? []).includes(tagFilter)),
+        (!tagFilter.length || (t.tags ?? []).some((tag) => tagFilter.includes(tag))),
     )
   }, [tasks, projectFilter, tagFilter])
 
@@ -2909,7 +2909,7 @@ if (typeof document !== 'undefined') {
 .tasks-create-btn { border:0; border-radius:8px; padding:6px 10px; background:var(--dsw-business); color:var(--dsw-bg); cursor:pointer; font:inherit; font-size:11px; font-weight:650; display:inline-flex; align-items:center; gap:4px; }
 
 /* ---- 看板视图（Notion 风格：极轻边框、无重色、悬浮轻阴影）---- */
-.tasks-board { display:grid; grid-template-columns:repeat(4, minmax(190px, 1fr)); gap:10px; margin-top:10px; align-items:start; overflow-x:auto; }
+.tasks-board { display:grid; grid-template-columns:repeat(5, minmax(190px, 1fr)); gap:10px; margin-top:10px; align-items:start; overflow-x:auto; }
 .tasks-board.is-compact { gap:8px; }
 .tasks-board-col { display:flex; flex-direction:column; min-height:120px; background:color-mix(in srgb, var(--dsw-muted-fill) 38%, transparent); border-radius:10px; padding:6px; }
 .tasks-board-colhead { display:flex; align-items:center; gap:6px; padding:4px 6px 8px; color:var(--dsw-label-2); font-size:11px; font-weight:600; }
