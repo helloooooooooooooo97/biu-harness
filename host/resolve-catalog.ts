@@ -34,10 +34,7 @@ export async function resolveCatalog(): Promise<CatalogEntry[]> {
     seen.add(item.id)
   }
 
-  // 外部包插在 dashboard 之后，便于其 provide 的服务被后续内置插件 inject
-  const head = builtinCatalog.filter((item) => item.id === 'dashboard')
-  const tail = builtinCatalog.filter((item) => item.id !== 'dashboard')
-  return [...head, ...externalEntries, ...tail]
+  return [...externalEntries, ...builtinCatalog]
 }
 
 function toCatalogEntry(item: CordisPluginEntry, mod: Plugin & { inject?: string[] }): CatalogEntry {

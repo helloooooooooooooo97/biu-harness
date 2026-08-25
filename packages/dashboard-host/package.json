@@ -1,0 +1,13 @@
+{
+  "name": "@hmr/dashboard-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dashboard host：GET /api/stats/overview",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}

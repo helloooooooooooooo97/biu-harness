@@ -34,9 +34,11 @@
 | id | 包 | 能力 |
 |---|---|---|
 | greeter | `@hmr/greeter-host` + `@hmr/greeter-ui` | greet tool + demos 卡片 |
-| tasks | `@hmr/tasks-host` + `@hmr/tasks-ui` | SQLite 任务；Table/Board；Activity `/tasks` + 右侧检查器「任务」Tab；tools：`tasks_list/get/create/update/delete` |
+| dashboard | `@hmr/dashboard-host` + `@hmr/dashboard-ui` | `GET /api/stats/overview`；向 `appModules` 注册 `/dashboard` |
+| tasks | `@hmr/tasks-host` + `@hmr/tasks-ui` | SQLite 任务；Table/Board；注册 `/tasks` + `inspector-panels`「任务」Tab；tools：`tasks_list/get/create/update/delete` |
+| channels | `@hmr/channel-host` + `@hmr/channel-ui` | 内网频道；注册 `/channels` |
 
-Tasks 入口：左侧 Activity 清单图标 → `/tasks`；Agent 视图右侧检查器 →「任务」。
+壳只内置 Agent（`/`、`/s/:id`）。任务 / 频道 / 控制台 **不写进 `src/` 或 `host/catalog`**：各自 `appModules.register` + `slots.place('app-modules')`（检查器额外 Tab 用 `inspector-panels`）。未注册的 `/tasks`、`/dashboard` 视为未知路径。
 
 ## 热插拔
 

@@ -4,12 +4,12 @@ import { SlotEvent } from '../registry/slots.ts'
 import { renderRoot } from './renderer.tsx'
 
 export const name = 'react-host'
-export const inject = ['slots']
+export const inject = ['slots', 'appModules']
 
 export function apply(ctx: Context, config: { el: HTMLElement }) {
   ctx.effect(() => {
     const root = createRoot(config.el)
-    const paint = () => root.render(renderRoot(ctx.slots))
+    const paint = () => root.render(renderRoot(ctx.slots, ctx.get('appModules')))
     const stop = ctx.slots.subscribe('root', SlotEvent.Entries, paint)
     paint()
     return () => {

@@ -12,16 +12,18 @@ import {
   subscribeMascotDance,
 } from '../infrastructure/mascot-dance.ts'
 import {
-  APP_MODULES,
+  bindAppModules,
   moduleIdFromPath,
-  type AppModuleId,
+  type AppModule,
+  type AppModulesService,
 } from '../infrastructure/app-modules.ts'
 import { ChatSidebar } from './chat-sidebar.tsx'
 import { DanceStage } from './mascot/dance-stage.tsx'
 import { SessionInspector } from './session-inspector.tsx'
 import { SessionConfigDialog } from './chat/session-config-dialog.tsx'
 import { FolderGlyph } from './chat/project-panel.tsx'
-import { DashboardModule } from './dashboard-module.tsx'
+import { useSlotEntries } from '../registry/use-slots.ts'
+import type { SlotsService } from '../registry/slots.ts'
 import {
   LuPanelLeft,
   LuPanelRight,
@@ -29,38 +31,12 @@ import {
 } from 'react-icons/lu'
 
 export const name = 'shell'
-export const inject = ['slots', 'snapshot', 'sessionView', 'projectView']
+export const inject = ['slots', 'snapshot', 'sessionView', 'projectView', 'appModules']
 
-function ModuleIcon({ id }: { id: AppModuleId }) {
-  if (id === 'dashboard') {
-    return (
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4.5h7v7H4zM13 4.5h7v4h-7zM13 11.5h7v8h-7zM4 14.5h7v5H4z" />
-      </svg>
-    )
-  }
-  if (id === 'tasks') {
-    return (
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M9 6h11M9 12h11M9 18h11M4.5 6.5l.8.8L7 5.5M4.5 12.5l.8.8L7 11.5M4.5 18.5l.8.8L7 17.5"
-        />
-      </svg>
-    )
-  }
-  if (id === 'channels') {
-    return (
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M4 6h16M4 12h16M4 18h10M7 3v4M11 3v4M15 3v4M19 3v4"
-        />
-        <circle cx="19" cy="18" r="2.4" />
-      </svg>
-    )
+function ModuleIcon({ module }: { module: AppModule }) {
+  if (module.Icon) {
+    const Icon = module.Icon
+    return <Icon className="size-5" />
   }
   return (
     <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
@@ -77,17 +53,19 @@ function ModuleRail({
   active,
   agentHref,
   live,
+  modules,
   onSettings,
 }: {
-  active: AppModuleId
+  active: string
   agentHref: string
   live: boolean
+  modules: AppModule[]
   onSettings: () => void
 }) {
   return (
     <nav className="app-activity-bar" aria-label="Activity bar">
       <div className="app-activity-list">
-        {APP_MODULES.map((module) => {
+        {modules.map((module) => {
           const to = module.id === 'agent' ? agentHref : module.path
           const isActive = module.id === active
           return (
@@ -100,7 +78,7 @@ function ModuleRail({
               aria-current={isActive ? 'page' : undefined}
             >
               <span className="app-activity-indicator" aria-hidden />
-              <ModuleIcon id={module.id} />
+              <ModuleIcon module={module} />
               <span className="sr-only">{module.label}</span>
             </Link>
           )
@@ -158,14 +136,52 @@ const AgentMainPanels = memo(function AgentMainPanels({
   )
 })
 
+function PluginModuleStage({
+  slots,
+  activeId,
+  renderSlot,
+}: {
+  slots: SlotsService
+  activeId: string
+  renderSlot: SlotProps['renderSlot']
+}) {
+  const entries = useSlotEntries(slots, 'app-modules')
+  const sorted = [...entries].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+  return (
+    <>
+      {sorted.map((entry) => {
+        const extra = entry.props?.() ?? {}
+        const moduleId = String(extra.moduleId ?? extra.id ?? entry.id)
+        const show = moduleId === activeId
+        const Component = entry.Component
+        return (
+          <div
+            key={entry.id}
+            className={show ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : 'hidden'}
+            aria-hidden={!show}
+            data-testid={`${moduleId}-module`}
+          >
+            <Component {...extra} renderSlot={renderSlot} />
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
 function Shell(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
+  const useAppModules = props.useAppModules as ReturnType<typeof bindAppModules>
+  const appModules = props.appModules as AppModulesService
   const sessionView = props.sessionView as SessionViewService
   const projectView = props.projectView as ProjectViewService
+  const slots = props.slots as SlotsService
   const navigate = useNavigate()
   const location = useLocation()
   const live = useSnapshot((state: Snapshot) => state.plugins.some((plugin) => plugin.enabled))
+  const modules = useAppModules()
+  const pluginModules = modules.filter((item) => item.id !== 'agent')
   const sessionId = useSessionView((state) => state.sessionId)
   const danceSessions = useSessionView((state) => state.sessions)
   const dancing = useSyncExternalStore(
@@ -229,8 +245,8 @@ function Shell(props: SlotProps) {
       /* ignore */
     }
   }, [])
-  const activeModule = moduleIdFromPath(location.pathname)
-  const appRoute = parseAppPath(location.pathname)
+  const activeModule = moduleIdFromPath(location.pathname, pluginModules)
+  const appRoute = parseAppPath(location.pathname, pluginModules)
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   const agentHref = sessionId ? `/s/${sessionId}` : '/'
@@ -251,11 +267,11 @@ function Shell(props: SlotProps) {
 
   // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
   useEffect(() => {
-    const route = parseAppPath(location.pathname)
+    const route = parseAppPath(location.pathname, pluginModules)
     void sessionView.applyRoute(route).catch(() => {
       if (location.pathname !== '/') navigate('/', { replace: true })
     })
-  }, [location.pathname, navigate, sessionView])
+  }, [location.pathname, navigate, sessionView, appModules.version()])
 
   // /debug 兼容：主区仍聊天，轨迹在右侧；URL 收成 /s/:id
   useEffect(() => {
@@ -304,6 +320,7 @@ function Shell(props: SlotProps) {
         active={activeModule}
         agentHref={agentHref}
         live={live}
+        modules={modules}
         onSettings={() => setSettingsOpen(true)}
       />
 
@@ -368,26 +385,11 @@ function Shell(props: SlotProps) {
           </header>
           <AgentMainPanels renderSlot={props.renderSlot} />
         </div>
-        <div
-          className={activeModule === 'dashboard' ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : 'hidden'}
-          aria-hidden={activeModule !== 'dashboard'}
-        >
-          <DashboardModule />
-        </div>
-        <div
-          className={activeModule === 'tasks' ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : 'hidden'}
-          aria-hidden={activeModule !== 'tasks'}
-          data-testid="tasks-module"
-        >
-          {props.renderSlot('tasks')}
-        </div>
-        <div
-          className={activeModule === 'channels' ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : 'hidden'}
-          aria-hidden={activeModule !== 'channels'}
-          data-testid="channels-module"
-        >
-          {props.renderSlot('channels')}
-        </div>
+        <PluginModuleStage
+          slots={slots}
+          activeId={activeModule === 'agent' ? '' : activeModule}
+          renderSlot={props.renderSlot}
+        />
       </main>
 
       {activeModule === 'agent' ? (
@@ -398,6 +400,7 @@ function Shell(props: SlotProps) {
           onClose={closeInspector}
           useSessionView={useSessionView}
           sessionView={sessionView}
+          slots={slots}
           renderSlot={props.renderSlot}
         />
       ) : null}
@@ -488,9 +491,12 @@ export function apply(ctx: Context) {
   const shellProps = {
     useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService),
     useSessionView: bindSessionView(ctx.sessionView as SessionViewService),
+    useAppModules: bindAppModules(ctx.appModules as AppModulesService),
     sessionView: ctx.sessionView as SessionViewService,
     projectView: ctx.projectView as ProjectViewService,
     useProjectView: bindProjectView(ctx.projectView as ProjectViewService),
+    slots: ctx.slots as SlotsService,
+    appModules: ctx.appModules as AppModulesService,
   }
   ctx.slots.fill('root', Shell, {
     children: {
@@ -505,9 +511,8 @@ export function apply(ctx: Context) {
       models: { kind: 'single' },
       log: { kind: 'single' },
       routes: { kind: 'single' },
-      tasks: { kind: 'single' },
-      'inspector-tasks': { kind: 'single' },
-      channels: { kind: 'single' },
+      'app-modules': { kind: 'list' },
+      'inspector-panels': { kind: 'list' },
     },
     props: () => shellProps,
   })

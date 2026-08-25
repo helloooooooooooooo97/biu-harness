@@ -1,13 +1,15 @@
-import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { LuActivity, LuListChecks, LuListTree, LuPanelRightClose } from 'react-icons/lu'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
+import { LuActivity, LuLayoutGrid, LuListTree, LuPanelRightClose } from 'react-icons/lu'
 import {
   bindSessionView,
   type SessionViewService,
 } from '../infrastructure/session-view.ts'
 import { TrajectoryView } from './chat/trajectory.tsx'
 import { UsagePanel } from './chat/usage-panel.tsx'
+import { useSlotEntries } from '../registry/use-slots.ts'
+import type { SlotsService } from '../registry/slots.ts'
 
-type InspectorTab = 'tasks' | 'traj' | 'usage'
+const BUILTIN_TABS = ['traj', 'usage'] as const
 
 export type SessionInspectorProps = {
   open: boolean
@@ -16,16 +18,15 @@ export type SessionInspectorProps = {
   onClose: () => void
   useSessionView: ReturnType<typeof bindSessionView>
   sessionView: SessionViewService
-  renderSlot?: (name: string) => ReactNode
+  slots: SlotsService
+  renderSlot: (name: string) => ReactNode
 }
 
-const TABS: InspectorTab[] = ['tasks', 'traj', 'usage']
-
-function inspectorStoredTab(sid: string | null | undefined): InspectorTab | undefined {
+function inspectorStoredTab(sid: string | null | undefined, allowed: string[]): string | undefined {
   if (!sid) return undefined
   try {
     const raw = localStorage.getItem(`inspector.tab:${sid}`)
-    if (raw && (TABS as string[]).includes(raw)) return raw as InspectorTab
+    if (raw && allowed.includes(raw)) return raw
   } catch {
     /* ignore */
   }
@@ -46,14 +47,32 @@ export const SessionInspector = memo(function SessionInspector({
   onClose,
   useSessionView,
   sessionView,
+  slots,
   renderSlot,
 }: SessionInspectorProps) {
   const sessionId = useSessionView((state) => state.sessionId)
   const focusCallId = useSessionView((state) => state.focusCallId)
+  const extras = useSlotEntries(slots, 'inspector-panels')
+  const extraTabs = useMemo(
+    () =>
+      [...extras]
+        .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+        .map((entry) => {
+          const extra = entry.props?.() ?? {}
+          return {
+            entry,
+            id: String(extra.tabId ?? entry.id),
+            label: String(extra.tabLabel ?? '插件'),
+            Icon: extra.tabIcon as ComponentType<{ className?: string }> | undefined,
+          }
+        }),
+    [extras],
+  )
+  const allowedTabs = useMemo(() => [...extraTabs.map((item) => item.id), ...BUILTIN_TABS], [extraTabs])
 
-  const [tab, setTabState] = useState<InspectorTab>(() => inspectorStoredTab(sessionId) ?? 'tasks')
+  const [tab, setTabState] = useState(() => inspectorStoredTab(sessionId, allowedTabs) ?? extraTabs[0]?.id ?? 'traj')
   const setTab = useCallback(
-    (next: InspectorTab) => {
+    (next: string) => {
       setTabState(next)
       if (!sessionId) return
       try {
@@ -71,9 +90,8 @@ export const SessionInspector = memo(function SessionInspector({
       setTab('traj')
       return
     }
-    // 会话变化：优先恢复该会话已存的 tab；无则默认 tasks
-    setTabState(inspectorStoredTab(sessionId) ?? 'tasks')
-  }, [sessionId, focusCallId])
+    setTabState(inspectorStoredTab(sessionId, allowedTabs) ?? extraTabs[0]?.id ?? 'traj')
+  }, [sessionId, focusCallId, allowedTabs.join('|'), extraTabs[0]?.id, setTab])
 
   useEffect(() => {
     if (!open || tab !== 'traj') return
@@ -102,6 +120,9 @@ export const SessionInspector = memo(function SessionInspector({
 
   if (!open) return null
 
+  const extraActive = extraTabs.find((item) => item.id === tab)
+  const ExtraComponent = extraActive?.entry.Component
+
   return (
     <aside
       className="relative flex min-h-0 min-w-0 flex-col border-l border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] text-[var(--dsw-label)]"
@@ -122,17 +143,20 @@ export const SessionInspector = memo(function SessionInspector({
 
       <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-[var(--dsw-border)] px-2.5">
         <div className="flex min-w-0 items-center gap-1" role="tablist" aria-label="检查器分区">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === 'tasks'}
-            className={tabClass(tab === 'tasks')}
-            onClick={() => setTab('tasks')}
-            data-testid="inspector-tab-tasks"
-          >
-            <LuListChecks className="size-3.5" />
-            任务
-          </button>
+          {extraTabs.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === item.id}
+              className={tabClass(tab === item.id)}
+              onClick={() => setTab(item.id)}
+              data-testid={`inspector-tab-${item.id}`}
+            >
+              {item.Icon ? <item.Icon className="size-3.5" /> : <LuLayoutGrid className="size-3.5" />}
+              {item.label}
+            </button>
+          ))}
           <button
             type="button"
             role="tab"
@@ -169,7 +193,7 @@ export const SessionInspector = memo(function SessionInspector({
 
       <div
         className={`min-h-0 flex-1 ${
-          tab === 'traj' || tab === 'tasks' ? 'flex flex-col overflow-hidden' : 'overflow-auto p-2.5'
+          tab === 'traj' || extraActive ? 'flex flex-col overflow-hidden' : 'overflow-auto p-2.5'
         }`}
       >
         {tab === 'traj' ? (
@@ -178,13 +202,9 @@ export const SessionInspector = memo(function SessionInspector({
           </div>
         ) : null}
 
-        {tab === 'tasks' ? (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid="inspector-tasks">
-            {renderSlot?.('inspector-tasks') ?? (
-              <div className="p-3 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
-                任务插件未启用。在 cordis.plugins.json 打开 @hmr/tasks-* 后刷新。
-              </div>
-            )}
+        {extraActive && ExtraComponent ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid={`inspector-${extraActive.id}`}>
+            <ExtraComponent {...(extraActive.entry.props?.() ?? {})} renderSlot={renderSlot} />
           </div>
         ) : null}
 
