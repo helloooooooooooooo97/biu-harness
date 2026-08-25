@@ -59,7 +59,11 @@ export type SlotProps = Record<string, unknown> & {
 }
 
 type SlotsService = {
-  place: (slot: string, view: unknown, opts: { key: string; order: number }) => unknown
+  place: (
+    slot: string,
+    view: unknown,
+    opts: { key: string; order: number; props?: () => Record<string, unknown> },
+  ) => unknown
 }
 
 export type TaskStatus = 'todo' | 'doing' | 'done'
@@ -2852,13 +2856,53 @@ function TasksInspectorPanel(_props: SlotProps) {
 }
 
 export const name = 'tasks-ui'
-export const inject = ['slots']
+export const inject = ['slots', 'appModules']
+
+const tasksModuleProps = { moduleId: 'tasks' }
+const tasksInspectorProps = { tabId: 'tasks', tabLabel: '任务', tabIcon: TasksRailIcon }
+
+function TasksRailIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className ?? 'size-5'} fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 6h11M9 12h11M9 18h11M4.5 6.5l.8.8L7 5.5M4.5 12.5l.8.8L7 11.5M4.5 18.5l.8.8L7 17.5"
+      />
+    </svg>
+  )
+}
+
+type AppModulesService = {
+  register: (mod: {
+    id: string
+    label: string
+    path: string
+    description?: string
+    order?: number
+    Icon?: (props: { className?: string }) => unknown
+  }) => unknown
+}
 
 export function apply(ctx: Context) {
   const slots = ctx.get('slots') as SlotsService | undefined
+  const appModules = ctx.get('appModules') as AppModulesService | undefined
   if (!slots) throw new Error('slots service required')
-  slots.place('tasks', TasksModulePage, { key: 'tasks-module', order: 10 })
-  slots.place('inspector-tasks', TasksInspectorPanel, { key: 'tasks-inspector', order: 10 })
+  if (!appModules) throw new Error('appModules service required')
+  appModules.register({
+    id: 'tasks',
+    label: 'Tasks',
+    path: '/tasks',
+    description: 'Task table and board',
+    order: 20,
+    Icon: TasksRailIcon,
+  })
+  slots.place('app-modules', TasksModulePage, { key: 'tasks-module', order: 20, props: () => tasksModuleProps })
+  slots.place('inspector-panels', TasksInspectorPanel, {
+    key: 'tasks-inspector',
+    order: 10,
+    props: () => tasksInspectorProps,
+  })
 }
 
 if (typeof document !== 'undefined') {

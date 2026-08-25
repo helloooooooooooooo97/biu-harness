@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, useLocation } from 'react-router-dom'
 import { SlotEvent, type SlotEntry, type SlotKind, type SlotsService } from '../registry/slots.ts'
+import type { AppModulesService } from './app-modules.ts'
 import { isKnownAppPath } from './session-route.ts'
 
 function Outlet({ slots, name, kind }: { slots: SlotsService; name: string; kind?: SlotKind }) {
@@ -39,18 +40,27 @@ function AppShell({ slots }: { slots: SlotsService }) {
 }
 
 /** 单壳常驻：路由变化不卸载 Shell，避免 Chat/Debug/模块切换整树重挂。 */
-function Root({ slots }: { slots: SlotsService }) {
+function Root({ slots, modules }: { slots: SlotsService; modules?: AppModulesService }) {
   const location = useLocation()
-  if (!isKnownAppPath(location.pathname)) {
+  useSyncExternalStore(
+    modules?.subscribe ?? ((fn: () => void) => {
+      void fn
+      return () => undefined
+    }),
+    modules?.version ?? (() => 0),
+    modules?.version ?? (() => 0),
+  )
+  const plugins = modules?.plugins() ?? []
+  if (!isKnownAppPath(location.pathname, plugins)) {
     return <Navigate to="/" replace />
   }
   return <AppShell slots={slots} />
 }
 
-export function renderRoot(slots: SlotsService): ReactNode {
+export function renderRoot(slots: SlotsService, modules?: AppModulesService): ReactNode {
   return (
     <BrowserRouter>
-      <Root slots={slots} />
+      <Root slots={slots} modules={modules} />
     </BrowserRouter>
   )
 }

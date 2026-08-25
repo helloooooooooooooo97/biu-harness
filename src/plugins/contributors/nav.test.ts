@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { Context } from 'cordis'
 import '../../types.ts'
 import * as slots from '../registry/slots.ts'
+import * as appModules from '../infrastructure/app-modules.ts'
 import * as snapshot from '../infrastructure/snapshot.ts'
 import * as sessionView from '../infrastructure/session-view.ts'
 import * as projectView from '../infrastructure/project-view.ts'
@@ -12,6 +13,7 @@ import * as shell from './shell.tsx'
 test('fills sidebar', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
+  await ctx.plugin(appModules)
   await ctx.plugin(sessionView)
   await ctx.plugin(projectView)
   await ctx.plugin(snapshot)

@@ -2,7 +2,6 @@ import type { Plugin } from 'cordis'
 import * as uppercase from './plugins/contributors/uppercase.ts'
 import * as clock from './plugins/contributors/clock.ts'
 import * as chat from './plugins/contributors/chat.ts'
-import * as dashboard from './plugins/contributors/dashboard.ts'
 import * as logger from './plugins/contributors/logger.ts'
 import * as mascotEasterEgg from './plugins/contributors/mascot-easter-egg.ts'
 
@@ -23,16 +22,6 @@ export interface CatalogEntry {
 
 /** 内置插件；可热插拔能力只写在 cordis.plugins.json，主仓不引用具体包。 */
 export const builtinCatalog: CatalogEntry[] = [
-  {
-    id: 'dashboard',
-    name: '控制台',
-    layer: 'web',
-    blurb: '投影 snapshot 与插件开关 API。',
-    plugin: dashboard,
-    inject: dashboard.inject,
-    togglable: false,
-    enabled: true,
-  },
   {
     id: 'chat',
     name: '对话',
@@ -84,6 +73,3 @@ export const builtinCatalog: CatalogEntry[] = [
     enabled: true,
   },
 ]
-
-/** @deprecated 使用 resolveCatalog()；保留同步 builtin 别名以免旧引用炸掉。 */
-export const catalog = builtinCatalog

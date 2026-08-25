@@ -2,6 +2,7 @@ import { Context } from 'cordis'
 import './types.ts'
 import './style.css'
 import * as slots from './plugins/registry/slots.ts'
+import * as appModules from './plugins/infrastructure/app-modules.ts'
 import * as snapshot from './plugins/infrastructure/snapshot.ts'
 import * as sessionView from './plugins/infrastructure/session-view.ts'
 import * as projectView from './plugins/infrastructure/project-view.ts'
@@ -17,6 +18,7 @@ if (!el) throw new Error('#app missing')
 
 const ctx = new Context()
 ctx.plugin(slots)
+ctx.plugin(appModules)
 ctx.plugin(sessionView)
 ctx.plugin(projectView)
 ctx.plugin(snapshot)

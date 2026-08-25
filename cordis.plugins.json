@@ -1,6 +1,16 @@
 {
   "plugins": [
     {
+      "id": "dashboard",
+      "name": "控制台",
+      "layer": "capability",
+      "blurb": "独立包：@hmr/dashboard-host + @hmr/dashboard-ui。用量概览。",
+      "package": "@hmr/dashboard-host",
+      "ui": "@hmr/dashboard-ui",
+      "togglable": true,
+      "enabled": true
+    },
+    {
       "id": "greeter",
       "name": "问候服务",
       "layer": "capability",

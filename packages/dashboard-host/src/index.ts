@@ -1,6 +1,4 @@
 import type { Context } from 'cordis'
-import '../../types.ts'
-import type { SessionEvent } from '../core/session-types.ts'
 
 export const name = 'dashboard'
 export const inject = ['http', 'hub', 'sessions']
@@ -19,6 +17,31 @@ type ProjectStat = {
   path?: string
   sessions: number
   events: number
+}
+
+type HostCtx = Context & {
+  http: {
+    route: (
+      method: string,
+      pattern: string,
+      handler: (route: { send: (status: number, body: unknown) => void }) => void | Promise<void>,
+    ) => unknown
+  }
+  hub: {
+    register: (page: {
+      id: string
+      title: string
+      subtitle: string
+      plugin: string
+      kind: string
+    }) => unknown
+  }
+  sessions: {
+    listSummaries: () => Promise<
+      Array<{ id: string; eventCount: number; updatedAt: number; project?: { name: string; path?: string } }>
+    >
+    get: (id: string) => Promise<{ events: Array<Record<string, unknown>> } | undefined>
+  }
 }
 
 function emptyUsage() {
@@ -57,19 +80,16 @@ function hourLabel(key: string) {
 }
 
 export function apply(ctx: Context) {
-  ctx.http.route('GET', '/api/snapshot', (route) => {
-    route.send(200, ctx.hub.snapshot())
-  })
-  ctx.http.route('POST', '/api/plugins/:id', async (route) => {
-    const payload = (await route.json()) as { enabled?: boolean }
-    try {
-      route.send(200, await ctx.hub.setEnabled(route.params.id, Boolean(payload.enabled)))
-    } catch (error) {
-      route.send(400, { error: String(error) })
-    }
+  const host = ctx as HostCtx
+  host.hub.register({
+    id: 'dashboard',
+    title: '控制台',
+    subtitle: '用量与项目概览',
+    plugin: 'dashboard',
+    kind: 'dashboard',
   })
 
-  ctx.http.route('GET', '/api/stats/overview', async (route) => {
+  host.http.route('GET', '/api/stats/overview', async (route) => {
     const now = Date.now()
     const todayKey = dayKey(now)
     const hourStart = now - 24 * 60 * 60 * 1000
@@ -82,8 +102,7 @@ export function apply(ctx: Context) {
     let sessionCount = 0
     let eventCount = 0
 
-    const summaries = await ctx.sessions.listSummaries()
-    // 最近会话优先，避免全量扫爆
+    const summaries = await host.sessions.listSummaries()
     const recent = [...summaries].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 80)
     sessionCount = summaries.length
 
@@ -102,21 +121,23 @@ export function apply(ctx: Context) {
         projects.set(key, prev)
       }
 
-      const record = await ctx.sessions.get(summary.id)
+      const record = await host.sessions.get(summary.id)
       if (!record) continue
-      for (const event of record.events as SessionEvent[]) {
-        if (event.type === 'turn/start') {
-          if (dayKey(event.ts) === todayKey) today.turns += 1
-          if (event.ts >= hourStart) {
-            const key = hourKey(event.ts)
+      for (const event of record.events) {
+        const type = String(event.type || '')
+        const ts = Number(event.ts || 0)
+        if (type === 'turn/start') {
+          if (dayKey(ts) === todayKey) today.turns += 1
+          if (ts >= hourStart) {
+            const key = hourKey(ts)
             const bucket =
               hourlyMap.get(key) ??
               ({ key, label: hourLabel(key), inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, turns: 0 } satisfies UsageBucket)
             bucket.turns += 1
             hourlyMap.set(key, bucket)
           }
-          if (event.ts >= dayStart) {
-            const key = dayKey(event.ts)
+          if (ts >= dayStart) {
+            const key = dayKey(ts)
             const bucket =
               dailyMap.get(key) ??
               ({ key, label: key, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, turns: 0 } satisfies UsageBucket)
@@ -124,23 +145,24 @@ export function apply(ctx: Context) {
             dailyMap.set(key, bucket)
           }
         }
-        if (event.type !== 'assistant/message' || !event.usage) continue
+        if (type !== 'assistant/message' || !event.usage || typeof event.usage !== 'object') continue
+        const raw = event.usage as { inputTokens?: number; outputTokens?: number; cacheReadTokens?: number }
         const usage = {
-          inputTokens: event.usage.inputTokens,
-          outputTokens: event.usage.outputTokens,
-          cacheReadTokens: event.usage.cacheReadTokens,
+          inputTokens: Number(raw.inputTokens || 0),
+          outputTokens: Number(raw.outputTokens || 0),
+          cacheReadTokens: Number(raw.cacheReadTokens || 0),
         }
-        if (dayKey(event.ts) === todayKey) addUsage(today, usage)
-        if (event.ts >= hourStart) {
-          const key = hourKey(event.ts)
+        if (dayKey(ts) === todayKey) addUsage(today, usage)
+        if (ts >= hourStart) {
+          const key = hourKey(ts)
           const bucket =
             hourlyMap.get(key) ??
             ({ key, label: hourLabel(key), inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, turns: 0 } satisfies UsageBucket)
           addUsage(bucket, usage)
           hourlyMap.set(key, bucket)
         }
-        if (event.ts >= dayStart) {
-          const key = dayKey(event.ts)
+        if (ts >= dayStart) {
+          const key = dayKey(ts)
           const bucket =
             dailyMap.get(key) ??
             ({ key, label: key, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, turns: 0 } satisfies UsageBucket)
