@@ -19,7 +19,8 @@
     { "id": "agent-loop", "package": "@hmr/host-runtime/agent-loop", "togglable": false, "enabled": true },
     { "id": "agents", "package": "@hmr/host-runtime/agents", "togglable": false, "enabled": true },
     { "id": "subagents", "package": "@hmr/host-runtime/subagents", "togglable": false, "enabled": true },
-    { "id": "live-sessions", "package": "@hmr/host-runtime/live-sessions", "togglable": false, "enabled": true }
+    { "id": "live-sessions", "package": "@hmr/host-runtime/live-sessions", "togglable": false, "enabled": true },
+    { "id": "hub", "package": "@hmr/host-runtime/hub", "togglable": false, "enabled": true }
   ],
   "web": [
     { "id": "slots", "package": "@hmr/web-runtime/slots", "togglable": false, "enabled": true },
