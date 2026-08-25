@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import { Service, type Context } from 'cordis'
-import { currentSessionId } from '../../../host/plugins/core/session-scope.ts'
+import { currentSessionId } from '../../host-runtime/src/core/session-scope.ts'
 
 type DatabaseSync = import('node:sqlite').DatabaseSync
 type SQLInputValue = import('node:sqlite').SQLInputValue

@@ -1,0 +1,39 @@
+{
+  "name": "@hmr/host-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Host 侧全部 Cordis 插件（内核 + 可卸载贡献者）",
+  "exports": {
+    "./http": "./src/registry/http.ts",
+    "./tools": "./src/registry/tools.ts",
+    "./session-store": "./src/storage/session-store.ts",
+    "./sessions": "./src/core/sessions.ts",
+    "./system-prompt": "./src/core/system-prompt.ts",
+    "./llm": "./src/orchestration/llm.ts",
+    "./approvals": "./src/orchestration/approvals.ts",
+    "./agent-loop": "./src/orchestration/agent-loop.ts",
+    "./agents": "./src/orchestration/agents.ts",
+    "./fs": "./src/seams/fs.ts",
+    "./sandbox": "./src/seams/sandbox.ts",
+    "./subprocess": "./src/seams/subprocess.ts",
+    "./shell": "./src/seams/shell.ts",
+    "./jobs": "./src/seams/jobs.ts",
+    "./mcp": "./src/seams/mcp.ts",
+    "./terminal": "./src/seams/terminal.ts",
+    "./lsp": "./src/seams/lsp.ts",
+    "./context": "./src/seams/context.ts",
+    "./subagents": "./src/seams/subagents.ts",
+    "./live-sessions": "./src/seams/live-sessions.ts",
+    "./session-inspector": "./src/seams/session-inspector.ts",
+    "./chat": "./src/contributors/chat.ts",
+    "./clock": "./src/contributors/clock.ts",
+    "./logger": "./src/contributors/logger.ts",
+    "./uppercase": "./src/contributors/uppercase.ts",
+    "./mascot-easter-egg": "./src/contributors/mascot-easter-egg.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "ws": "^8.18.3"
+  }
+}

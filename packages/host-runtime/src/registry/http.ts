@@ -3,7 +3,7 @@ import { extname, join } from 'node:path'
 import { readFile } from 'node:fs/promises'
 import { Service, type Context } from 'cordis'
 import { WebSocketServer, type WebSocket } from 'ws'
-import { HUB_CHANGE } from '../registry/hub.ts'
+import { HUB_CHANGE } from './hub-events.ts'
 import type { Method, RouteContext, RouteHandler } from '../../types.ts'
 
 interface Route {

@@ -1,13 +1,5 @@
 import type { Context, Fiber, Plugin } from 'cordis'
-import * as clock from '../contributors/clock.tsx'
-import * as chat from '../contributors/chat/index.ts'
 import { uiPackageLoaders } from 'virtual:cordis-ui-loaders'
-
-/** 仍留在主仓的内置 UI 插件（未拆包）。外部 UI 只来自 virtual:cordis-ui-loaders（由配置生成）。 */
-const builtinUi: Record<string, Plugin> = {
-  clock,
-  chat,
-}
 
 export const name = 'ui-hub'
 export const inject = ['slots', 'snapshot']
@@ -17,12 +9,10 @@ export function apply(ctx: Context) {
   let pending = false
   let running = false
 
-  async function resolvePlugin(id: string, ui?: string): Promise<Plugin | undefined> {
-    if (builtinUi[id]) return builtinUi[id]
-    if (ui) {
-      const loader = uiPackageLoaders[ui]
-      if (loader) return loader()
-    }
+  async function resolvePlugin(_id: string, ui?: string): Promise<Plugin | undefined> {
+    if (!ui) return undefined
+    const loader = uiPackageLoaders[ui]
+    if (loader) return loader()
     return undefined
   }
 
@@ -39,9 +29,15 @@ export function apply(ctx: Context) {
 
       for (const row of enabledRows) {
         if (forks.has(row.id)) continue
-        const plugin = await resolvePlugin(row.id, row.ui)
-        if (!plugin) continue
-        forks.set(row.id, ctx.plugin(plugin))
+        const loaded = await resolvePlugin(row.id, row.ui)
+        if (!loaded) continue
+        const plugin =
+          loaded && typeof loaded === 'object' && 'default' in loaded && (loaded as { default?: Plugin }).default
+            ? (loaded as { default: Plugin }).default
+            : loaded
+        const fiber = ctx.plugin(plugin)
+        forks.set(row.id, fiber)
+        await fiber
       }
 
       for (const [id, fiber] of [...forks.entries()]) {
@@ -61,5 +57,5 @@ export function apply(ctx: Context) {
   ctx.snapshot.subscribe(() => {
     void sync()
   })
-  void sync()
+  return sync()
 }

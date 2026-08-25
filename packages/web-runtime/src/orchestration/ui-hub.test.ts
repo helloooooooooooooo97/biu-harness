@@ -26,7 +26,7 @@ function plugin(id: string, enabled: boolean, ui?: string) {
   }
 }
 
-test('ui-hub mounts configured ui packages and builtin chat', async () => {
+test('ui-hub mounts configured ui packages including chat', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
   await ctx.plugin(appModules)
@@ -50,13 +50,18 @@ test('ui-hub mounts configured ui packages and builtin chat', async () => {
   assert.ok(uiIds.length >= 1, 'virtual loaders should come from cordis.plugins.json')
   const greeterUi = uiIds.find((id) => id.includes('greeter'))
   assert.ok(greeterUi, 'greeter-ui loader missing')
+  const chatUi = uiIds.find((id) => id === '@hmr/web-runtime/chat' || id.includes('web-runtime/chat'))
+  assert.ok(chatUi, `chat-ui loader missing in ${uiIds.join(',')}`)
   const base = ctx.snapshot.get()
   ctx.snapshot.get = () => ({
     ...base,
-    plugins: [plugin('greeter', true, greeterUi), plugin('chat', true)],
+    plugins: [plugin('greeter', true, greeterUi), plugin('chat', true, chatUi)],
   })
   await ctx.plugin(uiHub)
-  await new Promise((resolve) => setTimeout(resolve, 80))
+  const deadline = Date.now() + 5000
+  while (Date.now() < deadline && ctx.slots.list('composer').every((item) => item.id !== 'chat')) {
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
   assert.equal(ctx.slots.list('demos').length >= 1, true)
   assert.equal(ctx.slots.list('composer').some((item) => item.id === 'chat'), true)
   assert.equal(ctx.slots.list('models').some((item) => item.id === 'chat-config'), true)

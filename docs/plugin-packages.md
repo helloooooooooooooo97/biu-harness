@@ -1,45 +1,21 @@
-# 真正的配置热插拔（问候服务示范）
+# 配置热插拔
 
-主仓 **源码不出现、也不 import 任何具体插件包名**。插件只写在 `cordis.plugins.json`，由通用加载器解析。
+主仓 **`host/` / `src/` 只留加载器**：读 `cordis.plugins.json`，按包名动态 import。插件源码在 `packages/`。
 
-## 与上一版的区别 / 与 dsh
+## 三张表
 
-| | 错误做法（已改掉） | 本仓正确做法 | 官方 dsh |
-|---|---|---|---|
-| 主仓是否写死包名 | `import '@hmr/greeter-ui'`、`ui-packages.ts` 登记 | **否**；只读配置 | 否；`cordis.yml` 的 `name` |
-| 根 package.json | 写 `"@hmr/greeter-*": "*"` | **不写**；`postinstall` 按配置 symlink | workspace 包由 bundle/yml 组合 |
-| Vite | 手写 alias | `cordisPluginsVite` 读配置生成 alias + `virtual:cordis-ui-loaders` | client 包清单 / boot |
-| Host | catalog 静态 import | `importConfiguredPackage(配置里的字符串)` | Loader |
-
-## 怎么加一个插件
-
-1. 在 `packages/<dir>/` 放好包（`package.json` 的 `name` 任意 scoped 名）
-2. 只改 **`cordis.plugins.json`**：
-
-```json
-{
-  "id": "greeter",
-  "package": "@hmr/greeter-host",
-  "ui": "@hmr/greeter-ui",
-  "enabled": true
-}
-```
-
-3. `npm install`（或 `node scripts/link-cordis-plugins.mjs`）→ 启动
-
-主仓 `src/` / `host/` 里搜不到 `@hmr/greeter` 字样才算合格。
-
-## 已有示范
-
-| id | 包 | 能力 |
+| 键 | 谁加载 | 含义 |
 |---|---|---|
-| greeter | `@hmr/greeter-host` + `@hmr/greeter-ui` | greet tool + demos 卡片 |
-| dashboard | `@hmr/dashboard-host` + `@hmr/dashboard-ui` | `GET /api/stats/overview`；向 `appModules` 注册 `/dashboard` |
-| tasks | `@hmr/tasks-host` + `@hmr/tasks-ui` | SQLite 任务；Table/Board；注册 `/tasks` + `inspector-panels`「任务」Tab；tools：`tasks_list/get/create/update/delete` |
-| channels | `@hmr/channel-host` + `@hmr/channel-ui` | 内网频道；注册 `/channels` |
+| `host` | `host/index.ts` | 内核（http / sessions / tools …），按数组顺序 `await plugin` |
+| `web` | `src/main.tsx` ← `virtual:cordis-web-runtime` | 壳（slots / shell / ui-hub …） |
+| `plugins` | host `hub` + web `ui-hub` | 可热插拔能力；`ui` 字段成对卸前端 |
 
-壳只内置 Agent（`/`、`/s/:id`）。任务 / 频道 / 控制台 **不写进 `src/` 或 `host/catalog`**：各自 `appModules.register` + `slots.place('app-modules')`（检查器额外 Tab 用 `inspector-panels`）。未注册的 `/tasks`、`/dashboard` 视为未知路径。
+例外：`hub` 本身仍在 `host/plugins/registry/hub.ts`，因为它要 `resolveCatalog()` 去挂 `plugins`。
 
-## 热插拔
+## 包
 
-Settings 开关仍走 hub `fiber.dispose` / ui-hub 同步；卸掉配置项并重启即等于主仓从未安装过该插件。
+- `@hmr/host-runtime/*`：原 `host/plugins`（含 chat / clock / logger … 子路径导出）
+- `@hmr/web-runtime/*`：原 `src/plugins`（含 chat-ui / clock-ui）
+- `@hmr/dashboard-*` / `greeter-*` / `tasks-*` / `channel-*`：独立能力包
+
+加插件：在 `packages/<dir>` 放包，只改 `cordis.plugins.json`。

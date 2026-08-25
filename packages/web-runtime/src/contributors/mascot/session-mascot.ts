@@ -49,7 +49,7 @@ function hashSessionId(id: string): number {
   return h >>> 0
 }
 
-/** Keep in sync with host/plugins/core/session-mascot.ts `mascotFromSessionId`. */
+/** Keep in sync with packages/host-runtime/src/core/session-mascot.ts `mascotFromSessionId`. */
 export function mascotFromSessionId(id: string): SessionMascotIdentity {
   const seed = hashSessionId(id)
   const shape = GROK_SHAPES[seed % GROK_SHAPES.length]!
