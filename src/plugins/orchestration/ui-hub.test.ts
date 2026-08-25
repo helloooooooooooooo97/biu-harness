@@ -38,6 +38,7 @@ test('ui-hub mounts configured ui packages and builtin chat', async () => {
       dock: { kind: 'list' },
       project: { kind: 'single' },
       composer: { kind: 'single' },
+      models: { kind: 'single' },
       settings: { kind: 'list' },
     },
   })
@@ -53,5 +54,5 @@ test('ui-hub mounts configured ui packages and builtin chat', async () => {
   await new Promise((resolve) => setTimeout(resolve, 80))
   assert.equal(ctx.slots.list('demos').length >= 1, true)
   assert.equal(ctx.slots.list('composer').some((item) => item.id === 'chat'), true)
-  assert.equal(ctx.slots.list('settings').some((item) => item.id === 'chat-config'), true)
+  assert.equal(ctx.slots.list('models').some((item) => item.id === 'chat-config'), true)
 })

@@ -28,6 +28,27 @@ type StatsOverview = {
   projects: ProjectStat[]
 }
 
+function emptyTotals(): UsageTotals {
+  return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, turns: 0 }
+}
+
+/** fetch 可能拿到非 overview 的 JSON（测试 mock / 旧接口），缺字段时不能直接 .map */
+function normalizeOverview(raw: unknown): StatsOverview | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Partial<StatsOverview>
+  const totals = o.totals
+  const today = o.today ?? emptyTotals()
+  if (!totals || typeof totals.sessions !== 'number') return null
+  return {
+    generatedAt: typeof o.generatedAt === 'number' ? o.generatedAt : 0,
+    totals,
+    today,
+    hourly: Array.isArray(o.hourly) ? o.hourly : [],
+    daily: Array.isArray(o.daily) ? o.daily : [],
+    projects: Array.isArray(o.projects) ? o.projects : [],
+  }
+}
+
 function formatTok(n: number) {
   return n.toLocaleString('en-US')
 }
@@ -60,7 +81,7 @@ export function DashboardModule() {
       })
       .then((next) => {
         if (cancelled) return
-        setData(next)
+        setData(normalizeOverview(next))
         setError('')
       })
       .catch((err) => {
@@ -75,8 +96,10 @@ export function DashboardModule() {
     }
   }, [])
 
-  const hourlyMax = Math.max(1, ...(data?.hourly.map((item) => item.inputTokens + item.outputTokens) ?? [1]))
-  const dailyMax = Math.max(1, ...(data?.daily.map((item) => item.inputTokens + item.outputTokens) ?? [1]))
+  const hourly = data?.hourly ?? []
+  const daily = data?.daily ?? []
+  const hourlyMax = Math.max(1, ...hourly.map((item) => item.inputTokens + item.outputTokens), 1)
+  const dailyMax = Math.max(1, ...daily.map((item) => item.inputTokens + item.outputTokens), 1)
 
   return (
     <div className="dash-root">
@@ -118,10 +141,10 @@ export function DashboardModule() {
             <section className="dash-panel">
               <h2 className="dash-panel-title">近 24 小时用量</h2>
               <div className="dash-bars">
-                {data.hourly.length === 0 ? (
+                {hourly.length === 0 ? (
                   <p className="dash-muted">暂无小时数据</p>
                 ) : (
-                  data.hourly.map((item) => (
+                  hourly.map((item) => (
                     <BarRow
                       key={item.key}
                       label={item.label}
@@ -136,10 +159,10 @@ export function DashboardModule() {
             <section className="dash-panel">
               <h2 className="dash-panel-title">近 7 天用量</h2>
               <div className="dash-bars">
-                {data.daily.length === 0 ? (
+                {daily.length === 0 ? (
                   <p className="dash-muted">暂无日数据</p>
                 ) : (
-                  data.daily.map((item) => (
+                  daily.map((item) => (
                     <BarRow
                       key={item.key}
                       label={item.label.slice(5)}

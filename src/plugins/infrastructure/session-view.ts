@@ -207,7 +207,7 @@ export class SessionViewService extends Service {
     super(ctx, 'sessionView')
     void this.refreshSessions()
     void this.refreshApprovals()
-    this.ctx.on('dispose', () => this.stopDispatchedPoll())
+    this.ctx.effect(() => () => this.stopDispatchedPoll())
   }
 
   private buildNodes(events: SessionEvent[], byTurn = this.value.dispatchedUsageByTurn) {

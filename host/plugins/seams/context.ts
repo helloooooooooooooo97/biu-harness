@@ -305,7 +305,8 @@ export function lastUsageBeforeCompact(events: SessionEvent[]): {
   cacheReadTokens: number
   found: boolean
 } {
-  let last: (typeof events)[number]['usage'] & { totalTokens?: number } | undefined
+  type AssistantUsage = NonNullable<Extract<SessionEvent, { type: 'assistant/message' }>['usage']>
+  let last: AssistantUsage | undefined
   for (const ev of events) {
     if (
       ev.type === 'tool/call' &&

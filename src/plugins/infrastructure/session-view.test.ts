@@ -130,7 +130,7 @@ test('inspectCall switches to trajectory with focus', async () => {
   await ctx.plugin(sessionView)
   const view = ctx.sessionView as SessionViewService
   view.inspectCall('c1')
-  assert.equal(view.get().view, 'debug')
+  assert.equal(view.get().view, 'chat')
   assert.equal(view.get().focusCallId, 'c1')
 })
 
