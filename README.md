@@ -18,7 +18,9 @@
   ·
   <a href="#5-运行时怎么拆">设计</a>
   ·
-  <a href="#6-跑起来">上手</a>
+  <a href="#6-仓库目录">目录</a>
+  ·
+  <a href="#7-跑起来">上手</a>
   ·
   <a href="#许可">许可</a>
 </p>
@@ -164,21 +166,92 @@ flowchart TB
 | `web` | `web/main.tsx` | 否（壳） |
 | `plugins` | hub + ui-hub | 是 |
 
-```
-host/  web/           加载器，不要往这里堆能力
-packages/
-  type-*              契约，不进 json
-  host-*              Node 内核（含 Live 派工）
-  web-*               浏览器内核
-  cap-*               chat / tasks / dashboard / channels …
-cordis.plugins.json   唯一清单
-```
-
 加能力：`packages/cap-<id>`，`exports` 分开 `./host` 与 `./web`，写入 `plugins` 表后重启。`type-*`、`web-mascot` 不要进表。细则：[docs/plugin-packages.md](docs/plugin-packages.md)。
 
 ---
 
-## 6. 跑起来
+## 6. 仓库目录
+
+根上只留加载器和清单；能力全在 `packages/`，按前缀一眼能分清。
+
+```
+BIU
+├── host/                      # Node 加载器：读 json 的 host 表，plugin()
+│   ├── index.ts
+│   └── types.ts
+├── web/                       # 浏览器加载器：读 json 的 web 表
+│   ├── main.tsx
+│   ├── style.css
+│   └── types.ts
+├── index.html                 # Vite 入口 → web/main.tsx
+├── cordis.plugins.json        # 唯一插件清单（host / web / plugins 三张表）
+├── Makefile                   # make / make stop / make restart
+├── vite.config.ts
+├── LICENSE                    # MIT（不含 Grok Bot 角色资产）
+├── NOTICE.md                  # 第三方角色声明
+├── docs/
+│   └── plugin-packages.md     # 包前缀与入口约定
+├── scripts/
+│   └── link-cordis-plugins.mjs
+├── public/
+│   ├── favicon.svg
+│   └── grok-bot/              # 非 MIT：xAI 角色几何副本
+└── packages/
+    ├── type-session/          # 契约，不进 json
+    ├── type-http/
+    ├── type-slots/
+    ├── type-agent-loop/
+    ├── type-host-context/
+    │
+    ├── host-plugin-loader/    # 解析 json、Vite virtual 模块
+    ├── host-http/             # HTTP / WS
+    ├── host-session-store/
+    ├── host-sessions/         # append-only session + ALS
+    ├── host-tools/
+    ├── host-llm/
+    ├── host-system-prompt/
+    ├── host-fs/
+    ├── host-sandbox/
+    ├── host-subprocess/
+    ├── host-shell/
+    ├── host-jobs/
+    ├── host-mcp/
+    ├── host-terminal/
+    ├── host-lsp/
+    ├── host-context/
+    ├── host-approvals/
+    ├── host-agent-loop/
+    ├── host-agents/
+    ├── host-subagents/
+    ├── host-live-sessions/    # Live 派工（不是任务插件）
+    ├── host-hub/              # 挂 plugins 表、snapshot
+    │
+    ├── web-slots/
+    ├── web-app-modules/
+    ├── web-session-view/
+    ├── web-project-view/
+    ├── web-snapshot/
+    ├── web-react-host/
+    ├── web-app-shell/         # 应用壳、检查器框
+    ├── web-plugin-tree/       # Settings → Plugins
+    ├── web-event-log/         # Settings → Events
+    ├── web-routes-panel/      # Settings → Routes
+    ├── web-ui-hub/
+    ├── web-mascot/            # 共享库，不进 json
+    │
+    ├── cap-chat/              # 对话 + 轨迹 / 用量
+    ├── cap-tasks/             # 看板 + 心跳 + 派工 / 汇报
+    ├── cap-dashboard/
+    ├── cap-channels/
+    ├── cap-logger/
+    └── cap-mascot-easter-egg/
+```
+
+每个 `host-*` / `web-*` / `cap-*` 源码在 `src/host/` 和（或）`src/web/`。`cap-*` 的 `package.json` 必须分开 `exports["./host"]` 与 `exports["./web"]`。
+
+---
+
+## 7. 跑起来
 
 需要 Node.js 20+ 和 npm。`main` 与开发分支 `hmr-dev` 当前对齐。
 
