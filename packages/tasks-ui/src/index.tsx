@@ -794,19 +794,55 @@ function timeUntilLabel(ts: number): string {
   return `${day}天后`
 }
 
-/** trigger 标记：任务开启了调度时显示一个小图标（含当前调度状态）。hover 显示 cron 的友好解读。 */
+/** 触发源数量：cron(at 单独) 1 + at 1 + on 各事件。 */
+function triggerSourceCount(t: Task['trigger'] | undefined): number {
+  if (!t) return 0
+  return (t.cron ? 1 : 0) + (t.at ? 1 : 0) + (t.on?.length ?? 0)
+}
+
+/** trigger 标记：有触发配置(triggerSourceCount>0)即显示小图标与数量角标。已启用用醒目色，未启用用灰。hover 显示 cron 解读与事件列表。 */
 function TriggerMark({ trigger }: { trigger?: Task['trigger'] }) {
-  if (!trigger?.enabled) return null
+  const count = triggerSourceCount(trigger)
+  if (!trigger || count <= 0) return null
   const state = trigger.state ?? 'idle'
+  const enabled = !!trigger.enabled
   const cron = trigger.cron ? `（${cronPreview(trigger.cron)}）· ${trigger.cron}` : ''
-  const title = `自动触发：${state}${cron}${trigger.at ? ' · 定点触发' : ''}${trigger.on?.length ? ` · 事件:${trigger.on.join(',')}` : ''}`
+  const parts = [`自动触发：${state}`, `源×${count}`]
+  if (trigger.cron) parts.push(`cron: ${cron}`)
+  if (trigger.at) parts.push(`定点: ${new Date(trigger.at).toLocaleString()}`)
+  if (trigger.on?.length) parts.push(`事件: ${trigger.on.join(', ')}`)
+  if (!enabled) parts.push('（未启用调度）')
+  const title = parts.join('｜')
   return (
-    <span className={`tasks-trigger-mark is-${state}`} title={title} aria-label="自动触发">
+    <span className={`tasks-trigger-mark ${enabled ? `is-${state}` : 'is-off'}`} title={title} aria-label="自动触发">
       <LuClock size={11} aria-hidden />
-      <span className="tasks-trigger-mark-state">{state}</span>
+      <span className="tasks-trigger-mark-state">{enabled ? state : 'off'}</span>
+      <span className="tasks-trigger-count">{count}</span>
     </span>
   )
 }
+
+/** 自动触发开关：表格行内一键启停 task.trigger.enabled。乐观更新 + 落库确认。 */
+function TriggerToggle({ task, onUpdate }: { task: Task; onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void> }) {
+  const enabled = !!task.trigger?.enabled
+  return (
+    <button
+      type="button"
+      className={`tasks-trigger-toggle${enabled ? ' is-on' : ''}`}
+      role="switch"
+      aria-checked={enabled}
+      aria-label={enabled ? `自动触发已开启（${task.title}）` : `自动触发已关闭（${task.title}）`}
+      title={enabled ? '点击关闭自动触发' : '点击开启自动触发'}
+      onClick={(e) => {
+        e.stopPropagation()
+        void onUpdate(task.id, { trigger: { enabled: !enabled } })
+      }}
+    >
+      <span className="tasks-trigger-toggle-knob" />
+    </button>
+  )
+}
+
 
 function tagColor(tag: string): string {
   const palette = [
@@ -1931,6 +1967,7 @@ function TasksTable({
                 <div className="tasks-status-cell">
                   <StatusPill status={task.status} reportCount={task.reports?.length ?? 0} blocked={task.blocked} />
                   <TriggerMark trigger={task.trigger} />
+                  <TriggerToggle task={task} onUpdate={onUpdate} />
                 </div>
               </td>
               <td className="tasks-col-priority" onClick={(e) => e.stopPropagation()}>
@@ -2777,7 +2814,7 @@ if (typeof document !== 'undefined') {
 .tasks-table tr:last-child td { border-bottom:0; }
 .tasks-table tr:hover td { background:color-mix(in srgb, var(--dsw-hover) 55%, transparent); }
 .tasks-table tr.is-active td { background:color-mix(in srgb, var(--dsw-business) 8%, transparent); }
-.tasks-col-title { width:400px; min-width:400px; }
+.tasks-col-title { width:267px; min-width:267px; }
 .tasks-col-status { width:92px; }
 .tasks-status-pill { display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:2px 8px; font-size:10.5px; font-weight:600; }
 .tasks-status-pill.is-todo { color:var(--dsw-label-3); background:color-mix(in srgb, var(--dsw-label-3) 10%, transparent); }
@@ -3015,7 +3052,19 @@ if (typeof document !== 'undefined') {
 .tasks-trigger-mark.is-delivered { color:#2f7d4c; background:color-mix(in srgb, #2f7d4c 14%, transparent); }
 .tasks-trigger-mark.is-done { color:#3d9a5f; background:color-mix(in srgb, #3d9a5f 12%, transparent); }
 .tasks-trigger-mark.is-cancelled { color:var(--dsw-label-3); background:var(--dsw-muted-fill); }
+/* 未启用但有配置 → 弱化灰 */
+.tasks-trigger-mark.is-off { color:var(--dsw-label-3); background:var(--dsw-muted-fill); border:1px dashed color-mix(in srgb, var(--dsw-border) 70%, transparent); }
 .tasks-trigger-mark-state { line-height:1; }
+.tasks-trigger-count { display:inline-flex; align-items:center; justify-content:center; min-width:13px; height:13px; padding:0 3px; border-radius:999px; font-size:8.5px; font-weight:800; line-height:1; color:#fff; background:color-mix(in srgb, var(--dsw-label) 78%, transparent); }
+.tasks-trigger-mark.is-off .tasks-trigger-count { background:var(--dsw-label-3); }
+/* ---- 自动触发开关（紧凑 Notion 风格 switch）---- */
+.tasks-trigger-toggle { flex:none; position:relative; width:34px; height:20px; border-radius:999px; border:0; cursor:pointer; background:color-mix(in srgb, var(--dsw-label-3) 26%, transparent); padding:0; transition:background .2s ease; box-shadow:none; }
+.tasks-trigger-toggle:hover { background:color-mix(in srgb, var(--dsw-label-3) 38%, transparent); }
+.tasks-trigger-toggle.is-on { background:hsl(145, 80%, 42%); box-shadow:none; }
+.tasks-trigger-toggle.is-on:hover { background:hsl(145, 75%, 38%); }
+.tasks-trigger-toggle-knob { position:absolute; top:3px; left:3px; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.22); transition:left .2s cubic-bezier(.4,0,.2,1); }
+.tasks-trigger-toggle.is-on .tasks-trigger-toggle-knob { left:17px; }
+.tasks-status-cell .tasks-trigger-toggle { margin-left:2px; }
 .tasks-trigger-block { grid-column:1 / -1; order:1; display:flex; flex-direction:column; gap:8px; padding:10px 12px; border:1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent); border-radius:9px; background:color-mix(in srgb, var(--dsw-muted-fill) 30%, transparent); }
 .tasks-trigger-block > span { display:inline-flex; align-items:center; gap:5px; font-weight:650; font-size:10.5px; color:var(--dsw-label-2); letter-spacing:.02em; }
 .tasks-trigger-enable { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--dsw-label-2); cursor:pointer; }
