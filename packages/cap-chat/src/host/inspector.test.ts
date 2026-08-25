@@ -1,10 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'vitest'
-import {
-  buildInspectorTools,
-  isToolActiveForSession,
-  toolSourceOf,
-} from './index.ts'
+import { buildInspectorTools, isToolActiveForSession, toolSourceOf } from './inspector.ts'
 
 test('toolSourceOf tags minimal / live / plugin', () => {
   assert.equal(toolSourceOf('bash'), 'minimal')
