@@ -136,9 +136,9 @@ BIU
 
 ```json
 {
-  "id": "greeter",
-  "package": "@biu/cap-greeter/host",
-  "web": "@biu/cap-greeter/web",
+  "id": "clock",
+  "package": "@biu/cap-clock/host",
+  "web": "@biu/cap-clock/web",
   "togglable": true,
   "enabled": true
 }

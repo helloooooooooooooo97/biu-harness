@@ -9,8 +9,6 @@ export interface CordisPluginEntry {
   package?: string
   /** 前端入口 specifier，如 @biu/cap-chat/web */
   web?: string
-  /** @deprecated 用 web */
-  ui?: string
   layer?: string
   blurb?: string
   togglable?: boolean
@@ -29,9 +27,8 @@ const RESOLVED_UI = `\0${VIRTUAL_UI}`
 const VIRTUAL_WEB = 'virtual:cordis-web-runtime'
 const RESOLVED_WEB = `\0${VIRTUAL_WEB}`
 
-/** 能力插件的前端 specifier（json 的 `web`，兼容旧字段 `ui`）。 */
 export function pluginWebSpecifier(item: CordisPluginEntry): string | undefined {
-  return item.web || item.ui
+  return item.web
 }
 
 export function findRepoRoot(start = fileURLToPath(import.meta.url)): string {

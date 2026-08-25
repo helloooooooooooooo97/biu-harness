@@ -30,7 +30,6 @@ function allConfiguredNames() {
     for (const item of list) {
       if (item.package) names.add(splitPackageRef(item.package).name)
       if (item.web) names.add(splitPackageRef(item.web).name)
-      if (item.ui) names.add(splitPackageRef(item.ui).name)
     }
   }
   return names
