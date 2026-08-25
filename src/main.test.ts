@@ -14,7 +14,7 @@ test('boots into #app', async () => {
   await act(async () => {
     await import('./main.tsx')
   })
-  assert.match(document.body.innerHTML, /deepseek/i)
-  assert.match(document.body.innerHTML, /HARNESS/)
-  assert.match(document.body.innerHTML, /Settings|New Session/)
+  assert.match(document.body.innerHTML, /Activity bar/)
+  assert.match(document.body.innerHTML, /Agent/)
+  assert.match(document.body.innerHTML, /Settings/)
 })

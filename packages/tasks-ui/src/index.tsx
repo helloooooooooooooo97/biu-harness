@@ -1212,7 +1212,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
           <div className="tasks-filter-btn-wrap" ref={filterRef}>
             <button
               type="button"
-              className={`tasks-refresh tasks-rbar-btn${filterOpen ? ' is-active' : ''}${projectFilter || tagFilter ? ' is-active' : ''}`}
+              className={`tasks-refresh tasks-rbar-btn${filterOpen ? ' is-active' : ''}${projectFilter || tagFilter.length ? ' is-active' : ''}`}
               aria-label="筛选任务"
               title="筛选"
               aria-haspopup="menu"
@@ -1220,7 +1220,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
               onClick={() => setFilterOpen((v) => !v)}
             >
               <LuSlidersHorizontal size={14} aria-hidden />
-              {(projectFilter || tagFilter) ? <span className="tasks-filter-dot" aria-hidden /> : null}
+              {(projectFilter || tagFilter.length) ? <span className="tasks-filter-dot" aria-hidden /> : null}
             </button>
             {filterOpen ? (
               <div className="tasks-filter-menu" role="menu">
@@ -1245,8 +1245,8 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
                   <select
                     className="tasks-filter"
                     aria-label="按标签筛选"
-                    value={tagFilter}
-                    onChange={(e) => setTagFilter(e.target.value)}
+                    value={tagFilter[0] ?? ''}
+                    onChange={(e) => setTagFilter(e.target.value ? [e.target.value] : [])}
                   >
                     <option value="">全部标签</option>
                     {allTags.map((t) => (
@@ -1256,11 +1256,11 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
                     ))}
                   </select>
                 </label>
-                {(projectFilter || tagFilter) ? (
+                {(projectFilter || tagFilter.length) ? (
                   <button
                     type="button"
                     className="tasks-filter-clear"
-                    onClick={() => { setProjectFilter(''); setTagFilter(''); }}
+                    onClick={() => { setProjectFilter(''); setTagFilter([]); }}
                   >
                     清除筛选
                   </button>

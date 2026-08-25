@@ -174,7 +174,7 @@ export const SessionInspector = memo(function SessionInspector({
       >
         {tab === 'traj' ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid="inspector-trajectory">
-            <TrajectoryView useSessionView={useSessionView} sessionView={sessionView} />
+            <TrajectoryView useSessionView={useSessionView} sessionView={sessionView} renderSlot={() => null} />
           </div>
         ) : null}
 

@@ -5,9 +5,9 @@ import {
   collectLiveDispatchedUsage,
   listLiveWakes,
 } from './live-dispatched-usage.ts'
-import type { SessionEvent } from '../core/session-types.ts'
+import type { SessionEvent, SessionEventBody } from '../core/session-types.ts'
 
-function ev(partial: Omit<SessionEvent, 'seq' | 'ts'> & { seq?: number; ts?: number }): SessionEvent {
+function ev(partial: SessionEventBody & { seq?: number; ts?: number }): SessionEvent {
   return { seq: partial.seq ?? 0, ts: partial.ts ?? 1, ...partial } as SessionEvent
 }
 

@@ -6,7 +6,6 @@ import { Service, type Context } from 'cordis'
 const require = createRequire(import.meta.url)
 
 type DatabaseSync = import('node:sqlite').DatabaseSync
-type SQLInputValue = import('node:sqlite').SQLInputValue
 
 export type ChannelRole = 'owner' | 'member'
 
@@ -148,9 +147,15 @@ export class ChannelService extends Service {
   }
 
   listChannels(): Channel[] {
-    return this.db
+    const rows = this.db
       .prepare('SELECT id, name, owner, created_at FROM channels ORDER BY created_at DESC')
-      .all() as Array<Record<string, unknown>> as unknown as Channel[]
+      .all() as Array<Record<string, unknown>>
+    return rows.map((row) => ({
+      id: row.id as string,
+      name: row.name as string,
+      owner: row.owner as string,
+      createdAt: row.created_at as number,
+    }))
   }
 
   getChannel(id: string): Channel | undefined {
