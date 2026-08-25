@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Agent loop 运行时",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/host/index.ts"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8"

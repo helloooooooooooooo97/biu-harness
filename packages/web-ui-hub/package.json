@@ -5,7 +5,7 @@
   "type": "module",
   "description": "UI hub",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/web/index.ts"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8"

@@ -5,7 +5,7 @@
   "type": "module",
   "description": "插件树面板",
   "exports": {
-    ".": "./src/index.tsx"
+    ".": "./src/web/index.tsx"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8",

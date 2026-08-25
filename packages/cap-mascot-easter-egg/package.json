@@ -5,7 +5,7 @@
   "type": "module",
   "description": "mascot_dance 工具",
   "exports": {
-    "./host": "./src/host.ts"
+    "./host": "./src/host/index.ts"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8"

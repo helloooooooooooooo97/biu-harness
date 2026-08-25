@@ -5,8 +5,8 @@
   "type": "module",
   "description": "心跳时钟",
   "exports": {
-    "./host": "./src/host.ts",
-    "./ui": "./src/ui.tsx"
+    "./host": "./src/host/index.ts",
+    "./web": "./src/web/index.tsx"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8",

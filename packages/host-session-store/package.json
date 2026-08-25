@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Session 持久化",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/host/index.ts"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8"

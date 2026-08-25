@@ -5,9 +5,9 @@
   "type": "module",
   "description": "会话列表 / 派生视图",
   "exports": {
-    ".": "./src/index.ts",
-    "./dialog": "./src/session-config-dialog.tsx",
-    "./folder-glyph": "./src/folder-glyph.tsx"
+    ".": "./src/web/index.ts",
+    "./dialog": "./src/web/session-config-dialog.tsx",
+    "./folder-glyph": "./src/web/folder-glyph.tsx"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8",

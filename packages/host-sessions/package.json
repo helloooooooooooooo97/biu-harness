@@ -5,13 +5,13 @@
   "type": "module",
   "description": "Session 运行时（含 ALS scope；不是 type 包）",
   "exports": {
-    ".": "./src/index.ts",
-    "./scope": "./src/session-scope.ts",
-    "./artifacts": "./src/artifacts.ts",
-    "./window": "./src/session-window.ts",
-    "./trajectory": "./src/trajectory-index.ts",
-    "./heal": "./src/session-heal.ts",
-    "./mascot": "./src/session-mascot.ts"
+    ".": "./src/host/index.ts",
+    "./scope": "./src/host/session-scope.ts",
+    "./artifacts": "./src/host/artifacts.ts",
+    "./window": "./src/host/session-window.ts",
+    "./trajectory": "./src/host/trajectory-index.ts",
+    "./heal": "./src/host/session-heal.ts",
+    "./mascot": "./src/host/session-mascot.ts"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8"

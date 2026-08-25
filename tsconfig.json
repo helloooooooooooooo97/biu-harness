@@ -13,5 +13,5 @@
     "jsx": "react-jsx",
     "types": ["node", "vite/client", "vitest/globals"]
   },
-  "include": ["src", "host", "packages"]
+  "include": ["web", "host", "packages"]
 }
