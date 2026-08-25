@@ -50,27 +50,11 @@ test('tool_calls assistant uses null content for API history', async () => {
   ])
 })
 
-test('json session store round-trips versioned records', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'cordis-sess-'))
-  const ctx = new Context()
-  await ctx.plugin(sessionStore, { driver: 'json', dir })
-  await ctx.plugin(sessions)
-  const record = await ctx.sessions.create('s1')
-  await ctx.sessions.append('s1', { type: 'user/message', text: 'hi', kind: 'wake' })
-  const ctx2 = new Context()
-  await ctx2.plugin(sessionStore, { driver: 'json', dir })
-  await ctx2.plugin(sessions)
-  const loaded = await ctx2.sessions.get('s1')
-  assert.equal(loaded?.version, SESSION_FORMAT_VERSION)
-  assert.equal(loaded?.id, record.id)
-  assert.equal(loaded?.events.some((item) => item.type === 'user/message'), true)
-})
-
 test('sqlite session store round-trips and listSummaries skips full reload', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cordis-sqlite-'))
   const path = join(dir, 'sessions.sqlite')
   const ctx = new Context()
-  await ctx.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx.plugin(sessionStore, { driver: 'sqlite', path })
   await ctx.plugin(sessions)
   const record = await ctx.sessions.create('sql1')
   await ctx.sessions.append('sql1', { type: 'user/message', text: 'sqlite hi', kind: 'wake' })
@@ -82,7 +66,7 @@ test('sqlite session store round-trips and listSummaries skips full reload', asy
   assert.equal(summaries[0]?.eventCount, 4)
 
   const ctx2 = new Context()
-  await ctx2.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx2.plugin(sessionStore, { driver: 'sqlite', path })
   await ctx2.plugin(sessions)
   const loaded = await ctx2.sessions.get('sql1')
   assert.equal(loaded?.id, record.id)
@@ -94,7 +78,7 @@ test('reload heals open step/turn left by crash', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cordis-heal-'))
   const path = join(dir, 'sessions.sqlite')
   const ctx = new Context()
-  await ctx.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx.plugin(sessionStore, { driver: 'sqlite', path })
   await ctx.plugin(sessions)
   await ctx.sessions.create('heal1')
   await ctx.sessions.append('heal1', { type: 'user/message', text: 'go', kind: 'wake' })
@@ -103,7 +87,7 @@ test('reload heals open step/turn left by crash', async () => {
   // simulate crash: no step/end, no turn/end
 
   const ctx2 = new Context()
-  await ctx2.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx2.plugin(sessionStore, { driver: 'sqlite', path })
   await ctx2.plugin(sessions)
   const loaded = await ctx2.sessions.get('heal1')
   assert.ok(loaded)
@@ -121,7 +105,7 @@ test('reload heals open step/turn left by crash', async () => {
   assert.equal(again?.events.length, loaded!.events.length)
 
   const ctx3 = new Context()
-  await ctx3.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx3.plugin(sessionStore, { driver: 'sqlite', path })
   await ctx3.plugin(sessions)
   const persisted = await ctx3.sessions.get('heal1')
   assert.equal(persisted?.events.filter((item) => item.type === 'turn/end').length, 1)
@@ -132,7 +116,7 @@ test('reload heals orphan tool_calls so next LLM round is valid', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cordis-heal-tools-'))
   const path = join(dir, 'sessions.sqlite')
   const ctx = new Context()
-  await ctx.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx.plugin(sessionStore, { driver: 'sqlite', path })
   await ctx.plugin(sessions)
   await ctx.sessions.create('heal-tools')
   await ctx.sessions.append('heal-tools', { type: 'user/message', text: 'wake workers', kind: 'wake' })
@@ -146,7 +130,7 @@ test('reload heals orphan tool_calls so next LLM round is valid', async () => {
   // crash before tool/result
 
   const ctx2 = new Context()
-  await ctx2.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx2.plugin(sessionStore, { driver: 'sqlite', path })
   await ctx2.plugin(sessions)
   const loaded = await ctx2.sessions.get('heal-tools')
   assert.ok(loaded)
@@ -161,23 +145,6 @@ test('reload heals orphan tool_calls so next LLM round is valid', async () => {
   const tool = history.find((item) => item.role === 'tool' && item.tool_call_id === 'call_1')
   assert.ok(assistant)
   assert.ok(tool)
-})
-
-test('sqlite migrates legacy json sessions once', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'cordis-migrate-'))
-  const jsonDir = join(dir, 'sessions')
-  const path = join(dir, 'sessions.sqlite')
-  const ctxJson = new Context()
-  await ctxJson.plugin(sessionStore, { driver: 'json', dir: jsonDir })
-  await ctxJson.plugin(sessions)
-  await ctxJson.sessions.create('legacy1')
-  await ctxJson.sessions.append('legacy1', { type: 'user/message', text: 'from json', kind: 'wake' })
-
-  const ctx = new Context()
-  await ctx.plugin(sessionStore, { driver: 'sqlite', path, dir: jsonDir })
-  await ctx.plugin(sessions)
-  const loaded = await ctx.sessions.get('legacy1')
-  assert.equal(loaded?.events.some((item) => item.type === 'user/message' && item.text === 'from json'), true)
 })
 
 test('fork copies the append-only log into a child session', async () => {
@@ -239,11 +206,11 @@ test('sqlite persists session type across reopen', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cordis-type-'))
   const path = join(dir, 'sessions.sqlite')
   const ctx = new Context()
-  await ctx.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx.plugin(sessionStore, { driver: 'sqlite', path })
   await ctx.plugin(sessions)
   await ctx.sessions.create('live-sql', { type: 'live' })
   const ctx2 = new Context()
-  await ctx2.plugin(sessionStore, { driver: 'sqlite', path, dir: join(dir, 'json') })
+  await ctx2.plugin(sessionStore, { driver: 'sqlite', path })
   await ctx2.plugin(sessions)
   const loaded = await ctx2.sessions.get('live-sql')
   assert.equal(loaded?.type, 'live')

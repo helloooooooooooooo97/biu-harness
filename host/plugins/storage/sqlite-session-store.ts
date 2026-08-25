@@ -1,5 +1,5 @@
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { mkdir } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import { createRequire } from 'node:module'
 import {
   SESSION_FORMAT_VERSION,
@@ -268,52 +268,7 @@ export class SqliteSessionStore implements SessionStore {
   }
 }
 
-/** 若 sqlite 为空且遗留 json 目录有数据，一次性导入。 */
-export async function migrateJsonSessionsIfNeeded(store: SqliteSessionStore, jsonDir: string) {
-  const summaries = await store.listSummaries()
-  if (summaries.length > 0) return { migrated: 0, skipped: true as const }
-
-  const marker = join(jsonDir, '.migrated-to-sqlite')
-  try {
-    await readFile(marker, 'utf8')
-    return { migrated: 0, skipped: true as const }
-  } catch {
-    /* no marker */
-  }
-
-  let names: string[] = []
-  try {
-    names = (await readdir(jsonDir)).filter((name) => name.endsWith('.json'))
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { migrated: 0, skipped: true as const }
-    throw error
-  }
-
-  let migrated = 0
-  for (const name of names) {
-    const id = name.slice(0, -5)
-    try {
-      const raw = await readFile(join(jsonDir, name), 'utf8')
-      const record = JSON.parse(raw) as SessionRecord
-      if (record.version !== SESSION_FORMAT_VERSION || record.id !== id) continue
-      await store.save(record)
-      migrated += 1
-    } catch {
-      /* skip corrupt */
-    }
-  }
-
-  await mkdir(jsonDir, { recursive: true })
-  await writeFile(marker, `${new Date().toISOString()}\nmigrated=${migrated}\n`, 'utf8')
-  return { migrated, skipped: false as const }
-}
-
-export async function ensureSqliteSessionStore(path: string, jsonDir: string) {
+export async function ensureSqliteSessionStore(path: string) {
   await mkdir(dirname(path), { recursive: true })
-  const store = new SqliteSessionStore(path).open()
-  const result = await migrateJsonSessionsIfNeeded(store, jsonDir)
-  if (result.migrated > 0) {
-    console.info(`[session-store] migrated ${result.migrated} json session(s) → sqlite`)
-  }
-  return store
+  return new SqliteSessionStore(path).open()
 }
