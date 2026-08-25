@@ -116,6 +116,17 @@ export type Task = {
   usage?: { inputTokens: number; outputTokens: number; cacheReadTokens: number; totalTokens: number }
   /** 本任务总消耗 token（= usage.totalTokens）。 */
   totalTokens?: number
+  /** 自动触发配置（后端 tasks 表持久化）。source 为 null 时自动触发不开启。 */
+  trigger?: {
+    enabled: boolean
+    cron: string | null
+    at: number | null
+    on: string[]
+    state: 'idle' | 'pending' | 'delivered' | 'done' | 'cancelled'
+    lastRun: number | null
+  }
+  /** 下次触发时间戳（派生）。 */
+  nextTriggerAt?: number | null
 }
 
 const STATUS_META: Array<{ id: TaskStatus; label: string; icon: ReactNode }> = [
@@ -633,6 +644,170 @@ function ReportBadge({ reports }: { reports: TaskReport[] }) {
   )
 }
 
+/** 把 cron 拆成字段数组（支持 5 或 6 字段）。秒级=6字段（秒 分 时 日 月 周）。 */
+function parseCronFields(cron: string | null | undefined): (string | null)[] {
+  if (!cron) return []
+  const parts = cron.trim().split(/\s+/).filter(Boolean)
+  return parts.length ? parts.map((p) => (p === '*' ? null : p)) : []
+}
+
+/* 单个 cron 字段友好解读：星斜杠N → 每N；N-M → N到M；N → 具体值；星 → 每次 */
+function cronFieldWord(f: string): string {
+  if (f === '*') return '每次'
+  const sl = f.match(/^\*\/(\d+)$/)
+  if (sl) return `每${sl[1]}`
+  const range = f.match(/^(\d+)-(\d+)$/)
+  if (range) return `${range[1]}到${range[2]}`
+  return f
+}
+
+/** cron → 中文友好解读（如 星斜杠5 全星 → 「每5秒」）。 */
+function cronPreview(cron: string | null | undefined): string {
+  const f = parseCronFields(cron)
+  const fieldNames = ['分钟', '小时', '日', '月', '星期']
+  if (f.length === 6) {
+    // 秒级：秒 + 分 时 日 月 周
+    const sec = cronFieldWord(f[0] ?? '*')
+    const nonSec = f.slice(1)
+    if (nonSec.every((x) => x == null)) return `每${sec}触发一次`
+    const rest = nonSec
+      .map((x, i) => (x ? `${fieldNames[i]}${cronFieldWord(x)}` : null))
+      .filter(Boolean)
+      .join('，')
+    return `每${sec}，${rest}时触发`
+  }
+  if (f.length === 5) {
+    // 5字段：分 时 日 月 周
+    if (f.every((x) => x == null)) return '每分钟触发一次'
+    const nonStar = f.map((x, i) => (x ? `${fieldNames[i]}${cronFieldWord(x)}` : null)).filter(Boolean)
+    // 常见：每天 hh:mm
+    const min = f[0], hour = f[1], day = f[2], month = f[3], week = f[4]
+    const isNumeric = (v: string | null) => v != null && /^\d+$/.test(v)
+    if (isNumeric(hour) && isNumeric(min) && !day && !month && !week) {
+      return `每天${hour}时${min}分触发`
+    }
+    if (week && !day && !month && !week.includes('/') && (isNumeric(week) || week === '*')) {
+      const wk = /^\d$/.test(week) ? Number(week) : 1
+      const w = ['日', '一', '二', '三', '四', '五', '六'][wk] ?? week
+      return `每周${w}触发`
+    }
+    return nonStar.length ? `满足 ${nonStar.join('，')} 时触发` : '每分钟触发一次'
+  }
+  return f.length ? `cron: ${cron}` : '未设置'
+}
+
+/** 用「秒/分/时/日/月/周」7 字段合成 cron：若秒为 * 或空则输出 5 字段，否则输出 6 字段（秒级）。非法返回 null。 */
+function composeCron(s: string, m: string, h: string, d: string, mo: string, w: string): string | null {
+  const day = d === '*' ? '*' : d
+  const fields = [m || '*', h || '*', day || '*', mo || '*', w || '*']
+  if (s && s !== '*') fields.unshift(s) // 秒级 → 6字段
+  return fields.join(' ')
+}
+
+const CRON_FIELD_RE = /^(\*|\*\/\d+|\d+|\d+-\d+)$/
+
+/** 校验单个 cron 字段是否合法（支持 星、星斜杠N、N、N-M）。 */
+function cronFieldValid(v: string): boolean {
+  if (!v) return true
+  return CRON_FIELD_RE.test(v.trim())
+}
+
+/** 从 cron 推断预设模式；无法识别返回 'custom'。 */
+function inferTriggerMode(cron: string): string {
+  const f = parseCronFields(cron)
+  if (f.length === 6 && f[0] != null && f[0].startsWith('*/') && f.slice(1).every((x) => x == null)) return 'sec'
+  if (f.length === 5) {
+    const [m, h, d, mo, w] = f
+    if (m != null && m.startsWith('*/') && !h && !d && !mo && !w) return 'min'
+    if (h != null && h.startsWith('*/') && !m && !d && !mo && !w) return 'hour'
+    if (h && m && !d && !mo && !w) return 'day'
+    if (w && !m && !h && !d && !mo) return 'week'
+  }
+  return 'custom'
+}
+
+/** 从 cron 派生 7 字段编辑值（无则为空）。 */
+function spawnCronFields(cron: string): { s: string; m: string; h: string; d: string; mo: string; w: string } {
+  const f = parseCronFields(cron)
+  if (f.length === 6) return { s: f[0] ?? '', m: f[1] ?? '', h: f[2] ?? '', d: f[3] ?? '', mo: f[4] ?? '', w: f[5] ?? '' }
+  if (f.length === 5) return { s: '', m: f[0] ?? '', h: f[1] ?? '', d: f[2] ?? '', mo: f[3] ?? '', w: f[4] ?? '' }
+  return { s: '', m: '', h: '', d: '', mo: '', w: '' }
+}
+
+/** 从 cron 的「星斜杠N」中取 N（默认 def）。 */
+function inferN(cron: string, def: number): string {
+  const f = parseCronFields(cron)
+  const first = f.find((x) => x && x.startsWith('*/'))
+  if (!first) return String(def)
+  const n = first.match(/^\*\/(\d+)$/)?.[1]
+  return n || String(def)
+}
+function inferH(cron: string, def: string | number = '10'): string {
+  const f = parseCronFields(cron)
+  const idx = f.length === 6 ? 2 : 1 // 小时在秒级为 index2，5字段为 index1
+  const v = f[idx]
+  if (v == null) return String(def)
+  return /^\d+$/.test(v) ? v : String(def)
+}
+function inferM(cron: string, def: string | number = '0'): string {
+  const f = parseCronFields(cron)
+  const idx = f.length === 6 ? 1 : 0 // 分钟在秒级为 index1，5字段为 index0
+  const v = f[idx]
+  if (v == null) return String(def)
+  return /^\d+$/.test(v) ? v : String(def)
+}
+function inferW(cron: string, def = '1'): string {
+  const f = parseCronFields(cron)
+  const w = f.length === 6 ? f[5] : f[4]
+  return w && /^\d$/.test(w) ? w : def
+}
+
+/** 预设 → cron 合成并回写；mode 为预设 key。 */
+function presetCron(mode: string, fields: { s: string; m: string; h: string; d: string; mo: string; w: string }, n: string, hh: string, mm: string, wk: string): string {
+  switch (mode) {
+    case 'sec':
+      return `*/${n} * * * * *`
+    case 'min':
+      return `*/${n} * * * *`
+    case 'hour':
+      return `0 */${n} * * *`
+    case 'day':
+      return `${mm || '0'} ${hh || '0'} * * *`
+    case 'week':
+      return `0 0 * * ${wk || '1'}`
+    default:
+      return composeCron(fields.s, fields.m, fields.h, fields.d, fields.mo, fields.w) ?? ''
+  }
+}
+
+/** nextTriggerAt 友好化：距今时间差。 */
+function timeUntilLabel(ts: number): string {
+  const diff = ts - Date.now()
+  if (diff <= 0) return '立即'
+  const s = Math.round(diff / 1000)
+  if (s < 60) return `${s}秒后`
+  const min = Math.round(s / 60)
+  if (min < 60) return `${min}分钟后`
+  const hr = Math.round(min / 60)
+  if (hr < 24) return `${hr}小时后`
+  const day = Math.round(hr / 24)
+  return `${day}天后`
+}
+
+/** trigger 标记：任务开启了调度时显示一个小图标（含当前调度状态）。hover 显示 cron 的友好解读。 */
+function TriggerMark({ trigger }: { trigger?: Task['trigger'] }) {
+  if (!trigger?.enabled) return null
+  const state = trigger.state ?? 'idle'
+  const cron = trigger.cron ? `（${cronPreview(trigger.cron)}）· ${trigger.cron}` : ''
+  const title = `自动触发：${state}${cron}${trigger.at ? ' · 定点触发' : ''}${trigger.on?.length ? ` · 事件:${trigger.on.join(',')}` : ''}`
+  return (
+    <span className={`tasks-trigger-mark is-${state}`} title={title} aria-label="自动触发">
+      <LuClock size={11} aria-hidden />
+      <span className="tasks-trigger-mark-state">{state}</span>
+    </span>
+  )
+}
+
 function tagColor(tag: string): string {
   const palette = [
     '#3b6fd9', '#8a5fd3', '#2f9e8f', '#d9822b', '#c94f4f', '#4b8f4b',
@@ -902,7 +1077,17 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
   }
 
   async function onUpdate(id: string, patch: Record<string, unknown>) {
-    setTasks((prev) => prev.map((item) => (item.id === id ? ({ ...item, ...patch } as Task) : item)))
+    // trigger 为字段级合并（局部更新），避免乐观替换丢失 cron/on/state 等既有字段
+    setTasks((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item
+        const merged = { ...item, ...patch } as Task
+        if (patch.trigger && item.trigger) {
+          merged.trigger = { ...item.trigger, ...(patch.trigger as object) }
+        }
+        return merged
+      }),
+    )
     try {
       const task = await patchTask(id, patch)
       setTasks((prev) => prev.map((item) => (item.id === id ? task : item)))
@@ -1195,6 +1380,7 @@ function TasksBoard({
               >
                 <div className="tasks-card-title">
                   <span className="tasks-card-titletext">{task.title}</span>
+                  <TriggerMark trigger={task.trigger} />
                   {task.blocked ? (
                     <span className="tasks-card-blocked" title="被依赖任务阻塞，无法开工"><LuLock size={11} aria-hidden /></span>
                   ) : null}
@@ -1742,7 +1928,10 @@ function TasksTable({
                 </div>
               </td>
               <td className="tasks-col-status">
-                <StatusPill status={task.status} reportCount={task.reports?.length ?? 0} blocked={task.blocked} />
+                <div className="tasks-status-cell">
+                  <StatusPill status={task.status} reportCount={task.reports?.length ?? 0} blocked={task.blocked} />
+                  <TriggerMark trigger={task.trigger} />
+                </div>
               </td>
               <td className="tasks-col-priority" onClick={(e) => e.stopPropagation()}>
                 <CellSelect<TaskPriority>
@@ -1861,6 +2050,17 @@ function TaskDetailPanel({
   const [project, setProject] = useState(task.project ?? '')
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>(task.tags ?? [])
+  // trigger 配置
+  const [triggerEnabled, setTriggerEnabled] = useState(task.trigger?.enabled ?? false)
+  const [triggerCron, setTriggerCron] = useState(task.trigger?.cron ?? '')
+  const [triggerAt, setTriggerAt] = useState(task.trigger?.at ? formatDueInput(task.trigger.at) : '')
+  const [triggerOn, setTriggerOn] = useState<string[]>(task.trigger?.on ?? [])
+  // 预设模式：根据 cron 推断；不可识别则自定义。
+  const [triggerMode, setTriggerMode] = useState<string>(() => inferTriggerMode(task.trigger?.cron ?? ''))
+  // 7 个 cron 字段编辑（秒/分/时/日/月/周）
+  const [cronFields, setCronFields] = useState<{ s: string; m: string; h: string; d: string; mo: string; w: string }>(() =>
+    spawnCronFields(task.trigger?.cron ?? '')
+  )
   // 跨 session：每个 report 定位到其 agent 所属 session 的该 turn 统计（step 数 / 耗时 / 额度消耗）。
   const [turnStats, setTurnStats] = useState<Record<string, TurnStats | null | undefined>>({})
 
@@ -1872,6 +2072,17 @@ function TaskDetailPanel({
     setProject(task.project ?? '')
     setTags(task.tags ?? [])
   }, [task.id, task.updatedAt])
+
+  // trigger 本地编辑状态只在切换任务时初始化，不随 updatedAt 回写，
+  // 避免 PATCH 引发的 updatedAt 变化覆盖正在编辑/刚开启的调度（否则配置区块会「出现又消失」）。
+  useEffect(() => {
+    setTriggerEnabled(task.trigger?.enabled ?? false)
+    setTriggerCron(task.trigger?.cron ?? '')
+    setTriggerAt(task.trigger?.at ? formatDueInput(task.trigger.at) : '')
+    setTriggerOn(task.trigger?.on ?? [])
+    setTriggerMode(inferTriggerMode(task.trigger?.cron ?? ''))
+    setCronFields(spawnCronFields(task.trigger?.cron ?? ''))
+  }, [task.id])
 
   const reports = useMemo(() => (task.reports ?? []).filter((r) => r.sessionId && r.turn != null), [task.reports])
 
@@ -2053,6 +2264,242 @@ function TaskDetailPanel({
             }}
           />
         </label>
+
+        <div className="tasks-field tasks-l-field tasks-trigger-block">
+          <span>
+            <LuClock size={12} aria-hidden />
+            自动触发
+          </span>
+          <label className="tasks-trigger-enable">
+            <input
+              type="checkbox"
+              checked={triggerEnabled}
+              onChange={(event) => {
+                const next = event.target.checked
+                setTriggerEnabled(next)
+                void onUpdate(task.id, { trigger: { enabled: next } })
+              }}
+            />
+            <span>开启调度（后台按 cron / 特定时间 / 事件自动派工）</span>
+          </label>
+          {(() => {
+            const hasAuto = !!(task.trigger?.cron || task.trigger?.at || task.trigger?.on?.length)
+            const showConfig = triggerEnabled || hasAuto
+            return showConfig ? (
+            <>
+              <div className="tasks-trigger-field">
+                <span>频率</span>
+                <select
+                  className="tasks-trigger-mode"
+                  value={triggerMode}
+                  onChange={(event) => {
+                    const mode = event.target.value
+                    setTriggerMode(mode)
+                    // 合成并回写 cron（秒级预设都支持）
+                    const cronStr = presetCron(mode, cronFields, '5', '10', '0', '1')
+                    const cron = cronStr || null
+                    setTriggerCron(cronStr)
+                    setCronFields(spawnCronFields(cronStr))
+                    if (cron !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron } })
+                  }}
+                >
+                  <option value="sec">每N秒</option>
+                  <option value="min">每N分钟</option>
+                  <option value="hour">每小时</option>
+                  <option value="day">每天</option>
+                  <option value="week">每周</option>
+                  <option value="custom">自定义</option>
+                </select>
+              </div>
+              {triggerMode === 'sec' ? (
+                <label className="tasks-trigger-field">
+                  <span>间隔（秒）</span>
+                  <input
+                    className="tasks-field-input tasks-cron-num"
+                    type="number"
+                    min={1}
+                    defaultValue={inferN(triggerCron, 5)}
+                    onChange={(event) => {
+                      const n = event.target.value || '5'
+                      const cronStr = `*/${n} * * * * *`
+                      setTriggerCron(cronStr)
+                      setCronFields(spawnCronFields(cronStr))
+                      if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                    }}
+                  />
+                </label>
+              ) : triggerMode === 'min' ? (
+                <label className="tasks-trigger-field">
+                  <span>间隔（分钟）</span>
+                  <input
+                    className="tasks-field-input tasks-cron-num"
+                    type="number"
+                    min={1}
+                    defaultValue={inferN(triggerCron, 5)}
+                    onChange={(event) => {
+                      const n = event.target.value || '5'
+                      const cronStr = `*/${n} * * * *`
+                      setTriggerCron(cronStr)
+                      if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                    }}
+                  />
+                </label>
+              ) : triggerMode === 'hour' ? (
+                <label className="tasks-trigger-field">
+                  <span>每 N 小时</span>
+                  <input
+                    className="tasks-field-input tasks-cron-num"
+                    type="number"
+                    min={1}
+                    defaultValue={inferN(triggerCron, 1)}
+                    onChange={(event) => {
+                      const n = event.target.value || '1'
+                      const cronStr = `0 */${n} * * *`
+                      setTriggerCron(cronStr)
+                      if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                    }}
+                  />
+                </label>
+              ) : triggerMode === 'day' ? (
+                <div className="tasks-trigger-field">
+                  <span>每天时间</span>
+                  <div className="tasks-trigger-time">
+                    <input
+                      className="tasks-field-input tasks-cron-num"
+                      type="number"
+                      min={0} max={23}
+                      defaultValue={inferH(triggerCron, 10)}
+                      onChange={(event) => {
+                        const n = event.target.value || '0'
+                        const cronStr = `${inferM(triggerCron)} ${n} * * *`
+                        setTriggerCron(cronStr)
+                        if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                      }}
+                    />
+                    <span className="tasks-trigger-time-sep">:</span>
+                    <input
+                      className="tasks-field-input tasks-cron-num"
+                      type="number"
+                      min={0} max={59}
+                      defaultValue={inferM(triggerCron, 0)}
+                      onChange={(event) => {
+                        const n = event.target.value || '0'
+                        const cronStr = `${n} ${inferH(triggerCron)} * * *`
+                        setTriggerCron(cronStr)
+                        if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : triggerMode === 'week' ? (
+                <label className="tasks-trigger-field">
+                  <span>星期几</span>
+                  <select
+                    className="tasks-trigger-mode tasks-cron-week"
+                    value={inferW(triggerCron, '1')}
+                    onChange={(event) => {
+                      const w = event.target.value
+                      const cronStr = `0 0 * * ${w}`
+                      setTriggerCron(cronStr)
+                      if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                    }}
+                  >
+                    {['日', '一', '二', '三', '四', '五', '六'].map((w, i) => (
+                      <option key={i} value={String(i)}>周{w}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <div className="tasks-trigger-field">
+                  <span>高级 cron（秒 分 时 日 月 周）</span>
+                  <div className="tasks-trigger-cronfield">
+                    {(
+                      [
+                        ['s', cronFields.s, '秒', 'cronFieldValid(cronFields.s)'],
+                        ['m', cronFields.m, '分', 'cronFieldValid(cronFields.m)'],
+                        ['h', cronFields.h, '时', 'cronFieldValid(cronFields.h)'],
+                        ['d', cronFields.d, '日', 'cronFieldValid(cronFields.d)'],
+                        ['mo', cronFields.mo, '月', 'cronFieldValid(cronFields.mo)'],
+                        ['w', cronFields.w, '周', 'cronFieldValid(cronFields.w)'],
+                      ] as const
+                    ).map(([key, val, label]) => (
+                      <label key={key} className={`tasks-cron-field${val && !cronFieldValid(val) ? ' is-invalid' : ''}`} title={val && !cronFieldValid(val) ? `「${val}」非法：仅支持 *、*/N、N、N-M` : `${label}字段`}>
+                        <span>{label}</span>
+                        <input
+                          className="tasks-field-input"
+                          value={val}
+                          placeholder="*"
+                          onChange={(event) => {
+                            const nextVal = event.target.value
+                            const next = { ...cronFields, [key]: nextVal }
+                            setCronFields(next)
+                            const cronStr = composeCron(next.s, next.m, next.h, next.d, next.mo, next.w)
+                            const invalid = Object.values(next).some((f) => f && !cronFieldValid(f))
+                            setTriggerCron(invalid ? '' : (cronStr ?? ''))
+                            if (!invalid && cronStr && cronStr !== (task.trigger?.cron ?? null)) {
+                              void onUpdate(task.id, { trigger: { cron: cronStr } })
+                            }
+                          }}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className={`tasks-trigger-field${triggerMode === 'custom' ? ' tasks-trigger-preview-wrap' : ''}`}>
+                <span>解读</span>
+                <span className="tasks-trigger-preview">{cronPreview(triggerCron)}</span>
+              </div>
+              <label className="tasks-trigger-field">
+                <span>特定时间 at</span>
+                <input
+                  className="tasks-field-input"
+                  type="date"
+                  value={triggerAt}
+                  onChange={(event) => setTriggerAt(event.target.value)}
+                  onBlur={() => {
+                    const at = triggerAt.trim() ? new Date(`${triggerAt}T00:00:00`).getTime() : null
+                    const prev = task.trigger?.at ?? null
+                    if (at !== prev) void onUpdate(task.id, { trigger: { at } })
+                  }}
+                />
+              </label>
+              <div className="tasks-trigger-field">
+                <span>自动触发事件</span>
+                <div className="tasks-trigger-on">
+                  {(['dep:done', 'turn:end'] as const).map((ev) => (
+                    <label key={ev} className="tasks-trigger-on-item">
+                      <input
+                        type="checkbox"
+                        checked={triggerOn.includes(ev)}
+                        onChange={(event) => {
+                          const next = event.target.checked
+                            ? [...new Set([...triggerOn, ev])]
+                            : triggerOn.filter((e) => e !== ev)
+                          setTriggerOn(next)
+                          void onUpdate(task.id, { trigger: { on: next } })
+                        }}
+                      />
+                      <span>{ev === 'dep:done' ? '依赖完成' : '回合结束'}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="tasks-trigger-status">
+                <span className={`tasks-trigger-state is-${task.trigger?.state ?? 'idle'}`}>
+                  状态：{task.trigger?.state ?? 'idle'}
+                </span>
+                {task.nextTriggerAt ? (
+                  <span className="tasks-trigger-next">下次触发：{timeUntilLabel(task.nextTriggerAt)}（{new Date(task.nextTriggerAt).toLocaleString()}）</span>
+                ) : null}
+                {task.trigger?.lastRun ? (
+                  <span className="tasks-trigger-last">上次触发：{formatWhen(task.trigger.lastRun)}</span>
+                ) : null}
+              </div>
+            </>
+            ) : null
+          })()}
+        </div>
 
         <label className="tasks-field">
           <span>
@@ -2455,16 +2902,16 @@ if (typeof document !== 'undefined') {
 .tasks-icon-btn { border:0; border-radius:5px; padding:3px; background:transparent; color:var(--dsw-label-3); cursor:pointer; font:inherit; display:inline-flex; align-items:center; justify-content:center; }
 .tasks-icon-btn:hover, .tasks-icon-btn.is-active { background:var(--dsw-hover); color:var(--dsw-label); }
 .tasks-modal-backdrop { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.34); padding:24px; }
-.tasks-detail-modal { width:min(560px, 92vw); max-height:min(640px, 88vh); display:flex; flex-direction:column; min-height:0; border-radius:12px; border:1px solid var(--dsw-border); background:var(--dsw-sidebar); box-shadow:0 20px 60px rgba(0,0,0,.22); overflow:hidden; }
-.tasks-detail-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 16px; border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent); }
-.tasks-detail-head-title { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:650; color:var(--dsw-label-2); }
-.tasks-detail-body { display:grid; flex:1; grid-template-columns:1fr 1fr; gap:14px 14px; padding:18px; overflow:auto; align-content:start; }
+.tasks-detail-modal { width:min(760px, 92vw); max-height:min(800px, 90vh); display:flex; flex-direction:column; min-height:0; border-radius:12px; border:1px solid var(--dsw-border); background:var(--dsw-sidebar); box-shadow:0 20px 60px rgba(0,0,0,.22); overflow:hidden; }
+.tasks-detail-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 20px; border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent); }
+.tasks-detail-head-title { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:650; color:var(--dsw-label-2); }
+.tasks-detail-body { display:grid; flex:1; grid-template-columns:1fr 1fr; gap:20px 24px; padding:24px; overflow:auto; align-content:start; }
 .tasks-detail-title { grid-column:1 / -1; order:0; }
 .tasks-field { order:1; }
 .tasks-l-field { grid-column:1 / -1; order:2; }
 .tasks-detail-meta { grid-column:1 / -1; order:3; }
 .tasks-detail-title { display:flex; flex-direction:column; gap:7px; padding-bottom:14px; border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 75%, transparent); }
-.tasks-detail-title-input { width:100%; border:0; background:transparent; color:var(--dsw-label); font:inherit; font-size:17px; font-weight:700; line-height:1.4; outline:none; padding:2px 0; resize:none; transition:border-color .12s; }
+.tasks-detail-title-input { width:100%; border:0; background:transparent; color:var(--dsw-label); font:inherit; font-size:20px; font-weight:700; line-height:1.4; outline:none; padding:2px 0; resize:none; transition:border-color .12s; }
 .tasks-detail-title-input:focus { border-bottom:1px solid var(--dsw-border); }
 .tasks-detail-id { font-size:10px; color:var(--dsw-label-3); line-height:1; }
 .tasks-field { display:flex; flex-direction:column; gap:5px; font-size:11px; color:var(--dsw-label-3); }
@@ -2561,6 +3008,44 @@ if (typeof document !== 'undefined') {
 .tasks-queue-meta .tasks-time { font-size:10px; }
 /* 队列视图用量胶囊与表格视图同大：固定 11px（与 .tasks-table 一致），胶囊 input→output 数字同尺寸 */
 .tasks-queue-item-main .tasks-usage-capsule { font-size:11px; }
+/* ---- Trigger 自动触发 ---- */
+.tasks-status-cell { display:flex; align-items:center; gap:5px; min-width:0; }
+.tasks-trigger-mark { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:9px; font-weight:700; white-space:nowrap; color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 12%, transparent); }
+.tasks-trigger-mark.is-pending { color:#d9822b; background:color-mix(in srgb, #d9822b 14%, transparent); }
+.tasks-trigger-mark.is-delivered { color:#2f7d4c; background:color-mix(in srgb, #2f7d4c 14%, transparent); }
+.tasks-trigger-mark.is-done { color:#3d9a5f; background:color-mix(in srgb, #3d9a5f 12%, transparent); }
+.tasks-trigger-mark.is-cancelled { color:var(--dsw-label-3); background:var(--dsw-muted-fill); }
+.tasks-trigger-mark-state { line-height:1; }
+.tasks-trigger-block { grid-column:1 / -1; order:1; display:flex; flex-direction:column; gap:8px; padding:10px 12px; border:1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent); border-radius:9px; background:color-mix(in srgb, var(--dsw-muted-fill) 30%, transparent); }
+.tasks-trigger-block > span { display:inline-flex; align-items:center; gap:5px; font-weight:650; font-size:10.5px; color:var(--dsw-label-2); letter-spacing:.02em; }
+.tasks-trigger-enable { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--dsw-label-2); cursor:pointer; }
+.tasks-trigger-enable input, .tasks-trigger-on-item input { accent-color:var(--dsw-business); }
+.tasks-trigger-field { display:flex; flex-direction:column; gap:4px; font-size:10.5px; color:var(--dsw-label-3); font-weight:600; }
+.tasks-trigger-field > span { color:var(--dsw-label-3); letter-spacing:.02em; }
+.tasks-trigger-on { display:flex; gap:10px; flex-wrap:wrap; }
+.tasks-trigger-on-item { display:inline-flex; align-items:center; gap:4px; font-size:11.5px; color:var(--dsw-label-2); cursor:pointer; font-weight:500; }
+.tasks-trigger-status { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:10.5px; color:var(--dsw-label-3); border-top:1px solid color-mix(in srgb, var(--dsw-border) 70%, transparent); padding-top:8px; }
+.tasks-trigger-state { display:inline-flex; align-items:center; gap:3px; font-weight:650; }
+.tasks-trigger-state.is-pending { color:#d9822b; }
+.tasks-trigger-state.is-delivered { color:#2f7d4c; }
+.tasks-trigger-state.is-done { color:#3d9a5f; }
+.tasks-trigger-next, .tasks-trigger-last { color:var(--dsw-label-2); font-variant-numeric:tabular-nums; }
+
+/* ---- Notion 风格 trigger 友好配置 ---- */
+.tasks-trigger-mode, .tasks-cron-week { appearance:none; -webkit-appearance:none; border:1px solid var(--dsw-border); border-radius:6px; padding:4px 8px; font-size:12px; color:var(--dsw-label); background:var(--dsw-muted-fill); cursor:pointer; width:auto; max-width:100%; font-family:inherit; }
+.tasks-trigger-mode:hover, .tasks-cron-week:hover { background:var(--dsw-hover); }
+.tasks-cron-num { width:72px; }
+.tasks-trigger-time { display:flex; align-items:center; gap:4px; }
+.tasks-trigger-time .tasks-cron-num { width:56px; }
+.tasks-trigger-time-sep { color:var(--dsw-label-3); font-weight:700; font-size:13px; }
+.tasks-trigger-preview-wrap { gap:6px; }
+.tasks-trigger-preview { color:var(--dsw-label-2); font-size:11.5px; font-weight:650; font-variant-numeric:tabular-nums; padding:3px 8px; border-radius:6px; background:color-mix(in srgb, var(--dsw-business) 8%, transparent); border:1px solid color-mix(in srgb, var(--dsw-border) 60%, transparent); display:inline-flex; align-items:center; gap:4px; }
+.tasks-trigger-cronfield { display:flex; gap:6px; flex-wrap:wrap; }
+.tasks-cron-field { display:flex; flex-direction:column; gap:3px; }
+.tasks-cron-field > span { font-size:10px; color:var(--dsw-label-3); font-weight:600; }
+.tasks-cron-field .tasks-field-input { width:44px; padding:3px 5px; text-align:center; font-size:11.5px; font-variant-numeric:tabular-nums; }
+.tasks-cron-field:hover .tasks-field-input { border-color:var(--dsw-business); }
+.tasks-cron-field.is-invalid .tasks-field-input { border-color:var(--dsw-danger); box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-danger) 30%, transparent); }
 `
   if (!style.parentNode) document.head.appendChild(style)
 }

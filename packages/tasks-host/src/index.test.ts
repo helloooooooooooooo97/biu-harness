@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from 'cordis'
-import { buildDeliverText, coerceAssigneeArg, computeBlocked, computeBlockedBy, computeTurnUsage, depsSatisfied, deriveExecution, deriveExecutionFromReports, reportBackToCreator, sumReportUsage, TasksService } from './index.ts'
+import { buildDeliverText, coerceAssigneeArg, computeBlocked, computeBlockedBy, computeNextTriggerAt, computeTurnUsage, defaultTrigger, depsSatisfied, deriveExecution, deriveExecutionFromReports, normalizeTrigger, parseCron, reportBackToCreator, shouldPromptProgress, sumReportUsage, TasksService } from './index.ts'
 
 test('tasks sqlite crud and status move', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
@@ -305,6 +305,8 @@ test('buildDeliverText renders a派工 message with task key fields', () => {
     creator: { kind: 'agent', sessionId: 'boss', name: 'Boss' },
     assignee: { kind: 'agent', sessionId: 'worker', name: 'Worker' },
     assignedAt: 1,
+    reportIntervalSec: 60,
+    lastReportPromptAt: null,
   })
   assert.match(text, /写需求文档/)
   assert.match(text, /状态：todo/)
@@ -406,4 +408,294 @@ test('sumReportUsage sums per-report usage with same (session,turn) dedupe', () 
     totalTokens: 32,
   })
   assert.equal(sumReportUsage(undefined), undefined)
+})
+
+// ==================== Trigger：cron 解析 / 下次触发 / 持久化 / 状态机 ====================
+
+test('parseCron matches minute-level patterns', () => {
+  // 每天 10:30
+  const daily = parseCron('30 10 * * *')!
+  assert.ok(daily(new Date(2026, 0, 15, 10, 30)))
+  assert.ok(!daily(new Date(2026, 0, 15, 10, 31)))
+  assert.ok(!daily(new Date(2026, 0, 15, 11, 30)))
+
+  // 每 5 分钟（*/5）
+  const every5 = parseCron('*/5 * * * *')!
+  assert.ok(every5(new Date(2026, 0, 15, 9, 20)))
+  assert.ok(!every5(new Date(2026, 0, 15, 9, 22)))
+
+  // 每周一 09:00（周字段 1）
+  const monday = parseCron('0 9 * * 1')!
+  // 2026-01-05 是周一
+  assert.ok(monday(new Date(2026, 0, 5, 9, 0)))
+  assert.ok(!monday(new Date(2026, 0, 5, 9, 1)))
+  assert.ok(!monday(new Date(2026, 0, 6, 9, 0))) // 周二
+
+  // 区间 + 列表
+  const list = parseCron('0,15,30 * * * *')!
+  assert.ok(list(new Date(2026, 0, 15, 1, 30)))
+  assert.ok(!list(new Date(2026, 0, 15, 1, 45)))
+
+  // 非法表达式 → null
+  assert.equal(parseCron('bad'), null)
+  assert.equal(parseCron('* * * * * * * *'), null) // 字段太多也算 null（<5 或异常）
+})
+
+test('reportIntervalSec persists with default 60 and is updatable to 5', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const a = tasks.create({
+      title: 'A',
+      creator: { kind: 'agent', sessionId: 'boss', name: 'Boss' },
+      assignee: { kind: 'agent', sessionId: 'worker', name: 'Worker' },
+    })
+    // 默认 60
+    assert.equal(a.reportIntervalSec, 60)
+    assert.equal(a.lastReportPromptAt, null)
+    // 可回读（DB 持久）
+    assert.equal(tasks.get(a.id)!.reportIntervalSec, 60)
+    // 改 5 秒
+    const b = tasks.update(a.id, { reportIntervalSec: 5 })
+    assert.equal(b.reportIntervalSec, 5)
+    assert.equal(tasks.get(a.id)!.reportIntervalSec, 5)
+    // 建任务时显式 5 秒
+    const c = tasks.create({
+      title: 'C',
+      creator: { kind: 'agent', sessionId: 'boss', name: 'Boss' },
+      assignee: { kind: 'agent', sessionId: 'worker', name: 'Worker' },
+      reportIntervalSec: 5,
+    })
+    assert.equal(c.reportIntervalSec, 5)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('shouldPromptProgress: default 60s, no report uses assignedAt baseline', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const a = tasks.create({
+      title: 'A',
+      creator: { kind: 'agent', sessionId: 'boss', name: 'Boss' },
+      assignee: { kind: 'agent', sessionId: 'worker', name: 'Worker' },
+    })
+    const base = a.assignedAt!
+    // 未超过 60s（59s）：不追问
+    assert.equal(shouldPromptProgress(tasks.get(a.id)!, base + 59_000).shouldPrompt, false)
+    // 超过 60s（61s）：追问
+    assert.equal(shouldPromptProgress(tasks.get(a.id)!, base + 61_000).shouldPrompt, true)
+    // 无 assignee 不追
+    const unassigned = tasks.create({ title: 'U', creator: { kind: 'agent', sessionId: 'boss', name: 'Boss' } })
+    assert.equal(shouldPromptProgress(tasks.get(unassigned.id)!, base + 200_000).shouldPrompt, false)
+    // creator 非 agent（纯用户）不追
+    const userCreated = tasks.create({
+      title: 'UC',
+      creator: { kind: 'user', name: '用户' },
+      assignee: { kind: 'agent', sessionId: 'worker', name: 'Worker' },
+    })
+    assert.equal(shouldPromptProgress(tasks.get(userCreated.id)!, base + 200_000).shouldPrompt, false)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('shouldPromptProgress: cooldown after prompt and reset on new report', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const a = tasks.create({
+      title: 'A',
+      creator: { kind: 'agent', sessionId: 'boss', name: 'Boss' },
+      assignee: { kind: 'agent', sessionId: 'worker', name: 'Worker' },
+      reportIntervalSec: 5,
+    })
+    const base = a.assignedAt!
+    // 5s 间隔：第 6s 追问
+    const t1 = base + 6_000
+    assert.equal(shouldPromptProgress(tasks.get(a.id)!, t1).shouldPrompt, true)
+    // 记录一次追问（进入冷却）
+    tasks.update(a.id, { lastReportPromptAt: t1 })
+    // 冷却窗口（5s）内：+4s 不追
+    assert.equal(shouldPromptProgress(tasks.get(a.id)!, t1 + 4_000).shouldPrompt, false)
+    // 过冷却窗口：+6s 又追
+    assert.equal(shouldPromptProgress(tasks.get(a.id)!, t1 + 6_000).shouldPrompt, true)
+    // 新 report 到来（task_report → report()）→ 刷新 lastReportTs 且重置 lastReportPromptAt
+    tasks.report(a.id, { sessionId: 'worker', turn: 1, status: 'doing', ts: t1 + 6_500 })
+    const refreshed = tasks.get(a.id)!
+    assert.equal(refreshed.lastReportPromptAt, null)
+    // 距新 report 3s（<5s）：不追问
+    assert.equal(shouldPromptProgress(refreshed, t1 + 9_500).shouldPrompt, false)
+    // 距新 report 6s：又追问
+    assert.equal(shouldPromptProgress(tasks.get(a.id)!, t1 + 12_500).shouldPrompt, true)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('shouldPromptProgress: done task stops prompting', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const a = tasks.create({
+      title: 'A',
+      creator: { kind: 'agent', sessionId: 'boss', name: 'Boss' },
+      assignee: { kind: 'agent', sessionId: 'worker', name: 'Worker' },
+      reportIntervalSec: 5,
+    })
+    const base = a.assignedAt!
+    tasks.update(a.id, { status: 'done' })
+    assert.equal(shouldPromptProgress(tasks.get(a.id)!, base + 200_000).shouldPrompt, false)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('parseCron supports 6-field second-level cron', () => {
+  // 每 5 秒：*/5 * * * * *（秒字段步进）
+  const every5s = parseCron('*/5 * * * * *')!
+  assert.equal(every5s.hasSeconds, true)
+  assert.ok(every5s(new Date(2026, 0, 15, 10, 30, 0)))
+  assert.ok(every5s(new Date(2026, 0, 15, 10, 30, 5)))
+  assert.ok(every5s(new Date(2026, 0, 15, 10, 30, 55)))
+  assert.ok(!every5s(new Date(2026, 0, 15, 10, 30, 1)))
+  assert.ok(!every5s(new Date(2026, 0, 15, 10, 30, 7)))
+
+  // 精确单秒：每天都命中 10:30:15 这一秒
+  const atSec = parseCron('15 30 10 * * *')!
+  assert.equal(atSec.hasSeconds, true)
+  assert.ok(atSec(new Date(2026, 0, 15, 10, 30, 15)))
+  assert.ok(!atSec(new Date(2026, 0, 15, 10, 30, 14)))
+  assert.ok(!atSec(new Date(2026, 0, 15, 10, 31, 15)))
+
+  // 含秒步进 + 列表组合：秒 0,10-20 且分步进 2
+  const combo = parseCron('0,10-20 */2 * * * *')!
+  assert.equal(combo.hasSeconds, true)
+  assert.ok(combo(new Date(2026, 0, 15, 8, 30, 0)))   // 秒0 命中
+  assert.ok(combo(new Date(2026, 0, 15, 8, 30, 15)))  // 秒10-20 命中
+  assert.ok(!combo(new Date(2026, 0, 15, 8, 30, 30))) // 秒30 不命中
+  assert.ok(!combo(new Date(2026, 0, 15, 8, 31, 15))) // 分非步进 命中点不成立（*/2 在偶数分）
+
+  // 轮换对齐：秒 1-6 中 3 命中（每 2 秒起点1 → 1,3,5）
+  const oddSec = parseCron('1/2 * * * * *')!
+  assert.equal(oddSec.hasSeconds, true)
+  assert.ok(oddSec(new Date(2026, 0, 15, 9, 10, 3)))
+  assert.ok(!oddSec(new Date(2026, 0, 15, 9, 10, 2)))
+
+  // 6 字段与 5 字段在 parse 层互不影响：5 字段 hasSeconds=false
+  assert.equal(parseCron('*/5 * * * *')!.hasSeconds, false)
+})
+test('computeNextTriggerAt derives next time for second-level and minute-level cron', () => {
+  const nowTs = new Date(2026, 0, 15, 10, 0, 0).getTime() // 10:00:00
+
+  // 秒级：每 5 秒（从 10:00:03 起，下一命中在 10:00:05）
+  const secFrom = nowTs + 3000
+  const secTask = { trigger: { ...defaultTrigger(), enabled: true, cron: '*/5 * * * * *' } }
+  const secNext = computeNextTriggerAt(secTask as never, secFrom)!
+  assert.equal(secNext, secFrom + 2000)
+  assert.equal(new Date(secNext).getSeconds(), 5)
+
+  // 秒级：精确 0 秒 → 未来正好一个整分起点也可能命中；这里测第二精度扫描
+  const zeroSec = { trigger: { ...defaultTrigger(), enabled: true, cron: '0 * * * * *' } }
+  const zNext = computeNextTriggerAt(zeroSec as never, nowTs + 3000)!
+  assert.equal(zNext % 60000, 0) // 每次整分
+
+  // 分钟级（5 字段）仍按整分扫描，不受影响
+  const minTask = { trigger: { ...defaultTrigger(), enabled: true, cron: '30 10 * * *' } }
+  const minNext = computeNextTriggerAt(minTask as never, nowTs)!
+  assert.equal(new Date(minNext).getMinutes(), 30)
+  assert.equal(new Date(minNext).getSeconds(), 0)
+})
+test('computeNextTriggerAt derives next time for cron and at', () => {
+  const nowTs = new Date(2026, 0, 15, 10, 0, 0).getTime() // 10:00
+
+  // at：未来时间点
+  const atTask = { trigger: { ...defaultTrigger(), enabled: true, at: nowTs + 3600_000 } }
+  assert.equal(computeNextTriggerAt(atTask as never, nowTs), nowTs + 3600_000)
+  // at 已过 → 不返回（一次性已触发）
+  const pastAt = { trigger: { ...defaultTrigger(), enabled: true, at: nowTs - 1000 } }
+  assert.equal(computeNextTriggerAt(pastAt as never, nowTs), null)
+
+  // cron：每天 10:30（未来 30 分钟）
+  const cronTask = { trigger: { ...defaultTrigger(), enabled: true, cron: '30 10 * * *' } }
+  const next = computeNextTriggerAt(cronTask as never, nowTs)!
+  assert.ok(next >= nowTs)
+  assert.equal(new Date(next).getMinutes(), 30)
+  assert.equal(new Date(next).getHours(), 10)
+
+  // 未启用 → null
+  const disabled = { trigger: { ...defaultTrigger(), enabled: false, cron: '* * * * *' } }
+  assert.equal(computeNextTriggerAt(disabled as never, nowTs), null)
+  // 无 trigger → null
+  assert.equal(computeNextTriggerAt({} as never, nowTs), null)
+})
+
+test('trigger persists through create/update/reopen', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-trigger-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const t = tasks.create({
+      title: '定时清理',
+      creator: { kind: 'user', name: '用户' },
+      trigger: { enabled: true, cron: '0 3 * * *', on: [] },
+    })
+    assert.equal(t.trigger?.enabled, true)
+    assert.equal(t.trigger?.cron, '0 3 * * *')
+    assert.equal(t.trigger?.state, 'idle')
+    assert.equal(t.trigger?.lastRun, null)
+
+    // partial update：合并既有 trigger，改 state
+    tasks.update(t.id, { trigger: { state: 'delivered', lastRun: 123 } })
+    const u = tasks.get(t.id)!
+    assert.equal(u.trigger?.cron, '0 3 * * *') // 未被覆盖
+    assert.equal(u.trigger?.enabled, true)
+    assert.equal(u.trigger?.state, 'delivered')
+    assert.equal(u.trigger?.lastRun, 123)
+
+    // 持久化后重开仍保留
+    const reopened = new TasksService(new Context(), path).open().get(t.id)!
+    assert.equal(reopened.trigger?.state, 'delivered')
+    assert.equal(reopened.trigger?.cron, '0 3 * * *')
+    assert.equal(reopened.trigger?.enabled, true)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('normalizeTrigger sanities inputs and disables auto-trigger when absent', () => {
+  const d = defaultTrigger()
+  assert.deepEqual(normalizeTrigger(undefined), d)
+  assert.deepEqual(normalizeTrigger(null), d)
+
+  const valid = normalizeTrigger({ enabled: true, cron: '*/10 * * * *', on: ['dep:done', 'turn:end', 'bogus'] })
+  assert.equal(valid.enabled, true)
+  assert.equal(valid.cron, '*/10 * * * *')
+  assert.deepEqual(valid.on, ['dep:done', 'turn:end']) // 未知事件被过滤
+  assert.deepEqual(normalizeTrigger({ state: 'running' } as never), { ...d, state: 'idle' }) // 非法状态回退
+})
+
+test('trigger default state is idle and enabled=false (no auto-trigger for plain tasks)', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-trigger-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const plain = tasks.create({ title: '普通任务', creator: { kind: 'user', name: '用户' } })
+    // source=null（未给 trigger）→ 自动触发不开启
+    assert.equal(plain.trigger?.enabled, false)
+    assert.equal(plain.trigger?.state, 'idle')
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
 })

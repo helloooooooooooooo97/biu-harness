@@ -49,6 +49,47 @@ export type TaskReport = {
   usage?: TaskUsage
 }
 
+/** trigger 调度状态机：idle → pending → delivered → done（周期任务下轮重置回 idle） */
+export type TaskTriggerState = 'idle' | 'pending' | 'delivered' | 'done' | 'cancelled'
+
+/**
+ * 任务统一自动触发配置。三种触发源共用：
+ *  - cron: 定时 cron 表达式（标准 5 字段：分 时 日 月 周）
+ *  - at:   特定时间戳（一次性）
+ *  - on:   自动触发事件（依赖完成 dep:done / 回合结束 turn:end 等）
+ */
+export type TaskTrigger = {
+  enabled: boolean
+  cron: string | null
+  at: number | null
+  on: string[]
+  state: TaskTriggerState
+  lastRun: number | null
+}
+
+const TRIGGER_STATES = new Set<TaskTriggerState>(['idle', 'pending', 'delivered', 'done', 'cancelled'])
+const TRIGGER_ON_EVENTS = new Set<string>(['dep:done', 'turn:end'])
+
+export function defaultTrigger(): TaskTrigger {
+  return { enabled: false, cron: null, at: null, on: [], state: 'idle', lastRun: null }
+}
+
+export function normalizeTrigger(value: unknown): TaskTrigger {
+  const d = defaultTrigger()
+  if (!value || typeof value !== 'object') return d
+  const raw = value as Record<string, unknown>
+  return {
+    enabled: raw.enabled === true,
+    cron: typeof raw.cron === 'string' && /^[0-9*,/\- ?]+$/.test(raw.cron.trim()) ? raw.cron.trim() : null,
+    at: typeof raw.at === 'number' && Number.isFinite(raw.at) ? Number(raw.at) : null,
+    on: Array.isArray(raw.on)
+      ? [...new Set((raw.on as unknown[]).map((e) => String(e)).filter((e) => TRIGGER_ON_EVENTS.has(e)))]
+      : [],
+    state: TRIGGER_STATES.has(raw.state as TaskTriggerState) ? (raw.state as TaskTriggerState) : 'idle',
+    lastRun: typeof raw.lastRun === 'number' && Number.isFinite(raw.lastRun) ? Number(raw.lastRun) : null,
+  }
+}
+
 export type TaskRow = {
   id: string
   title: string
@@ -91,6 +132,14 @@ export type TaskRow = {
   usage?: TaskUsage
   /** 本任务总消耗 token（= usage.totalTokens），方便前端/列表直接展示。 */
   totalTokens?: number
+  /** 自动触发配置（定时/特定时间/事件）。source 为 null 时自动触发不开启。 */
+  trigger?: TaskTrigger
+  /** 下次触发时间戳（派生）：当前状态 idle/pending 且有命中条件时计算。 */
+  nextTriggerAt?: number | null
+  /** 进度汇报提醒间隔（秒）。任务派发后若 assignee 超过该时长未 task_report，creator 会收到进度追问。默认 60。 */
+  reportIntervalSec: number
+  /** 上次进度追问时间戳（ms），用于追问冷却（冷却窗口=reportIntervalSec）。 */
+  lastReportPromptAt: number | null
 }
 
 export type TaskCreateInput = {
@@ -108,6 +157,9 @@ export type TaskCreateInput = {
   tags?: string[]
   parentId?: string | null
   dependsOn?: string[]
+  trigger?: Partial<TaskTrigger>
+  /** 进度汇报提醒间隔（秒），默认 60。 */
+  reportIntervalSec?: number
 }
 
 export type TaskUpdateInput = Partial<{
@@ -125,6 +177,11 @@ export type TaskUpdateInput = Partial<{
   tags: string[]
   parentId: string | null
   dependsOn: string[]
+  trigger: Partial<TaskTrigger>
+  /** 进度汇报提醒间隔（秒），默认 60。 */
+  reportIntervalSec: number
+  /** 上次进度追问时间戳（ms），仅供内部监测更新。 */
+  lastReportPromptAt: number | null
 }>
 
 export type TaskListFilter = {
@@ -251,6 +308,156 @@ export function computeBlockedBy(row: TaskRow, getById: (id: string) => TaskRow 
     }
   }
   return out
+}
+
+/**
+ * 极简 cron 解析：把标准 5 字段（分 时 日 月 周）或 6 字段（秒 分 时 日 月 周）cron
+ * 表达式解析为「在某时间点是否命中的谓词」。
+ * 字段（自前向后）：秒(0-59，仅 6 字段) 分(0-59) 时(0-23) 日(1-31) 月(1-12) 周(0-7，0 与 7 都表示周日)。
+ * 支持：* 号、a,b 列表、a-b 区间、星号斜杠 n 步进。日与周都受限时按 GNU 语义（取并集）。
+ * 不解析 L 与 W、井号 等扩展。
+ * 5 字段 → 分钟/整分命中谓词（秒不参与）；6 字段 → 秒级命中谓词。
+ */
+const CRON_FIELD_RANGES: [number, number][] = [
+  [0, 59], // 秒（仅 6 字段 cron 使用）
+  [0, 59], // 分
+  [0, 23], // 时
+  [1, 31], // 日
+  [1, 12], // 月
+  [0, 7], // 周
+]
+
+export type CronMatch = {
+  hasSeconds: boolean
+  /** 判断某日期时刻是否命中（秒级 cron 时 seconds 参与判定）。 */
+  (date: Date): boolean
+}
+
+export function parseCron(expr: string): CronMatch | null {
+  if (!expr || typeof expr !== 'string') return null
+  const parts = expr.trim().split(/\s+/)
+  if (parts.length !== 5 && parts.length !== 6) return null
+  const hasSeconds = parts.length === 6
+  // 内部统一字段顺序：partIdx → [秒?, 分, 时, 日, 月, 周]，其中秒仅 6 字段时有。
+  // fields 数组固定 6 个槽位（秒位可能为空）。
+  const fields: (Set<number> | null)[] = [null, null, null, null, null, null]
+  const wilds: (boolean | null)[] = [null, null, null, null, null, null]
+  // 秒字段（仅 6 字段存在）占用 CRON_FIELD_RANGES[0]
+  const parseFieldRange = (idx: number): { set: Set<number>; isWild: boolean } | null => {
+    const [min, max] = CRON_FIELD_RANGES[idx]!
+    const token = parts[hasSeconds ? idx : idx - 1]!
+    const set = new Set<number>()
+    const frags = token.split(',')
+    let ok = true
+    let isWild = frags.length === 1 && /^\*(\/\d+)?$/.test(frags[0]!)
+    for (const frag of frags) {
+      if (!frag) { ok = false; break }
+      let m1: number
+      let m2: number
+      let step = 1
+      const stepMatch = frag.match(/^(.+?)\/(\d+)$/)
+      if (stepMatch) {
+        const base = stepMatch[1]!
+        const st = Number(stepMatch[2])
+        if (!Number.isFinite(st) || st <= 0) { ok = false; break }
+        step = st
+        const sub = base.includes('-') ? base : `${base}-${max}`
+        const [a, b] = sub.split('-').map((s) => s.trim())
+        m1 = a === '*' ? min : Number(a)
+        m2 = b === '*' ? max : Number(b)
+        if (!Number.isFinite(m1) || !Number.isFinite(m2)) { ok = false; break }
+      } else if (frag.includes('-')) {
+        const [a, b] = frag.split('-').map((s) => s.trim())
+        m1 = Number(a)
+        m2 = Number(b)
+        if (!Number.isFinite(m1) || !Number.isFinite(m2)) { ok = false; break }
+      } else if (frag === '*') {
+        m1 = min
+        m2 = max
+      } else {
+        m1 = Number(frag)
+        m2 = Number(frag)
+        if (!Number.isFinite(m1)) { ok = false; break }
+      }
+      for (let v = m1; v <= m2; v += step) {
+        set.add(v)
+      }
+    }
+    if (!ok) return null
+    return { set, isWild }
+  }
+  // 解析 6 个槽位（秒可选）
+  if (hasSeconds) {
+    const s = parseFieldRange(0) // 秒
+    if (!s) return null
+    fields[0] = s.set
+    wilds[0] = s.isWild
+  }
+  for (let i = 1; i <= 5; i++) {
+    // 分=1,时=2,日=3,月=4,周=5 对应 CRON_FIELD_RANGES 索引（周特殊：0/7 允许）
+    const f = parseFieldRange(i)
+    if (!f) return null
+    fields[i] = f.set
+    wilds[i] = f.isWild
+  }
+  const seconds = hasSeconds ? fields[0]! : null
+  const minute = fields[1]!
+  const hour = fields[2]!
+  const dom = fields[3]!
+  const month = fields[4]!
+  const dowRaw = fields[5]!
+  // 周 0/7 归一为 0
+  const dow = new Set<number>()
+  for (const d of dowRaw) dow.add(d % 7)
+
+  const match = (date: Date): boolean => {
+    if (seconds && !seconds.has(date.getSeconds())) return false
+    if (!minute.has(date.getMinutes())) return false
+    if (!hour.has(date.getHours())) return false
+    if (!month.has(date.getMonth() + 1)) return false
+    const isDom = dom.has(date.getDate())
+    const isDow = dow.has(date.getDay())
+    // 日/月通配语义：dom 与 dow 都通配 → 每天；dom 通配且 dow 受限 → 按 dow；
+    // dom 受限且 dow 通配 → 按 dom；两者都受限 → 满足其一即可（GNU 并集）。
+    const domWild = wilds[3]!
+    const dowWild = wilds[5]!
+    if (domWild && dowWild) return isDom && isDow
+    if (domWild) return isDow
+    if (dowWild) return isDom
+    return isDom || isDow
+  }
+  match.hasSeconds = hasSeconds
+  return match
+}
+
+/** 计算某任务在 now 之后的「下次触发时间戳」。返回 null 表示无启用触发源。 */
+export function computeNextTriggerAt(row: { trigger?: TaskTrigger; status?: TaskStatus }, nowTs = Date.now()): number | null {
+  const tr = row.trigger
+  if (!tr || !tr.enabled) return null
+  // at：一次性特定时间（未来）
+  if (tr.at != null && tr.at > nowTs) return tr.at
+  // cron：在下一次对齐（minute 或 second）内查找；定长扫描（防年跨度，扫描范围约一年）
+  if (tr.cron) {
+    const match = parseCron(tr.cron)
+    if (match) {
+      // 6 字段秒级 cron：按 1000ms 步进扫描（秒级高频，扫描未来 24h 内即可）
+      if (match.hasSeconds) {
+        const secTs = Math.floor(nowTs / 1000) * 1000
+        for (let step = 0; step < 24 * 3600; step++) {
+          const t = new Date(secTs + step * 1000)
+          if (match(t)) return t.getTime()
+        }
+        return null
+      }
+      // 5 字段分钟级 cron：按 60000ms 步进扫描（扫描范围约一年）
+      const minuteTs = Math.floor(nowTs / 60_000) * 60_000
+      for (let step = 0; step < 366 * 24 * 60; step++) {
+        const t = new Date(minuteTs + step * 60_000)
+        if (match(t)) return t.getTime()
+      }
+    }
+  }
+  return null
 }
 
 function asStatus(value: unknown, fallback: TaskStatus = 'todo'): TaskStatus {
@@ -603,6 +810,24 @@ function mapRow(row: Record<string, unknown>): TaskRow {
     assignee,
     assignedAt: assignee ? assignedAt : null,
     reports,
+    trigger: (() => {
+      if (typeof row.trigger_json === 'string' && row.trigger_json) {
+        try {
+          return normalizeTrigger(JSON.parse(row.trigger_json))
+        } catch {
+          /* ignore */
+        }
+      }
+      return undefined
+    })(),
+    reportIntervalSec:
+      row.report_interval_sec == null || Number.isNaN(Number(row.report_interval_sec)) || Number(row.report_interval_sec) <= 0
+        ? 60
+        : Math.round(Number(row.report_interval_sec)),
+    lastReportPromptAt:
+      row.last_report_prompt_at == null || row.last_report_prompt_at === ''
+        ? null
+        : Number(row.last_report_prompt_at),
   }
 }
 
@@ -735,6 +960,35 @@ export function computeTurnUsage(
   return { inputTokens, outputTokens, cacheReadTokens, totalTokens }
 }
 
+/**
+ * 进度超时判定（纯函数，导出便于单测与复用）。
+ * 对已派发（assignee 有 sessionId 且 assignedAt 非空）、非 done 的任务：
+ * 距最近一次 task_report（无 report 时以 assignedAt 为基线）超过 reportIntervalSec 且不在追问冷却
+ * （距上次追问 lastReportPromptAt 不足 reportIntervalSec）时，应触发一次进度追问。
+ * 返回 { shouldPrompt, overdueSec, intervalMs }。
+ */
+export type PromptProgressVerdict = {
+  shouldPrompt: boolean
+  overdueSec: number
+  intervalMs: number
+}
+
+export function shouldPromptProgress(row: TaskRow, nowTs: number): PromptProgressVerdict {
+  const none: PromptProgressVerdict = { shouldPrompt: false, overdueSec: 0, intervalMs: 0 }
+  if (row.status === 'done') return none
+  if (!row.assignedAt) return none
+  if (!row.assignee?.sessionId) return none
+  if (row.creator?.kind !== 'agent' || !row.creator.sessionId) return none
+  const lastReportTs = row.reports?.length ? row.reports[row.reports.length - 1].ts : row.assignedAt
+  const intervalMs = Math.max(1, row.reportIntervalSec) * 1000
+  if (nowTs - lastReportTs <= intervalMs) return { shouldPrompt: false, overdueSec: 0, intervalMs }
+  if (row.lastReportPromptAt != null && nowTs - row.lastReportPromptAt < intervalMs) {
+    return { shouldPrompt: false, overdueSec: 0, intervalMs }
+  }
+  const overdueSec = Math.max(1, Math.floor((nowTs - lastReportTs) / 1000))
+  return { shouldPrompt: true, overdueSec, intervalMs }
+}
+
 export class TasksService extends Service {
   private db!: DatabaseSync
 
@@ -780,6 +1034,9 @@ export class TasksService extends Service {
       "ALTER TABLE tasks ADD COLUMN depends_on TEXT NOT NULL DEFAULT '[]'",
       'ALTER TABLE tasks ADD COLUMN depth INTEGER NOT NULL DEFAULT 0',
       "ALTER TABLE tasks ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'med'",
+      "ALTER TABLE tasks ADD COLUMN trigger_json TEXT NOT NULL DEFAULT '{}'",
+      'ALTER TABLE tasks ADD COLUMN report_interval_sec INTEGER NOT NULL DEFAULT 60',
+      'ALTER TABLE tasks ADD COLUMN last_report_prompt_at INTEGER',
     ]) {
       try {
         this.db.exec(sql)
@@ -858,6 +1115,15 @@ export class TasksService extends Service {
       .map((d) => String(d))
       .filter((d) => d && d !== id)
 
+    // source==null 时自动触发不开启（enabled=false），保证无 trigger 的普通任务不被 driver 影响。
+    const trigger = normalizeTrigger(input.trigger)
+
+    // 进度汇报提醒间隔（秒）：默认 60；非法值回退默认。
+    const reportIntervalSec =
+      input.reportIntervalSec == null || Number.isNaN(Number(input.reportIntervalSec)) || Number(input.reportIntervalSec) <= 0
+        ? 60
+        : Math.round(Number(input.reportIntervalSec))
+
     const creator = normalizeActor(input.creator, '用户') ?? { kind: 'user', name: '用户' }
     const assignee = input.assignee ? normalizeActor(input.assignee) : null
     const assignedAt = assignee ? (input.assignedAt ?? ts) : null
@@ -871,8 +1137,9 @@ export class TasksService extends Service {
         `INSERT INTO tasks (
           id, title, status, priority, difficulty, assignee, due_at, description, notes, sort,
           created_at, updated_at, creator_json, assignee_json, assigned_at,
-          project, tags_json, parent_id, depends_on, depth
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          project, tags_json, parent_id, depends_on, depth, trigger_json,
+          report_interval_sec
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -895,6 +1162,8 @@ export class TasksService extends Service {
         parentId,
         JSON.stringify(dependsOn),
         depth,
+        JSON.stringify(trigger),
+        reportIntervalSec,
       )
     this.emitChange()
     return this.get(id)!
@@ -966,13 +1235,32 @@ export class TasksService extends Service {
       this.assertNoCycle(id, dependsOn)
     }
 
+    // trigger 合并更新：partial trigger 与现有 trigger 合并后整体落库
+    const triggerObj = current.trigger ?? defaultTrigger()
+    const trigger = normalizeTrigger({ ...triggerObj, ...(patch.trigger ?? {}) })
+
+    // 进度汇报提醒间隔（秒）：默认 60。lastReportPromptAt 为内部监测字段，仅显式 patch 时才覆盖。
+    const reportIntervalSec =
+      patch.reportIntervalSec === undefined
+        ? current.reportIntervalSec
+        : patch.reportIntervalSec == null || Number.isNaN(Number(patch.reportIntervalSec)) || Number(patch.reportIntervalSec) <= 0
+          ? 60
+          : Math.round(Number(patch.reportIntervalSec))
+    const lastReportPromptAt =
+      patch.lastReportPromptAt === undefined
+        ? current.lastReportPromptAt
+        : patch.lastReportPromptAt == null
+          ? null
+          : Number(patch.lastReportPromptAt)
+
     const ts = now()
     this.db
       .prepare(
         `UPDATE tasks SET
           title = ?, status = ?, priority = ?, difficulty = ?, assignee = ?, due_at = ?, description = ?, notes = ?, sort = ?,
           updated_at = ?, assignee_json = ?, assigned_at = ?, project = ?, tags_json = ?,
-          parent_id = ?, depends_on = ?, depth = ?
+          parent_id = ?, depends_on = ?, depth = ?, trigger_json = ?,
+          report_interval_sec = ?, last_report_prompt_at = ?
          WHERE id = ?`,
       )
       .run(
@@ -993,6 +1281,9 @@ export class TasksService extends Service {
         parentId,
         JSON.stringify(dependsOn),
         depth,
+        JSON.stringify(trigger),
+        reportIntervalSec,
+        lastReportPromptAt,
         id,
       )
     this.emitChange()
@@ -1026,8 +1317,9 @@ export class TasksService extends Service {
     if (!current) throw new Error('unknown task')
     const reports = [...(current.reports ?? []), report]
     const ts = now()
+    // 新 report 到来即「已回应」：重置 lastReportPromptAt（清空后倒计时重新从本次报道算起，避免立即再追问）
     this.db
-      .prepare('UPDATE tasks SET reports_json = ?, updated_at = ? WHERE id = ?')
+      .prepare('UPDATE tasks SET reports_json = ?, updated_at = ?, last_report_prompt_at = NULL WHERE id = ?')
       .run(JSON.stringify(reports), ts, id)
     this.emitChange()
     return this.get(id)!
@@ -1060,6 +1352,9 @@ export function apply(ctx: Context) {
         : { status: 'idle', turn: null, assistantText: '', updatedAt: 0 },
       // 消耗持久化字段：有 usage 才附上；无则为 undefined（前端据此 fallback 到实时 query）。
       ...(usage ? { usage, totalTokens: usage.totalTokens } : {}),
+      // 自动触发：附上 trigger 配置与下次触发时间（仅 enabled 且有命中源时非空）
+      trigger: row.trigger,
+      nextTriggerAt: computeNextTriggerAt({ ...base, trigger: row.trigger }),
     }
   }
 
@@ -1128,6 +1423,7 @@ export function apply(ctx: Context) {
         tags: { type: 'array', items: { type: 'string' }, description: '标签（类型/性质）' },
         parentId: { type: 'string', description: '父任务 id（树层级，深度上限 3）' },
         dependsOn: { type: 'array', items: { type: 'string' }, description: '依赖的任务 id 列表（DAG，自动防环）' },
+        reportIntervalSec: { type: 'number', description: '进度汇报提醒间隔（秒），默认 60' },
       },
       required: ['title'],
     },
@@ -1152,6 +1448,7 @@ export function apply(ctx: Context) {
         ...(Array.isArray(args.tags) ? { tags: args.tags.map(String).filter(Boolean) } : {}),
         ...(args.parentId != null ? { parentId: String(args.parentId) || null } : {}),
         ...(Array.isArray(args.dependsOn) ? { dependsOn: args.dependsOn.map(String).filter(Boolean) } : {}),
+        ...(args.reportIntervalSec != null ? { reportIntervalSec: Number(args.reportIntervalSec) } : {}),
         creator,
         assignee,
       })
@@ -1181,6 +1478,19 @@ export function apply(ctx: Context) {
         tags: { type: 'array', items: { type: 'string' }, description: '标签（类型/性质），替换整个列表' },
         parentId: { type: ['string', 'null'], description: '父任务 id（树层级，深度上限 3），传 null 移到根' },
         dependsOn: { type: 'array', items: { type: 'string' }, description: '依赖的任务 id 列表（DAG，自动防环），替换整个列表' },
+        reportIntervalSec: { type: 'number', description: '进度汇报提醒间隔（秒），默认 60' },
+        trigger: {
+          type: 'object',
+          description: '自动触发配置（partial，与现有合并）：{ enabled, cron, at, on[], state, lastRun }',
+          properties: {
+            enabled: { type: 'boolean', description: '是否开启自动触发' },
+            cron: { type: ['string', 'null'], description: '定时 cron 表达式（5 字段：分 时 日 月 周）' },
+            at: { type: ['number', 'null'], description: '特定时间戳（一次性触发）' },
+            on: { type: 'array', items: { type: 'string' }, description: "自动触发事件：如 dep:done(依赖完成) / turn:end(回合结束)" },
+            state: { type: 'string', enum: ['idle', 'pending', 'delivered', 'done', 'cancelled'], description: '调度状态' },
+            lastRun: { type: ['number', 'null'], description: '上次触发时间戳' },
+          },
+        },
       },
       required: ['id'],
     },
@@ -1203,6 +1513,10 @@ export function apply(ctx: Context) {
         patch.parentId = args.parentId == null ? null : String(args.parentId) || null
       }
       if (Array.isArray(args.dependsOn)) patch.dependsOn = args.dependsOn.map(String).filter(Boolean)
+      if (args.reportIntervalSec !== undefined) patch.reportIntervalSec = Number(args.reportIntervalSec)
+      if (args.trigger !== undefined && args.trigger !== null && typeof args.trigger === 'object') {
+        patch.trigger = args.trigger as Partial<TaskTrigger>
+      }
       if (args.assigneeSessionId !== undefined) {
         const resolved = await resolveAssignee(host, {
           assigneeSessionId: args.assigneeSessionId == null ? null : String(args.assigneeSessionId),
@@ -1586,6 +1900,207 @@ export function apply(ctx: Context) {
       route.send(200, { ok: true, deleted, missing })
     } catch (error) {
       route.send(400, { error: String(error) })
+    }
+  })
+
+  // ==================== Trigger 统一调度 driver（自包含，事件驱动） ====================
+  // 触发语义：cron(定时) / at(特定时间) / on(自动事件 dep:done·turn:end) 三源统一。
+  // 状态机：idle → pending → delivered → done（周期任务 done 后按 enabled 重置回 idle）。
+  // 防重入：state 守卫（仅 idle 可触发）；防重：无有效 trigger / 未分配 session 不派工。
+
+  /**
+   * 对任务执行一次性「触发 → 派工 → delivered」。
+   * 仅在 trigger.enabled 且 state==='idle' 且 任务未完成 且 有负责 session 时才真正派工。
+   * 返回是否执行了派工。
+   */
+  async function fireTrigger(row: TaskRow): Promise<boolean> {
+    const tr = row.trigger
+    if (!tr?.enabled) return false
+    if (tr.state !== 'idle') return false
+    if (row.status === 'done') return false
+    const targetSessionId = row.assignee?.sessionId
+    if (!targetSessionId) {
+      // 未分配负责 session：不派工也不改状态（保持 idle，等分配后再触发）
+      return false
+    }
+    if (!host.sessions?.sendMessage) return false
+    // 置 pending 防重入（原子守卫：先写库再派工）
+    tasks.update(row.id, {
+      trigger: { state: 'pending', lastRun: now() },
+    })
+    const text = buildDeliverText({ ...row, ...(row.trigger ? { trigger: row.trigger } : {}) })
+    try {
+      await host.sessions.sendMessage(targetSessionId, text, {
+        wait: false,
+        sender: { type: 'session', sessionId: currentSessionId() ?? 'unknown' },
+      })
+      tasks.update(row.id, { trigger: { state: 'delivered' } })
+      return true
+    } catch {
+      // 派工失败：回退 idle，允许下次重试
+      tasks.update(row.id, { trigger: { state: 'idle' } })
+      return false
+    }
+  }
+
+  /** 检查定时触发命中：cron 到点 or at 已到。 */
+  function timingHit(tr: TaskTrigger, nowTs: number): boolean {
+    if (!tr.enabled) return false
+    if (tr.at != null && tr.at <= nowTs) return true
+    if (tr.cron) {
+      const match = parseCron(tr.cron)
+      if (!match) return false
+      // 6 字段秒级 cron：保留秒参与判定（秒精确命中）
+      if (match.hasSeconds) return match(new Date(nowTs))
+      // 5 字段分钟级 cron：整分对齐（当前分钟任意秒都视为命中）
+      const date = new Date(nowTs)
+      date.setSeconds(0, 0)
+      return match(date)
+    }
+    return false
+  }
+
+  /** 周期任务下轮重置：任务已完成且 trigger 仍 enabled（周期语义）→ 回到 idle 进入下轮。 */
+  function resetPeriodic(row: TaskRow): void {
+    const tr = row.trigger
+    if (!tr?.enabled) return
+    if (row.status === 'done' && tr.state === 'delivered') {
+      tasks.update(row.id, {
+        trigger: { state: 'idle' },
+      })
+      // 周期 cron：更新 lastRun，使下轮定时不重叠
+      if (tr.cron) tasks.update(row.id, { trigger: { state: 'idle' } })
+    }
+  }
+
+  /**
+   * 进度超时判定（纯函数，便于单测）：
+   * 对已派发（assignee 有 sessionId 且 assignedAt 非空）、非 done 的任务，
+   * 距最近一次 task_report（无 report 时以 assignedAt 为基线）超过 reportIntervalSec 且不在追问冷却(距上次追问
+   * lastReportPromptAt 不足 reportIntervalSec)内时，应触发一次进程追问。
+   * 返回 null 表示不应追问；否则返回是否追问 + 已超时秒数 + 冷却/间隔毫秒。
+   */
+  function promptForProgress(row: TaskRow): void {
+    try {
+      if (row.status === 'done') return
+      if (!row.assignedAt) return
+      const assigneeSessionId = row.assignee?.sessionId
+      if (!assigneeSessionId) return
+      const creatorSessionId = row.creator?.kind === 'agent' ? row.creator.sessionId : undefined
+      if (!creatorSessionId) return
+      if (!host.sessions?.sendMessage) return
+      // 基线：最新 report.ts；无 report 用 assignedAt
+      const lastReportTs = row.reports?.length ? row.reports[row.reports.length - 1].ts : row.assignedAt
+      const intervalMs = Math.max(1, row.reportIntervalSec) * 1000
+      const nowTs = now()
+      // 距上次汇报未超过间隔 → 仍处于窗口内，不追问
+      if (nowTs - lastReportTs <= intervalMs) return
+      // 冷却：距上次追问未超过间隔 → 不重复追问
+      if (row.lastReportPromptAt != null && nowTs - row.lastReportPromptAt < intervalMs) return
+      const overdueSec = Math.max(1, Math.floor((nowTs - lastReportTs) / 1000))
+      const text = `【任务进度询问】${row.title}\n任务 id：${row.id}\n任务已派发 ${overdueSec} 秒仍未收到汇报，请问当前进展？`
+      const sender = { type: 'session' as const, sessionId: creatorSessionId }
+      host.sessions.sendMessage(assigneeSessionId, text, { wait: false, sender }).catch(() => {
+        /* 发送失败：保留 lastReportPromptAt 未更新，下轮可重试 */
+      })
+      // 记录追问时间，进入冷却窗口
+      tasks.update(row.id, { lastReportPromptAt: nowTs })
+    } catch {
+      /* 单测/无完整 host 时容忍 */
+    }
+  }
+
+  /** 统一驱动一轮：定时触发检查 + 周期重置。返回本轮派工的任务数。 */
+  async function driveTimers(): Promise<number> {
+    const nowTs = now()
+    let fired = 0
+    const rows = tasks.list()
+    // 进度超时监测（周期汇报提醒）：只针对已派发且有执行 session 的未完成任务
+    for (const row of rows) {
+      promptForProgress(row)
+    }
+    for (const row of rows) {
+      const tr = row.trigger
+      if (!tr?.enabled) continue
+      // 周期重置：已完成的任务回到下轮
+      resetPeriodic(row)
+      const fresh = tasks.get(row.id)!
+      const freshTr = fresh.trigger
+      if (!freshTr?.enabled) continue
+      // 秒级周期 cron（*/N 等）已派工未 done：时间维度按周期重置回 idle 再触发，
+      // 使「每 N 秒严格执行一次」而不死等 done；配 lastRun 节流避免因每秒 tick 重复累计。
+      if (freshTr.state !== 'idle' && freshTr.cron) {
+        const match = parseCron(freshTr.cron)
+        if (match?.hasSeconds && freshTr.lastRun != null && nowTs - freshTr.lastRun >= 1000) {
+          tasks.update(fresh.id, { trigger: { state: 'idle' } })
+          const resetRow = tasks.get(fresh.id)!
+          const resetTr = resetRow.trigger
+          if (resetTr?.enabled && timingHit(resetTr, nowTs)) {
+            const ok = await fireTrigger(resetRow)
+            if (ok) fired++
+          }
+          continue
+        }
+      }
+      if (timingHit(freshTr, nowTs)) {
+        const ok = await fireTrigger(fresh)
+        if (ok) fired++
+      }
+    }
+    return fired
+  }
+
+  // 定时触发：订阅 clock/tick（外部时钟每秒心跳）——自包含、事件驱动，不依赖独立调度器。
+  ctx.on('clock/tick', () => {
+    try {
+      void driveTimers()
+    } catch {
+      /* 单测等无完整 host 时容忍 */
+    }
+  })
+
+  // on 自动触发：
+  //  - turn:end：某 session 回合结束时，检查所有监听 turn:end 且已到达条件的事件触发
+  //  - dep:done：依赖任务完成 → 触发依赖它的任务（通过监听 task_report done / 状态变化）
+  ctx.on('session/event', (payload) => {
+    try {
+      const ev = payload.event
+      if (ev?.type !== 'turn/end') return
+      const sessionId = payload.sessionId
+      const rows = tasks.list()
+      for (const row of rows) {
+        const tr = row.trigger
+        if (!tr?.enabled || !tr.on.includes('turn:end')) continue
+        if (tr.state !== 'idle') continue
+        const targetSessionId = row.assignee?.sessionId
+        if (targetSessionId !== sessionId) continue
+        // 回合结束：该执行 session 刚结束上一回合，若任务仍待触发则派工
+        void fireTrigger(row)
+      }
+    } catch {
+      /* ignore */
+    }
+  })
+
+  // dep:done：依赖某任务的"完成"作为触发源。通过 tools/post-execute 捕获 task_report done，
+  // 或监听任务状态变化。这里统一：当某任务的 assignee 回合结束且该任务已 done 时，通知依赖方。
+  // 简化为：监听 task_report（tools/post-execute 中 name==='task_report'），若报告 done 则触发其下游。
+  ctx.on('tools/post-execute', (payload) => {
+    try {
+      if (payload?.name !== 'task_report') return
+      const rows = tasks.list()
+      // 找所有已完成的任务 id 集合（作为 dep:done 的候选依赖源）
+      for (const row of rows) {
+        const tr = row.trigger
+        if (!tr?.enabled || !tr.on.includes('dep:done')) continue
+        if (tr.state !== 'idle') continue
+        // 依赖全部完成（满足 depsSatisfied）即触发
+        if (depsSatisfied(row, (id) => tasks.get(id))) {
+          void fireTrigger(row)
+        }
+      }
+    } catch {
+      /* ignore */
     }
   })
 }
