@@ -839,7 +839,3 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     </div>
   )
 })
-
-export function chatThreadProps(view: SessionViewService) {
-  return { useSessionView: bindSessionView(view) }
-}

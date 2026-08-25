@@ -10,7 +10,6 @@
     "./artifacts": "./src/host/artifacts.ts",
     "./window": "./src/host/session-window.ts",
     "./trajectory": "./src/host/trajectory-index.ts",
-    "./heal": "./src/host/session-heal.ts",
     "./mascot": "./src/host/session-mascot.ts"
   },
   "peerDependencies": {

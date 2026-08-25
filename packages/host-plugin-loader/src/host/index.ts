@@ -42,11 +42,6 @@ export function findRepoRoot(start = fileURLToPath(import.meta.url)): string {
   return process.cwd()
 }
 
-/** @deprecated 用 findRepoRoot */
-export function rootDirFrom(_metaUrl?: string) {
-  return findRepoRoot()
-}
-
 export function splitPackageRef(specifier: string): { name: string; subpath: string } {
   if (specifier.startsWith('@')) {
     const parts = specifier.split('/')

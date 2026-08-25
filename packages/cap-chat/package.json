@@ -6,9 +6,7 @@
   "description": "对话能力（host + web 分入口）",
   "exports": {
     "./host": "./src/host/index.ts",
-    "./web": "./src/web/index.ts",
-    "./web/trajectory": "./src/web/trajectory.tsx",
-    "./web/usage-panel": "./src/web/usage-panel.tsx"
+    "./web": "./src/web/index.ts"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8",
