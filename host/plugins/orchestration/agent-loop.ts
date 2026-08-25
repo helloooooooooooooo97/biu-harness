@@ -8,6 +8,9 @@ import { applyContextBudget } from '../core/sessions.ts'
 import { runWithToolPolicy, type AgentToolMode } from '../registry/tools.ts'
 import { LIVE_TOOL_NAMES } from '../seams/live-sessions.ts'
 
+/** 工具结果写入事件日志( tool/result )时统一上限字符数；超长裁剪，避免上下文被单次工具输出撑爆。 */
+export const MAX_TOOL_RESULT_CHARS = 16_000
+
 export interface AgentTurn {
   text: string
   steps: Array<{ name: string; ok: boolean; detail: string }>
@@ -218,7 +221,7 @@ export class AgentLoop implements AgentRunner {
         let detail = ''
         let ok = true
         try {
-          detail = stringify(await this.ctx.tools.invoke(call.name, args, this.signal))
+          detail = truncateToolResult(stringify(await this.ctx.tools.invoke(call.name, args, this.signal)))
         } catch (error) {
           ok = false
           detail = String(error)
@@ -271,6 +274,16 @@ function stringify(value: unknown) {
   } catch {
     return String(value)
   }
+}
+
+/**
+ * 工具结果落库(tool/result)前统一裁剪上限，防单次工具输出（大文件/目录/big JSON）撑爆事件日志与 LLM 上下文。
+ * 超长时保留「头半段 + 尾半段」各 N 字符，中间用省略号拼接，兼顾开头（文件头/报错上下文）与结尾（命令输出尾部）。
+ */
+export function truncateToolResult(detail: string): string {
+  if (detail.length <= MAX_TOOL_RESULT_CHARS) return detail
+  const half = MAX_TOOL_RESULT_CHARS >> 1 // 前后各保留一半（≈8k）
+  return `${detail.slice(0, half)}…[${detail.length - MAX_TOOL_RESULT_CHARS} chars clipped]…${detail.slice(-half)}`
 }
 
 export const name = 'agent-loop'

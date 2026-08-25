@@ -6,7 +6,7 @@ import * as sessionStore from '../storage/session-store.ts'
 import * as sessions from '../core/sessions.ts'
 import * as tools from '../registry/tools.ts'
 import * as systemPrompt from '../core/system-prompt.ts'
-import { AgentLoop, type AgentTurn } from './agent-loop.ts'
+import { AgentLoop, MAX_TOOL_RESULT_CHARS, truncateToolResult, type AgentTurn } from './agent-loop.ts'
 import type { AssistantReply, LlmClient, LlmMessage } from './llm.ts'
 
 class ScriptedLlm implements LlmClient {
@@ -146,4 +146,21 @@ test('abort closes the turn as cancelled', async () => {
   await assert.rejects(() => loop.run([{ kind: 'wake', text: 'x' }]), /cancelled/)
   const types = (await ctx.sessions.require(sessionId)).events.map((item) => item.type)
   assert.equal(types.includes('turn/end'), true)
+})
+
+test('truncateToolResult keeps head+tail and clips middle when over limit', () => {
+  const half = MAX_TOOL_RESULT_CHARS >> 1
+  // 短输出不截断
+  const short = 'pong'
+  assert.equal(truncateToolResult(short), short)
+  // 超长输出：保留头尾半段，中间用省略标记拼接
+  const big = 'A'.repeat(half) + 'MID'.repeat(5_000) + 'Z'.repeat(half)
+  const out = truncateToolResult(big)
+  assert.ok(out.length <= MAX_TOOL_RESULT_CHARS + 30, `clipped length ${out.length}`)
+  assert.equal(out.startsWith('A'.repeat(half)), true)
+  assert.equal(out.endsWith('Z'.repeat(half)), true)
+  assert.ok(out.includes('chars clipped'))
+  // 恰达上限不截断
+  const exact = 'x'.repeat(MAX_TOOL_RESULT_CHARS)
+  assert.equal(truncateToolResult(exact), exact)
 })

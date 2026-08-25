@@ -156,6 +156,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     streamingId: string | null
     tools: Map<string, ChatToolPart>
     usage: { input: number; output: number; total: number; cache: number; hit: boolean }
+    histPct?: number
     streaming: boolean
     turn?: number
     steps: Map<number, ChatStepStat>
@@ -203,6 +204,8 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     r.usage.output += usage.outputTokens
     r.usage.total += usage.totalTokens ?? usage.inputTokens + usage.outputTokens
     r.usage.cache += usage.cacheReadTokens ?? 0
+    // 保留最后一条 assistant/message 的 histPct（该 reply 的"本次/历史"占比取最后一次 llm.chat 时刻）
+    if (usage.histPct !== undefined) r.histPct = usage.histPct
     if (currentStep != null) {
       const stat = ensureStepStat(currentStep)
       stat.inputTokens += usage.inputTokens
@@ -230,6 +233,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
           outputTokens: reply.usage.output,
           totalTokens: reply.usage.total,
           ...(reply.usage.cache ? { cacheReadTokens: reply.usage.cache } : {}),
+          ...(reply.histPct !== undefined ? { histPct: reply.histPct } : {}),
         }
       : undefined
     const durationMs =
