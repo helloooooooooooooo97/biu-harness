@@ -1969,7 +1969,7 @@ function TasksTable({
               <td className="tasks-col-status">
                 <div className="tasks-status-cell">
                   <StatusPill status={task.status} reportCount={task.reports?.length ?? 0} blocked={task.blocked} />
-                  <TriggerToggle task={task} onUpdate={onUpdate} />
+                  {triggerSourceCount(task.trigger) > 0 ? <TriggerToggle task={task} onUpdate={onUpdate} /> : null}
                 </div>
               </td>
               <td className="tasks-col-priority" onClick={(e) => e.stopPropagation()}>
@@ -3060,12 +3060,12 @@ if (typeof document !== 'undefined') {
 .tasks-trigger-count { display:inline-flex; align-items:center; justify-content:center; min-width:13px; height:13px; padding:0 3px; border-radius:999px; font-size:8.5px; font-weight:800; line-height:1; color:#fff; background:color-mix(in srgb, #9a6700 78%, transparent); }
 .tasks-trigger-mark.is-off .tasks-trigger-count { background:var(--dsw-label-3); }
 /* ---- 自动触发开关（紧凑 Notion 风格 switch）---- */
-.tasks-trigger-toggle { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; border:0; cursor:pointer; font-size:9px; font-weight:700; white-space:nowrap; color:var(--dsw-label-3); background:var(--dsw-muted-fill); font-family:inherit; line-height:1; transition:background .15s ease; }
-.tasks-trigger-toggle:hover { background:color-mix(in srgb, var(--dsw-label-3) 18%, transparent); }
-.tasks-trigger-toggle.is-on { color:#2f7d4c; background:color-mix(in srgb, #2f7d4c 14%, transparent); }
-.tasks-trigger-toggle.is-on:hover { background:color-mix(in srgb, #2f7d4c 24%, transparent); }
-.tasks-trigger-toggle .tasks-trigger-count { min-width:12px; height:12px; font-size:8px; }
-.tasks-status-cell .tasks-trigger-toggle { margin-left:2px; }
+.tasks-trigger-toggle { flex:none; display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:2px 8px; border:0; cursor:pointer; font-size:10.5px; font-weight:600; white-space:nowrap; line-height:1.3; font-family:inherit; color:rgba(121,86,0,1); background:rgba(253,243,221,.85); transition:background .15s ease; }
+.tasks-trigger-toggle:hover { background:rgba(251,236,198,.95); }
+.tasks-trigger-toggle.is-on { background:rgba(253,235,195,.95); }
+.tasks-trigger-toggle.is-on:hover { background:rgba(252,228,170,1); }
+.tasks-trigger-toggle .tasks-trigger-count { min-width:15px; height:14px; padding:0 4px; font-size:9.5px; background:transparent; color:#9a6700; }
+.tasks-status-cell .tasks-trigger-toggle { margin-left:4px; }
 .tasks-trigger-block { grid-column:1 / -1; order:1; display:flex; flex-direction:column; gap:8px; padding:10px 12px; border:1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent); border-radius:9px; background:color-mix(in srgb, var(--dsw-muted-fill) 30%, transparent); }
 .tasks-trigger-block > span { display:inline-flex; align-items:center; gap:5px; font-weight:650; font-size:10.5px; color:var(--dsw-label-2); letter-spacing:.02em; }
 .tasks-trigger-enable { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--dsw-label-2); cursor:pointer; }
