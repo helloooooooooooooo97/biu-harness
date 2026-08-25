@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Host 侧全部 Cordis 插件（内核 + 可卸载贡献者）",
   "exports": {
-    "./http": "./src/registry/http.ts",
+    "./hub": "./src/registry/hub.ts",
     "./tools": "./src/registry/tools.ts",
     "./session-store": "./src/storage/session-store.ts",
     "./sessions": "./src/core/sessions.ts",

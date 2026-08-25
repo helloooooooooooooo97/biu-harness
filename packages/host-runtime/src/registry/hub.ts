@@ -1,12 +1,8 @@
 import { Service, type Context, type Fiber, type Plugin } from 'cordis'
-import type { CatalogEntry } from '../../catalog.ts'
-import { resolveCatalog } from '../../resolve-catalog.ts'
-import type { PageSpec } from '../../../packages/host-runtime/types.ts'
-import {
-  HUB_CHANGE,
-  HUB_CHANNEL_EVENT,
-  HUB_CHANNEL_SNAPSHOT,
-} from '../../../packages/host-runtime/src/registry/hub-events.ts'
+import type { CatalogEntry } from './catalog.ts'
+import { resolveCatalog } from './resolve-catalog.ts'
+import type { PageSpec } from '../../types.ts'
+import { HUB_CHANGE, HUB_CHANNEL_EVENT, HUB_CHANNEL_SNAPSHOT } from './hub-events.ts'
 
 export { HUB_CHANGE, HUB_CHANNEL_EVENT, HUB_CHANNEL_SNAPSHOT }
 

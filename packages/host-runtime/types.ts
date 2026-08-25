@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { HttpService } from './src/registry/http.ts'
-import type { HubService } from '../../host/plugins/registry/hub.ts'
+import type { HubService } from './src/registry/hub.ts'
 import type { ToolsService } from './src/registry/tools.ts'
 import type { ToolRequest } from './src/registry/tools.ts'
 import type { LlmService } from './src/orchestration/llm.ts'

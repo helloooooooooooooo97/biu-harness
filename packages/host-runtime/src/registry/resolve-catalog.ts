@@ -5,9 +5,9 @@ import {
   readCordisPlugins,
   rootDirFrom,
   type CordisPluginEntry,
-} from './cordis-plugins.ts'
+} from '../../../../host/cordis-plugins.ts'
 
-const rootDir = rootDirFrom(import.meta.url)
+const rootDir = rootDirFrom()
 
 /** 内置 catalog + cordis.plugins.json（主仓代码不出现具体外部包名）。 */
 export async function resolveCatalog(): Promise<CatalogEntry[]> {

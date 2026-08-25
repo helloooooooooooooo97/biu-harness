@@ -1,7 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { Context } from 'cordis'
-import * as hub from './plugins/registry/hub.ts'
 import { importConfiguredPackage, readCordisConfig, rootDirFrom } from './cordis-plugins.ts'
 import './types.ts'
 
@@ -30,7 +29,6 @@ async function boot() {
     const extra = item.id === 'http' ? { port, host, publicDir } : item.config
     await ctx.plugin(mod, extra)
   }
-  await ctx.plugin(hub)
 }
 
 boot().catch((error) => {
