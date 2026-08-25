@@ -109,6 +109,13 @@ function StepBar({ stat }: { stat: ChatStepStat }) {
           value={formatTok(stat.messageChars)}
           title={`本步 Message ${formatTok(stat.messageChars)} 字`}
         />
+        {stat.durationMs != null ? (
+          <MetaItem
+            icon={<LuTimer className="size-3" />}
+            value={formatDuration(stat.durationMs)}
+            title="本步耗时"
+          />
+        ) : null}
       </div>
     </div>
   )

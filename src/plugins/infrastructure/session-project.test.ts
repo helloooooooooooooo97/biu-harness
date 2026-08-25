@@ -187,6 +187,7 @@ test('reply projects per-step token/tool/message stats', () => {
     outputTokens: 4,
     toolCount: 1,
     messageChars: 5,
+    durationMs: 400,
   })
   assert.deepEqual(reply.steps?.[1], {
     step: 1,
@@ -194,6 +195,7 @@ test('reply projects per-step token/tool/message stats', () => {
     outputTokens: 2,
     toolCount: 0,
     messageChars: 5,
+    durationMs: 200,
   })
   assert.equal(reply.parts[0]?.step, 0)
   assert.equal(reply.parts.at(-1)?.step, 1)

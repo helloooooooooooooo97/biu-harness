@@ -73,6 +73,8 @@ export type ChatStepStat = {
   messageChars: number
   /** 该 step 内按 input token 加权的历史占比（0~1）；仅当该 step 有 llm.chat usage 才存在。 */
   histPct?: number
+  /** 该 step 耗时（ms）：由 step/start → step/end（或回合结束）的日志 ts 差值估算。 */
+  durationMs?: number
 }
 
 export type ChatNode =
@@ -152,6 +154,7 @@ export function projectRequestMessages(events: SessionEvent[], assistantSeq: num
 export function projectNodes(events: SessionEvent[]): ChatNode[] {
   const nodes: ChatNode[] = []
   let turnStartTs: number | undefined
+  let stepStartTs: number | undefined
   let currentTurn: number | undefined
   let currentStep: number | undefined
   let reply: {
@@ -207,6 +210,16 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     return next
   }
 
+  /** 估算某 step 的耗时并写回其 ChatStepStat（endTs 未给时用 stepStartTs 兜底为 0）。 */
+  function recordStepDuration(step: number, endTs?: number) {
+    if (reply && stepStartTs != null && endTs != null) {
+      const stat = reply.steps.get(step)
+      if (stat && stat.durationMs === undefined) {
+        stat.durationMs = Math.max(0, endTs - stepStartTs)
+      }
+    }
+  }
+
   function addUsage(usage: NonNullable<Extract<SessionEvent, { type: 'assistant/message' }>['usage']>) {
     const r = reply
     if (!r) return
@@ -241,8 +254,11 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     if (!reply || reply.parts.length === 0) {
       reply = null
       currentStep = undefined
+      stepStartTs = undefined
       return
     }
+    // 兜底：当前 step 若恰好没有 step/end（回合就直接结束），用 flush 时间补算耗时
+    if (currentStep != null) recordStepDuration(currentStep, endTs)
     const copyText = reply.parts
       .filter((part): part is ChatAssistantPart => part.kind === 'assistant')
       .map((part) => part.text.trim())
@@ -280,6 +296,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     })
     reply = null
     currentStep = undefined
+    stepStartTs = undefined
   }
 
   for (const event of events) {
@@ -288,12 +305,18 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       turnStartTs = event.ts
       currentTurn = event.turn
       currentStep = undefined
+      stepStartTs = undefined
     } else if (event.type === 'step/start') {
       currentStep = event.step
+      stepStartTs = event.ts
       ensureReply(event.seq)
       ensureStepStat(event.step)
     } else if (event.type === 'step/end') {
-      if (currentStep === event.step) currentStep = undefined
+      if (currentStep === event.step) {
+        recordStepDuration(event.step, event.ts)
+        currentStep = undefined
+        stepStartTs = undefined
+      }
     } else if (event.type === 'user/message') {
       flushReply(undefined, true)
       nodes.push({
