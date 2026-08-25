@@ -8,6 +8,8 @@
 <p align="center">多 Agent 不靠群聊轮流说话，靠任务看板协作。</p>
 
 <p align="center">
+  <a href="#产品演示">演示</a>
+  ·
   <a href="#1-它是什么">它是什么</a>
   ·
   <a href="#2-三条原则">原则</a>
@@ -18,8 +20,32 @@
   ·
   <a href="#5-运行时怎么拆">设计</a>
   ·
-  <a href="#6-跑起来">上手</a>
+  <a href="#6-仓库目录">目录</a>
+  ·
+  <a href="#7-跑起来">上手</a>
+  ·
+  <a href="#许可">许可</a>
 </p>
+
+> **Grok Bot 头像可能侵权。** 侧栏那个机器人外形来自 xAI Grok Bot 的学习向几何副本（`public/grok-bot/`），**不在 MIT 授权里**。克隆、演示可以，二次分发或商用前请自己评估，或换成自己的角色。详见 [NOTICE.md](NOTICE.md)。
+
+---
+
+## 产品演示
+
+任务看板是多 Agent 的工作面：同一张卡可以指派给不同 session，依赖会进「阻塞」列，cron / at 写在卡上。
+
+<p align="center">
+  <img src="docs/demo/tasks-board.gif" alt="任务看板：队列、表格、看板、依赖，以及定时巡检任务详情" width="880" />
+</p>
+<p align="center"><sub>看板 / 表格 / 依赖图，点开「每小时巡检失败任务」看定时触发</sub></p>
+
+Live 调度席和执行席是**不同的 session**，不是一个窗口里的几个角色。
+
+<p align="center">
+  <img src="docs/demo/live-sessions.gif" alt="Live 调度席与执行席 session，再回到任务看板" width="880" />
+</p>
+<p align="center"><sub>侧栏切换调度席 / 执行席，再回到 Tasks</sub></p>
 
 ---
 
@@ -160,21 +186,93 @@ flowchart TB
 | `web` | `web/main.tsx` | 否（壳） |
 | `plugins` | hub + ui-hub | 是 |
 
-```
-host/  web/           加载器，不要往这里堆能力
-packages/
-  type-*              契约，不进 json
-  host-*              Node 内核（含 Live 派工）
-  web-*               浏览器内核
-  cap-*               chat / tasks / dashboard / channels …
-cordis.plugins.json   唯一清单
-```
-
 加能力：`packages/cap-<id>`，`exports` 分开 `./host` 与 `./web`，写入 `plugins` 表后重启。`type-*`、`web-mascot` 不要进表。细则：[docs/plugin-packages.md](docs/plugin-packages.md)。
 
 ---
 
-## 6. 跑起来
+## 6. 仓库目录
+
+根上只留加载器和清单；能力全在 `packages/`，按前缀一眼能分清。
+
+```
+BIU
+├── host/                      # Node 加载器：读 json 的 host 表，plugin()
+│   ├── index.ts
+│   └── types.ts
+├── web/                       # 浏览器加载器：读 json 的 web 表
+│   ├── main.tsx
+│   ├── style.css
+│   └── types.ts
+├── index.html                 # Vite 入口 → web/main.tsx
+├── cordis.plugins.json        # 唯一插件清单（host / web / plugins 三张表）
+├── Makefile                   # make / make stop / make restart
+├── vite.config.ts
+├── LICENSE                    # MIT（不含 Grok Bot 角色资产）
+├── NOTICE.md                  # 第三方角色声明
+├── docs/
+│   ├── plugin-packages.md     # 包前缀与入口约定
+│   └── demo/                  # README 产品 GIF
+├── scripts/
+│   └── link-cordis-plugins.mjs
+├── public/
+│   ├── favicon.svg
+│   └── grok-bot/              # 非 MIT：xAI 角色几何副本
+└── packages/
+    ├── type-session/          # 契约，不进 json
+    ├── type-http/
+    ├── type-slots/
+    ├── type-agent-loop/
+    ├── type-host-context/
+    │
+    ├── host-plugin-loader/    # 解析 json、Vite virtual 模块
+    ├── host-http/             # HTTP / WS
+    ├── host-session-store/
+    ├── host-sessions/         # append-only session + ALS
+    ├── host-tools/
+    ├── host-llm/
+    ├── host-system-prompt/
+    ├── host-fs/
+    ├── host-sandbox/
+    ├── host-subprocess/
+    ├── host-shell/
+    ├── host-jobs/
+    ├── host-mcp/
+    ├── host-terminal/
+    ├── host-lsp/
+    ├── host-context/
+    ├── host-approvals/
+    ├── host-agent-loop/
+    ├── host-agents/
+    ├── host-subagents/
+    ├── host-live-sessions/    # Live 派工（不是任务插件）
+    ├── host-hub/              # 挂 plugins 表、snapshot
+    │
+    ├── web-slots/
+    ├── web-app-modules/
+    ├── web-session-view/
+    ├── web-project-view/
+    ├── web-snapshot/
+    ├── web-react-host/
+    ├── web-app-shell/         # 应用壳、检查器框
+    ├── web-plugin-tree/       # Settings → Plugins
+    ├── web-event-log/         # Settings → Events
+    ├── web-routes-panel/      # Settings → Routes
+    ├── web-ui-hub/
+    ├── web-mascot/            # 共享库，不进 json
+    │
+    ├── cap-chat/              # 对话 + 轨迹 / 用量
+    ├── cap-tasks/             # 看板 + 心跳 + 派工 / 汇报
+    ├── cap-dashboard/
+    ├── cap-channels/
+    ├── cap-logger/
+    └── cap-mascot-easter-egg/
+```
+
+每个 `host-*` / `web-*` / `cap-*` 源码在 `src/host/` 和（或）`src/web/`。`cap-*` 的 `package.json` 必须分开 `exports["./host"]` 与 `exports["./web"]`。
+
+---
+
+## 7. 跑起来
 
 需要 Node.js 20+ 和 npm。`main` 与开发分支 `hmr-dev` 当前对齐。
 
@@ -223,8 +321,8 @@ export CHAT_MODEL=deepseek-chat # 可选
 
 ## 许可
 
-源码公开，允许学习、修改、非商业分发；**禁止商用**。
+仓库里 **Biu 自己写的代码和文档** 使用 [MIT License](LICENSE)：可以学习、修改、分发，**也可以商用**，保留版权声明和许可文本即可。
 
-采用 [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0)（全文见 [LICENSE](LICENSE)）。个人学习、爱好项目、教学与公益研究可以用；把本软件作为产品出售、对客户提供收费服务、或用于以营利为目的的内部业务，都不在许可范围内。需要商用请另行联系维护者。
+**例外：Grok Bot 机器人。** `public/grok-bot/` 里的几何、动画和角色外形 **不是 MIT**。它们改编自对 Grok Bot.app 的学习向抽取，权利属于 xAI 等权利人，继续使用、打包上线或当产品吉祥物，**有商标 / 版权侵权风险**。本项目不授予这部分的任何权利。说明见 [NOTICE.md](NOTICE.md)。
 
-这不是 OSI 意义上的 “Open Source”（OSI 定义不允许限制商业用途）。
+MIT 软件「按原样」提供，作者不承担质量担保。

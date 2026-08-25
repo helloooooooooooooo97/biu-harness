@@ -9,7 +9,7 @@ replica in [grok_bot-icon-study](https://github.com/w210548735-art/grok_bot-icon
 That study project extracts geometry, palette, and animation logic from
 Grok Bot.app for personal research. **Character shapes, trademarks, icons,
 geometry data, and extracted materials belong to xAI / respective rights
-holders.** This harness uses them only as a local UI experiment for
+holders and are not covered by this repository's MIT license.** This harness uses them only as a local UI experiment for
 per-session avatars; do not treat the assets as original product branding.
 
 Source disclaimer (upstream): for learning reference only; confirm copyright,
