@@ -29,6 +29,24 @@
 
 ---
 
+## 产品演示
+
+任务看板是多 Agent 的工作面：同一张卡可以指派给不同 session，依赖会进「阻塞」列，cron / at 写在卡上。
+
+<p align="center">
+  <img src="docs/demo/tasks-board.gif" alt="任务看板：队列、表格、看板、依赖，以及定时巡检任务详情" width="880" />
+</p>
+<p align="center"><sub>看板 / 表格 / 依赖图，点开「每小时巡检失败任务」看定时触发</sub></p>
+
+Live 调度席和执行席是**不同的 session**，不是一个窗口里的几个角色。
+
+<p align="center">
+  <img src="docs/demo/live-sessions.gif" alt="Live 调度席与执行席 session，再回到任务看板" width="880" />
+</p>
+<p align="center"><sub>侧栏切换调度席 / 执行席，再回到 Tasks</sub></p>
+
+---
+
 ## 1. 它是什么
 
 Biu 不是「聊天窗口外挂几个 tool」。它是一套把 **Agent 当进程、把任务当总线** 的本地工作台：
