@@ -26,6 +26,9 @@ import {
   LuChevronRight,
   LuGitBranch,
   LuListChecks,
+  LuZap,
+  LuPlay,
+  LuMousePointerClick,
   LuGauge,
   LuSearch,
   LuSlidersHorizontal,
@@ -36,6 +39,7 @@ import {
   LuTrash2,
   LuUserRound,
   LuX,
+  LuPlus,
 } from 'react-icons/lu'
 import {
   ReactFlow,
@@ -793,6 +797,21 @@ function timeUntilLabel(ts: number): string {
   const day = Math.round(hr / 24)
   return `${day}天后`
 }
+
+/** 一句话规则摘要：由 cron/at/on 合成自然语言。 */
+function triggerSummary(cron: string, at: number | null | undefined, on: string[]): string {
+  const parts: string[] = []
+  if (cron) parts.push(cronPreview(cron))
+  if (at) {
+    const d = new Date(at)
+    parts.push(`在 ${d.getMonth() + 1}月${d.getDate()}日 触发`)
+  }
+  const evMap: Record<string, string> = { 'dep:done': '依赖完成', 'turn:end': '回合结束' }
+  for (const e of on) parts.push(evMap[e] ?? e)
+  if (!parts.length) return '配置自动化规则'
+  return parts.join('，')
+}
+
 
 /** 触发源数量：cron(at 单独) 1 + at 1 + on 各事件。 */
 function triggerSourceCount(t: Task['trigger'] | undefined): number {
@@ -2099,6 +2118,8 @@ function TaskDetailPanel({
   const [cronFields, setCronFields] = useState<{ s: string; m: string; h: string; d: string; mo: string; w: string }>(() =>
     spawnCronFields(task.trigger?.cron ?? '')
   )
+  // 「添加触发条件」选择器是否展开
+  const [condAddOpen, setCondAddOpen] = useState(false)
   // 跨 session：每个 report 定位到其 agent 所属 session 的该 turn 统计（step 数 / 耗时 / 额度消耗）。
   const [turnStats, setTurnStats] = useState<Record<string, TurnStats | null | undefined>>({})
 
@@ -2120,6 +2141,7 @@ function TaskDetailPanel({
     setTriggerOn(task.trigger?.on ?? [])
     setTriggerMode(inferTriggerMode(task.trigger?.cron ?? ''))
     setCronFields(spawnCronFields(task.trigger?.cron ?? ''))
+    setCondAddOpen(false)
   }, [task.id])
 
   const reports = useMemo(() => (task.reports ?? []).filter((r) => r.sessionId && r.turn != null), [task.reports])
@@ -2176,506 +2198,602 @@ function TaskDetailPanel({
           <span className="tasks-detail-id">{task.id}</span>
         </div>
 
-        <div className="tasks-field-row">
-          <label className="tasks-field">
-            <span>状态</span>
-            <CellSelect<TaskStatus>
-              value={task.status}
-              options={STATUS_META.map((m) => ({ value: m.id, label: m.label, icon: m.icon }))}
-              onSelect={(status) => void onUpdate(task.id, { status })}
-              valueClass={`is-${task.status}`}
-              renderValue={(cur) => (
-                <>
-                  {cur?.icon ?? null}
-                  <span className="tasks-chip-text">{cur?.label ?? task.status}</span>
-                </>
-              )}
-            />
-          </label>
-          <label className="tasks-field">
-            <span>优先级</span>
-            <CellSelect<TaskPriority>
-              value={task.priority}
-              options={(Object.keys(PRIORITY_LABEL) as TaskPriority[]).map((k) => ({
-                value: k,
-                label: PRIORITY_LABEL[k],
-                icon: <LuFlag size={12} aria-hidden />,
-              }))}
-              onSelect={(priority) => void onUpdate(task.id, { priority })}
-              valueClass={`is-p-${task.priority}`}
-              renderValue={(cur) => (
-                <>
-                  {cur?.icon ?? null}
-                  <span className="tasks-chip-text">{cur?.label ?? task.priority}</span>
-                </>
-              )}
-            />
-          </label>
-        </div>
-
-        <div className="tasks-field-row">
-          <label className="tasks-field">
-            <span>难度</span>
-            <CellSelect<TaskDifficulty>
-              value={task.difficulty}
-              options={(Object.keys(DIFFICULTY_LABEL) as TaskDifficulty[]).map((k) => ({
-                value: k,
-                label: DIFFICULTY_LABEL[k],
-                icon: <LuGauge size={12} aria-hidden />,
-              }))}
-              onSelect={(difficulty) => void onUpdate(task.id, { difficulty })}
-              valueClass={`is-d-${task.difficulty}`}
-              renderValue={(cur) => (
-                <>
-                  {cur?.icon ?? null}
-                  <span className="tasks-chip-text">{cur?.label ?? task.difficulty}</span>
-                </>
-              )}
-            />
-          </label>
-        </div>
-
-        <label className="tasks-field tasks-l-field">
-          <span>
-            <LuStickyNote size={12} aria-hidden />
-            描述
-          </span>
-          <textarea
-            className="tasks-field-textarea"
-            value={description}
-            placeholder="任务要做什么、验收标准…"
-            rows={5}
-            onChange={(event) => setDescription(event.target.value)}
-            onBlur={() => {
-              if (description !== (task.description ?? '')) void onUpdate(task.id, { description })
-            }}
-          />
-        </label>
-
-        <label className="tasks-field tasks-l-field">
-          <span>
-            <LuNotebookPen size={12} aria-hidden />
-            备忘
-          </span>
-          <textarea
-            className="tasks-field-textarea"
-            value={notes}
-            placeholder="临时笔记、链接、提醒…"
-            rows={4}
-            onChange={(event) => setNotes(event.target.value)}
-            onBlur={() => {
-              if (notes !== (task.notes ?? '')) void onUpdate(task.id, { notes })
-            }}
-          />
-        </label>
-
-        <label className="tasks-field">
-          <span>
-            <LuUserRound size={12} aria-hidden />
-            分配人
-          </span>
-          <div className="tasks-detail-actor">
-            <AssigneePicker
-              actor={task.assignee}
-              agents={agents}
-              loading={agentsLoading}
-              onPick={(sessionId) => void onUpdate(task.id, { assigneeSessionId: sessionId })}
-              onClear={() => void onUpdate(task.id, { assignee: null })}
-            />
+        <div className="tasks-sec-head"><LuSlidersHorizontal size={12} aria-hidden /> 属性</div>
+        <div className="tasks-sec-card tasks-sec-props">
+          <div className="tasks-field-row">
+            <label className="tasks-field">
+              <span>状态</span>
+              <CellSelect<TaskStatus>
+                value={task.status}
+                options={STATUS_META.map((m) => ({ value: m.id, label: m.label, icon: m.icon }))}
+                onSelect={(status) => void onUpdate(task.id, { status })}
+                valueClass={`is-${task.status}`}
+                renderValue={(cur) => (
+                  <>
+                    {cur?.icon ?? null}
+                    <span className="tasks-chip-text">{cur?.label ?? task.status}</span>
+                  </>
+                )}
+              />
+            </label>
+            <label className="tasks-field">
+              <span>优先级</span>
+              <CellSelect<TaskPriority>
+                value={task.priority}
+                options={(Object.keys(PRIORITY_LABEL) as TaskPriority[]).map((k) => ({
+                  value: k,
+                  label: PRIORITY_LABEL[k],
+                  icon: <LuFlag size={12} aria-hidden />,
+                }))}
+                onSelect={(priority) => void onUpdate(task.id, { priority })}
+                valueClass={`is-p-${task.priority}`}
+                renderValue={(cur) => (
+                  <>
+                    {cur?.icon ?? null}
+                    <span className="tasks-chip-text">{cur?.label ?? task.priority}</span>
+                  </>
+                )}
+              />
+            </label>
           </div>
-        </label>
 
-        <label className="tasks-field">
-          <span>
-            <LuCalendarClock size={12} aria-hidden />
-            截止日期
-          </span>
-          <input
-            className="tasks-field-input"
-            type="date"
-            value={due}
-            onChange={(event) => setDue(event.target.value)}
-            onBlur={() => {
-              const next = due.trim() ? new Date(`${due}T00:00:00`).getTime() : null
-              const prev = task.dueAt
-              if (next !== prev) void onUpdate(task.id, { dueAt: next })
-            }}
-          />
-        </label>
+          <div className="tasks-field-row">
+            <label className="tasks-field">
+              <span>难度</span>
+              <CellSelect<TaskDifficulty>
+                value={task.difficulty}
+                options={(Object.keys(DIFFICULTY_LABEL) as TaskDifficulty[]).map((k) => ({
+                  value: k,
+                  label: DIFFICULTY_LABEL[k],
+                  icon: <LuGauge size={12} aria-hidden />,
+                }))}
+                onSelect={(difficulty) => void onUpdate(task.id, { difficulty })}
+                valueClass={`is-d-${task.difficulty}`}
+                renderValue={(cur) => (
+                  <>
+                    {cur?.icon ?? null}
+                    <span className="tasks-chip-text">{cur?.label ?? task.difficulty}</span>
+                  </>
+                )}
+              />
+            </label>
+          </div>
 
-        <div className="tasks-field tasks-l-field tasks-trigger-block">
-          <span>
-            <LuClock size={12} aria-hidden />
-            自动触发
-          </span>
-          <label className="tasks-trigger-enable">
+          <label className="tasks-field">
+            <span>
+              <LuUserRound size={12} aria-hidden />
+              分配人
+            </span>
+            <div className="tasks-detail-actor">
+              <AssigneePicker
+                actor={task.assignee}
+                agents={agents}
+                loading={agentsLoading}
+                onPick={(sessionId) => void onUpdate(task.id, { assigneeSessionId: sessionId })}
+                onClear={() => void onUpdate(task.id, { assignee: null })}
+              />
+            </div>
+          </label>
+
+          <label className="tasks-field">
+            <span>
+              <LuCalendarClock size={12} aria-hidden />
+              截止日期
+            </span>
             <input
-              type="checkbox"
-              checked={triggerEnabled}
-              onChange={(event) => {
-                const next = event.target.checked
-                setTriggerEnabled(next)
-                void onUpdate(task.id, { trigger: { enabled: next } })
+              className="tasks-field-input"
+              type="date"
+              value={due}
+              onChange={(event) => setDue(event.target.value)}
+              onBlur={() => {
+                const next = due.trim() ? new Date(`${due}T00:00:00`).getTime() : null
+                const prev = task.dueAt
+                if (next !== prev) void onUpdate(task.id, { dueAt: next })
               }}
             />
-            <span>开启调度（后台按 cron / 特定时间 / 事件自动派工）</span>
           </label>
+
+          <label className="tasks-field">
+            <span>
+              <LuPanelsTopLeft size={12} aria-hidden />
+              项目
+            </span>
+            <input
+              className="tasks-field-input"
+              value={project}
+              placeholder="所属项目，如 cordis-web"
+              onChange={(event) => setProject(event.target.value)}
+              onBlur={() => {
+                if (project !== (task.project ?? '')) void onUpdate(task.id, { project: project.trim() || null })
+              }}
+            />
+          </label>
+
+          <label className="tasks-field">
+            <span>
+              <LuTags size={12} aria-hidden />
+              标签
+            </span>
+            <div className="tasks-tag-editor">
+              <TagChips tags={tags} />
+              <input
+                className="tasks-field-input"
+                value={tagInput}
+                placeholder="输入后回车添加，逗号分隔"
+                onChange={(event) => setTagInput(event.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault()
+                    const parts = tagInput.split(',').map((s) => s.trim()).filter(Boolean)
+                    if (parts.length) {
+                      const next = [...new Set([...tags, ...parts])]
+                      setTags(next)
+                      void onUpdate(task.id, { tags: next })
+                      setTagInput('')
+                    }
+                  } else if (e.key === 'Backspace' && !tagInput && tags.length) {
+                    const next = tags.slice(0, -1)
+                    setTags(next)
+                    void onUpdate(task.id, { tags: next })
+                  }
+                }}
+              />
+            </div>
+          </label>
+        </div>
+
+        <div className="tasks-sec-head"><LuStickyNote size={12} aria-hidden /> 描述</div>
+        <div className="tasks-sec-card">
+          <label className="tasks-field">
+            <textarea
+              className="tasks-field-textarea"
+              value={description}
+              placeholder="任务要做什么、验收标准…"
+              rows={5}
+              onChange={(event) => setDescription(event.target.value)}
+              onBlur={() => {
+                if (description !== (task.description ?? '')) void onUpdate(task.id, { description })
+              }}
+            />
+          </label>
+        </div>
+
+        <div className="tasks-sec-head"><LuNotebookPen size={12} aria-hidden /> 备忘</div>
+        <div className="tasks-sec-card">
+          <label className="tasks-field">
+            <textarea
+              className="tasks-field-textarea"
+              value={notes}
+              placeholder="临时笔记、链接、提醒…"
+              rows={4}
+              onChange={(event) => setNotes(event.target.value)}
+              onBlur={() => {
+                if (notes !== (task.notes ?? '')) void onUpdate(task.id, { notes })
+              }}
+            />
+          </label>
+        </div>
+
+        <div className="tasks-field tasks-l-field tasks-automation">
+          <div className="tasks-auto-head">
+            <span className="tasks-auto-title"><LuClock size={13} aria-hidden /> 自动触发</span>
+            <label className={`tasks-auto-switch${triggerEnabled ? ' is-on' : ''}`} title={triggerEnabled ? '点击关闭此规则' : '点击开启此规则'}>
+              <input
+                type="checkbox"
+                checked={triggerEnabled}
+                onChange={(event) => {
+                  const next = event.target.checked
+                  setTriggerEnabled(next)
+                  void onUpdate(task.id, { trigger: { enabled: next } })
+                }}
+              />
+              <span className="tasks-auto-switch-track"><span className="tasks-auto-switch-knob" /></span>
+            </label>
+          </div>
           {(() => {
             const hasAuto = !!(task.trigger?.cron || task.trigger?.at || task.trigger?.on?.length)
             const showConfig = triggerEnabled || hasAuto
             return showConfig ? (
             <>
-              <div className="tasks-trigger-field">
-                <span>频率</span>
-                <select
-                  className="tasks-trigger-mode"
-                  value={triggerMode}
-                  onChange={(event) => {
-                    const mode = event.target.value
-                    setTriggerMode(mode)
-                    // 合成并回写 cron（秒级预设都支持）
-                    const cronStr = presetCron(mode, cronFields, '5', '10', '0', '1')
-                    const cron = cronStr || null
-                    setTriggerCron(cronStr)
-                    setCronFields(spawnCronFields(cronStr))
-                    if (cron !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron } })
-                  }}
-                >
-                  <option value="sec">每N秒</option>
-                  <option value="min">每N分钟</option>
-                  <option value="hour">每小时</option>
-                  <option value="day">每天</option>
-                  <option value="week">每周</option>
-                  <option value="custom">自定义</option>
-                </select>
+              {/* 一句话规则摘要 */}
+              <div className="tasks-auto-summary">
+                <span className="tasks-auto-summary-dot" />
+                <span>{triggerSummary(triggerCron, task.trigger?.at, triggerOn)}</span>
               </div>
-              {triggerMode === 'sec' ? (
-                <label className="tasks-trigger-field">
-                  <span>间隔（秒）</span>
-                  <input
-                    className="tasks-field-input tasks-cron-num"
-                    type="number"
-                    min={1}
-                    defaultValue={inferN(triggerCron, 5)}
-                    onChange={(event) => {
-                      const n = event.target.value || '5'
-                      const cronStr = `*/${n} * * * * *`
-                      setTriggerCron(cronStr)
-                      setCronFields(spawnCronFields(cronStr))
-                      if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                    }}
-                  />
-                </label>
-              ) : triggerMode === 'min' ? (
-                <label className="tasks-trigger-field">
-                  <span>间隔（分钟）</span>
-                  <input
-                    className="tasks-field-input tasks-cron-num"
-                    type="number"
-                    min={1}
-                    defaultValue={inferN(triggerCron, 5)}
-                    onChange={(event) => {
-                      const n = event.target.value || '5'
-                      const cronStr = `*/${n} * * * *`
-                      setTriggerCron(cronStr)
-                      if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                    }}
-                  />
-                </label>
-              ) : triggerMode === 'hour' ? (
-                <label className="tasks-trigger-field">
-                  <span>每 N 小时</span>
-                  <input
-                    className="tasks-field-input tasks-cron-num"
-                    type="number"
-                    min={1}
-                    defaultValue={inferN(triggerCron, 1)}
-                    onChange={(event) => {
-                      const n = event.target.value || '1'
-                      const cronStr = `0 */${n} * * *`
-                      setTriggerCron(cronStr)
-                      if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                    }}
-                  />
-                </label>
-              ) : triggerMode === 'day' ? (
-                <div className="tasks-trigger-field">
-                  <span>每天时间</span>
-                  <div className="tasks-trigger-time">
-                    <input
-                      className="tasks-field-input tasks-cron-num"
-                      type="number"
-                      min={0} max={23}
-                      defaultValue={inferH(triggerCron, 10)}
-                      onChange={(event) => {
-                        const n = event.target.value || '0'
-                        const cronStr = `${inferM(triggerCron)} ${n} * * *`
-                        setTriggerCron(cronStr)
-                        if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                      }}
-                    />
-                    <span className="tasks-trigger-time-sep">:</span>
-                    <input
-                      className="tasks-field-input tasks-cron-num"
-                      type="number"
-                      min={0} max={59}
-                      defaultValue={inferM(triggerCron, 0)}
-                      onChange={(event) => {
-                        const n = event.target.value || '0'
-                        const cronStr = `${n} ${inferH(triggerCron)} * * *`
-                        setTriggerCron(cronStr)
-                        if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                      }}
-                    />
-                  </div>
-                </div>
-              ) : triggerMode === 'week' ? (
-                <label className="tasks-trigger-field">
-                  <span>星期几</span>
-                  <select
-                    className="tasks-trigger-mode tasks-cron-week"
-                    value={inferW(triggerCron, '1')}
-                    onChange={(event) => {
-                      const w = event.target.value
-                      const cronStr = `0 0 * * ${w}`
-                      setTriggerCron(cronStr)
-                      if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                    }}
-                  >
-                    {['日', '一', '二', '三', '四', '五', '六'].map((w, i) => (
-                      <option key={i} value={String(i)}>周{w}</option>
-                    ))}
-                  </select>
-                </label>
-              ) : (
-                <div className="tasks-trigger-field">
-                  <span>高级 cron（秒 分 时 日 月 周）</span>
-                  <div className="tasks-trigger-cronfield">
-                    {(
-                      [
-                        ['s', cronFields.s, '秒', 'cronFieldValid(cronFields.s)'],
-                        ['m', cronFields.m, '分', 'cronFieldValid(cronFields.m)'],
-                        ['h', cronFields.h, '时', 'cronFieldValid(cronFields.h)'],
-                        ['d', cronFields.d, '日', 'cronFieldValid(cronFields.d)'],
-                        ['mo', cronFields.mo, '月', 'cronFieldValid(cronFields.mo)'],
-                        ['w', cronFields.w, '周', 'cronFieldValid(cronFields.w)'],
-                      ] as const
-                    ).map(([key, val, label]) => (
-                      <label key={key} className={`tasks-cron-field${val && !cronFieldValid(val) ? ' is-invalid' : ''}`} title={val && !cronFieldValid(val) ? `「${val}」非法：仅支持 *、*/N、N、N-M` : `${label}字段`}>
-                        <span>{label}</span>
-                        <input
-                          className="tasks-field-input"
-                          value={val}
-                          placeholder="*"
-                          onChange={(event) => {
-                            const nextVal = event.target.value
-                            const next = { ...cronFields, [key]: nextVal }
-                            setCronFields(next)
-                            const cronStr = composeCron(next.s, next.m, next.h, next.d, next.mo, next.w)
-                            const invalid = Object.values(next).some((f) => f && !cronFieldValid(f))
-                            setTriggerCron(invalid ? '' : (cronStr ?? ''))
-                            if (!invalid && cronStr && cronStr !== (task.trigger?.cron ?? null)) {
-                              void onUpdate(task.id, { trigger: { cron: cronStr } })
-                            }
-                          }}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className={`tasks-trigger-field${triggerMode === 'custom' ? ' tasks-trigger-preview-wrap' : ''}`}>
-                <span>解读</span>
-                <span className="tasks-trigger-preview">{cronPreview(triggerCron)}</span>
-              </div>
-              <label className="tasks-trigger-field">
-                <span>特定时间 at</span>
-                <input
-                  className="tasks-field-input"
-                  type="date"
-                  value={triggerAt}
-                  onChange={(event) => setTriggerAt(event.target.value)}
-                  onBlur={() => {
-                    const at = triggerAt.trim() ? new Date(`${triggerAt}T00:00:00`).getTime() : null
-                    const prev = task.trigger?.at ?? null
-                    if (at !== prev) void onUpdate(task.id, { trigger: { at } })
-                  }}
-                />
-              </label>
-              <div className="tasks-trigger-field">
-                <span>自动触发事件</span>
-                <div className="tasks-trigger-on">
-                  {(['dep:done', 'turn:end'] as const).map((ev) => (
-                    <label key={ev} className="tasks-trigger-on-item">
-                      <input
-                        type="checkbox"
-                        checked={triggerOn.includes(ev)}
-                        onChange={(event) => {
-                          const next = event.target.checked
-                            ? [...new Set([...triggerOn, ev])]
-                            : triggerOn.filter((e) => e !== ev)
-                          setTriggerOn(next)
-                          void onUpdate(task.id, { trigger: { on: next } })
-                        }}
-                      />
-                      <span>{ev === 'dep:done' ? '依赖完成' : '回合结束'}</span>
-                    </label>
+
+              {/* Trigger 区 */}
+              <div className="tasks-auto-sec-head"><LuMousePointerClick size={12} aria-hidden /> Trigger · 触发</div>
+              <div className="tasks-auto-sec">
+                <div className="tasks-auto-cond-list">
+                  {/* 定时 cron 条件 */}
+                  {triggerCron ? (
+                    <div className="tasks-auto-cond">
+                      <div className="tasks-auto-cond-head">
+                        <span className="tasks-auto-cond-type"><LuCalendarClock size={12} aria-hidden /> 定时</span>
+                        <button type="button" className="tasks-auto-cond-del" title="删除定时条件"
+                          onClick={() => {
+                            setTriggerCron('')
+                            setTriggerMode('min')
+                            setCronFields(spawnCronFields(''))
+                            if (task.trigger?.cron) void onUpdate(task.id, { trigger: { cron: null } })
+                          }}><LuX size={12} aria-hidden /></button>
+                      </div>
+                      <div className="tasks-auto-cond-body">
+                        <div className="tasks-trigger-field">
+                          <span>频率</span>
+                          <div className="tasks-auto-seg tasks-auto-preset">
+                            {(
+                              [
+                                ['sec', '每N秒'], ['min', '每N分钟'], ['hour', '每小时'],
+                                ['day', '每天'], ['week', '每周'], ['custom', '自定义'],
+                              ] as const
+                            ).map(([m, label]) => (
+                              <button key={m} type="button" className={triggerMode === m ? 'is-active' : ''} onClick={() => {
+                                setTriggerMode(m)
+                                const cronStr = presetCron(m, cronFields, '5', '10', '0', '1')
+                                const cron = cronStr || null
+                                setTriggerCron(cronStr)
+                                setCronFields(spawnCronFields(cronStr))
+                                if (cron !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron } })
+                              }}>{label}</button>
+                            ))}
+                          </div>
+                        </div>
+                        {triggerMode === 'sec' ? (
+                          <label className="tasks-trigger-field">
+                            <span>间隔（秒）</span>
+                            <input
+                              className="tasks-field-input tasks-cron-num"
+                              type="number"
+                              min={1}
+                              defaultValue={inferN(triggerCron, 5)}
+                              onChange={(event) => {
+                                const n = event.target.value || '5'
+                                const cronStr = `*/${n} * * * * *`
+                                setTriggerCron(cronStr)
+                                setCronFields(spawnCronFields(cronStr))
+                                if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                              }}
+                            />
+                          </label>
+                        ) : triggerMode === 'min' ? (
+                          <label className="tasks-trigger-field">
+                            <span>间隔（分钟）</span>
+                            <input
+                              className="tasks-field-input tasks-cron-num"
+                              type="number"
+                              min={1}
+                              defaultValue={inferN(triggerCron, 5)}
+                              onChange={(event) => {
+                                const n = event.target.value || '5'
+                                const cronStr = `*/${n} * * * *`
+                                setTriggerCron(cronStr)
+                                if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                              }}
+                            />
+                          </label>
+                        ) : triggerMode === 'hour' ? (
+                          <label className="tasks-trigger-field">
+                            <span>每 N 小时</span>
+                            <input
+                              className="tasks-field-input tasks-cron-num"
+                              type="number"
+                              min={1}
+                              defaultValue={inferN(triggerCron, 1)}
+                              onChange={(event) => {
+                                const n = event.target.value || '1'
+                                const cronStr = `0 */${n} * * *`
+                                setTriggerCron(cronStr)
+                                if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                              }}
+                            />
+                          </label>
+                        ) : triggerMode === 'day' ? (
+                          <div className="tasks-trigger-field">
+                            <span>每天时间</span>
+                            <div className="tasks-trigger-time">
+                              <input
+                                className="tasks-field-input tasks-cron-num"
+                                type="number"
+                                min={0} max={23}
+                                defaultValue={inferH(triggerCron, 10)}
+                                onChange={(event) => {
+                                  const n = event.target.value || '0'
+                                  const cronStr = `${inferM(triggerCron)} ${n} * * *`
+                                  setTriggerCron(cronStr)
+                                  if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                                }}
+                              />
+                              <span className="tasks-trigger-time-sep">:</span>
+                              <input
+                                className="tasks-field-input tasks-cron-num"
+                                type="number"
+                                min={0} max={59}
+                                defaultValue={inferM(triggerCron, 0)}
+                                onChange={(event) => {
+                                  const n = event.target.value || '0'
+                                  const cronStr = `${n} ${inferH(triggerCron)} * * *`
+                                  setTriggerCron(cronStr)
+                                  if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ) : triggerMode === 'week' ? (
+                          <label className="tasks-trigger-field">
+                            <span>星期几</span>
+                            <select
+                              className="tasks-trigger-mode tasks-cron-week"
+                              value={inferW(triggerCron, '1')}
+                              onChange={(event) => {
+                                const w = event.target.value
+                                const cronStr = `0 0 * * ${w}`
+                                setTriggerCron(cronStr)
+                                if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                              }}
+                            >
+                              {['日', '一', '二', '三', '四', '五', '六'].map((w, i) => (
+                                <option key={i} value={String(i)}>周{w}</option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : (
+                          <div className="tasks-trigger-field">
+                            <span>高级 cron（秒 分 时 日 月 周）</span>
+                            <div className="tasks-trigger-cronfield">
+                              {(
+                                [
+                                  ['s', cronFields.s, '秒'], ['m', cronFields.m, '分'], ['h', cronFields.h, '时'],
+                                  ['d', cronFields.d, '日'], ['mo', cronFields.mo, '月'], ['w', cronFields.w, '周'],
+                                ] as const
+                              ).map(([key, val, label]) => (
+                                <label key={key} className={`tasks-cron-field${val && !cronFieldValid(val) ? ' is-invalid' : ''}`} title={val && !cronFieldValid(val) ? `「${val}」非法：仅支持 *、*/N、N、N-M` : `${label}字段`}>
+                                  <span>{label}</span>
+                                  <input
+                                    className="tasks-field-input"
+                                    value={val}
+                                    placeholder="*"
+                                    onChange={(event) => {
+                                      const nextVal = event.target.value
+                                      const next = { ...cronFields, [key]: nextVal }
+                                      setCronFields(next)
+                                      const cronStr = composeCron(next.s, next.m, next.h, next.d, next.mo, next.w)
+                                      const invalid = Object.values(next).some((f) => f && !cronFieldValid(f))
+                                      setTriggerCron(invalid ? '' : (cronStr ?? ''))
+                                      if (!invalid && cronStr && cronStr !== (task.trigger?.cron ?? null)) {
+                                        void onUpdate(task.id, { trigger: { cron: cronStr } })
+                                      }
+                                    }}
+                                  />
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className={`tasks-trigger-field${triggerMode === 'custom' ? ' tasks-trigger-preview-wrap' : ''}`}>
+                          <span>解读</span>
+                          <span className="tasks-trigger-preview">{cronPreview(triggerCron)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                  {/* 特定时间 at 条件 */}
+                  {triggerAt ? (
+                    <div className="tasks-auto-cond">
+                      <div className="tasks-auto-cond-head">
+                        <span className="tasks-auto-cond-type"><LuClock size={12} aria-hidden /> 特定时间</span>
+                        <button type="button" className="tasks-auto-cond-del" title="删除特定时间条件"
+                          onClick={() => {
+                            setTriggerAt('')
+                            if (task.trigger?.at) void onUpdate(task.id, { trigger: { at: null } })
+                          }}><LuX size={12} aria-hidden /></button>
+                      </div>
+                      <div className="tasks-auto-cond-body">
+                        <label className="tasks-trigger-field">
+                          <span>日期</span>
+                          <input
+                            className="tasks-field-input"
+                            type="date"
+                            value={triggerAt}
+                            onChange={(event) => setTriggerAt(event.target.value)}
+                            onBlur={() => {
+                              const at = triggerAt.trim() ? new Date(`${triggerAt}T00:00:00`).getTime() : null
+                              const prev = task.trigger?.at ?? null
+                              if (at !== prev) void onUpdate(task.id, { trigger: { at } })
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ) : null}
+                  {/* on 事件条件（每事件一行） */}
+                  {triggerOn.map((ev) => (
+                    <div key={ev} className="tasks-auto-cond">
+                      <div className="tasks-auto-cond-head">
+                        <span className="tasks-auto-cond-type"><LuZap size={12} aria-hidden /> {ev === 'dep:done' ? '依赖完成' : '回合结束'}</span>
+                        <button type="button" className="tasks-auto-cond-del" title="删除该事件条件"
+                          onClick={() => {
+                            const next = triggerOn.filter((e) => e !== ev)
+                            setTriggerOn(next)
+                            void onUpdate(task.id, { trigger: { on: next } })
+                          }}><LuX size={12} aria-hidden /></button>
+                      </div>
+                    </div>
                   ))}
                 </div>
+
+                {/* 添加触发条件 */}
+                <div className="tasks-auto-add">
+                  {condAddOpen ? (
+                    <div className="tasks-auto-seg">
+                      <button type="button" onClick={() => {
+                        const cronStr = '*/5 * * * * *'
+                        setTriggerMode('sec')
+                        setCronFields(spawnCronFields(cronStr))
+                        setTriggerCron(cronStr)
+                        setCondAddOpen(false)
+                        if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                      }}><LuCalendarClock size={12} aria-hidden /> 定时</button>
+                      <button type="button" onClick={() => {
+                        const atStr = formatDueInput(Date.now())
+                        setTriggerAt(atStr)
+                        setCondAddOpen(false)
+                        const atMs = atStr.trim() ? new Date(`${atStr}T00:00:00`).getTime() : null
+                        if (atMs !== (task.trigger?.at ?? null)) void onUpdate(task.id, { trigger: { at: atMs } })
+                      }}><LuClock size={12} aria-hidden /> 特定时间</button>
+                      <button type="button" onClick={() => {
+                        const next = triggerOn.includes('dep:done') ? triggerOn : [...triggerOn, 'dep:done']
+                        setTriggerOn(next)
+                        setCondAddOpen(false)
+                        void onUpdate(task.id, { trigger: { on: next } })
+                      }}>依赖完成</button>
+                      <button type="button" onClick={() => {
+                        const next = triggerOn.includes('turn:end') ? triggerOn : [...triggerOn, 'turn:end']
+                        setTriggerOn(next)
+                        setCondAddOpen(false)
+                        void onUpdate(task.id, { trigger: { on: next } })
+                      }}>回合结束</button>
+                    </div>
+                  ) : (
+                    <button type="button" className="tasks-auto-add-btn" onClick={() => setCondAddOpen(true)}><LuPlus size={12} aria-hidden /> 触发条件</button>
+                  )}
+                </div>
               </div>
+
+              {/* Then 区 */}
+              <div className="tasks-auto-sec-head"><LuPlay size={12} aria-hidden /> Then · 执行</div>
+              <div className="tasks-auto-sec tasks-auto-then">
+                <span className="tasks-auto-then-arrow"><LuPlay size={12} aria-hidden /></span>
+                <span className="tasks-auto-then-text">自动派工给承担者并开始执行任务</span>
+              </div>
+
+              {/* 调度状态 */}
               <div className="tasks-trigger-status">
-                <span className={`tasks-trigger-state is-${task.trigger?.state ?? 'idle'}`}>
-                  状态：{task.trigger?.state ?? 'idle'}
+                <span className={`tasks-trigger-state-pill is-${task.trigger?.state ?? 'idle'}`}>
+                  <span className="tasks-trigger-state-dot" />
+                  {task.trigger?.state ?? 'idle'}
                 </span>
-                {task.nextTriggerAt ? (
-                  <span className="tasks-trigger-next">下次触发：{timeUntilLabel(task.nextTriggerAt)}（{new Date(task.nextTriggerAt).toLocaleString()}）</span>
-                ) : null}
-                {task.trigger?.lastRun ? (
-                  <span className="tasks-trigger-last">上次触发：{formatWhen(task.trigger.lastRun)}</span>
-                ) : null}
+                <div className="tasks-trigger-times">
+                  {task.nextTriggerAt ? (
+                    <span className="tasks-trigger-next">
+                      <span className="tasks-trigger-tk">下次触发</span>
+                      <span className="tasks-trigger-tv">{timeUntilLabel(task.nextTriggerAt)}</span>
+                      <span className="tasks-trigger-ts">{new Date(task.nextTriggerAt).toLocaleString()}</span>
+                    </span>
+                  ) : null}
+                  {task.trigger?.lastRun ? (
+                    <span className="tasks-trigger-last">
+                      <span className="tasks-trigger-tk">上次触发</span>
+                      <span className="tasks-trigger-tv">{formatWhen(task.trigger.lastRun)}</span>
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </>
             ) : null
           })()}
         </div>
 
-        <label className="tasks-field">
-          <span>
-            <LuPanelsTopLeft size={12} aria-hidden />
-            项目
-          </span>
-          <input
-            className="tasks-field-input"
-            value={project}
-            placeholder="所属项目，如 cordis-web"
-            onChange={(event) => setProject(event.target.value)}
-            onBlur={() => {
-              if (project !== (task.project ?? '')) void onUpdate(task.id, { project: project.trim() || null })
-            }}
-          />
-        </label>
-
-        <label className="tasks-field">
-          <span>
-            <LuTags size={12} aria-hidden />
-            标签
-          </span>
-          <div className="tasks-tag-editor">
-            <TagChips tags={tags} />
-            <input
-              className="tasks-field-input"
-              value={tagInput}
-              placeholder="输入后回车添加，逗号分隔"
-              onChange={(event) => setTagInput(event.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ',') {
-                  e.preventDefault()
-                  const parts = tagInput.split(',').map((s) => s.trim()).filter(Boolean)
-                  if (parts.length) {
-                    const next = [...new Set([...tags, ...parts])]
-                    setTags(next)
-                    void onUpdate(task.id, { tags: next })
-                    setTagInput('')
-                  }
-                } else if (e.key === 'Backspace' && !tagInput && tags.length) {
-                  const next = tags.slice(0, -1)
-                  setTags(next)
-                  void onUpdate(task.id, { tags: next })
-                }
-              }}
-            />
-          </div>
-        </label>
-
+        <div className="tasks-sec-head"><LuActivity size={12} aria-hidden /> 执行记录</div>
+        <div className="tasks-sec-card tasks-sec-exec">
         <div className="tasks-detail-meta">
-          <div className="tasks-meta-row">
-            <span className="tasks-meta-icon"><LuUserRound size={11} aria-hidden /></span>
-            <span className="tasks-meta-label">创建人</span>
-            <span className="tasks-meta-value">
-              <ActorChip actor={task.creator} empty="—" />
-              <TimeLabel ts={task.createdAt} />
-            </span>
-          </div>{task.assignedAt ? (
-            <div className="tasks-meta-row">
-              <span className="tasks-meta-icon"><LuClock size={11} aria-hidden /></span>
-              <span className="tasks-meta-label">实施时间</span>
-              <span className="tasks-meta-value">
-                <TimeLabel ts={task.assignedAt} />
+          <div className="tasks-exec-stats">
+            <div className="tasks-exec-stat">
+              <span className="tasks-exec-stat-label"><LuUserRound size={11} aria-hidden /> 创建人</span>
+              <span className="tasks-exec-stat-value">
+                <ActorChip actor={task.creator} empty="—" />
+                <TimeLabel ts={task.createdAt} />
               </span>
             </div>
-          ) : null}
-          {task.blocked && task.blockedBy?.length ? (
-            <div className="tasks-detail-blocked">
-              <div className="tasks-blocked-head">
-                <LuLock size={13} aria-hidden />
-                <span>被 {task.blockedBy.length} 个前置任务阻塞</span>
+            {task.assignedAt ? (
+              <div className="tasks-exec-stat">
+                <span className="tasks-exec-stat-label"><LuClock size={11} aria-hidden /> 实施时间</span>
+                <span className="tasks-exec-stat-value"><TimeLabel ts={task.assignedAt} /></span>
               </div>
-              <ul className="tasks-blocked-list">
-                {task.blockedBy.map((id) => {
-                  const src = allTasks.find((t) => t.id === id)
+            ) : null}
+            {task.blocked && task.blockedBy?.length ? (
+              <div className="tasks-exec-stat">
+                <span className="tasks-exec-stat-label"><LuLock size={11} aria-hidden /> 阻塞</span>
+                <span className="tasks-exec-stat-value">
+                  <span className="tasks-blocked-head">被 {task.blockedBy.length} 个前置任务阻塞</span>
+                  <ul className="tasks-blocked-list">
+                    {task.blockedBy.map((id) => {
+                      const src = allTasks.find((t) => t.id === id)
+                      return (
+                        <li key={id} className="tasks-blocked-item">
+                          <span className="tasks-blocked-dot" aria-hidden />
+                          {src?.title ?? id.slice(0, 10)}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </span>
+              </div>
+            ) : null}
+            {task.usage && task.usage.totalTokens > 0 ? (
+              <div className="tasks-exec-stat">
+                <span className="tasks-exec-stat-label"><LuCoins size={11} aria-hidden /> 消耗</span>
+                <span className="tasks-exec-stat-value">
+                  <span className="tasks-detail-usage-total-capsule">
+                    <LuCoins size={12} aria-hidden />
+                    共 {formatTokens(task.usage.totalTokens)} tokens
+                    <span className="tasks-detail-usage-breakdown">
+                      in {formatTokens(task.usage.inputTokens)} / out {formatTokens(task.usage.outputTokens)}
+                      {task.usage.cacheReadTokens > 0 ? ` / cache ${formatTokens(task.usage.cacheReadTokens)}` : ''}
+                    </span>
+                  </span>
+                </span>
+              </div>
+            ) : null}
+          </div>
+          {task.reports?.length ? (
+            <>
+              <div className="tasks-exec-timeline-head">执行报告</div>
+              <ul className="tasks-report-timeline">
+                {[...task.reports].reverse().map((r, i) => {
+                  // 优先读该 report 固化的持久 usage（删 session 不丢）；缺失则 fallback 实时 turn-stats。
+                  const persistUsage = r.usage ?? null
+                  const realtimeStat =
+                    !persistUsage && r.sessionId && r.turn != null
+                      ? turnStats[`${r.sessionId}:${r.turn}`] ?? null
+                      : null
+                  const usage = persistUsage ?? (realtimeStat && realtimeStat.totalTokens > 0 ? realtimeStat : null)
+                  const consumed = !!usage && usage.totalTokens > 0
                   return (
-                    <li key={id} className="tasks-blocked-item">
-                      <span className="tasks-blocked-dot" aria-hidden />
-                      {src?.title ?? id.slice(0, 10)}
+                    <li key={`${r.ts}-${i}`} className={`tasks-report-item is-${r.status}`}>
+                      <span className="tasks-report-node">{r.status === 'done' ? <LuCircleCheck size={11} aria-hidden /> : <LuLoaderCircle size={11} aria-hidden />}</span>
+                      <span className="tasks-report-rail" />
+                      <div className="tasks-report-content">
+                        <div className="tasks-report-head">
+                          <span className="tasks-report-status">
+                            {r.status === 'done' ? <LuCircleCheck size={12} aria-hidden /> : <LuLoaderCircle size={12} aria-hidden />}
+                            {r.status === 'done' ? '完成' : '进行中'}
+                          </span>
+                          {r.turn != null ? <span className="tasks-report-turn">T{r.turn}</span> : null}
+                          {realtimeStat ? (
+                            <span className="tasks-report-stats">
+                              {realtimeStat.stepCount} step · 耗时 {formatTurnDuration(realtimeStat.durationMs)}
+                            </span>
+                          ) : null}
+                          <span className="tasks-report-time">{formatWhen(r.ts)}</span>
+                        </div>
+                        {r.note ? <div className="tasks-report-note">{r.note}</div> : null}
+                        {consumed ? (
+                          <div className="tasks-report-usage">
+                            消耗 {formatTokens(usage.totalTokens)} tokens
+                            {usage.inputTokens > 0 || usage.outputTokens > 0
+                              ? `（in ${formatTokens(usage.inputTokens)} / out ${formatTokens(usage.outputTokens)}${usage.cacheReadTokens > 0 ? ` / cache ${formatTokens(usage.cacheReadTokens)}` : ''}）`
+                              : ''}
+                          </div>
+                        ) : null}
+                      </div>
                     </li>
                   )
                 })}
               </ul>
-            </div>
+            </>
           ) : null}
-          {task.usage && task.usage.totalTokens > 0 ? (
-            <div className="tasks-detail-usage-total">
-              <span className="tasks-meta-label">消耗</span>
-              <span className="tasks-detail-usage-total-capsule">
-                <LuCoins size={12} aria-hidden />
-                共 {formatTokens(task.usage.totalTokens)} tokens
-                <span className="tasks-detail-usage-breakdown">
-                  in {formatTokens(task.usage.inputTokens)} / out {formatTokens(task.usage.outputTokens)}
-                  {task.usage.cacheReadTokens > 0 ? ` / cache ${formatTokens(task.usage.cacheReadTokens)}` : ''}
-                </span>
-              </span>
-            </div>
-          ) : null}
-          {task.reports?.length ? (
-            <ul className="tasks-detail-reports">
-              {[...task.reports].reverse().map((r, i) => {
-                // 优先读该 report 固化的持久 usage（删 session 不丢）；缺失则 fallback 实时 turn-stats。
-                const persistUsage = r.usage ?? null
-                const realtimeStat =
-                  !persistUsage && r.sessionId && r.turn != null
-                    ? turnStats[`${r.sessionId}:${r.turn}`] ?? null
-                    : null
-                const usage = persistUsage ?? (realtimeStat && realtimeStat.totalTokens > 0 ? realtimeStat : null)
-                const consumed = !!usage && usage.totalTokens > 0
-                return (
-                  <li key={`${r.ts}-${i}`} className={`tasks-report-item is-${r.status}`}>
-                    <span className="tasks-report-line">
-                      <span className="tasks-report-status">
-                        {r.status === 'done' ? <LuCircleCheck size={11} aria-hidden /> : <LuLoaderCircle size={11} aria-hidden />}
-                        {r.status === 'done' ? '完成' : '进行中'}
-                      </span>
-                      {r.turn != null ? <span className="tasks-report-turn">T{r.turn}</span> : null}
-                      <span className="tasks-report-stats">
-                        {realtimeStat
-                          ? `${realtimeStat.stepCount} step · 耗时 ${formatTurnDuration(realtimeStat.durationMs)}`
-                          : null}
-                      </span>
-                      {r.note ? <span className="tasks-report-note">{r.note}</span> : null}
-                      <span className="tasks-report-time">{formatWhen(r.ts)}</span>
-                    </span>
-                    {consumed ? (
-                      <span className="tasks-report-usage">
-                        消耗 {formatTokens(usage.totalTokens)} tokens
-                        {usage.inputTokens > 0 || usage.outputTokens > 0
-                          ? `（in ${formatTokens(usage.inputTokens)} / out ${formatTokens(usage.outputTokens)}${usage.cacheReadTokens > 0 ? ` / cache ${formatTokens(usage.cacheReadTokens)}` : ''}）`
-                          : ''}
-                      </span>
-                    ) : null}
-                  </li>
-                )
-              })}
-            </ul>
-          ) : null}
+        </div>
         </div>
       </div>
 
@@ -2943,11 +3061,15 @@ if (typeof document !== 'undefined') {
 .tasks-detail-modal { width:min(760px, 92vw); max-height:min(800px, 90vh); display:flex; flex-direction:column; min-height:0; border-radius:12px; border:1px solid var(--dsw-border); background:var(--dsw-sidebar); box-shadow:0 20px 60px rgba(0,0,0,.22); overflow:hidden; }
 .tasks-detail-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 20px; border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent); }
 .tasks-detail-head-title { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:650; color:var(--dsw-label-2); }
-.tasks-detail-body { display:grid; flex:1; grid-template-columns:1fr 1fr; gap:20px 24px; padding:24px; overflow:auto; align-content:start; }
-.tasks-detail-title { grid-column:1 / -1; order:0; }
-.tasks-field { order:1; }
-.tasks-l-field { grid-column:1 / -1; order:2; }
-.tasks-detail-meta { grid-column:1 / -1; order:3; }
+.tasks-detail-body { display:flex; flex:1; flex-direction:column; gap:10px; padding:20px 24px 24px; overflow:auto; }
+.tasks-detail-title { flex:none; }
+.tasks-sec-head { flex:none; display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--dsw-label-3); }
+.tasks-sec-head:first-of-type { margin-top:4px; }
+.tasks-sec-card { display:flex; flex-direction:column; gap:12px; padding:14px; border:1px solid var(--dsw-border); border-radius:10px; background:var(--dsw-surface); }
+.tasks-sec-props { gap:14px; }
+.tasks-sec-props .tasks-field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.tasks-sec-props .tasks-field { flex:1; min-width:0; }
+.tasks-sec-exec .tasks-detail-meta { border-top:0; padding-top:0; margin-top:0; }
 .tasks-detail-title { display:flex; flex-direction:column; gap:7px; padding-bottom:14px; border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 75%, transparent); }
 .tasks-detail-title-input { width:100%; border:0; background:transparent; color:var(--dsw-label); font:inherit; font-size:20px; font-weight:700; line-height:1.4; outline:none; padding:2px 0; resize:none; transition:border-color .12s; }
 .tasks-detail-title-input:focus { border-bottom:1px solid var(--dsw-border); }
@@ -2959,36 +3081,41 @@ if (typeof document !== 'undefined') {
 .tasks-field-input:focus, .tasks-field-textarea:focus { border-color:color-mix(in srgb, var(--dsw-business) 55%, transparent); box-shadow:0 0 0 3px color-mix(in srgb, var(--dsw-business) 12%, transparent); }
 .tasks-field-textarea { min-height:80px; line-height:1.55; }
 .tasks-detail-actor { display:flex; flex-direction:column; gap:6px; }
-.tasks-detail-meta { display:flex; flex-direction:column; gap:9px; padding-top:12px; margin-top:2px; border-top:1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent); }
-.tasks-meta-row { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--dsw-label-2); }
-.tasks-meta-icon { flex:none; display:inline-flex; align-items:center; color:var(--dsw-label-3); }
-.tasks-meta-label { flex:none; width:48px; color:var(--dsw-label-3); font-size:10.5px; font-weight:600; }
-.tasks-meta-value { flex:1; min-width:0; display:flex; align-items:center; gap:6px; }
-.tasks-meta-value .tasks-actor-name { font-size:11px; font-weight:600; color:var(--dsw-label); }
-.tasks-time { display:inline-flex; align-items:center; gap:4px; font-size:10.5px; color:var(--dsw-label-3); }
-.tasks-detail-exec-text { color:var(--dsw-label-3); font-size:11px; line-height:1.45; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
-.tasks-detail-reports { margin:6px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:3px; }
-.tasks-detail-usage-total { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--dsw-label-2); margin-top:2px; }
-.tasks-detail-usage-total-capsule { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 10px; background:color-mix(in srgb, var(--dsw-business) 12%, transparent); color:var(--dsw-label); font-weight:650; white-space:nowrap; }
+.tasks-detail-meta { display:flex; flex-direction:column; gap:14px; }
+/* 键值 stat 列表 */
+.tasks-exec-stats { display:flex; flex-direction:column; gap:8px; }
+.tasks-exec-stat { display:flex; align-items:flex-start; gap:12px; font-size:11px; color:var(--dsw-label-2); }
+.tasks-exec-stat-label { flex:none; width:72px; display:inline-flex; align-items:center; gap:5px; color:var(--dsw-label-3); font-size:10.5px; font-weight:600; padding-top:1px; }
+.tasks-exec-stat-value { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+.tasks-exec-stat-value .tasks-actor-name { font-size:11px; font-weight:600; color:var(--dsw-label); }
+.tasks-time { display:inline-flex; align-items:center; gap:4px; font-size:10.5px; color:var(--dsw-label-2); }
+.tasks-detail-usage-total-capsule { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 10px; background:color-mix(in srgb, var(--dsw-business) 12%, transparent); color:var(--dsw-label); font-weight:650; white-space:nowrap; width:fit-content; }
 .tasks-detail-usage-total-capsule svg { color:var(--dsw-business); }
 .tasks-detail-usage-breakdown { color:var(--dsw-label-3); font-weight:500; }
-.tasks-detail-blocked { padding-top:2px; }
 .tasks-blocked-head { display:flex; align-items:center; gap:6px; font-size:11px; font-weight:650; color:#9a6700; }
-.tasks-blocked-list { margin:6px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:5px; border:1px solid color-mix(in srgb, #9a6700 26%, transparent); border-radius:8px; padding:8px 10px; background:color-mix(in srgb, #9a6700 5%, transparent); }
+.tasks-blocked-list { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:5px; border:1px solid color-mix(in srgb, #9a6700 26%, transparent); border-radius:8px; padding:8px 10px; background:color-mix(in srgb, #9a6700 5%, transparent); }
 .tasks-blocked-item { display:flex; align-items:center; gap:7px; font-size:11px; color:var(--dsw-label-2); line-height:1.4; }
 .tasks-blocked-dot { flex:none; width:6px; height:6px; border-radius:50%; background:#9a6700; }
-.tasks-report-item { display:flex; flex-direction:column; align-items:stretch; gap:2px; font-size:11px; line-height:1.4; padding:3px 4px; border-radius:5px; }
-.tasks-report-item.is-done { background:color-mix(in srgb, #3d9a5f 12%, transparent); }
-.tasks-report-item.is-doing { background:color-mix(in srgb, var(--dsw-business) 10%, transparent); }
-.tasks-report-line { display:flex; align-items:center; gap:6px; min-width:0; }
-.tasks-report-status { display:inline-flex; align-items:center; gap:3px; font-weight:650; color:var(--dsw-label); flex:none; }
+/* 报告 timeline */
+.tasks-exec-timeline-head { display:flex; align-items:center; gap:6px; margin-top:2px; padding-top:12px; border-top:1px solid var(--dsw-border); font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--dsw-label-3); }
+.tasks-report-timeline { margin:8px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; }
+.tasks-report-item { position:relative; display:flex; gap:12px; padding-bottom:16px; }
+.tasks-report-item:last-child { padding-bottom:0; }
+.tasks-report-node { flex:none; position:relative; z-index:1; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+.tasks-report-item.is-done .tasks-report-node { color:#2f7d4c; background:color-mix(in srgb, #2f7d4c 18%, transparent); box-shadow:0 0 0 1px color-mix(in srgb, #2f7d4c 32%, transparent); }
+.tasks-report-item.is-doing .tasks-report-node { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 16%, transparent); box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-business) 30%, transparent); }
+.tasks-report-rail { position:absolute; left:9px; top:22px; bottom:-2px; width:2px; background:var(--dsw-border); }
+.tasks-report-item:last-child .tasks-report-rail { display:none; }
+.tasks-report-content { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+.tasks-report-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.tasks-report-status { display:inline-flex; align-items:center; gap:4px; font-weight:650; font-size:11px; color:var(--dsw-label); }
 .tasks-report-item.is-done .tasks-report-status { color:#2f7d4c; }
 .tasks-report-item.is-doing .tasks-report-status { color:var(--dsw-business); }
-.tasks-report-turn { color:var(--dsw-label-2); font-weight:600; flex:none; }
-.tasks-report-stats { color:var(--dsw-label-2); flex:none; }
-.tasks-report-note { color:var(--dsw-label-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
-.tasks-report-time { margin-left:auto; flex:none; color:var(--dsw-label-3); font-size:10px; white-space:nowrap; }
-.tasks-report-usage { color:var(--dsw-label-3); font-size:10px; padding-left:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tasks-report-turn { color:var(--dsw-label-2); font-weight:600; font-size:10.5px; }
+.tasks-report-stats { color:var(--dsw-label-3); font-size:10.5px; }
+.tasks-report-time { margin-left:auto; color:var(--dsw-label-3); font-size:10px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.tasks-report-note { color:var(--dsw-label-2); font-size:11px; line-height:1.5; white-space:normal; word-break:break-word; padding:8px 10px; border:1px solid var(--dsw-border); border-radius:8px; background:color-mix(in srgb, var(--dsw-muted-fill) 50%, transparent); }
+.tasks-report-usage { color:var(--dsw-label-3); font-size:10px; font-variant-numeric:tabular-nums; }
 .tasks-detail-foot { padding:10px 12px; border-top:1px solid var(--dsw-border); }
 .tasks-danger-btn { border:1px solid color-mix(in srgb, var(--dsw-danger) 35%, var(--dsw-border)); border-radius:8px; padding:6px 10px; background:transparent; color:var(--dsw-danger); cursor:pointer; font:inherit; font-size:11px; font-weight:650; display:inline-flex; align-items:center; gap:5px; }
 .tasks-danger-btn:hover { background:var(--dsw-danger-soft); }
@@ -3074,12 +3201,57 @@ if (typeof document !== 'undefined') {
 .tasks-trigger-field > span { color:var(--dsw-label-3); letter-spacing:.02em; }
 .tasks-trigger-on { display:flex; gap:10px; flex-wrap:wrap; }
 .tasks-trigger-on-item { display:inline-flex; align-items:center; gap:4px; font-size:11.5px; color:var(--dsw-label-2); cursor:pointer; font-weight:500; }
-.tasks-trigger-status { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:10.5px; color:var(--dsw-label-3); border-top:1px solid color-mix(in srgb, var(--dsw-border) 70%, transparent); padding-top:8px; }
-.tasks-trigger-state { display:inline-flex; align-items:center; gap:3px; font-weight:650; }
-.tasks-trigger-state.is-pending { color:#d9822b; }
-.tasks-trigger-state.is-delivered { color:#2f7d4c; }
-.tasks-trigger-state.is-done { color:#3d9a5f; }
-.tasks-trigger-next, .tasks-trigger-last { color:var(--dsw-label-2); font-variant-numeric:tabular-nums; }
+.tasks-trigger-status { display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--dsw-border); padding-top:10px; }
+.tasks-trigger-state-pill { align-self:flex-start; display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:3px 10px; font-size:10.5px; font-weight:650; background:var(--dsw-muted-fill); color:var(--dsw-label-2); box-shadow:inset 0 0 0 1px var(--dsw-border); }
+.tasks-trigger-state-dot { width:7px; height:7px; border-radius:50%; background:var(--dsw-label-3); }
+.tasks-trigger-state-pill.is-pending .tasks-trigger-state-dot { background:#d9822b; }
+.tasks-trigger-state-pill.is-delivered .tasks-trigger-state-dot { background:#2f7d4c; }
+.tasks-trigger-state-pill.is-done .tasks-trigger-state-dot { background:#3d9a5f; }
+.tasks-trigger-state-pill.is-pending { color:#d9822b; }
+.tasks-trigger-state-pill.is-delivered { color:#2f7d4c; }
+.tasks-trigger-state-pill.is-done { color:#3d9a5f; }
+.tasks-trigger-times { display:flex; flex-direction:column; gap:4px; }
+.tasks-trigger-next, .tasks-trigger-last { display:flex; align-items:baseline; gap:8px; font-size:10.5px; color:var(--dsw-label-2); }
+.tasks-trigger-tk { flex:none; width:48px; color:var(--dsw-label-3); font-weight:600; }
+.tasks-trigger-tv { font-variant-numeric:tabular-nums; font-weight:650; color:var(--dsw-label); }
+.tasks-trigger-ts { color:var(--dsw-label-3); font-variant-numeric:tabular-nums; font-weight:400; margin-left:auto; }
+
+/* ---- Notion Automation 风格规则卡片 ---- */
+.tasks-automation { flex:none; width:100%; box-sizing:border-box; display:flex; flex-direction:column; gap:10px; padding:12px; border:1px solid var(--dsw-border); border-radius:10px; background:var(--dsw-surface); }
+.tasks-auto-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.tasks-auto-title { display:inline-flex; align-items:center; gap:6px; font-weight:650; font-size:11.5px; color:var(--dsw-label); letter-spacing:.01em; }
+.tasks-auto-switch { flex:none; position:relative; display:inline-flex; align-items:center; height:22px; cursor:pointer; }
+.tasks-auto-switch input { position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; }
+.tasks-auto-switch-track { position:relative; width:34px; height:20px; border-radius:999px; background:color-mix(in srgb, var(--dsw-label-3) 24%, transparent); box-shadow:inset 0 0 0 1px var(--dsw-border); transition:background .2s ease; pointer-events:none; }
+.tasks-auto-switch-knob { position:absolute; top:3px; left:3px; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:left .2s cubic-bezier(.4,0,.2,1); }
+.tasks-auto-switch.is-on .tasks-auto-switch-track { background:var(--dsw-ok); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--dsw-ok) 30%, transparent); }
+.tasks-auto-switch.is-on .tasks-auto-switch-knob { left:17px; }
+.tasks-auto-summary { display:flex; align-items:flex-start; gap:7px; padding:8px 10px; border-radius:8px; background:color-mix(in srgb, var(--dsw-muted-fill) 60%, transparent); border:1px solid var(--dsw-border); font-size:11.5px; line-height:1.5; color:var(--dsw-label); font-weight:500; }
+.tasks-auto-summary-dot { flex:none; margin-top:5px; width:6px; height:6px; border-radius:50%; background:var(--dsw-business); box-shadow:0 0 0 2px color-mix(in srgb, var(--dsw-business) 22%, transparent); }
+.tasks-auto-sec-head { display:flex; align-items:center; gap:6px; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--dsw-label-3); margin-top:2px; }
+.tasks-auto-sec { display:flex; flex-direction:column; gap:9px; padding:10px 11px; border:1px solid var(--dsw-border); border-radius:8px; background:color-mix(in srgb, var(--dsw-muted-fill) 35%, transparent); }
+.tasks-auto-seg { display:inline-flex; gap:2px; padding:2px; border-radius:8px; background:color-mix(in srgb, var(--dsw-muted-fill) 70%, transparent); box-shadow:inset 0 0 0 1px var(--dsw-border); }
+.tasks-auto-seg button { border:0; background:transparent; color:var(--dsw-label-3); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-family:inherit; transition:background .15s ease, color .15s ease; }
+.tasks-auto-seg button:hover { color:var(--dsw-label); }
+.tasks-auto-seg button.is-active { background:var(--dsw-surface); color:var(--dsw-label); box-shadow:0 1px 2px rgba(0,0,0,.3); }
+.tasks-auto-preset { flex-wrap:wrap; }
+.tasks-auto-then { flex-direction:row; align-items:center; gap:8px; }
+.tasks-auto-then-arrow { display:inline-flex; color:var(--dsw-ok); }
+.tasks-auto-then-text { font-size:11.5px; color:var(--dsw-label-2); font-weight:500; }
+
+/* ---- 触发条件列表（每条件一行，可删除）---- */
+.tasks-auto-cond-list { display:flex; flex-direction:column; gap:8px; }
+.tasks-auto-cond { border:1px solid var(--dsw-border); border-radius:8px; background:color-mix(in srgb, var(--dsw-muted-fill) 45%, transparent); overflow:hidden; }
+.tasks-auto-cond-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 10px; background:color-mix(in srgb, var(--dsw-muted-fill) 60%, transparent); }
+.tasks-auto-cond-type { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:650; color:var(--dsw-label); }
+.tasks-auto-cond-del { flex:none; display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:6px; border:0; cursor:pointer; color:var(--dsw-label-3); background:transparent; transition:background .12s ease, color .12s ease; }
+.tasks-auto-cond-del:hover { background:color-mix(in srgb, var(--dsw-danger) 16%, transparent); color:var(--dsw-danger); }
+.tasks-auto-cond-body { display:flex; flex-direction:column; gap:8px; padding:8px 10px; }
+.tasks-auto-add { margin-top:2px; }
+.tasks-auto-add-btn { display:inline-flex; align-items:center; gap:5px; border:1px dashed var(--dsw-border); border-radius:8px; padding:5px 10px; background:transparent; color:var(--dsw-label-3); font-size:11px; font-weight:600; cursor:pointer; font-family:inherit; transition:background .12s ease, color .12s ease, border-color .12s ease; }
+.tasks-auto-add-btn:hover { color:var(--dsw-label); border-color:color-mix(in srgb, var(--dsw-border) 160%, transparent); background:var(--dsw-hover); }
+
+
 
 /* ---- Notion 风格 trigger 友好配置 ---- */
 .tasks-trigger-mode, .tasks-cron-week { appearance:none; -webkit-appearance:none; border:1px solid var(--dsw-border); border-radius:6px; padding:4px 8px; font-size:12px; color:var(--dsw-label); background:var(--dsw-muted-fill); cursor:pointer; width:auto; max-width:100%; font-family:inherit; }
