@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
-import { SlotEvent, type SlotEntry, type SlotsService } from './index.ts'
+import { SlotEvent, type SlotEntry } from '@biu/type-slots'
+import type { SlotsService } from './service.ts'
 
 export function useSlotEntries(slots: SlotsService, name: string): SlotEntry[] {
   useSyncExternalStore(
