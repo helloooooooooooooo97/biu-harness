@@ -124,8 +124,9 @@ export function apply(ctx: Context) {
       const record = await host.sessions.get(summary.id)
       if (!record) continue
       for (const event of record.events) {
-        const type = String(event.type || '')
-        const ts = Number(event.ts || 0)
+        const rec = event as Record<string, unknown>
+        const type = String(rec.type || '')
+        const ts = Number(rec.ts || 0)
         if (type === 'turn/start') {
           if (dayKey(ts) === todayKey) today.turns += 1
           if (ts >= hourStart) {
@@ -145,8 +146,8 @@ export function apply(ctx: Context) {
             dailyMap.set(key, bucket)
           }
         }
-        if (type !== 'assistant/message' || !event.usage || typeof event.usage !== 'object') continue
-        const raw = event.usage as { inputTokens?: number; outputTokens?: number; cacheReadTokens?: number }
+        if (type !== 'assistant/message' || !rec.usage || typeof rec.usage !== 'object') continue
+        const raw = rec.usage as { inputTokens?: number; outputTokens?: number; cacheReadTokens?: number }
         const usage = {
           inputTokens: Number(raw.inputTokens || 0),
           outputTokens: Number(raw.outputTokens || 0),
