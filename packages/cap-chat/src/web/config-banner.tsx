@@ -32,13 +32,13 @@ export function ChatConfigBanner(_props: SlotProps) {
       style={{ borderRadius: 'var(--dsw-radius-bubble)' }}
       role="status"
     >
-      尚未配置 API Key：消息会本地回声，不会调用模型。点击输入框旁的{' '}
+      尚未配置 API Key：消息会本地回声，不会调用模型。打开模型菜单右上角的{' '}
       <button
         type="button"
         className="font-medium text-[var(--dsw-business)] underline-offset-2 hover:underline"
         onClick={() => window.dispatchEvent(new CustomEvent('biu:open-model-config'))}
       >
-        ＋ 配置模型
+        设置
       </button>
       。
     </div>

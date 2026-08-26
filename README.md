@@ -313,7 +313,7 @@ make          # 安装依赖，同时起 host 与 Vite
 | UI | http://127.0.0.1:5173 |
 | API / WS | http://127.0.0.1:3141 |
 
-未配置 Key 时，发送消息只会得到本地回声。请点击输入框旁的 **＋ 配置模型**，或：
+未配置 Key 时，发送消息只会得到本地回声。请打开模型选择菜单右上角的 **设置**，或：
 
 ```bash
 export DEEPSEEK_API_KEY=...     # 或 OPENAI_API_KEY / ANTHROPIC_API_KEY
