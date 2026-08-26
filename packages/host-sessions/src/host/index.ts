@@ -1,6 +1,7 @@
 import { Service, type Context } from 'cordis'
 import { basename, isAbsolute, resolve } from 'node:path'
 import { realpath, stat } from 'node:fs/promises'
+import { platform } from 'node:os'
 import { assistantContentForApi, type LlmMessage } from '@biu/host-llm'
 import type { AgentSendOptions, AgentHandle, AgentTurn } from '@biu/host-agents'
 import {
@@ -516,10 +517,23 @@ export class SessionsService extends Service {
   }
 }
 
+/**
+ * 规范化磁盘路径字符串，使其能解析到实际存在的目录。
+ *
+ * macOS 的 APFS/HFS+ 以 NFD（Unicode 分解）形式存储文件名，而用户输入的
+ * 中文等多字节路径往往是 NFC（预组合）形式。两者字节不同，`realpath`/`stat`
+ * 对 NFC 字符串去解析 NFD 存储的目录会抛 ENOENT（即使目录确实存在），导致
+ * “中文等目录无法绑定”。这里在 darwin 上把输入统一转成 NFD 再解析（NFD 与
+ * NFC 对无分解字符的路径无差别，因此安全）。非 macOS 直接透传。
+ */
+function normalizePathForFs(input: string): string {
+  return platform() === 'darwin' ? input.normalize('NFD') : input
+}
+
 async function resolveHostProject(input: string): Promise<SessionProject> {
   const raw = String(input || '').trim()
   if (!raw) throw new Error('project path is required')
-  const abs = resolve(raw)
+  const abs = resolve(normalizePathForFs(raw))
   if (!isAbsolute(abs)) throw new Error('project path must be absolute')
   let real: string
   try {

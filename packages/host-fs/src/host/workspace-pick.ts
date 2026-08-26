@@ -27,20 +27,46 @@ export async function pickHostDirectory(initial?: string): Promise<string> {
 }
 
 async function pickMac(initial?: string) {
-  const lines = [
-    'try',
-    initial
-      ? `set chosen to choose folder with prompt "Choose workspace" default location POSIX file ${jsonString(initial)}`
-      : 'set chosen to choose folder with prompt "Choose workspace"',
-    'return POSIX path of chosen',
-    'on error number -128',
-    'return ""',
-    'end try',
-  ]
-  const { stdout } = await execFileAsync('osascript', ['-e', lines.join('\n')], { timeout: 300_000 })
-  const path = stdout.trim().replace(/\/$/, '')
-  if (!path) throw new DirectoryPickCancelled()
-  return path
+  // choose folder 对 default location（当前绑定的项目目录，可能是中文等非 ASCII 路径）
+  // 若无法解析成 alias，会抛出 -1700 等非 -128 错误（-128 才是用户取消）。
+  // 旧实现只捕获 -128，导致这类错误直接穿透成 4xx。这里：先带 default location 尝试；
+  // 若带默认位置失败（例如旧路径已失效），则退回不带默认位置重新弹框，让用户仍能选择目录。
+  const options = initial
+    ? [
+        `set chosen to choose folder with prompt "Choose workspace" default location POSIX file ${jsonString(initial)}`,
+        'set chosen to choose folder with prompt "Choose workspace"',
+      ]
+    : ['set chosen to choose folder with prompt "Choose workspace"']
+
+  let lastError: unknown
+  for (const openLine of options) {
+    const lines = [
+      'try',
+      openLine,
+      'return POSIX path of chosen',
+      'on error errMsg number errNum',
+      'if errNum is -128 then return ""',
+      'return "ERR:" & errNum & ":" & errMsg',
+      'end try',
+    ]
+    try {
+      const { stdout } = await execFileAsync('osascript', ['-e', lines.join('\n')], { timeout: 300_000 })
+      const line = stdout.trim()
+      if (line.startsWith('ERR:')) {
+        // AppleScript 运行时错误（非用户取消）
+        lastError = new DirectoryPickUnavailable(`osascript 目录选择失败：${line}`)
+        continue // 若存在不带默认位置的兜底选项，则重试
+      }
+      const path = line.replace(/\/$/, '')
+      if (!path) throw new DirectoryPickCancelled()
+      return path
+    } catch (error) {
+      lastError = error
+      continue
+    }
+  }
+  if (lastError) throw lastError
+  throw new DirectoryPickCancelled()
 }
 
 async function pickWindows(initial?: string) {
