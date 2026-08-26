@@ -294,8 +294,8 @@ biu-harness
 需要 Node.js 20+ 和 npm。`main` 与开发分支 `hmr-dev` 当前对齐。
 
 ```bash
-git clone https://github.com/helloooooooooooooo97/Biu-harness.git
-cd Biu-harness
+git clone https://github.com/helloooooooooooooo97/biu-harness.git
+cd biu-harness
 make          # 安装依赖，同时起 host 与 Vite
 ```
 
