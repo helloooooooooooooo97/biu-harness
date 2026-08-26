@@ -4,9 +4,10 @@ import { Service, type Context } from 'cordis'
 import type { ChatMessage } from './chat-types.ts'
 import type { AgentToolMode } from '@biu/host-tools'
 import type { LlmConfig } from '@biu/host-llm'
-import { LLM_MODEL_CATALOG, describeProvider, defaultModelFor, CHAT_PROVIDERS } from './model-catalog.ts'
-import type { ChatProvider, LlmModelDef } from './model-catalog.ts'
-export type { ChatProvider, LlmModelDef } from './model-catalog.ts'
+import { LLM_MODEL_CATALOG, LLM_ENDPOINT_PRESETS, describeProvider, defaultModelFor, CHAT_PROVIDERS, findEndpointPreset, normalizeBaseUrl } from './model-catalog.ts'
+import type { ChatProvider, LlmModelDef, LlmEndpointDef } from './model-catalog.ts'
+export type { ChatProvider, LlmModelDef, LlmEndpointDef } from './model-catalog.ts'
+export { LLM_ENDPOINT_PRESETS, LLM_MODEL_CATALOG } from './model-catalog.ts'
 import { currentSessionId } from '@biu/host-sessions/scope'
 import type { SessionConfig, SessionEvent } from '@biu/type-session'
 import { DEFAULT_TAIL_TURNS, sliceBeforeTurns, sliceTailTurns } from '@biu/host-sessions/window'
@@ -28,11 +29,25 @@ export type { ChatMessage }
 export type { AgentToolMode }
 
 const DEFAULT_PROVIDER: ChatProvider = 'deepseek'
+/** 当前选中入口 id；内置三家与 preset id 对齐，自定义入口为 custom-*。 */
+type EndpointId = string
 
 interface ChatConfig {
+  /** 入口 id（官方 / 中转 / 自定义）；兼容旧值 deepseek|openai|anthropic。 */
+  endpointId: EndpointId
+  /**
+   * 协议分流用的 provider（deepseek|openai|anthropic）。
+   * 由入口决定；保留字段以兼容旧持久化与会话覆盖。
+   */
   provider: ChatProvider
-  /** 每个 provider 独立存一份 apiKey；未配置的为空串。 */
-  apiKeys: Record<ChatProvider, string>
+  /** 每个入口独立存一份 apiKey。 */
+  apiKeys: Record<string, string>
+  /** 用户覆盖的 baseUrl（未覆盖则用 preset / customEndpoints 默认）。 */
+  baseUrls: Record<string, string>
+  /** 用户自定义入口（中转站自建 URL 等）。 */
+  customEndpoints: LlmEndpointDef[]
+  /** 用户在某入口下追加的模型名。 */
+  customModels: LlmModelDef[]
   model: string
   systemPrompt: string
   agentMode: AgentToolMode
@@ -44,7 +59,7 @@ function configPath() {
   return join(process.cwd(), '.cordis', 'chat-config.json')
 }
 
-function emptyKeys(): Record<ChatProvider, string> {
+function emptyKeys(): Record<string, string> {
   return { deepseek: '', openai: '', anthropic: '' }
 }
 
@@ -58,8 +73,12 @@ function defaults(): ChatConfig {
   const anthropic = Boolean(envKeys.anthropic)
   const provider: ChatProvider = deepseek ? 'deepseek' : openai ? 'openai' : anthropic ? 'anthropic' : 'deepseek'
   return {
+    endpointId: provider,
     provider,
     apiKeys: envKeys,
+    baseUrls: {},
+    customEndpoints: [],
+    customModels: [],
     model:
       process.env.CHAT_MODEL ||
       (provider === 'openai' ? 'gpt-4o-mini' : provider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'deepseek-chat'),
@@ -90,12 +109,16 @@ function writePersisted(config: ChatConfig) {
     configPath(),
     `${JSON.stringify(
       {
+        endpointId: config.endpointId,
         provider: config.provider,
         model: config.model,
         systemPrompt: config.systemPrompt,
         agentMode: config.agentMode,
         extraTools: config.extraTools,
         apiKeys: config.apiKeys,
+        baseUrls: config.baseUrls,
+        customEndpoints: config.customEndpoints,
+        customModels: config.customModels,
       },
       null,
       2,
@@ -112,17 +135,21 @@ function parseProvider(value: unknown): ChatProvider | null {
   return CHAT_PROVIDERS.includes(value as ChatProvider) ? (value as ChatProvider) : null
 }
 
-/** 取某个 provider 的持久化 key；环境变量始终优先（不会被磁盘文件覆盖 UI 清空）。 */
-function keyFor(provider: ChatProvider, saved: Partial<ChatConfig> | null): string {
-  const envMap: Record<ChatProvider, string | undefined> = {
+function isLocalEndpoint(endpoint: LlmEndpointDef): boolean {
+  return endpoint.group === 'local'
+}
+
+/** 取某个入口的持久化 key；环境变量始终优先（不会被磁盘文件覆盖 UI 清空）。 */
+function keyFor(endpointId: string, saved: Partial<ChatConfig> | null): string {
+  const envMap: Record<string, string | undefined> = {
     deepseek: process.env.DEEPSEEK_API_KEY,
     openai: process.env.OPENAI_API_KEY,
     anthropic: process.env.ANTHROPIC_API_KEY,
   }
-  if (envMap[provider]) return envMap[provider]
+  if (envMap[endpointId]) return envMap[endpointId]!
   const savedKeys = saved?.apiKeys
-  if (savedKeys && typeof savedKeys === 'object' && typeof (savedKeys as Record<string, unknown>)[provider] === 'string') {
-    const key = (savedKeys as Record<string, string>)[provider] || ''
+  if (savedKeys && typeof savedKeys === 'object' && typeof savedKeys[endpointId] === 'string') {
+    const key = savedKeys[endpointId] || ''
     if (key.trim()) return key.trim()
   }
   // 老格式：单一 apiKey 迁移到 deepseek（或默认 provider 所在）
@@ -132,18 +159,107 @@ function keyFor(provider: ChatProvider, saved: Partial<ChatConfig> | null): stri
       legacy.provider && CHAT_PROVIDERS.includes(legacy.provider as ChatProvider)
         ? (legacy.provider as ChatProvider)
         : DEFAULT_PROVIDER
-    if (provider === owner) return legacy.apiKey.trim()
+    if (endpointId === owner) return legacy.apiKey.trim()
   }
   return ''
 }
 
+function mergeCustomEndpoints(saved: Partial<ChatConfig> | null): LlmEndpointDef[] {
+  if (!Array.isArray(saved?.customEndpoints)) return []
+  const out: LlmEndpointDef[] = []
+  for (const raw of saved.customEndpoints) {
+    if (!raw || typeof raw !== 'object') continue
+    const id = typeof raw.id === 'string' ? raw.id.trim() : ''
+    const label = typeof raw.label === 'string' ? raw.label.trim() : ''
+    const baseUrl = typeof raw.baseUrl === 'string' ? normalizeBaseUrl(raw.baseUrl) : ''
+    if (!id || !label || !baseUrl) continue
+    const protocol = raw.protocol === 'anthropic' ? 'anthropic' : 'openai-compat'
+    const provider: ChatProvider =
+      raw.provider === 'deepseek' || raw.provider === 'anthropic' || raw.provider === 'openai'
+        ? raw.provider
+        : protocol === 'anthropic'
+          ? 'anthropic'
+          : 'openai'
+    out.push({
+      id,
+      label,
+      group: 'custom',
+      protocol,
+      baseUrl,
+      provider,
+      note: typeof raw.note === 'string' ? raw.note : undefined,
+      placeholder: typeof raw.placeholder === 'string' ? raw.placeholder : 'sk-…',
+      builtin: false,
+    })
+  }
+  return out
+}
+
+function mergeCustomModels(saved: Partial<ChatConfig> | null): LlmModelDef[] {
+  if (!Array.isArray(saved?.customModels)) return []
+  const out: LlmModelDef[] = []
+  for (const raw of saved.customModels) {
+    if (!raw || typeof raw !== 'object') continue
+    const id = typeof raw.id === 'string' ? raw.id.trim() : ''
+    const model = typeof raw.model === 'string' ? raw.model.trim() : ''
+    const endpointId = typeof raw.endpointId === 'string' ? raw.endpointId.trim() : ''
+    if (!id || !model || !endpointId) continue
+    const provider: ChatProvider =
+      raw.provider === 'deepseek' || raw.provider === 'openai' || raw.provider === 'anthropic'
+        ? raw.provider
+        : 'openai'
+    out.push({
+      id,
+      label: typeof raw.label === 'string' && raw.label.trim() ? raw.label.trim() : model,
+      endpointId,
+      provider,
+      model,
+      category: typeof raw.category === 'string' ? raw.category : 'custom',
+      note: typeof raw.note === 'string' ? raw.note : undefined,
+      builtin: false,
+    })
+  }
+  return out
+}
+
 function mergePersisted(base: ChatConfig, saved: Partial<ChatConfig> | null): ChatConfig {
   if (!saved) return base
-  const apiKeys = emptyKeys()
-  for (const provider of CHAT_PROVIDERS) apiKeys[provider] = keyFor(provider, saved)
+  const customEndpoints = mergeCustomEndpoints(saved)
+  const customModels = mergeCustomModels(saved)
+  const apiKeys: Record<string, string> = { ...emptyKeys() }
+  // 合并所有已知入口的 key
+  const allEndpointIds = new Set<string>([
+    ...CHAT_PROVIDERS,
+    ...LLM_ENDPOINT_PRESETS.map((e) => e.id),
+    ...customEndpoints.map((e) => e.id),
+    ...(saved.apiKeys && typeof saved.apiKeys === 'object' ? Object.keys(saved.apiKeys) : []),
+  ])
+  for (const id of allEndpointIds) apiKeys[id] = keyFor(id, saved)
+
+  const baseUrls: Record<string, string> = {}
+  if (saved.baseUrls && typeof saved.baseUrls === 'object') {
+    for (const [id, url] of Object.entries(saved.baseUrls)) {
+      if (typeof url === 'string' && url.trim()) baseUrls[id] = normalizeBaseUrl(url)
+    }
+  }
+
+  const endpointId =
+    typeof saved.endpointId === 'string' && saved.endpointId.trim()
+      ? saved.endpointId.trim()
+      : parseProvider(saved.provider) ?? base.endpointId
+
+  const endpoint =
+    findEndpointPreset(endpointId) ??
+    customEndpoints.find((e) => e.id === endpointId) ??
+    findEndpointPreset(base.endpointId)
+
   return {
-    provider: parseProvider(saved.provider) ?? (base.provider in apiKeys && apiKeys[base.provider] ? base.provider : DEFAULT_PROVIDER),
+    endpointId,
+    provider: endpoint?.provider ?? parseProvider(saved.provider) ?? base.provider,
     apiKeys,
+    baseUrls,
+    customEndpoints,
+    customModels,
     model: !process.env.CHAT_MODEL && typeof saved.model === 'string' && saved.model.trim() ? saved.model.trim() : base.model,
     systemPrompt: typeof saved.systemPrompt === 'string' ? saved.systemPrompt : base.systemPrompt,
     agentMode: parseAgentMode(saved.agentMode, base.agentMode),
@@ -153,13 +269,36 @@ function mergePersisted(base: ChatConfig, saved: Partial<ChatConfig> | null): Ch
   }
 }
 
-/** 返回某 provider 是否已配置 key（用于前端「只有配了 token 的模型可选」）。 */
-function providerConfigured(keys: Record<ChatProvider, string>): Record<ChatProvider, boolean> {
-  return {
-    deepseek: Boolean(keys.deepseek.trim()),
-    openai: Boolean(keys.openai.trim()),
-    anthropic: Boolean(keys.anthropic.trim()),
-  }
+function allEndpoints(config: ChatConfig): LlmEndpointDef[] {
+  const customIds = new Set(config.customEndpoints.map((e) => e.id))
+  return [
+    ...LLM_ENDPOINT_PRESETS.filter((e) => !customIds.has(e.id)),
+    ...config.customEndpoints,
+  ]
+}
+
+function allModels(config: ChatConfig): LlmModelDef[] {
+  const customIds = new Set(config.customModels.map((m) => m.id))
+  return [
+    ...LLM_MODEL_CATALOG.filter((m) => !customIds.has(m.id)),
+    ...config.customModels,
+  ]
+}
+
+function resolveEndpoint(config: ChatConfig, endpointId: string): LlmEndpointDef | undefined {
+  return allEndpoints(config).find((e) => e.id === endpointId)
+}
+
+function effectiveBaseUrl(config: ChatConfig, endpoint: LlmEndpointDef): string {
+  const override = config.baseUrls[endpoint.id]
+  return override?.trim() ? normalizeBaseUrl(override) : endpoint.baseUrl
+}
+
+/** 入口是否已配置：有 Key，或本地入口（允许空 Key）。 */
+function endpointConfigured(config: ChatConfig, endpoint: LlmEndpointDef): boolean {
+  const key = (config.apiKeys[endpoint.id] ?? '').trim()
+  if (key) return true
+  return isLocalEndpoint(endpoint)
 }
 
 export class ChatService extends Service {
@@ -180,22 +319,67 @@ export class ChatService extends Service {
   }
 
   publicView() {
-    const configured = providerConfigured(this.config.apiKeys)
+    const endpoints = allEndpoints(this.config)
+    const models = allModels(this.config)
+    const current = resolveEndpoint(this.config, this.config.endpointId)
+    const providers: Record<string, { label: string; configured: boolean; hint: string; baseUrl: string; group: string; protocol: string }> = {}
+    for (const ep of endpoints) {
+      providers[ep.id] = {
+        label: ep.label,
+        configured: endpointConfigured(this.config, ep),
+        hint: hint(this.config.apiKeys[ep.id] ?? ''),
+        baseUrl: effectiveBaseUrl(this.config, ep),
+        group: ep.group,
+        protocol: ep.protocol,
+      }
+    }
+    // 兼容旧前端：三家协议维度也暴露
+    for (const p of CHAT_PROVIDERS) {
+      if (!providers[p]) {
+        providers[p] = {
+          label: describeProvider(p),
+          configured: Boolean((this.config.apiKeys[p] ?? '').trim()),
+          hint: hint(this.config.apiKeys[p] ?? ''),
+          baseUrl: findEndpointPreset(p)?.baseUrl ?? '',
+          group: 'official',
+          protocol: p === 'anthropic' ? 'anthropic' : 'openai-compat',
+        }
+      }
+    }
     return {
+      endpointId: this.config.endpointId,
       provider: this.config.provider,
       model: this.config.model,
       systemPrompt: this.config.systemPrompt,
       agentMode: this.config.agentMode,
-      /** 当前默认 provider 是否已配置（兼容旧语义，供 banner 等使用）。 */
-      configured: configured[this.config.provider],
-      hint: hint(this.config.apiKeys[this.config.provider]),
-      /** 各 provider 是否已配置 key。 */
-      providers: {
-        deepseek: { label: describeProvider('deepseek'), configured: configured.deepseek, hint: hint(this.config.apiKeys.deepseek) },
-        openai: { label: describeProvider('openai'), configured: configured.openai, hint: hint(this.config.apiKeys.openai) },
-        anthropic: { label: describeProvider('anthropic'), configured: configured.anthropic, hint: hint(this.config.apiKeys.anthropic) },
-      },
-      modelCatalog: LLM_MODEL_CATALOG,
+      /** 当前默认入口是否已配置（兼容旧语义，供 banner 等使用）。 */
+      configured: current ? endpointConfigured(this.config, current) : Boolean((this.config.apiKeys[this.config.provider] ?? '').trim()),
+      hint: hint(this.config.apiKeys[this.config.endpointId] ?? this.config.apiKeys[this.config.provider] ?? ''),
+      baseUrl: current ? effectiveBaseUrl(this.config, current) : '',
+      /** 各入口是否已配置 key + baseUrl。 */
+      providers,
+      endpoints: endpoints.map((ep) => ({
+        id: ep.id,
+        label: ep.label,
+        group: ep.group,
+        protocol: ep.protocol,
+        provider: ep.provider,
+        baseUrl: effectiveBaseUrl(this.config, ep),
+        defaultBaseUrl: ep.baseUrl,
+        configured: endpointConfigured(this.config, ep),
+        hint: hint(this.config.apiKeys[ep.id] ?? ''),
+        placeholder: ep.placeholder ?? 'sk-…',
+        note: ep.note,
+        builtin: ep.builtin !== false && ep.group !== 'custom',
+      })),
+      modelCatalog: models.map((m) => ({
+        ...m,
+        // 方便前端按入口过滤
+        endpointConfigured: (() => {
+          const ep = resolveEndpoint(this.config, m.endpointId)
+          return ep ? endpointConfigured(this.config, ep) : false
+        })(),
+      })),
       tools: this.ctx.tools.names(),
       toolCatalog: this.ctx.tools.catalog(),
       extraTools: this.config.extraTools,
@@ -205,6 +389,7 @@ export class ChatService extends Service {
   /** 全局默认 + 会话覆盖（不含 apiKey）。 */
   resolveEffective(sessionId?: string | null) {
     const defaultsView = {
+      endpointId: this.config.endpointId,
       provider: this.config.provider,
       model: this.config.model,
       systemPrompt: this.config.systemPrompt,
@@ -213,9 +398,19 @@ export class ChatService extends Service {
     }
     if (!sessionId) return { defaults: defaultsView, config: undefined as SessionConfig | undefined, effective: defaultsView }
     const config = this.ctx.sessions.peek(sessionId)?.config
+    // 会话仍可覆盖 provider/model；endpoint 跟随模型所属入口或全局
+    const provider = (config?.provider as ChatProvider | undefined) ?? defaultsView.provider
+    const model = config?.model ?? defaultsView.model
+    let endpointId = defaultsView.endpointId
+    const matched = allModels(this.config).find((m) => m.model === model && m.provider === provider)
+    if (matched) endpointId = matched.endpointId
+    else if (config?.provider && CHAT_PROVIDERS.includes(config.provider as ChatProvider)) {
+      endpointId = config.provider as string
+    }
     const effective = {
-      provider: config?.provider ?? defaultsView.provider,
-      model: config?.model ?? defaultsView.model,
+      endpointId,
+      provider,
+      model,
       systemPrompt:
         typeof config?.systemPrompt === 'string' ? config.systemPrompt : defaultsView.systemPrompt,
       agentMode: config?.agentMode ?? defaultsView.agentMode,
@@ -226,54 +421,172 @@ export class ChatService extends Service {
   }
 
   resolverKey(provider: ChatProvider): string {
-    return this.config.apiKeys[provider]
+    return this.config.apiKeys[provider] ?? ''
   }
 
-  /** 根据有效 provider 取对应 apiKey；未配置则返回空（LLM 层会因鉴权失败抛错，友好提示）。 */
+  /** 根据有效入口取对应 apiKey + baseUrl。 */
   resolveLlm(sessionId?: string | null): LlmConfig {
     const { effective } = this.resolveEffective(sessionId)
+    const endpointId = (effective as { endpointId?: string }).endpointId ?? this.config.endpointId
+    const endpoint = resolveEndpoint(this.config, endpointId) ?? resolveEndpoint(this.config, effective.provider)
+    const provider: ChatProvider = endpoint?.provider ?? effective.provider
+    const apiKey =
+      (endpoint ? this.config.apiKeys[endpoint.id] : undefined) ??
+      this.config.apiKeys[provider] ??
+      ''
+    // 本地入口允许空 Key：上游常不校验，填占位避免部分网关拒空 Authorization
+    const key = apiKey.trim() || (endpoint && isLocalEndpoint(endpoint) ? 'local' : '')
     return {
-      provider: effective.provider,
-      apiKey: this.config.apiKeys[effective.provider] ?? '',
+      provider,
+      apiKey: key,
       model: effective.model,
+      ...(endpoint ? { baseUrl: effectiveBaseUrl(this.config, endpoint) } : {}),
     }
   }
 
   /**
-   * 更新配置。provider/model/systemPrompt/agentMode/extraTools 直接覆盖；
-   * setApiKey(provider, key) 按 provider 独立写入 key；空串表示保留原值，仅非空时更新。
+   * 更新配置。endpointId/provider/model/systemPrompt/agentMode/extraTools 直接覆盖；
+   * setApiKey / setBaseUrl 按入口写入；空串表示保留原值，仅非空时更新。
+   * addEndpoint / addModel / removeCustom* 管理自定义入口与模型。
    */
   patch(
     next: Partial<{
+      endpointId: string
       provider: ChatProvider
       apiKey: string
       model: string
+      baseUrl: string
       systemPrompt: string
       agentMode: AgentToolMode
       extraTools: string[]
-      /** 按 provider 更新 key：{ deepseek?: '…', openai?: '…', anthropic?: '…' } */
-      setApiKey: Partial<Record<ChatProvider, string>>
+      /** 按入口更新 key */
+      setApiKey: Partial<Record<string, string>>
+      /** 按入口覆盖 baseUrl；空串清除覆盖、回到 preset 默认 */
+      setBaseUrl: Partial<Record<string, string | null>>
+      /** 追加自定义入口 */
+      addEndpoint: { id?: string; label: string; baseUrl: string; protocol?: 'openai-compat' | 'anthropic'; provider?: ChatProvider; note?: string }
+      /** 追加模型到某入口 */
+      addModel: { endpointId: string; model: string; label?: string; note?: string }
+      removeCustomEndpoint: string
+      removeCustomModel: string
     }>,
     opts?: { persist?: boolean },
   ) {
-    if (next.provider) {
+    if (typeof next.endpointId === 'string' && next.endpointId.trim()) {
+      const id = next.endpointId.trim()
+      const ep = resolveEndpoint(this.config, id)
+      this.config.endpointId = id
+      if (ep) this.config.provider = ep.provider
+      // 未指定 model 时，切到该入口第一个模型
+      if (typeof next.model !== 'string' || !next.model.trim()) {
+        const first = allModels(this.config).find((m) => m.endpointId === id)
+        if (first) this.config.model = first.model
+        else if (ep) this.config.model = defaultModelFor(ep.provider)
+      }
+    } else if (next.provider) {
       this.config.provider = next.provider
-      // 未指定 model 时，默认模型跟随 provider 的默认模型
+      this.config.endpointId = next.provider
       if (typeof next.model !== 'string' || !next.model.trim()) {
         this.config.model = defaultModelFor(next.provider)
       }
     }
     if (typeof next.model === 'string' && next.model.trim()) this.config.model = next.model.trim()
     if (typeof next.systemPrompt === 'string') this.config.systemPrompt = next.systemPrompt
+    if (typeof next.baseUrl === 'string' && next.baseUrl.trim()) {
+      this.config.baseUrls[this.config.endpointId] = normalizeBaseUrl(next.baseUrl)
+    }
     if (next.setApiKey && typeof next.setApiKey === 'object') {
-      for (const provider of CHAT_PROVIDERS) {
-        const key = next.setApiKey[provider]
-        if (typeof key === 'string' && key.trim()) this.config.apiKeys[provider] = key.trim()
+      for (const [id, key] of Object.entries(next.setApiKey)) {
+        if (typeof key === 'string' && key.trim()) this.config.apiKeys[id] = key.trim()
       }
     }
-    // 兼容旧调用：单一 apiKey 写入当前 provider
+    if (next.setBaseUrl && typeof next.setBaseUrl === 'object') {
+      for (const [id, url] of Object.entries(next.setBaseUrl)) {
+        if (url === null || url === '') {
+          delete this.config.baseUrls[id]
+        } else if (typeof url === 'string' && url.trim()) {
+          this.config.baseUrls[id] = normalizeBaseUrl(url)
+        }
+      }
+    }
+    // 兼容旧调用：单一 apiKey 写入当前入口
     if (typeof next.apiKey === 'string' && next.apiKey.trim()) {
-      this.config.apiKeys[this.config.provider] = next.apiKey.trim()
+      this.config.apiKeys[this.config.endpointId] = next.apiKey.trim()
+    }
+    if (next.addEndpoint && typeof next.addEndpoint === 'object') {
+      const label = String(next.addEndpoint.label ?? '').trim()
+      const baseUrl = normalizeBaseUrl(String(next.addEndpoint.baseUrl ?? ''))
+      if (label && baseUrl) {
+        const protocol = next.addEndpoint.protocol === 'anthropic' ? 'anthropic' : 'openai-compat'
+        const provider: ChatProvider =
+          next.addEndpoint.provider === 'deepseek' ||
+          next.addEndpoint.provider === 'anthropic' ||
+          next.addEndpoint.provider === 'openai'
+            ? next.addEndpoint.provider
+            : protocol === 'anthropic'
+              ? 'anthropic'
+              : 'openai'
+        const id =
+          (typeof next.addEndpoint.id === 'string' && next.addEndpoint.id.trim()) ||
+          `custom-${Date.now().toString(36)}`
+        const existing = this.config.customEndpoints.findIndex((e) => e.id === id)
+        const def: LlmEndpointDef = {
+          id,
+          label,
+          group: 'custom',
+          protocol,
+          baseUrl,
+          provider,
+          note: next.addEndpoint.note,
+          placeholder: 'sk-…',
+          builtin: false,
+        }
+        if (existing >= 0) this.config.customEndpoints[existing] = def
+        else this.config.customEndpoints.push(def)
+        this.config.endpointId = id
+        this.config.provider = provider
+      }
+    }
+    if (next.addModel && typeof next.addModel === 'object') {
+      const endpointId = String(next.addModel.endpointId ?? '').trim()
+      const model = String(next.addModel.model ?? '').trim()
+      if (endpointId && model) {
+        const ep = resolveEndpoint(this.config, endpointId)
+        const provider = ep?.provider ?? 'openai'
+        const id = `custom-model-${endpointId}-${model}`.replace(/[^a-zA-Z0-9._:-]+/g, '-')
+        const def: LlmModelDef = {
+          id,
+          label: (next.addModel.label ?? model).trim() || model,
+          endpointId,
+          provider,
+          model,
+          category: 'custom',
+          note: next.addModel.note,
+          builtin: false,
+        }
+        const existing = this.config.customModels.findIndex((m) => m.id === id || (m.endpointId === endpointId && m.model === model))
+        if (existing >= 0) this.config.customModels[existing] = def
+        else this.config.customModels.push(def)
+        this.config.endpointId = endpointId
+        this.config.provider = provider
+        this.config.model = model
+      }
+    }
+    if (typeof next.removeCustomEndpoint === 'string' && next.removeCustomEndpoint.trim()) {
+      const id = next.removeCustomEndpoint.trim()
+      this.config.customEndpoints = this.config.customEndpoints.filter((e) => e.id !== id)
+      this.config.customModels = this.config.customModels.filter((m) => m.endpointId !== id)
+      delete this.config.apiKeys[id]
+      delete this.config.baseUrls[id]
+      if (this.config.endpointId === id) {
+        this.config.endpointId = DEFAULT_PROVIDER
+        this.config.provider = DEFAULT_PROVIDER
+        this.config.model = defaultModelFor(DEFAULT_PROVIDER)
+      }
+    }
+    if (typeof next.removeCustomModel === 'string' && next.removeCustomModel.trim()) {
+      const id = next.removeCustomModel.trim()
+      this.config.customModels = this.config.customModels.filter((m) => m.id !== id)
     }
     if (next.agentMode === 'standard' || next.agentMode === 'minimal') this.config.agentMode = next.agentMode
     if (Array.isArray(next.extraTools)) {
@@ -406,13 +719,20 @@ export function apply(ctx: Context) {
   })
   ctx.http.route('POST', '/api/chat/config', async (route) => {
     const payload = (await route.json()) as Partial<{
+      endpointId: string
       provider: ChatProvider
       apiKey: string
       model: string
+      baseUrl: string
       systemPrompt: string
       agentMode: AgentToolMode
       extraTools: string[]
-      setApiKey: Partial<Record<ChatProvider, string>>
+      setApiKey: Partial<Record<string, string>>
+      setBaseUrl: Partial<Record<string, string | null>>
+      addEndpoint: { id?: string; label: string; baseUrl: string; protocol?: 'openai-compat' | 'anthropic'; provider?: ChatProvider; note?: string }
+      addModel: { endpointId: string; model: string; label?: string; note?: string }
+      removeCustomEndpoint: string
+      removeCustomModel: string
     }>
     route.send(200, chat.patch(payload ?? {}))
   })

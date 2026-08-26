@@ -57,6 +57,7 @@ type ModelOption = {
   id: string
   label: string
   provider: ChatProvider
+  endpointId: string
   model: string
   note?: string
 }
@@ -84,6 +85,7 @@ function matchModelOption(catalog: ModelOption[], provider: string, model: strin
       id: `${provider}:${model}`,
       label: model,
       provider: (provider as ChatProvider) ?? 'deepseek',
+      endpointId: provider || 'deepseek',
       model,
     }
   )
@@ -105,12 +107,13 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     id: 'deepseek-flash',
     label: 'DeepSeek Flash',
     provider: 'deepseek',
+    endpointId: 'deepseek',
     model: 'deepseek-chat',
   })
   const [modelBusy, setModelBusy] = useState(false)
-  /** 全部目录模型（含未配置的），用于下拉只展示已配置 provider，但当前选中可能来自任一。 */
+  /** 全部目录模型（含未配置的），用于下拉只展示已配置入口，但当前选中可能来自任一。 */
   const [allModels, setAllModels] = useState<ModelOption[]>([])
-  /** 各 provider 是否已配置 token。 */
+  /** 各入口是否已配置 token（key = endpointId）。 */
   const [modelProviders, setModelProviders] = useState<Record<string, boolean> | null>(null)
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const pending = useSessionView((state) => state.pending)
@@ -164,9 +167,19 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
         (data: {
           toolCatalog?: ToolCatalogItem[]
           provider?: string
+          endpointId?: string
           model?: string
           providers?: Record<string, { configured?: boolean }>
-          modelCatalog?: Array<{ id: string; label: string; provider: string; model: string; note?: string }>
+          endpoints?: Array<{ id: string; configured?: boolean }>
+          modelCatalog?: Array<{
+            id: string
+            label: string
+            provider: string
+            endpointId?: string
+            model: string
+            note?: string
+            endpointConfigured?: boolean
+          }>
         }) => {
           if (cancelled) return
           const items = Array.isArray(data.toolCatalog) ? data.toolCatalog : []
@@ -176,6 +189,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
               id: m.id,
               label: m.label,
               provider: m.provider as ChatProvider,
+              endpointId: m.endpointId || m.provider,
               model: m.model,
               ...(m.note ? { note: m.note } : {}),
             }))
@@ -185,11 +199,14 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           } else if (data.provider && data.model) {
             setModelOption(matchModelOption([], data.provider, data.model))
           }
-          if (data.providers) {
-            const cfg: Record<string, boolean> = {}
-            for (const [k, v] of Object.entries(data.providers)) cfg[k] = Boolean(v?.configured)
-            setModelProviders(cfg)
+          const cfg: Record<string, boolean> = {}
+          if (Array.isArray(data.endpoints)) {
+            for (const ep of data.endpoints) cfg[ep.id] = Boolean(ep?.configured)
           }
+          if (data.providers) {
+            for (const [k, v] of Object.entries(data.providers)) cfg[k] = Boolean(v?.configured)
+          }
+          if (Object.keys(cfg).length) setModelProviders(cfg)
         },
       )
       .catch(() => {
@@ -357,7 +374,11 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       const res = await fetch('/api/chat/config', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ provider: option.provider, model: option.model }),
+        body: JSON.stringify({
+          endpointId: option.endpointId,
+          provider: option.provider,
+          model: option.model,
+        }),
       })
       if (!res.ok) return
       const data = (await res.json()) as { provider?: string; model?: string }
@@ -566,7 +587,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
             {modelOpen ? (
               <div className="composer-model-menu" role="listbox" aria-label="模型">
                 {allModels
-                  .filter((m) => modelProviders?.[m.provider])
+                  .filter((m) => modelProviders?.[m.endpointId] || modelProviders?.[m.provider])
                   .map((option) => (
                     <button
                       key={option.id}
@@ -581,7 +602,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
                     </button>
                   ))}
                 {allModels.length === 0 ||
-                !allModels.some((m) => modelProviders?.[m.provider]) ? (
+                !allModels.some((m) => modelProviders?.[m.endpointId] || modelProviders?.[m.provider]) ? (
                   <div className="composer-model-empty">请在 Settings → 模型与 Token 配置 API Key 后选择模型</div>
                 ) : null}
               </div>

@@ -6,6 +6,34 @@ export interface LlmConfig {
   provider: ChatProvider
   apiKey: string
   model: string
+  /**
+   * 可选自定义 API 根地址（官方 / 中转站 / 本地）。
+   * openai-compat：拼 `/chat/completions`；anthropic：拼 `/messages`。
+   * 也可直接传入已含后缀的完整 URL。
+   */
+  baseUrl?: string
+}
+
+/** 把用户配置的 baseUrl 解析成 chat.completions 完整地址。 */
+export function resolveChatCompletionsUrl(baseUrl: string | undefined, provider: ChatProvider): string {
+  if (baseUrl?.trim()) {
+    const trimmed = baseUrl.trim().replace(/\/+$/, '')
+    if (/\/chat\/completions$/i.test(trimmed)) return trimmed
+    return `${trimmed}/chat/completions`
+  }
+  return provider === 'deepseek'
+    ? 'https://api.deepseek.com/chat/completions'
+    : 'https://api.openai.com/v1/chat/completions'
+}
+
+/** 把用户配置的 baseUrl 解析成 Anthropic messages 完整地址。 */
+export function resolveAnthropicMessagesUrl(baseUrl: string | undefined): string {
+  if (baseUrl?.trim()) {
+    const trimmed = baseUrl.trim().replace(/\/+$/, '')
+    if (/\/messages$/i.test(trimmed)) return trimmed
+    return `${trimmed}/messages`
+  }
+  return 'https://api.anthropic.com/v1/messages'
 }
 
 /** DeepSeek 视觉模型：检测到图片输入时自动路由到它。 */
@@ -218,10 +246,7 @@ export class OpenAiCompatLlm implements LlmClient {
     signal?: AbortSignal,
     options?: ChatOptions,
   ): Promise<AssistantReply> {
-    const url =
-      this.config.provider === 'deepseek'
-        ? 'https://api.deepseek.com/chat/completions'
-        : 'https://api.openai.com/v1/chat/completions'
+    const url = resolveChatCompletionsUrl(this.config.baseUrl, this.config.provider)
     // 仅 deepseek provider 支持自动路由到视觉模型；openai/anthropic 保持配置原状。
     const hasImage = messages.some((m) => hasImageContent(m.content))
     const model =
@@ -271,8 +296,6 @@ export class OpenAiCompatLlm implements LlmClient {
  *  - 结束由 `message_stop` 标志，无 `[DONE]`。
  */
 export class AnthropicLlm implements LlmClient {
-  private endpoint = 'https://api.anthropic.com/v1/messages'
-
   constructor(private config: LlmConfig) {}
 
   async chat(
@@ -281,6 +304,7 @@ export class AnthropicLlm implements LlmClient {
     signal?: AbortSignal,
     options?: ChatOptions,
   ): Promise<AssistantReply> {
+    const endpoint = resolveAnthropicMessagesUrl(this.config.baseUrl)
     const system = messages
       .filter((m) => m.role === 'system')
       .map((m) => m.content ?? '')
@@ -326,7 +350,7 @@ export class AnthropicLlm implements LlmClient {
         }
       })
     }
-    const res = await fetch(this.endpoint, {
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'x-api-key': this.config.apiKey,

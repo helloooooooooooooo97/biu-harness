@@ -15,6 +15,10 @@
 
 <p align="center"><b>一切即插件的 Agent Harness</b></p>
 <p align="center">多 Agent 不依赖群聊轮流发言，而是通过任务看板协作。</p>
+<p align="center">
+  <img src="public/f1.svg" width="22" height="22" alt="F1" valign="middle" />
+  &nbsp;<b>天生驾驶者</b>
+</p>
 
 <div align="center">
 
