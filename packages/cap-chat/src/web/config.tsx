@@ -1,11 +1,13 @@
 /**
- * Models 设置：
- * 1) 官方 Token：DeepSeek / Claude / GPT 独立 Key（始终可见）
- * 2) 默认模型：提供商 + 模型下拉（有目录就能看见模型）
- * 3) 第三方：自定义 Base URL + Token + 模型名（中转站 / OneAPI 等）
+ * Models 设置 UI（对齐 LobeChat / Open WebUI）
+ *
+ * 交互：
+ * 1. 左侧选 Provider（官方置顶；已接入的第三方；+ 添加）
+ * 2. 右侧只编辑当前 Provider：Key / Base URL / 模型列表 / 设为默认
+ * 3. 一处保存，不再拆成三块互相抢焦点
  */
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { LuPlus, LuTrash2 } from 'react-icons/lu'
+import { useEffect, useMemo, useState } from 'react'
+import { LuCheck, LuPlus, LuSearch, LuTrash2 } from 'react-icons/lu'
 import type { SlotProps } from '@biu/web-slots'
 
 type ChatProvider = 'deepseek' | 'openai' | 'anthropic'
@@ -53,107 +55,144 @@ interface ChatPublicConfig {
   modelCatalog?: ModelDef[]
 }
 
-const OFFICIAL: { key: ChatProvider; label: string; placeholder: string }[] = [
-  { key: 'deepseek', label: 'DeepSeek', placeholder: 'sk-…' },
-  { key: 'anthropic', label: 'Claude（Anthropic）', placeholder: 'sk-ant-…' },
-  { key: 'openai', label: 'GPT（OpenAI）', placeholder: 'sk-…' },
-]
+const OFFICIAL_IDS = ['deepseek', 'anthropic', 'openai'] as const
+type OfficialId = (typeof OFFICIAL_IDS)[number]
 
-const OFFICIAL_ORDER: ChatProvider[] = ['deepseek', 'anthropic', 'openai']
+const OFFICIAL_META: Record<OfficialId, { label: string; placeholder: string }> = {
+  deepseek: { label: 'DeepSeek', placeholder: 'sk-…' },
+  anthropic: { label: 'Claude', placeholder: 'sk-ant-…' },
+  openai: { label: 'OpenAI', placeholder: 'sk-…' },
+}
+
+function isOfficial(id: string): id is OfficialId {
+  return (OFFICIAL_IDS as readonly string[]).includes(id)
+}
 
 const inputCls = [
   'w-full rounded-[8px] px-2.5 py-[7px] text-[13px] text-[var(--dsw-label)]',
   'border border-[var(--dsw-border)] bg-[var(--dsw-input)] outline-none',
   'placeholder:text-[var(--dsw-label-3)] focus:border-[var(--dsw-business)]',
 ].join(' ')
-const labelCls = 'text-[11px] font-semibold text-[var(--dsw-label-3)]'
-const ghostBtn = [
-  'inline-flex items-center gap-1 rounded-[8px] px-2.5 py-[6px] text-[12px] font-medium',
-  'border border-[var(--dsw-border)] text-[var(--dsw-label)]',
-  'hover:bg-[var(--dsw-hover)]',
-].join(' ')
 
 export function ChatConfig(_props: SlotProps) {
-  const [endpointId, setEndpointId] = useState('deepseek')
-  const [model, setModel] = useState('deepseek-chat')
+  const [activeId, setActiveId] = useState('deepseek')
+  const [defaultEndpointId, setDefaultEndpointId] = useState('deepseek')
+  const [defaultModel, setDefaultModel] = useState('deepseek-chat')
   const [endpoints, setEndpoints] = useState<EndpointView[]>([])
   const [modelCatalog, setModelCatalog] = useState<ModelDef[]>([])
   const [providers, setProviders] = useState<Record<string, ProviderView> | null>(null)
-  const [officialKeys, setOfficialKeys] = useState<Record<ChatProvider, string>>({
-    deepseek: '',
-    openai: '',
-    anthropic: '',
-  })
-  const [thirdKeyDraft, setThirdKeyDraft] = useState('')
-  const [thirdUrlDraft, setThirdUrlDraft] = useState('')
+
+  const [keyDraft, setKeyDraft] = useState('')
+  const [urlDraft, setUrlDraft] = useState('')
+  const [query, setQuery] = useState('')
+  const [newModelName, setNewModelName] = useState('')
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  const [newModelName, setNewModelName] = useState('')
-  const [showAddThird, setShowAddThird] = useState(false)
-  const [newEpLabel, setNewEpLabel] = useState('')
-  const [newEpUrl, setNewEpUrl] = useState('')
-  const [newEpKey, setNewEpKey] = useState('')
-  const [newEpProtocol, setNewEpProtocol] = useState<'openai-compat' | 'anthropic'>('openai-compat')
+  const [adding, setAdding] = useState(false)
   const [presetId, setPresetId] = useState('')
+  const [newLabel, setNewLabel] = useState('')
+  const [newUrl, setNewUrl] = useState('')
+  const [newKey, setNewKey] = useState('')
+  const [newProtocol, setNewProtocol] = useState<'openai-compat' | 'anthropic'>('openai-compat')
 
-  const officialEndpoints = useMemo(
-    () => endpoints.filter((e) => OFFICIAL_ORDER.includes(e.id as ChatProvider)),
-    [endpoints],
+  const active = endpoints.find((e) => e.id === activeId)
+  const activeModels = useMemo(
+    () => modelCatalog.filter((m) => m.endpointId === activeId),
+    [modelCatalog, activeId],
   )
-  const thirdEndpoints = useMemo(
-    () => endpoints.filter((e) => !OFFICIAL_ORDER.includes(e.id as ChatProvider)),
-    [endpoints],
-  )
-  const relayPresets = useMemo(
-    () => thirdEndpoints.filter((e) => e.group === 'relay' || e.group === 'local' || (e.group === 'official' && !OFFICIAL_ORDER.includes(e.id as ChatProvider))),
-    [thirdEndpoints],
+  const isDefaultProvider = defaultEndpointId === activeId
+  const configured = active?.configured ?? providers?.[activeId]?.configured ?? false
+
+  const officialList = useMemo(() => {
+    return OFFICIAL_IDS.map((id) => {
+      const found = endpoints.find((e) => e.id === id)
+      if (found) return found
+      return {
+        id,
+        label: OFFICIAL_META[id].label,
+        group: 'official',
+        protocol: id === 'anthropic' ? 'anthropic' : 'openai-compat',
+        provider: id,
+        baseUrl: '',
+        defaultBaseUrl: '',
+        configured: Boolean(providers?.[id]?.configured),
+        hint: providers?.[id]?.hint ?? '',
+        placeholder: OFFICIAL_META[id].placeholder,
+        note: '官方',
+        builtin: true,
+      } satisfies EndpointView
+    })
+  }, [endpoints, providers])
+
+  /** 已接入的第三方：配过 Key，或自定义，或当前默认 */
+  const connectedThird = useMemo(
+    () =>
+      endpoints.filter(
+        (e) =>
+          !isOfficial(e.id) &&
+          (e.configured || e.group === 'custom' || e.id === defaultEndpointId || e.id === activeId),
+      ),
+    [endpoints, defaultEndpointId, activeId],
   )
 
-  const isOfficial = OFFICIAL_ORDER.includes(endpointId as ChatProvider)
-  const current = endpoints.find((e) => e.id === endpointId)
-  const availableModels = useMemo(
-    () => modelCatalog.filter((m) => m.endpointId === endpointId),
-    [modelCatalog, endpointId],
+  const presets = useMemo(
+    () =>
+      endpoints.filter(
+        (e) =>
+          !isOfficial(e.id) &&
+          !connectedThird.some((c) => c.id === e.id) &&
+          (e.group === 'relay' || e.group === 'local' || e.group === 'official'),
+      ),
+    [endpoints, connectedThird],
   )
-  const currentModelInCatalog =
-    availableModels.find((m) => m.model === model) ?? availableModels[0]
 
-  /** 切换入口：同步 URL 草稿，并强制落到该入口的第一个模型。 */
-  function switchEndpoint(next: string) {
-    setEndpointId(next)
-    setThirdKeyDraft('')
-    setError('')
-    setStatus('')
-    setNewModelName('')
-    const ep = endpoints.find((x) => x.id === next)
-    if (ep && !OFFICIAL_ORDER.includes(next as ChatProvider)) {
-      setThirdUrlDraft(ep.baseUrl)
-    } else {
-      setThirdUrlDraft('')
-    }
-    const models = modelCatalog.filter((m) => m.endpointId === next)
-    if (models[0]) setModel(models[0].model)
-  }
+  const filteredOfficial = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return officialList
+    return officialList.filter(
+      (e) => e.label.toLowerCase().includes(q) || e.id.includes(q),
+    )
+  }, [officialList, query])
 
-  function applyPublic(data: ChatPublicConfig, preferId?: string) {
+  const filteredThird = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return connectedThird
+    return connectedThird.filter(
+      (e) =>
+        e.label.toLowerCase().includes(q) ||
+        e.id.includes(q) ||
+        e.baseUrl.toLowerCase().includes(q),
+    )
+  }, [connectedThird, query])
+
+  function applyPublic(data: ChatPublicConfig, preferActive?: string) {
     const eps = Array.isArray(data.endpoints) ? data.endpoints : []
     setEndpoints(eps)
     const cats = Array.isArray(data.modelCatalog) ? data.modelCatalog : []
     setModelCatalog(cats)
     if (data.providers) setProviders(data.providers)
-    const eid = preferId || data.endpointId || data.provider || 'deepseek'
-    setEndpointId(eid)
-    const modelsFor = cats.filter((m) => m.endpointId === eid)
-    const nextModel =
-      data.model && modelsFor.some((m) => m.model === data.model)
-        ? data.model
-        : modelsFor[0]?.model || data.model
-    setModel(nextModel)
+
+    const eid = preferActive || data.endpointId || data.provider || 'deepseek'
+    setDefaultEndpointId(data.endpointId || data.provider || eid)
+    setDefaultModel(data.model)
+    setActiveId(eid)
+
     const ep = eps.find((e) => e.id === eid)
-    setThirdUrlDraft(ep && !OFFICIAL_ORDER.includes(eid as ChatProvider) ? ep.baseUrl : '')
-    setThirdKeyDraft('')
-    setOfficialKeys({ deepseek: '', openai: '', anthropic: '' })
+    setUrlDraft(ep?.baseUrl ?? data.baseUrl ?? '')
+    setKeyDraft('')
+  }
+
+  function selectProvider(id: string) {
+    setActiveId(id)
+    setAdding(false)
+    setError('')
+    setStatus('')
+    setKeyDraft('')
+    setNewModelName('')
+    const ep = endpoints.find((e) => e.id === id)
+    setUrlDraft(ep?.baseUrl ?? '')
   }
 
   useEffect(() => {
@@ -163,67 +202,107 @@ export function ChatConfig(_props: SlotProps) {
       .catch(() => setError('加载配置失败'))
   }, [])
 
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault()
+  async function saveCurrent(opts?: { makeDefault?: boolean; model?: string }) {
+    if (!active) return
+    setSaving(true)
     setError('')
     setStatus('')
+    try {
+      const body: Record<string, unknown> = {}
+      const nextModel = opts?.model ?? (isDefaultProvider ? defaultModel : activeModels[0]?.model)
+      if (opts?.makeDefault || isDefaultProvider) {
+        body.endpointId = activeId
+        if (nextModel) body.model = nextModel
+      }
+      if (keyDraft.trim()) body.setApiKey = { [activeId]: keyDraft.trim() }
+      if (!isOfficial(activeId)) {
+        const base = urlDraft.trim()
+        if (base && base !== active.defaultBaseUrl) body.setBaseUrl = { [activeId]: base }
+        else if (base === active.defaultBaseUrl && active.baseUrl !== active.defaultBaseUrl) {
+          body.setBaseUrl = { [activeId]: null }
+        }
+      }
+      // 至少要有可写内容，或设为默认
+      if (
+        !body.endpointId &&
+        !body.setApiKey &&
+        !body.setBaseUrl &&
+        !opts?.makeDefault
+      ) {
+        // 仅切换默认模型（当前已是默认入口）
+        if (isDefaultProvider && opts?.model) {
+          body.endpointId = activeId
+          body.model = opts.model
+        } else {
+          setStatus('没有需要保存的更改')
+          return
+        }
+      }
 
-    const setApiKey: Record<string, string> = {}
-    for (const p of OFFICIAL) {
-      if (officialKeys[p.key].trim()) setApiKey[p.key] = officialKeys[p.key].trim()
+      const res = await fetch('/api/chat/config', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        setError(`保存失败：HTTP ${res.status}`)
+        return
+      }
+      applyPublic((await res.json()) as ChatPublicConfig, activeId)
+      setStatus(opts?.makeDefault ? '已设为默认并保存' : '已保存')
+    } finally {
+      setSaving(false)
     }
-    if (!isOfficial && thirdKeyDraft.trim()) setApiKey[endpointId] = thirdKeyDraft.trim()
+  }
 
-    const hasOfficial =
-      OFFICIAL_ORDER.some((p) => providers?.[p]?.configured || officialKeys[p].trim())
-    const hasThird =
-      thirdEndpoints.some((e) => e.configured) || Boolean(thirdKeyDraft.trim()) || Object.keys(setApiKey).length > 0
-    if (!hasOfficial && !hasThird && current?.group !== 'local') {
-      setError('请至少填写一个官方 API Key，或配置第三方连接。')
-      return
+  async function pickDefaultModel(m: ModelDef) {
+    setDefaultModel(m.model)
+    setSaving(true)
+    setError('')
+    try {
+      const body: Record<string, unknown> = {
+        endpointId: activeId,
+        model: m.model,
+      }
+      if (keyDraft.trim()) body.setApiKey = { [activeId]: keyDraft.trim() }
+      if (!isOfficial(activeId) && urlDraft.trim()) {
+        body.setBaseUrl = { [activeId]: urlDraft.trim() }
+      }
+      const res = await fetch('/api/chat/config', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        setError(`保存失败：HTTP ${res.status}`)
+        return
+      }
+      applyPublic((await res.json()) as ChatPublicConfig, activeId)
+      setStatus(`默认模型：${m.label}`)
+    } finally {
+      setSaving(false)
     }
-
-    const body: Record<string, unknown> = {
-      endpointId,
-      model,
-      ...(Object.keys(setApiKey).length ? { setApiKey } : {}),
-    }
-    if (!isOfficial && thirdUrlDraft.trim()) {
-      body.setBaseUrl = { [endpointId]: thirdUrlDraft.trim() }
-    }
-
-    const res = await fetch('/api/chat/config', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    if (!res.ok) {
-      setError(`保存失败：HTTP ${res.status}`)
-      return
-    }
-    applyPublic((await res.json()) as ChatPublicConfig, endpointId)
-    setStatus('已保存（.cordis/chat-config.json）')
   }
 
   async function onAddModel() {
     const name = newModelName.trim()
     if (!name) {
-      setError('请填写模型名称')
+      setError('请填写模型 ID')
       return
     }
     setError('')
     const res = await fetch('/api/chat/config', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ addModel: { endpointId, model: name, label: name } }),
+      body: JSON.stringify({ addModel: { endpointId: activeId, model: name, label: name } }),
     })
     if (!res.ok) {
-      setError(`添加模型失败：HTTP ${res.status}`)
+      setError(`添加失败：HTTP ${res.status}`)
       return
     }
-    applyPublic((await res.json()) as ChatPublicConfig, endpointId)
+    applyPublic((await res.json()) as ChatPublicConfig, activeId)
     setNewModelName('')
-    setStatus(`已添加模型 ${name}`)
+    setStatus(`已添加 ${name}`)
   }
 
   async function onRemoveModel(id: string) {
@@ -233,24 +312,24 @@ export function ChatConfig(_props: SlotProps) {
       body: JSON.stringify({ removeCustomModel: id }),
     })
     if (!res.ok) return
-    applyPublic((await res.json()) as ChatPublicConfig, endpointId)
+    applyPublic((await res.json()) as ChatPublicConfig, activeId)
   }
 
-  async function onAddThird() {
+  async function onAddConnection() {
     const fromPreset = presetId ? endpoints.find((e) => e.id === presetId) : null
-    const label = newEpLabel.trim() || fromPreset?.label || ''
-    const baseUrl = newEpUrl.trim() || fromPreset?.defaultBaseUrl || fromPreset?.baseUrl || ''
+    const label = newLabel.trim() || fromPreset?.label || ''
+    const baseUrl = newUrl.trim() || fromPreset?.defaultBaseUrl || fromPreset?.baseUrl || ''
     if (!label || !baseUrl) {
-      setError('请填写第三方名称与 API URL，或选择预设中转站')
+      setError('请选择预设或填写名称与 Base URL')
       return
     }
     setError('')
-    // 预设：只切到该入口并写 Key/URL；自定义：addEndpoint
-    if (fromPreset && !newEpLabel.trim()) {
+
+    if (fromPreset && !newLabel.trim()) {
       const body: Record<string, unknown> = { endpointId: fromPreset.id }
-      if (newEpKey.trim()) body.setApiKey = { [fromPreset.id]: newEpKey.trim() }
-      if (newEpUrl.trim() && newEpUrl.trim() !== fromPreset.defaultBaseUrl) {
-        body.setBaseUrl = { [fromPreset.id]: newEpUrl.trim() }
+      if (newKey.trim()) body.setApiKey = { [fromPreset.id]: newKey.trim() }
+      if (newUrl.trim() && newUrl.trim() !== fromPreset.defaultBaseUrl) {
+        body.setBaseUrl = { [fromPreset.id]: newUrl.trim() }
       }
       const first = modelCatalog.find((m) => m.endpointId === fromPreset.id)
       if (first) body.model = first.model
@@ -269,45 +348,35 @@ export function ChatConfig(_props: SlotProps) {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          addEndpoint: {
-            label,
-            baseUrl,
-            protocol: newEpProtocol,
-          },
-          ...(newEpKey.trim()
-            ? {
-                // addEndpoint 会切到新 id；紧接着再 patch key 需二次请求
-              }
-            : {}),
+          addEndpoint: { label, baseUrl, protocol: newProtocol },
         }),
       })
       if (!res.ok) {
         setError(`添加失败：HTTP ${res.status}`)
         return
       }
-      const data = (await res.json()) as ChatPublicConfig
+      let data = (await res.json()) as ChatPublicConfig
       const newId = data.endpointId
-      if (newEpKey.trim() && newId) {
+      if (newKey.trim() && newId) {
         const res2 = await fetch('/api/chat/config', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ setApiKey: { [newId]: newEpKey.trim() }, endpointId: newId }),
+          body: JSON.stringify({ setApiKey: { [newId]: newKey.trim() }, endpointId: newId }),
         })
-        if (res2.ok) applyPublic((await res2.json()) as ChatPublicConfig, newId)
-        else applyPublic(data)
-      } else {
-        applyPublic(data)
+        if (res2.ok) data = (await res2.json()) as ChatPublicConfig
       }
+      applyPublic(data, newId)
     }
-    setShowAddThird(false)
+
+    setAdding(false)
     setPresetId('')
-    setNewEpLabel('')
-    setNewEpUrl('')
-    setNewEpKey('')
-    setStatus('第三方已接入，可在上方选择其模型')
+    setNewLabel('')
+    setNewUrl('')
+    setNewKey('')
+    setStatus('已接入')
   }
 
-  async function onRemoveThird(id: string) {
+  async function onRemoveConnection(id: string) {
     const res = await fetch('/api/chat/config', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -315,335 +384,394 @@ export function ChatConfig(_props: SlotProps) {
     })
     if (!res.ok) return
     applyPublic((await res.json()) as ChatPublicConfig)
-    setStatus('已删除第三方连接')
+    setStatus('已删除')
   }
 
-  const selectOptions = useMemo(() => {
-    const official = officialEndpoints
-    const configuredThird = thirdEndpoints.filter((e) => e.configured || e.id === endpointId)
-    return { official, third: configuredThird }
-  }, [officialEndpoints, thirdEndpoints, endpointId])
+  function providerRow(ep: EndpointView) {
+    const activeRow = ep.id === activeId && !adding
+    const isDef = ep.id === defaultEndpointId
+    const ok = ep.configured || providers?.[ep.id]?.configured
+    return (
+      <button
+        key={ep.id}
+        type="button"
+        className={`flex w-full items-center gap-2 px-3 py-[8px] text-left text-[12px] transition-colors ${
+          activeRow
+            ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
+            : 'text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]'
+        }`}
+        onClick={() => selectProvider(ep.id)}
+      >
+        <span
+          className={`size-1.5 shrink-0 rounded-full ${
+            ok ? 'bg-[var(--dsw-ok)]' : 'bg-[var(--dsw-label-3)] opacity-35'
+          }`}
+        />
+        <span className="min-w-0 flex-1 truncate font-medium">{ep.label}</span>
+        {isDef ? (
+          <span className="shrink-0 text-[9px] font-semibold tracking-wide opacity-70">默认</span>
+        ) : null}
+        {activeRow ? <LuCheck className="size-3 shrink-0 opacity-80" /> : null}
+      </button>
+    )
+  }
 
   return (
-    <form
-      className="relative flex h-full min-h-[420px] flex-col gap-5 px-1 pb-14"
-      data-testid="assistant-config"
-      onSubmit={onSubmit}
-    >
-      {/* ① 官方 Token —— 始终可见 */}
-      <section className="flex flex-col gap-2.5">
-        <div className="flex items-baseline justify-between">
-          <span className={labelCls}>官方 API Key</span>
-          <span className="text-[10px] text-[var(--dsw-label-3)]">DeepSeek / Claude / GPT</span>
-        </div>
-        {OFFICIAL.map((p) => {
-          const view = providers?.[p.key]
-          return (
-            <label key={p.key} className="flex flex-col gap-1">
-              <span className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--dsw-label)]">
-                <span
-                  className={`inline-block size-1.5 rounded-full ${
-                    view?.configured ? 'bg-[var(--dsw-ok)]' : 'bg-[var(--dsw-label-3)] opacity-40'
-                  }`}
-                />
-                {p.label}
-                {view?.configured ? (
-                  <span className="font-normal text-[var(--dsw-label-3)]">· {view.hint}</span>
-                ) : null}
-              </span>
+    <div className="flex h-full min-h-[460px] flex-col" data-testid="assistant-config">
+      <div className="flex min-h-0 flex-1 overflow-hidden rounded-[12px] border border-[var(--dsw-border)]">
+        {/* 左：Provider 列表 */}
+        <aside className="flex w-[200px] shrink-0 flex-col border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
+          <div className="border-b border-[var(--dsw-border)] p-2.5">
+            <div className="relative">
+              <LuSearch className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-[var(--dsw-label-3)]" />
               <input
-                className={inputCls}
-                type="password"
-                autoComplete="off"
-                data-testid={`key-${p.key}`}
-                placeholder={view?.configured ? `已配置 · 输入可覆盖` : p.placeholder}
-                value={officialKeys[p.key]}
-                onChange={(e) => setOfficialKeys((prev) => ({ ...prev, [p.key]: e.target.value }))}
+                className={`${inputCls} pl-7`}
+                placeholder="搜索…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="搜索 Provider"
               />
-            </label>
-          )
-        })}
-      </section>
-
-      {/* ② 默认模型 —— 下拉可见目录模型 */}
-      <section className="flex flex-col gap-2.5">
-        <div className="flex items-baseline justify-between">
-          <span className={labelCls}>默认模型</span>
-          <span className="text-[10px] text-[var(--dsw-label-3)]">
-            当前入口 {availableModels.length} 个模型
-          </span>
-        </div>
-        <div className="flex gap-2">
-          <label className="flex w-[42%] flex-col gap-1">
-            <span className="text-[11px] text-[var(--dsw-label-3)]">提供商 / 入口</span>
-            <select
-              className={inputCls}
-              value={endpointId}
-              data-testid="endpoint"
-              onChange={(e) => switchEndpoint(e.target.value)}
-            >
-              <optgroup label="官方">
-                {OFFICIAL.map((p) => (
-                  <option key={p.key} value={p.key}>
-                    {p.label}
-                    {providers?.[p.key]?.configured ? '（已配置）' : ''}
-                  </option>
-                ))}
-              </optgroup>
-              {selectOptions.third.length ? (
-                <optgroup label="第三方 / 中转">
-                  {selectOptions.third.map((ep) => (
-                    <option key={ep.id} value={ep.id}>
-                      {ep.label}
-                      {ep.configured ? '（已配置）' : ''}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : null}
-            </select>
-          </label>
-          <label className="flex w-[58%] flex-col gap-1">
-            <span className="text-[11px] text-[var(--dsw-label-3)]">模型</span>
-            <select
-              key={endpointId}
-              className={inputCls}
-              value={currentModelInCatalog?.id ?? ''}
-              data-testid="model"
-              size={1}
-              onChange={(e) => {
-                const def = availableModels.find((m) => m.id === e.target.value)
-                if (def) setModel(def.model)
-              }}
-            >
-              {availableModels.length === 0 ? (
-                <option value="">暂无模型 — 可在下方添加</option>
-              ) : (
-                availableModels.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                    {m.model !== m.label ? ` · ${m.model}` : ''}
-                    {m.note ? ` — ${m.note}` : ''}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
-        </div>
-
-        {/* 第三方入口：显示 URL + Key 覆盖 */}
-        {!isOfficial && current ? (
-          <div className="flex flex-col gap-2 rounded-[10px] border border-[var(--dsw-border)] p-3">
-            <div className="text-[12px] font-medium text-[var(--dsw-label)]">{current.label}</div>
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] text-[var(--dsw-label-3)]">API URL</span>
-              <input
-                className={inputCls}
-                type="url"
-                data-testid="base-url"
-                value={thirdUrlDraft}
-                placeholder={current.defaultBaseUrl}
-                onChange={(e) => setThirdUrlDraft(e.target.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] text-[var(--dsw-label-3)]">API Token</span>
-              <input
-                className={inputCls}
-                type="password"
-                autoComplete="off"
-                placeholder={current.configured ? `已配置 · ${current.hint}` : current.placeholder}
-                value={thirdKeyDraft}
-                onChange={(e) => setThirdKeyDraft(e.target.value)}
-              />
-            </label>
-          </div>
-        ) : null}
-
-        {/* 在当前入口追加模型名 */}
-        <div className="flex gap-2">
-          <input
-            className={inputCls}
-            placeholder="追加模型名称，如 gpt-4o / deepseek-chat"
-            value={newModelName}
-            onChange={(e) => setNewModelName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                void onAddModel()
-              }
-            }}
-          />
-          <button type="button" className={ghostBtn} onClick={() => void onAddModel()}>
-            <LuPlus className="size-3.5" />
-            添加模型
-          </button>
-        </div>
-        {availableModels.some((m) => m.builtin === false) ? (
-          <ul className="flex flex-col gap-1">
-            {availableModels
-              .filter((m) => m.builtin === false)
-              .map((m) => (
-                <li
-                  key={m.id}
-                  className="flex items-center justify-between text-[11px] text-[var(--dsw-label-2)]"
-                >
-                  <span>
-                    {m.label} <code className="text-[10px] opacity-70">{m.model}</code>
-                  </span>
-                  <button
-                    type="button"
-                    className="text-[var(--dsw-danger,#b42318)]"
-                    onClick={() => void onRemoveModel(m.id)}
-                  >
-                    删除
-                  </button>
-                </li>
-              ))}
-          </ul>
-        ) : null}
-      </section>
-
-      {/* ③ 第三方 / 中转 */}
-      <section className="flex flex-col gap-2.5">
-        <div className="flex items-center justify-between">
-          <span className={labelCls}>第三方 API</span>
-          {!showAddThird ? (
-            <button type="button" className={ghostBtn} onClick={() => setShowAddThird(true)}>
-              <LuPlus className="size-3.5" />
-              接入中转 / 自定义
-            </button>
-          ) : null}
-        </div>
-
-        {thirdEndpoints.filter((e) => e.configured || !e.builtin).length ? (
-          <ul className="flex flex-col gap-1 rounded-[10px] border border-[var(--dsw-border)] p-1.5">
-            {thirdEndpoints
-              .filter((e) => e.configured || e.group === 'custom')
-              .map((ep) => (
-                <li
-                  key={ep.id}
-                  className={`flex items-center gap-2 rounded-[8px] px-2.5 py-2 text-[12px] ${
-                    ep.id === endpointId ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]' : 'text-[var(--dsw-label)]'
-                  }`}
-                >
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 truncate text-left"
-                    onClick={() => switchEndpoint(ep.id)}
-                  >
-                    <span className="font-medium">{ep.label}</span>
-                    <span className="mt-0.5 block truncate text-[10px] opacity-60">{ep.baseUrl}</span>
-                  </button>
-                  <span
-                    className={`size-1.5 shrink-0 rounded-full ${
-                      ep.configured ? 'bg-[var(--dsw-ok)]' : 'bg-[var(--dsw-label-3)] opacity-40'
-                    }`}
-                  />
-                  {ep.group === 'custom' || !ep.builtin ? (
-                    <button
-                      type="button"
-                      className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:text-[var(--dsw-danger,#b42318)]"
-                      title="删除"
-                      onClick={() => void onRemoveThird(ep.id)}
-                    >
-                      <LuTrash2 className="size-3" />
-                    </button>
-                  ) : null}
-                </li>
-              ))}
-          </ul>
-        ) : (
-          <p className="text-[11px] text-[var(--dsw-label-3)]">
-            未接入第三方。可用官方 Key，或添加中转站 / 自定义 URL。
-          </p>
-        )}
-
-        {showAddThird ? (
-          <div className="flex flex-col gap-2 rounded-[10px] border border-[var(--dsw-border)] p-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] text-[var(--dsw-label-3)]">预设中转站（可选）</span>
-              <select
-                className={inputCls}
-                value={presetId}
-                onChange={(e) => {
-                  const id = e.target.value
-                  setPresetId(id)
-                  const ep = endpoints.find((x) => x.id === id)
-                  if (ep) {
-                    setNewEpUrl(ep.defaultBaseUrl || ep.baseUrl)
-                    if (!newEpLabel) setNewEpLabel('')
-                  }
-                }}
-              >
-                <option value="">自定义…</option>
-                {relayPresets.map((ep) => (
-                  <option key={ep.id} value={ep.id}>
-                    {ep.label}
-                    {ep.note ? ` · ${ep.note}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {!presetId ? (
-              <>
-                <input
-                  className={inputCls}
-                  placeholder="名称，如 My OneAPI"
-                  value={newEpLabel}
-                  onChange={(e) => setNewEpLabel(e.target.value)}
-                />
-                <select
-                  className={inputCls}
-                  value={newEpProtocol}
-                  onChange={(e) => setNewEpProtocol(e.target.value as 'openai-compat' | 'anthropic')}
-                >
-                  <option value="openai-compat">OpenAI 兼容</option>
-                  <option value="anthropic">Anthropic Messages</option>
-                </select>
-              </>
-            ) : null}
-            <input
-              className={inputCls}
-              placeholder="API URL，如 https://api.example.com/v1"
-              value={newEpUrl}
-              onChange={(e) => setNewEpUrl(e.target.value)}
-            />
-            <input
-              className={inputCls}
-              type="password"
-              autoComplete="off"
-              placeholder="API Token"
-              value={newEpKey}
-              onChange={(e) => setNewEpKey(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="rounded-[8px] px-3 py-[6px] text-[12px] font-medium text-[var(--dsw-bg)]"
-                style={{ background: 'var(--dsw-business)' }}
-                onClick={() => void onAddThird()}
-              >
-                确认接入
-              </button>
-              <button type="button" className={ghostBtn} onClick={() => setShowAddThird(false)}>
-                取消
-              </button>
             </div>
           </div>
-        ) : null}
-      </section>
 
-      <div className="flex flex-1 items-end justify-end gap-2">
-        {status ? <span className="text-[11px] text-[var(--dsw-ok)]">{status}</span> : null}
-        {error ? <span className="text-[11px] text-[var(--dsw-danger,#b42318)]">{error}</span> : null}
-        <button
-          className="rounded-[8px] px-3 py-[7px] text-[13px] font-medium text-[var(--dsw-bg)] transition-opacity hover:opacity-90"
-          style={{ background: 'var(--dsw-business)' }}
-          type="submit"
-        >
-          保存
-        </button>
+          <div className="min-h-0 flex-1 overflow-y-auto py-1">
+            <div className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
+              官方
+            </div>
+            {filteredOfficial.map(providerRow)}
+
+            {filteredThird.length > 0 ? (
+              <>
+                <div className="px-3 pt-3 pb-1 text-[10px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
+                  第三方
+                </div>
+                {filteredThird.map(providerRow)}
+              </>
+            ) : null}
+          </div>
+
+          <div className="border-t border-[var(--dsw-border)] p-2">
+            <button
+              type="button"
+              className={`flex w-full items-center justify-center gap-1 rounded-[8px] px-2.5 py-[7px] text-[12px] font-medium transition-colors ${
+                adding
+                  ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
+                  : 'text-[var(--dsw-label-2)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]'
+              }`}
+              onClick={() => {
+                setAdding(true)
+                setError('')
+                setStatus('')
+              }}
+            >
+              <LuPlus className="size-3.5" />
+              添加连接
+            </button>
+          </div>
+        </aside>
+
+        {/* 右：详情 */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {adding ? (
+            <>
+              <div className="border-b border-[var(--dsw-border)] px-4 py-3">
+                <h3 className="text-[14px] font-semibold text-[var(--dsw-label)]">添加连接</h3>
+                <p className="mt-0.5 text-[11px] text-[var(--dsw-label-3)]">
+                  选中转站预设，或填自定义 Base URL + Token
+                </p>
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-3">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">预设</span>
+                  <select
+                    className={inputCls}
+                    value={presetId}
+                    onChange={(e) => {
+                      const id = e.target.value
+                      setPresetId(id)
+                      const ep = endpoints.find((x) => x.id === id)
+                      if (ep) {
+                        setNewUrl(ep.defaultBaseUrl || ep.baseUrl)
+                        setNewLabel('')
+                      } else {
+                        setNewUrl('')
+                      }
+                    }}
+                  >
+                    <option value="">自定义 URL…</option>
+                    {presets.map((ep) => (
+                      <option key={ep.id} value={ep.id}>
+                        {ep.label}
+                        {ep.note ? ` · ${ep.note}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {!presetId ? (
+                  <>
+                    <label className="flex flex-col gap-1.5">
+                      <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">名称</span>
+                      <input
+                        className={inputCls}
+                        placeholder="My OneAPI"
+                        value={newLabel}
+                        onChange={(e) => setNewLabel(e.target.value)}
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1.5">
+                      <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">协议</span>
+                      <select
+                        className={inputCls}
+                        value={newProtocol}
+                        onChange={(e) => setNewProtocol(e.target.value as 'openai-compat' | 'anthropic')}
+                      >
+                        <option value="openai-compat">OpenAI 兼容</option>
+                        <option value="anthropic">Anthropic Messages</option>
+                      </select>
+                    </label>
+                  </>
+                ) : null}
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">Base URL</span>
+                  <input
+                    className={inputCls}
+                    placeholder="https://api.example.com/v1"
+                    value={newUrl}
+                    onChange={(e) => setNewUrl(e.target.value)}
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">API Key</span>
+                  <input
+                    className={inputCls}
+                    type="password"
+                    autoComplete="off"
+                    placeholder="sk-…"
+                    value={newKey}
+                    onChange={(e) => setNewKey(e.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="flex items-center justify-end gap-2 border-t border-[var(--dsw-border)] px-4 py-2.5">
+                {error ? (
+                  <span className="mr-auto text-[11px] text-[var(--dsw-danger,#b42318)]">{error}</span>
+                ) : null}
+                <button
+                  type="button"
+                  className="rounded-[8px] px-3 py-[6px] text-[12px] text-[var(--dsw-label-2)] hover:bg-[var(--dsw-hover)]"
+                  onClick={() => setAdding(false)}
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  className="rounded-[8px] px-3.5 py-[7px] text-[13px] font-medium text-[var(--dsw-bg)]"
+                  style={{ background: 'var(--dsw-business)' }}
+                  onClick={() => void onAddConnection()}
+                >
+                  接入
+                </button>
+              </div>
+            </>
+          ) : active ? (
+            <>
+              <div className="flex items-start justify-between gap-3 border-b border-[var(--dsw-border)] px-4 py-3">
+                <div className="min-w-0">
+                  <h3 className="truncate text-[14px] font-semibold text-[var(--dsw-label)]">
+                    {isOfficial(active.id) ? OFFICIAL_META[active.id].label : active.label}
+                  </h3>
+                  <p className="mt-0.5 truncate text-[11px] text-[var(--dsw-label-3)]">
+                    {active.note || active.baseUrl}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span
+                    className={`rounded-[6px] px-2 py-0.5 text-[10px] font-medium ${
+                      configured
+                        ? 'bg-[color-mix(in_srgb,var(--dsw-ok)_16%,transparent)] text-[var(--dsw-ok)]'
+                        : 'bg-[var(--dsw-hover)] text-[var(--dsw-label-3)]'
+                    }`}
+                  >
+                    {configured ? '已配置' : '未配置'}
+                  </span>
+                  {isDefaultProvider ? (
+                    <span className="rounded-[6px] bg-[var(--dsw-business-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--dsw-business)]">
+                      当前默认
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">API Key</span>
+                  <input
+                    className={inputCls}
+                    type="password"
+                    autoComplete="off"
+                    data-testid={isOfficial(active.id) ? `key-${active.id}` : 'key-third'}
+                    placeholder={
+                      configured
+                        ? `已配置 · 输入新 Key 可覆盖（${active.hint || active.placeholder}）`
+                        : isOfficial(active.id)
+                          ? OFFICIAL_META[active.id].placeholder
+                          : active.placeholder
+                    }
+                    value={keyDraft}
+                    onChange={(e) => setKeyDraft(e.target.value)}
+                  />
+                </label>
+
+                {!isOfficial(active.id) ? (
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">Base URL</span>
+                    <input
+                      className={inputCls}
+                      type="url"
+                      data-testid="base-url"
+                      value={urlDraft}
+                      placeholder={active.defaultBaseUrl}
+                      onChange={(e) => setUrlDraft(e.target.value)}
+                    />
+                  </label>
+                ) : (
+                  <p className="text-[11px] text-[var(--dsw-label-3)]">
+                    官方地址：<span className="font-mono text-[10px]">{active.defaultBaseUrl}</span>
+                  </p>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">
+                      模型
+                      <span className="ml-1 font-normal">· {activeModels.length}</span>
+                    </span>
+                    <span className="text-[10px] text-[var(--dsw-label-3)]">点击设为默认</span>
+                  </div>
+
+                  {activeModels.length ? (
+                    <ul className="flex max-h-[220px] flex-col gap-0.5 overflow-y-auto rounded-[8px] border border-[var(--dsw-border)] p-1">
+                      {activeModels.map((m) => {
+                        const selected = isDefaultProvider && m.model === defaultModel
+                        return (
+                          <li key={m.id}>
+                            <button
+                              type="button"
+                              data-testid={selected ? 'model-active' : undefined}
+                              className={`flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left transition-colors ${
+                                selected
+                                  ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
+                                  : 'text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]'
+                              }`}
+                              onClick={() => void pickDefaultModel(m)}
+                            >
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-[12px] font-medium">{m.label}</span>
+                                <span className="block truncate font-mono text-[10px] opacity-55">
+                                  {m.model}
+                                  {m.note ? ` · ${m.note}` : ''}
+                                </span>
+                              </span>
+                              {m.builtin === false ? (
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  className="grid size-6 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:text-[var(--dsw-danger,#b42318)]"
+                                  title="删除"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void onRemoveModel(m.id)
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                      void onRemoveModel(m.id)
+                                    }
+                                  }}
+                                >
+                                  <LuTrash2 className="size-3" />
+                                </span>
+                              ) : selected ? (
+                                <LuCheck className="size-3.5 shrink-0" />
+                              ) : null}
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="text-[11px] text-[var(--dsw-label-3)]">暂无模型，在下方添加 model id</p>
+                  )}
+
+                  <div className="flex gap-2">
+                    <input
+                      className={inputCls}
+                      placeholder="添加模型 ID"
+                      value={newModelName}
+                      onChange={(e) => setNewModelName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          void onAddModel()
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-[8px] border border-[var(--dsw-border)] px-2.5 py-[6px] text-[12px] text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]"
+                      onClick={() => void onAddModel()}
+                    >
+                      <LuPlus className="size-3.5" />
+                      添加
+                    </button>
+                  </div>
+                </div>
+
+                {!isOfficial(active.id) && (active.group === 'custom' || !active.builtin) ? (
+                  <button
+                    type="button"
+                    className="self-start text-[11px] text-[var(--dsw-danger,#b42318)] hover:underline"
+                    onClick={() => void onRemoveConnection(active.id)}
+                  >
+                    删除此连接
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-[var(--dsw-border)] px-4 py-2.5">
+                {status ? <span className="mr-auto text-[11px] text-[var(--dsw-ok)]">{status}</span> : null}
+                {error ? (
+                  <span className="mr-auto text-[11px] text-[var(--dsw-danger,#b42318)]">{error}</span>
+                ) : null}
+                {!isDefaultProvider ? (
+                  <button
+                    type="button"
+                    className="rounded-[8px] border border-[var(--dsw-border)] px-3 py-[6px] text-[12px] text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]"
+                    disabled={saving}
+                    onClick={() => void saveCurrent({ makeDefault: true })}
+                  >
+                    设为默认
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="rounded-[8px] px-3.5 py-[7px] text-[13px] font-medium text-[var(--dsw-bg)] transition-opacity hover:opacity-90 disabled:opacity-50"
+                  style={{ background: 'var(--dsw-business)' }}
+                  disabled={saving}
+                  onClick={() => void saveCurrent()}
+                >
+                  {saving ? '保存中…' : '保存'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="grid flex-1 place-items-center text-[12px] text-[var(--dsw-label-3)]">
+              从左侧选择 Provider
+            </div>
+          )}
+        </div>
       </div>
-    </form>
+    </div>
   )
 }
