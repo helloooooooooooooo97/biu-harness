@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <!-- F1-inspired racing mark: checkered + speed stripe -->
+  <rect width="64" height="64" rx="12" fill="#111"/>
+  <g fill="#fff">
+    <rect x="8" y="10" width="8" height="8"/>
+    <rect x="24" y="10" width="8" height="8"/>
+    <rect x="16" y="18" width="8" height="8"/>
+    <rect x="32" y="18" width="8" height="8"/>
+    <rect x="8" y="26" width="8" height="8"/>
+    <rect x="24" y="26" width="8" height="8"/>
+  </g>
+  <g fill="#e10600">
+    <path d="M28 38h28l-6 8H22l6-8z"/>
+    <path d="M22 46h26l-4 6H18l4-6z"/>
+  </g>
+  <circle cx="18" cy="52" r="4" fill="#ddd"/>
+  <circle cx="42" cy="52" r="4" fill="#ddd"/>
+  <circle cx="18" cy="52" r="1.6" fill="#111"/>
+  <circle cx="42" cy="52" r="1.6" fill="#111"/>
+</svg>
