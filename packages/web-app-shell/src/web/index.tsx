@@ -179,7 +179,9 @@ function Shell(props: SlotProps) {
   const slots = props.slots as SlotsService
   const navigate = useNavigate()
   const location = useLocation()
-  const live = useSnapshot((state: Snapshot) => state.plugins.some((plugin) => plugin.enabled))
+  const live = useSnapshot((state: Snapshot) =>
+    state.plugins.some((plugin) => plugin.layer === 'capability' && plugin.enabled),
+  )
   const modules = useAppModules()
   const pluginModules = modules.filter((item) => item.id !== 'agent')
   const sessionId = useSessionView((state) => state.sessionId)

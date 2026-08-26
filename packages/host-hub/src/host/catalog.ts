@@ -3,7 +3,7 @@ import type { Plugin } from 'cordis'
 export interface CatalogEntry {
   id: string
   name: string
-  layer: 'web' | 'capability'
+  layer: 'host' | 'web' | 'capability'
   blurb: string
   plugin: Plugin
   inject?: string[]
