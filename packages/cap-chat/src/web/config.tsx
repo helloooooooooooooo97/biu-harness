@@ -119,6 +119,23 @@ export function ChatConfig(_props: SlotProps) {
   const currentModelInCatalog =
     availableModels.find((m) => m.model === model) ?? availableModels[0]
 
+  /** 切换入口：同步 URL 草稿，并强制落到该入口的第一个模型。 */
+  function switchEndpoint(next: string) {
+    setEndpointId(next)
+    setThirdKeyDraft('')
+    setError('')
+    setStatus('')
+    setNewModelName('')
+    const ep = endpoints.find((x) => x.id === next)
+    if (ep && !OFFICIAL_ORDER.includes(next as ChatProvider)) {
+      setThirdUrlDraft(ep.baseUrl)
+    } else {
+      setThirdUrlDraft('')
+    }
+    const models = modelCatalog.filter((m) => m.endpointId === next)
+    if (models[0]) setModel(models[0].model)
+  }
+
   function applyPublic(data: ChatPublicConfig, preferId?: string) {
     const eps = Array.isArray(data.endpoints) ? data.endpoints : []
     setEndpoints(eps)
@@ -350,7 +367,12 @@ export function ChatConfig(_props: SlotProps) {
 
       {/* ② 默认模型 —— 下拉可见目录模型 */}
       <section className="flex flex-col gap-2.5">
-        <span className={labelCls}>默认模型</span>
+        <div className="flex items-baseline justify-between">
+          <span className={labelCls}>默认模型</span>
+          <span className="text-[10px] text-[var(--dsw-label-3)]">
+            当前入口 {availableModels.length} 个模型
+          </span>
+        </div>
         <div className="flex gap-2">
           <label className="flex w-[42%] flex-col gap-1">
             <span className="text-[11px] text-[var(--dsw-label-3)]">提供商 / 入口</span>
@@ -358,17 +380,7 @@ export function ChatConfig(_props: SlotProps) {
               className={inputCls}
               value={endpointId}
               data-testid="endpoint"
-              onChange={(e) => {
-                const next = e.target.value
-                setEndpointId(next)
-                setThirdKeyDraft('')
-                const ep = endpoints.find((x) => x.id === next)
-                if (ep && !OFFICIAL_ORDER.includes(next as ChatProvider)) {
-                  setThirdUrlDraft(ep.baseUrl)
-                }
-                const def = modelCatalog.find((m) => m.endpointId === next)
-                if (def) setModel(def.model)
-              }}
+              onChange={(e) => switchEndpoint(e.target.value)}
             >
               <optgroup label="官方">
                 {OFFICIAL.map((p) => (
@@ -393,11 +405,13 @@ export function ChatConfig(_props: SlotProps) {
           <label className="flex w-[58%] flex-col gap-1">
             <span className="text-[11px] text-[var(--dsw-label-3)]">模型</span>
             <select
+              key={endpointId}
               className={inputCls}
               value={currentModelInCatalog?.id ?? ''}
               data-testid="model"
+              size={1}
               onChange={(e) => {
-                const def = modelCatalog.find((m) => m.id === e.target.value)
+                const def = availableModels.find((m) => m.id === e.target.value)
                 if (def) setModel(def.model)
               }}
             >
@@ -407,6 +421,7 @@ export function ChatConfig(_props: SlotProps) {
                 availableModels.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label}
+                    {m.model !== m.label ? ` · ${m.model}` : ''}
                     {m.note ? ` — ${m.note}` : ''}
                   </option>
                 ))
@@ -514,12 +529,7 @@ export function ChatConfig(_props: SlotProps) {
                   <button
                     type="button"
                     className="min-w-0 flex-1 truncate text-left"
-                    onClick={() => {
-                      setEndpointId(ep.id)
-                      setThirdUrlDraft(ep.baseUrl)
-                      const def = modelCatalog.find((m) => m.endpointId === ep.id)
-                      if (def) setModel(def.model)
-                    }}
+                    onClick={() => switchEndpoint(ep.id)}
                   >
                     <span className="font-medium">{ep.label}</span>
                     <span className="mt-0.5 block truncate text-[10px] opacity-60">{ep.baseUrl}</span>

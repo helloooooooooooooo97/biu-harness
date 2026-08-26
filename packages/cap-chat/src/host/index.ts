@@ -545,6 +545,33 @@ export class ChatService extends Service {
         else this.config.customEndpoints.push(def)
         this.config.endpointId = id
         this.config.provider = provider
+        // 自定义入口默认挂一批常用模型名，避免下拉空空如也
+        const hasModels = allModels(this.config).some((m) => m.endpointId === id)
+        if (!hasModels) {
+          const seeds = [
+            'gpt-4o',
+            'gpt-4o-mini',
+            'gpt-4.1',
+            'o3-mini',
+            'claude-sonnet-4-20250514',
+            'claude-opus-4-20250514',
+            'gemini-2.5-pro',
+            'deepseek-chat',
+            'deepseek-reasoner',
+          ]
+          for (const modelName of seeds) {
+            this.config.customModels.push({
+              id: `custom-model-${id}-${modelName}`.replace(/[^a-zA-Z0-9._:-]+/g, '-'),
+              label: modelName,
+              endpointId: id,
+              provider,
+              model: modelName,
+              category: 'custom',
+              builtin: false,
+            })
+          }
+          this.config.model = seeds[0]!
+        }
       }
     }
     if (next.addModel && typeof next.addModel === 'object') {

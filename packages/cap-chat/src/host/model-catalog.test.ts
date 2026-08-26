@@ -51,6 +51,23 @@ test('builtin models reference known endpoints', () => {
   }
 })
 
+test('official providers ship a rich model catalog', () => {
+  const deepseek = LLM_MODEL_CATALOG.filter((m) => m.endpointId === 'deepseek')
+  const openai = LLM_MODEL_CATALOG.filter((m) => m.endpointId === 'openai')
+  const anthropic = LLM_MODEL_CATALOG.filter((m) => m.endpointId === 'anthropic')
+  assert.ok(deepseek.length >= 5, `deepseek=${deepseek.length}`)
+  assert.ok(openai.length >= 15, `openai=${openai.length}`)
+  assert.ok(anthropic.length >= 8, `anthropic=${anthropic.length}`)
+  assert.ok(LLM_MODEL_CATALOG.length >= 100, `total=${LLM_MODEL_CATALOG.length}`)
+})
+
+test('relay endpoints share a multi-model pack', () => {
+  const closeai = LLM_MODEL_CATALOG.filter((m) => m.endpointId === 'closeai')
+  assert.ok(closeai.length >= 15, `closeai=${closeai.length}`)
+  assert.ok(closeai.some((m) => m.model === 'gpt-4o'))
+  assert.ok(closeai.some((m) => m.model.includes('claude')))
+})
+
 test('normalizeBaseUrl strips trailing slash', () => {
   assert.equal(normalizeBaseUrl(' https://a.com/v1/ '), 'https://a.com/v1')
 })
