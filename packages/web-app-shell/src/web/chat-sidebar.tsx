@@ -303,10 +303,10 @@ export const ChatSidebar = memo(function ChatSidebar({
               return (
                 <section key={section.kind} className="min-w-0">
                   {/* 板块标题：收藏 / (项目|标签)，可点击整行展开/收缩；层级靠 kind 图标表达；悬浮时右侧露出分组切换 tab */}
-                  <div className="sidebar-section-head mb-0.5 flex items-center gap-0.5 px-1">
+                  <div className="sidebar-section-head min-w-0">
                     <button
                       type="button"
-                      className="flex min-h-[22px] min-w-0 flex-1 items-center gap-1 rounded-[6px] px-1 text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
+                      className="flex min-w-0 flex-1 items-center gap-1 rounded-[6px] text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
                       aria-expanded={!sectionCollapsed}
                       onClick={() => toggleSection(section.kind)}
                     >
@@ -326,7 +326,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                     </button>
                     {section.kind !== 'pinned' ? (
                       <div
-                        className="sidebar-view-switch flex shrink-0 items-center overflow-hidden rounded-[6px] border border-[var(--dsw-border)]"
+                        className="sidebar-view-switch flex shrink-0 items-center overflow-hidden rounded-[6px]"
                         role="group"
                         aria-label="分组视图切换"
                       >
@@ -334,19 +334,19 @@ export const ChatSidebar = memo(function ChatSidebar({
                           type="button"
                           title="按项目分组"
                           aria-pressed={groupBy === 'project'}
-                          className={`grid size-6 place-items-center ${groupBy === 'project' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
+                          className={`grid h-[20px] w-5 place-items-center rounded-[6px] ${groupBy === 'project' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
                           onClick={() => changeGroupBy('project')}
                         >
-                          <LuFolderTree className="size-3" />
+                          <LuFolderTree className="size-2.5" />
                         </button>
                         <button
                           type="button"
                           title="按标签分组"
                           aria-pressed={groupBy === 'tag'}
-                          className={`grid size-6 place-items-center ${groupBy === 'tag' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
+                          className={`grid h-[20px] w-5 place-items-center rounded-[6px] ${groupBy === 'tag' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
                           onClick={() => changeGroupBy('tag')}
                         >
-                          <LuTags className="size-3" />
+                          <LuTags className="size-2.5" />
                         </button>
                       </div>
                     ) : null}
@@ -372,13 +372,20 @@ export const ChatSidebar = memo(function ChatSidebar({
                         const canAddHere = group.kind === 'project' || group.kind === 'ungrouped'
                         return (
                           <div key={group.key} className="min-w-0">
-                            <div className="sidebar-group-head mb-0.5 flex items-center gap-0.5 px-1">
-                              <button
-                                type="button"
-                                className="flex min-h-[24px] min-w-0 flex-1 items-center gap-1 rounded-[6px] px-1 text-left text-[12px] font-semibold tracking-wide text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
+                            <div className="sidebar-group-head mb-0.5 flex items-center px-1">
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                className="flex min-h-[24px] min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-[6px] px-1 text-left text-[12px] font-semibold tracking-wide text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
                                 title={group.path ?? group.label}
                                 aria-expanded={!collapsed}
                                 onClick={() => toggleProjectGroup(group.key)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    toggleProjectGroup(group.key)
+                                  }
+                                }}
                               >
                                 {collapsed ? (
                                   <LuChevronRight className="size-3 shrink-0 opacity-70" />
@@ -398,23 +405,24 @@ export const ChatSidebar = memo(function ChatSidebar({
                                 )}
                                 <span className="min-w-0 flex-1 truncate tracking-normal">{group.label}</span>
                                 <span className="shrink-0 font-mono text-[10px] opacity-60">{group.sessions.length}</span>
-                              </button>
-                              {canAddHere ? (
-                                <button
-                                  type="button"
-                                  className="sidebar-add grid size-5 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
-                                  title={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
-                                  aria-label={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
-                                  onClick={() =>
-                                    createChat({
-                                      type: 'chat',
-                                      ...(group.path ? { projectPath: group.path } : {}),
-                                    })
-                                  }
-                                >
-                                  <LuPlus className="size-3" />
-                                </button>
-                              ) : null}
+                                {canAddHere ? (
+                                  <button
+                                    type="button"
+                                    className="sidebar-add grid size-5 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
+                                    title={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
+                                    aria-label={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      createChat({
+                                        type: 'chat',
+                                        ...(group.path ? { projectPath: group.path } : {}),
+                                      })
+                                    }}
+                                  >
+                                    <LuPlus className="size-3" />
+                                  </button>
+                                ) : null}
+                              </div>
                             </div>
                             <div className={`min-w-0 ${collapsed ? 'hidden' : ''}`} aria-hidden={collapsed}>
                               {group.sessions.map((item) => (

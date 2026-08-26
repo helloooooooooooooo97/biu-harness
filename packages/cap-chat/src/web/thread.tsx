@@ -626,7 +626,7 @@ export const ChatNodeList = memo(function ChatNodeList({
                 replyNode?.turn != null ? dispatchedTasksByTurn[String(replyNode.turn)] : undefined
               const stickyUser =
                 node.kind === 'user'
-                  ? 'sticky top-0 z-[1] -mt-1 bg-[var(--dsw-bg)] pt-2 pb-2.5 shadow-[0_1px_0_color-mix(in_srgb,var(--dsw-border)_80%,transparent)]'
+                  ? 'sticky top-0 z-[1] -mt-1 bg-[var(--dsw-bg)] pt-2 pb-2.5 shadow-[0_1px_0_color-mix(in_srgb,var(--dsw-border)_80%,transparent),0_6px_16px_-6px_rgba(0,0,0,0.12)]'
                   : ''
               const skipPaint =
                 node.kind === 'reply' || node.kind === 'turn'

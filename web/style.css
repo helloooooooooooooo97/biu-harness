@@ -400,7 +400,7 @@ body {
   padding: 0;
   color: var(--dsw-label-3);
   opacity: 0;
-  transition: none;
+  transition: width 150ms ease, margin-left 150ms ease, padding 150ms ease, opacity 150ms ease;
 }
 
 .chat-session-row:hover .chat-session-row-delete,
@@ -430,35 +430,52 @@ body {
   color: var(--dsw-danger);
 }
 
-/* 分组添加按钮(+)：默认宽度塌陷不占位，仅悬浮分组头/聚焦时展开显示 */
+/* 分组添加按钮(+)：移入分组头主按钮内部、紧跟计数后。默认宽度塌陷，并用负 margin 抵消
+   count 与 add 之间 flex gap-1 的 4px，使计数精确贴右与板块计数对齐；仅悬浮分组头/聚焦时展开 */
 .sidebar-add {
   flex-shrink: 0;
   width: 0;
   overflow: hidden;
+  margin-left: -4px;
   padding: 0;
   opacity: 0;
-  transition: none;
+  transition: width 150ms ease, margin-left 150ms ease, padding 150ms ease, opacity 150ms ease;
 }
 .sidebar-group-head:hover .sidebar-add,
 .sidebar-add:focus {
   width: auto;
+  margin-left: 0;
   padding: 2px;
   opacity: 1;
 }
 
-/* 顶层板块右侧分组视图切换 tab：默认宽度塌陷不占位，仅悬浮板块标题/聚焦时展开显示 */
+/* 顶部「收藏/项目/标签」板块标题行：普通透明形态(无胶囊质感)。
+   保留固定 22px 行高(items-center)，确保 view-switch 悬浮出现不撑高行 */
+.sidebar-section-head {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  margin: 0 0 4px;
+  padding: 0 4px;
+}
+
+/* 顶层板块右侧分组视图切换 tab：作为 flex 流右侧子元素参与行内布局；
+   默认宽度塌陷不占位(计数贴右与「收藏」tab 对齐)，悬浮/聚焦时展开，自动令 label(flex-1 truncate)
+   左移让位、文本靠左可截断，不遮字，行宽平滑过渡。无 border/padding，高度仅由按钮(20px)决定，
+   不高于标题行(22px)故悬浮出现绝不撑高行 */
 .sidebar-view-switch {
   flex-shrink: 0;
   width: 0;
   overflow: hidden;
-  padding: 0;
+  margin-left: 0;
+  height: 20px;
   opacity: 0;
-  transition: none;
+  transition: width 150ms ease, margin-left 150ms ease, opacity 150ms ease;
 }
 .sidebar-section-head:hover .sidebar-view-switch,
 .sidebar-view-switch:focus-within {
-  width: auto;
-  padding: 2px;
+  width: 40px;
+  margin-left: 4px;
   opacity: 1;
 }
 
