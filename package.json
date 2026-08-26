@@ -2,7 +2,7 @@
   "name": "biu",
   "version": "0.1.0",
   "private": true,
-  "description": "BIU",
+  "description": "一切即插件的 Agent Harness：多 Agent 不靠群聊，而是通过任务看板协作。基于 Cordis，事件流驱动，一切可溯源。",
   "type": "module",
   "workspaces": [
     "packages/*"
