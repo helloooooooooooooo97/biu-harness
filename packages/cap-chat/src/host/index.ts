@@ -49,6 +49,11 @@ interface ChatConfig {
   customEndpoints: LlmEndpointDef[]
   /** 用户在某入口下追加的模型名。 */
   customModels: LlmModelDef[]
+  /**
+   * 探测失败 / 用户主动断开的入口：强制视为未配置，
+   * 避免坏 Key（含环境变量）仍显示绿点并出现在模型下拉。
+   */
+  blockedEndpoints: string[]
   model: string
   systemPrompt: string
   agentMode: AgentToolMode
@@ -80,6 +85,7 @@ function defaults(): ChatConfig {
     baseUrls: {},
     customEndpoints: [],
     customModels: [],
+    blockedEndpoints: [],
     model:
       process.env.CHAT_MODEL ||
       (provider === 'openai' ? 'gpt-4o-mini' : provider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'deepseek-v4-flash'),
@@ -120,6 +126,7 @@ function writePersisted(config: ChatConfig) {
         baseUrls: config.baseUrls,
         customEndpoints: config.customEndpoints,
         customModels: config.customModels,
+        blockedEndpoints: config.blockedEndpoints,
       },
       null,
       2,
@@ -261,6 +268,9 @@ function mergePersisted(base: ChatConfig, saved: Partial<ChatConfig> | null): Ch
     baseUrls,
     customEndpoints,
     customModels,
+    blockedEndpoints: Array.isArray(saved.blockedEndpoints)
+      ? [...new Set(saved.blockedEndpoints.map((id) => String(id).trim()).filter(Boolean))]
+      : [],
     model: !process.env.CHAT_MODEL && typeof saved.model === 'string' && saved.model.trim() ? saved.model.trim() : base.model,
     systemPrompt: typeof saved.systemPrompt === 'string' ? saved.systemPrompt : base.systemPrompt,
     agentMode: parseAgentMode(saved.agentMode, base.agentMode),
@@ -295,11 +305,20 @@ function effectiveBaseUrl(config: ChatConfig, endpoint: LlmEndpointDef): string 
   return override?.trim() ? normalizeBaseUrl(override) : endpoint.baseUrl
 }
 
-/** 入口是否已配置：有 Key，或本地入口（允许空 Key）。 */
+/** 入口是否已配置：有 Key（或本地入口），且未被探测失败拉黑。 */
 function endpointConfigured(config: ChatConfig, endpoint: LlmEndpointDef): boolean {
+  if (config.blockedEndpoints.includes(endpoint.id)) return false
   const key = (config.apiKeys[endpoint.id] ?? '').trim()
   if (key) return true
   return isLocalEndpoint(endpoint)
+}
+
+function unblockEndpoint(config: ChatConfig, id: string) {
+  config.blockedEndpoints = config.blockedEndpoints.filter((x) => x !== id)
+}
+
+function blockEndpoint(config: ChatConfig, id: string) {
+  if (!config.blockedEndpoints.includes(id)) config.blockedEndpoints.push(id)
 }
 
 export class ChatService extends Service {
@@ -480,6 +499,59 @@ export class ChatService extends Service {
   }
 
   /**
+   * 探测失败：拉黑入口（绿点变灰、模型下拉不可选）。
+   * 保留已存 Key 便于改 URL 后重试；若当前默认就是该入口，切到其它已配置入口。
+   */
+  invalidateEndpoint(endpointId: string, opts?: { persist?: boolean }) {
+    const id = endpointId.trim()
+    if (!id) return this.publicView()
+    blockEndpoint(this.config, id)
+    if (this.config.endpointId === id) {
+      const fallback =
+        allEndpoints(this.config).find((ep) => ep.id !== id && endpointConfigured(this.config, ep)) ??
+        findEndpointPreset(DEFAULT_PROVIDER)
+      if (fallback) {
+        this.config.endpointId = fallback.id
+        this.config.provider = fallback.provider
+        this.config.model =
+          allModels(this.config).find((m) => m.endpointId === fallback.id)?.model ??
+          defaultModelFor(fallback.provider)
+      }
+    }
+    this.syncLlm()
+    if (opts?.persist !== false) {
+      try {
+        writePersisted(this.config)
+      } catch (error) {
+        console.warn('[chat] failed to persist config', error)
+      }
+    }
+    return this.publicView()
+  }
+
+  /** 探测成功：解除拉黑（Key 仍由调用方决定是否写入）。 */
+  markEndpointReachable(endpointId: string, opts?: { persist?: boolean; apiKey?: string; baseUrl?: string }) {
+    const id = endpointId.trim()
+    if (!id) return this.publicView()
+    unblockEndpoint(this.config, id)
+    if (typeof opts?.apiKey === 'string' && opts.apiKey.trim()) {
+      this.config.apiKeys[id] = opts.apiKey.trim()
+    }
+    if (typeof opts?.baseUrl === 'string' && opts.baseUrl.trim()) {
+      this.config.baseUrls[id] = normalizeBaseUrl(opts.baseUrl)
+    }
+    this.syncLlm()
+    if (opts?.persist !== false) {
+      try {
+        writePersisted(this.config)
+      } catch (error) {
+        console.warn('[chat] failed to persist config', error)
+      }
+    }
+    return this.publicView()
+  }
+
+  /**
    * 更新配置。endpointId/provider/model/systemPrompt/agentMode/extraTools 直接覆盖；
    * setApiKey / setBaseUrl 按入口写入；空串表示保留原值，仅非空时更新。
    * addEndpoint / addModel / removeCustom* 管理自定义入口与模型。
@@ -494,8 +566,8 @@ export class ChatService extends Service {
       systemPrompt: string
       agentMode: AgentToolMode
       extraTools: string[]
-      /** 按入口更新 key */
-      setApiKey: Partial<Record<string, string>>
+      /** 按入口更新 key；空串 / null 清除 */
+      setApiKey: Partial<Record<string, string | null>>
       /** 按入口覆盖 baseUrl；空串清除覆盖、回到 preset 默认 */
       setBaseUrl: Partial<Record<string, string | null>>
       /** 追加自定义入口 */
@@ -532,7 +604,14 @@ export class ChatService extends Service {
     }
     if (next.setApiKey && typeof next.setApiKey === 'object') {
       for (const [id, key] of Object.entries(next.setApiKey)) {
-        if (typeof key === 'string' && key.trim()) this.config.apiKeys[id] = key.trim()
+        // 空串 / null：清除 Key（测试失败或断开时用）
+        if (key === null || key === '') {
+          delete this.config.apiKeys[id]
+          blockEndpoint(this.config, id)
+        } else if (typeof key === 'string' && key.trim()) {
+          this.config.apiKeys[id] = key.trim()
+          unblockEndpoint(this.config, id)
+        }
       }
     }
     if (next.setBaseUrl && typeof next.setBaseUrl === 'object') {
@@ -547,6 +626,7 @@ export class ChatService extends Service {
     // 兼容旧调用：单一 apiKey 写入当前入口
     if (typeof next.apiKey === 'string' && next.apiKey.trim()) {
       this.config.apiKeys[this.config.endpointId] = next.apiKey.trim()
+      unblockEndpoint(this.config, this.config.endpointId)
     }
     if (next.addEndpoint && typeof next.addEndpoint === 'object') {
       const label = String(next.addEndpoint.label ?? '').trim()
@@ -640,6 +720,7 @@ export class ChatService extends Service {
       this.config.customModels = this.config.customModels.filter((m) => m.endpointId !== id)
       delete this.config.apiKeys[id]
       delete this.config.baseUrls[id]
+      unblockEndpoint(this.config, id)
       if (this.config.endpointId === id) {
         this.config.endpointId = DEFAULT_PROVIDER
         this.config.provider = DEFAULT_PROVIDER
@@ -789,7 +870,7 @@ export function apply(ctx: Context) {
       systemPrompt: string
       agentMode: AgentToolMode
       extraTools: string[]
-      setApiKey: Partial<Record<string, string>>
+      setApiKey: Partial<Record<string, string | null>>
       setBaseUrl: Partial<Record<string, string | null>>
       addEndpoint: { id?: string; label: string; baseUrl: string; protocol?: 'openai-compat' | 'anthropic'; provider?: ChatProvider; note?: string }
       addModel: { endpointId: string; model: string; label?: string; note?: string }
@@ -807,7 +888,20 @@ export function apply(ctx: Context) {
     }
     try {
       const result = await chat.testConnection(payload)
-      route.send(result.ok ? 200 : 400, result)
+      if (result.ok) {
+        const config = chat.markEndpointReachable(result.endpointId, {
+          ...(typeof payload.apiKey === 'string' && payload.apiKey.trim()
+            ? { apiKey: payload.apiKey.trim() }
+            : {}),
+          ...(typeof payload.baseUrl === 'string' && payload.baseUrl.trim()
+            ? { baseUrl: payload.baseUrl.trim() }
+            : {}),
+        })
+        route.send(200, { ...result, config })
+        return
+      }
+      const config = chat.invalidateEndpoint(result.endpointId)
+      route.send(400, { ...result, config })
     } catch (error) {
       route.send(500, { ok: false, detail: String(error) })
     }

@@ -7,7 +7,7 @@
  * 3. 一处保存，不再拆成三块互相抢焦点
  */
 import { useEffect, useMemo, useState } from 'react'
-import { LuCheck, LuLoaderCircle, LuPlus, LuSearch, LuTrash2, LuUnplug, LuX } from 'react-icons/lu'
+import { LuCheck, LuLoaderCircle, LuPlus, LuTrash2, LuUnplug, LuX } from 'react-icons/lu'
 
 type ChatProvider = 'deepseek' | 'openai' | 'anthropic'
 
@@ -83,7 +83,6 @@ export function ChatConfig(props?: { onClose?: () => void }) {
 
   const [keyDraft, setKeyDraft] = useState('')
   const [urlDraft, setUrlDraft] = useState('')
-  const [query, setQuery] = useState('')
   const [newModelName, setNewModelName] = useState('')
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
@@ -148,26 +147,6 @@ export function ChatConfig(props?: { onClose?: () => void }) {
       ),
     [endpoints, connectedThird],
   )
-
-  const filteredOfficial = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return officialList
-    return officialList.filter(
-      (e) => e.label.toLowerCase().includes(q) || e.id.includes(q),
-    )
-  }, [officialList, query])
-
-  const filteredThird = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return connectedThird
-    return connectedThird.filter(
-      (e) =>
-        e.label.toLowerCase().includes(q) ||
-        e.id.includes(q) ||
-        e.baseUrl.toLowerCase().includes(q),
-    )
-  }, [connectedThird, query])
-
   function applyPublic(data: ChatPublicConfig, preferActive?: string) {
     const eps = Array.isArray(data.endpoints) ? data.endpoints : []
     setEndpoints(eps)
@@ -305,13 +284,21 @@ export function ChatConfig(props?: { onClose?: () => void }) {
           ...(!isDefaultProvider && activeModels[0]?.model ? { model: activeModels[0].model } : {}),
         }),
       })
-      const data = (await res.json()) as { ok?: boolean; detail?: string; latencyMs?: number }
+      const data = (await res.json()) as {
+        ok?: boolean
+        detail?: string
+        latencyMs?: number
+        config?: ChatPublicConfig
+      }
+      // 失败：服务端拉黑入口（绿点变灰、下拉不可选）；成功：解除拉黑并可写入草稿 Key
+      if (data.config) applyPublic(data.config, activeId)
       if (data.ok) {
+        setKeyDraft('')
         setTestHint(data.detail || '连接成功')
         setStatus('连接正常')
       } else {
         setTestHint('')
-        setError(data.detail || `连接失败（HTTP ${res.status}）`)
+        setError(data.detail || `连接失败（HTTP ${res.status}）· 已从可选模型中移除`)
       }
     } catch (err) {
       setError(String(err))
@@ -503,46 +490,37 @@ export function ChatConfig(props?: { onClose?: () => void }) {
       aria-label={asDialog ? '模型配置' : undefined}
       onClick={asDialog ? (e) => e.stopPropagation() : undefined}
     >
+      <div className="flex shrink-0 items-center justify-between border-b border-[var(--dsw-border)] px-4 py-3">
+        <h2 className="text-[14px] font-semibold text-[var(--dsw-label)]">模型配置</h2>
+        {asDialog ? (
+          <button
+            type="button"
+            className="grid size-8 place-items-center rounded-[8px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
+            aria-label="关闭"
+            onClick={props?.onClose}
+          >
+            <LuX className="size-4" />
+          </button>
+        ) : (
+          <span className="text-[11px] text-[var(--dsw-label-3)]">官方 Key / 第三方 URL</span>
+        )}
+      </div>
+
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* 左：Provider 列表 */}
         <aside className="flex w-[200px] shrink-0 flex-col border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
-          <div className="border-b border-[var(--dsw-border)] p-2.5">
-            <div className="flex items-center gap-1.5">
-              <div className="relative min-w-0 flex-1">
-                <LuSearch className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-[var(--dsw-label-3)]" />
-                <input
-                  className={`${inputCls} pl-7`}
-                  placeholder="搜索…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  aria-label="搜索 Provider"
-                />
-              </div>
-              {asDialog ? (
-                <button
-                  type="button"
-                  className="grid size-8 shrink-0 place-items-center rounded-[8px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
-                  aria-label="关闭"
-                  onClick={props?.onClose}
-                >
-                  <LuX className="size-4" />
-                </button>
-              ) : null}
-            </div>
-          </div>
-
           <div className="min-h-0 flex-1 overflow-y-auto py-1">
             <div className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
               官方
             </div>
-            {filteredOfficial.map((ep) => providerRow(ep, { removable: false }))}
+            {officialList.map((ep) => providerRow(ep, { removable: false }))}
 
-            {filteredThird.length > 0 ? (
+            {connectedThird.length > 0 ? (
               <>
                 <div className="px-3 pt-3 pb-1 text-[10px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
                   第三方
                 </div>
-                {filteredThird.map((ep) => providerRow(ep, { removable: true }))}
+                {connectedThird.map((ep) => providerRow(ep, { removable: true }))}
               </>
             ) : null}
           </div>
