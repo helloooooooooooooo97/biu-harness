@@ -5,6 +5,7 @@ import {
   UNGROUPED_PROJECT_KEY,
   UNGROUPED_TAG_KEY,
   buildSidebarGroups,
+  buildSidebarSections,
   folderNameFromPath,
   groupSessionsByProject,
   groupSessionsByTag,
@@ -115,4 +116,60 @@ test('buildSidebarGroups prepends a pinned section', () => {
 test('folderNameFromPath takes the last segment', () => {
   assert.equal(folderNameFromPath('/Users/me/work/cordis-web/'), 'cordis-web')
   assert.equal(folderNameFromPath('C:\\repos\\demo'), 'demo')
+})
+
+test('buildSidebarSections groups by project by default', () => {
+  const sections = buildSidebarSections([
+    item({ id: 'a', updatedAt: 2, project: { name: 'x', path: '/x', boundAt: 1 } }),
+    item({ id: 'b', updatedAt: 1 }),
+  ])
+  assert.deepEqual(
+    sections.map((s) => s.kind),
+    ['project'],
+  )
+  const projectSection = sections[0]!
+  assert.equal(projectSection.label, '项目')
+  assert.deepEqual(
+    projectSection.groups?.map((g) => g.kind),
+    ['project', 'ungrouped'],
+  )
+})
+
+test('buildSidebarSections groups by tag when groupBy=tag', () => {
+  const sections = buildSidebarSections(
+    [
+      item({ id: 'a', updatedAt: 2, tags: ['ui', 'bug'] }),
+      item({ id: 'b', updatedAt: 1 }),
+    ],
+    'tag',
+  )
+  assert.deepEqual(
+    sections.map((s) => s.kind),
+    ['tag'],
+  )
+  const tagSection = sections[0]!
+  assert.equal(tagSection.label, '标签')
+  assert.deepEqual(
+    tagSection.groups?.map((g) => g.kind),
+    ['tag', 'tag', 'ungrouped'],
+  )
+  assert.deepEqual(
+    tagSection.groups?.map((g) => g.label),
+    ['bug', 'ui', '未标签'],
+  )
+})
+
+test('buildSidebarSections keeps a pinned section that holds pinned rows', () => {
+  const sections = buildSidebarSections(
+    [item({ id: 'a', updatedAt: 2, pinned: true }), item({ id: 'b', updatedAt: 1 })],
+    'tag',
+  )
+  assert.deepEqual(
+    sections.map((s) => s.kind),
+    ['pinned', 'tag'],
+  )
+  assert.deepEqual(
+    sections[0]?.sessions?.map((r) => r.id),
+    ['a'],
+  )
 })

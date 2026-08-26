@@ -21,7 +21,7 @@ import { estimateTokens } from '@biu/host-sessions'
 import { readArtifactFile } from '@biu/host-sessions/artifacts'
 import { collectLiveDispatchedTasks } from '@biu/host-live-sessions/usage'
 import { normalizeSessionType } from '@biu/type-session'
-import { registerChatInspectorRoutes } from './inspector.ts'
+import { loadLiveDispatchTasks, registerChatInspectorRoutes } from './inspector.ts'
 
 export type { ChatMessage }
 
@@ -383,7 +383,7 @@ export function computeTurnStats(events: SessionEvent[], targetTurn?: number): R
 }
 
 export const name = 'chat'
-export const inject = ['http', 'hub', 'agents', 'sessions', 'systemPrompt', 'tools']
+export const inject = ['http', 'hub', 'agents', 'sessions', 'systemPrompt', 'tools', 'tasks']
 
 declare module 'cordis' {
   interface Context {
@@ -537,7 +537,8 @@ export function apply(ctx: Context) {
         const worker = await ctx.sessions.require(item.id)
         workers.push({ id: item.id, events: worker.events })
       }
-      const dispatched = collectLiveDispatchedTasks(record.id, record.events, workers)
+      const liveTasks = await loadLiveDispatchTasks(ctx, record.id)
+      const dispatched = collectLiveDispatchedTasks(record.id, record.events, workers, liveTasks)
       payload.dispatchedUsage = dispatched.total
       payload.dispatchedUsageByTurn = Object.fromEntries(
         Object.entries(dispatched.byLiveTurn).map(([key, value]) => [key, value.usage]),

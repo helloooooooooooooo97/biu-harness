@@ -139,8 +139,7 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
                     {task.preview?.trim() || '（无派工文本）'}
                   </div>
                   <div className="mt-0.5 truncate text-[10px] text-[var(--dsw-label-3)]">
-                    {task.tool === 'session_inject' ? 'inject' : 'wake'}
-                    {task.workerTurn != null ? ` · t${task.workerTurn}` : ''}
+                    派工{task.workerTurn != null ? ` · t${task.workerTurn}` : ''}
                   </div>
                 </td>
                 <td className="px-2 py-2 align-middle">

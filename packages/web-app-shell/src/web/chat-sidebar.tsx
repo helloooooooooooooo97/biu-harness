@@ -11,6 +11,7 @@ import {
   UNGROUPED_PROJECT_KEY,
   UNGROUPED_TAG_KEY,
   buildSidebarSections,
+  type SidebarGroupBy,
   type SidebarSectionKind,
 } from '@biu/web-session-view'
 import { useSidebarCollapseStore } from '@biu/web-session-view'
@@ -20,12 +21,25 @@ import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import {
   LuChevronDown,
   LuChevronRight,
+  LuFolderTree,
   LuPanelLeftClose,
-  LuPin,
   LuPlus,
+  LuStar,
   LuRadio,
   LuTag,
+  LuTags,
 } from 'react-icons/lu'
+
+/** 项目/标签分组视图的持久化 key。 */
+const GROUP_BY_KEY = 'cordis.sidebar.groupBy'
+
+function readGroupBy(): SidebarGroupBy {
+  try {
+    return localStorage.getItem(GROUP_BY_KEY) === 'tag' ? 'tag' : 'project'
+  } catch {
+    return 'project'
+  }
+}
 
 /** 每行 tag 徽标：最多显示 2 个，其余以 +N（剩余数量）展示。 */
 function SessionTagBadges({ tags }: { tags?: string[] }) {
@@ -96,17 +110,17 @@ const SessionRow = memo(function SessionRow({
       </Link>
       <button
         type="button"
-        className={`chat-session-row-pin${pinned ? ' is-on' : ''}`}
+        className={`chat-session-row-star${pinned ? ' is-on' : ''}`}
         aria-pressed={pinned}
-        aria-label={pinned ? `取消置顶 ${item.title}` : `置顶 ${item.title}`}
-        title={pinned ? '取消置顶' : '置顶'}
+        aria-label={pinned ? `取消收藏 ${item.title}` : `收藏 ${item.title}`}
+        title={pinned ? '取消收藏' : '收藏'}
         onClick={(event) => {
           event.preventDefault()
           event.stopPropagation()
           onPin(item)
         }}
       >
-        <LuPin className="size-3.5" />
+        <LuStar className={`size-3.5${pinned ? ' text-[#f5b700]' : ''}`} fill={pinned ? 'currentColor' : 'none'} />
       </button>
       <button
         type="button"
@@ -168,8 +182,19 @@ export const ChatSidebar = memo(function ChatSidebar({
   const collapsedProjects = useSidebarCollapseStore((state) => state.collapsed)
   const toggleProjectGroup = useSidebarCollapseStore((state) => state.toggle)
   const expandProjectGroup = useSidebarCollapseStore((state) => state.expand)
-  // 三板块并存：置顶 / 项目 / 标签
-  const sections = useMemo(() => buildSidebarSections(sessions), [sessions])
+  // 数据分组视图：项目树 / 标签树（持久化记忆用户选择）
+  const [groupBy, setGroupBy] = useState<SidebarGroupBy>(readGroupBy)
+  const changeGroupBy = useCallback((next: SidebarGroupBy) => {
+    setGroupBy(next)
+    // 完整保存/恢复，不截断
+    try {
+      localStorage.setItem(GROUP_BY_KEY, next)
+    } catch {
+      /* ignore */
+    }
+  }, [])
+  // 板块并存：收藏 + (项目|标签)，由上而下
+  const sections = useMemo(() => buildSidebarSections(sessions, groupBy), [sessions, groupBy])
   // 板块级收缩（点击标题可展开/收缩，不显示收缩按钮，层级靠 kind 图标表达）
   const [collapsedSections, setCollapsedSections] = useState<Partial<Record<SidebarSectionKind, boolean>>>({})
   const toggleSection = useCallback((kind: SidebarSectionKind) => {
@@ -277,28 +302,54 @@ export const ChatSidebar = memo(function ChatSidebar({
               const sectionCollapsed = Boolean(collapsedSections[section.kind])
               return (
                 <section key={section.kind} className="min-w-0">
-                  {/* 板块标题：置顶 / 项目 / 标签，可点击整行展开/收缩，但不显示收缩按钮；层级靠 kind 图标表达 */}
-                  <div className="mb-0.5 flex items-center gap-0.5 px-1">
+                  {/* 板块标题：收藏 / (项目|标签)，可点击整行展开/收缩；层级靠 kind 图标表达；悬浮时右侧露出分组切换 tab */}
+                  <div className="sidebar-section-head mb-0.5 flex items-center gap-0.5 px-1">
                     <button
                       type="button"
-                      className="flex min-w-0 flex-1 items-center gap-1 rounded-[6px] px-1 py-0.5 text-left text-[11px] font-bold tracking-wider text-[var(--dsw-label-3)] uppercase hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
+                      className="flex min-h-[22px] min-w-0 flex-1 items-center gap-1 rounded-[6px] px-1 text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
                       aria-expanded={!sectionCollapsed}
                       onClick={() => toggleSection(section.kind)}
                     >
                       {section.kind === 'pinned' ? (
-                        <LuPin className="size-3.5 shrink-0 opacity-80" />
+                        <LuStar className="size-3.5 shrink-0 text-[#f5b700]" fill="currentColor" />
                       ) : section.kind === 'tag' ? (
                         <LuTag className="size-3.5 shrink-0 opacity-80" />
                       ) : (
                         <FolderGlyph className="size-3.5 shrink-0 opacity-80" />
                       )}
-                      <span className="min-w-0 flex-1 truncate normal-case tracking-normal">{section.label}</span>
+                      <span className="min-w-0 flex-1 truncate tracking-normal">{section.label}</span>
                       <span className="shrink-0 font-mono text-[10px] opacity-60">
                         {section.sessions
                           ? section.sessions.length
                           : section.groups?.reduce((sum, g) => sum + g.sessions.length, 0) ?? 0}
                       </span>
                     </button>
+                    {section.kind !== 'pinned' ? (
+                      <div
+                        className="sidebar-view-switch flex shrink-0 items-center overflow-hidden rounded-[6px] border border-[var(--dsw-border)]"
+                        role="group"
+                        aria-label="分组视图切换"
+                      >
+                        <button
+                          type="button"
+                          title="按项目分组"
+                          aria-pressed={groupBy === 'project'}
+                          className={`grid size-6 place-items-center ${groupBy === 'project' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
+                          onClick={() => changeGroupBy('project')}
+                        >
+                          <LuFolderTree className="size-3" />
+                        </button>
+                        <button
+                          type="button"
+                          title="按标签分组"
+                          aria-pressed={groupBy === 'tag'}
+                          className={`grid size-6 place-items-center ${groupBy === 'tag' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
+                          onClick={() => changeGroupBy('tag')}
+                        >
+                          <LuTags className="size-3" />
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
 
                   {!sectionCollapsed ? (
@@ -321,37 +372,37 @@ export const ChatSidebar = memo(function ChatSidebar({
                         const canAddHere = group.kind === 'project' || group.kind === 'ungrouped'
                         return (
                           <div key={group.key} className="min-w-0">
-                            <div className="group/header mb-0.5 flex items-center gap-0.5 px-1">
+                            <div className="sidebar-group-head mb-0.5 flex items-center gap-0.5 px-1">
                               <button
                                 type="button"
-                                className="flex min-w-0 flex-1 items-center gap-1 rounded-[6px] px-1 py-0.5 text-left text-[11px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
+                                className="flex min-h-[24px] min-w-0 flex-1 items-center gap-1 rounded-[6px] px-1 text-left text-[12px] font-semibold tracking-wide text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
                                 title={group.path ?? group.label}
                                 aria-expanded={!collapsed}
                                 onClick={() => toggleProjectGroup(group.key)}
                               >
                                 {collapsed ? (
-                                  <LuChevronRight className="size-3 shrink-0" />
+                                  <LuChevronRight className="size-3 shrink-0 opacity-70" />
                                 ) : (
-                                  <LuChevronDown className="size-3 shrink-0" />
+                                  <LuChevronDown className="size-3 shrink-0 opacity-70" />
                                 )}
                                 {group.kind === 'pinned' ? (
-                                  <LuPin className="size-3 shrink-0 opacity-80" />
+                                  <LuStar className="size-3.5 shrink-0 text-[#f5b700]" fill="currentColor" />
                                 ) : group.kind === 'tag' ? (
-                                  <LuTag className="size-3 shrink-0 opacity-80" />
+                                  <LuTag className="size-3.5 shrink-0 opacity-80" />
                                 ) : isUngrouped ? (
-                                  <span className="grid size-3 place-items-center text-[10px] opacity-70" aria-hidden>
+                                  <span className="grid size-3.5 place-items-center text-[11px] opacity-70" aria-hidden>
                                     —
                                   </span>
                                 ) : (
-                                  <FolderGlyph className="size-3 shrink-0 opacity-80" />
+                                  <FolderGlyph className="size-3.5 shrink-0 opacity-80" />
                                 )}
-                                <span className="min-w-0 flex-1 truncate normal-case tracking-normal">{group.label}</span>
+                                <span className="min-w-0 flex-1 truncate tracking-normal">{group.label}</span>
                                 <span className="shrink-0 font-mono text-[10px] opacity-60">{group.sessions.length}</span>
                               </button>
                               {canAddHere ? (
                                 <button
                                   type="button"
-                                  className="grid size-5 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] opacity-0 hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)] group-hover/header:opacity-100 focus:opacity-100"
+                                  className="sidebar-add grid size-5 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
                                   title={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
                                   aria-label={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
                                   onClick={() =>

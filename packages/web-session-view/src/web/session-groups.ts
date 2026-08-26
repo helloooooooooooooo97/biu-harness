@@ -103,7 +103,7 @@ export function buildSidebarGroups(sessions: SessionListItem[], groupBy: Sidebar
   return [
     {
       key: PINNED_GROUP_KEY,
-      label: '置顶',
+      label: '收藏',
       sessions: pinned,
       updatedAt: pinned[0]?.updatedAt ?? 0,
       kind: 'pinned',
@@ -125,25 +125,31 @@ export interface SidebarSection {
 }
 
 /**
- * 三板块并存：置顶 / 项目 / 标签，自上而下。
- * - 置顶区：所有 pinned 会话（直接携带，不嵌套分组）；无则省去该 section。
- * - 项目区：按绑定 folder path 分组，未绑定归「未分组」。
- * - 标签区：按 tags 分组（一条会话可出现在多个标签下），无标签归「未标签」。
+ * 两板块并存：收藏 / (项目|标签)，自上而下。
+ * - 收藏区：所有 pinned 会话（直接携带，不嵌套分组）；无则省去该 section。
+ * - 数据分组区：按 groupBy 决定——'project' 按绑定 folder path 分组（未绑定归「未分组」）；
+ *   'tag' 按 tag 分组（一条会话可出现在多个标签下，无标签归「未标签」）。
  */
-export function buildSidebarSections(sessions: SessionListItem[]): SidebarSection[] {
+export function buildSidebarSections(
+  sessions: SessionListItem[],
+  groupBy: SidebarGroupBy = 'project',
+): SidebarSection[] {
   const sections: SidebarSection[] = []
 
   const pinned = sessions.filter((item) => item.pinned).sort(compareSessionRows)
   if (pinned.length) {
     sections.push({
       kind: 'pinned',
-      label: '置顶',
+      label: '收藏',
       sessions: pinned,
     })
   }
 
-  sections.push({ kind: 'project', label: '项目', groups: groupSessionsByProject(sessions) })
-  sections.push({ kind: 'tag', label: '标签', groups: groupSessionsByTag(sessions) })
+  if (groupBy === 'tag') {
+    sections.push({ kind: 'tag', label: '标签', groups: groupSessionsByTag(sessions) })
+  } else {
+    sections.push({ kind: 'project', label: '项目', groups: groupSessionsByProject(sessions) })
+  }
 
   return sections
 }

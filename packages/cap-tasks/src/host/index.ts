@@ -188,6 +188,8 @@ export type TaskUpdateInput = Partial<{
 export type TaskListFilter = {
   status?: TaskStatus
   q?: string
+  /** 精确过滤创建者（creator sessionId，用于 Live 派工统计） */
+  creatorSessionId?: string
 }
 
 type SessionEventLite = {
@@ -1083,6 +1085,10 @@ export class TasksService extends Service {
       )
       const like = `%${filter.q.trim()}%`
       params.push(like, like, like, like, like, like)
+    }
+    if (filter.creatorSessionId?.trim()) {
+      clauses.push('creator_json LIKE ?')
+      params.push(`%${filter.creatorSessionId.trim()}%`)
     }
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
     const rows = this.db
@@ -2118,4 +2124,11 @@ export function apply(ctx: Context) {
       /* ignore */
     }
   })
+}
+
+// 供其它 plugin（如 cap-chat）通过 inject 'tasks' 注入本服务，做 Live 派工统计按 creator 取数。
+declare module 'cordis' {
+  interface Context {
+    tasks: TasksService
+  }
 }

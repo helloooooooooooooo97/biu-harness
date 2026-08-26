@@ -391,40 +391,75 @@ body {
   background: var(--dsw-business-soft);
 }
 
-.chat-session-row-delete {
+/* 收藏/删除按钮：默认不占位（宽度塌陷），仅悬浮/聚焦该行时展开，避免不悬浮时右侧留白挤压左侧标签 */
+.chat-session-row-delete,
+.chat-session-row-star {
   flex-shrink: 0;
-  padding: 0 6px;
-  color: var(--dsw-label-3);
-  opacity: 0;
-  transition: none;
-}
-
-.chat-session-row-pin {
-  flex-shrink: 0;
-  padding: 0 4px;
+  width: 0;
+  overflow: hidden;
+  padding: 0;
   color: var(--dsw-label-3);
   opacity: 0;
   transition: none;
 }
 
 .chat-session-row:hover .chat-session-row-delete,
-.chat-session-row-delete:focus,
-.chat-session-row:hover .chat-session-row-pin,
-.chat-session-row-pin:focus,
-.chat-session-row-pin.is-on {
+.chat-session-row-delete:focus {
+  width: auto;
+  padding: 0 6px;
   opacity: 1;
 }
 
-.chat-session-row-pin.is-on {
-  color: var(--dsw-label);
+.chat-session-row:hover .chat-session-row-star,
+.chat-session-row-star:focus,
+.chat-session-row-star.is-on {
+  width: auto;
+  padding: 0 4px;
+  opacity: 1;
 }
 
-.chat-session-row-pin:hover {
-  color: var(--dsw-label);
+.chat-session-row-star.is-on {
+  color: #f5c518;
+}
+
+.chat-session-row-star:hover {
+  color: #fbd96d;
 }
 
 .chat-session-row-delete:hover {
   color: var(--dsw-danger);
+}
+
+/* 分组添加按钮(+)：默认宽度塌陷不占位，仅悬浮分组头/聚焦时展开显示 */
+.sidebar-add {
+  flex-shrink: 0;
+  width: 0;
+  overflow: hidden;
+  padding: 0;
+  opacity: 0;
+  transition: none;
+}
+.sidebar-group-head:hover .sidebar-add,
+.sidebar-add:focus {
+  width: auto;
+  padding: 2px;
+  opacity: 1;
+}
+
+/* 顶层板块右侧分组视图切换 tab：默认宽度塌陷不占位，仅悬浮板块标题/聚焦时展开显示 */
+.sidebar-view-switch {
+  flex-shrink: 0;
+  width: 0;
+  overflow: hidden;
+  padding: 0;
+  opacity: 0;
+  transition: none;
+}
+.sidebar-section-head:hover .sidebar-view-switch,
+.sidebar-view-switch:focus-within {
+  width: auto;
+  padding: 2px;
+  opacity: 1;
 }
 
 .app-activity-bar {

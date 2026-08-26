@@ -14,7 +14,7 @@ import * as agents from '@biu/host-agents'
 import * as liveSessions from './index.ts'
 import { runWithSession } from '@biu/host-sessions/scope'
 
-test('live tools list/inspect/inject; reject from chat sessions', async () => {
+test('live tools list/inspect; reject from chat sessions', async () => {
   const ctx = new Context()
   await ctx.plugin(sessionStore, { driver: 'memory' })
   await ctx.plugin(sessions)
@@ -55,15 +55,6 @@ test('live tools list/inspect/inject; reject from chat sessions', async () => {
     ctx.tools.invoke('session_inspect', { sessionId: chat.id }, new AbortController().signal),
   )) as { recent: Array<{ text: string }> }
   assert.equal(inspected.recent.some((item) => item.text.includes('hello worker')), true)
-
-  const injected = (await runWithSession(live.id, () =>
-    ctx.tools.invoke(
-      'session_inject',
-      { sessionId: chat.id, text: 'keep going' },
-      new AbortController().signal,
-    ),
-  )) as { queued: boolean }
-  assert.equal(injected.queued, true)
 })
 
 test('live session turn unlocks session_* tools on top of minimal mode', async () => {
@@ -141,7 +132,7 @@ test('buildSessionProgress derives turn/step/status and afterSeq delta text', ()
   assert.equal(done.newestSeq, 8)
 })
 
-test('session_progress and async wake work for live caller', async () => {
+test('session_progress and async dispatch work for live caller', async () => {
   const ctx = new Context()
   await ctx.plugin(sessionStore, { driver: 'memory' })
   await ctx.plugin(sessions)
@@ -169,60 +160,6 @@ test('session_progress and async wake work for live caller', async () => {
     ctx.tools.invoke('session_list', {}, new AbortController().signal),
   )) as { sessions: Array<{ id: string; status: string }> }
   assert.equal(listed.sessions.find((item) => item.id === chat.id)?.status, 'idle')
-})
-
-test('wait=false wake: queues worker and does not append note to live', async () => {
-  const ctx = new Context()
-  await ctx.plugin(sessionStore, { driver: 'memory' })
-  await ctx.plugin(sessions)
-  await ctx.plugin(tools)
-  await ctx.plugin(systemPrompt)
-  await ctx.plugin(llm)
-  await ctx.plugin(agentLoop)
-  await ctx.plugin(agents)
-  await ctx.plugin(liveSessions)
-
-  let workerFinished = false
-  ctx.agentLoop.setFactory((_llm, sessionId) => ({
-    run: async () => {
-      await ctx.sessions.append(sessionId, { type: 'turn/start', turn: 1 })
-      await ctx.sessions.append(sessionId, { type: 'assistant/message', text: 'task done' })
-      await ctx.sessions.append(sessionId, { type: 'turn/end', turn: 1, reason: 'complete' })
-      workerFinished = true
-      return { text: 'task done', steps: [] }
-    },
-  }))
-  ctx.agents.configure({ provider: 'deepseek', apiKey: '', model: 'x' })
-
-  const live = await ctx.sessions.create(undefined, { type: 'live' })
-  const chat = await ctx.sessions.create()
-  const liveEventCountBefore = (await ctx.sessions.require(live.id)).events.length
-
-  const result = (await runWithSession(live.id, () =>
-    ctx.tools.invoke(
-      'session_wake',
-      { sessionId: chat.id, text: 'go', wait: false },
-      new AbortController().signal,
-    ),
-  )) as { queued: boolean; wait: boolean }
-
-  assert.equal(result.queued, true)
-  assert.equal(result.wait, false)
-
-  for (let i = 0; i < 40; i += 1) {
-    if (workerFinished) break
-    await new Promise((r) => setTimeout(r, 25))
-  }
-  assert.equal(workerFinished, true)
-
-  const liveEvents = (await ctx.sessions.require(live.id)).events
-  assert.equal(liveEvents.length, liveEventCountBefore)
-  assert.equal(
-    liveEvents.some(
-      (item) => item.type === 'assistant/message' && item.text.includes('[指挥席]'),
-    ),
-    false,
-  )
 })
 
 test('session_create / session_configure bind and rebind project folder', async () => {
@@ -333,7 +270,7 @@ test('session_tag add/set/remove/clear on chat session', async () => {
   assert.deepEqual(cleared.tags, [])
 })
 
-test('session_pin pin / unpin / toggle on chat session', async () => {
+test('session_star star / unstar / toggle on chat session', async () => {
   const ctx = new Context()
   await ctx.plugin(sessionStore, { driver: 'memory' })
   await ctx.plugin(sessions)
@@ -351,26 +288,26 @@ test('session_pin pin / unpin / toggle on chat session', async () => {
   await assert.rejects(
     () =>
       runWithSession(chat.id, () =>
-        ctx.tools.invoke('session_pin', { sessionId: chat.id, pinned: true }, new AbortController().signal),
+        ctx.tools.invoke('session_star', { sessionId: chat.id, pinned: true }, new AbortController().signal),
       ),
     /only available in live/,
   )
 
   // 置顶
   const p1 = (await runWithSession(live.id, () =>
-    ctx.tools.invoke('session_pin', { sessionId: chat.id, pinned: true }, new AbortController().signal),
+    ctx.tools.invoke('session_star', { sessionId: chat.id, pinned: true }, new AbortController().signal),
   )) as { pinned: boolean }
   assert.equal(p1.pinned, true)
 
   // 不传 pinned → 切换为取消置顶
   const p2 = (await runWithSession(live.id, () =>
-    ctx.tools.invoke('session_pin', { sessionId: chat.id }, new AbortController().signal),
+    ctx.tools.invoke('session_star', { sessionId: chat.id }, new AbortController().signal),
   )) as { pinned: boolean }
   assert.equal(p2.pinned, false)
 
   // 显式置顶回来
   await runWithSession(live.id, () =>
-    ctx.tools.invoke('session_pin', { sessionId: chat.id, pinned: true }, new AbortController().signal),
+    ctx.tools.invoke('session_star', { sessionId: chat.id, pinned: true }, new AbortController().signal),
   )
 
   // session_list 能看到 pinned

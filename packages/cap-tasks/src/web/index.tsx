@@ -1059,7 +1059,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
   })
   const [tagFilter, setTagFilter] = useState<string[]>(() => {
     try {
-      const saved = JSON.parse(window.localStorage.getItem('tasks.filter') ?? '{}')
+      const saved = JSON.parse(window.localStorage.getItem('tasks.filter') ?? '{}') as { tags?: unknown }
       return Array.isArray(saved.tags) ? saved.tags.filter((t): t is string => typeof t === 'string') : []
     } catch {
       return []

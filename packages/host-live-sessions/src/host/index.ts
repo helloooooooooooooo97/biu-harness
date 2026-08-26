@@ -6,18 +6,16 @@ export const LIVE_TOOL_NAMES = [
   'session_list',
   'session_inspect',
   'session_progress',
-  'session_wake',
-  'session_inject',
   'session_create',
   'session_rename',
   'session_configure',
   'session_delete',
   'session_tag',
-  'session_pin',
+  'session_star',
 ] as const
 
 const LIVE_PROMPT = `你是 Live 指挥席（文字版）：调度其他 chat session，而不是亲自改代码或跑长任务。
-工作流：session_list / session_inspect（含 tags / pinned）了解现场 → 需要时可 session_create（可带 project 绑定文件夹）新建、session_rename / session_configure（可改 project）调整目标，用 session_tag 打标签、session_pin 置顶 → session_wake（wait=false 可先派工）或 session_inject → session_progress 抽查进度。废弃的 session 可 session_delete 清理。
+工作流：session_list / session_inspect（含 tags / pinned）了解现场 → 需要时可 session_create（可带 project 绑定文件夹）新建、session_rename / session_configure（可改 project）调整目标，用 session_tag 打标签、session_star 收藏。派工必须走任务体系：用 tasks_create 建任务、tasks_update 指派 assigneeSessionId、task_deliver 派发给目标 session，进度用 task_report 上报/回传；不要直接用 dispatch 绕过任务系统。用 session_progress 抽查进度。废弃的 session 可 session_delete 清理。
 异步派工后不要等待对方完成：完成态在目标 session 自己的 turn 里，需要时再 inspect / progress。
 向用户汇报要克制：只在关键节点、明显卡住、或用户追问时说明，不要刷屏。
 回答简洁：说明调度了谁、当前状态、下一步。`
@@ -266,75 +264,6 @@ export function apply(ctx: Context) {
   })
 
   ctx.tools.register({
-    name: 'session_wake',
-    description:
-      '向目标 chat session 发送 wake 并启动 agent。wait=false 时立即返回 queued；完成态在目标 session，不回写 Live。',
-    parameters: {
-      type: 'object',
-      properties: {
-        sessionId: { type: 'string' },
-        text: { type: 'string' },
-        wait: {
-          type: 'boolean',
-          description: '默认 true 等回合结束；false 则入队后立即返回 queued',
-        },
-      },
-      required: ['sessionId', 'text'],
-    },
-    execute: async (args) => {
-      const selfId = await requireLiveCaller(ctx)
-      const targetId = String(args.sessionId || '').trim()
-      const text = String(args.text || '').trim()
-      const wait = args.wait !== false && args.wait !== 'false'
-      if (!targetId) throw new Error('sessionId required')
-      if (!text) throw new Error('text required')
-      if (targetId === selfId) throw new Error('cannot wake the current live session')
-      const target = await ctx.sessions.require(targetId)
-      if (normalizeSessionType(target.type) === 'live') {
-        throw new Error('cannot wake another live session; target a chat session')
-      }
-      const sender = { type: 'session' as const, sessionId: selfId }
-      if (!wait) {
-        void ctx.sessions.sendMessage(targetId, text, { wait: false, sender })
-        return { sessionId: targetId, queued: true, wait: false }
-      }
-      const turn = await ctx.sessions.sendMessage(targetId, text, { wait: true, sender })
-      return {
-        sessionId: targetId,
-        queued: false,
-        wait: true,
-        text: turn.text.slice(0, 1200),
-        steps: turn.steps.length,
-      }
-    },
-  })
-
-  ctx.tools.register({
-    name: 'session_inject',
-    description:
-      '向目标 session 注入补充指示（inject）；若对方正在跑会进入 inbox。完成态在目标 session，不回写 Live。',
-    parameters: {
-      type: 'object',
-      properties: {
-        sessionId: { type: 'string' },
-        text: { type: 'string' },
-      },
-      required: ['sessionId', 'text'],
-    },
-    execute: async (args) => {
-      const selfId = await requireLiveCaller(ctx)
-      const targetId = String(args.sessionId || '').trim()
-      const text = String(args.text || '').trim()
-      if (!targetId) throw new Error('sessionId required')
-      if (!text) throw new Error('text required')
-      if (targetId === selfId) throw new Error('cannot inject into the current live session')
-      await ctx.sessions.require(targetId)
-      ctx.sessions.injectMessage(targetId, text, { sender: { type: 'session', sessionId: selfId } })
-      return { sessionId: targetId, queued: true }
-    },
-  })
-
-  ctx.tools.register({
     name: 'session_create',
     description:
       '创建新的 chat session（可带标题、初始配置、绑定工作区文件夹）。Live 指挥席专用。',
@@ -426,7 +355,7 @@ export function apply(ctx: Context) {
         systemPrompt: { type: 'string' },
         agentMode: { type: 'string', enum: ['standard', 'minimal'] },
         extraTools: { type: 'array', items: { type: 'string' } },
-        pinned: { type: 'boolean', description: 'true=置顶；false=取消置顶' },
+        pinned: { type: 'boolean', description: 'true=收藏（即侧栏置顶 pinned）；false=取消收藏' },
       },
       required: ['sessionId'],
     },
@@ -506,14 +435,14 @@ export function apply(ctx: Context) {
   })
 
   ctx.tools.register({
-    name: 'session_pin',
+    name: 'session_star',
     description:
-      '置顶/取消置顶目标 session（侧栏 pinned）。传 pinned=true 置顶；pinned=false 取消置顶；不传时切换。返回更新后的 pinned 状态。Live 指挥席专用。',
+      '收藏/取消收藏目标 session（即侧栏置顶 pinned）。传 pinned=true 收藏；pinned=false 取消收藏；不传时切换。返回更新后的 pinned 状态。Live 指挥席专用。',
     parameters: {
       type: 'object',
       properties: {
         sessionId: { type: 'string', description: '目标 session id' },
-        pinned: { type: 'boolean', description: 'true=置顶；false=取消置顶；不传则切换' },
+        pinned: { type: 'boolean', description: 'true=收藏（黄色星星）；false=取消收藏；不传则切换' },
       },
       required: ['sessionId'],
     },

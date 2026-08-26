@@ -81,7 +81,7 @@ export type DispatchedTaskRow = {
   title?: string
   project?: { name: string; path?: string }
   mascot?: { shape: string; color: string; eye?: number }
-  tool: 'session_wake' | 'session_inject'
+  tool: 'task_deliver'
   liveTurn?: number
   wakeTs?: number
   status: 'pending' | 'running' | 'complete' | 'ended'
@@ -401,12 +401,26 @@ export class SessionViewService extends Service {
     }
     this.flushChunkFrame()
     const events = upsertEvent(this.value.sessionId === sessionId ? this.value.events : [], event)
-    this.replace({
+    const basePatch: Partial<SessionViewState> = {
       sessionId,
       events,
       nodes: this.buildNodes(events),
       error: undefined,
-    })
+    }
+    let patch: Partial<SessionViewState> = basePatch
+    // 回合真正结束(turn/end)：立即清掉该会话的 busy，并解除当前会话 pending/运行态，
+    // 让侧栏呼吸态及时转回；否则仅靠 refreshSessions 兜底会被 syncBusyFromSessions 的 pending 保护卡住。
+    if (event.type === 'turn/end') {
+      const busySessions = { ...this.value.busySessions }
+      if (busySessions[sessionId]) {
+        delete busySessions[sessionId]
+        patch = { ...patch, busySessions }
+      }
+      if (this.value.sessionId === sessionId) {
+        patch = { ...patch, pending: false, agentStatus: 'idle' }
+      }
+    }
+    this.replace(patch)
     this.stashCurrent()
     // Trajectory 索引走独立接口；运行中只做轻量刷新，不塞全文 events
     if (this.value.view === 'debug') void this.refreshTrajectoryIndex()
