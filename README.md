@@ -36,17 +36,17 @@
 三张都是同一套工作面：左边一排独立 session，中间调度席说话，右边任务队列。
 
 <p align="center">
-  <img src="docs/demo/task.png" alt="调度席收执行席 task_report，右侧队列同步待办与已完成" width="880" />
+  <img src="docs/demo/task.jpg" alt="调度席收执行席 task_report，右侧队列同步待办与已完成" width="880" />
 </p>
 <p align="center"><sub><code>task.png</code> — 多 Agent 在看板上汇报：chat 里进度回传，队列里待办 / 已完成对得上</sub></p>
 
 <p align="center">
-  <img src="docs/demo/inject.png" alt="Live 调度席向多个执行席异步 inject，本回合派工表显示 usage" width="880" />
+  <img src="docs/demo/inject.jpg" alt="Live 调度席向多个执行席异步 inject，本回合派工表显示 usage" width="880" />
 </p>
 <p align="center"><sub><code>inject.png</code> — 一次 inject 点名多个执行席，派工表看谁回了、花了多少 token</sub></p>
 
 <p align="center">
-  <img src="docs/demo/dance.png" alt="Live 调度让一排 mascot 排成爱心" width="880" />
+  <img src="docs/demo/dance.jpg" alt="Live 调度让一排 mascot 排成爱心" width="880" />
 </p>
 <p align="center"><sub><code>dance.png</code> — 同一批 session 也能一起跳：Live 下令，mascot 在舞台上排成爱心</sub></p>
 
