@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import type { Context } from 'cordis'
+import { Service, type Context } from 'cordis'
 import { bindSnapshot, type Snapshot, type SnapshotService } from '@biu/web-snapshot'
 
 // ---- mascot 静态形状：引用外部 grok-bot 包的同源 geometry（/grok-bot/geometry-data.js 暴露 window.GROK_GEO）----
@@ -1153,7 +1153,27 @@ function ThIcon({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   )
 }
 
-function TasksWorkspace({ compact = false }: { compact?: boolean }) {
+/** Agent 远程切换看板事件的服务（注册为 ctx 'tasksView'；web-snapshot 收到 tasks 广播后调用 handleViewSwitch）。 */
+class TasksViewService extends Service {
+  private listeners = new Set<(viewId: string, ts?: number) => void>()
+
+  constructor(ctx: Context) {
+    super(ctx, 'tasksView')
+  }
+
+  subscribeViewSwitch = (fn: (viewId: string, ts?: number) => void) => {
+    this.listeners.add(fn)
+    return () => {
+      this.listeners.delete(fn)
+    }
+  }
+
+  handleViewSwitch(viewId: string, ts?: number) {
+    for (const fn of this.listeners) fn(viewId, ts)
+  }
+}
+
+function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tasksView?: TasksViewService }) {
   const { tasks, setTasks, error, loading, refresh, query, setQuery } = useTasks(compact ? 3000 : 2500)
   const { agents, loading: agentsLoading } = useAgents()
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -1228,6 +1248,14 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
       /* ignore */
     }
   }
+
+  // Agent 远程切换看板：订阅 tasksView 服务的 view-switch 事件（后端广播 → WS → web-snapshot 转发）
+  useEffect(() => {
+    if (!tasksView) return
+    return tasksView.subscribeViewSwitch((viewId) => {
+      switchView(viewId)
+    })
+  }, [tasksView, views, hydrated])
 
   // ---- 视图对话框（自绘模态：另存为 / 重命名 / 删除确认，不使用系统 prompt/confirm/alert） ----
   type ViewDlgState =
@@ -2062,6 +2090,14 @@ function GraphTaskNode({ data }: NodeProps) {
   )
 }
 
+function TasksEmpty({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={`tasks-empty${compact ? ' is-compact' : ''}`}>
+      暂无任务，可让 AI 助手为你创建
+    </div>
+  )
+}
+
 function TasksGraph({
   tasks,
   onOpenDetail,
@@ -2077,7 +2113,7 @@ function TasksGraph({
   const nodeTypes = useMemo(() => ({ task: GraphTaskNode }), [])
   const usedNodes = useMemo(() => tree.nodes.map((n) => ({ ...n, type: 'task' as const })), [tree])
 
-  if (tasks.length === 0) return <div className="tasks-empty">暂无任务</div>
+  if (tasks.length === 0) return <TasksEmpty compact={compact} />
   return (
     <div className={`tasks-graph${compact ? ' is-compact' : ''}`}>
       <ReactFlow
@@ -2163,7 +2199,7 @@ function TasksQueue({
   }, [tasks, childSet])
 
   const total = QUEUE_GROUPS.reduce((acc, g) => acc + (grouped[g.key]?.length ?? 0), 0)
-  if (total === 0) return <div className="tasks-empty" />
+  if (total === 0) return <TasksEmpty compact={compact} />
 
   return (
     <div className={`tasks-queue${compact ? ' is-compact' : ''}`}>
@@ -2401,7 +2437,7 @@ function TasksTable({
   }, [tasks, selfUsage])
 
   if (rows.length === 0) {
-    return <div className="tasks-empty" />
+    return <TasksEmpty compact={compact} />
   }
   return (
     <div className="tasks-table-wrap">
@@ -3276,18 +3312,18 @@ function TaskDetailPanel({
   )
 }
 
-function TasksModulePage(_props: SlotProps) {
+function TasksModulePage(props: SlotProps) {
   return (
     <div className="tasks-module-page">
-      <TasksWorkspace />
+      <TasksWorkspace tasksView={props.tasksView as TasksViewService | undefined} />
     </div>
   )
 }
 
-function TasksInspectorPanel(_props: SlotProps) {
+function TasksInspectorPanel(props: SlotProps) {
   return (
     <div className="tasks-inspector-panel">
-      <TasksWorkspace compact />
+      <TasksWorkspace compact tasksView={props.tasksView as TasksViewService | undefined} />
     </div>
   )
 }
@@ -3354,11 +3390,25 @@ export function apply(ctx: Context) {
     order: 20,
     Icon: TasksRailIcon,
   })
-  slots.place('app-modules', TasksModulePage, { key: 'tasks-module', order: 20, props: () => tasksModuleProps })
+  const tasksView = new TasksViewService(ctx)
+  // 依赖 snapshot 总线：注册本插件关心的 'tasks' 消息（Agent 远程切换看板事件），由总线转发
+  const snapshot = ctx.get('snapshot') as SnapshotService | undefined
+  const off = snapshot?.onMessage?.('tasks', (payload) => {
+    const p = payload as { type?: string; viewId?: string; ts?: number } | undefined
+    if (p?.type === 'view-switch' && p.viewId) {
+      tasksView.handleViewSwitch(p.viewId, p.ts)
+    }
+  })
+  if (off) ctx.effect(() => off)
+  slots.place('app-modules', TasksModulePage, {
+    key: 'tasks-module',
+    order: 20,
+    props: () => ({ ...tasksModuleProps, tasksView }),
+  })
   slots.place('inspector-panels', TasksInspectorPanel, {
     key: 'tasks-inspector',
     order: 10,
-    props: () => tasksInspectorProps,
+    props: () => ({ ...tasksInspectorProps, tasksView }),
   })
   slots.place('demos', ClockBadge, {
     key: 'clock',
@@ -3495,7 +3545,8 @@ if (typeof document !== 'undefined') {
 .tasks-board-empty { color:var(--dsw-label-3); font-size:11px; padding:14px 6px; text-align:center; }
 
 .tasks-error { border-radius:7px; padding:6px 8px; background:var(--dsw-danger-soft); color:var(--dsw-danger); font-size:11px; }
-.tasks-empty { color:var(--dsw-label-3); font-size:12px; line-height:1.45; }
+.tasks-empty { color:var(--dsw-label-3); font-size:12px; line-height:1.45; padding:28px 16px; text-align:center; }
+.tasks-empty.is-compact { padding:16px 10px; }
 .tasks-table-wrap { overflow:auto; border:1px solid var(--dsw-border); border-radius:10px; background:color-mix(in srgb, var(--dsw-surface) 92%, transparent); }
 .tasks-table { width:max-content; min-width:100%; border-collapse:collapse; table-layout:auto; font-size:11px; white-space:nowrap; }
 .tasks-table th { padding:6px 6px; border-bottom:1px solid var(--dsw-border); color:var(--dsw-label-3); font-weight:600; text-align:left; white-space:nowrap; position:sticky; top:0; background:var(--dsw-surface); z-index:1; }

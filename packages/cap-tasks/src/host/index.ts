@@ -1177,6 +1177,16 @@ export class TasksService extends Service {
     }
   }
 
+  /** 广播「切换到指定视图」事件（Agent 工具触发，前端 WS 收到后自动切换看板）。 */
+  emitViewSwitch(viewId: string) {
+    try {
+      const host = this.ctx as HostCtx
+      host.http?.broadcast?.('tasks', { ts: now(), type: 'view-switch', viewId })
+    } catch {
+      /* host http 未就绪（单测） */
+    }
+  }
+
   list(filter: TaskListFilter = {}): TaskRow[] {
     const clauses: string[] = []
     const params: SQLInputValue[] = []
@@ -1994,6 +2004,122 @@ export function apply(ctx: Context) {
         created.push(row)
       }
       return { created: presentMany(created) }
+    },
+  })
+
+  // ==================== 视图（task_views）Agent 工具：新建视图 / 筛选 / 排序 ====================
+  const VIEW_MODE_PARAM = { type: 'string', enum: ['queue', 'table', 'board', 'graph'] as const, description: '呈现方式：队列 / 表格 / 看板 / 依赖图' }
+  const VIEW_FILTER_PARAM = {
+    type: 'object',
+    properties: {
+      project: { type: 'string', description: '按项目筛选（空串=全部）' },
+      tags: { type: 'array', items: { type: 'string' }, description: '按标签筛选（至少命中一个）' },
+      time: { type: 'string', enum: ['', '1h', '24h', '7d', '30d'], description: '按更新时间筛选：空=全部 | 1h | 24h | 7d | 30d' },
+    },
+    description: '筛选条件',
+  }
+  const VIEW_SORT_PARAM = {
+    type: 'object',
+    properties: {
+      field: { type: 'string', enum: ['priority', 'due', 'updated', 'created', 'status'] as const, description: '排序字段（status 为「状态→优先级→截止」复合排序）' },
+      dir: { type: 'string', enum: ['asc', 'desc'] as const, description: '升序 asc / 降序 desc' },
+    },
+    description: '排序规则',
+  }
+
+  host.tools.register({
+    name: 'tasks_view_list',
+    description: '列出任务面板的所有视图（含内置：队列/表格/看板/依赖）及其筛选、排序配置',
+    parameters: { type: 'object', properties: {} },
+    execute: () => ({ views: tasks.listTaskViews() }),
+  })
+
+  host.tools.register({
+    name: 'tasks_view_create',
+    description: '新建一个任务面板视图（Notion 风格）：可同时指定呈现方式 mode、筛选 filter、排序 sort',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: '视图名称' },
+        mode: VIEW_MODE_PARAM,
+        filter: VIEW_FILTER_PARAM,
+        sort: VIEW_SORT_PARAM,
+      },
+      required: ['name'],
+    },
+    execute: async (args) => {
+      const view = tasks.createTaskView({
+        name: normalizeViewName(args.name),
+        config: normalizeViewConfig({
+          ...(args.mode !== undefined ? { mode: args.mode } : {}),
+          ...(args.filter !== undefined ? { filter: args.filter } : {}),
+          ...(args.sort !== undefined ? { sort: args.sort } : {}),
+        }),
+      })
+      return { view }
+    },
+  })
+
+  host.tools.register({
+    name: 'tasks_view_update',
+    description: '更新任务面板视图：可重命名，或修改筛选/排序/呈现方式（只传要改的字段，其余保持不变）',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: '视图 id' },
+        name: { type: 'string', description: '新名称' },
+        mode: VIEW_MODE_PARAM,
+        filter: VIEW_FILTER_PARAM,
+        sort: VIEW_SORT_PARAM,
+      },
+      required: ['id'],
+    },
+    execute: async (args) => {
+      const id = String(args.id ?? '')
+      const current = tasks.getTaskView(id)
+      if (!current) throw new Error('unknown view')
+      const config: TaskViewConfig = {
+        mode: args.mode !== undefined ? (args.mode as TaskViewMode) : current.config.mode,
+        filter: args.filter !== undefined ? (args.filter as TaskViewFilter) : current.config.filter,
+        sort: args.sort !== undefined ? (args.sort as TaskViewSort) : current.config.sort,
+      }
+      const view = tasks.updateTaskView(id, {
+        ...(args.name !== undefined ? { name: String(args.name) } : {}),
+        ...(args.mode !== undefined || args.filter !== undefined || args.sort !== undefined ? { config } : {}),
+      })
+      return { view }
+    },
+  })
+
+  host.tools.register({
+    name: 'tasks_view_delete',
+    description: '删除任务面板的自定义视图（内置视图不可删除）',
+    parameters: {
+      type: 'object',
+      properties: { id: { type: 'string', description: '视图 id' } },
+      required: ['id'],
+    },
+    execute: async (args) => {
+      const ok = tasks.deleteTaskView(String(args.id ?? ''))
+      if (!ok) throw new Error('unknown view')
+      return { ok: true }
+    },
+  })
+
+  host.tools.register({
+    name: 'tasks_view_switch',
+    description: '切换任务面板前端当前显示的视图（即把看板切到指定视图；通过后端广播事件，前端 WS 收到后立即切换）',
+    parameters: {
+      type: 'object',
+      properties: { id: { type: 'string', description: '视图 id（可用 tasks_view_list 查询）' } },
+      required: ['id'],
+    },
+    execute: async (args) => {
+      const id = String(args.id ?? '')
+      const view = tasks.getTaskView(id)
+      if (!view) throw new Error('unknown view')
+      tasks.emitViewSwitch(id)
+      return { ok: true, viewId: id, view: view.name }
     },
   })
 

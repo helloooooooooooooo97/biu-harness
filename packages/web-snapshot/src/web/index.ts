@@ -34,6 +34,7 @@ const empty: Snapshot = { seq: 0, plugins: [], pages: [], routes: [], events: []
 export class SnapshotService extends Service {
   private value: Snapshot = empty
   private listeners = new Set<() => void>()
+  private messageHandlers = new Map<string, Set<(payload: unknown) => void>>()
 
   constructor(ctx: Context) {
     super(ctx, 'snapshot')
@@ -46,6 +47,35 @@ export class SnapshotService extends Service {
   }
 
   get = () => this.value
+
+  /**
+   * 订阅某类 WS 推送消息（如 'tasks'、'session'、'agent'……）。
+   * 供其他插件（如 cap-tasks）注册自己的业务处理器，避免在 snapshot 总线里硬编码各业务分支。
+   * 返回取消订阅函数。
+   */
+  onMessage = (type: string, handler: (payload: unknown) => void) => {
+    let set = this.messageHandlers.get(type)
+    if (!set) {
+      set = new Set()
+      this.messageHandlers.set(type, set)
+    }
+    set.add(handler)
+    return () => {
+      set?.delete(handler)
+    }
+  }
+
+  private dispatch(type: string, payload: unknown) {
+    const handlers = this.messageHandlers.get(type)
+    if (!handlers) return
+    for (const fn of handlers) {
+      try {
+        fn(payload)
+      } catch {
+        /* 单个处理器异常不影响总线 */
+      }
+    }
+  }
 
   async setEnabled(id: string, enabled: boolean) {
     const res = await fetch(`/api/plugins/${id}`, {
@@ -165,6 +195,8 @@ export class SnapshotService extends Service {
             view?.setInbox(detail.inbox, detail.sessionId)
           }
         }
+        // 通用总线：把消息转发给外部通过 onMessage 注册的处理器（如 cap-tasks 的 tasks/view-switch）
+        this.dispatch(parsed.type, parsed.payload)
       }
       ws.onclose = () => {
         if (import.meta.env.MODE === 'test') return
