@@ -399,9 +399,28 @@ body {
   transition: none;
 }
 
+.chat-session-row-pin {
+  flex-shrink: 0;
+  padding: 0 4px;
+  color: var(--dsw-label-3);
+  opacity: 0;
+  transition: none;
+}
+
 .chat-session-row:hover .chat-session-row-delete,
-.chat-session-row-delete:focus {
+.chat-session-row-delete:focus,
+.chat-session-row:hover .chat-session-row-pin,
+.chat-session-row-pin:focus,
+.chat-session-row-pin.is-on {
   opacity: 1;
+}
+
+.chat-session-row-pin.is-on {
+  color: var(--dsw-label);
+}
+
+.chat-session-row-pin:hover {
+  color: var(--dsw-label);
 }
 
 .chat-session-row-delete:hover {

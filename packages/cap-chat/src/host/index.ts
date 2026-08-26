@@ -445,6 +445,8 @@ export function apply(ctx: Context) {
         systemPrompt?: string | null
         agentMode?: 'standard' | 'minimal'
         extraTools?: string[]
+        tags?: string[]
+        pinned?: boolean
       } = {}
       if (typeof payload.title === 'string' || payload.title === null) patch.title = payload.title as string | null
       if (typeof payload.model === 'string') patch.model = payload.model
@@ -456,6 +458,8 @@ export function apply(ctx: Context) {
       }
       if (payload.agentMode === 'standard' || payload.agentMode === 'minimal') patch.agentMode = payload.agentMode
       if (Array.isArray(payload.extraTools)) patch.extraTools = payload.extraTools.map((name) => String(name))
+      if (Array.isArray(payload.tags)) patch.tags = payload.tags.map((name) => String(name))
+      if (typeof payload.pinned === 'boolean') patch.pinned = payload.pinned
       const record = await ctx.sessions.patchConfig(
         route.params.id,
         patch as SessionConfig & { title?: string | null; systemPrompt?: string | null },
@@ -484,7 +488,8 @@ export function apply(ctx: Context) {
         busy: ctx.agents.isBusy(item.id),
         ...(item.project ? { project: item.project } : {}),
         ...(item.mascot ? { mascot: item.mascot } : {}),
-        ...(item.config ? { config: item.config } : {}),
+        tags: item.config?.tags ?? [],
+        pinned: Boolean(item.config?.pinned),
       })),
     })
   })
