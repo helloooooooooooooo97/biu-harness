@@ -1891,6 +1891,45 @@ body {
   line-height: var(--dsw-chat-line-height);
 }
 
+/*
+ * 修复「上下滚动条 thumb 偶发异常变大」：
+ * chat 主滚动容器此前用浏览器默认粗滚动条，thumb 由 clientHeight/scrollHeight
+ * 实时决定；配合 content-visibility:auto 的 contain-intrinsic-size 估算，在
+ * 流式输出/开关检查器/滚动贴底时 scrollHeight 会抖动，导致默认 thumb 比例不稳、
+ * 看起来忽大忽小甚至撑满。
+ *
+ * 这里改为固定细窄 thumb（overlay 风格：不滚动/不悬浮时透明，悬停/滚动时显现），
+ * 无论 scrollHeight 如何波动 thumb 视觉都恒定细长，且与暗色 UI 保持一致。
+ */
+.chat-stage {
+  scrollbar-gutter: stable;
+  /* 非 WebKit（如 Firefox）细滚动条：细而窄、颜色与暗色 UI 对齐，避免默认粗条 */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--dsw-label-3) 55%, transparent) transparent;
+}
+.chat-stage::-webkit-scrollbar {
+  width: 10px;
+}
+.chat-stage::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 999px;
+}
+.chat-stage::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--dsw-label-3) 55%, transparent);
+  border-radius: 999px;
+  /* 内边距产生“窄条间隙”，视觉更细，不随 scrollHeight 变粗 */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.chat-stage::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--dsw-label-2) 70%, transparent);
+  background-clip: padding-box;
+}
+/* 滚动时可滚动才显现；内容不满一屏时完全隐藏，避免空轨道 */
+.chat-stage::-webkit-scrollbar-thumb {
+  min-height: 32px;
+}
+
 /* 底部输入栏 + dock 悬浮控件：叠在对话内容之上 */
 .chat-composer-dock {
   z-index: 20;
