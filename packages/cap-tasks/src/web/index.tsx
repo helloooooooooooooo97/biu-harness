@@ -18,10 +18,8 @@ import {
   LuLock,
   LuMaximize2,
   LuLoaderCircle,
-  LuNotebookPen,
   LuColumns3,
   LuPanelRight,
-  LuPencilLine,
   LuPanelsTopLeft,
   LuChevronDown,
   LuChevronRight,
@@ -33,7 +31,6 @@ import {
   LuGauge,
   LuSearch,
   LuSlidersHorizontal,
-  LuStickyNote,
   LuTable2,
   LuTags,
   LuText,
@@ -2147,6 +2144,7 @@ function TaskDetailPanel({
   const [condAddOpen, setCondAddOpen] = useState(false)
   // 跨 session：每个 report 定位到其 agent 所属 session 的该 turn 统计（step 数 / 耗时 / 额度消耗）。
   const [turnStats, setTurnStats] = useState<Record<string, TurnStats | null | undefined>>({})
+  const [pane, setPane] = useState<'overview' | 'auto' | 'run'>('overview')
 
   useEffect(() => {
     setTitle(task.title)
@@ -2167,6 +2165,7 @@ function TaskDetailPanel({
     setTriggerMode(inferTriggerMode(task.trigger?.cron ?? ''))
     setCronFields(spawnCronFields(task.trigger?.cron ?? ''))
     setCondAddOpen(false)
+    setPane('overview')
   }, [task.id])
 
   const reports = useMemo(() => (task.reports ?? []).filter((r) => r.sessionId && r.turn != null), [task.reports])
@@ -2199,34 +2198,65 @@ function TaskDetailPanel({
   return (
     <div className="tasks-detail-modal" aria-label="任务详情" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
       <header className="tasks-detail-head">
-        <div className="tasks-detail-head-title">
-          <LuPencilLine size={14} aria-hidden />
-          任务详情
-        </div>
+        <nav className="tasks-detail-tabs" aria-label="详情分区">
+          <button type="button" className={pane === 'overview' ? 'is-active' : ''} onClick={() => setPane('overview')}>
+            概况
+          </button>
+          <button type="button" className={pane === 'auto' ? 'is-active' : ''} onClick={() => setPane('auto')}>
+            自动化
+            {triggerEnabled || task.trigger?.cron || task.trigger?.at || task.trigger?.on?.length ? <span className="tasks-detail-tab-dot" /> : null}
+          </button>
+          <button type="button" className={pane === 'run' ? 'is-active' : ''} onClick={() => setPane('run')}>
+            执行
+            {task.reports?.length ? <span className="tasks-detail-tab-count">{task.reports.length}</span> : null}
+          </button>
+        </nav>
         <button type="button" className="tasks-icon-btn" title="关闭 (Esc)" onClick={onClose} aria-label="关闭">
           <LuX size={14} aria-hidden />
         </button>
       </header>
 
-      <div className="tasks-detail-body">
-        <div className="tasks-detail-title">
-          <textarea
-            className="tasks-detail-title-input"
-            value={title}
-            rows={title.length > 40 ? 2 : 1}
-            onChange={(event) => setTitle(event.target.value)}
-            onBlur={() => {
-              const next = title.trim()
-              if (next && next !== task.title) void onUpdate(task.id, { title: next })
-            }}
-          />
-          <span className="tasks-detail-id">{task.id}</span>
-        </div>
-
-        <div className="tasks-sec-head"><LuSlidersHorizontal size={12} aria-hidden /> 属性</div>
-        <div className="tasks-sec-card tasks-sec-props">
-          <div className="tasks-field-row">
-            <label className="tasks-field">
+      {pane === 'overview' ? (
+        <div className="tasks-detail-split">
+          <div className="tasks-detail-main">
+            <textarea
+              className="tasks-detail-title-input"
+              value={title}
+              rows={title.length > 48 ? 2 : 1}
+              placeholder="任务标题"
+              onChange={(event) => setTitle(event.target.value)}
+              onBlur={() => {
+                const next = title.trim()
+                if (next && next !== task.title) void onUpdate(task.id, { title: next })
+              }}
+            />
+            <span className="tasks-detail-id">{task.id}</span>
+            <textarea
+              className="tasks-detail-doc"
+              value={description}
+              placeholder="要做什么、怎么算完成。"
+              rows={8}
+              onChange={(event) => setDescription(event.target.value)}
+              onBlur={() => {
+                if (description !== (task.description ?? '')) void onUpdate(task.id, { description })
+              }}
+            />
+            <label className="tasks-detail-notes">
+              <span>备忘</span>
+              <textarea
+                className="tasks-detail-notes-input"
+                value={notes}
+                placeholder="临时笔记、链接…"
+                rows={3}
+                onChange={(event) => setNotes(event.target.value)}
+                onBlur={() => {
+                  if (notes !== (task.notes ?? '')) void onUpdate(task.id, { notes })
+                }}
+              />
+            </label>
+          </div>
+          <aside className="tasks-detail-aside">
+            <label className="tasks-prop">
               <span>状态</span>
               <CellSelect<TaskStatus>
                 value={task.status}
@@ -2241,7 +2271,7 @@ function TaskDetailPanel({
                 )}
               />
             </label>
-            <label className="tasks-field">
+            <label className="tasks-prop">
               <span>优先级</span>
               <CellSelect<TaskPriority>
                 value={task.priority}
@@ -2260,10 +2290,7 @@ function TaskDetailPanel({
                 )}
               />
             </label>
-          </div>
-
-          <div className="tasks-field-row">
-            <label className="tasks-field">
+            <label className="tasks-prop">
               <span>难度</span>
               <CellSelect<TaskDifficulty>
                 value={task.difficulty}
@@ -2282,14 +2309,8 @@ function TaskDetailPanel({
                 )}
               />
             </label>
-          </div>
-
-          <label className="tasks-field">
-            <span>
-              <LuUserRound size={12} aria-hidden />
-              分配人
-            </span>
-            <div className="tasks-detail-actor">
+            <label className="tasks-prop">
+              <span>分配</span>
               <AssigneePicker
                 actor={task.assignee}
                 agents={agents}
@@ -2297,109 +2318,66 @@ function TaskDetailPanel({
                 onPick={(sessionId) => void onUpdate(task.id, { assigneeSessionId: sessionId })}
                 onClear={() => void onUpdate(task.id, { assignee: null })}
               />
-            </div>
-          </label>
-
-          <label className="tasks-field">
-            <span>
-              <LuCalendarClock size={12} aria-hidden />
-              截止日期
-            </span>
-            <input
-              className="tasks-field-input"
-              type="date"
-              value={due}
-              onChange={(event) => setDue(event.target.value)}
-              onBlur={() => {
-                const next = due.trim() ? new Date(`${due}T00:00:00`).getTime() : null
-                const prev = task.dueAt
-                if (next !== prev) void onUpdate(task.id, { dueAt: next })
-              }}
-            />
-          </label>
-
-          <label className="tasks-field">
-            <span>
-              <LuPanelsTopLeft size={12} aria-hidden />
-              项目
-            </span>
-            <input
-              className="tasks-field-input"
-              value={project}
-              placeholder="所属项目，如 cordis-web"
-              onChange={(event) => setProject(event.target.value)}
-              onBlur={() => {
-                if (project !== (task.project ?? '')) void onUpdate(task.id, { project: project.trim() || null })
-              }}
-            />
-          </label>
-
-          <label className="tasks-field">
-            <span>
-              <LuTags size={12} aria-hidden />
-              标签
-            </span>
-            <div className="tasks-tag-editor">
-              <TagChips tags={tags} />
+            </label>
+            <label className="tasks-prop">
+              <span>截止</span>
               <input
                 className="tasks-field-input"
-                value={tagInput}
-                placeholder="输入后回车添加，逗号分隔"
-                onChange={(event) => setTagInput(event.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ',') {
-                    e.preventDefault()
-                    const parts = tagInput.split(',').map((s) => s.trim()).filter(Boolean)
-                    if (parts.length) {
-                      const next = [...new Set([...tags, ...parts])]
-                      setTags(next)
-                      void onUpdate(task.id, { tags: next })
-                      setTagInput('')
-                    }
-                  } else if (e.key === 'Backspace' && !tagInput && tags.length) {
-                    const next = tags.slice(0, -1)
-                    setTags(next)
-                    void onUpdate(task.id, { tags: next })
-                  }
+                type="date"
+                value={due}
+                onChange={(event) => setDue(event.target.value)}
+                onBlur={() => {
+                  const next = due.trim() ? new Date(`${due}T00:00:00`).getTime() : null
+                  const prev = task.dueAt
+                  if (next !== prev) void onUpdate(task.id, { dueAt: next })
                 }}
               />
+            </label>
+            <label className="tasks-prop">
+              <span>项目</span>
+              <input
+                className="tasks-field-input"
+                value={project}
+                placeholder="可选"
+                onChange={(event) => setProject(event.target.value)}
+                onBlur={() => {
+                  if (project !== (task.project ?? '')) void onUpdate(task.id, { project: project.trim() || null })
+                }}
+              />
+            </label>
+            <div className="tasks-prop is-stack">
+              <span>标签</span>
+              <div className="tasks-tag-editor">
+                <TagChips tags={tags} />
+                <input
+                  className="tasks-field-input"
+                  value={tagInput}
+                  placeholder="回车添加"
+                  onChange={(event) => setTagInput(event.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault()
+                      const parts = tagInput.split(',').map((s) => s.trim()).filter(Boolean)
+                      if (parts.length) {
+                        const next = [...new Set([...tags, ...parts])]
+                        setTags(next)
+                        void onUpdate(task.id, { tags: next })
+                        setTagInput('')
+                      }
+                    } else if (e.key === 'Backspace' && !tagInput && tags.length) {
+                      const next = tags.slice(0, -1)
+                      setTags(next)
+                      void onUpdate(task.id, { tags: next })
+                    }
+                  }}
+                />
+              </div>
             </div>
-          </label>
+          </aside>
         </div>
-
-        <div className="tasks-sec-head"><LuStickyNote size={12} aria-hidden /> 描述</div>
-        <div className="tasks-sec-card">
-          <label className="tasks-field">
-            <textarea
-              className="tasks-field-textarea"
-              value={description}
-              placeholder="任务要做什么、验收标准…"
-              rows={5}
-              onChange={(event) => setDescription(event.target.value)}
-              onBlur={() => {
-                if (description !== (task.description ?? '')) void onUpdate(task.id, { description })
-              }}
-            />
-          </label>
-        </div>
-
-        <div className="tasks-sec-head"><LuNotebookPen size={12} aria-hidden /> 备忘</div>
-        <div className="tasks-sec-card">
-          <label className="tasks-field">
-            <textarea
-              className="tasks-field-textarea"
-              value={notes}
-              placeholder="临时笔记、链接、提醒…"
-              rows={4}
-              onChange={(event) => setNotes(event.target.value)}
-              onBlur={() => {
-                if (notes !== (task.notes ?? '')) void onUpdate(task.id, { notes })
-              }}
-            />
-          </label>
-        </div>
-
-        <div className="tasks-field tasks-l-field tasks-automation">
+      ) : pane === 'auto' ? (
+        <div className="tasks-detail-pane">
+<div className="tasks-field tasks-l-field tasks-automation">
           <div className="tasks-auto-head">
             <span className="tasks-auto-title"><LuClock size={13} aria-hidden /> 自动触发</span>
             <label className={`tasks-auto-switch${triggerEnabled ? ' is-on' : ''}`} title={triggerEnabled ? '点击关闭此规则' : '点击开启此规则'}>
@@ -2718,9 +2696,9 @@ function TaskDetailPanel({
             ) : null
           })()}
         </div>
-
-        <div className="tasks-sec-head"><LuActivity size={12} aria-hidden /> 执行记录</div>
-        <div className="tasks-sec-card tasks-sec-exec">
+        </div>
+      ) : (
+        <div className="tasks-detail-pane">
         <div className="tasks-detail-meta">
           <div className="tasks-exec-stats">
             <div className="tasks-exec-stat">
@@ -2820,7 +2798,7 @@ function TaskDetailPanel({
           ) : null}
         </div>
         </div>
-      </div>
+      )}
 
       <footer className="tasks-detail-foot">
         <button
@@ -3120,23 +3098,35 @@ if (typeof document !== 'undefined') {
 .tasks-row-actions { display:inline-flex; align-items:center; gap:2px; }
 .tasks-icon-btn { border:0; border-radius:5px; padding:3px; background:transparent; color:var(--dsw-label-3); cursor:pointer; font:inherit; display:inline-flex; align-items:center; justify-content:center; }
 .tasks-icon-btn:hover, .tasks-icon-btn.is-active { background:var(--dsw-hover); color:var(--dsw-label); }
-.tasks-modal-backdrop { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.34); padding:24px; }
-.tasks-detail-modal { width:min(760px, 92vw); max-height:min(800px, 90vh); display:flex; flex-direction:column; min-height:0; border-radius:12px; border:1px solid var(--dsw-border); background:var(--dsw-sidebar); box-shadow:0 20px 60px rgba(0,0,0,.22); overflow:hidden; }
-.tasks-detail-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 20px; border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent); }
-.tasks-detail-head-title { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:650; color:var(--dsw-label-2); }
-.tasks-detail-body { display:flex; flex:1; flex-direction:column; gap:10px; padding:20px 24px 24px; overflow:auto; }
-.tasks-detail-title { flex:none; }
-.tasks-sec-head { flex:none; display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--dsw-label-3); }
-.tasks-sec-head:first-of-type { margin-top:4px; }
-.tasks-sec-card { display:flex; flex-direction:column; gap:12px; padding:14px; border:1px solid var(--dsw-border); border-radius:10px; background:var(--dsw-surface); }
-.tasks-sec-props { gap:14px; }
-.tasks-sec-props .tasks-field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.tasks-sec-props .tasks-field { flex:1; min-width:0; }
-.tasks-sec-exec .tasks-detail-meta { border-top:0; padding-top:0; margin-top:0; }
-.tasks-detail-title { display:flex; flex-direction:column; gap:7px; padding-bottom:14px; border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 75%, transparent); }
-.tasks-detail-title-input { width:100%; border:0; background:transparent; color:var(--dsw-label); font:inherit; font-size:20px; font-weight:700; line-height:1.4; outline:none; padding:2px 0; resize:none; transition:border-color .12s; }
-.tasks-detail-title-input:focus { border-bottom:1px solid var(--dsw-border); }
-.tasks-detail-id { font-size:10px; color:var(--dsw-label-3); line-height:1; }
+.tasks-modal-backdrop { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); padding:28px; }
+.tasks-detail-modal { width:min(880px, 94vw); height:min(720px, 88vh); display:flex; flex-direction:column; min-height:0; border-radius:10px; border:1px solid var(--dsw-border); background:var(--dsw-sidebar); box-shadow:var(--dsw-shadow-lv2); overflow:hidden; }
+.tasks-detail-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px 8px 12px; border-bottom:1px solid var(--dsw-border); }
+.tasks-detail-tabs { display:inline-flex; align-items:center; gap:2px; padding:2px; border-radius:8px; background:var(--dsw-muted-fill); }
+.tasks-detail-tabs button { border:0; background:transparent; color:var(--dsw-label-3); padding:5px 10px; border-radius:6px; font:inherit; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+.tasks-detail-tabs button:hover { color:var(--dsw-label-2); }
+.tasks-detail-tabs button.is-active { background:var(--dsw-surface); color:var(--dsw-label); box-shadow:0 0 0 1px var(--dsw-border); }
+.tasks-detail-tab-dot { width:6px; height:6px; border-radius:50%; background:var(--dsw-ok); }
+.tasks-detail-tab-count { min-width:16px; height:16px; padding:0 5px; border-radius:999px; background:var(--dsw-hover-strong); color:var(--dsw-label-2); font-size:10px; font-weight:700; line-height:16px; text-align:center; }
+.tasks-detail-split { display:grid; grid-template-columns:minmax(0,1fr) 248px; flex:1; min-height:0; }
+.tasks-detail-main { display:flex; flex-direction:column; gap:8px; padding:20px 22px 24px; overflow:auto; min-width:0; }
+.tasks-detail-aside { display:flex; flex-direction:column; gap:2px; padding:14px 12px; overflow:auto; border-left:1px solid var(--dsw-border); background:color-mix(in srgb, var(--dsw-muted-fill) 55%, transparent); }
+.tasks-detail-pane { flex:1; min-height:0; overflow:auto; padding:16px 18px 20px; }
+.tasks-detail-pane .tasks-automation { border:0; background:transparent; padding:0; }
+.tasks-prop { display:grid; grid-template-columns:52px minmax(0,1fr); align-items:center; gap:8px; min-height:32px; font-size:11px; color:var(--dsw-label-3); }
+.tasks-prop > span { font-size:11px; font-weight:600; color:var(--dsw-label-3); }
+.tasks-prop.is-stack { align-items:start; padding-top:8px; }
+.tasks-prop .tasks-field-input { padding:4px 8px; font-size:12px; }
+.tasks-prop .tasks-cellselect-trigger { padding:4px 6px; }
+.tasks-detail-title-input { width:100%; border:0; background:transparent; color:var(--dsw-label); font:inherit; font-size:22px; font-weight:700; line-height:1.35; outline:none; padding:0; resize:none; }
+.tasks-detail-id { font-size:10px; color:var(--dsw-label-3); font-family:var(--font-mono); letter-spacing:.02em; }
+.tasks-detail-doc { width:100%; flex:1; min-height:180px; border:0; background:transparent; color:var(--dsw-label); font:inherit; font-size:13px; line-height:1.65; outline:none; resize:none; padding:8px 0 0; }
+.tasks-detail-notes { display:flex; flex-direction:column; gap:6px; margin-top:auto; padding-top:12px; border-top:1px solid var(--dsw-border); color:var(--dsw-label-3); font-size:11px; font-weight:600; }
+.tasks-detail-notes-input { width:100%; border:0; background:transparent; color:var(--dsw-label-2); font:inherit; font-size:12px; font-weight:400; line-height:1.55; outline:none; resize:none; padding:0; }
+@media (max-width: 720px) {
+  .tasks-detail-modal { width:min(94vw, 880px); height:min(90vh, 720px); }
+  .tasks-detail-split { grid-template-columns:1fr; }
+  .tasks-detail-aside { border-left:0; border-top:1px solid var(--dsw-border); }
+}
 .tasks-field { display:flex; flex-direction:column; gap:5px; font-size:11px; color:var(--dsw-label-3); }
 .tasks-field > span { display:inline-flex; align-items:center; gap:5px; font-weight:600; font-size:10.5px; letter-spacing:.02em; }
 .tasks-field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
