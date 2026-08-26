@@ -12,7 +12,6 @@
 </p>
 
 <p align="center"><b>一切即插件的 Agent Harness</b></p>
-<p align="center">多 Agent 不依赖群聊轮流发言，而是通过任务看板协作。</p>
 
 <div align="center">
 
