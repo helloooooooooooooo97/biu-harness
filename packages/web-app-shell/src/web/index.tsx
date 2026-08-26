@@ -431,7 +431,6 @@ function Shell(props: SlotProps) {
             <ul className="space-y-1 text-sm text-[var(--dsw-label-2)]">
               {[
                 { key: 'plugins', label: 'Plugins' },
-                { key: 'models', label: 'Models' },
                 { key: 'demos', label: 'Demos' },
                 { key: 'routes', label: 'Routes' },
                 { key: 'events', label: 'Events' },
@@ -466,9 +465,6 @@ function Shell(props: SlotProps) {
             <div className="flex-1 space-y-6 overflow-y-auto px-5 py-4">
               {settingsTab === 'plugins' ? (
                 <section>{props.renderSlot('sidebar')}</section>
-              ) : null}
-              {settingsTab === 'models' ? (
-                <section className="relative min-h-[400px]">{props.renderSlot('models')}</section>
               ) : null}
               {settingsTab === 'demos' ? (
                 <section>
@@ -510,7 +506,6 @@ export function apply(ctx: Context) {
       project: { kind: 'single' },
       composer: { kind: 'single' },
       settings: { kind: 'list' },
-      models: { kind: 'single' },
       log: { kind: 'single' },
       routes: { kind: 'single' },
       'app-modules': { kind: 'list' },

@@ -2416,6 +2416,46 @@ body {
   line-height: 1.5;
 }
 
+.composer-model-config-entry {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-top: 1px solid var(--dsw-border);
+  background: transparent;
+  padding: 9px 12px;
+  color: var(--dsw-label-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.composer-model-config-entry:hover {
+  background: var(--dsw-hover-strong);
+  color: var(--dsw-business);
+}
+
+.composer-model-add {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px dashed var(--dsw-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-label-3);
+  cursor: pointer;
+}
+
+.composer-model-add:hover {
+  border-style: solid;
+  color: var(--dsw-business);
+  background: var(--dsw-hover);
+}
+
 .composer-send,
 .composer-stop {
   display: grid;

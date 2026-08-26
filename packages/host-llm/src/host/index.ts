@@ -36,6 +36,128 @@ export function resolveAnthropicMessagesUrl(baseUrl: string | undefined): string
   return 'https://api.anthropic.com/v1/messages'
 }
 
+/** OpenAI 兼容：列出模型的 GET 地址（…/models）。 */
+export function resolveModelsListUrl(baseUrl: string | undefined, provider: ChatProvider): string {
+  if (baseUrl?.trim()) {
+    const trimmed = baseUrl.trim().replace(/\/+$/, '')
+    if (/\/models$/i.test(trimmed)) return trimmed
+    if (/\/chat\/completions$/i.test(trimmed)) return trimmed.replace(/\/chat\/completions$/i, '/models')
+    return `${trimmed}/models`
+  }
+  return provider === 'deepseek' ? 'https://api.deepseek.com/models' : 'https://api.openai.com/v1/models'
+}
+
+export type LlmProbeResult =
+  | { ok: true; latencyMs: number; detail: string }
+  | { ok: false; latencyMs: number; detail: string }
+
+/**
+ * 轻量连通性探测：优先 GET /models；失败则发一条极短非流式 chat。
+ * Anthropic 走一条 max_tokens=1 的 Messages 请求。
+ */
+export async function probeLlmConnection(
+  config: LlmConfig,
+  opts?: { signal?: AbortSignal },
+): Promise<LlmProbeResult> {
+  const started = Date.now()
+  const apiKey = config.apiKey?.trim() || ''
+  if (!apiKey) {
+    return { ok: false, latencyMs: 0, detail: '未配置 API Key' }
+  }
+
+  try {
+    if (config.provider === 'anthropic') {
+      const url = resolveAnthropicMessagesUrl(config.baseUrl)
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: config.model || 'claude-3-5-haiku-20241022',
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'ping' }],
+        }),
+        signal: opts?.signal,
+      })
+      const latencyMs = Date.now() - started
+      if (!res.ok) {
+        let detail = `HTTP ${res.status}`
+        try {
+          const err = (await res.json()) as { error?: { message?: string } }
+          if (err.error?.message) detail = err.error.message
+        } catch {
+          /* ignore */
+        }
+        return { ok: false, latencyMs, detail }
+      }
+      return { ok: true, latencyMs, detail: `Anthropic Messages · ${latencyMs}ms` }
+    }
+
+    // OpenAI 兼容：先试 /models
+    const modelsUrl = resolveModelsListUrl(config.baseUrl, config.provider)
+    const listRes = await fetch(modelsUrl, {
+      method: 'GET',
+      headers: { authorization: `Bearer ${apiKey}`, accept: 'application/json' },
+      signal: opts?.signal,
+    })
+    if (listRes.ok) {
+      const latencyMs = Date.now() - started
+      let count = 0
+      try {
+        const body = (await listRes.json()) as { data?: unknown[] }
+        if (Array.isArray(body.data)) count = body.data.length
+      } catch {
+        /* ignore */
+      }
+      return {
+        ok: true,
+        latencyMs,
+        detail: count > 0 ? `GET /models · ${count} 个模型 · ${latencyMs}ms` : `GET /models · ${latencyMs}ms`,
+      }
+    }
+
+    // /models 不可用时回退 chat/completions
+    const chatUrl = resolveChatCompletionsUrl(config.baseUrl, config.provider)
+    const chatRes = await fetch(chatUrl, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: config.model || 'gpt-4o-mini',
+        messages: [{ role: 'user', content: 'ping' }],
+        max_tokens: 1,
+        stream: false,
+      }),
+      signal: opts?.signal,
+    })
+    const latencyMs = Date.now() - started
+    if (!chatRes.ok) {
+      let detail = `HTTP ${chatRes.status}`
+      try {
+        const err = (await chatRes.json()) as { error?: { message?: string } }
+        if (err.error?.message) detail = err.error.message
+      } catch {
+        /* ignore */
+      }
+      // 附带 /models 失败信息，便于排查
+      detail = `${detail}（/models → ${listRes.status}）`
+      return { ok: false, latencyMs, detail }
+    }
+    return { ok: true, latencyMs, detail: `chat/completions · ${latencyMs}ms` }
+  } catch (error) {
+    return {
+      ok: false,
+      latencyMs: Date.now() - started,
+      detail: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
 /** DeepSeek 视觉模型：检测到图片输入时自动路由到它。 */
 export const DEEPSEEK_VISION_MODEL = 'deepseek-v4-flash-vision-exp'
 

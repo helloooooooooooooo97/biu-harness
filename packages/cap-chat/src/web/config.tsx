@@ -7,8 +7,7 @@
  * 3. 一处保存，不再拆成三块互相抢焦点
  */
 import { useEffect, useMemo, useState } from 'react'
-import { LuCheck, LuPlus, LuSearch, LuTrash2 } from 'react-icons/lu'
-import type { SlotProps } from '@biu/web-slots'
+import { LuCheck, LuLoaderCircle, LuPlus, LuSearch, LuTrash2, LuUnplug } from 'react-icons/lu'
 
 type ChatProvider = 'deepseek' | 'openai' | 'anthropic'
 
@@ -74,7 +73,7 @@ const inputCls = [
   'placeholder:text-[var(--dsw-label-3)] focus:border-[var(--dsw-business)]',
 ].join(' ')
 
-export function ChatConfig(_props: SlotProps) {
+export function ChatConfig() {
   const [activeId, setActiveId] = useState('deepseek')
   const [defaultEndpointId, setDefaultEndpointId] = useState('deepseek')
   const [defaultModel, setDefaultModel] = useState('deepseek-chat')
@@ -89,6 +88,8 @@ export function ChatConfig(_props: SlotProps) {
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testHint, setTestHint] = useState('')
 
   const [adding, setAdding] = useState(false)
   const [presetId, setPresetId] = useState('')
@@ -182,6 +183,8 @@ export function ChatConfig(_props: SlotProps) {
     const ep = eps.find((e) => e.id === eid)
     setUrlDraft(ep?.baseUrl ?? data.baseUrl ?? '')
     setKeyDraft('')
+    // 通知 Composer 等刷新模型目录
+    window.dispatchEvent(new CustomEvent('biu:chat-config-changed'))
   }
 
   function selectProvider(id: string) {
@@ -189,6 +192,7 @@ export function ChatConfig(_props: SlotProps) {
     setAdding(false)
     setError('')
     setStatus('')
+    setTestHint('')
     setKeyDraft('')
     setNewModelName('')
     const ep = endpoints.find((e) => e.id === id)
@@ -281,6 +285,38 @@ export function ChatConfig(_props: SlotProps) {
       setStatus(`默认模型：${m.label}`)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function onTestConnection() {
+    if (!active || testing) return
+    setTesting(true)
+    setTestHint('')
+    setError('')
+    try {
+      const res = await fetch('/api/chat/config/test', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          endpointId: activeId,
+          ...(keyDraft.trim() ? { apiKey: keyDraft.trim() } : {}),
+          ...(!isOfficial(activeId) && urlDraft.trim() ? { baseUrl: urlDraft.trim() } : {}),
+          ...(isDefaultProvider && defaultModel ? { model: defaultModel } : {}),
+          ...(!isDefaultProvider && activeModels[0]?.model ? { model: activeModels[0].model } : {}),
+        }),
+      })
+      const data = (await res.json()) as { ok?: boolean; detail?: string; latencyMs?: number }
+      if (data.ok) {
+        setTestHint(data.detail || '连接成功')
+        setStatus('连接正常')
+      } else {
+        setTestHint('')
+        setError(data.detail || `连接失败（HTTP ${res.status}）`)
+      }
+    } catch (err) {
+      setError(String(err))
+    } finally {
+      setTesting(false)
     }
   }
 
@@ -604,7 +640,25 @@ export function ChatConfig(_props: SlotProps) {
 
               <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3">
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">API Key</span>
+                  <span className="flex items-center justify-between text-[11px] font-semibold text-[var(--dsw-label-3)]">
+                    <span>API Key</span>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-[6px] px-1.5 py-0.5 text-[11px] font-medium text-[var(--dsw-label-2)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)] disabled:opacity-50"
+                      title="测试连接"
+                      aria-label="测试连接"
+                      data-testid="test-connection"
+                      disabled={testing}
+                      onClick={() => void onTestConnection()}
+                    >
+                      {testing ? (
+                        <LuLoaderCircle className="size-3.5 animate-spin" />
+                      ) : (
+                        <LuUnplug className="size-3.5" />
+                      )}
+                      {testing ? '测试中' : '测试连接'}
+                    </button>
+                  </span>
                   <input
                     className={inputCls}
                     type="password"
@@ -620,6 +674,9 @@ export function ChatConfig(_props: SlotProps) {
                     value={keyDraft}
                     onChange={(e) => setKeyDraft(e.target.value)}
                   />
+                  {testHint ? (
+                    <span className="text-[11px] text-[var(--dsw-ok)]">{testHint}</span>
+                  ) : null}
                 </label>
 
                 {!isOfficial(active.id) ? (

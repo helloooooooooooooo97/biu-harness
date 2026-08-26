@@ -4,6 +4,7 @@ import { Service, type Context } from 'cordis'
 import type { ChatMessage } from './chat-types.ts'
 import type { AgentToolMode } from '@biu/host-tools'
 import type { LlmConfig } from '@biu/host-llm'
+import { probeLlmConnection } from '@biu/host-llm'
 import { LLM_MODEL_CATALOG, LLM_ENDPOINT_PRESETS, describeProvider, defaultModelFor, CHAT_PROVIDERS, findEndpointPreset, normalizeBaseUrl } from './model-catalog.ts'
 import type { ChatProvider, LlmModelDef, LlmEndpointDef } from './model-catalog.ts'
 export type { ChatProvider, LlmModelDef, LlmEndpointDef } from './model-catalog.ts'
@@ -444,6 +445,40 @@ export class ChatService extends Service {
     }
   }
 
+  /** 探测指定入口连通性；可临时覆盖草稿 Key / URL / model（不落盘）。 */
+  async testConnection(opts?: {
+    endpointId?: string
+    apiKey?: string
+    baseUrl?: string
+    model?: string
+  }) {
+    const endpointId = (opts?.endpointId || this.config.endpointId || this.config.provider).trim()
+    const endpoint = resolveEndpoint(this.config, endpointId)
+    if (!endpoint) {
+      return { ok: false as const, latencyMs: 0, detail: `未知入口：${endpointId}`, endpointId }
+    }
+    const draftKey = typeof opts?.apiKey === 'string' ? opts.apiKey.trim() : ''
+    const storedKey = (this.config.apiKeys[endpointId] ?? '').trim()
+    const apiKey = draftKey || storedKey || (isLocalEndpoint(endpoint) ? 'local' : '')
+    const baseUrl =
+      typeof opts?.baseUrl === 'string' && opts.baseUrl.trim()
+        ? normalizeBaseUrl(opts.baseUrl)
+        : effectiveBaseUrl(this.config, endpoint)
+    const model =
+      (typeof opts?.model === 'string' && opts.model.trim()) ||
+      allModels(this.config).find((m) => m.endpointId === endpointId)?.model ||
+      this.config.model ||
+      defaultModelFor(endpoint.provider)
+
+    const result = await probeLlmConnection({
+      provider: endpoint.provider,
+      apiKey,
+      model,
+      baseUrl,
+    })
+    return { ...result, endpointId, baseUrl, model }
+  }
+
   /**
    * 更新配置。endpointId/provider/model/systemPrompt/agentMode/extraTools 直接覆盖；
    * setApiKey / setBaseUrl 按入口写入；空串表示保留原值，仅非空时更新。
@@ -762,6 +797,20 @@ export function apply(ctx: Context) {
       removeCustomModel: string
     }>
     route.send(200, chat.patch(payload ?? {}))
+  })
+  ctx.http.route('POST', '/api/chat/config/test', async (route) => {
+    const payload = ((await route.json().catch(() => null)) ?? {}) as {
+      endpointId?: string
+      apiKey?: string
+      baseUrl?: string
+      model?: string
+    }
+    try {
+      const result = await chat.testConnection(payload)
+      route.send(result.ok ? 200 : 400, result)
+    } catch (error) {
+      route.send(500, { ok: false, detail: String(error) })
+    }
   })
   ctx.http.route('POST', '/api/sessions', async (route) => {
     const payload = ((await route.json().catch(() => null)) ?? {}) as {

@@ -3,6 +3,7 @@ import { LuChevronDown, LuPlus } from 'react-icons/lu'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
+import { ModelConfigDialog } from './model-config-dialog.tsx'
 
 /** 按键不驱动受控 value；仅防抖更新发送按钮可用态，避免每个字符打穿 React 渲染。 */
 const INPUT_DEBOUNCE_MS = 120
@@ -111,6 +112,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     model: 'deepseek-chat',
   })
   const [modelBusy, setModelBusy] = useState(false)
+  const [configOpen, setConfigOpen] = useState(false)
   /** 全部目录模型（含未配置的），用于下拉只展示已配置入口，但当前选中可能来自任一。 */
   const [allModels, setAllModels] = useState<ModelOption[]>([])
   /** 各入口是否已配置 token（key = endpointId）。 */
@@ -124,6 +126,20 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   const sessionView = props.sessionView as SessionViewService
   const navigate = useNavigate()
   const location = useLocation()
+
+  useEffect(() => {
+    const open = () => {
+      setModelOpen(false)
+      setConfigOpen(true)
+    }
+    window.addEventListener('biu:open-model-config', open)
+    return () => window.removeEventListener('biu:open-model-config', open)
+  }, [])
+
+  function openModelConfig() {
+    setModelOpen(false)
+    setConfigOpen(true)
+  }
 
   function syncComposerShape(
     el: HTMLTextAreaElement | null = textareaRef.current,
@@ -163,13 +179,87 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
 
   useEffect(() => {
     let cancelled = false
+
+    function applyConfig(data: {
+      toolCatalog?: ToolCatalogItem[]
+      provider?: string
+      endpointId?: string
+      model?: string
+      providers?: Record<string, { configured?: boolean }>
+      endpoints?: Array<{ id: string; label?: string; configured?: boolean }>
+      modelCatalog?: Array<{
+        id: string
+        label: string
+        provider: string
+        endpointId?: string
+        model: string
+        note?: string
+        endpointConfigured?: boolean
+      }>
+    }) {
+      if (cancelled) return
+      const items = Array.isArray(data.toolCatalog) ? data.toolCatalog : []
+      setCatalog(items.filter((item) => item?.name))
+      if (Array.isArray(data.modelCatalog) && data.modelCatalog.length) {
+        const catalog = data.modelCatalog.map((m) => ({
+          id: m.id,
+          label: m.label,
+          provider: m.provider as ChatProvider,
+          endpointId: m.endpointId || m.provider,
+          model: m.model,
+          ...(m.note ? { note: m.note } : {}),
+        }))
+        setAllModels(catalog)
+        if (data.provider && data.model)
+          setModelOption(matchModelOption(catalog, data.provider, data.model))
+      } else if (data.provider && data.model) {
+        setModelOption(matchModelOption([], data.provider, data.model))
+      }
+      const cfg: Record<string, boolean> = {}
+      const labels: Record<string, string> = {
+        deepseek: 'DeepSeek',
+        anthropic: 'Claude',
+        openai: 'GPT',
+      }
+      if (Array.isArray(data.endpoints)) {
+        for (const ep of data.endpoints) {
+          cfg[ep.id] = Boolean(ep?.configured)
+          if (ep.label) labels[ep.id] = ep.label
+        }
+      }
+      if (data.providers) {
+        for (const [k, v] of Object.entries(data.providers)) cfg[k] = Boolean(v?.configured)
+      }
+      if (Object.keys(cfg).length) setModelProviders(cfg)
+      setEndpointLabels(labels)
+    }
+
+    function reload() {
+      void fetch('/api/chat/config')
+        .then((res) => res.json())
+        .then(applyConfig)
+        .catch(() => {
+          /* ignore */
+        })
+    }
+
+    reload()
+    const onConfigChanged = () => reload()
+    window.addEventListener('biu:chat-config-changed', onConfigChanged)
+    return () => {
+      cancelled = true
+      window.removeEventListener('biu:chat-config-changed', onConfigChanged)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!modelOpen) return
+    // 打开下拉时强制刷新，保证 Settings 里新加的模型立刻可见
     void fetch('/api/chat/config')
       .then((res) => res.json())
       .then(
         (data: {
-          toolCatalog?: ToolCatalogItem[]
           provider?: string
-          endpointId?: string
           model?: string
           providers?: Record<string, { configured?: boolean }>
           endpoints?: Array<{ id: string; label?: string; configured?: boolean }>
@@ -180,12 +270,8 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
             endpointId?: string
             model: string
             note?: string
-            endpointConfigured?: boolean
           }>
         }) => {
-          if (cancelled) return
-          const items = Array.isArray(data.toolCatalog) ? data.toolCatalog : []
-          setCatalog(items.filter((item) => item?.name))
           if (Array.isArray(data.modelCatalog) && data.modelCatalog.length) {
             const catalog = data.modelCatalog.map((m) => ({
               id: m.id,
@@ -198,15 +284,9 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
             setAllModels(catalog)
             if (data.provider && data.model)
               setModelOption(matchModelOption(catalog, data.provider, data.model))
-          } else if (data.provider && data.model) {
-            setModelOption(matchModelOption([], data.provider, data.model))
           }
           const cfg: Record<string, boolean> = {}
-          const labels: Record<string, string> = {
-            deepseek: 'DeepSeek',
-            anthropic: 'Claude',
-            openai: 'GPT',
-          }
+          const labels: Record<string, string> = { ...endpointLabels }
           if (Array.isArray(data.endpoints)) {
             for (const ep of data.endpoints) {
               cfg[ep.id] = Boolean(ep?.configured)
@@ -223,13 +303,6 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       .catch(() => {
         /* ignore */
       })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!modelOpen) return
     const onPointer = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null
       if (target?.closest('.composer-model')) return
@@ -237,6 +310,8 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     }
     window.addEventListener('mousedown', onPointer)
     return () => window.removeEventListener('mousedown', onPointer)
+    // endpointLabels 仅作合并基础，不纳入依赖避免循环刷新
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modelOpen])
 
   const filtered = useMemo(() => {
@@ -604,7 +679,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
                   if (!visible.length) {
                     return (
                       <div className="composer-model-empty">
-                        请在 Settings → Models 配置官方 API Key，或接入第三方后再选模型
+                        尚未配置可用模型。点击下方「配置模型」添加官方 Key 或第三方。
                       </div>
                     )
                   }
@@ -653,9 +728,29 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
                     )
                   })
                 })()}
+                <button
+                  type="button"
+                  className="composer-model-config-entry"
+                  data-testid="open-model-config"
+                  onClick={openModelConfig}
+                >
+                  <LuPlus className="size-3.5" />
+                  配置模型
+                </button>
               </div>
             ) : null}
           </div>
+
+          <button
+            type="button"
+            className="composer-model-add"
+            title="配置模型"
+            aria-label="配置模型"
+            data-testid="composer-model-add"
+            onClick={openModelConfig}
+          >
+            <LuPlus className="size-3.5" />
+          </button>
 
           {pending ? (
             <button
@@ -682,6 +777,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
         </div>
       </div>
     </form>
+    <ModelConfigDialog open={configOpen} onClose={() => setConfigOpen(false)} />
     </div>
   )
 })

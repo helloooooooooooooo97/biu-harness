@@ -39,7 +39,6 @@ test('ui-hub mounts configured ui packages including chat', async () => {
       dock: { kind: 'list' },
       project: { kind: 'single' },
       composer: { kind: 'single' },
-      models: { kind: 'single' },
       settings: { kind: 'list' },
       'app-modules': { kind: 'list' },
       'inspector-panels': { kind: 'list' },
@@ -63,5 +62,4 @@ test('ui-hub mounts configured ui packages including chat', async () => {
   }
   assert.equal(ctx.slots.list('demos').length >= 1, true)
   assert.equal(ctx.slots.list('composer').some((item) => item.id === 'chat'), true)
-  assert.equal(ctx.slots.list('models').some((item) => item.id === 'chat-config'), true)
 })
