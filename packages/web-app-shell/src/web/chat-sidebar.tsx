@@ -1,4 +1,4 @@
-import { memo, useCallback, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react'
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isMascotDancing, subscribeMascotDance } from '@biu/web-mascot'
 import {
@@ -7,8 +7,11 @@ import {
   type SessionViewService,
 } from '@biu/web-session-view'
 import {
+  PINNED_GROUP_KEY,
   UNGROUPED_PROJECT_KEY,
-  groupSessionsByProject,
+  UNGROUPED_TAG_KEY,
+  buildSidebarGroups,
+  type SidebarGroupBy,
 } from '@biu/web-session-view'
 import { useSidebarCollapseStore } from '@biu/web-session-view'
 import { SidebarMascot } from '@biu/web-mascot'
@@ -18,9 +21,21 @@ import {
   LuChevronDown,
   LuChevronRight,
   LuPanelLeftClose,
+  LuPin,
   LuPlus,
   LuRadio,
+  LuTag,
 } from 'react-icons/lu'
+
+const GROUP_BY_KEY = 'cordis.sidebar.groupBy'
+
+function readGroupBy(): SidebarGroupBy {
+  try {
+    return localStorage.getItem(GROUP_BY_KEY) === 'tag' ? 'tag' : 'project'
+  } catch {
+    return 'project'
+  }
+}
 
 const SessionRow = memo(function SessionRow({
   item,
@@ -28,16 +43,19 @@ const SessionRow = memo(function SessionRow({
   busy,
   dancing,
   onDelete,
+  onPin,
 }: {
   item: SessionListItem
   active: boolean
   busy: boolean
   dancing: boolean
   onDelete: (item: SessionListItem) => void
+  onPin: (item: SessionListItem) => void
 }) {
   const identity = resolveSessionMascot(item.id, item.mascot)
+  const pinned = Boolean(item.pinned)
   return (
-    <div className={`chat-session-row group${active ? ' is-active' : ''}`}>
+    <div className={`chat-session-row group${active ? ' is-active' : ''}${pinned ? ' is-pinned' : ''}`}>
       <Link
         to={`/s/${item.id}`}
         className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-[12px] leading-4"
@@ -60,6 +78,20 @@ const SessionRow = memo(function SessionRow({
           {item.title}
         </span>
       </Link>
+      <button
+        type="button"
+        className={`chat-session-row-pin${pinned ? ' is-on' : ''}`}
+        aria-pressed={pinned}
+        aria-label={pinned ? `取消置顶 ${item.title}` : `置顶 ${item.title}`}
+        title={pinned ? '取消置顶' : '置顶'}
+        onClick={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          onPin(item)
+        }}
+      >
+        <LuPin className="size-3.5" />
+      </button>
       <button
         type="button"
         className="chat-session-row-delete"
@@ -120,7 +152,8 @@ export const ChatSidebar = memo(function ChatSidebar({
   const collapsedProjects = useSidebarCollapseStore((state) => state.collapsed)
   const toggleProjectGroup = useSidebarCollapseStore((state) => state.toggle)
   const expandProjectGroup = useSidebarCollapseStore((state) => state.expand)
-  const projectGroups = useMemo(() => groupSessionsByProject(sessions), [sessions])
+  const [groupBy, setGroupBy] = useState<SidebarGroupBy>(readGroupBy)
+  const sidebarGroups = useMemo(() => buildSidebarGroups(sessions, groupBy), [sessions, groupBy])
   const dancing = useSyncExternalStore(
     subscribeMascotDance,
     () => isMascotDancing(),
@@ -133,10 +166,10 @@ export const ChatSidebar = memo(function ChatSidebar({
     const prev = prevRouteSessionRef.current
     prevRouteSessionRef.current = routeSessionId
     if (!routeSessionId || prev === routeSessionId) return
-    const group = projectGroups.find((item) => item.sessions.some((row) => row.id === routeSessionId))
-    if (!group) return
+    const group = sidebarGroups.find((item) => item.sessions.some((row) => row.id === routeSessionId))
+    if (!group || group.key === PINNED_GROUP_KEY) return
     expandProjectGroup(group.key)
-  }, [routeSessionId, projectGroups, expandProjectGroup])
+  }, [routeSessionId, sidebarGroups, expandProjectGroup])
 
   const createChat = useCallback(
     (opts: { type?: 'chat' | 'live'; projectPath?: string } = {}) => {
@@ -157,6 +190,22 @@ export const ChatSidebar = memo(function ChatSidebar({
     },
     [navigate, sessionId, sessionView],
   )
+
+  const pinChat = useCallback(
+    (item: SessionListItem) => {
+      void sessionView.setSessionPinned(item.id, !item.pinned)
+    },
+    [sessionView],
+  )
+
+  const changeGroupBy = useCallback((next: SidebarGroupBy) => {
+    setGroupBy(next)
+    try {
+      localStorage.setItem(GROUP_BY_KEY, next)
+    } catch {
+      /* ignore */
+    }
+  }, [])
 
   return (
     <aside
@@ -206,13 +255,43 @@ export const ChatSidebar = memo(function ChatSidebar({
           </button>
         </div>
 
+        <div className="mt-2 flex items-center gap-0.5 px-2" role="tablist" aria-label="侧栏分组">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={groupBy === 'project'}
+            className={`rounded-[6px] px-1.5 py-0.5 text-[10px] font-semibold ${
+              groupBy === 'project'
+                ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]'
+                : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'
+            }`}
+            onClick={() => changeGroupBy('project')}
+          >
+            项目
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={groupBy === 'tag'}
+            className={`rounded-[6px] px-1.5 py-0.5 text-[10px] font-semibold ${
+              groupBy === 'tag'
+                ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]'
+                : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'
+            }`}
+            onClick={() => changeGroupBy('tag')}
+          >
+            标签
+          </button>
+        </div>
+
         <div className="mt-2 space-y-1.5">
           {sessions.length === 0 ? (
             <p className="px-2 text-[11px] leading-4 text-[var(--dsw-label-3)]">No chats yet. Send a message or create one.</p>
           ) : (
-            projectGroups.map((group) => {
+            sidebarGroups.map((group) => {
               const collapsed = Boolean(collapsedProjects[group.key])
-              const isUngrouped = group.key === UNGROUPED_PROJECT_KEY
+              const isUngrouped = group.key === UNGROUPED_PROJECT_KEY || group.key === UNGROUPED_TAG_KEY
+              const canAddHere = group.kind === 'project' || group.kind === 'ungrouped'
               return (
                 <div key={group.key} className="min-w-0">
                   <div className="group/header mb-0.5 flex items-center gap-0.5 px-1">
@@ -228,7 +307,11 @@ export const ChatSidebar = memo(function ChatSidebar({
                       ) : (
                         <LuChevronDown className="size-3 shrink-0" />
                       )}
-                      {isUngrouped ? (
+                      {group.kind === 'pinned' ? (
+                        <LuPin className="size-3 shrink-0 opacity-80" />
+                      ) : group.kind === 'tag' ? (
+                        <LuTag className="size-3 shrink-0 opacity-80" />
+                      ) : isUngrouped ? (
                         <span className="grid size-3 place-items-center text-[10px] opacity-70" aria-hidden>
                           —
                         </span>
@@ -238,31 +321,33 @@ export const ChatSidebar = memo(function ChatSidebar({
                       <span className="min-w-0 flex-1 truncate normal-case tracking-normal">{group.label}</span>
                       <span className="shrink-0 font-mono text-[10px] opacity-60">{group.sessions.length}</span>
                     </button>
-                    <button
-                      type="button"
-                      className="grid size-5 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] opacity-0 hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)] group-hover/header:opacity-100 focus:opacity-100"
-                      title={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
-                      aria-label={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
-                      onClick={() =>
-                        createChat({
-                          type: 'chat',
-                          ...(group.path ? { projectPath: group.path } : {}),
-                        })
-                      }
-                    >
-                      <LuPlus className="size-3" />
-                    </button>
+                    {canAddHere ? (
+                      <button
+                        type="button"
+                        className="grid size-5 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] opacity-0 hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)] group-hover/header:opacity-100 focus:opacity-100"
+                        title={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
+                        aria-label={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
+                        onClick={() =>
+                          createChat({
+                            type: 'chat',
+                            ...(group.path ? { projectPath: group.path } : {}),
+                          })
+                        }
+                      >
+                        <LuPlus className="size-3" />
+                      </button>
+                    ) : null}
                   </div>
-                  {/* hidden 保活，避免展开时重新 mount 行（哪怕只有几条也少一次协调） */}
                   <div className={`min-w-0 ${collapsed ? 'hidden' : ''}`} aria-hidden={collapsed}>
                     {group.sessions.map((item) => (
                       <SessionRow
-                        key={item.id}
+                        key={`${group.key}:${item.id}`}
                         item={item}
                         active={item.id === routeSessionId}
                         busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
                         dancing={dancing}
                         onDelete={deleteChat}
+                        onPin={pinChat}
                       />
                     ))}
                   </div>

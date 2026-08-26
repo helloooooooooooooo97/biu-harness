@@ -32,7 +32,15 @@ export {
   type TrajectoryRow,
   type TrajectoryUsage,
 } from './session-project.ts'
-export { UNGROUPED_PROJECT_KEY, groupSessionsByProject } from './session-groups.ts'
+export {
+  UNGROUPED_PROJECT_KEY,
+  UNGROUPED_TAG_KEY,
+  PINNED_GROUP_KEY,
+  groupSessionsByProject,
+  groupSessionsByTag,
+  buildSidebarGroups,
+  type SidebarGroupBy,
+} from './session-groups.ts'
 export { useSidebarCollapseStore } from './sidebar-collapse-store.ts'
 export {
   SIDEBAR_MASCOT_INTRO_MS,
@@ -57,6 +65,8 @@ export interface SessionListItem {
   busy?: boolean
   project?: { name: string; path?: string; boundAt: number }
   mascot?: { shape: string; color: string; eye?: number }
+  tags?: string[]
+  pinned?: boolean
 }
 
 export type ConversationView = 'chat' | 'debug'
@@ -214,6 +224,8 @@ function sessionsEqual(a: SessionListItem[], b: SessionListItem[]): boolean {
       left.mascot?.color !== right.mascot?.color ||
       left.mascot?.eye !== right.mascot?.eye ||
       Boolean(left.busy) !== Boolean(right.busy) ||
+      Boolean(left.pinned) !== Boolean(right.pinned) ||
+      (left.tags ?? []).join('\0') !== (right.tags ?? []).join('\0') ||
       (left.type ?? 'chat') !== (right.type ?? 'chat')
     ) {
       return false
@@ -1067,6 +1079,25 @@ export class SessionViewService extends Service {
     if (!res.ok || !body.id) throw new Error(body.error || 'fork failed')
     await this.load(body.id, { view: 'chat' })
     return body.id
+  }
+
+  async setSessionPinned(id: string, pinned: boolean) {
+    const prev = this.value.sessions
+    this.replace({
+      sessions: prev.map((item) => (item.id === id ? { ...item, pinned } : item)),
+    })
+    try {
+      const res = await fetch(`/api/sessions/${id}/config`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ pinned }),
+      })
+      if (!res.ok) throw new Error(`pin failed HTTP ${res.status}`)
+    } catch (error) {
+      this.replace({ sessions: prev, error: String(error) })
+      throw error
+    }
+    void this.refreshSessions()
   }
 
   async deleteSession(id: string) {
