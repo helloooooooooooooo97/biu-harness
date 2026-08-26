@@ -1,10 +1,10 @@
-<p align="center">
+<h1 align="center">
   <img src="public/mascot-blue.svg" width="54" height="54" alt="biu-harness mascot" />
   <img src="public/mascot-violet.svg" width="54" height="54" alt="biu-harness mascot" />
   <img src="public/mascot-red.svg" width="54" height="54" alt="biu-harness mascot" />
-</p>
-
-<h1 align="center">biu-harness</h1>
+  <br>
+  biu-harness
+</h1>
 
 <p align="center"><b>🧭 天生驾驶者</b></p>
 
