@@ -103,7 +103,7 @@ export function buildSidebarGroups(sessions: SessionListItem[], groupBy: Sidebar
   return [
     {
       key: PINNED_GROUP_KEY,
-      label: '置顶',
+      label: '收藏',
       sessions: pinned,
       updatedAt: pinned[0]?.updatedAt ?? 0,
       kind: 'pinned',
@@ -137,7 +137,7 @@ export function buildSidebarSections(sessions: SessionListItem[]): SidebarSectio
   if (pinned.length) {
     sections.push({
       kind: 'pinned',
-      label: '置顶',
+      label: '收藏',
       sessions: pinned,
     })
   }

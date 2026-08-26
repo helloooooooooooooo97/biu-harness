@@ -379,10 +379,10 @@ body {
 .side-sec-label {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
   width: 100%;
   height: 24px;
-  padding: 0 6px 0 4px;
+  padding: 0 8px 0 8px;
   border: 0;
   border-radius: 4px;
   background: transparent;
@@ -390,33 +390,36 @@ body {
   font: inherit;
   font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   text-align: left;
   cursor: pointer;
 }
 
 .side-sec-label:hover {
-  background: var(--dsw-hover);
+  color: var(--dsw-label-2);
 }
 
-.side-sec-chev {
-  display: grid;
-  width: 16px;
-  height: 16px;
+.side-sec-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.side-count {
+  margin-left: auto;
   flex: none;
-  place-items: center;
-  opacity: 0;
   color: var(--dsw-label-3);
+  font-size: 10px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  opacity: 0.7;
+  line-height: 1;
 }
 
-.side-sec-label:hover .side-sec-chev,
-.side-sec-label:focus-visible .side-sec-chev {
-  opacity: 1;
-}
-
-.side-sec-chev svg {
-  width: 12px;
-  height: 12px;
+.side-group-toggle .side-count {
+  padding-right: 2px;
 }
 
 .side-sec-body {
@@ -551,8 +554,17 @@ body {
   color: var(--dsw-label);
 }
 
-.side-tool.is-on {
-  color: var(--dsw-label);
+.side-tool.is-star.is-on {
+  color: #efc454;
+}
+
+.side-tool.is-star.is-on svg {
+  fill: currentColor;
+}
+
+.side-tool.is-star.is-on:hover {
+  color: #f3d06a;
+  background: color-mix(in srgb, #efc454 16%, transparent);
 }
 
 .side-tool.is-danger:hover {

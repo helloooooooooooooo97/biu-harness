@@ -19,9 +19,9 @@ import {
   LuChevronDown,
   LuChevronRight,
   LuPanelLeftClose,
-  LuPin,
   LuPlus,
   LuRadio,
+  LuStar,
   LuTrash2,
 } from 'react-icons/lu'
 
@@ -81,17 +81,17 @@ const SessionRow = memo(function SessionRow({
       <div className="side-page-tools">
         <button
           type="button"
-          className={`side-tool${pinned ? ' is-on' : ''}`}
+          className={`side-tool is-star${pinned ? ' is-on' : ''}`}
           aria-pressed={pinned}
-          aria-label={pinned ? `取消置顶 ${item.title}` : `置顶 ${item.title}`}
-          title={pinned ? '取消置顶' : '置顶'}
+          aria-label={pinned ? `取消收藏 ${item.title}` : `收藏 ${item.title}`}
+          title={pinned ? '取消收藏' : '收藏'}
           onClick={(event) => {
             event.preventDefault()
             event.stopPropagation()
             onPin(item)
           }}
         >
-          <LuPin />
+          <LuStar />
         </button>
         <button
           type="button"
@@ -117,6 +117,15 @@ export type ChatSidebarProps = {
   useSessionView: ReturnType<typeof bindSessionView>
   sessionView: SessionViewService
   onCollapse: () => void
+}
+
+function sectionCount(section: { sessions?: SessionListItem[]; groups?: { sessions: SessionListItem[] }[] }) {
+  if (section.sessions) return section.sessions.length
+  const ids = new Set<string>()
+  for (const group of section.groups ?? []) {
+    for (const row of group.sessions) ids.add(row.id)
+  }
+  return ids.size
 }
 
 export const ChatSidebar = memo(function ChatSidebar({
@@ -239,10 +248,8 @@ export const ChatSidebar = memo(function ChatSidebar({
                   aria-expanded={!sectionCollapsed}
                   onClick={() => toggleSection(section.kind)}
                 >
-                  <span className="side-sec-chev" aria-hidden>
-                    {sectionCollapsed ? <LuChevronRight /> : <LuChevronDown />}
-                  </span>
-                  {section.label}
+                  <span className="side-sec-name">{section.label}</span>
+                  <span className="side-count">{sectionCount(section)}</span>
                 </button>
                 {sectionCollapsed ? null : section.sessions ? (
                   <div className="side-sec-body">
@@ -285,6 +292,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                 <FolderGlyph className="side-group-icon" />
                               )}
                               <span className="side-group-name">{group.label}</span>
+                              <span className="side-count">{group.sessions.length}</span>
                             </button>
                             {canAddHere ? (
                               <button
