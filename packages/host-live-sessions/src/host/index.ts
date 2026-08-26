@@ -6,16 +6,16 @@ export const LIVE_TOOL_NAMES = [
   'session_list',
   'session_inspect',
   'session_progress',
-  'session_wake',
-  'session_inject',
   'session_create',
   'session_rename',
   'session_configure',
   'session_delete',
+  'session_tag',
+  'session_star',
 ] as const
 
 const LIVE_PROMPT = `你是 Live 指挥席（文字版）：调度其他 chat session，而不是亲自改代码或跑长任务。
-工作流：session_list / session_inspect 了解现场 → 需要时可 session_create（可带 project 绑定文件夹）新建、session_rename / session_configure（可改 project）调整目标 → session_wake（wait=false 可先派工）或 session_inject → session_progress 抽查进度。废弃的 session 可 session_delete 清理。
+工作流：session_list / session_inspect（含 tags / pinned）了解现场 → 需要时可 session_create（可带 project 绑定文件夹）新建、session_rename / session_configure（可改 project）调整目标，用 session_tag 打标签、session_star 收藏。派工必须走任务体系：用 tasks_create 建任务、tasks_update 指派 assigneeSessionId、task_deliver 派发给目标 session，进度用 task_report 上报/回传；不要直接用 dispatch 绕过任务系统。用 session_progress 抽查进度。废弃的 session 可 session_delete 清理。
 异步派工后不要等待对方完成：完成态在目标 session 自己的 turn 里，需要时再 inspect / progress。
 向用户汇报要克制：只在关键节点、明显卡住、或用户追问时说明，不要刷屏。
 回答简洁：说明调度了谁、当前状态、下一步。`
@@ -189,6 +189,8 @@ export function apply(ctx: Context) {
           eventCount: item.eventCount,
           updatedAt: item.updatedAt,
           project: item.project?.name,
+          tags: item.config?.tags ?? [],
+          pinned: Boolean(item.config?.pinned),
         }))
       return { count: sessions.length, sessions }
     },
@@ -218,6 +220,8 @@ export function apply(ctx: Context) {
         title: record.config?.title,
         config: record.config ?? null,
         project: record.project,
+        tags: record.config?.tags ?? [],
+        pinned: Boolean(record.config?.pinned),
         eventCount: record.events.length,
         recent: recentMessages(record.events, limit),
       }
@@ -256,75 +260,6 @@ export function apply(ctx: Context) {
         type: normalizeSessionType(record.type),
         ...progress,
       } satisfies SessionProgressSnapshot
-    },
-  })
-
-  ctx.tools.register({
-    name: 'session_wake',
-    description:
-      '向目标 chat session 发送 wake 并启动 agent。wait=false 时立即返回 queued；完成态在目标 session，不回写 Live。',
-    parameters: {
-      type: 'object',
-      properties: {
-        sessionId: { type: 'string' },
-        text: { type: 'string' },
-        wait: {
-          type: 'boolean',
-          description: '默认 true 等回合结束；false 则入队后立即返回 queued',
-        },
-      },
-      required: ['sessionId', 'text'],
-    },
-    execute: async (args) => {
-      const selfId = await requireLiveCaller(ctx)
-      const targetId = String(args.sessionId || '').trim()
-      const text = String(args.text || '').trim()
-      const wait = args.wait !== false && args.wait !== 'false'
-      if (!targetId) throw new Error('sessionId required')
-      if (!text) throw new Error('text required')
-      if (targetId === selfId) throw new Error('cannot wake the current live session')
-      const target = await ctx.sessions.require(targetId)
-      if (normalizeSessionType(target.type) === 'live') {
-        throw new Error('cannot wake another live session; target a chat session')
-      }
-      const sender = { type: 'session' as const, sessionId: selfId }
-      if (!wait) {
-        void ctx.sessions.sendMessage(targetId, text, { wait: false, sender })
-        return { sessionId: targetId, queued: true, wait: false }
-      }
-      const turn = await ctx.sessions.sendMessage(targetId, text, { wait: true, sender })
-      return {
-        sessionId: targetId,
-        queued: false,
-        wait: true,
-        text: turn.text.slice(0, 1200),
-        steps: turn.steps.length,
-      }
-    },
-  })
-
-  ctx.tools.register({
-    name: 'session_inject',
-    description:
-      '向目标 session 注入补充指示（inject）；若对方正在跑会进入 inbox。完成态在目标 session，不回写 Live。',
-    parameters: {
-      type: 'object',
-      properties: {
-        sessionId: { type: 'string' },
-        text: { type: 'string' },
-      },
-      required: ['sessionId', 'text'],
-    },
-    execute: async (args) => {
-      const selfId = await requireLiveCaller(ctx)
-      const targetId = String(args.sessionId || '').trim()
-      const text = String(args.text || '').trim()
-      if (!targetId) throw new Error('sessionId required')
-      if (!text) throw new Error('text required')
-      if (targetId === selfId) throw new Error('cannot inject into the current live session')
-      await ctx.sessions.require(targetId)
-      ctx.sessions.injectMessage(targetId, text, { sender: { type: 'session', sessionId: selfId } })
-      return { sessionId: targetId, queued: true }
     },
   })
 
@@ -405,7 +340,7 @@ export function apply(ctx: Context) {
   ctx.tools.register({
     name: 'session_configure',
     description:
-      '修改目标 session 的配置（title/model/provider/systemPrompt/agentMode/extraTools/project）。未传字段保持不变；systemPrompt 传空串可清回默认；project 传空串可解绑文件夹。',
+      '修改目标 session 的配置（title/model/provider/systemPrompt/agentMode/extraTools/project/pinned）。未传字段保持不变；systemPrompt 传空串可清回默认；project 传空串可解绑文件夹。',
     parameters: {
       type: 'object',
       properties: {
@@ -420,6 +355,7 @@ export function apply(ctx: Context) {
         systemPrompt: { type: 'string' },
         agentMode: { type: 'string', enum: ['standard', 'minimal'] },
         extraTools: { type: 'array', items: { type: 'string' } },
+        pinned: { type: 'boolean', description: 'true=收藏（即侧栏置顶 pinned）；false=取消收藏' },
       },
       required: ['sessionId'],
     },
@@ -438,6 +374,7 @@ export function apply(ctx: Context) {
         ...(Array.isArray(args.extraTools)
           ? { extraTools: args.extraTools.map((name) => String(name)) }
           : {}),
+        ...(typeof args.pinned === 'boolean' ? { pinned: args.pinned } : {}),
       })
       if (typeof args.project === 'string') {
         const path = args.project.trim()
@@ -449,6 +386,75 @@ export function apply(ctx: Context) {
         config: record.config ?? null,
         project: record.project ?? null,
       }
+    },
+  })
+
+  ctx.tools.register({
+    name: 'session_tag',
+    description:
+      '给目标 session 打/移除标签（侧栏标签组）。可用 op 选 add/set/remove/clear，默认 add。可一次传单个 tag 字符串或 tags 数组。返回更新后的 tags 列表。可结合 session_list（含 tags 字段）筛选调度。Live 指挥席专用。',
+    parameters: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', description: '目标 session id' },
+        tag: { type: 'string', description: '单个标签名（与 tags 二选一）' },
+        tags: { type: 'array', items: { type: 'string' }, description: '标签名数组（与 tag 二选一；append 合并去重）' },
+        op: {
+          type: 'string',
+          enum: ['add', 'set', 'remove', 'clear'],
+          description: 'add=追加（默认，去重）；set=整体替换；remove=移除指定；clear=清空全部',
+        },
+      },
+      required: ['sessionId'],
+    },
+    execute: async (args) => {
+      await requireLiveCaller(ctx)
+      const targetId = String(args.sessionId || '').trim()
+      if (!targetId) throw new Error('sessionId required')
+      const record = await ctx.sessions.require(targetId)
+
+      const op = args.op === 'set' || args.op === 'remove' || args.op === 'clear' ? args.op : 'add'
+      const incoming = Array.isArray(args.tags)
+        ? args.tags.map((t) => String(t).trim()).filter(Boolean)
+        : typeof args.tag === 'string' && args.tag.trim()
+          ? [args.tag.trim()]
+          : []
+      if (op !== 'clear' && incoming.length === 0) throw new Error('tag or tags required (except for clear)')
+
+      const current = [...new Set((record.config?.tags ?? []).map((t) => String(t).trim()).filter(Boolean))]
+      let next: string[]
+      if (op === 'clear') next = []
+      else if (op === 'set') next = [...new Set(incoming)]
+      else if (op === 'remove') next = current.filter((t) => !incoming.includes(t))
+      else next = [...new Set([...current, ...incoming])]
+      next = next.slice(0, 24)
+
+      const patched = await ctx.sessions.patchConfig(targetId, { tags: next })
+      return { id: targetId, op, tags: patched.config?.tags ?? [] }
+    },
+  })
+
+  ctx.tools.register({
+    name: 'session_star',
+    description:
+      '收藏/取消收藏目标 session（即侧栏置顶 pinned）。传 pinned=true 收藏；pinned=false 取消收藏；不传时切换。返回更新后的 pinned 状态。Live 指挥席专用。',
+    parameters: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', description: '目标 session id' },
+        pinned: { type: 'boolean', description: 'true=收藏（黄色星星）；false=取消收藏；不传则切换' },
+      },
+      required: ['sessionId'],
+    },
+    execute: async (args) => {
+      await requireLiveCaller(ctx)
+      const targetId = String(args.sessionId || '').trim()
+      if (!targetId) throw new Error('sessionId required')
+      const record = await ctx.sessions.require(targetId)
+      const current = Boolean(record.config?.pinned)
+      const next = typeof args.pinned === 'boolean' ? args.pinned : !current
+      const patched = await ctx.sessions.patchConfig(targetId, { pinned: next })
+      return { id: targetId, pinned: Boolean(patched.config?.pinned) }
     },
   })
 

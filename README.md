@@ -12,6 +12,7 @@
 </p>
 
 <p align="center"><b>一切即插件的 Agent Harness</b></p>
+<p align="center">多 Agent 不依赖群聊轮流发言，而是通过任务看板协作。</p>
 
 <div align="center">
 
@@ -40,6 +41,8 @@
   ·
   <a href="#许可">许可</a>
 </p>
+
+> **注意：Grok Bot 头像资产可能涉及侵权。** 侧栏所用的机器人外形来自对 xAI Grok Bot 的学习向几何副本（`public/grok-bot/`），**不在 MIT 授权范围内**。可用于克隆与演示；二次分发或商用前请自行评估，或替换为自有角色。详见 [NOTICE.md](NOTICE.md)。
 
 ---
 

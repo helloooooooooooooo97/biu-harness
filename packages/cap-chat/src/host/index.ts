@@ -21,7 +21,7 @@ import { estimateTokens } from '@biu/host-sessions'
 import { readArtifactFile } from '@biu/host-sessions/artifacts'
 import { collectLiveDispatchedTasks } from '@biu/host-live-sessions/usage'
 import { normalizeSessionType } from '@biu/type-session'
-import { registerChatInspectorRoutes } from './inspector.ts'
+import { loadLiveDispatchTasks, registerChatInspectorRoutes } from './inspector.ts'
 
 export type { ChatMessage }
 
@@ -383,7 +383,7 @@ export function computeTurnStats(events: SessionEvent[], targetTurn?: number): R
 }
 
 export const name = 'chat'
-export const inject = ['http', 'hub', 'agents', 'sessions', 'systemPrompt', 'tools']
+export const inject = ['http', 'hub', 'agents', 'sessions', 'systemPrompt', 'tools', 'tasks']
 
 declare module 'cordis' {
   interface Context {
@@ -445,6 +445,8 @@ export function apply(ctx: Context) {
         systemPrompt?: string | null
         agentMode?: 'standard' | 'minimal'
         extraTools?: string[]
+        tags?: string[]
+        pinned?: boolean
       } = {}
       if (typeof payload.title === 'string' || payload.title === null) patch.title = payload.title as string | null
       if (typeof payload.model === 'string') patch.model = payload.model
@@ -456,6 +458,8 @@ export function apply(ctx: Context) {
       }
       if (payload.agentMode === 'standard' || payload.agentMode === 'minimal') patch.agentMode = payload.agentMode
       if (Array.isArray(payload.extraTools)) patch.extraTools = payload.extraTools.map((name) => String(name))
+      if (Array.isArray(payload.tags)) patch.tags = payload.tags.map((name) => String(name))
+      if (typeof payload.pinned === 'boolean') patch.pinned = payload.pinned
       const record = await ctx.sessions.patchConfig(
         route.params.id,
         patch as SessionConfig & { title?: string | null; systemPrompt?: string | null },
@@ -484,7 +488,8 @@ export function apply(ctx: Context) {
         busy: ctx.agents.isBusy(item.id),
         ...(item.project ? { project: item.project } : {}),
         ...(item.mascot ? { mascot: item.mascot } : {}),
-        ...(item.config ? { config: item.config } : {}),
+        tags: item.config?.tags ?? [],
+        pinned: Boolean(item.config?.pinned),
       })),
     })
   })
@@ -532,7 +537,8 @@ export function apply(ctx: Context) {
         const worker = await ctx.sessions.require(item.id)
         workers.push({ id: item.id, events: worker.events })
       }
-      const dispatched = collectLiveDispatchedTasks(record.id, record.events, workers)
+      const liveTasks = await loadLiveDispatchTasks(ctx, record.id)
+      const dispatched = collectLiveDispatchedTasks(record.id, record.events, workers, liveTasks)
       payload.dispatchedUsage = dispatched.total
       payload.dispatchedUsageByTurn = Object.fromEntries(
         Object.entries(dispatched.byLiveTurn).map(([key, value]) => [key, value.usage]),

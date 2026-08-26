@@ -6,7 +6,7 @@ test('toolSourceOf tags minimal / live / plugin', () => {
   assert.equal(toolSourceOf('bash'), 'minimal')
   assert.equal(toolSourceOf('str_replace_editor'), 'minimal')
   assert.equal(toolSourceOf('session_list'), 'live')
-  assert.equal(toolSourceOf('session_wake'), 'live')
+  assert.equal(toolSourceOf('session_progress'), 'live')
   assert.equal(toolSourceOf('fs_read'), 'plugin')
 })
 

@@ -32,7 +32,18 @@ export {
   type TrajectoryRow,
   type TrajectoryUsage,
 } from './session-project.ts'
-export { UNGROUPED_PROJECT_KEY, groupSessionsByProject } from './session-groups.ts'
+export {
+  UNGROUPED_PROJECT_KEY,
+  UNGROUPED_TAG_KEY,
+  PINNED_GROUP_KEY,
+  groupSessionsByProject,
+  groupSessionsByTag,
+  buildSidebarGroups,
+  buildSidebarSections,
+  type SidebarGroupBy,
+  type SidebarSection,
+  type SidebarSectionKind,
+} from './session-groups.ts'
 export { useSidebarCollapseStore } from './sidebar-collapse-store.ts'
 export {
   SIDEBAR_MASCOT_INTRO_MS,
@@ -57,6 +68,8 @@ export interface SessionListItem {
   busy?: boolean
   project?: { name: string; path?: string; boundAt: number }
   mascot?: { shape: string; color: string; eye?: number }
+  tags?: string[]
+  pinned?: boolean
 }
 
 export type ConversationView = 'chat' | 'debug'
@@ -68,7 +81,7 @@ export type DispatchedTaskRow = {
   title?: string
   project?: { name: string; path?: string }
   mascot?: { shape: string; color: string; eye?: number }
-  tool: 'session_wake' | 'session_inject'
+  tool: 'task_deliver'
   liveTurn?: number
   wakeTs?: number
   status: 'pending' | 'running' | 'complete' | 'ended'
@@ -214,6 +227,8 @@ function sessionsEqual(a: SessionListItem[], b: SessionListItem[]): boolean {
       left.mascot?.color !== right.mascot?.color ||
       left.mascot?.eye !== right.mascot?.eye ||
       Boolean(left.busy) !== Boolean(right.busy) ||
+      Boolean(left.pinned) !== Boolean(right.pinned) ||
+      (left.tags ?? []).join('\0') !== (right.tags ?? []).join('\0') ||
       (left.type ?? 'chat') !== (right.type ?? 'chat')
     ) {
       return false
@@ -386,12 +401,26 @@ export class SessionViewService extends Service {
     }
     this.flushChunkFrame()
     const events = upsertEvent(this.value.sessionId === sessionId ? this.value.events : [], event)
-    this.replace({
+    const basePatch: Partial<SessionViewState> = {
       sessionId,
       events,
       nodes: this.buildNodes(events),
       error: undefined,
-    })
+    }
+    let patch: Partial<SessionViewState> = basePatch
+    // 回合真正结束(turn/end)：立即清掉该会话的 busy，并解除当前会话 pending/运行态，
+    // 让侧栏呼吸态及时转回；否则仅靠 refreshSessions 兜底会被 syncBusyFromSessions 的 pending 保护卡住。
+    if (event.type === 'turn/end') {
+      const busySessions = { ...this.value.busySessions }
+      if (busySessions[sessionId]) {
+        delete busySessions[sessionId]
+        patch = { ...patch, busySessions }
+      }
+      if (this.value.sessionId === sessionId) {
+        patch = { ...patch, pending: false, agentStatus: 'idle' }
+      }
+    }
+    this.replace(patch)
     this.stashCurrent()
     // Trajectory 索引走独立接口；运行中只做轻量刷新，不塞全文 events
     if (this.value.view === 'debug') void this.refreshTrajectoryIndex()
@@ -1067,6 +1096,25 @@ export class SessionViewService extends Service {
     if (!res.ok || !body.id) throw new Error(body.error || 'fork failed')
     await this.load(body.id, { view: 'chat' })
     return body.id
+  }
+
+  async setSessionPinned(id: string, pinned: boolean) {
+    const prev = this.value.sessions
+    this.replace({
+      sessions: prev.map((item) => (item.id === id ? { ...item, pinned } : item)),
+    })
+    try {
+      const res = await fetch(`/api/sessions/${id}/config`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ pinned }),
+      })
+      if (!res.ok) throw new Error(`pin failed HTTP ${res.status}`)
+    } catch (error) {
+      this.replace({ sessions: prev, error: String(error) })
+      throw error
+    }
+    void this.refreshSessions()
   }
 
   async deleteSession(id: string) {

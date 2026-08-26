@@ -16,8 +16,9 @@ export interface LlmModelDef {
 /** 模型目录：deepseek(flash/pro)、claude、gpt；每项归属 provider，只有对应 provider 配了 token 才可选。 */
 export const LLM_MODEL_CATALOG: LlmModelDef[] = [
   // DeepSeek（OpenAI 兼容，endpoint https://api.deepseek.com/chat/completions）
-  { id: 'deepseek-flash', label: 'DeepSeek Flash', provider: 'deepseek', model: 'deepseek-chat', category: 'flash', note: '通用对话 / 快速' },
-  { id: 'deepseek-pro', label: 'DeepSeek Pro', provider: 'deepseek', model: 'deepseek-reasoner', category: 'pro', note: '深度推理' },
+  { id: 'deepseek-flash', label: 'DeepSeek Flash', provider: 'deepseek', model: 'deepseek-v4-flash', category: 'flash', note: '通用对话 / 快速' },
+  { id: 'deepseek-pro', label: 'DeepSeek Pro', provider: 'deepseek', model: 'deepseek-v4-pro', category: 'pro', note: '深度推理' },
+  { id: 'deepseek-flash-vision', label: 'DeepSeek Flash Vision', provider: 'deepseek', model: 'deepseek-v4-flash-vision-exp', category: 'flash', note: '多模态视觉（图片识别）' },
   // Anthropic Claude（endpoint https://api.anthropic.com/v1/messages）
   { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet', provider: 'anthropic', model: 'claude-3-5-sonnet-20241022', category: 'claude', note: '智能均衡' },
   { id: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku', provider: 'anthropic', model: 'claude-3-5-haiku-20241022', category: 'claude', note: '轻量快速' },
@@ -41,5 +42,5 @@ export function describeProvider(provider: ChatProvider): string {
 
 export function defaultModelFor(provider: ChatProvider): string {
   const first = LLM_MODEL_CATALOG.find((m) => m.provider === provider)
-  return first?.model ?? 'deepseek-chat'
+  return first?.model ?? 'deepseek-v4-flash'
 }

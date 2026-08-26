@@ -30,6 +30,8 @@ interface SessionConfigFields {
   systemPrompt?: string
   agentMode?: AgentMode
   extraTools?: string[]
+  tags?: string[]
+  pinned?: boolean
 }
 
 interface InspectorPayload {
@@ -67,6 +69,7 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
   const [busy, setBusy] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [promptDraft, setPromptDraft] = useState('')
+  const [tagInput, setTagInput] = useState('')
   const titleFocusedRef = useRef(false)
   const promptFocusedRef = useRef(false)
 
@@ -195,6 +198,43 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
                     if (event.key !== 'Enter') return
                     event.preventDefault()
                     ;(event.target as HTMLInputElement).blur()
+                  }}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1 text-[11px] text-[var(--dsw-label-3)]">
+                <span>标签 · 侧栏可按标签分组</span>
+                <div className="flex flex-wrap gap-1">
+                  {(data?.config?.tags ?? []).map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      className="rounded-full border border-[var(--dsw-border)] px-2 py-0.5 text-[11px] text-[var(--dsw-label-2)] hover:border-[var(--dsw-danger)] hover:text-[var(--dsw-danger)]"
+                      title="移除标签"
+                      disabled={busy}
+                      onClick={() => {
+                        const next = (data?.config?.tags ?? []).filter((item) => item !== tag)
+                        void patchSessionConfig({ tags: next })
+                      }}
+                    >
+                      {tag} ×
+                    </button>
+                  ))}
+                </div>
+                <input
+                  className={fieldClass}
+                  value={tagInput}
+                  placeholder="输入后回车添加"
+                  disabled={busy}
+                  onChange={(event) => setTagInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter' && event.key !== ',') return
+                    event.preventDefault()
+                    const parts = tagInput.split(',').map((s) => s.trim()).filter(Boolean)
+                    if (!parts.length) return
+                    const next = [...new Set([...(data?.config?.tags ?? []), ...parts])]
+                    setTagInput('')
+                    void patchSessionConfig({ tags: next })
                   }}
                 />
               </label>

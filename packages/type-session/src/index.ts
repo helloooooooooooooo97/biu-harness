@@ -71,6 +71,10 @@ export interface SessionConfig {
   agentMode?: 'standard' | 'minimal'
   /** 极简模式下常驻额外工具 */
   extraTools?: string[]
+  /** 侧栏标签；一条会话可属于多个标签组 */
+  tags?: string[]
+  /** 侧栏置顶 */
+  pinned?: boolean
 }
 
 export function normalizeSessionConfig(value: unknown): SessionConfig | undefined {
@@ -85,6 +89,10 @@ export function normalizeSessionConfig(value: unknown): SessionConfig | undefine
   if (Array.isArray(raw.extraTools)) {
     next.extraTools = [...new Set(raw.extraTools.map((name) => String(name).trim()).filter(Boolean))]
   }
+  if (Array.isArray(raw.tags)) {
+    next.tags = [...new Set(raw.tags.map((name) => String(name).trim()).filter(Boolean))].slice(0, 24)
+  }
+  if (typeof raw.pinned === 'boolean') next.pinned = raw.pinned
   return Object.keys(next).length ? next : undefined
 }
 
@@ -109,6 +117,15 @@ export function mergeSessionConfig(
   if (patch.agentMode === 'standard' || patch.agentMode === 'minimal') next.agentMode = patch.agentMode
   if (Array.isArray(patch.extraTools)) {
     next.extraTools = [...new Set(patch.extraTools.map((name) => String(name).trim()).filter(Boolean))]
+  }
+  if (Array.isArray(patch.tags)) {
+    const tags = [...new Set(patch.tags.map((name) => String(name).trim()).filter(Boolean))].slice(0, 24)
+    if (tags.length) next.tags = tags
+    else delete next.tags
+  }
+  if (typeof patch.pinned === 'boolean') {
+    if (patch.pinned) next.pinned = true
+    else delete next.pinned
   }
   return Object.keys(next).length ? next : undefined
 }

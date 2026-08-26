@@ -1048,8 +1048,39 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
   const allTags = useMemo(() => {
     return [...new Set(tasks.flatMap((t) => t.tags))].sort()
   }, [tasks])
-  const [projectFilter, setProjectFilter] = useState('')
-  const [tagFilter, setTagFilter] = useState<string[]>([])
+  // 筛选条件持久化：project / tags / time 存到单个 JSON key（tasks.filter），刷新后恢复
+  const [projectFilter, setProjectFilter] = useState<string>(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem('tasks.filter') ?? '{}')
+      return typeof saved.project === 'string' ? saved.project : ''
+    } catch {
+      return ''
+    }
+  })
+  const [tagFilter, setTagFilter] = useState<string[]>(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem('tasks.filter') ?? '{}') as { tags?: unknown }
+      return Array.isArray(saved.tags) ? saved.tags.filter((t): t is string => typeof t === 'string') : []
+    } catch {
+      return []
+    }
+  })
+  // 时间筛选：''=全部 | '1h' | '24h' | '7d' | '30d'，基于任务最近活动时间（createdAt/updatedAt）
+  const [timeFilter, setTimeFilter] = useState<string>(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem('tasks.filter') ?? '{}')
+      return ['', '1h', '24h', '7d', '30d'].includes(saved.time) ? saved.time : ''
+    } catch {
+      return ''
+    }
+  })
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('tasks.filter', JSON.stringify({ project: projectFilter, tags: tagFilter, time: timeFilter }))
+    } catch {
+      /* ignore */
+    }
+  }, [projectFilter, tagFilter, timeFilter])
   const [filterOpen, setFilterOpen] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -1061,13 +1092,19 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
     return () => document.removeEventListener('mousedown', onDown)
   }, [filterOpen])
   const filteredTasks = useMemo(() => {
-    if (!projectFilter && !tagFilter.length) return tasks
-    return tasks.filter(
-      (t) =>
-        (!projectFilter || t.project === projectFilter) &&
-        (!tagFilter.length || (t.tags ?? []).some((tag) => tagFilter.includes(tag))),
-    )
-  }, [tasks, projectFilter, tagFilter])
+    if (!projectFilter && !tagFilter.length && !timeFilter) return tasks
+    const ageMs = timeFilter === '1h' ? 3600e3 : timeFilter === '24h' ? 86400e3 : timeFilter === '7d' ? 7 * 86400e3 : timeFilter === '30d' ? 30 * 86400e3 : 0
+    const cutoff = ageMs ? Date.now() - ageMs : 0
+    return tasks.filter((t) => {
+      if (projectFilter && t.project !== projectFilter) return false
+      if (tagFilter.length && !(t.tags ?? []).some((tag) => tagFilter.includes(tag))) return false
+      if (cutoff) {
+        const recent = Math.max(t.createdAt ?? 0, t.updatedAt ?? 0)
+        if (!recent || recent < cutoff) return false
+      }
+      return true
+    })
+  }, [tasks, projectFilter, tagFilter, timeFilter])
 
   const detailTask = useMemo(
     () => (detailId ? tasks.find((item) => item.id === detailId) ?? null : null),
@@ -1214,7 +1251,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
           <div className="tasks-filter-btn-wrap" ref={filterRef}>
             <button
               type="button"
-              className={`tasks-refresh tasks-rbar-btn${filterOpen ? ' is-active' : ''}${projectFilter || tagFilter.length ? ' is-active' : ''}`}
+              className={`tasks-refresh tasks-rbar-btn${filterOpen ? ' is-active' : ''}${projectFilter || tagFilter.length || timeFilter ? ' is-active' : ''}`}
               aria-label="筛选任务"
               title="筛选"
               aria-haspopup="menu"
@@ -1222,7 +1259,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
               onClick={() => setFilterOpen((v) => !v)}
             >
               <LuSlidersHorizontal size={14} aria-hidden />
-              {(projectFilter || tagFilter.length) ? <span className="tasks-filter-dot" aria-hidden /> : null}
+              {(projectFilter || tagFilter.length || timeFilter) ? <span className="tasks-filter-dot" aria-hidden /> : null}
             </button>
             {filterOpen ? (
               <div className="tasks-filter-menu" role="menu">
@@ -1258,11 +1295,26 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
                     ))}
                   </select>
                 </label>
-                {(projectFilter || tagFilter.length) ? (
+                <label className="tasks-filter-menu-label">
+                  <span>按时间</span>
+                  <select
+                    className="tasks-filter"
+                    aria-label="按时间筛选"
+                    value={timeFilter}
+                    onChange={(e) => setTimeFilter(e.target.value)}
+                  >
+                    <option value="">全部时间</option>
+                    <option value="1h">最近 1 小时</option>
+                    <option value="24h">最近 1 天</option>
+                    <option value="7d">最近 7 天</option>
+                    <option value="30d">最近 30 天</option>
+                  </select>
+                </label>
+                {(projectFilter || tagFilter.length || timeFilter) ? (
                   <button
                     type="button"
                     className="tasks-filter-clear"
-                    onClick={() => { setProjectFilter(''); setTagFilter([]); }}
+                    onClick={() => { setProjectFilter(''); setTagFilter([]); setTimeFilter(''); }}
                   >
                     清除筛选
                   </button>

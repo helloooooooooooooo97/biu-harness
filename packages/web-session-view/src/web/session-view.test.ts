@@ -102,6 +102,48 @@ test('send wake keeps running after HTTP so WS agent/status owns idle', async ()
   assert.equal(view.get().busySessions.s1, undefined)
 })
 
+test('turn/end clears current busy promptly (no stale breathing state)', async () => {
+  // 列表已不再 busy(false)，但因当前会话 pending 存在，旧 syncBusyFromSessions 的
+  // pending 保护会卡死不删 → 侧栏持续呼吸态。turn/end 是回合结束的权威信号，应立即清 busy。
+  mockFetch({
+    '/api/sessions': () => ({ sessions: [{ id: 's1', title: 'a', busy: false, eventCount: 2, updatedAt: 1 }] }),
+    '/api/approvals': () => ({ mode: 'auto', pending: [] }),
+  })
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  view.ingest('s1', { type: 'session/open', version: 1, seq: 0, ts: 1 })
+  view.setAgentStatus('running', 1)
+  assert.equal(view.get().busySessions.s1, true)
+  assert.equal(view.get().pending, true)
+  // 回合结束：WS 推来 turn/end
+  view.ingest('s1', { type: 'turn/end', turn: 1, reason: 'complete', seq: 2, ts: 2 })
+  assert.equal(view.get().busySessions.s1, undefined)
+  assert.equal(view.get().pending, false)
+  assert.equal(view.get().agentStatus, 'idle')
+  // 兜底轮询不再被 pending 卡死
+  await view.refreshSessions()
+  assert.equal(view.get().busySessions.s1, undefined)
+  assert.equal(view.get().pending, false)
+})
+
+test('worker session busy cleared once list reports not busy', async () => {
+  mockFetch({
+    '/api/sessions': () => ({ sessions: [{ id: 'worker-9', title: 'w', busy: false, eventCount: 1, updatedAt: 1 }] }),
+    '/api/approvals': () => ({ mode: 'auto', pending: [] }),
+  })
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  view.ingest('live-1', { type: 'session/open', version: 1, seq: 0, ts: 1 })
+  view.setAgentStatus('running', 0, 'worker-9')
+  assert.equal(view.get().busySessions['worker-9'], true)
+  assert.equal(view.get().pending, false)
+  // worker 非当前会话，无 pending 保护，列表不 busy 即可兜底清掉
+  await view.refreshSessions()
+  assert.equal(view.get().busySessions['worker-9'], undefined)
+})
+
 test('setAgentStatus with other sessionId only updates busySessions', async () => {
   mockFetch({
     '/api/sessions': () => ({ sessions: [] }),

@@ -1,7 +1,11 @@
 import type { Context } from 'cordis'
 import { MINIMAL_TOOL_NAMES, type AgentToolMode } from '@biu/host-tools'
 import { LIVE_TOOL_NAMES } from '@biu/host-live-sessions'
-import { collectLiveDispatchedTasks, type DispatchedTask } from '@biu/host-live-sessions/usage'
+import {
+  collectLiveDispatchedTasks,
+  type DispatchedTask,
+  type TaskDispatchSource,
+} from '@biu/host-live-sessions/usage'
 import { normalizeSessionType, type SessionEvent, type SessionType } from '@biu/type-session'
 
 export type ToolSourceId = 'minimal' | 'live' | 'plugin'
@@ -188,7 +192,29 @@ function decorateTask(
   }
 }
 
-async function loadDispatchedUsage(ctx: Context, liveId: string, liveEvents: SessionEvent[]) {
+/** 从 task 体系取出本 live（作为 creator）派发的任务，作为派工统计数据源（替代旧的 wake/inject 扫描）。 */
+export async function loadLiveDispatchTasks(
+  ctx: Context & { tasks?: { list(filter: { creatorSessionId?: string }): Array<{ id: string; title: string; status: 'todo' | 'doing' | 'done'; createdAt: number; assignee?: { sessionId?: string } | null }> } },
+  liveId: string,
+): Promise<TaskDispatchSource[]> {
+  if (!ctx.tasks) return []
+  const rows = ctx.tasks.list({ creatorSessionId: liveId })
+  return rows
+    .map((row) => ({
+      id: row.id,
+      title: row.title,
+      sessionId: row.assignee?.sessionId ?? '',
+      createdAt: row.createdAt,
+      status: row.status,
+    }))
+    .filter((item) => Boolean(item.sessionId))
+}
+
+async function loadDispatchedUsage(
+  ctx: Context,
+  liveId: string,
+  liveEvents: SessionEvent[],
+) {
   const summaries = await ctx.sessions.listSummaries()
   const workers: Array<{ id: string; events: SessionEvent[] }> = []
   for (const item of summaries) {
@@ -197,5 +223,6 @@ async function loadDispatchedUsage(ctx: Context, liveId: string, liveEvents: Ses
     const worker = await ctx.sessions.require(item.id)
     workers.push({ id: item.id, events: worker.events })
   }
-  return collectLiveDispatchedTasks(liveId, liveEvents, workers)
+  const liveTasks = await loadLiveDispatchTasks(ctx, liveId)
+  return collectLiveDispatchedTasks(liveId, liveEvents, workers, liveTasks)
 }

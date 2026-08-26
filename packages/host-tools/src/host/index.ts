@@ -81,8 +81,6 @@ export class ToolsService extends Service {
       'session_list',
       'session_inspect',
       'session_progress',
-      'session_wake',
-      'session_inject',
       'session_create',
       'session_rename',
       'session_configure',

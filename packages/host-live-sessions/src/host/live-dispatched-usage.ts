@@ -11,14 +11,14 @@ export type DispatchedTaskStatus = 'pending' | 'running' | 'complete' | 'ended'
 
 export type DispatchedTask = {
   sessionId: string
-  tool: 'session_wake' | 'session_inject'
+  tool: 'task_deliver'
   liveTurn: number
   wakeTs: number
   status: DispatchedTaskStatus
   reason?: string
   workerTurn?: number
   usage?: TokenUsageSum
-  /** wake/inject 文本摘要 */
+  /** 派工任务标题/文本摘要 */
   preview?: string
 }
 
@@ -48,56 +48,73 @@ function usageOrUndefined(usage: TokenUsageSum): TokenUsageSum | undefined {
   return { ...usage }
 }
 
-function parseWakeArgs(argumentsJson: string): { sessionId: string; preview?: string } {
-  try {
-    const args = JSON.parse(argumentsJson || '{}') as { sessionId?: unknown; text?: unknown }
-    const sessionId = String(args.sessionId || '').trim()
-    const text = String(args.text || '').trim().replace(/\s+/g, ' ')
-    return {
-      sessionId,
-      // 派工表主文案：来自当次 wake/inject，不是 worker session 标题
-      ...(text ? { preview: text.slice(0, 240) } : {}),
-    }
-  } catch {
-    return { sessionId: '' }
-  }
+/** Live 本回合派工对应的任务最小视图（由 cap-chat 从 task 体系取数传入）。 */
+export type TaskDispatchSource = {
+  /** 任务 id */
+  id: string
+  /** 任务标题（派工表主文案） */
+  title: string
+  /** 执行 agent 的 sessionId（assignee.kind==='agent'） */
+  sessionId: string
+  /** 任务创建时间戳（= 派工点） */
+  createdAt: number
+  /** 任务状态：todo→pending / doing→running / done→complete */
+  status: 'todo' | 'doing' | 'done'
 }
 
-type LiveWake = {
+type LiveDispatchPoint = {
   ts: number
   targetId: string
   liveTurn: number
-  tool: 'session_wake' | 'session_inject'
   preview?: string
+  status: DispatchedTaskStatus
 }
 
-/** 从 Live 日志收集 session_wake / session_inject 派工点。 */
-export function listLiveWakes(liveEvents: SessionEvent[]): LiveWake[] {
-  const wakes: LiveWake[] = []
-  let liveTurn: number | null = null
+/** 把本 live 派发的任务（task_deliver）映射为派工点，并按 createdAt 定位到 Live 日志里的 turn。 */
+export function buildLiveDispatchPoints(
+  liveEvents: SessionEvent[],
+  tasks: TaskDispatchSource[],
+): LiveDispatchPoint[] {
+  if (!tasks.length) return []
+  // 建 turn 时间区间（turn/start .. turn/end）
+  const turns: Array<{ turn: number; start: number; end: number }> = []
+  let current: { turn: number; start: number; end: number } | null = null
   for (const event of liveEvents) {
     if (event.type === 'turn/start') {
-      liveTurn = event.turn
+      current = { turn: event.turn, start: event.ts, end: event.ts }
       continue
     }
     if (event.type === 'turn/end') {
-      liveTurn = null
+      if (current) current.end = event.ts
+      if (current) turns.push(current)
+      current = null
       continue
     }
-    if (event.type !== 'tool/call') continue
-    if (event.name !== 'session_wake' && event.name !== 'session_inject') continue
-    if (liveTurn == null) continue
-    const parsed = parseWakeArgs(event.arguments)
-    if (!parsed.sessionId) continue
-    wakes.push({
-      ts: event.ts,
-      targetId: parsed.sessionId,
-      liveTurn,
-      tool: event.name,
-      ...(parsed.preview ? { preview: parsed.preview } : {}),
-    })
   }
-  return wakes
+  const findTurn = (ts: number): number | null => {
+    // 精确区间内优先；否则取相邻最近 turn
+    let best: { turn: number; dist: number } | null = null
+    for (const t of turns) {
+      if (ts >= t.start && ts <= t.end) return t.turn
+      const dist = ts < t.start ? t.start - ts : ts - t.end
+      if (best == null || dist < best.dist) best = { turn: t.turn, dist }
+    }
+    return best?.turn ?? null
+  }
+  return tasks
+    .map((task) => {
+      const liveTurn = findTurn(task.createdAt) ?? 0
+      const status: DispatchedTaskStatus =
+        task.status === 'done' ? 'complete' : task.status === 'doing' ? 'running' : 'pending'
+      return {
+        ts: task.createdAt,
+        targetId: task.sessionId,
+        liveTurn,
+        preview: task.title,
+        status,
+      }
+    })
+    .filter((point) => point.targetId)
 }
 
 type WorkerTurnHit = {
@@ -181,19 +198,21 @@ function findWorkerTurnsForLive(
 }
 
 /**
- * Live 派工子任务（衍生）：每个 wake/inject 一条，带运行状态与 usage。
+ * Live 派工子任务（衍生）：每个 task_deliver 派工一条，带运行状态与 usage。
+ * 数据来源为 task 体系（tasks 参数：本 live 作为 creator 派发的任务），不扫 wake/inject。
  * 不写回 session 日志。
  */
 export function collectLiveDispatchedTasks(
   liveId: string,
   liveEvents: SessionEvent[],
   workers: Array<{ id: string; events: SessionEvent[] }>,
+  tasks: TaskDispatchSource[] = [],
 ): {
   tasks: DispatchedTask[]
   byLiveTurn: Record<string, LiveTurnDispatch>
   total: TokenUsageSum
 } {
-  const wakes = listLiveWakes(liveEvents)
+  const wakes = buildLiveDispatchPoints(liveEvents, tasks)
   const workerHits = new Map<string, WorkerTurnHit[]>()
   for (const worker of workers) {
     if (worker.id === liveId) continue
@@ -201,7 +220,7 @@ export function collectLiveDispatchedTasks(
   }
   const usedHit = new Map<string, Set<number>>()
 
-  const tasks: DispatchedTask[] = wakes.map((wake) => {
+  const dispatched: DispatchedTask[] = wakes.map((wake) => {
     const hits = workerHits.get(wake.targetId) ?? []
     const used = usedHit.get(wake.targetId) ?? new Set<number>()
     usedHit.set(wake.targetId, used)
@@ -217,10 +236,10 @@ export function collectLiveDispatchedTasks(
     if (best < 0) {
       return {
         sessionId: wake.targetId,
-        tool: wake.tool,
+        tool: 'task_deliver' as const,
         liveTurn: wake.liveTurn,
         wakeTs: wake.ts,
-        status: 'pending' as const,
+        status: wake.status,
         ...(wake.preview ? { preview: wake.preview } : {}),
       }
     }
@@ -229,7 +248,7 @@ export function collectLiveDispatchedTasks(
     const hit = hits[best]!
     return {
       sessionId: wake.targetId,
-      tool: wake.tool,
+      tool: 'task_deliver' as const,
       liveTurn: wake.liveTurn,
       wakeTs: wake.ts,
       status: hit.status,
@@ -242,7 +261,7 @@ export function collectLiveDispatchedTasks(
 
   const byLiveTurn: Record<string, LiveTurnDispatch> = {}
   const total = emptyUsage()
-  for (const task of tasks) {
+  for (const task of dispatched) {
     const key = String(task.liveTurn)
     const bucket = byLiveTurn[key] ?? { tasks: [], usage: emptyUsage() }
     bucket.tasks.push(task)
@@ -251,7 +270,7 @@ export function collectLiveDispatchedTasks(
     if (task.usage) addUsage(total, task.usage)
   }
 
-  return { tasks, byLiveTurn, total }
+  return { tasks: dispatched, byLiveTurn, total }
 }
 
 /** 兼容旧调用：只取 usage 合计。 */
@@ -259,8 +278,9 @@ export function collectLiveDispatchedUsage(
   liveId: string,
   liveEvents: SessionEvent[],
   workers: Array<{ id: string; events: SessionEvent[] }>,
+  tasks: TaskDispatchSource[] = [],
 ): { byLiveTurn: Record<string, TokenUsageSum>; total: TokenUsageSum } {
-  const collected = collectLiveDispatchedTasks(liveId, liveEvents, workers)
+  const collected = collectLiveDispatchedTasks(liveId, liveEvents, workers, tasks)
   const byLiveTurn: Record<string, TokenUsageSum> = {}
   for (const [key, value] of Object.entries(collected.byLiveTurn)) {
     byLiveTurn[key] = value.usage

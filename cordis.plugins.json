@@ -65,16 +65,6 @@
       "enabled": true
     },
     {
-      "id": "dashboard",
-      "name": "控制台",
-      "layer": "capability",
-      "blurb": "@biu/cap-dashboard。用量概览。",
-      "package": "@biu/cap-dashboard/host",
-      "web": "@biu/cap-dashboard/web",
-      "togglable": true,
-      "enabled": false
-    },
-    {
       "id": "tasks",
       "name": "任务",
       "layer": "capability",
@@ -83,16 +73,6 @@
       "web": "@biu/cap-tasks/web",
       "togglable": true,
       "enabled": true
-    },
-    {
-      "id": "channels",
-      "name": "频道",
-      "layer": "capability",
-      "blurb": "@biu/cap-channels。",
-      "package": "@biu/cap-channels/host",
-      "web": "@biu/cap-channels/web",
-      "togglable": true,
-      "enabled": false
     }
   ]
 }
