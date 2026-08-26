@@ -208,12 +208,8 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
     )
   }
 
-  if (!rows.length) {
-    return <div className="traj-root" aria-hidden />
-  }
-
   return (
-    <div className={`traj-root${selectedSeq != null ? ' traj-root-split' : ''}`}>
+    <div className={`traj-root${selectedSeq != null ? ' traj-root-split' : ''}${!rows.length ? ' traj-root-empty' : ''}`}>
       <div className="traj-pane">
         <div className="traj-meta">
           {trajectoryHasMore ? (

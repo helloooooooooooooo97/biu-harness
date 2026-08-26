@@ -544,3 +544,54 @@ test('deleteSession removes from list before DELETE resolves', async () => {
   await pending
   assert.equal(view.get().sessions.map((row) => row.id).join(','), 's2')
 })
+
+test('ensureTrajectory keeps live index on chat route after new session navigate', async () => {
+  let trajRows: Array<{ id: string; seq: number; turn: number; step: null; depth: number; type: string; summary: string }> = []
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.includes('/trajectory')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 's-new', rows: trajRows, hasMore: false, totalTurns: trajRows.length ? 1 : 0 }),
+      } as Response
+    }
+    if (url.includes('/api/sessions/s-new?turns=')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 's-new',
+          events: [{ type: 'session/open', version: 1, seq: 0, ts: 1 }],
+          hasMore: false,
+          totalTurns: 0,
+        }),
+      } as Response
+    }
+    if (url.includes('/api/sessions')) {
+      return { ok: true, status: 200, json: async () => ({ sessions: [] }) } as Response
+    }
+    if (url.includes('/api/approvals')) {
+      return { ok: true, status: 200, json: async () => ({ mode: 'auto', pending: [] }) } as Response
+    }
+    return { ok: false, status: 404, json: async () => ({}) } as Response
+  }) as typeof fetch
+
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  view.ingest('s-new', { type: 'session/open', version: 1, seq: 0, ts: 1 })
+  await view.ensureTrajectory()
+  assert.equal(view.get().view, 'chat')
+  assert.equal(view.get().trajectory.length, 0)
+
+  // 新建会话后 navigate(`/s/${id}`) 会 applyRoute chat，不应关掉轨迹订阅
+  await view.applyRoute({ kind: 'session', sessionId: 's-new', view: 'chat' })
+  assert.equal(view.get().view, 'chat')
+
+  trajRows = [{ id: 'tr-1', seq: 1, turn: 0, step: null, depth: 0, type: 'user/message', summary: 'hi' }]
+  view.ingest('s-new', { type: 'user/message', text: 'hi', seq: 1, ts: 2 })
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(view.get().trajectory.length, 1)
+  assert.equal(view.get().view, 'chat')
+})

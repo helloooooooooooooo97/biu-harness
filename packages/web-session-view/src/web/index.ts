@@ -244,6 +244,10 @@ export class SessionViewService extends Service {
   private cache = new Map<string, SessionCacheEntry>()
   private cacheOrder: string[] = []
   private loadGen = 0
+  /** 右侧检查器或 debug 路由要实时轨迹：与 ConversationView 解耦 */
+  private trajectoryLive = false
+  private trajGen = 0
+  private trajFetchSessionId: string | null = null
   private dispatchedPoll: ReturnType<typeof setInterval> | null = null
 
   constructor(ctx: Context) {
@@ -317,7 +321,11 @@ export class SessionViewService extends Service {
 
   setView(view: ConversationView) {
     this.replace({ view, focusCallId: view === 'chat' ? undefined : this.value.focusCallId })
-    if (view === 'debug') void this.ensureTrajectory()
+    if (this.wantsTrajectory(view)) void this.ensureTrajectory()
+  }
+
+  private wantsTrajectory(view: ConversationView = this.value.view) {
+    return this.trajectoryLive || view === 'debug'
   }
 
   inspectCall(callId: string) {
@@ -334,6 +342,8 @@ export class SessionViewService extends Service {
       if (!this.value.sessionId && this.value.view === 'chat') return
       this.stashCurrent()
       this.loadGen += 1
+      this.trajectoryLive = false
+      this.trajGen += 1
       this.replace({
         sessionId: null,
         events: [],
@@ -382,7 +392,7 @@ export class SessionViewService extends Service {
         focusCallId: route.view === 'chat' ? undefined : this.value.focusCallId,
       })
     }
-    if (route.view === 'debug') await this.ensureTrajectory()
+    if (this.wantsTrajectory(route.view)) await this.ensureTrajectory()
   }
 
   ingest(sessionId: string, event: SessionEvent) {
@@ -422,8 +432,8 @@ export class SessionViewService extends Service {
     }
     this.replace(patch)
     this.stashCurrent()
-    // Trajectory 索引走独立接口；运行中只做轻量刷新，不塞全文 events
-    if (this.value.view === 'debug') void this.refreshTrajectoryIndex()
+    // 检查器打开后 trajectoryLive=true：即使 URL 仍是 chat 也要刷新右侧轨迹
+    if (this.wantsTrajectory()) void this.refreshTrajectoryIndex()
     void this.refreshSessions()
   }
 
@@ -669,13 +679,15 @@ export class SessionViewService extends Service {
       if (cached) {
         this.touchCache(sessionId)
         this.loadGen += 1
+        if (needSwap) this.trajGen += 1
         this.applyCached(sessionId, cached, view)
-        if (view === 'debug') void this.ensureTrajectory()
+        if (this.wantsTrajectory(view)) void this.ensureTrajectory()
         void this.revalidate(sessionId, view)
         return
       }
       if (needSwap) {
         this.loadGen += 1
+        this.trajGen += 1
         // 有上一段内容时先保留画面，只换 sessionId；无缓存清空会闪 EmptyHero
         if (this.value.sessionId && (this.value.nodes.length > 0 || this.value.events.length > 0)) {
           this.replace({
@@ -710,7 +722,7 @@ export class SessionViewService extends Service {
             switchingSession: true,
           })
         }
-        if (view === 'debug') void this.ensureTrajectory()
+        if (this.wantsTrajectory(view)) void this.ensureTrajectory()
         void this.revalidate(sessionId, view)
         return
       }
@@ -718,6 +730,7 @@ export class SessionViewService extends Service {
 
     // wait：发送后等同会话刷新，必须等网络；切会话时也先换目标再 await
     this.loadGen += 1
+    if (needSwap) this.trajGen += 1
     if (needSwap) {
       if (cached) {
         this.touchCache(sessionId)
@@ -757,7 +770,7 @@ export class SessionViewService extends Service {
       }
     }
     await this.revalidate(sessionId, view)
-    if (view === 'debug') await this.ensureTrajectory()
+    if (this.wantsTrajectory(view)) await this.ensureTrajectory()
   }
 
   /** 静默拉取并套用；若用户已切走则丢弃 */
@@ -833,12 +846,12 @@ export class SessionViewService extends Service {
         dispatchedUsageByTurn: byTurn,
         dispatchedTasksByTurn: tasksByTurn,
         dispatchedUsage,
-        trajectory: view === 'debug' ? this.value.trajectory : [],
+        trajectory: this.wantsTrajectory(view) ? this.value.trajectory : [],
         switchingSession: false,
         error: undefined,
       })
       this.syncDispatchedPoll()
-      if (view === 'debug') void this.ensureTrajectory()
+      if (this.wantsTrajectory(view)) void this.ensureTrajectory()
       void this.refreshInbox(sessionId)
     } catch {
       /* 静默 */
@@ -943,16 +956,20 @@ export class SessionViewService extends Service {
     }
   }
 
-  /** 进入 Trajectory：只拉轻量 rows 索引，不拉全文 events。 */
+  /** 进入 Trajectory：只拉轻量 rows 索引，不拉全文 events。不改 ConversationView，避免 /s/:id 把 debug 打回 chat。 */
   async ensureTrajectory() {
     const sessionId = this.value.sessionId
     if (!sessionId) return
-    if (this.value.trajectoryLoading) return
-    this.replace({ trajectoryLoading: true, view: 'debug' })
+    this.trajectoryLive = true
+    if (this.value.trajectoryLoading && this.trajFetchSessionId === sessionId) return
+    const gen = ++this.trajGen
+    this.trajFetchSessionId = sessionId
+    this.replace({ trajectoryLoading: true })
     try {
       const res = await fetch(
         `/api/sessions/${sessionId}/trajectory?turns=${TRAJECTORY_TAIL_TURNS}`,
       )
+      if (gen !== this.trajGen || this.value.sessionId !== sessionId) return
       if (!res.ok) throw new Error(`加载 trajectory 失败：${res.status}`)
       const body = (await res.json()) as TrajectoryPayload
       this.replace({
@@ -960,20 +977,22 @@ export class SessionViewService extends Service {
         trajectoryHasMore: Boolean(body.hasMore),
         trajectoryLoading: false,
         totalTurns: typeof body.totalTurns === 'number' ? body.totalTurns : this.value.totalTurns,
-        view: 'debug',
       })
     } catch (error) {
+      if (gen !== this.trajGen || this.value.sessionId !== sessionId) return
       this.replace({ trajectoryLoading: false, error: String(error) })
     }
   }
 
   async refreshTrajectoryIndex() {
     const sessionId = this.value.sessionId
-    if (!sessionId || this.value.view !== 'debug') return
+    if (!sessionId || !this.wantsTrajectory()) return
+    const gen = this.trajGen
     try {
       const res = await fetch(
         `/api/sessions/${sessionId}/trajectory?turns=${TRAJECTORY_TAIL_TURNS}`,
       )
+      if (gen !== this.trajGen || this.value.sessionId !== sessionId) return
       if (!res.ok) return
       const body = (await res.json()) as TrajectoryPayload
       this.replace({
