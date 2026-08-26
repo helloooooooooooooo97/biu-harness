@@ -4,6 +4,13 @@
 
 <h1 align="center">biu-harness</h1>
 
+<p align="center">
+  <img alt="version" src="https://img.shields.io/badge/version-v0.1.0-blue" />
+  <img alt="license" src="https://img.shields.io/github/license/helloooooooooooooo97/biu-harness" />
+  <img alt="stars" src="https://img.shields.io/github/stars/helloooooooooooooo97/biu-harness" />
+  <img alt="npm" src="https://img.shields.io/node/v/cordis" />
+</p>
+
 <p align="center"><b>一切即插件的 Agent Harness</b></p>
 <p align="center">多 Agent 不依赖群聊轮流发言，而是通过任务看板协作。</p>
 
