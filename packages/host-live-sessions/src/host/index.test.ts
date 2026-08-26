@@ -272,3 +272,116 @@ test('session_create / session_configure bind and rebind project folder', async 
     await rm(dirB, { recursive: true, force: true })
   }
 })
+
+test('session_tag add/set/remove/clear on chat session', async () => {
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  await ctx.plugin(tools)
+  await ctx.plugin(systemPrompt)
+  await ctx.plugin(llm)
+  await ctx.plugin(agentLoop)
+  await ctx.plugin(agents)
+  await ctx.plugin(liveSessions)
+
+  const live = await ctx.sessions.create(undefined, { type: 'live' })
+  const chat = await ctx.sessions.create()
+
+  // 非 live 调用被拒
+  await assert.rejects(
+    () =>
+      runWithSession(chat.id, () =>
+        ctx.tools.invoke('session_tag', { sessionId: chat.id, tag: 'x' }, new AbortController().signal),
+      ),
+    /only available in live/,
+  )
+
+  // add 两个标签（去重）
+  const added = (await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_tag', { sessionId: chat.id, tags: ['bug', 'feature'] }, new AbortController().signal),
+  )) as { tags: string[] }
+  assert.deepEqual(added.tags, ['bug', 'feature'])
+
+  // 重复 add 会去重
+  const added2 = (await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_tag', { sessionId: chat.id, tag: 'bug' }, new AbortController().signal),
+  )) as { tags: string[] }
+  assert.deepEqual(added2.tags, ['bug', 'feature'])
+
+  // session_list 里能看到 tags
+  const listed = (await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_list', { type: 'chat' }, new AbortController().signal),
+  )) as { sessions: Array<{ id: string; tags: string[] }> }
+  assert.deepEqual(listed.sessions.find((s) => s.id === chat.id)?.tags, ['bug', 'feature'])
+
+  // remove
+  const removed = (await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_tag', { sessionId: chat.id, op: 'remove', tag: 'bug' }, new AbortController().signal),
+  )) as { tags: string[] }
+  assert.deepEqual(removed.tags, ['feature'])
+
+  // set 整体替换
+  const set = (await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_tag', { sessionId: chat.id, op: 'set', tags: ['a'] }, new AbortController().signal),
+  )) as { tags: string[] }
+  assert.deepEqual(set.tags, ['a'])
+
+  // clear 清空
+  const cleared = (await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_tag', { sessionId: chat.id, op: 'clear' }, new AbortController().signal),
+  )) as { tags: string[] }
+  assert.deepEqual(cleared.tags, [])
+})
+
+test('session_pin pin / unpin / toggle on chat session', async () => {
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'memory' })
+  await ctx.plugin(sessions)
+  await ctx.plugin(tools)
+  await ctx.plugin(systemPrompt)
+  await ctx.plugin(llm)
+  await ctx.plugin(agentLoop)
+  await ctx.plugin(agents)
+  await ctx.plugin(liveSessions)
+
+  const live = await ctx.sessions.create(undefined, { type: 'live' })
+  const chat = await ctx.sessions.create()
+
+  // 非 live 被拒
+  await assert.rejects(
+    () =>
+      runWithSession(chat.id, () =>
+        ctx.tools.invoke('session_pin', { sessionId: chat.id, pinned: true }, new AbortController().signal),
+      ),
+    /only available in live/,
+  )
+
+  // 置顶
+  const p1 = (await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_pin', { sessionId: chat.id, pinned: true }, new AbortController().signal),
+  )) as { pinned: boolean }
+  assert.equal(p1.pinned, true)
+
+  // 不传 pinned → 切换为取消置顶
+  const p2 = (await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_pin', { sessionId: chat.id }, new AbortController().signal),
+  )) as { pinned: boolean }
+  assert.equal(p2.pinned, false)
+
+  // 显式置顶回来
+  await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_pin', { sessionId: chat.id, pinned: true }, new AbortController().signal),
+  )
+
+  // session_list 能看到 pinned
+  const listed = (await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_list', { type: 'chat' }, new AbortController().signal),
+  )) as { sessions: Array<{ id: string; pinned: boolean }> }
+  assert.equal(listed.sessions.find((s) => s.id === chat.id)?.pinned, true)
+
+  // session_configure 也支持 pinned
+  const cfg = (await runWithSession(live.id, () =>
+    ctx.tools.invoke('session_configure', { sessionId: chat.id, pinned: false }, new AbortController().signal),
+  )) as { config: { pinned?: boolean } }
+  assert.equal(cfg.config?.pinned, undefined)
+})

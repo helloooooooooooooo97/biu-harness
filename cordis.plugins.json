@@ -65,32 +65,12 @@
       "enabled": true
     },
     {
-      "id": "dashboard",
-      "name": "控制台",
-      "layer": "capability",
-      "blurb": "@biu/cap-dashboard。用量概览。",
-      "package": "@biu/cap-dashboard/host",
-      "web": "@biu/cap-dashboard/web",
-      "togglable": true,
-      "enabled": true
-    },
-    {
       "id": "tasks",
       "name": "任务",
       "layer": "capability",
       "blurb": "@biu/cap-tasks。任务与秒级心跳。",
       "package": "@biu/cap-tasks/host",
       "web": "@biu/cap-tasks/web",
-      "togglable": true,
-      "enabled": true
-    },
-    {
-      "id": "channels",
-      "name": "频道",
-      "layer": "capability",
-      "blurb": "@biu/cap-channels。",
-      "package": "@biu/cap-channels/host",
-      "web": "@biu/cap-channels/web",
       "togglable": true,
       "enabled": true
     }

@@ -7,6 +7,49 @@ import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 /** 按键不驱动受控 value；仅防抖更新发送按钮可用态，避免每个字符打穿 React 渲染。 */
 const INPUT_DEBOUNCE_MS = 120
 
+/** 草稿持久化：跟随 session 存 localStorage，停止输入该时长后写入。草稿内容完整保存、完整恢复，不限制长度。 */
+const DRAFT_KEY = 'chat.draft'
+const DRAFT_DEBOUNCE_MS = 300
+
+function readDraftMap(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const out: Record<string, string> = {}
+      for (const [k, v] of Object.entries(parsed)) {
+        if (typeof v === 'string') out[k] = v
+      }
+      return out
+    }
+  } catch {
+    /* 忽略：localStorage 不可用则静默降级，不影响输入 */
+  }
+  return {}
+}
+
+function writeDraft(sessionId: string, text: string) {
+  try {
+    const map = readDraftMap()
+    map[sessionId] = text
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(map))
+  } catch {
+    /* 忽略：localStorage 不可用则静默降级，不影响输入 */
+  }
+}
+
+function clearDraft(sessionId: string) {
+  try {
+    const map = readDraftMap()
+    if (!(sessionId in map)) return
+    delete map[sessionId]
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(map))
+  } catch {
+    /* ignore */
+  }
+}
+
 type ToolCatalogItem = { name: string; description: string }
 type ChatProvider = 'deepseek' | 'openai' | 'anthropic'
 
@@ -49,6 +92,7 @@ function matchModelOption(catalog: ModelOption[], provider: string, model: strin
 export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const canSubmitRef = useRef(false)
   const [canSubmit, setCanSubmit] = useState(false)
   const [expanded, setExpanded] = useState(false)
@@ -71,6 +115,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const pending = useSessionView((state) => state.pending)
   const inbox = useSessionView((state) => state.inbox)
+  const sessionId = useSessionView((state) => state.sessionId)
   const sessionView = props.sessionView as SessionViewService
   const navigate = useNavigate()
   const location = useLocation()
@@ -93,9 +138,23 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   useEffect(
     () => () => {
       if (debounceRef.current != null) clearTimeout(debounceRef.current)
+      if (draftTimerRef.current != null) clearTimeout(draftTimerRef.current)
     },
     [],
   )
+
+  // 挂载/session 切换时恢复该 session 草稿并同步高度/形状
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el || !sessionId) return
+    const draft = readDraftMap()[sessionId]
+    if (typeof draft === 'string' && draft) {
+      el.value = draft
+      syncComposerShape(el)
+    }
+    // 仅关注 session 切换；首挂载 sessionId 初始值也会触发一次（无害）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId])
 
   useEffect(() => {
     let cancelled = false
@@ -183,11 +242,30 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     }, INPUT_DEBOUNCE_MS)
   }
 
+  /** 输入防抖写草稿：停止输入约 300ms 后写入当前 session 的 localStorage 草稿。 */
+  function schedulePersistDraft(text: string) {
+    if (!sessionId) return
+    if (draftTimerRef.current != null) clearTimeout(draftTimerRef.current)
+    draftTimerRef.current = setTimeout(() => {
+      draftTimerRef.current = null
+      writeDraft(sessionId, text)
+    }, DRAFT_DEBOUNCE_MS)
+  }
+
+  /** 清理挂起的草稿写定时器（切会话/发送时不残留脏写）。 */
+  function flushDraftTimer() {
+    if (draftTimerRef.current != null) {
+      clearTimeout(draftTimerRef.current)
+      draftTimerRef.current = null
+    }
+  }
+
   function clearInput() {
     if (debounceRef.current != null) {
       clearTimeout(debounceRef.current)
       debounceRef.current = null
     }
+    flushDraftTimer()
     const el = textareaRef.current
     if (el) {
       el.value = ''
@@ -320,6 +398,10 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     try {
       await sessionView.send(text, 'wake', tools)
       const id = sessionView.get().sessionId
+      if (id) {
+        clearDraft(id)
+        flushDraftTimer()
+      }
       if (id && !location.pathname.startsWith(`/s/${id}`)) navigate(`/s/${id}`)
     } catch {
       /* error 已写入 sessionView */
@@ -455,6 +537,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           onChange={(event) => {
             scheduleCanSubmit(event.target.value)
             syncComposerShape(event.target)
+            schedulePersistDraft(event.target.value)
             const next = readSlashAtCursor(
               event.target.value,
               event.target.selectionStart ?? event.target.value.length,

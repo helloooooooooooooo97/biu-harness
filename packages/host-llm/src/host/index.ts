@@ -8,11 +8,27 @@ export interface LlmConfig {
   model: string
 }
 
+/** DeepSeek 视觉模型：检测到图片输入时自动路由到它。 */
+export const DEEPSEEK_VISION_MODEL = 'deepseek-v4-flash-vision-exp'
+
+/** 多模态内容块：文本 或 图片（data URL / http URL）。 */
+export type LlmContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } }
+
+export type LlmMessageContent = string | LlmContentPart[] | null
+
 export interface LlmMessage {
   role: string
-  content?: string | null
+  content?: LlmMessageContent
   tool_calls?: Array<{ id: string; type: string; function: { name: string; arguments: string } }>
   tool_call_id?: string
+}
+
+/** 若消息 content 含图片块则返回 true（用于触发视觉模型路由）。 */
+export function hasImageContent(content: LlmMessageContent | undefined): boolean {
+  if (typeof content !== 'object' || !Array.isArray(content)) return false
+  return content.some((part) => part.type === 'image_url')
 }
 
 /** OpenAI/DeepSeek：带 tool_calls 时 content 宜为 null，空字符串可能导致后续回合拒答。 */
@@ -206,8 +222,14 @@ export class OpenAiCompatLlm implements LlmClient {
       this.config.provider === 'deepseek'
         ? 'https://api.deepseek.com/chat/completions'
         : 'https://api.openai.com/v1/chat/completions'
+    // 仅 deepseek provider 支持自动路由到视觉模型；openai/anthropic 保持配置原状。
+    const hasImage = messages.some((m) => hasImageContent(m.content))
+    const model =
+      this.config.provider === 'deepseek' && hasImage
+        ? DEEPSEEK_VISION_MODEL
+        : this.config.model
     const body: Record<string, unknown> = {
-      model: this.config.model,
+      model,
       messages,
       stream: true,
       stream_options: { include_usage: true },

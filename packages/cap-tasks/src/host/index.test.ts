@@ -316,6 +316,10 @@ test('buildDeliverText renders a派工 message with task key fields', () => {
   assert.match(text, /要把需求写清楚/)
   assert.match(text, /明天跟进/)
   assert.match(text, /task_x/)
+  assert.match(text, /协作规范/)
+  assert.match(text, /tasks_create/)
+  assert.match(text, /task_deliver/)
+  assert.match(text, /task_report/)
 })
 
 test('reportBackToCreator sends a progress message to the assigner session via sendMessage (wake-first)', async () => {

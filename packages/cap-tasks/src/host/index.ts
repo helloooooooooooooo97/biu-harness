@@ -634,7 +634,19 @@ function actorsEqual(a: TaskActor | null, b: TaskActor | null): boolean {
 }
 
 /**
+ * 追加在 task_deliver 默认派工消息末尾的协作规范：引导执行 agent 用本系统任务体系做后续派发与协作，
+ * 而不是绕过任务系统直接 dispatch 子 session。让需求可跟踪、进度可回传、派发人收到回执。
+ */
+export const DELIVER_COLLABORATION_NOTE = [
+  '',
+  '【协作规范】请优先使用本系统的任务体系进行后续任务派发与协作：',
+  '新需求请用 tasks_create 创建、用 task_deliver 派给负责 session、用 task_report 上报进度。',
+  '这样需求可被跟踪、进度可回传、派发人会收到回执。避免绕过任务系统直接 dispatch 子 session。',
+].join('\n')
+
+/**
  * 生成 task_deliver 派工消息的默认文案：把任务关键信息整理成一段给执行 agent 的指令。
+ * 末尾固定追加【协作规范】段落，引导执行 agent 优先走任务体系。自定义 text 时不经过本函数。
  */
 export function buildDeliverText(row: TaskRow): string {
   const lines: string[] = []
@@ -648,6 +660,7 @@ export function buildDeliverText(row: TaskRow): string {
   if (row.description?.trim()) lines.push(`\n描述：\n${row.description.trim()}`)
   if (row.notes?.trim()) lines.push(`\n备忘：\n${row.notes.trim()}`)
   lines.push(`\n任务 id：${row.id}`)
+  lines.push(DELIVER_COLLABORATION_NOTE)
   return lines.join('\n')
 }
 

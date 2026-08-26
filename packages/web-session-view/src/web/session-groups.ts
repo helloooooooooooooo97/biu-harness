@@ -112,6 +112,42 @@ export function buildSidebarGroups(sessions: SessionListItem[], groupBy: Sidebar
   ]
 }
 
+export type SidebarSectionKind = 'pinned' | 'project' | 'tag'
+
+/** 置顶区直接携带会话行；项目/标签区按分组。 */
+export interface SidebarSection {
+  kind: SidebarSectionKind
+  label: string
+  /** 置顶区专属：直接持有的 pinned 会话（不嵌套重复的分组头）。 */
+  sessions?: SessionListItem[]
+  /** 项目/标签区：各自的分组列表。 */
+  groups?: SessionSidebarGroup[]
+}
+
+/**
+ * 三板块并存：置顶 / 项目 / 标签，自上而下。
+ * - 置顶区：所有 pinned 会话（直接携带，不嵌套分组）；无则省去该 section。
+ * - 项目区：按绑定 folder path 分组，未绑定归「未分组」。
+ * - 标签区：按 tags 分组（一条会话可出现在多个标签下），无标签归「未标签」。
+ */
+export function buildSidebarSections(sessions: SessionListItem[]): SidebarSection[] {
+  const sections: SidebarSection[] = []
+
+  const pinned = sessions.filter((item) => item.pinned).sort(compareSessionRows)
+  if (pinned.length) {
+    sections.push({
+      kind: 'pinned',
+      label: '置顶',
+      sessions: pinned,
+    })
+  }
+
+  sections.push({ kind: 'project', label: '项目', groups: groupSessionsByProject(sessions) })
+  sections.push({ kind: 'tag', label: '标签', groups: groupSessionsByTag(sessions) })
+
+  return sections
+}
+
 export function folderNameFromPath(path: string) {
   const cleaned = path.replace(/[\\/]+$/, '')
   const parts = cleaned.split(/[\\/]/).filter(Boolean)

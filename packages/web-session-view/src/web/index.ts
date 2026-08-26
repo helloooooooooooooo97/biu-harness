@@ -39,7 +39,10 @@ export {
   groupSessionsByProject,
   groupSessionsByTag,
   buildSidebarGroups,
+  buildSidebarSections,
   type SidebarGroupBy,
+  type SidebarSection,
+  type SidebarSectionKind,
 } from './session-groups.ts'
 export { useSidebarCollapseStore } from './sidebar-collapse-store.ts'
 export {
