@@ -221,7 +221,7 @@ function EChartsDualLine({
   )
 }
 
-/** 每回合 Step 数（Turn per Step）柱状图：回合号 vs 该回合拆了几步。 */
+/** 每回合 Step 数（Steps per Turn）柱状图：回合号 vs 该回合拆了几步。 */
 function TurnStepChart({ data, height }: { data: Array<{ x: number; value: number }>; height: number }) {
   const option = useMemo<EChartsOption>(() => {
     return {
@@ -401,7 +401,7 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
 
           <div className="usage-panel-section">
             <div className="usage-panel-section-title">
-              Turn per Step
+              Steps per Turn
               <span className="usage-panel-section-hint">每回合 step 数</span>
             </div>
             <TurnStepChart data={turnSteps} height={110} />

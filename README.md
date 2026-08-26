@@ -1,90 +1,104 @@
 <p align="center">
-  <img src="public/favicon.svg" width="64" height="64" alt="Biu" />
+  <img src="public/favicon.svg" width="64" height="64" alt="biu-harness" />
 </p>
 
-<h1 align="center">Biu</h1>
+<h1 align="center">biu-harness</h1>
 
 <p align="center"><b>一切即插件的 Agent Harness</b></p>
-<p align="center">多 Agent 不靠群聊轮流说话，靠任务看板协作。</p>
+<p align="center">多 Agent 不依赖群聊轮流发言，而是通过任务看板协作。</p>
+
+<div align="center">
+
+| 🧩 一切即插件 | 🗂 看板协作 | 🤖 Agent 原生 | 🔍 极致可溯源 |
+|---|---|---|---|
+| Cordis 内核 · 简单可扩展 | 复杂 Agent 架构任意搭 | 用 Agent 治理 Agent | 事件流 · 一切可回溯 |
+
+</div>
+
+<br>
 
 <p align="center">
+  <a href="#四大设计原则">设计原则</a>
+  ·
   <a href="#产品演示">演示</a>
   ·
-  <a href="#1-它是什么">它是什么</a>
+  <a href="#1-任务看板上的多-agent">多 Agent</a>
   ·
-  <a href="#2-三条原则">原则</a>
+  <a href="#2-harness-怎么被看见">可观测性</a>
   ·
-  <a href="#3-核心任务看板上的多-agent">多 Agent</a>
+  <a href="#3-运行时怎么拆">设计</a>
   ·
-  <a href="#4-harness-怎么被看见">可观测性</a>
+  <a href="#4-仓库目录">目录</a>
   ·
-  <a href="#5-运行时怎么拆">设计</a>
-  ·
-  <a href="#6-仓库目录">目录</a>
-  ·
-  <a href="#7-跑起来">上手</a>
+  <a href="#5-跑起来">上手</a>
   ·
   <a href="#许可">许可</a>
 </p>
 
-> **Grok Bot 头像可能侵权。** 侧栏那个机器人外形来自 xAI Grok Bot 的学习向几何副本（`public/grok-bot/`），**不在 MIT 授权里**。克隆、演示可以，二次分发或商用前请自己评估，或换成自己的角色。详见 [NOTICE.md](NOTICE.md)。
+> **注意：Grok Bot 头像资产可能涉及侵权。** 侧栏所用的机器人外形来自对 xAI Grok Bot 的学习向几何副本（`public/grok-bot/`），**不在 MIT 授权范围内**。可用于克隆与演示；二次分发或商用前请自行评估，或替换为自有角色。详见 [NOTICE.md](NOTICE.md)。
+
+---
+
+## 四大设计原则
+
+biu-harness 不是「在聊天窗口上附加若干工具」，而是一套把 **Agent 当进程、把任务当总线** 的本地工作台。它的四个核心能力，也即四项基本设计原则：
+
+### 1. 一切即插件
+
+基于 Cordis 内核打造的插件体系。内核与能力分层解耦，每个能力包只声明它需要的服务（通过服务键 `inject`）、不关心具体实现。HTTP / 会话 / LLM / 对话 / 看板……一律是 Cordis 插件，由一份 [`cordis.plugins.json`](cordis.plugins.json) 承载。**代码结构简单、易于扩展**：想换通信、换会话存储、加新能力，都在插槽边界内完成，一行不改内核。
+
+关掉 `tasks` 插件，看板、派工工具、心跳会一并移除——**壳只识别插槽，不理解任何业务概念**。包名遵循 `@biu/<prefix>-<id>`；主仓 `host/`/`web/` 仅负责加载，不内置功能。
+
+### 2. 多 Agent 协作
+
+以 Task 看板为协作总线：建卡、指派到独立执行席、事件驱动派工、进度回报。支持依赖阻塞、定时/事件自动触发、进度自愈追问。复杂协作靠一张张任务卡编排成可跑的流水线，**支持各类复杂 Agent 架构搭建**。
+
+**每个 Agent 是独立 session**（各自拥有工作区、模型、工具集），**看板则是它们之间的总线**——多 Agent 的交互发生在看板上（建卡、指派、依赖/阻塞、触发派工、`task_report` 写回），而非让多个角色在一个窗口轮流发言。这是实际协作的场地，而非演示页面。
+
+### 3. Agent 原生
+
+Agent 本身就是产品的一等操作对象：**Agent 可以接管产品功能，包括新建其他 Agent、给所有 Agent 打标签、巡检状态、编排派工**。多 Agent 系统里的数量与生命周期可被程序化管理——**用 Agent 治理 Agent，防止 Agent 泛滥**，而不是靠人肉去数去管。
+
+### 4. 极致可观测性 · 一切可溯源
+
+biu-harness 的核心日志不是零散的聊天记录或状态快照，而是一条**完整的事件流**——输入、模型输出、每一步工具调用、审批、派工，所有动作都以事件形式落进这条流，一个不落。**观察与执行的底层是同一份事实**：模型下一回合收到的完整上下文，就是从这条流重建的；界面上的任何一屏展示（轨迹、用量、任务派工、检查器）也都只是这条流的投影。
+
+正因如此，一切皆可追溯：
+
+- **每个行为都有据可查。** 这一回合模型说了什么、调了哪些工具、结果如何、经过了怎样的审批、派给了谁，都能沿着事件流逐条还原。
+- **可量化、可介入。** 能观测**每一个回合的历史上下文占用**——比如输入里多大比例在重读旧历史、多大比例是新内容，据此判断何时压缩、怎么调窗口，实现精细的上下文管理；想干预长对话，就在流上某个位置插入「压缩点」，后续从那里重放——既能往回追溯，又能往前控制。
+- **不丢账、不漂移。** 用量会固化到任务上，删掉执行会话账还在；所有视角读同一份事件流，永远对得上。
+
+> 一句话：**没有一个状态是不知其所以然的，没有一个结论是追溯不到来源的。**
+
+这套设计的基础是：**Session 是权威日志**。每个 Agent = 一条 append-only session，模型输出、tool、审批、派工都先写成 `session/event`。浏览器只负责投影、不持模型能力——**投影可以换，日志不能丢**。
 
 ---
 
 ## 产品演示
 
-三张都是同一套工作面：左边一排独立 session，中间调度席说话，右边任务队列。
+三图覆盖同一套工作面：任务看板、执行席的回合轨迹与 token 用量。
 
 <p align="center">
-  <img src="docs/demo/task.jpg" alt="调度席收执行席 task_report，右侧队列同步待办与已完成" width="880" />
+  <img src="docs/demo/task.jpg" alt="任务看板：多 Agent 通过 task_report 协作" width="880" />
 </p>
-<p align="center"><sub><code>task.png</code> — 多 Agent 在看板上汇报：chat 里进度回传，队列里待办 / 已完成对得上</sub></p>
+<p align="center"><sub><code>task.jpg</code> — 多 Agent 在看板上汇报：chat 中进度回传，队列内待办 / 已完成保持对应</sub></p>
 
 <p align="center">
-  <img src="docs/demo/inject.jpg" alt="Live 调度席向多个执行席异步 inject，本回合派工表显示 usage" width="880" />
+  <img src="docs/demo/trajectory.jpg" alt="检查器轨迹：模型 / 工具逐步做了什么" width="880" />
 </p>
-<p align="center"><sub><code>inject.png</code> — 一次 inject 点名多个执行席，派工表看谁回了、花了多少 token</sub></p>
+<p align="center"><sub><code>trajectory.jpg</code> — 检查器「轨迹」以事件投影还原单回合完整过程：模型输出、tool 调用、审批、派工</sub></p>
 
 <p align="center">
-  <img src="docs/demo/dance.jpg" alt="Live 调度让一排 mascot 排成爱心" width="880" />
+  <img src="docs/demo/usage.jpg" alt="用量：本回合 token 怎么花的" width="880" />
 </p>
-<p align="center"><sub><code>dance.png</code> — 同一批 session 也能一起跳：Live 下令，mascot 在舞台上排成爱心</sub></p>
+<p align="center"><sub><code>usage.jpg</code> — 检查器「用量」展示 token 消耗；<code>task_report</code> 会固化当回合用量</sub></p>
 
 ---
 
-## 1. 它是什么
+## 1. 任务看板上的多 Agent
 
-Biu 不是「聊天窗口外挂几个 tool」。它是一套把 **Agent 当进程、把任务当总线** 的本地工作台：
-
-| | 含义 |
-|--|--|
-| **Harness** | 运行时、工具、审批、loop、界面都可替换；壳不内置业务 |
-| **一切即插件** | HTTP / 会话 / LLM / 对话 / 看板……一律 Cordis 插件，一份 [`cordis.plugins.json`](cordis.plugins.json) |
-| **看板协作** | 每个 Agent 是独立 session；人与 Agent 对同一张卡派工、阻塞、汇报 |
-
-关掉 `tasks` 插件，看板、派工工具、心跳一起消失。壳不知道「任务」这个词，只认识插槽。
-
----
-
-## 2. 三条原则
-
-### 一切即插件
-
-能力靠服务键 `inject`，不绑实现类。主仓 `host/`、`web/` **只加载**，不堆功能。json 三张表：`host` 内核、`web` 壳、`plugins` 可热插拔。包名 `@biu/<prefix>-<id>`，json 里的 `id` 仍是短名（`chat`、`http`）。
-
-### Session 是权威日志
-
-每个 Agent = 一条 append-only session。模型输出、tool、审批、派工，都先写成 `session/event`。浏览器只投影，不持模型能力。投影可以换，日志不能丢。
-
-### 协作对象是任务，不是另一段 prompt
-
-多 Agent 交互发生在看板上：建卡、指派到某个 session、依赖与阻塞、触发派工、`task_report` 写回。这是工作面，不是演示页。
-
----
-
-## 3. 核心：任务看板上的多 Agent
-
-别人常见的「多 Agent」是一个窗口里几个角色轮流说话。Biu 里 **执行席是独立 session**（各自工作区、模型、工具集），**看板是它们之间的总线**。
+常见的「多 Agent」实现是让一个窗口里的多个角色依次发言。在 biu-harness 中，**执行席是独立 session**（各自拥有工作区、模型、工具集），**看板则是它们之间的总线**。
 
 ```mermaid
 flowchart TB
@@ -101,17 +115,17 @@ flowchart TB
   Worker -->|"task_report doing / done"| Board
 ```
 
-Live 管 **现场**（谁在跑、要不要再 wake）；看板管 **工作项**（这件事归谁、卡在哪、何时再派）。多数产品只有群聊，或只有调度、没有这张板。
+Live 负责 **现场**（谁在运行、是否需要再次 wake）；看板负责 **工作项**（该事项归属谁、卡在何处、何时再派）。多数产品要么只有会话，要么只有调度，而缺少这样一块看板。
 
-### 第一次怎么走
+### 首次上手的流程
 
-1. 开一个 **Live** 会话当调度席，再开一个或多个 **chat** 当执行席。
-2. 侧栏打开 **Tasks**，建卡，把负责人指到某个执行席 session。
-3. 人或调度席 `task_deliver`（或 cron / `dep:done` / `turn:end` 触发）把执行席 wake 起来。
-4. 执行席干活，每回合 `task_report`：还在做传 `doing`，做完传 `done`（进度、说明、当回合用量写在卡上）。
-5. 右侧检查器一边看 **轨迹**，一边看同一张 **任务**。上游 `done` 可自动派下游。
+1. 开一个 **Live** 会话作为调度席，再开一个或多个 **chat** 作为执行席。
+2. 在侧栏打开 **Tasks**，建卡，把负责人指派到某个执行席 session。
+3. 由人或调度席 `task_deliver`（或通过 cron / `dep:done` / `turn:end` 触发）将执行席 wake 起来。
+4. 执行席执行任务，每回合调用 `task_report`：进行中传 `doing`，完成后传 `done`（进度、说明、当回合用量会记录在卡上）。
+5. 右侧检查器同时查看 **轨迹** 与对应的 **任务**。上游 `done` 可自动触发下游。
 
-### 人和 Agent 摸的是同一张板
+### 人与 Agent 面对的是同一块看板
 
 | | 人 | Agent |
 |--|--|--|
@@ -121,13 +135,13 @@ Live 管 **现场**（谁在跑、要不要再 wake）；看板管 **工作项**
 | 回报 | 看板上的报告时间线 | `task_report` |
 | 现场指挥 | 切到对方会话 | Live：`session_wake` / `session_inject` |
 
-依赖是图：`parentId` / `dependsOn` 派生阻塞链。触发器同一套状态机：`idle → pending → delivered → done`。删掉执行席 session，卡上的 report 还在。
+依赖是一种图结构：由 `parentId` / `dependsOn` 派生阻塞链。触发器共用同一套状态机：`idle → pending → delivered → done`。删除执行席 session 后，卡上的 report 记录仍会保留。
 
 ---
 
-## 4. Harness 怎么被看见
+## 2. Harness 怎么被看见
 
-Harness 要当场回答四件事：**装了什么、刚 dispatch 了什么、这一回合做了什么、协作卡在哪**——做成运行时表面，而不是事后翻日志。
+Harness 需要在现场回答四件事：**装了什么、刚 dispatch 了什么、这一回合做了什么、协作停在哪一步**——使之在运行时表面即可呈现，而非事后查阅日志。
 
 ```mermaid
 flowchart LR
@@ -159,11 +173,11 @@ flowchart LR
 | 协作 | 谁在做哪张卡 | Tasks + 检查器任务页；Live 对话里的派工表 |
 | 协作 | 这套工具对当前 session 是否有效 | 会话配置 / `GET /api/sessions/:id/inspector` |
 
-插件装卸立刻反映到 snapshot（插件表、路由、工具名）。UI 只订阅，不猜测。
+插件装卸立刻反映到 snapshot（插件表、路由、工具名）。UI 只负责订阅，不自行推断。
 
 ---
 
-## 5. 运行时怎么拆
+## 3. 运行时怎么拆
 
 ```mermaid
 flowchart TB
@@ -179,9 +193,9 @@ flowchart TB
   Shell --- Cap
 ```
 
-- **壳只认插槽。** `composer`、`inspector-panels`、`app-modules`、Settings 各栏由能力自己 `place`。Activity Bar 里的 Dashboard / Tasks / Channels 都是 cap 注册的模块。
+- **壳只依赖插槽。** `composer`、`inspector-panels`、`app-modules`、Settings 各栏由能力自己进行 `place`。Activity Bar 里的 Dashboard / Tasks / Channels 都是 cap 注册的模块。
 - **Agent loop 可替换。** `agents` 句柄不变，factory 可换。
-- **审批在管线上。** 敏感 tool 进 hold，UI 在 dock，不写进壳。
+- **审批位于管线上。** 敏感 tool 进入 hold 状态，审批 UI 停靠在 dock，不并入壳逻辑。
 
 | 表 | 谁加载 | 能否热卸 |
 |----|--------|----------|
@@ -193,12 +207,12 @@ flowchart TB
 
 ---
 
-## 6. 仓库目录
+## 4. 仓库目录
 
-根上只留加载器和清单；能力全在 `packages/`，按前缀一眼能分清。
+根目录只保留加载器与清单；能力全部位于 `packages/`，按前缀即可清晰区分。
 
 ```
-BIU
+biu-harness
 ├── host/                      # Node 加载器：读 json 的 host 表，plugin()
 │   ├── index.ts
 │   └── types.ts
@@ -214,7 +228,7 @@ BIU
 ├── NOTICE.md                  # 第三方角色声明
 ├── docs/
 │   ├── plugin-packages.md     # 包前缀与入口约定
-│   └── demo/                  # README 截图：task / inject / dance
+│   └── demo/                  # README 截图：task / trajectory / usage
 ├── scripts/
 │   └── link-cordis-plugins.mjs
 ├── public/
@@ -275,13 +289,13 @@ BIU
 
 ---
 
-## 7. 跑起来
+## 5. 跑起来
 
 需要 Node.js 20+ 和 npm。`main` 与开发分支 `hmr-dev` 当前对齐。
 
 ```bash
-git clone https://github.com/helloooooooooooooo97/BIU.git
-cd BIU
+git clone https://github.com/helloooooooooooooo97/Biu-harness.git
+cd Biu-harness
 make          # 安装依赖，同时起 host 与 Vite
 ```
 
@@ -290,14 +304,14 @@ make          # 安装依赖，同时起 host 与 Vite
 | UI | http://127.0.0.1:5173 |
 | API / WS | http://127.0.0.1:3141 |
 
-未配 Key 时发消息只会本地回声。打开 **Settings → Models**，或：
+未配置 Key 时，发送消息只会得到本地回声。请打开 **Settings → Models**，或：
 
 ```bash
 export DEEPSEEK_API_KEY=...     # 或 OPENAI_API_KEY / ANTHROPIC_API_KEY
 export CHAT_MODEL=deepseek-chat # 可选
 ```
 
-配好后按 [§3 第一次怎么走](#第一次怎么走) 开 Live + 执行席，到 Tasks 建卡。
+配置完成后，按 [§1 首次上手的流程](#首次上手的流程) 启动 Live 与执行席，再到 Tasks 建卡。
 
 <details>
 <summary>命令与环境变量</summary>
@@ -324,7 +338,7 @@ export CHAT_MODEL=deepseek-chat # 可选
 
 ## 许可
 
-仓库里 **Biu 自己写的代码和文档** 使用 [MIT License](LICENSE)：可以学习、修改、分发，**也可以商用**，保留版权声明和许可文本即可。
+仓库里 **biu-harness 自己写的代码和文档** 使用 [MIT License](LICENSE)：可以学习、修改、分发，**也可以商用**，保留版权声明和许可文本即可。
 
 **例外：Grok Bot 机器人。** `public/grok-bot/` 里的几何、动画和角色外形 **不是 MIT**。它们改编自对 Grok Bot.app 的学习向抽取，权利属于 xAI 等权利人，继续使用、打包上线或当产品吉祥物，**有商标 / 版权侵权风险**。本项目不授予这部分的任何权利。说明见 [NOTICE.md](NOTICE.md)。
 
