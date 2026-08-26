@@ -1,5 +1,7 @@
 import { Service, type Context, type Fiber, type Plugin } from 'cordis'
+import { findRepoRoot, readCordisConfig } from '@biu/host-plugin-loader'
 import type { CatalogEntry } from './catalog.ts'
+import { kernelCatalogRows } from './kernel-rows.ts'
 import { resolveCatalog } from './resolve-catalog.ts'
 import type { PageSpec } from '@biu/type-http'
 import { HUB_CHANGE, HUB_CHANNEL_EVENT, HUB_CHANNEL_SNAPSHOT } from '@biu/type-http'
@@ -64,18 +66,23 @@ export class HubService extends Service {
   }
 
   snapshot() {
-    const plugins = [...this.forks.values()].map(({ entry, fiber }) => ({
-      id: entry.id,
-      name: entry.name,
-      layer: entry.layer,
-      blurb: entry.blurb,
-      inject: entry.inject ?? [],
-      togglable: entry.togglable,
-      enabled: Boolean(fiber && fiber.uid !== null),
-      state: fiber ? STATE[fiber.state] ?? String(fiber.state) : 'off',
-      ...(entry.web ? { web: entry.web } : {}),
-      ...(entry.packageName ? { packageName: entry.packageName } : {}),
-    }))
+    const config = readCordisConfig(findRepoRoot())
+    const plugins = [
+      ...kernelCatalogRows(config.host ?? [], 'host'),
+      ...kernelCatalogRows(config.web ?? [], 'web'),
+      ...[...this.forks.values()].map(({ entry, fiber }) => ({
+        id: entry.id,
+        name: entry.name,
+        layer: entry.layer,
+        blurb: entry.blurb,
+        inject: entry.inject ?? [],
+        togglable: entry.togglable,
+        enabled: Boolean(fiber && fiber.uid !== null),
+        state: fiber ? STATE[fiber.state] ?? String(fiber.state) : 'off',
+        ...(entry.web ? { web: entry.web } : {}),
+        ...(entry.packageName ? { packageName: entry.packageName } : {}),
+      })),
+    ]
     return {
       seq: ++this.seq,
       plugins,
