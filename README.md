@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="public/favicon.svg" width="64" height="64" alt="biu-harness" />
+  <img src="public/mascot-blue.svg" width="54" height="54" alt="biu-harness mascot" />
+  <img src="public/mascot-violet.svg" width="54" height="54" alt="biu-harness mascot" />
+  <img src="public/mascot-red.svg" width="54" height="54" alt="biu-harness mascot" />
 </p>
 
 <h1 align="center">biu-harness</h1>
@@ -14,7 +16,6 @@
 </p>
 
 <p align="center"><b>一切即插件的 Agent Harness</b></p>
-<p align="center">多 Agent 不依赖群聊轮流发言，而是通过任务看板协作。</p>
 
 <div align="center">
 
@@ -44,9 +45,6 @@
   <a href="#许可">许可</a>
 </p>
 
-> **注意：Grok Bot 头像资产可能涉及侵权。** 侧栏所用的机器人外形来自对 xAI Grok Bot 的学习向几何副本（`public/grok-bot/`），**不在 MIT 授权范围内**。可用于克隆与演示；二次分发或商用前请自行评估，或替换为自有角色。详见 [NOTICE.md](NOTICE.md)。
-
----
 
 ## 四大设计原则
 
@@ -242,6 +240,9 @@ biu-harness
 │   └── link-cordis-plugins.mjs
 ├── public/
 │   ├── favicon.svg
+│   ├── mascot-blue.svg        # README 吉祥物（BMW M 三色）
+│   ├── mascot-violet.svg
+│   ├── mascot-red.svg
 │   └── grok-bot/              # 非 MIT：xAI 角色几何副本
 └── packages/
     ├── type-session/          # 契约，不进 json
