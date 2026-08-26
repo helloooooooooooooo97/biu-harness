@@ -376,7 +376,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                               <div
                                 role="button"
                                 tabIndex={0}
-                                className="flex min-h-[24px] min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-[6px] px-1 text-left text-[12px] font-semibold tracking-wide text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
+                                className="flex min-h-[24px] min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-[6px] text-left text-[12px] font-semibold tracking-wide text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
                                 title={group.path ?? group.label}
                                 aria-expanded={!collapsed}
                                 onClick={() => toggleProjectGroup(group.key)}
@@ -408,7 +408,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                 {canAddHere ? (
                                   <button
                                     type="button"
-                                    className="sidebar-add grid size-5 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
+                                    className="sidebar-add grid shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
                                     title={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
                                     aria-label={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
                                     onClick={(e) => {
