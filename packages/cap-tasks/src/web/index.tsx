@@ -38,6 +38,10 @@ import {
   LuUserRound,
   LuX,
   LuPlus,
+  LuArrowUpDown,
+  LuArrowUp,
+  LuArrowDown,
+  LuPenLine,
 } from 'react-icons/lu'
 import {
   ReactFlow,
@@ -135,6 +139,97 @@ export type Task = {
   nextTriggerAt?: number | null
 }
 
+// ==================== 视图系统（Notion 风格）类型 ====================
+export type TaskViewMode = 'queue' | 'table' | 'board' | 'graph'
+export type TaskViewSortField = 'priority' | 'due' | 'updated' | 'created' | 'status'
+export type TaskViewSortDir = 'asc' | 'desc'
+
+export type TaskViewFilter = {
+  project: string
+  tags: string[]
+  time: string // ''=全部 | '1h' | '24h' | '7d' | '30d'
+}
+
+export type TaskViewSort = {
+  field: TaskViewSortField
+  dir: TaskViewSortDir
+}
+
+/** 视图 = 呈现方式 + 筛选 + 排序 的完整配置 */
+export type TaskViewConfig = {
+  mode: TaskViewMode
+  filter: TaskViewFilter
+  sort: TaskViewSort
+}
+
+export type TaskView = {
+  id: string
+  name: string
+  config: TaskViewConfig
+  isBuiltin: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+export function defaultViewConfig(): TaskViewConfig {
+  return {
+    mode: 'table',
+    filter: { project: '', tags: [], time: '' },
+    // 默认排序：状态 → 优先级 → 截止（status 为复合排序）
+    sort: { field: 'status', dir: 'asc' },
+  }
+}
+
+const SORT_FIELD_LABEL: Record<TaskViewSortField, string> = {
+  priority: '优先级',
+  due: '截止时间',
+  updated: '最近更新',
+  created: '创建时间',
+  status: '状态',
+}
+
+const VIEW_MODE_ICON: Record<TaskViewMode, ReactNode> = {
+  queue: <LuListChecks size={13} aria-hidden />,
+  table: <LuTable2 size={13} aria-hidden />,
+  board: <LuColumns3 size={13} aria-hidden />,
+  graph: <LuGitBranch size={13} aria-hidden />,
+}
+
+const PRIORITY_RANK: Record<TaskPriority, number> = { low: 0, med: 1, high: 2 }
+const STATUS_RANK: Record<TaskStatus, number> = { todo: 0, doing: 1, done: 2 }
+
+function dueRank(t: Task): number {
+  return t.dueAt && t.dueAt > 0 ? t.dueAt : Number.MAX_SAFE_INTEGER
+}
+
+/** 按视图排序配置对任务排序：status 字段为「状态→优先级→截止」复合排序（默认）。 */
+export function sortTasks(tasks: Task[], sort: TaskViewSort): Task[] {
+  const dir = sort.dir === 'desc' ? -1 : 1
+  const cmp = (a: Task, b: Task): number => {
+    let c = 0
+    const f = sort.field
+    if (f === 'status') {
+      c = STATUS_RANK[a.status] - STATUS_RANK[b.status]
+      if (c === 0) c = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]
+      if (c === 0) c = dueRank(a) - dueRank(b)
+    } else if (f === 'priority') {
+      c = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]
+      if (c === 0) c = STATUS_RANK[a.status] - STATUS_RANK[b.status]
+    } else if (f === 'due') {
+      c = dueRank(a) - dueRank(b)
+      if (c === 0) c = STATUS_RANK[a.status] - STATUS_RANK[b.status]
+    } else if (f === 'updated') {
+      c = (a.updatedAt ?? 0) - (b.updatedAt ?? 0)
+    } else {
+      c = (a.createdAt ?? 0) - (b.createdAt ?? 0)
+    }
+    if (c === 0) c = (a.updatedAt ?? 0) - (b.updatedAt ?? 0)
+    if (c === 0) c = a.id.localeCompare(b.id)
+    return c * dir
+  }
+  return [...tasks].sort(cmp)
+}
+
 const STATUS_META: Array<{ id: TaskStatus; label: string; icon: ReactNode }> = [
   { id: 'todo', label: '待办', icon: <LuCircleDashed size={13} aria-hidden /> },
   { id: 'doing', label: '进行中', icon: <LuLoaderCircle size={13} aria-hidden /> },
@@ -210,6 +305,44 @@ async function patchTask(id: string, patch: Record<string, unknown>): Promise<Ta
 
 async function removeTask(id: string): Promise<void> {
   const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new Error(body.error || `HTTP ${res.status}`)
+  }
+}
+
+// ---- 视图（/api/task-views）----
+async function fetchTaskViews(): Promise<TaskView[]> {
+  const res = await fetch('/api/task-views')
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const body = (await res.json()) as { views?: TaskView[] }
+  return Array.isArray(body.views) ? body.views : []
+}
+
+async function createTaskView(name: string, config: TaskViewConfig): Promise<TaskView> {
+  const res = await fetch('/api/task-views', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name, config }),
+  })
+  const body = (await res.json()) as { view?: TaskView; error?: string }
+  if (!res.ok || !body.view) throw new Error(body.error || `HTTP ${res.status}`)
+  return body.view
+}
+
+async function patchTaskView(id: string, patch: { name?: string; config?: TaskViewConfig }): Promise<TaskView> {
+  const res = await fetch(`/api/task-views/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(patch),
+  })
+  const body = (await res.json()) as { view?: TaskView; error?: string }
+  if (!res.ok || !body.view) throw new Error(body.error || `HTTP ${res.status}`)
+  return body.view
+}
+
+async function deleteTaskView(id: string): Promise<void> {
+  const res = await fetch(`/api/task-views/${encodeURIComponent(id)}`, { method: 'DELETE' })
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: string }
     throw new Error(body.error || `HTTP ${res.status}`)
@@ -1024,22 +1157,191 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
   const { tasks, setTasks, error, loading, refresh, query, setQuery } = useTasks(compact ? 3000 : 2500)
   const { agents, loading: agentsLoading } = useAgents()
   const [detailId, setDetailId] = useState<string | null>(null)
-  const [view, setView] = useState<'queue' | 'table' | 'board' | 'graph'>(() => {
-    try {
-      const saved = window.localStorage.getItem('tasks.view')
-      if (saved === 'queue' || saved === 'table' || saved === 'board' || saved === 'graph') return saved
-    } catch {
-      /* ignore */
-    }
-    return 'table'
-  })
+
+  // ---- 视图系统（Notion 风格）：视图列表 + 当前视图 + 当前配置 ----
+  const [views, setViews] = useState<TaskView[]>([])
+  const [activeViewId, setActiveViewId] = useState<string | null>(null)
+  const [config, setConfig] = useState<TaskViewConfig>(defaultViewConfig)
+  // hydrated：视图列表加载完成并已恢复当前视图配置后才允许自动保存
+  const [hydrated, setHydrated] = useState(false)
+
   useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = await fetchTaskViews()
+        if (cancelled) return
+        setViews(list)
+        let savedId: string | null = null
+        try {
+          savedId = window.localStorage.getItem('tasks.activeViewId')
+        } catch {
+          /* ignore */
+        }
+        const target = (savedId ? list.find((v) => v.id === savedId) : undefined) ?? list[0] ?? null
+        setActiveViewId(target?.id ?? null)
+        if (target) setConfig(target.config)
+      } catch {
+        /* 服务不可用：留在默认配置 */
+      } finally {
+        if (!cancelled) setHydrated(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const activeView = useMemo(() => views.find((v) => v.id === activeViewId) ?? null, [views, activeViewId])
+  const mode = config.mode
+  const { project: projectFilter, tags: tagFilter, time: timeFilter } = config.filter
+  const sort = config.sort
+  const filterActive = Boolean(projectFilter || tagFilter.length || timeFilter)
+  // 排序非默认（字段≠status 或 非升序）时，排序按钮右上角显示圆点（与筛选按钮一致）
+  const sortCustom = sort.field !== 'status' || sort.dir !== 'asc'
+
+  // 自动保存：配置变化 → 防抖 PATCH 回当前视图
+  const configKey = JSON.stringify(config)
+  useEffect(() => {
+    if (!hydrated || !activeView) return
+    if (configKey === JSON.stringify(activeView.config)) return
+    const timer = window.setTimeout(() => {
+      patchTaskView(activeView.id, { config })
+        .then((updated) => {
+          setViews((prev) => prev.map((v) => (v.id === updated.id ? updated : v)))
+        })
+        .catch(() => {
+          /* 静默失败：下次配置变化时重试 */
+        })
+    }, 600)
+    return () => window.clearTimeout(timer)
+  }, [configKey, config, activeView, hydrated])
+
+  const switchView = (id: string) => {
+    const v = views.find((x) => x.id === id)
+    if (!v) return
+    setActiveViewId(id)
+    setConfig(v.config)
     try {
-      window.localStorage.setItem('tasks.view', view)
+      window.localStorage.setItem('tasks.activeViewId', id)
     } catch {
       /* ignore */
     }
-  }, [view])
+  }
+
+  // ---- 视图对话框（自绘模态：另存为 / 重命名 / 删除确认，不使用系统 prompt/confirm/alert） ----
+  type ViewDlgState =
+    | { kind: 'saveAs' }
+    | { kind: 'rename'; view: TaskView }
+    | { kind: 'delete'; view: TaskView }
+  const [dlg, setDlg] = useState<ViewDlgState | null>(null)
+  const dlgInputRef = useRef<HTMLInputElement>(null)
+  const [dlgName, setDlgName] = useState('')
+  const [dlgBusy, setDlgBusy] = useState(false)
+  const [dlgError, setDlgError] = useState('')
+
+  const openDlg = (next: ViewDlgState) => {
+    setDlgError('')
+    setDlgBusy(false)
+    if (next.kind === 'saveAs') {
+      setDlgName(activeView ? `${activeView.name} 副本` : '')
+    } else if (next.kind === 'rename') {
+      setDlgName(next.view.name)
+    }
+    setDlg(next)
+  }
+
+  useEffect(() => {
+    if (!dlg) return
+    // 打开后聚焦输入框；Esc 取消
+    const id = window.setTimeout(() => dlgInputRef.current?.focus(), 30)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setDlg(null)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.clearTimeout(id)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [dlg])
+
+  const submitDlg = async () => {
+    if (!dlg || dlgBusy) return
+    if (dlg.kind === 'delete') {
+      setDlgBusy(true)
+      try {
+        await deleteTaskView(dlg.view.id)
+        const rest = views.filter((x) => x.id !== dlg.view.id)
+        setViews(rest)
+        if (activeViewId === dlg.view.id) {
+          const next = rest[0] ?? null
+          setActiveViewId(next?.id ?? null)
+          if (next) setConfig(next.config)
+        }
+        setDlg(null)
+      } catch (err) {
+        setDlgBusy(false)
+        setDlgError(String(err))
+      }
+      return
+    }
+    const name = dlgName.trim()
+    if (!name) {
+      setDlgError('请输入视图名称')
+      return
+    }
+    setDlgBusy(true)
+    try {
+      if (dlg.kind === 'saveAs') {
+        const v = await createTaskView(name, config)
+        setViews((prev) => [...prev, v])
+        setActiveViewId(v.id)
+        setConfig(v.config)
+        try {
+          window.localStorage.setItem('tasks.activeViewId', v.id)
+        } catch {
+          /* ignore */
+        }
+      } else {
+        if (name === dlg.view.name) {
+          setDlg(null)
+          return
+        }
+        const updated = await patchTaskView(dlg.view.id, { name })
+        setViews((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
+      }
+      setDlg(null)
+    } catch (err) {
+      setDlgBusy(false)
+      setDlgError(String(err))
+    }
+  }
+
+  // ---- 筛选菜单 ----
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterRef = useRef<HTMLDivElement>(null)
+  // ---- 视图下拉菜单 ----
+  const [viewMenuOpen, setViewMenuOpen] = useState(false)
+  const viewMenuRef = useRef<HTMLDivElement>(null)
+  // ---- 排序下拉菜单 ----
+  const [sortMenuOpen, setSortMenuOpen] = useState(false)
+  const sortMenuRef = useRef<HTMLDivElement>(null)
+  // 点击外部关闭所有弹出菜单
+  useEffect(() => {
+    if (!viewMenuOpen && !sortMenuOpen && !filterOpen) return
+    const onDown = (event: MouseEvent) => {
+      const node = event.target as Node
+      if (viewMenuRef.current?.contains(node) || sortMenuRef.current?.contains(node) || filterRef.current?.contains(node)) return
+      setViewMenuOpen(false)
+      setSortMenuOpen(false)
+      setFilterOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [viewMenuOpen, sortMenuOpen, filterOpen])
 
   // 项目 / 标签筛选
   const allProjects = useMemo(() => {
@@ -1048,49 +1350,22 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
   const allTags = useMemo(() => {
     return [...new Set(tasks.flatMap((t) => t.tags))].sort()
   }, [tasks])
-  // 筛选条件持久化：project / tags / time 存到单个 JSON key（tasks.filter），刷新后恢复
-  const [projectFilter, setProjectFilter] = useState<string>(() => {
-    try {
-      const saved = JSON.parse(window.localStorage.getItem('tasks.filter') ?? '{}')
-      return typeof saved.project === 'string' ? saved.project : ''
-    } catch {
-      return ''
+
+  // 配置更新助手：改筛选 / 改排序 / 改呈现方式（触发自动保存）
+  const patchConfig = (patch: Partial<TaskViewConfig>) => setConfig((c) => ({ ...c, ...patch }))
+  const patchFilter = (patch: Partial<TaskViewFilter>) => setConfig((c) => ({ ...c, filter: { ...c.filter, ...patch } }))
+
+  // 排序字段点击循环：未选中 → 升序 → 降序 → 还原（默认：状态升序）
+  const cycleSort = (field: TaskViewSortField) => {
+    if (sort.field !== field) {
+      patchConfig({ sort: { field, dir: 'asc' } })
+    } else if (sort.dir === 'asc') {
+      patchConfig({ sort: { field, dir: 'desc' } })
+    } else {
+      patchConfig({ sort: { field: 'status', dir: 'asc' } })
     }
-  })
-  const [tagFilter, setTagFilter] = useState<string[]>(() => {
-    try {
-      const saved = JSON.parse(window.localStorage.getItem('tasks.filter') ?? '{}') as { tags?: unknown }
-      return Array.isArray(saved.tags) ? saved.tags.filter((t): t is string => typeof t === 'string') : []
-    } catch {
-      return []
-    }
-  })
-  // 时间筛选：''=全部 | '1h' | '24h' | '7d' | '30d'，基于任务最近活动时间（createdAt/updatedAt）
-  const [timeFilter, setTimeFilter] = useState<string>(() => {
-    try {
-      const saved = JSON.parse(window.localStorage.getItem('tasks.filter') ?? '{}')
-      return ['', '1h', '24h', '7d', '30d'].includes(saved.time) ? saved.time : ''
-    } catch {
-      return ''
-    }
-  })
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('tasks.filter', JSON.stringify({ project: projectFilter, tags: tagFilter, time: timeFilter }))
-    } catch {
-      /* ignore */
-    }
-  }, [projectFilter, tagFilter, timeFilter])
-  const [filterOpen, setFilterOpen] = useState(false)
-  const filterRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!filterOpen) return
-    const onDown = (event: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(event.target as Node)) setFilterOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [filterOpen])
+  }
+
   const filteredTasks = useMemo(() => {
     if (!projectFilter && !tagFilter.length && !timeFilter) return tasks
     const ageMs = timeFilter === '1h' ? 3600e3 : timeFilter === '24h' ? 86400e3 : timeFilter === '7d' ? 7 * 86400e3 : timeFilter === '30d' ? 30 * 86400e3 : 0
@@ -1106,6 +1381,9 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
     })
   }, [tasks, projectFilter, tagFilter, timeFilter])
 
+  // 排序：作用于筛选结果之上
+  const sortedTasks = useMemo(() => sortTasks(filteredTasks, sort), [filteredTasks, sort])
+
   const detailTask = useMemo(
     () => (detailId ? tasks.find((item) => item.id === detailId) ?? null : null),
     [detailId, tasks],
@@ -1119,15 +1397,15 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
     if (!detailId) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { setDetailId(null); return }
-      if (!view) return
+      if (!mode) return
       const isVertical = e.key === 'ArrowDown' || e.key === 'ArrowUp'
       const isHorizontal = e.key === 'ArrowRight' || e.key === 'ArrowLeft'
       if (!isVertical && !isHorizontal) return
 
       // 构建当前视图的可导航任务视图
-      if (view === 'queue') {
+      if (mode === 'queue') {
         // 队列：只含叶节点，按 4 状态组顺序展开成线性列表导航（↑/↓ 或 ←/→ 均可）
-        const queue = buildQueueRows(filteredTasks)
+        const queue = buildQueueRows(sortedTasks)
         const idx = queue.findIndex((t) => t.id === detailId)
         if (idx < 0) return
         const dir = (isVertical ? isVertical2(e.key) : (e.key === 'ArrowRight' ? 1 : -1))
@@ -1135,13 +1413,13 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
         if (n === 0) return
         const target = queue[(idx + dir + n) % n]
         if (target) { e.preventDefault(); setDetailId(target.id) }
-      } else if (view === 'board') {
+      } else if (mode === 'board') {
         // 看板：按列（overdue/todo/blocked/doing/done）分组，列内保持顺序
         const cols: BoardKey[] = ['overdue', 'todo', 'blocked', 'doing', 'done']
         const colOf = (t: Task): BoardKey => (isOverdue(t) ? 'overdue' : t.blocked ? 'blocked' : t.status)
         const matrix: { key: BoardKey; items: Task[] }[] = cols.map((c) => ({
           key: c,
-          items: filteredTasks.filter((t) => colOf(t) === c),
+          items: sortedTasks.filter((t) => colOf(t) === c),
         }))
         let ci = matrix.findIndex((col) => col.items.some((t) => t.id === detailId))
         let ri = matrix[ci]?.items.findIndex((t) => t.id === detailId) ?? -1
@@ -1164,7 +1442,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
         }
       } else {
         // 表格：按树的 DFS 顺序（父在前、子随后）
-        const tree = buildTreeRows(filteredTasks, {})
+        const tree = buildTreeRows(sortedTasks, {})
         const idx = tree.findIndex((t) => t.id === detailId)
         if (idx < 0) return
         const dir = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1
@@ -1176,7 +1454,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [detailId, view, filteredTasks, setDetailId])
+  }, [detailId, mode, sortedTasks, setDetailId])
 
   function isVertical2(k: string): 1 | -1 {
     return k === 'ArrowDown' ? 1 : -1
@@ -1216,28 +1494,61 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
     <div className={`tasks-root${compact ? ' is-compact' : ''}${detailTask ? ' has-detail' : ''}`}>
       <div className="tasks-main">
         <div className="tasks-toolbar">
-          <div className="tasks-viewtabs tasks-viewtabs-left" role="tablist" aria-label="视图切换">
-            {(
-              [
-                ['queue', '队列', <LuListChecks key="queue" size={13} aria-hidden />],
-                ['table', '表格', <LuTable2 key="table" size={13} aria-hidden />],
-                ['board', '看板', <LuColumns3 key="board" size={13} aria-hidden />],
-                ['graph', '依赖', <LuGitBranch key="graph" size={13} aria-hidden />],
-              ] as const
-            ).map(([key, label, icon]) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={view === key}
-                className={`tasks-viewtab ${view === key ? 'is-active' : ''}`}
-                onClick={() => setView(key)}
-              >
-                {icon}
-                {label}
-              </button>
-            ))}
+          <div className="tasks-toolbar-left">
+          {/* 视图下拉（Notion 数据库左上角风格） */}
+          <div className="tasks-viewdd-wrap" ref={viewMenuRef}>
+            <button
+              type="button"
+              className={`tasks-viewdd-btn${viewMenuOpen ? ' is-active' : ''}`}
+              aria-label="切换视图"
+              aria-haspopup="menu"
+              aria-expanded={viewMenuOpen}
+              onClick={() => setViewMenuOpen((v) => !v)}
+            >
+              {VIEW_MODE_ICON[mode]}
+              <span className="tasks-viewdd-name">{activeView?.name ?? (mode === 'queue' ? '队列' : mode === 'board' ? '看板' : mode === 'graph' ? '依赖' : '表格')}</span>
+              <LuChevronDown size={13} aria-hidden />
+            </button>
+            {viewMenuOpen ? (
+              <div className="tasks-viewdd-menu" role="menu">
+                <div className="tasks-viewdd-head">视图</div>
+                {views.map((v) => (
+                  <div key={v.id} className={`tasks-viewdd-item${v.id === activeViewId ? ' is-active' : ''}`}>
+                    <button
+                      type="button"
+                      className="tasks-viewdd-item-main"
+                      role="menuitemradio"
+                      aria-checked={v.id === activeViewId}
+                      onClick={() => { switchView(v.id); setViewMenuOpen(false) }}
+                    >
+                      {VIEW_MODE_ICON[v.config.mode]}
+                      <span className="tasks-viewdd-item-name">{v.name}</span>
+                      {v.id === activeViewId ? <LuCircleCheck size={13} aria-hidden className="tasks-viewdd-check" /> : null}
+                    </button>
+                    {!v.isBuiltin ? (
+                      <span className="tasks-viewdd-item-actions">
+                        <button type="button" className="tasks-viewdd-act" title="重命名" onClick={() => openDlg({ kind: 'rename', view: v })}>
+                          <LuPenLine size={12} aria-hidden />
+                        </button>
+                        <button type="button" className="tasks-viewdd-act is-danger" title="删除" onClick={() => openDlg({ kind: 'delete', view: v })}>
+                          <LuTrash2 size={12} aria-hidden />
+                        </button>
+                      </span>
+                    ) : null}
+                  </div>
+                ))}
+                <div className="tasks-viewdd-foot">
+                  <button type="button" className="tasks-viewdd-saveas" onClick={() => { setViewMenuOpen(false); openDlg({ kind: 'saveAs' }) }}>
+                    <LuPlus size={13} aria-hidden />
+                    另存为视图
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
+          </div>
+
+          <div className="tasks-toolbar-right">
           <label className="tasks-search-wrap">
             <LuSearch size={14} aria-hidden />
             <input
@@ -1248,10 +1559,60 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
+          {/* 排序按钮（仅图标：字段+升降序在菜单内，位于筛选按钮左侧） */}
+          <div className="tasks-sort-wrap" ref={sortMenuRef}>
+            <button
+              type="button"
+              className={`tasks-sort-btn${sortMenuOpen ? ' is-active' : ''}${sortCustom ? ' is-custom' : ''}`}
+              aria-label="排序"
+              title={`排序：${SORT_FIELD_LABEL[sort.field]}${sort.dir === 'asc' ? ' ↑' : ' ↓'}`}
+              aria-haspopup="menu"
+              aria-expanded={sortMenuOpen}
+              onClick={() => setSortMenuOpen((v) => !v)}
+            >
+              <LuArrowUpDown size={14} aria-hidden />
+              {sortCustom ? <span className="tasks-sort-dot" aria-hidden /> : null}
+            </button>
+            {sortMenuOpen ? (
+              <div className="tasks-sort-menu" role="menu">
+                <div className="tasks-sort-head">排序依据</div>
+                {(
+                  [
+                    ['status', '状态'],
+                    ['priority', '优先级'],
+                    ['due', '截止时间'],
+                    ['updated', '最近更新'],
+                    ['created', '创建时间'],
+                  ] as const
+                ).map(([field, label]) => {
+                  const isCurrent = sort.field === field
+                  const stateIcon = isCurrent
+                    ? sort.dir === 'asc'
+                      ? <LuArrowUp size={13} aria-hidden />
+                      : <LuArrowDown size={13} aria-hidden />
+                    : null
+                  return (
+                    <button
+                      key={field}
+                      type="button"
+                      className={`tasks-sort-item${isCurrent ? ' is-active' : ''}`}
+                      role="menuitemradio"
+                      aria-checked={isCurrent}
+                      title={isCurrent ? (sort.dir === 'asc' ? '当前升序，点击切为降序' : '当前降序，点击还原默认') : `按「${label}」升序排序`}
+                      onClick={() => cycleSort(field)}
+                    >
+                      <span className="tasks-sort-item-label">{label}</span>
+                      <span className={`tasks-sort-item-icon${isCurrent ? ' is-on' : ''}`}>{stateIcon}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
+          </div>
           <div className="tasks-filter-btn-wrap" ref={filterRef}>
             <button
               type="button"
-              className={`tasks-refresh tasks-rbar-btn${filterOpen ? ' is-active' : ''}${projectFilter || tagFilter.length || timeFilter ? ' is-active' : ''}`}
+              className={`tasks-refresh tasks-rbar-btn${filterOpen ? ' is-active' : ''}${filterActive ? ' is-active' : ''}`}
               aria-label="筛选任务"
               title="筛选"
               aria-haspopup="menu"
@@ -1259,7 +1620,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
               onClick={() => setFilterOpen((v) => !v)}
             >
               <LuSlidersHorizontal size={14} aria-hidden />
-              {(projectFilter || tagFilter.length || timeFilter) ? <span className="tasks-filter-dot" aria-hidden /> : null}
+              {filterActive ? <span className="tasks-filter-dot" aria-hidden /> : null}
             </button>
             {filterOpen ? (
               <div className="tasks-filter-menu" role="menu">
@@ -1269,7 +1630,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
                     className="tasks-filter"
                     aria-label="按项目筛选"
                     value={projectFilter}
-                    onChange={(e) => setProjectFilter(e.target.value)}
+                    onChange={(e) => patchFilter({ project: e.target.value })}
                   >
                     <option value="">全部项目</option>
                     {allProjects.map((p) => (
@@ -1285,7 +1646,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
                     className="tasks-filter"
                     aria-label="按标签筛选"
                     value={tagFilter[0] ?? ''}
-                    onChange={(e) => setTagFilter(e.target.value ? [e.target.value] : [])}
+                    onChange={(e) => patchFilter({ tags: e.target.value ? [e.target.value] : [] })}
                   >
                     <option value="">全部标签</option>
                     {allTags.map((t) => (
@@ -1301,7 +1662,7 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
                     className="tasks-filter"
                     aria-label="按时间筛选"
                     value={timeFilter}
-                    onChange={(e) => setTimeFilter(e.target.value)}
+                    onChange={(e) => patchFilter({ time: e.target.value })}
                   >
                     <option value="">全部时间</option>
                     <option value="1h">最近 1 小时</option>
@@ -1310,11 +1671,11 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
                     <option value="30d">最近 30 天</option>
                   </select>
                 </label>
-                {(projectFilter || tagFilter.length || timeFilter) ? (
+                {filterActive ? (
                   <button
                     type="button"
                     className="tasks-filter-clear"
-                    onClick={() => { setProjectFilter(''); setTagFilter([]); setTimeFilter(''); }}
+                    onClick={() => patchFilter({ project: '', tags: [], time: '' })}
                   >
                     清除筛选
                   </button>
@@ -1331,14 +1692,15 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
           >
             <LuLoaderCircle size={14} aria-hidden />
           </button>
+          </div>
         </div>
 
         {error ? <div className="tasks-error">{error}</div> : null}
         {loading && tasks.length === 0 ? <div className="tasks-empty">加载中…</div> : null}
 
-        {view === 'queue' ? (
+        {mode === 'queue' ? (
           <TasksQueue
-            tasks={filteredTasks}
+            tasks={sortedTasks}
             detailId={detailId}
             onOpenDetail={setDetailId}
             onUpdate={onUpdate}
@@ -1346,9 +1708,9 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
             agents={agents}
             agentsLoading={agentsLoading}
           />
-        ) : view === 'board' ? (
+        ) : mode === 'board' ? (
           <TasksBoard
-            tasks={filteredTasks}
+            tasks={sortedTasks}
             detailId={detailId}
             onOpenDetail={setDetailId}
             onUpdate={onUpdate}
@@ -1356,11 +1718,11 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
             agents={agents}
             agentsLoading={agentsLoading}
           />
-        ) : view === 'graph' ? (
-          <TasksGraph tasks={filteredTasks} onOpenDetail={setDetailId} detailId={detailId} compact={compact} />
+        ) : mode === 'graph' ? (
+          <TasksGraph tasks={sortedTasks} onOpenDetail={setDetailId} detailId={detailId} compact={compact} />
         ) : (
           <TasksTable
-            tasks={filteredTasks}
+            tasks={sortedTasks}
             detailId={detailId}
             onOpenDetail={setDetailId}
             onUpdate={onUpdate}
@@ -1389,12 +1751,63 @@ function TasksWorkspace({ compact = false }: { compact?: boolean }) {
         />
         </div>
       ) : null}
+
+      {/* 视图对话框：另存为 / 重命名 / 删除确认（自绘，替代系统 prompt/confirm/alert） */}
+      {dlg ? (
+        <div
+          className="tasks-viewdlg-backdrop"
+          onMouseDown={(e) => { if (e.target === e.currentTarget && !dlgBusy) setDlg(null) }}
+        >
+          <div className="tasks-viewdlg" role="dialog" aria-modal="true" aria-label={dlg.kind === 'delete' ? '删除视图' : dlg.kind === 'rename' ? '重命名视图' : '另存为视图'}>
+            <div className="tasks-viewdlg-title">
+              {dlg.kind === 'delete' ? '删除视图' : dlg.kind === 'rename' ? '重命名视图' : '另存为视图'}
+            </div>
+            {dlg.kind === 'delete' ? (
+              <div className="tasks-viewdlg-body">
+                <p>确定删除视图「{dlg.view.name}」？删除后不可恢复。</p>
+              </div>
+            ) : (
+              <div className="tasks-viewdlg-body">
+                <input
+                  ref={dlgInputRef}
+                  className="tasks-viewdlg-input"
+                  value={dlgName}
+                  placeholder="视图名称"
+                  maxLength={80}
+                  disabled={dlgBusy}
+                  onChange={(e) => { setDlgName(e.target.value); if (dlgError) setDlgError('') }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') void submitDlg() }}
+                />
+                {dlgError ? <div className="tasks-viewdlg-error">{dlgError}</div> : null}
+              </div>
+            )}
+            <div className="tasks-viewdlg-actions">
+              <button
+                type="button"
+                className="tasks-viewdlg-cancel"
+                disabled={dlgBusy}
+                onClick={() => setDlg(null)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className={`tasks-viewdlg-ok${dlg.kind === 'delete' ? ' is-danger' : ''}`}
+                disabled={dlgBusy}
+                onClick={() => void submitDlg()}
+              >
+                {dlgBusy ? '处理中…' : dlg.kind === 'delete' ? '删除' : dlg.kind === 'rename' ? '保存' : '创建'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
 
 // 树的 DFS 排序：父在前、子随其后；collapsed 决定是否深入展开子树（默认全展开）
-function buildTreeRows(tasks: Task[], collapsed: Record<string, boolean>): Task[] {
+export function buildTreeRows(tasks: Task[], collapsed: Record<string, boolean>): Task[] {
   const children = new Map<string, Task[]>()
   for (const t of tasks) {
     const p = t.parentId ?? ''
@@ -1403,7 +1816,8 @@ function buildTreeRows(tasks: Task[], collapsed: Record<string, boolean>): Task[
   }
   const out: Task[] = []
   const visit = (parentKey: string) => {
-    const list = (children.get(parentKey) ?? []).sort((a, b) => a.sort - b.sort)
+    // 同级兄弟保持传入顺序（已是排序后的顺序），树结构不变
+    const list = children.get(parentKey) ?? []
     for (const t of list) {
       out.push(t)
       if (!collapsed[t.id]) visit(t.id)
@@ -1433,12 +1847,10 @@ const QUEUE_GROUPS: { key: QueueKey; label: string; icon: ReactNode }[] = [
  * 队列视图仅展示叶节点，并按状态分组排序。
  * 时间排序：同一状态内用 scheduledAt/dueAt (若有) 优先，否则回退 createdAt（无稳定 dueAt 的用创建时间保证稳定可辨序）。
  */
-function buildQueueRows(tasks: Task[]): Task[] {
+export function buildQueueRows(tasks: Task[]): Task[] {
   const childSet = new Set<string>()
   for (const t of tasks) if (t.parentId) childSet.add(t.parentId)
   const leafs = tasks.filter((t) => !childSet.has(t.id))
-  // 时间排序：最近优先（时间倒序，最新任务排最前）。dueAt(若有) 优先，否则 createdAt。
-  const timeKey = (t: Task): number => t.dueAt ?? t.createdAt
   const colOf = (t: Task): QueueKey => (isOverdue(t) ? 'overdue' : t.blocked ? 'blocked' : (t.status === 'done' ? 'done' : (t.status === 'doing' ? 'doing' : 'todo')))
   const group = new Map<QueueKey, Task[]>()
   for (const t of leafs) {
@@ -1448,9 +1860,8 @@ function buildQueueRows(tasks: Task[]): Task[] {
   }
   const out: Task[] = []
   for (const { key } of QUEUE_GROUPS) {
-    const list = group.get(key) ?? []
-    list.sort((a, b) => timeKey(b) - timeKey(a) || b.sort - a.sort)
-    out.push(...list)
+    // 组内保持传入顺序（已是按视图排序后的顺序），仅按状态分组
+    out.push(...(group.get(key) ?? []))
   }
   return out
 }
@@ -1747,11 +2158,7 @@ function TasksQueue({
       const k = colOf(t)
       ;(map[k] ??= []).push(t)
     }
-    // 组内时间排序：最近优先（时间倒序），dueAt(若有)优先，否则 createdAt
-    const timeKey = (a: Task) => a.dueAt ?? a.createdAt
-    for (const k of Object.keys(map)) {
-      map[k]!.sort((a, b) => timeKey(b) - timeKey(a) || b.sort - a.sort)
-    }
+    // 组内保持传入顺序（tasks 已是按视图排序后的 sortedTasks），仅按状态分组。
     return map
   }, [tasks, childSet])
 
@@ -1883,8 +2290,9 @@ function TasksTable({
     const out: Task[] = []
     // parentKey: 父任务 id（'' = 根）。
     // 父被折叠时：它的整棵子树（含直接子）都不渲染，只保留父自身。
+    // 同级兄弟保持传入顺序（tasks 已是按视图排序后的 sortedTasks），树结构不变。
     const visit = (parentKey: string) => {
-      const list = (children.get(parentKey) ?? []).sort((a, b) => a.sort - b.sort)
+      const list = children.get(parentKey) ?? []
       for (const t of list) {
         out.push(t)
         // 只有该子节点自身没被折叠，才继续深入它的子树
@@ -2973,15 +3381,17 @@ if (typeof document !== 'undefined') {
 .tasks-root.is-compact { flex-direction:column; }
 .tasks-main { display:flex; min-width:0; min-height:0; flex:1; flex-direction:column; gap:10px; padding:12px 14px 14px; overflow:auto; }
 .tasks-root.is-compact .tasks-main { padding:8px 10px 10px; gap:8px; }
-.tasks-toolbar { display:flex; gap:6px; align-items:stretch; flex-wrap:wrap; }
+.tasks-toolbar { display:flex; gap:12px; align-items:center; justify-content:space-between; }
+.tasks-toolbar-left { display:flex; align-items:center; gap:6px; flex:none; min-width:0; }
+.tasks-toolbar-right { display:flex; align-items:center; gap:6px; flex:none; margin-left:auto; }
 .tasks-search { min-width:0; border:1px solid var(--dsw-border); border-radius:8px; padding:6px 8px; background:var(--dsw-input); color:var(--dsw-label); font:inherit; font-size:12px; outline:none; }
-.tasks-search-wrap { flex:0 1 180px; margin-left:auto; display:flex; align-items:center; gap:6px; border:1px solid var(--dsw-border); border-radius:8px; padding:0 8px; background:var(--dsw-input); color:var(--dsw-label-3); min-width:0; }
+.tasks-search-wrap { flex:0 1 180px; display:flex; align-items:center; gap:6px; border:1px solid var(--dsw-border); border-radius:8px; padding:0 8px; background:var(--dsw-input); color:var(--dsw-label-3); min-width:0; }
 .tasks-refresh { display:inline-flex; align-items:center; justify-content:center; flex:none; width:28px; height:26px; border:1px solid var(--dsw-border); border-radius:8px; padding:0; background:var(--dsw-input); color:var(--dsw-label-2); font:inherit; cursor:pointer; }
 .tasks-refresh:hover { background:var(--dsw-hover); }
 .tasks-refresh.is-active { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 10%, var(--dsw-input)); }
 .tasks-filter-btn-wrap { position:relative; display:inline-flex; flex:none; }
 .tasks-filter-btn-wrap .tasks-refresh { position:relative; }
-.tasks-filter-dot { position:absolute; top:4px; right:4px; width:5px; height:5px; border-radius:50%; background:var(--dsw-business); box-shadow:0 0 0 1px var(--dsw-surface); }
+.tasks-filter-dot, .tasks-sort-dot { position:absolute; top:4px; right:4px; width:5px; height:5px; border-radius:50%; background:var(--dsw-business); box-shadow:0 0 0 1px var(--dsw-surface); }
 .tasks-filter-menu { position:absolute; top:calc(100% + 6px); right:0; z-index:40; min-width:180px; padding:8px; background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:8px; }
 .tasks-filter-menu-label { display:flex; flex-direction:column; gap:4px; font-size:10.5px; font-weight:600; color:var(--dsw-label-3); }
 .tasks-filter-menu-label .tasks-filter { width:100%; max-width:none; }
@@ -2993,6 +3403,62 @@ if (typeof document !== 'undefined') {
 .tasks-viewtab { display:inline-flex; align-items:center; gap:4px; border:0; border-radius:6px; padding:4px 8px; background:transparent; color:var(--dsw-label-2); font:inherit; font-size:11px; font-weight:600; cursor:pointer; }
 .tasks-viewtab:hover { background:var(--dsw-hover); }
 .tasks-viewtab.is-active { background:var(--dsw-business); color:var(--dsw-bg); }
+
+/* ---- 视图下拉（Notion 数据库左上角风格）---- */
+.tasks-viewdd-wrap { position:relative; display:inline-flex; align-items:center; gap:6px; flex:none; }
+.tasks-viewdd-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--dsw-border); border-radius:8px; padding:5px 9px; background:var(--dsw-input); color:var(--dsw-label); font:inherit; font-size:12px; font-weight:650; cursor:pointer; transition:background .12s ease, border-color .12s ease; }
+.tasks-viewdd-btn:hover { background:var(--dsw-hover); }
+.tasks-viewdd-btn.is-active { border-color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 10%, var(--dsw-input)); }
+.tasks-viewdd-name { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tasks-viewdd-menu { position:absolute; top:calc(100% + 6px); left:0; z-index:40; min-width:230px; padding:6px; background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:2px; }
+.tasks-viewdd-head { padding:5px 8px 3px; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--dsw-label-3); }
+.tasks-viewdd-item { display:flex; align-items:center; gap:2px; border-radius:7px; }
+.tasks-viewdd-item:hover { background:var(--dsw-hover); }
+.tasks-viewdd-item.is-active { background:color-mix(in srgb, var(--dsw-business) 10%, transparent); }
+.tasks-viewdd-item-main { flex:1; display:inline-flex; align-items:center; gap:7px; min-width:0; border:0; border-radius:7px; padding:6px 8px; background:transparent; color:var(--dsw-label); font:inherit; font-size:12px; font-weight:550; cursor:pointer; text-align:left; }
+.tasks-viewdd-item.is-active .tasks-viewdd-item-main { color:var(--dsw-business); font-weight:650; }
+.tasks-viewdd-item-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tasks-viewdd-check { flex:none; color:var(--dsw-business); }
+.tasks-viewdd-item-actions { display:none; align-items:center; gap:2px; flex:none; padding-right:4px; }
+.tasks-viewdd-item:hover .tasks-viewdd-item-actions { display:inline-flex; }
+.tasks-viewdd-act { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border:0; border-radius:6px; background:transparent; color:var(--dsw-label-3); cursor:pointer; }
+.tasks-viewdd-act:hover { background:color-mix(in srgb, var(--dsw-muted-fill) 80%, transparent); color:var(--dsw-label); }
+.tasks-viewdd-act.is-danger:hover { background:color-mix(in srgb, var(--dsw-danger) 16%, transparent); color:var(--dsw-danger); }
+.tasks-viewdd-foot { border-top:1px solid var(--dsw-border); margin-top:4px; padding-top:4px; }
+.tasks-viewdd-saveas { width:100%; display:inline-flex; align-items:center; gap:6px; border:0; border-radius:7px; padding:6px 8px; background:transparent; color:var(--dsw-label-2); font:inherit; font-size:11.5px; font-weight:600; cursor:pointer; }
+.tasks-viewdd-saveas:hover { background:var(--dsw-hover); color:var(--dsw-label); }
+
+/* ---- 视图对话框（另存为 / 重命名 / 删除确认，自绘模态）---- */
+.tasks-viewdlg-backdrop { position:fixed; inset:0; z-index:120; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.35); animation:tasks-fade-in .12s ease; }
+.tasks-viewdlg { width:min(360px, calc(100vw - 32px)); background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,.25); padding:16px; display:flex; flex-direction:column; gap:12px; }
+.tasks-viewdlg-title { font-size:14px; font-weight:700; color:var(--dsw-label); }
+.tasks-viewdlg-body { display:flex; flex-direction:column; gap:8px; }
+.tasks-viewdlg-body p { margin:0; font-size:12.5px; line-height:1.6; color:var(--dsw-label-2); }
+.tasks-viewdlg-input { width:100%; box-sizing:border-box; border:1px solid var(--dsw-border); border-radius:8px; padding:8px 10px; background:var(--dsw-input); color:var(--dsw-label); font:inherit; font-size:13px; outline:none; }
+.tasks-viewdlg-input:focus { border-color:var(--dsw-business); }
+.tasks-viewdlg-error { font-size:11.5px; color:var(--dsw-danger); }
+.tasks-viewdlg-actions { display:flex; justify-content:flex-end; gap:8px; }
+.tasks-viewdlg-cancel, .tasks-viewdlg-ok { border:1px solid var(--dsw-border); border-radius:8px; padding:6px 14px; background:transparent; color:var(--dsw-label-2); font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
+.tasks-viewdlg-cancel:hover { background:var(--dsw-hover); }
+.tasks-viewdlg-ok { border-color:var(--dsw-business); background:var(--dsw-business); color:var(--dsw-bg); }
+.tasks-viewdlg-ok.is-danger { border-color:var(--dsw-danger); background:var(--dsw-danger); color:var(--dsw-bg); }
+.tasks-viewdlg-ok:disabled, .tasks-viewdlg-cancel:disabled { opacity:.6; cursor:default; }
+@keyframes tasks-fade-in { from { opacity:0 } to { opacity:1 } }
+
+/* ---- 排序按钮 + 菜单 ---- */
+.tasks-sort-wrap { position:relative; display:inline-flex; flex:none; }
+.tasks-sort-btn { position:relative; display:inline-flex; align-items:center; justify-content:center; width:28px; height:26px; border:1px solid var(--dsw-border); border-radius:8px; padding:0; background:var(--dsw-input); color:var(--dsw-label-2); font:inherit; font-size:11.5px; font-weight:600; cursor:pointer; transition:background .12s ease, border-color .12s ease; }
+.tasks-sort-btn:hover { background:var(--dsw-hover); }
+.tasks-sort-btn.is-custom { color:var(--dsw-business); }
+.tasks-sort-btn.is-active { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 10%, var(--dsw-input)); }
+/* 与筛选菜单 tasks-filter-menu 完全对齐 */
+.tasks-sort-menu { position:absolute; top:calc(100% + 6px); right:0; z-index:40; min-width:180px; padding:8px; background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:8px; }
+.tasks-sort-head { font-size:10.5px; font-weight:600; color:var(--dsw-label-3); }
+.tasks-sort-item { display:inline-flex; align-items:center; justify-content:space-between; gap:8px; border:0; border-radius:7px; padding:6px 8px; background:transparent; color:var(--dsw-label-2); font:inherit; font-size:12px; font-weight:550; cursor:pointer; text-align:left; }
+.tasks-sort-item:hover { background:var(--dsw-hover); }
+.tasks-sort-item.is-active { color:var(--dsw-business); font-weight:650; }
+.tasks-sort-item-icon { display:inline-flex; align-items:center; justify-content:center; width:16px; flex:none; color:var(--dsw-label-3); }
+.tasks-sort-item-icon.is-on { color:var(--dsw-business); }
 
 /* ---- 看板视图（Notion 风格：极轻边框、无重色、悬浮轻阴影）---- */
 .tasks-board { display:grid; grid-template-columns:repeat(5, minmax(190px, 1fr)); gap:10px; margin-top:10px; align-items:start; overflow-x:auto; }

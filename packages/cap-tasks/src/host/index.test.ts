@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from 'cordis'
-import { buildDeliverText, coerceAssigneeArg, computeBlocked, computeBlockedBy, computeNextTriggerAt, computeTurnUsage, defaultTrigger, depsSatisfied, deriveExecution, deriveExecutionFromReports, normalizeTrigger, parseCron, reportBackToCreator, shouldPromptProgress, sumReportUsage, TasksService } from './index.ts'
+import { buildDeliverText, coerceAssigneeArg, computeBlocked, computeBlockedBy, computeNextTriggerAt, computeTurnUsage, defaultTrigger, depsSatisfied, deriveExecution, deriveExecutionFromReports, normalizeTrigger, normalizeViewConfig, parseCron, reportBackToCreator, shouldPromptProgress, sumReportUsage, TasksService } from './index.ts'
 
 test('tasks sqlite crud and status move', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
@@ -699,6 +699,83 @@ test('trigger default state is idle and enabled=false (no auto-trigger for plain
     // source=null（未给 trigger）→ 自动触发不开启
     assert.equal(plain.trigger?.enabled, false)
     assert.equal(plain.trigger?.state, 'idle')
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+// ==================== 视图系统（Notion 风格）测试 ====================
+
+test('task_views: seeds 4 builtin views on first open and normalizes config', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-views-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const views = tasks.listTaskViews()
+    assert.equal(views.length, 4)
+    const names = views.map((v) => v.name)
+    assert.deepEqual(names.sort(), ['依赖', '看板', '表格', '队列'])
+    for (const v of views) assert.equal(v.isBuiltin, true)
+    // 默认排序 = 状态（复合：状态→优先级→截止）
+    assert.deepEqual(views[0].config.sort, { field: 'status', dir: 'asc' })
+
+    // 再开一次不重复 seed
+    const tasks2 = new TasksService(new Context(), path).open()
+    assert.equal(tasks2.listTaskViews().length, 4)
+
+    // 脏配置归一化：非法 mode/field 回退默认
+    const v = tasks.createTaskView({ name: '  我的视图  ', config: { mode: 'gantt' as never, filter: { project: 'biu', tags: ['a', 'a', ' '], time: '99d' }, sort: { field: 'bogus' as never, dir: 'side' as never } } })
+    assert.equal(v.name, '我的视图')
+    assert.equal(v.isBuiltin, false)
+    assert.deepEqual(v.config, {
+      mode: 'table',
+      filter: { project: 'biu', tags: ['a'], time: '' },
+      sort: { field: 'status', dir: 'asc' },
+    })
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('task_views: create / update / delete semantics (builtin cannot be deleted)', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-views-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const v = tasks.createTaskView({
+      name: '高优待办',
+      config: {
+        mode: 'board',
+        filter: { project: '', tags: [], time: '' },
+        sort: { field: 'priority', dir: 'desc' },
+      },
+    })
+    assert.equal(tasks.listTaskViews().length, 5)
+
+    // PATCH 重命名 + 更新配置
+    const updated = tasks.updateTaskView(v.id, {
+      name: '高优看板',
+      config: { mode: 'board', filter: { project: 'biu-harness', tags: ['前端'], time: '7d' }, sort: { field: 'due', dir: 'asc' } },
+    })
+    assert.equal(updated.name, '高优看板')
+    assert.deepEqual(updated.config.filter, { project: 'biu-harness', tags: ['前端'], time: '7d' })
+    assert.deepEqual(updated.config.sort, { field: 'due', dir: 'asc' })
+
+    // 未知视图：update 抛错，delete 返回 false（路由层转 404）
+    assert.throws(() => tasks.updateTaskView('nope', { name: 'x' }), /unknown view/)
+    assert.equal(tasks.deleteTaskView('nope'), false)
+
+    // 删除自定义视图
+    assert.equal(tasks.deleteTaskView(v.id), true)
+    assert.equal(tasks.getTaskView(v.id), undefined)
+    assert.equal(tasks.listTaskViews().length, 4)
+
+    // 内置视图不可删除
+    const builtin = tasks.listTaskViews().find((x) => x.isBuiltin)!
+    assert.throws(() => tasks.deleteTaskView(builtin.id), /builtin view cannot be deleted/)
+    assert.ok(tasks.getTaskView(builtin.id))
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

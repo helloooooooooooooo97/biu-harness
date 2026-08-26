@@ -143,6 +143,90 @@ export type TaskRow = {
   lastReportPromptAt: number | null
 }
 
+
+// ==================== 视图系统（Notion 风格）：task_views 表 + 配置归一化 ====================
+export type TaskViewMode = 'queue' | 'table' | 'board' | 'graph'
+export type TaskViewSortField = 'priority' | 'due' | 'updated' | 'created' | 'status'
+export type TaskViewSortDir = 'asc' | 'desc'
+
+/** 视图筛选（与工具栏筛选对应；time：''=全部 | '1h' | '24h' | '7d' | '30d'） */
+export type TaskViewFilter = {
+  project: string
+  tags: string[]
+  time: string
+}
+
+/** 视图排序：字段 + 升降序。字段为 status 时按「状态 → 优先级 → 截止」复合排序。 */
+export type TaskViewSort = {
+  field: TaskViewSortField
+  dir: TaskViewSortDir
+}
+
+/** 视图 = 一套完整配置：呈现方式 + 筛选 + 排序 */
+export type TaskViewConfig = {
+  mode: TaskViewMode
+  filter: TaskViewFilter
+  sort: TaskViewSort
+}
+
+export type TaskView = {
+  id: string
+  name: string
+  config: TaskViewConfig
+  isBuiltin: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+const VIEW_MODES = new Set<TaskViewMode>(['queue', 'table', 'board', 'graph'])
+const VIEW_SORT_FIELDS = new Set<TaskViewSortField>(['priority', 'due', 'updated', 'created', 'status'])
+const VIEW_SORT_DIRS = new Set<TaskViewSortDir>(['asc', 'desc'])
+const VIEW_TIME_FILTERS = new Set<string>(['', '1h', '24h', '7d', '30d'])
+
+export function defaultViewConfig(): TaskViewConfig {
+  return {
+    mode: 'table',
+    filter: { project: '', tags: [], time: '' },
+    // 默认排序：状态 → 优先级 → 截止（status 为复合排序）
+    sort: { field: 'status', dir: 'asc' },
+  }
+}
+
+/** 归一化视图配置：非法字段回退默认，保证写入 task_views.config_json 的数据结构稳定。 */
+export function normalizeViewConfig(value: unknown): TaskViewConfig {
+  const d = defaultViewConfig()
+  if (!value || typeof value !== 'object') return d
+  const raw = value as Record<string, unknown>
+  const mode = VIEW_MODES.has(raw.mode as TaskViewMode) ? (raw.mode as TaskViewMode) : d.mode
+  const filterRaw = (raw.filter && typeof raw.filter === 'object' ? raw.filter : {}) as Record<string, unknown>
+  const tags = Array.isArray(filterRaw.tags) ? [...new Set(filterRaw.tags.map((t) => String(t).trim()).filter(Boolean))] : []
+  const filter: TaskViewFilter = {
+    project: typeof filterRaw.project === 'string' ? filterRaw.project : '',
+    tags,
+    time: VIEW_TIME_FILTERS.has(String(filterRaw.time ?? '')) ? String(filterRaw.time) : '',
+  }
+  const sortRaw = (raw.sort && typeof raw.sort === 'object' ? raw.sort : {}) as Record<string, unknown>
+  const sort: TaskViewSort = {
+    field: VIEW_SORT_FIELDS.has(sortRaw.field as TaskViewSortField) ? (sortRaw.field as TaskViewSortField) : d.sort.field,
+    dir: VIEW_SORT_DIRS.has(sortRaw.dir as TaskViewSortDir) ? (sortRaw.dir as TaskViewSortDir) : d.sort.dir,
+  }
+  return { mode, filter, sort }
+}
+
+export function normalizeViewName(value: unknown): string {
+  const s = typeof value === 'string' ? value.trim() : ''
+  return s ? s.slice(0, 80) : '未命名视图'
+}
+
+/** 内置 4 个默认视图：首次启动自动 seed，不可删除。 */
+const BUILTIN_VIEWS: Array<{ id: string; name: string; config: TaskViewConfig }> = [
+  { id: 'builtin-queue', name: '队列', config: { ...defaultViewConfig(), mode: 'queue' } },
+  { id: 'builtin-table', name: '表格', config: { ...defaultViewConfig(), mode: 'table' } },
+  { id: 'builtin-board', name: '看板', config: { ...defaultViewConfig(), mode: 'board' } },
+  { id: 'builtin-graph', name: '依赖', config: { ...defaultViewConfig(), mode: 'graph' } },
+]
+
+
 export type TaskCreateInput = {
   title: string
   status?: TaskStatus
@@ -1060,6 +1144,27 @@ export class TasksService extends Service {
         /* already exists */
       }
     }
+    // ---- 视图持久化：task_views 表 + 内置视图首次启动自动 seed ----
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS task_views (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        config_json TEXT NOT NULL,
+        is_builtin INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+    `)
+    const viewCount = (this.db.prepare('SELECT COUNT(*) AS c FROM task_views').get() as { c: number }).c
+    if (!viewCount) {
+      const ts = now()
+      const insertView = this.db.prepare(
+        'INSERT INTO task_views (id, name, config_json, is_builtin, created_at, updated_at) VALUES (?, ?, ?, 1, ?, ?)',
+      )
+      for (const v of BUILTIN_VIEWS) {
+        insertView.run(v.id, v.name, JSON.stringify(v.config), ts, ts)
+      }
+    }
     return this
   }
 
@@ -1312,6 +1417,70 @@ export class TasksService extends Service {
 
   delete(id: string): boolean {
     const result = this.db.prepare('DELETE FROM tasks WHERE id = ?').run(id) as { changes: number }
+    if (result.changes > 0) this.emitChange()
+    return result.changes > 0
+  }
+
+  // ---- 视图（task_views）----
+  private rowToView(row: Record<string, unknown>): TaskView {
+    let config = defaultViewConfig()
+    try {
+      config = normalizeViewConfig(JSON.parse(String(row.config_json ?? '{}')))
+    } catch {
+      /* 脏数据回退默认 */
+    }
+    return {
+      id: String(row.id),
+      name: String(row.name),
+      config,
+      isBuiltin: Number(row.is_builtin) === 1,
+      createdAt: Number(row.created_at ?? 0),
+      updatedAt: Number(row.updated_at ?? 0),
+    }
+  }
+
+  listTaskViews(): TaskView[] {
+    const rows = this.db
+      .prepare('SELECT * FROM task_views ORDER BY is_builtin DESC, created_at ASC, id ASC')
+      .all() as Array<Record<string, unknown>>
+    return rows.map((r) => this.rowToView(r))
+  }
+
+  getTaskView(id: string): TaskView | undefined {
+    const row = this.db.prepare('SELECT * FROM task_views WHERE id = ?').get(id) as Record<string, unknown> | undefined
+    return row ? this.rowToView(row) : undefined
+  }
+
+  createTaskView(input: { name: string; config: TaskViewConfig }): TaskView {
+    const name = normalizeViewName(input.name)
+    const config = normalizeViewConfig(input.config)
+    const id = `view_${now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+    const ts = now()
+    this.db
+      .prepare('INSERT INTO task_views (id, name, config_json, is_builtin, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)')
+      .run(id, name, JSON.stringify(config), ts, ts)
+    this.emitChange()
+    return this.getTaskView(id)!
+  }
+
+  updateTaskView(id: string, patch: { name?: string; config?: TaskViewConfig }): TaskView {
+    const current = this.getTaskView(id)
+    if (!current) throw new Error('unknown view')
+    const name = patch.name !== undefined ? normalizeViewName(patch.name) : current.name
+    const config = patch.config !== undefined ? normalizeViewConfig(patch.config) : current.config
+    this.db
+      .prepare('UPDATE task_views SET name = ?, config_json = ?, updated_at = ? WHERE id = ?')
+      .run(name, JSON.stringify(config), now(), id)
+    this.emitChange()
+    return this.getTaskView(id)!
+  }
+
+  /** 内置视图不可删除；返回是否删除成功。 */
+  deleteTaskView(id: string): boolean {
+    const current = this.getTaskView(id)
+    if (!current) return false
+    if (current.isBuiltin) throw new Error('builtin view cannot be deleted')
+    const result = this.db.prepare('DELETE FROM task_views WHERE id = ?').run(id) as { changes: number }
     if (result.changes > 0) this.emitChange()
     return result.changes > 0
   }
@@ -1919,6 +2088,49 @@ export function apply(ctx: Context) {
         else missing.push(id)
       }
       route.send(200, { ok: true, deleted, missing })
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
+  })
+
+  // ==================== 视图（task_views）REST：Notion 风格视图持久化 ====================
+  // GET    /api/task-views      —— 视图列表
+  // POST   /api/task-views      —— 新建/另存为（body: { name, config }）
+  // PATCH  /api/task-views/:id  —— 重命名/更新配置（body: { name?, config? }）
+  // DELETE /api/task-views/:id  —— 删除（内置视图返回 400）
+  host.http.route('GET', '/api/task-views', async (route) => {
+    route.send(200, { views: tasks.listTaskViews() })
+  })
+
+  host.http.route('POST', '/api/task-views', async (route) => {
+    try {
+      const body = (await route.json()) as { name?: string; config?: TaskViewConfig }
+      const view = tasks.createTaskView({ name: normalizeViewName(body.name), config: normalizeViewConfig(body.config) })
+      route.send(201, { view })
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
+  })
+
+  host.http.route('PATCH', '/api/task-views/:id', async (route) => {
+    try {
+      const body = (await route.json()) as { name?: string; config?: TaskViewConfig }
+      const view = tasks.updateTaskView(route.params.id, {
+        ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.config !== undefined ? { config: body.config } : {}),
+      })
+      route.send(200, { view })
+    } catch (error) {
+      const message = String(error)
+      route.send(message.includes('unknown') ? 404 : 400, { error: message })
+    }
+  })
+
+  host.http.route('DELETE', '/api/task-views/:id', async (route) => {
+    try {
+      const ok = tasks.deleteTaskView(route.params.id)
+      if (!ok) return route.send(404, { error: 'unknown view' })
+      route.send(200, { ok: true })
     } catch (error) {
       route.send(400, { error: String(error) })
     }
