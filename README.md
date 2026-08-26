@@ -33,19 +33,22 @@
 
 ## 产品演示
 
-任务看板是多 Agent 的工作面：同一张卡可以指派给不同 session，依赖会进「阻塞」列，cron / at 写在卡上。
+三张都是同一套工作面：左边一排独立 session，中间调度席说话，右边任务队列。
 
 <p align="center">
-  <img src="docs/demo/tasks-board.gif" alt="任务看板：队列、表格、看板、依赖，以及定时巡检任务详情" width="880" />
+  <img src="docs/demo/task.png" alt="调度席收执行席 task_report，右侧队列同步待办与已完成" width="880" />
 </p>
-<p align="center"><sub>看板 / 表格 / 依赖图，点开「每小时巡检失败任务」看定时触发</sub></p>
-
-Live 调度席和执行席是**不同的 session**，不是一个窗口里的几个角色。
+<p align="center"><sub><code>task.png</code> — 多 Agent 在看板上汇报：chat 里进度回传，队列里待办 / 已完成对得上</sub></p>
 
 <p align="center">
-  <img src="docs/demo/live-sessions.gif" alt="Live 调度席与执行席 session，再回到任务看板" width="880" />
+  <img src="docs/demo/inject.png" alt="Live 调度席向多个执行席异步 inject，本回合派工表显示 usage" width="880" />
 </p>
-<p align="center"><sub>侧栏切换调度席 / 执行席，再回到 Tasks</sub></p>
+<p align="center"><sub><code>inject.png</code> — 一次 inject 点名多个执行席，派工表看谁回了、花了多少 token</sub></p>
+
+<p align="center">
+  <img src="docs/demo/dance.png" alt="Live 调度让一排 mascot 排成爱心" width="880" />
+</p>
+<p align="center"><sub><code>dance.png</code> — 同一批 session 也能一起跳：Live 下令，mascot 在舞台上排成爱心</sub></p>
 
 ---
 
@@ -211,7 +214,7 @@ BIU
 ├── NOTICE.md                  # 第三方角色声明
 ├── docs/
 │   ├── plugin-packages.md     # 包前缀与入口约定
-│   └── demo/                  # README 产品 GIF
+│   └── demo/                  # README 截图：task / inject / dance
 ├── scripts/
 │   └── link-cordis-plugins.mjs
 ├── public/
