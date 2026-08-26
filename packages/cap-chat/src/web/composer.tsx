@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { LuChevronDown, LuPlus } from 'react-icons/lu'
+import { LuChevronDown, LuSettings } from 'react-icons/lu'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
@@ -672,6 +672,19 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
             </button>
             {modelOpen ? (
               <div className="composer-model-menu" role="listbox" aria-label="模型">
+                <div className="composer-model-menu-head">
+                  <span className="composer-model-menu-title">选择模型</span>
+                  <button
+                    type="button"
+                    className="composer-model-settings"
+                    title="模型配置"
+                    aria-label="模型配置"
+                    data-testid="open-model-config"
+                    onClick={openModelConfig}
+                  >
+                    <LuSettings className="size-3.5" />
+                  </button>
+                </div>
                 {(() => {
                   const visible = allModels.filter(
                     (m) => modelProviders?.[m.endpointId] || modelProviders?.[m.provider],
@@ -679,7 +692,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
                   if (!visible.length) {
                     return (
                       <div className="composer-model-empty">
-                        尚未配置可用模型。点击下方「配置模型」添加官方 Key 或第三方。
+                        尚未配置可用模型。点击右上角设置添加官方 Key 或第三方。
                       </div>
                     )
                   }
@@ -728,29 +741,9 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
                     )
                   })
                 })()}
-                <button
-                  type="button"
-                  className="composer-model-config-entry"
-                  data-testid="open-model-config"
-                  onClick={openModelConfig}
-                >
-                  <LuPlus className="size-3.5" />
-                  配置模型
-                </button>
               </div>
             ) : null}
           </div>
-
-          <button
-            type="button"
-            className="composer-model-add"
-            title="配置模型"
-            aria-label="配置模型"
-            data-testid="composer-model-add"
-            onClick={openModelConfig}
-          >
-            <LuPlus className="size-3.5" />
-          </button>
 
           {pending ? (
             <button

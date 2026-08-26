@@ -2353,7 +2353,7 @@ body {
   right: 0;
   bottom: calc(100% + 8px);
   z-index: 9;
-  min-width: 200px;
+  min-width: 220px;
   max-height: min(360px, 50vh);
   overflow-x: hidden;
   overflow-y: auto;
@@ -2361,6 +2361,44 @@ body {
   border-radius: 12px;
   background: color-mix(in srgb, var(--dsw-sidebar) 96%, #000);
   box-shadow: var(--dsw-shadow-lv2);
+}
+
+.composer-model-menu-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 8px 6px 12px;
+  border-bottom: 1px solid var(--dsw-border);
+  background: color-mix(in srgb, var(--dsw-sidebar) 96%, #000);
+}
+
+.composer-model-menu-title {
+  color: var(--dsw-label-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.composer-model-settings {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-label-3);
+  cursor: pointer;
+}
+
+.composer-model-settings:hover {
+  background: var(--dsw-hover-strong);
+  color: var(--dsw-label);
 }
 
 .composer-model-group-label {
@@ -2414,46 +2452,6 @@ body {
   color: var(--dsw-label-3);
   font-size: 11px;
   line-height: 1.5;
-}
-
-.composer-model-config-entry {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: 0;
-  border-top: 1px solid var(--dsw-border);
-  background: transparent;
-  padding: 9px 12px;
-  color: var(--dsw-label-2);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.composer-model-config-entry:hover {
-  background: var(--dsw-hover-strong);
-  color: var(--dsw-business);
-}
-
-.composer-model-add {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  border: 1px dashed var(--dsw-border);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--dsw-label-3);
-  cursor: pointer;
-}
-
-.composer-model-add:hover {
-  border-style: solid;
-  color: var(--dsw-business);
-  background: var(--dsw-hover);
 }
 
 .composer-send,
