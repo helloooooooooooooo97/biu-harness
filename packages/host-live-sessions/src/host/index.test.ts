@@ -333,7 +333,7 @@ test('session_tag add/set/remove/clear on chat session', async () => {
   assert.deepEqual(cleared.tags, [])
 })
 
-test('session_pin pin / unpin / toggle on chat session', async () => {
+test('session_star pin / unpin / toggle on chat session', async () => {
   const ctx = new Context()
   await ctx.plugin(sessionStore, { driver: 'memory' })
   await ctx.plugin(sessions)
@@ -351,26 +351,26 @@ test('session_pin pin / unpin / toggle on chat session', async () => {
   await assert.rejects(
     () =>
       runWithSession(chat.id, () =>
-        ctx.tools.invoke('session_pin', { sessionId: chat.id, pinned: true }, new AbortController().signal),
+        ctx.tools.invoke('session_star', { sessionId: chat.id, pinned: true }, new AbortController().signal),
       ),
     /only available in live/,
   )
 
   // 置顶
   const p1 = (await runWithSession(live.id, () =>
-    ctx.tools.invoke('session_pin', { sessionId: chat.id, pinned: true }, new AbortController().signal),
+    ctx.tools.invoke('session_star', { sessionId: chat.id, pinned: true }, new AbortController().signal),
   )) as { pinned: boolean }
   assert.equal(p1.pinned, true)
 
   // 不传 pinned → 切换为取消置顶
   const p2 = (await runWithSession(live.id, () =>
-    ctx.tools.invoke('session_pin', { sessionId: chat.id }, new AbortController().signal),
+    ctx.tools.invoke('session_star', { sessionId: chat.id }, new AbortController().signal),
   )) as { pinned: boolean }
   assert.equal(p2.pinned, false)
 
   // 显式置顶回来
   await runWithSession(live.id, () =>
-    ctx.tools.invoke('session_pin', { sessionId: chat.id, pinned: true }, new AbortController().signal),
+    ctx.tools.invoke('session_star', { sessionId: chat.id, pinned: true }, new AbortController().signal),
   )
 
   // session_list 能看到 pinned
