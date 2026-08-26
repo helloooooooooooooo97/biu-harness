@@ -133,7 +133,6 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
 
   const defaults = data?.defaults
   const effective = data?.effective
-  const mode = effective?.agentMode ?? data?.agentMode ?? 'standard'
   const sources = data?.sources ?? []
   const tools = data?.tools ?? []
 
@@ -170,7 +169,7 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
           ) : (
             <div className="flex flex-col gap-2.5">
               <p className="m-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
-                未填写的字段使用全局默认（Settings）。此处只覆盖当前 session。
+                名称、提示词和工具只作用于当前 session；未改的字段沿用全局默认。
               </p>
 
               <label className="flex flex-col gap-1 text-[11px] text-[var(--dsw-label-3)]">
@@ -198,53 +197,6 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
                     ;(event.target as HTMLInputElement).blur()
                   }}
                 />
-              </label>
-
-              <label className="flex flex-col gap-1 text-[11px] text-[var(--dsw-label-3)]">
-                <span>Provider · 默认 {defaults?.provider ?? '—'}</span>
-                <select
-                  className={fieldClass}
-                  value={effective?.provider ?? defaults?.provider ?? 'deepseek'}
-                  disabled={busy}
-                  onChange={(event) =>
-                    void patchSessionConfig({ provider: event.target.value as ChatProvider })
-                  }
-                >
-                  <option value="deepseek">deepseek</option>
-                  <option value="openai">openai</option>
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1 text-[11px] text-[var(--dsw-label-3)]">
-                <span>Model · 默认 {defaults?.model ?? '—'}</span>
-                <input
-                  className={fieldClass}
-                  defaultValue={effective?.model ?? ''}
-                  key={`${sessionId}-${effective?.model ?? ''}`}
-                  placeholder={defaults?.model ?? ''}
-                  disabled={busy}
-                  onBlur={(event) => {
-                    const next = event.target.value.trim()
-                    if (next === (data?.config?.model ?? defaults?.model ?? '')) return
-                    void patchSessionConfig({ model: next || defaults?.model || '' })
-                  }}
-                />
-              </label>
-
-              <label className="flex flex-col gap-1 text-[11px] text-[var(--dsw-label-3)]">
-                <span>Agent mode</span>
-                <select
-                  className={fieldClass}
-                  value={mode}
-                  disabled={busy}
-                  data-testid="config-agent-mode"
-                  onChange={(event) =>
-                    void patchSessionConfig({ agentMode: event.target.value as AgentMode })
-                  }
-                >
-                  <option value="standard">standard（全开）</option>
-                  <option value="minimal">minimal（底座 + 勾选）</option>
-                </select>
               </label>
 
               <label className="flex flex-col gap-1 text-[11px] text-[var(--dsw-label-3)]">
