@@ -488,46 +488,46 @@ export function ChatConfig(props?: { onClose?: () => void }) {
     )
   }
 
+  const asDialog = Boolean(props?.onClose)
+
   return (
     <div
-      className={`flex h-full min-h-[460px] flex-col ${props?.onClose ? 'min-h-0' : ''}`}
+      className={
+        asDialog
+          ? 'flex h-[min(640px,calc(100vh-48px))] w-[min(720px,calc(100vw-32px))] flex-col overflow-hidden rounded-[16px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] shadow-2xl'
+          : 'flex h-full min-h-[460px] flex-col overflow-hidden rounded-[12px] border border-[var(--dsw-border)]'
+      }
       data-testid="assistant-config"
+      role={asDialog ? 'dialog' : undefined}
+      aria-modal={asDialog ? true : undefined}
+      aria-label={asDialog ? '模型配置' : undefined}
+      onClick={asDialog ? (e) => e.stopPropagation() : undefined}
     >
-      {props?.onClose ? (
-        <div className="flex shrink-0 items-center justify-between border-b border-[var(--dsw-border)] px-4 py-3">
-          <div>
-            <h2 className="text-[14px] font-semibold text-[var(--dsw-label)]">模型配置</h2>
-            <p className="mt-0.5 text-[11px] text-[var(--dsw-label-3)]">
-              官方 Key / 第三方 URL · 选模型 · 测试连接
-            </p>
-          </div>
-          <button
-            type="button"
-            className="grid size-8 place-items-center rounded-[8px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
-            aria-label="关闭"
-            onClick={props.onClose}
-          >
-            <LuX className="size-4" />
-          </button>
-        </div>
-      ) : null}
-      <div
-        className={`flex min-h-0 flex-1 overflow-hidden ${
-          props?.onClose ? '' : 'rounded-[12px] border border-[var(--dsw-border)]'
-        }`}
-      >
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* 左：Provider 列表 */}
         <aside className="flex w-[200px] shrink-0 flex-col border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
           <div className="border-b border-[var(--dsw-border)] p-2.5">
-            <div className="relative">
-              <LuSearch className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-[var(--dsw-label-3)]" />
-              <input
-                className={`${inputCls} pl-7`}
-                placeholder="搜索…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                aria-label="搜索 Provider"
-              />
+            <div className="flex items-center gap-1.5">
+              <div className="relative min-w-0 flex-1">
+                <LuSearch className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-[var(--dsw-label-3)]" />
+                <input
+                  className={`${inputCls} pl-7`}
+                  placeholder="搜索…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  aria-label="搜索 Provider"
+                />
+              </div>
+              {asDialog ? (
+                <button
+                  type="button"
+                  className="grid size-8 shrink-0 place-items-center rounded-[8px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
+                  aria-label="关闭"
+                  onClick={props?.onClose}
+                >
+                  <LuX className="size-4" />
+                </button>
+              ) : null}
             </div>
           </div>
 
