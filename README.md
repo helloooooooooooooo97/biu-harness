@@ -4,6 +4,8 @@
 
 <h1 align="center">biu-harness</h1>
 
+<p align="center"><b>🧭 天生驾驶者</b></p>
+
 <p align="center">
   <img alt="version" src="https://img.shields.io/badge/version-v0.1.0-blue" />
   <img alt="license" src="https://img.shields.io/github/license/helloooooooooooooo97/biu-harness" />
