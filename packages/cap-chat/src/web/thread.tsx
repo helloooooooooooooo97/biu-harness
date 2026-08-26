@@ -135,7 +135,8 @@ function renderReplyPartList({
   const elements: ReactNode[] = []
   let lastStep: number | undefined
 
-  for (const part of parts) {
+  for (let index = 0; index < parts.length; index += 1) {
+    const part = parts[index]!
     const step = part.step
     if (showSteps && step != null && step !== lastStep) {
       const stat = stepMap.get(step) ?? {
@@ -145,14 +146,14 @@ function renderReplyPartList({
         toolCount: 0,
         messageChars: 0,
       }
-      elements.push(<StepBar key={`step-${step}`} stat={stat} />)
+      elements.push(<StepBar key={`step-${step}@${index}`} stat={stat} />)
       lastStep = step
     }
 
     if (part.kind === 'assistant') {
       const partStreaming = Boolean(part.streaming)
       elements.push(
-        <div key={part.id} className="chat-assistant-body">
+        <div key={`${part.id}@${index}`} className="chat-assistant-body">
           {part.text ? (
             <MarkdownBody text={part.text} streaming={partStreaming} />
           ) : partStreaming ? (
@@ -164,7 +165,7 @@ function renderReplyPartList({
         </div>,
       )
     } else {
-      elements.push(<ToolCard key={part.id} node={part} onInspect={onInspect} />)
+      elements.push(<ToolCard key={`${part.id}@${index}`} node={part} onInspect={onInspect} />)
     }
   }
 

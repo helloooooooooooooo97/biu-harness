@@ -419,3 +419,43 @@ test('reply & step histPct is token-weighted average over all llm.chat usage', (
   assert.equal(reply.steps?.[0]?.histPct, 0.2)
   assert.equal(reply.steps?.[1]?.histPct, 0.8)
 })
+
+test('dedupes repeated tool/call with the same id (no duplicate part keys)', () => {
+  const nodes = projectNodes([
+    { type: 'session/open', version: 1, seq: 0, ts: 1 },
+    { type: 'user/message', text: 'hi', kind: 'wake', seq: 1, ts: 2 },
+    {
+      type: 'tool/call',
+      id: 'call_00_dup',
+      name: 'bash',
+      arguments: '{}',
+      seq: 2,
+      ts: 3,
+    },
+    {
+      type: 'tool/call',
+      id: 'call_00_dup',
+      name: 'bash',
+      arguments: '{"command":"echo"}',
+      seq: 3,
+      ts: 4,
+    },
+    {
+      type: 'tool/result',
+      id: 'call_00_dup',
+      name: 'bash',
+      ok: true,
+      detail: 'ok',
+      seq: 4,
+      ts: 5,
+    },
+  ])
+  const reply = nodes.find((node) => node.kind === 'reply')
+  assert.equal(reply?.kind, 'reply')
+  if (reply?.kind !== 'reply') return
+  const tools = reply.parts.filter((part) => part.kind === 'tool')
+  assert.equal(tools.length, 1)
+  assert.equal(tools[0]?.id, 't-call_00_dup')
+  assert.equal(tools[0]?.kind === 'tool' && tools[0].arguments, '{"command":"echo"}')
+  assert.equal(tools[0]?.kind === 'tool' && tools[0].result?.detail, 'ok')
+})

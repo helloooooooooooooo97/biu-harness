@@ -383,23 +383,15 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       const r = ensureReply(event.seq)
       r.streamingId = null
       if (currentTurn != null) r.streaming = true
-      if (currentStep != null) ensureStepStat(currentStep).toolCount += 1
-      const part: ChatToolPart = {
-        id: `t-${event.id}`,
-        kind: 'tool',
-        callId: event.id,
-        name: event.name,
-        arguments: event.arguments,
-        ...(currentStep != null ? { step: currentStep } : {}),
-      }
-      r.tools.set(event.id, part)
-      r.parts.push(part)
-    } else if (event.type === 'tool/result') {
-      const r = ensureReply(event.seq)
-      if (currentTurn != null) r.streaming = true
       const existing = r.tools.get(event.id)
       if (existing) {
-        const next = { ...existing, result: { ok: event.ok, detail: event.detail } }
+        // 重放 / 重复 tool/call：就地更新，避免 parts 出现相同 key
+        const next: ChatToolPart = {
+          ...existing,
+          name: event.name,
+          arguments: event.arguments,
+          ...(currentStep != null ? { step: currentStep } : {}),
+        }
         r.tools.set(event.id, next)
         const idx = r.parts.findIndex((part) => part.id === existing.id)
         if (idx >= 0) r.parts[idx] = next
@@ -410,12 +402,38 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
           kind: 'tool',
           callId: event.id,
           name: event.name,
+          arguments: event.arguments,
+          ...(currentStep != null ? { step: currentStep } : {}),
+        }
+        r.tools.set(event.id, part)
+        r.parts.push(part)
+      }
+    } else if (event.type === 'tool/result') {
+      const r = ensureReply(event.seq)
+      if (currentTurn != null) r.streaming = true
+      const existing = r.tools.get(event.id)
+      if (existing) {
+        const next = { ...existing, result: { ok: event.ok, detail: event.detail } }
+        r.tools.set(event.id, next)
+        const idx = r.parts.findIndex((part) => part.id === existing.id)
+        if (idx >= 0) r.parts[idx] = next
+      } else {
+        // 仅有 result、未见 call：补一条；若 parts 里已有同 id 则更新
+        const partId = `t-${event.id}`
+        const idx = r.parts.findIndex((part) => part.id === partId)
+        if (currentStep != null && idx < 0) ensureStepStat(currentStep).toolCount += 1
+        const part: ChatToolPart = {
+          id: partId,
+          kind: 'tool',
+          callId: event.id,
+          name: event.name,
           arguments: '',
           result: { ok: event.ok, detail: event.detail },
           ...(currentStep != null ? { step: currentStep } : {}),
         }
         r.tools.set(event.id, part)
-        r.parts.push(part)
+        if (idx >= 0) r.parts[idx] = part
+        else r.parts.push(part)
       }
     } else if (event.type === 'turn/end') {
       flushReply(event.ts, true)
