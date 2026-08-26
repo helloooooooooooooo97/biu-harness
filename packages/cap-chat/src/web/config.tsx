@@ -6,8 +6,8 @@
  * 2. 右侧只编辑当前 Provider：Key / Base URL / 模型列表 / 设为默认
  * 3. 一处保存，不再拆成三块互相抢焦点
  */
-import { useEffect, useMemo, useState } from 'react'
-import { LuCheck, LuLoaderCircle, LuPlus, LuTrash2, LuUnplug, LuX } from 'react-icons/lu'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { LuCheck, LuChevronDown, LuLoaderCircle, LuPlus, LuSearch, LuTrash2, LuUnplug, LuX } from 'react-icons/lu'
 
 type ChatProvider = 'deepseek' | 'openai' | 'anthropic'
 
@@ -96,6 +96,10 @@ export function ChatConfig(props?: { onClose?: () => void }) {
   const [newUrl, setNewUrl] = useState('')
   const [newKey, setNewKey] = useState('')
   const [newProtocol, setNewProtocol] = useState<'openai-compat' | 'anthropic'>('openai-compat')
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerQuery, setPickerQuery] = useState('')
+  const pickerRef = useRef<HTMLDivElement>(null)
+  const pickerInputRef = useRef<HTMLInputElement>(null)
 
   const active = endpoints.find((e) => e.id === activeId)
   const activeModels = useMemo(
@@ -147,6 +151,107 @@ export function ChatConfig(props?: { onClose?: () => void }) {
       ),
     [endpoints, connectedThird],
   )
+
+  const selectedPreset = useMemo(
+    () => (presetId ? presets.find((e) => e.id === presetId) ?? endpoints.find((e) => e.id === presetId) : null),
+    [presetId, presets, endpoints],
+  )
+
+  const filteredPresets = useMemo(() => {
+    const q = pickerQuery.trim().toLowerCase()
+    if (!q) return presets
+    return presets.filter(
+      (e) =>
+        e.label.toLowerCase().includes(q) ||
+        e.id.toLowerCase().includes(q) ||
+        (e.note || '').toLowerCase().includes(q) ||
+        (e.defaultBaseUrl || e.baseUrl || '').toLowerCase().includes(q),
+    )
+  }, [presets, pickerQuery])
+
+  const presetGroups = useMemo(() => {
+    const order = ['relay', 'local', 'official', 'custom'] as const
+    const labels: Record<string, string> = {
+      relay: '中转站',
+      local: '本地',
+      official: '厂商',
+      custom: '其它',
+    }
+    const map = new Map<string, EndpointView[]>()
+    for (const ep of filteredPresets) {
+      const g = ep.group || 'custom'
+      if (!map.has(g)) map.set(g, [])
+      map.get(g)!.push(ep)
+    }
+    return order
+      .filter((g) => map.has(g))
+      .map((g) => ({ id: g, label: labels[g] || g, items: map.get(g)! }))
+  }, [filteredPresets])
+
+  const canCreateFromQuery = useMemo(() => {
+    const q = pickerQuery.trim()
+    if (!q) return false
+    const exact = presets.some((e) => e.label.toLowerCase() === q.toLowerCase() || e.id === q)
+    return !exact
+  }, [pickerQuery, presets])
+
+  useEffect(() => {
+    if (!pickerOpen) return
+    function onDoc(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false)
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setPickerOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [pickerOpen])
+
+  function resetAddForm() {
+    setPresetId('')
+    setNewLabel('')
+    setNewUrl('')
+    setNewKey('')
+    setNewProtocol('openai-compat')
+    setPickerQuery('')
+    setPickerOpen(false)
+  }
+
+  function pickPreset(ep: EndpointView) {
+    setPresetId(ep.id)
+    setNewLabel('')
+    setNewUrl(ep.defaultBaseUrl || ep.baseUrl || '')
+    setPickerQuery('')
+    setPickerOpen(false)
+    setError('')
+  }
+
+  function createCustom(name: string) {
+    const label = name.trim()
+    if (!label) return
+    setPresetId('')
+    setNewLabel(label)
+    setNewUrl('')
+    setPickerQuery('')
+    setPickerOpen(false)
+    setError('')
+  }
+
+  function clearConnectionPick() {
+    setPresetId('')
+    setNewLabel('')
+    setNewUrl('')
+    setPickerQuery('')
+    setPickerOpen(true)
+    requestAnimationFrame(() => pickerInputRef.current?.focus())
+  }
+
   function applyPublic(data: ChatPublicConfig, preferActive?: string) {
     const eps = Array.isArray(data.endpoints) ? data.endpoints : []
     setEndpoints(eps)
@@ -396,10 +501,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
     }
 
     setAdding(false)
-    setPresetId('')
-    setNewLabel('')
-    setNewUrl('')
-    setNewKey('')
+    resetAddForm()
     setStatus('已接入')
   }
 
@@ -535,8 +637,11 @@ export function ChatConfig(props?: { onClose?: () => void }) {
               }`}
               onClick={() => {
                 setAdding(true)
+                resetAddForm()
                 setError('')
                 setStatus('')
+                setPickerOpen(true)
+                requestAnimationFrame(() => pickerInputRef.current?.focus())
               }}
             >
               <LuPlus className="size-3.5" />
@@ -552,80 +657,253 @@ export function ChatConfig(props?: { onClose?: () => void }) {
               <div className="border-b border-[var(--dsw-border)] px-4 py-3">
                 <h3 className="text-[14px] font-semibold text-[var(--dsw-label)]">添加连接</h3>
                 <p className="mt-0.5 text-[11px] text-[var(--dsw-label-3)]">
-                  选中转站预设，或填自定义 Base URL + Token
+                  搜索预设，或输入名称创建自定义连接
                 </p>
               </div>
-              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-3">
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">预设</span>
-                  <select
-                    className={inputCls}
-                    value={presetId}
-                    onChange={(e) => {
-                      const id = e.target.value
-                      setPresetId(id)
-                      const ep = endpoints.find((x) => x.id === id)
-                      if (ep) {
-                        setNewUrl(ep.defaultBaseUrl || ep.baseUrl)
-                        setNewLabel('')
-                      } else {
-                        setNewUrl('')
-                      }
-                    }}
-                  >
-                    <option value="">自定义 URL…</option>
-                    {presets.map((ep) => (
-                      <option key={ep.id} value={ep.id}>
-                        {ep.label}
-                        {ep.note ? ` · ${ep.note}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {!presetId ? (
-                  <>
-                    <label className="flex flex-col gap-1.5">
-                      <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">名称</span>
-                      <input
-                        className={inputCls}
-                        placeholder="My OneAPI"
-                        value={newLabel}
-                        onChange={(e) => setNewLabel(e.target.value)}
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                      <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">协议</span>
-                      <select
-                        className={inputCls}
-                        value={newProtocol}
-                        onChange={(e) => setNewProtocol(e.target.value as 'openai-compat' | 'anthropic')}
+              <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
+                {/* Notion 风格属性行：连接选择 */}
+                <div className="flex items-start gap-3 rounded-[6px] px-2 py-2 hover:bg-[var(--dsw-hover)]">
+                  <div className="w-[72px] shrink-0 pt-[7px] text-[12px] text-[var(--dsw-label-3)]">连接</div>
+                  <div className="relative min-w-0 flex-1" ref={pickerRef}>
+                    {!pickerOpen && (selectedPreset || newLabel.trim()) ? (
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 rounded-[6px] border border-transparent px-2 py-[6px] text-left transition-colors hover:border-[var(--dsw-border)] hover:bg-[var(--dsw-muted-fill)]"
+                        onClick={() => {
+                          setPickerOpen(true)
+                          setPickerQuery(selectedPreset?.label || newLabel || '')
+                          requestAnimationFrame(() => {
+                            pickerInputRef.current?.focus()
+                            pickerInputRef.current?.select()
+                          })
+                        }}
                       >
-                        <option value="openai-compat">OpenAI 兼容</option>
-                        <option value="anthropic">Anthropic Messages</option>
-                      </select>
-                    </label>
-                  </>
+                        <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--dsw-label)]">
+                          {selectedPreset ? selectedPreset.label : newLabel.trim()}
+                        </span>
+                        {!selectedPreset ? (
+                          <span className="shrink-0 rounded-[4px] bg-[var(--dsw-muted-fill)] px-1.5 py-0.5 text-[10px] text-[var(--dsw-label-3)]">
+                            自定义
+                          </span>
+                        ) : null}
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          className="grid size-5 shrink-0 place-items-center rounded-[4px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover-strong)] hover:text-[var(--dsw-label)]"
+                          aria-label="清除"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            clearConnectionPick()
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              clearConnectionPick()
+                            }
+                          }}
+                        >
+                          <LuX className="size-3" />
+                        </span>
+                      </button>
+                    ) : (
+                      <div
+                        className={`flex items-center gap-1.5 rounded-[6px] border px-2 py-[5px] transition-colors ${
+                          pickerOpen
+                            ? 'border-[var(--dsw-label-3)] bg-[var(--dsw-input)] shadow-[0_0_0_1px_var(--dsw-border)]'
+                            : 'border-[var(--dsw-border)] bg-[var(--dsw-input)] hover:border-[var(--dsw-label-3)]'
+                        }`}
+                      >
+                        <LuSearch className="size-3.5 shrink-0 text-[var(--dsw-label-3)]" />
+                        <input
+                          ref={pickerInputRef}
+                          className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--dsw-label)] outline-none placeholder:text-[var(--dsw-label-3)]"
+                          placeholder="搜索或创建连接…"
+                          value={pickerQuery}
+                          onChange={(e) => {
+                            setPickerQuery(e.target.value)
+                            setPickerOpen(true)
+                          }}
+                          onFocus={() => setPickerOpen(true)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              if (filteredPresets.length === 1) {
+                                pickPreset(filteredPresets[0]!)
+                              } else if (canCreateFromQuery) {
+                                createCustom(pickerQuery)
+                              }
+                            }
+                          }}
+                          aria-label="搜索或创建连接"
+                          aria-expanded={pickerOpen}
+                          aria-controls="connection-picker-menu"
+                        />
+                        <LuChevronDown
+                          className={`size-3.5 shrink-0 text-[var(--dsw-label-3)] transition-transform ${
+                            pickerOpen ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </div>
+                    )}
+
+                    {pickerOpen ? (
+                      <div
+                        id="connection-picker-menu"
+                        role="listbox"
+                        className="absolute z-20 mt-1 max-h-[280px] w-full overflow-y-auto rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] py-1 shadow-[var(--dsw-shadow-lv2)]"
+                      >
+                        {presetGroups.length ? (
+                          presetGroups.map((group) => (
+                            <div key={group.id} className="py-1">
+                              <div className="px-2.5 py-1 text-[10px] font-medium tracking-wide text-[var(--dsw-label-3)]">
+                                {group.label}
+                              </div>
+                              {group.items.map((ep) => {
+                                const active = ep.id === presetId
+                                return (
+                                  <button
+                                    key={ep.id}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={active}
+                                    className={`flex w-full items-center gap-2 px-2.5 py-[7px] text-left transition-colors ${
+                                      active
+                                        ? 'bg-[var(--dsw-hover-strong)]'
+                                        : 'hover:bg-[var(--dsw-hover)]'
+                                    }`}
+                                    onClick={() => pickPreset(ep)}
+                                  >
+                                    <span className="min-w-0 flex-1">
+                                      <span className="block truncate text-[13px] text-[var(--dsw-label)]">
+                                        {ep.label}
+                                      </span>
+                                      <span className="block truncate font-mono text-[10px] text-[var(--dsw-label-3)]">
+                                        {ep.note || ep.defaultBaseUrl || ep.baseUrl}
+                                      </span>
+                                    </span>
+                                    {active ? (
+                                      <LuCheck className="size-3.5 shrink-0 text-[var(--dsw-label)]" />
+                                    ) : null}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          ))
+                        ) : !canCreateFromQuery ? (
+                          <div className="px-3 py-4 text-center text-[12px] text-[var(--dsw-label-3)]">
+                            没有匹配的预设
+                          </div>
+                        ) : null}
+
+                        {canCreateFromQuery ? (
+                          <>
+                            {presetGroups.length ? (
+                              <div className="mx-2 my-1 border-t border-[var(--dsw-border)]" />
+                            ) : null}
+                            <button
+                              type="button"
+                              role="option"
+                              className="flex w-full items-center gap-2 px-2.5 py-[8px] text-left hover:bg-[var(--dsw-hover)]"
+                              onClick={() => createCustom(pickerQuery)}
+                            >
+                              <span className="grid size-5 shrink-0 place-items-center rounded-[4px] bg-[var(--dsw-muted-fill)] text-[var(--dsw-label-2)]">
+                                <LuPlus className="size-3" />
+                              </span>
+                              <span className="min-w-0 text-[13px] text-[var(--dsw-label)]">
+                                创建「
+                                <span className="font-medium">{pickerQuery.trim()}</span>
+                                」
+                              </span>
+                            </button>
+                          </>
+                        ) : null}
+
+                        {!pickerQuery.trim() && presets.length > 0 ? (
+                          <>
+                            <div className="mx-2 my-1 border-t border-[var(--dsw-border)]" />
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 px-2.5 py-[8px] text-left hover:bg-[var(--dsw-hover)]"
+                              onClick={() => {
+                                setPickerOpen(false)
+                                setPresetId('')
+                                setNewLabel('')
+                                setNewUrl('')
+                              }}
+                            >
+                              <span className="grid size-5 shrink-0 place-items-center rounded-[4px] bg-[var(--dsw-muted-fill)] text-[var(--dsw-label-2)]">
+                                <LuPlus className="size-3" />
+                              </span>
+                              <span className="text-[13px] text-[var(--dsw-label-2)]">自定义 Base URL…</span>
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                {!selectedPreset ? (
+                  <div className="flex items-center gap-3 rounded-[6px] px-2 py-2 hover:bg-[var(--dsw-hover)]">
+                    <div className="w-[72px] shrink-0 text-[12px] text-[var(--dsw-label-3)]">名称</div>
+                    <input
+                      className="min-w-0 flex-1 rounded-[6px] border border-transparent bg-transparent px-2 py-[6px] text-[13px] text-[var(--dsw-label)] outline-none placeholder:text-[var(--dsw-label-3)] hover:border-[var(--dsw-border)] focus:border-[var(--dsw-label-3)] focus:bg-[var(--dsw-input)]"
+                      placeholder="My OneAPI"
+                      value={newLabel}
+                      onChange={(e) => setNewLabel(e.target.value)}
+                    />
+                  </div>
                 ) : null}
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">Base URL</span>
+
+                {!selectedPreset ? (
+                  <div className="flex items-center gap-3 rounded-[6px] px-2 py-2 hover:bg-[var(--dsw-hover)]">
+                    <div className="w-[72px] shrink-0 text-[12px] text-[var(--dsw-label-3)]">协议</div>
+                    <div className="flex gap-1">
+                      {(
+                        [
+                          { id: 'openai-compat' as const, label: 'OpenAI 兼容' },
+                          { id: 'anthropic' as const, label: 'Anthropic' },
+                        ] as const
+                      ).map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          className={`rounded-[6px] px-2.5 py-[5px] text-[12px] transition-colors ${
+                            newProtocol === opt.id
+                              ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]'
+                              : 'text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label-2)]'
+                          }`}
+                          onClick={() => setNewProtocol(opt.id)}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="flex items-center gap-3 rounded-[6px] px-2 py-2 hover:bg-[var(--dsw-hover)]">
+                  <div className="w-[72px] shrink-0 text-[12px] text-[var(--dsw-label-3)]">Base URL</div>
                   <input
-                    className={inputCls}
+                    className="min-w-0 flex-1 rounded-[6px] border border-transparent bg-transparent px-2 py-[6px] font-mono text-[12px] text-[var(--dsw-label)] outline-none placeholder:font-sans placeholder:text-[var(--dsw-label-3)] hover:border-[var(--dsw-border)] focus:border-[var(--dsw-label-3)] focus:bg-[var(--dsw-input)]"
                     placeholder="https://api.example.com/v1"
                     value={newUrl}
                     onChange={(e) => setNewUrl(e.target.value)}
                   />
-                </label>
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">API Key</span>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-[6px] px-2 py-2 hover:bg-[var(--dsw-hover)]">
+                  <div className="w-[72px] shrink-0 text-[12px] text-[var(--dsw-label-3)]">API Key</div>
                   <input
-                    className={inputCls}
+                    className="min-w-0 flex-1 rounded-[6px] border border-transparent bg-transparent px-2 py-[6px] text-[13px] text-[var(--dsw-label)] outline-none placeholder:text-[var(--dsw-label-3)] hover:border-[var(--dsw-border)] focus:border-[var(--dsw-label-3)] focus:bg-[var(--dsw-input)]"
                     type="password"
                     autoComplete="off"
-                    placeholder="sk-…"
+                    placeholder="sk-…（可选，稍后可补）"
                     value={newKey}
                     onChange={(e) => setNewKey(e.target.value)}
                   />
-                </label>
+                </div>
               </div>
               <div className="flex items-center justify-end gap-2 border-t border-[var(--dsw-border)] px-4 py-2.5">
                 {error ? (
@@ -633,14 +911,17 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                 ) : null}
                 <button
                   type="button"
-                  className="rounded-[8px] px-3 py-[6px] text-[12px] text-[var(--dsw-label-2)] hover:bg-[var(--dsw-hover)]"
-                  onClick={() => setAdding(false)}
+                  className="rounded-[6px] px-3 py-[6px] text-[12px] text-[var(--dsw-label-2)] hover:bg-[var(--dsw-hover)]"
+                  onClick={() => {
+                    setAdding(false)
+                    resetAddForm()
+                  }}
                 >
                   取消
                 </button>
                 <button
                   type="button"
-                  className="rounded-[8px] px-3.5 py-[7px] text-[13px] font-medium text-[var(--dsw-bg)]"
+                  className="rounded-[6px] px-3.5 py-[7px] text-[13px] font-medium text-[var(--dsw-bg)]"
                   style={{ background: 'var(--dsw-business)' }}
                   onClick={() => void onAddConnection()}
                 >
