@@ -41,8 +41,6 @@
   <a href="#许可">许可</a>
 </p>
 
-> **注意：Grok Bot 头像资产可能涉及侵权。** 侧栏所用的机器人外形来自对 xAI Grok Bot 的学习向几何副本（`public/grok-bot/`），**不在 MIT 授权范围内**。可用于克隆与演示；二次分发或商用前请自行评估，或替换为自有角色。详见 [NOTICE.md](NOTICE.md)。
-
 ---
 
 ## 四大设计原则
@@ -346,6 +344,6 @@ export CHAT_MODEL=deepseek-chat # 可选
 
 仓库里 **biu-harness 自己写的代码和文档** 使用 [MIT License](LICENSE)：可以学习、修改、分发，**也可以商用**，保留版权声明和许可文本即可。
 
-**例外：Grok Bot 机器人。** `public/grok-bot/` 里的几何、动画和角色外形 **不是 MIT**。它们改编自对 Grok Bot.app 的学习向抽取，权利属于 xAI 等权利人，继续使用、打包上线或当产品吉祥物，**有商标 / 版权侵权风险**。本项目不授予这部分的任何权利。说明见 [NOTICE.md](NOTICE.md)。
+**例外：Grok Bot 机器人。** `public/grok-bot/` 里的几何、动画和角色外形 **不是 MIT**。它们改编自对 Grok Bot.app 的学习向抽取，权利属于 xAI 等权利人。可用于克隆与演示；二次分发、打包上线或当产品吉祥物前，**有商标 / 版权侵权风险**，请自行评估，或替换为自有角色。本项目不授予这部分的任何权利。说明见 [NOTICE.md](NOTICE.md)。
 
 MIT 软件「按原样」提供，作者不承担质量担保。
