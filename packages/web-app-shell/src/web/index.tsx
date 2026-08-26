@@ -431,7 +431,6 @@ function Shell(props: SlotProps) {
             <ul className="space-y-1 text-sm text-[var(--dsw-label-2)]">
               {[
                 { key: 'plugins', label: 'Plugins' },
-                { key: 'demos', label: 'Demos' },
                 { key: 'routes', label: 'Routes' },
                 { key: 'events', label: 'Events' },
               ].map((item) => (
@@ -465,11 +464,6 @@ function Shell(props: SlotProps) {
             <div className="flex-1 space-y-6 overflow-y-auto px-5 py-4">
               {settingsTab === 'plugins' ? (
                 <section>{props.renderSlot('sidebar')}</section>
-              ) : null}
-              {settingsTab === 'demos' ? (
-                <section>
-                  <div className="space-y-3">{props.renderSlot('demos')}</div>
-                </section>
               ) : null}
               {settingsTab === 'routes' ? (
                 <section>{props.renderSlot('routes')}</section>

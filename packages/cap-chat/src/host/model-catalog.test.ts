@@ -55,7 +55,12 @@ test('official providers ship a rich model catalog', () => {
   const deepseek = LLM_MODEL_CATALOG.filter((m) => m.endpointId === 'deepseek')
   const openai = LLM_MODEL_CATALOG.filter((m) => m.endpointId === 'openai')
   const anthropic = LLM_MODEL_CATALOG.filter((m) => m.endpointId === 'anthropic')
-  assert.ok(deepseek.length >= 5, `deepseek=${deepseek.length}`)
+  assert.ok(deepseek.length >= 3, `deepseek=${deepseek.length}`)
+  assert.ok(deepseek.length <= 3, `deepseek should be flash/pro/vision only, got ${deepseek.length}`)
+  assert.deepEqual(
+    deepseek.map((m) => m.model).sort(),
+    ['deepseek-v4-flash', 'deepseek-v4-flash-vision-exp', 'deepseek-v4-pro'].sort(),
+  )
   assert.ok(openai.length >= 15, `openai=${openai.length}`)
   assert.ok(anthropic.length >= 8, `anthropic=${anthropic.length}`)
   assert.ok(LLM_MODEL_CATALOG.length >= 100, `total=${LLM_MODEL_CATALOG.length}`)

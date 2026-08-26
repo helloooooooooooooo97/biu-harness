@@ -518,13 +518,10 @@ function relayPack(endpointId: string, note?: string): LlmModelDef[] {
 
 /** 官方三家 + 各入口内置模型（尽量全；中转站复用统一模型包）。 */
 export const LLM_MODEL_CATALOG: LlmModelDef[] = [
-  // ── DeepSeek 官方 ──
-  { id: 'deepseek-chat', label: 'DeepSeek Chat', endpointId: 'deepseek', provider: 'deepseek', model: 'deepseek-chat', category: 'flash', note: 'V3 对话', builtin: true },
-  { id: 'deepseek-reasoner', label: 'DeepSeek Reasoner', endpointId: 'deepseek', provider: 'deepseek', model: 'deepseek-reasoner', category: 'pro', note: 'R1 推理', builtin: true },
-  { id: 'deepseek-flash', label: 'DeepSeek Flash', endpointId: 'deepseek', provider: 'deepseek', model: 'deepseek-v4-flash', category: 'flash', note: '快速', builtin: true },
+  // ── DeepSeek 官方（仅 Flash / Pro / Vision）──
+  { id: 'deepseek-flash', label: 'DeepSeek Flash', endpointId: 'deepseek', provider: 'deepseek', model: 'deepseek-v4-flash', category: 'flash', note: '通用 / 快速', builtin: true },
   { id: 'deepseek-pro', label: 'DeepSeek Pro', endpointId: 'deepseek', provider: 'deepseek', model: 'deepseek-v4-pro', category: 'pro', note: '深度推理', builtin: true },
   { id: 'deepseek-flash-vision', label: 'DeepSeek Flash Vision', endpointId: 'deepseek', provider: 'deepseek', model: 'deepseek-v4-flash-vision-exp', category: 'flash', note: '视觉', builtin: true },
-  { id: 'deepseek-coder', label: 'DeepSeek Coder', endpointId: 'deepseek', provider: 'deepseek', model: 'deepseek-coder', category: 'flash', note: '代码', builtin: true },
 
   // ── OpenAI 官方 ──
   { id: 'gpt-4o', label: 'GPT-4o', endpointId: 'openai', provider: 'openai', model: 'gpt-4o', category: 'gpt', note: '通用旗舰', builtin: true },
@@ -709,8 +706,9 @@ export function describeEndpointGroup(group: EndpointGroup): string {
 }
 
 export function defaultModelFor(provider: ChatProvider): string {
+  if (provider === 'deepseek') return 'deepseek-v4-flash'
   const first = LLM_MODEL_CATALOG.find((m) => m.provider === provider && m.endpointId === provider)
-  return first?.model ?? LLM_MODEL_CATALOG.find((m) => m.provider === provider)?.model ?? 'deepseek-chat'
+  return first?.model ?? LLM_MODEL_CATALOG.find((m) => m.provider === provider)?.model ?? 'deepseek-v4-flash'
 }
 
 export function modelsForEndpoint(endpointId: string): LlmModelDef[] {

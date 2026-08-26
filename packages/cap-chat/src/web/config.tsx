@@ -7,7 +7,7 @@
  * 3. 一处保存，不再拆成三块互相抢焦点
  */
 import { useEffect, useMemo, useState } from 'react'
-import { LuCheck, LuLoaderCircle, LuPlus, LuSearch, LuTrash2, LuUnplug } from 'react-icons/lu'
+import { LuCheck, LuLoaderCircle, LuPlus, LuSearch, LuTrash2, LuUnplug, LuX } from 'react-icons/lu'
 
 type ChatProvider = 'deepseek' | 'openai' | 'anthropic'
 
@@ -73,10 +73,10 @@ const inputCls = [
   'placeholder:text-[var(--dsw-label-3)] focus:border-[var(--dsw-business)]',
 ].join(' ')
 
-export function ChatConfig() {
+export function ChatConfig(props?: { onClose?: () => void }) {
   const [activeId, setActiveId] = useState('deepseek')
   const [defaultEndpointId, setDefaultEndpointId] = useState('deepseek')
-  const [defaultModel, setDefaultModel] = useState('deepseek-chat')
+  const [defaultModel, setDefaultModel] = useState('deepseek-v4-flash')
   const [endpoints, setEndpoints] = useState<EndpointView[]>([])
   const [modelCatalog, setModelCatalog] = useState<ModelDef[]>([])
   const [providers, setProviders] = useState<Record<string, ProviderView> | null>(null)
@@ -347,8 +347,12 @@ export function ChatConfig() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ removeCustomModel: id }),
     })
-    if (!res.ok) return
+    if (!res.ok) {
+      setError(`删除模型失败：HTTP ${res.status}`)
+      return
+    }
     applyPublic((await res.json()) as ChatPublicConfig, activeId)
+    setStatus('已删除模型')
   }
 
   async function onAddConnection() {
@@ -413,48 +417,105 @@ export function ChatConfig() {
   }
 
   async function onRemoveConnection(id: string) {
+    if (isOfficial(id)) return
+    setError('')
     const res = await fetch('/api/chat/config', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ removeCustomEndpoint: id }),
     })
-    if (!res.ok) return
-    applyPublic((await res.json()) as ChatPublicConfig)
-    setStatus('已删除')
+    if (!res.ok) {
+      setError(`删除失败：HTTP ${res.status}`)
+      return
+    }
+    applyPublic((await res.json()) as ChatPublicConfig, 'deepseek')
+    setAdding(false)
+    setStatus('已删除连接')
   }
 
-  function providerRow(ep: EndpointView) {
+  /** 凡能「添加」进列表的第三方连接，都可删除（含预设接入与自定义）。 */
+  function canRemoveConnection(ep: EndpointView | undefined): boolean {
+    return Boolean(ep && !isOfficial(ep.id))
+  }
+
+  function providerRow(ep: EndpointView, opts?: { removable?: boolean }) {
     const activeRow = ep.id === activeId && !adding
     const isDef = ep.id === defaultEndpointId
     const ok = ep.configured || providers?.[ep.id]?.configured
+    const removable = opts?.removable ?? canRemoveConnection(ep)
     return (
-      <button
+      <div
         key={ep.id}
-        type="button"
-        className={`flex w-full items-center gap-2 px-3 py-[8px] text-left text-[12px] transition-colors ${
+        className={`group flex w-full items-center gap-0.5 pr-1 ${
           activeRow
             ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
             : 'text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]'
         }`}
-        onClick={() => selectProvider(ep.id)}
       >
-        <span
-          className={`size-1.5 shrink-0 rounded-full ${
-            ok ? 'bg-[var(--dsw-ok)]' : 'bg-[var(--dsw-label-3)] opacity-35'
-          }`}
-        />
-        <span className="min-w-0 flex-1 truncate font-medium">{ep.label}</span>
-        {isDef ? (
-          <span className="shrink-0 text-[9px] font-semibold tracking-wide opacity-70">默认</span>
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-2 px-3 py-[8px] text-left text-[12px] transition-colors"
+          onClick={() => selectProvider(ep.id)}
+        >
+          <span
+            className={`size-1.5 shrink-0 rounded-full ${
+              ok ? 'bg-[var(--dsw-ok)]' : 'bg-[var(--dsw-label-3)] opacity-35'
+            }`}
+          />
+          <span className="min-w-0 flex-1 truncate font-medium">{ep.label}</span>
+          {isDef ? (
+            <span className="shrink-0 text-[9px] font-semibold tracking-wide opacity-70">默认</span>
+          ) : null}
+          {activeRow && !removable ? <LuCheck className="size-3 shrink-0 opacity-80" /> : null}
+        </button>
+        {removable ? (
+          <button
+            type="button"
+            className={`grid size-7 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] transition-opacity hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-danger,#b42318)] ${
+              activeRow ? 'opacity-100' : 'opacity-50 group-hover:opacity-100 focus:opacity-100'
+            }`}
+            title="删除连接"
+            aria-label={`删除 ${ep.label}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              void onRemoveConnection(ep.id)
+            }}
+          >
+            <LuTrash2 className="size-3" />
+          </button>
         ) : null}
-        {activeRow ? <LuCheck className="size-3 shrink-0 opacity-80" /> : null}
-      </button>
+      </div>
     )
   }
 
   return (
-    <div className="flex h-full min-h-[460px] flex-col" data-testid="assistant-config">
-      <div className="flex min-h-0 flex-1 overflow-hidden rounded-[12px] border border-[var(--dsw-border)]">
+    <div
+      className={`flex h-full min-h-[460px] flex-col ${props?.onClose ? 'min-h-0' : ''}`}
+      data-testid="assistant-config"
+    >
+      {props?.onClose ? (
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--dsw-border)] px-4 py-3">
+          <div>
+            <h2 className="text-[14px] font-semibold text-[var(--dsw-label)]">模型配置</h2>
+            <p className="mt-0.5 text-[11px] text-[var(--dsw-label-3)]">
+              官方 Key / 第三方 URL · 选模型 · 测试连接
+            </p>
+          </div>
+          <button
+            type="button"
+            className="grid size-8 place-items-center rounded-[8px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
+            aria-label="关闭"
+            onClick={props.onClose}
+          >
+            <LuX className="size-4" />
+          </button>
+        </div>
+      ) : null}
+      <div
+        className={`flex min-h-0 flex-1 overflow-hidden ${
+          props?.onClose ? '' : 'rounded-[12px] border border-[var(--dsw-border)]'
+        }`}
+      >
         {/* 左：Provider 列表 */}
         <aside className="flex w-[200px] shrink-0 flex-col border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
           <div className="border-b border-[var(--dsw-border)] p-2.5">
@@ -474,14 +535,14 @@ export function ChatConfig() {
             <div className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
               官方
             </div>
-            {filteredOfficial.map(providerRow)}
+            {filteredOfficial.map((ep) => providerRow(ep, { removable: false }))}
 
             {filteredThird.length > 0 ? (
               <>
                 <div className="px-3 pt-3 pb-1 text-[10px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
                   第三方
                 </div>
-                {filteredThird.map(providerRow)}
+                {filteredThird.map((ep) => providerRow(ep, { removable: true }))}
               </>
             ) : null}
           </div>
@@ -733,8 +794,9 @@ export function ChatConfig() {
                                 <span
                                   role="button"
                                   tabIndex={0}
-                                  className="grid size-6 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:text-[var(--dsw-danger,#b42318)]"
-                                  title="删除"
+                                  className="grid size-6 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-danger,#b42318)]"
+                                  title="删除模型"
+                                  aria-label={`删除 ${m.label}`}
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     void onRemoveModel(m.id)
@@ -785,12 +847,13 @@ export function ChatConfig() {
                   </div>
                 </div>
 
-                {!isOfficial(active.id) && (active.group === 'custom' || !active.builtin) ? (
+                {canRemoveConnection(active) ? (
                   <button
                     type="button"
-                    className="self-start text-[11px] text-[var(--dsw-danger,#b42318)] hover:underline"
+                    className="inline-flex self-start items-center gap-1 text-[11px] text-[var(--dsw-danger,#b42318)] hover:underline"
                     onClick={() => void onRemoveConnection(active.id)}
                   >
+                    <LuTrash2 className="size-3" />
                     删除此连接
                   </button>
                 ) : null}

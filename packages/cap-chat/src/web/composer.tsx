@@ -109,7 +109,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     label: 'DeepSeek Flash',
     provider: 'deepseek',
     endpointId: 'deepseek',
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-flash',
   })
   const [modelBusy, setModelBusy] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
