@@ -2416,16 +2416,37 @@ body {
   line-height: 1.5;
 }
 
-.composer-model-config-entry {
+.composer-model-config-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border: 0;
+  border-bottom: 1px solid var(--dsw-border);
+  background: color-mix(in srgb, var(--dsw-sidebar) 96%, #000);
+  padding: 6px 10px;
+}
+
+.composer-model-config-title {
+  color: var(--dsw-label-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.composer-model-config-entry {
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   border: 0;
-  border-top: 1px solid var(--dsw-border);
   background: transparent;
-  padding: 9px 12px;
+  padding: 2px;
   color: var(--dsw-label-2);
   font-size: 12px;
   font-weight: 500;
