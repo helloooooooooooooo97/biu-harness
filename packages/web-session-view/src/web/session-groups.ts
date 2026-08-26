@@ -143,7 +143,8 @@ export function buildSidebarSections(sessions: SessionListItem[]): SidebarSectio
   }
 
   sections.push({ kind: 'project', label: '项目', groups: groupSessionsByProject(sessions) })
-  sections.push({ kind: 'tag', label: '标签', groups: groupSessionsByTag(sessions) })
+  const tagGroups = groupSessionsByTag(sessions).filter((group) => group.kind === 'tag')
+  if (tagGroups.length) sections.push({ kind: 'tag', label: '标签', groups: tagGroups })
 
   return sections
 }
