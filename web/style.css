@@ -2353,12 +2353,27 @@ body {
   right: 0;
   bottom: calc(100% + 8px);
   z-index: 9;
-  min-width: 180px;
-  overflow: hidden;
+  min-width: 200px;
+  max-height: min(360px, 50vh);
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid var(--dsw-border);
   border-radius: 12px;
   background: color-mix(in srgb, var(--dsw-sidebar) 96%, #000);
   box-shadow: var(--dsw-shadow-lv2);
+}
+
+.composer-model-group-label {
+  padding: 8px 12px 4px;
+  color: var(--dsw-label-3);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.composer-model-group + .composer-model-group {
+  border-top: 1px solid var(--dsw-border);
 }
 
 .composer-model-item {

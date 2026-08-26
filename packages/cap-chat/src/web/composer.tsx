@@ -115,6 +115,8 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   const [allModels, setAllModels] = useState<ModelOption[]>([])
   /** 各入口是否已配置 token（key = endpointId）。 */
   const [modelProviders, setModelProviders] = useState<Record<string, boolean> | null>(null)
+  /** 入口展示名 */
+  const [endpointLabels, setEndpointLabels] = useState<Record<string, string>>({})
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const pending = useSessionView((state) => state.pending)
   const inbox = useSessionView((state) => state.inbox)
@@ -170,7 +172,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           endpointId?: string
           model?: string
           providers?: Record<string, { configured?: boolean }>
-          endpoints?: Array<{ id: string; configured?: boolean }>
+          endpoints?: Array<{ id: string; label?: string; configured?: boolean }>
           modelCatalog?: Array<{
             id: string
             label: string
@@ -200,13 +202,22 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
             setModelOption(matchModelOption([], data.provider, data.model))
           }
           const cfg: Record<string, boolean> = {}
+          const labels: Record<string, string> = {
+            deepseek: 'DeepSeek',
+            anthropic: 'Claude',
+            openai: 'GPT',
+          }
           if (Array.isArray(data.endpoints)) {
-            for (const ep of data.endpoints) cfg[ep.id] = Boolean(ep?.configured)
+            for (const ep of data.endpoints) {
+              cfg[ep.id] = Boolean(ep?.configured)
+              if (ep.label) labels[ep.id] = ep.label
+            }
           }
           if (data.providers) {
             for (const [k, v] of Object.entries(data.providers)) cfg[k] = Boolean(v?.configured)
           }
           if (Object.keys(cfg).length) setModelProviders(cfg)
+          setEndpointLabels(labels)
         },
       )
       .catch(() => {
@@ -586,25 +597,62 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
             </button>
             {modelOpen ? (
               <div className="composer-model-menu" role="listbox" aria-label="模型">
-                {allModels
-                  .filter((m) => modelProviders?.[m.endpointId] || modelProviders?.[m.provider])
-                  .map((option) => (
-                    <button
-                      key={option.id}
-                      type="button"
-                      role="option"
-                      aria-selected={option.id === modelOption.id}
-                      className={`composer-model-item${option.id === modelOption.id ? ' is-active' : ''}`}
-                      onClick={() => void selectModel(option)}
-                    >
-                      <span className="composer-model-item-label">{option.label}</span>
-                      {option.note ? <span className="composer-model-item-note">{option.note}</span> : null}
-                    </button>
-                  ))}
-                {allModels.length === 0 ||
-                !allModels.some((m) => modelProviders?.[m.endpointId] || modelProviders?.[m.provider]) ? (
-                  <div className="composer-model-empty">请在 Settings → 模型与 Token 配置 API Key 后选择模型</div>
-                ) : null}
+                {(() => {
+                  const visible = allModels.filter(
+                    (m) => modelProviders?.[m.endpointId] || modelProviders?.[m.provider],
+                  )
+                  if (!visible.length) {
+                    return (
+                      <div className="composer-model-empty">
+                        请在 Settings → Models 配置官方 API Key，或接入第三方后再选模型
+                      </div>
+                    )
+                  }
+                  // 按入口分组，官方三家优先
+                  const order = ['deepseek', 'anthropic', 'openai']
+                  const groups = new Map<string, typeof visible>()
+                  for (const m of visible) {
+                    const key = m.endpointId || m.provider
+                    if (!groups.has(key)) groups.set(key, [])
+                    groups.get(key)!.push(m)
+                  }
+                  const keys = [
+                    ...order.filter((k) => groups.has(k)),
+                    ...[...groups.keys()].filter((k) => !order.includes(k)),
+                  ]
+                  return keys.map((key) => {
+                    const items = groups.get(key) ?? []
+                    const title =
+                      endpointLabels[key] ||
+                      (key === 'deepseek'
+                        ? 'DeepSeek'
+                        : key === 'anthropic'
+                          ? 'Claude'
+                          : key === 'openai'
+                            ? 'GPT'
+                            : key)
+                    return (
+                      <div key={key} className="composer-model-group">
+                        <div className="composer-model-group-label">{title}</div>
+                        {items.map((option) => (
+                          <button
+                            key={option.id}
+                            type="button"
+                            role="option"
+                            aria-selected={option.id === modelOption.id}
+                            className={`composer-model-item${option.id === modelOption.id ? ' is-active' : ''}`}
+                            onClick={() => void selectModel(option)}
+                          >
+                            <span className="composer-model-item-label">{option.label}</span>
+                            {option.note ? (
+                              <span className="composer-model-item-note">{option.note}</span>
+                            ) : null}
+                          </button>
+                        ))}
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             ) : null}
           </div>
