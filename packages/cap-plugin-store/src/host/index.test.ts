@@ -16,6 +16,27 @@ test('default catalog is repo-root .biu/plugin-catalog', () => {
   assert.equal(dirname(fileURLToPath(import.meta.url)).includes('cap-plugin-store'), true)
 })
 
+test('bundled hello in .biu/plugin-catalog is listable', async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'plugin-store-'))
+  try {
+    const ctx = new Context()
+    ;(ctx as unknown as { hub: unknown }).hub = {
+      async adopt() {},
+      async drop() {},
+      snapshot() {
+        return { plugins: [] }
+      },
+    }
+    const store = new PluginStoreService(ctx, defaultCatalogDir(), dataDir)
+    const hello = (await store.list()).find((item) => item.id === 'store-hello')
+    assert.ok(hello, 'store-hello should ship in .biu/plugin-catalog')
+    assert.equal(hello.installed, false)
+    assert.equal(hello.name, 'Hello')
+  } finally {
+    await rm(dataDir, { recursive: true, force: true })
+  }
+})
+
 test('missing .biu catalog lists no plugins', async () => {
   const catalogDir = join(tmpdir(), `missing-plugin-catalog-${Date.now()}`)
   const dataDir = await mkdtemp(join(tmpdir(), 'plugin-store-'))
