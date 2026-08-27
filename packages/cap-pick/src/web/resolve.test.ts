@@ -1,7 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { resolvePickFromNode } from './resolve.ts'
-import { formatPicks, chipLabel } from './types.ts'
+import { formatPicks, parsePicks, chipLabel } from './types.ts'
 
 test('merges child action onto parent kind/id', () => {
   const card = document.createElement('div')
@@ -38,6 +38,17 @@ test('formatPicks emits data handles only', () => {
   const text = formatPicks([
     { kind: 'session', id: 'abc', label: '聊天', route: '/s/abc' },
   ])
-  assert.equal(text, '<pick kind="session" id="abc" route="/s/abc" />')
+  assert.equal(text, '<pick kind="session" id="abc" route="/s/abc" label="聊天" />')
   assert.doesNotMatch(text, /class=|svg|html/i)
+})
+
+test('parsePicks recovers chips that markdown would strip', () => {
+  const raw = '<pick kind="task" id="t1" action="open" route="/tasks" label="写需求" />\n看这个'
+  const parsed = parsePicks(raw)
+  assert.equal(parsed.refs.length, 1)
+  assert.equal(parsed.refs[0]?.kind, 'task')
+  assert.equal(parsed.refs[0]?.id, 't1')
+  assert.equal(parsed.refs[0]?.action, 'open')
+  assert.equal(parsed.refs[0]?.label, '写需求')
+  assert.equal(parsed.rest, '看这个')
 })

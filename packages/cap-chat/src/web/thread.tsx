@@ -29,6 +29,7 @@ import { SidebarMascot } from '@biu/web-mascot'
 import { StaticMascotMark } from '@biu/web-mascot'
 import { DEFAULT_SESSION_MASCOT, resolveSessionMascot } from '@biu/web-mascot'
 import type { SessionMascotIdentity } from '@biu/web-mascot'
+import { chipLabel, parsePicks, pickKey } from '@biu/cap-pick/web'
 import { MarkdownBody } from './markdown.tsx'
 import { ToolCard } from './tool-card.tsx'
 import { LiveDispatchTable } from './live-dispatch-table.tsx'
@@ -524,6 +525,7 @@ function NodeView({
   const overflows = textLen > 140 || lineHints > 3
 
   if (node.kind === 'user') {
+    const picked = parsePicks(node.text)
     const canExpand = overflows || expanded
     return (
       <div className="flex w-full flex-col gap-0 overflow-hidden rounded-[var(--dsw-radius-bubble)] border border-[var(--dsw-bubble)] bg-[var(--dsw-bg)]">
@@ -535,7 +537,16 @@ function NodeView({
             {node.kindTag === 'inject' ? (
               <div className="mb-1 text-[10px] text-[var(--dsw-label-3)]">inject</div>
             ) : null}
-            <MarkdownBody text={node.text} />
+            {picked.refs.length ? (
+              <div className="user-pick-chips" data-testid="user-pick-chips">
+                {picked.refs.map((ref) => (
+                  <span key={pickKey(ref)} className="user-pick-chip" data-testid="user-pick-chip">
+                    {chipLabel(ref)}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            {picked.rest ? <MarkdownBody text={picked.rest} /> : null}
           </div>
         </div>
         <UserTurnBar

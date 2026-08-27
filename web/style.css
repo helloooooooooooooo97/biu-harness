@@ -2259,6 +2259,12 @@ body {
   border-radius: 16px;
 }
 
+/* 有选取/工具芯片时改成和用户气泡一样的方角，不再保持胶囊 */
+.composer-pill.has-chips,
+.composer-pill.is-expanded.has-chips {
+  border-radius: var(--dsw-radius-bubble);
+}
+
 .composer-pill-row {
   display: flex;
   align-items: center;
@@ -2665,6 +2671,29 @@ body {
 
 .composer-tool-chip:hover {
   color: var(--dsw-business);
+}
+
+.user-pick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.user-pick-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--dsw-border);
+  border-radius: 999px;
+  background: var(--dsw-business-soft);
+  padding: 3px 8px;
+  color: var(--dsw-label-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tool-artifacts {

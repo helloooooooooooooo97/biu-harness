@@ -103,4 +103,27 @@ describe('sticky user message markers', () => {
     expect(reply1?.querySelector('[aria-label="回合操作"]')).toBeTruthy()
     expect(document.querySelectorAll('.chat-reply-bar')).toHaveLength(0)
   })
+
+  it('renders pick handles as chips in the user bubble', () => {
+    const onInspect = vi.fn()
+    const onFork = vi.fn(async () => {})
+    render(
+      <ChatNodeList
+        nodes={[
+          {
+            id: 'u-pick',
+            kind: 'user',
+            text: '<pick kind="task" id="t1" action="open" route="/tasks" label="写需求" />\n处理这个',
+            ts: 1,
+          },
+        ]}
+        onInspect={onInspect}
+        onFork={onFork}
+      />,
+    )
+    const chips = document.querySelectorAll('[data-testid="user-pick-chip"]')
+    expect(chips).toHaveLength(1)
+    expect(chips[0]?.textContent).toBe('写需求 · open')
+    expect(document.querySelector('[data-testid="user-bubble"]')?.textContent).toContain('处理这个')
+  })
 })

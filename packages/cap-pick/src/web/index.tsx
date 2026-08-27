@@ -5,7 +5,7 @@ import { PickOverlay } from './overlay.tsx'
 import { PickToggle } from './toggle.tsx'
 
 export { PickService, usePickState } from './service.ts'
-export { formatPicks, chipLabel, pickKey, type PickRef } from './types.ts'
+export { formatPicks, parsePicks, chipLabel, pickKey, type PickRef } from './types.ts'
 export { resolvePickFromNode, resolvePickAtPoint } from './resolve.ts'
 
 export const name = 'pick-ui'

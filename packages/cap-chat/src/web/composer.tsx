@@ -146,7 +146,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
 
   function syncComposerShape(
     el: HTMLTextAreaElement | null = textareaRef.current,
-    toolsCount = picked.length,
+    toolsCount = picked.length + pickRefs.length,
   ) {
     if (!el) {
       setExpanded(toolsCount > 0)
@@ -583,7 +583,10 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
         </div>
       ) : null}
 
-      <form className={`composer-pill${expanded ? ' is-expanded' : ''}`} onSubmit={onSubmit}>
+      <form
+        className={`composer-pill${expanded ? ' is-expanded' : ''}${pickRefs.length || picked.length ? ' has-chips' : ''}`}
+        onSubmit={onSubmit}
+      >
       {slash?.open ? (
         <div className="composer-slash" role="listbox" aria-label="工具列表">
           <div className="composer-slash-head">工具 · 输入过滤 · Enter 选用</div>

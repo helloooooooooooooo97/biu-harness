@@ -21,4 +21,11 @@ describe('composer dock stacking above sticky user', () => {
     expect(shell).toContain('chat-composer-dock')
     expect(shell).not.toMatch(/bottom-0 z-\[2\]/)
   })
+
+  it('squares the composer when pick chips are present', () => {
+    const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
+    const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
+    expect(composer).toMatch(/has-chips/)
+    expect(css).toMatch(/\.composer-pill\.has-chips[\s\S]*border-radius:\s*var\(--dsw-radius-bubble\)/)
+  })
 })
