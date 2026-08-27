@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, access } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -88,7 +88,8 @@ test('install copies catalog js and adopt; uninstall drops it', async () => {
     await store.uninstall('store-echo')
     assert.deepEqual(dropped, ['store-echo'])
     const after = (await store.list()).find((item) => item.id === 'store-echo')
-    assert.equal(after, undefined)
+    assert.equal(after?.installed, false)
+    await access(join(catalogDir, 'echo', 'host.js'))
   } finally {
     await rm(catalogDir, { recursive: true, force: true })
     await rm(dataDir, { recursive: true, force: true })

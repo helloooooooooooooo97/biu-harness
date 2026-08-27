@@ -115,8 +115,6 @@ export class PluginStoreService {
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
     await this.hub().drop(id)
     await rm(join(this.dataDir, id), { recursive: true, force: true })
-    const catalogHit = await this.findCatalogById(id)
-    if (catalogHit) await rm(catalogHit, { recursive: true, force: true })
     await this.writeIndex()
   }
 
