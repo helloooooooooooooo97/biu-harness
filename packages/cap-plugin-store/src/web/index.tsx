@@ -34,8 +34,7 @@ async function readJson<T>(path: string, init?: RequestInit): Promise<T> {
   return body
 }
 
-function PluginStorePage({ slots, compact = false }: { slots: SlotsService; compact?: boolean }) {
-  const extras = useSlotEntries(slots, 'plugin-store-extras')
+function PluginStorePage({ compact = false }: { compact?: boolean }) {
   const [items, setItems] = useState<StoreListing[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -106,17 +105,6 @@ function PluginStorePage({ slots, compact = false }: { slots: SlotsService; comp
         <p className="mb-4 text-[13px] text-[var(--dsw-danger)]" data-testid="plugin-store-error">
           {error}
         </p>
-      ) : null}
-
-      {extras.length > 0 ? (
-        <div className="mb-5 flex flex-col gap-2">
-          {extras
-            .sort((a, b) => a.order - b.order)
-            .map((entry) => {
-              const Component = entry.Component
-              return <Component key={entry.id} renderSlot={() => null} />
-            })}
-        </div>
       ) : null}
 
       {items.length === 0 && !error ? (
@@ -199,8 +187,29 @@ type AppModulesService = {
 const moduleProps = { moduleId: 'plugins' }
 const inspectorProps = { tabId: 'plugins', tabLabel: '插件', tabIcon: LuPuzzle }
 
-function PluginStoreInspectorPanel({ slots }: { slots: SlotsService }) {
-  return <PluginStorePage slots={slots} compact />
+function PluginStoreInspectorPanel() {
+  return <PluginStorePage compact />
+}
+
+/** 运行中的商店插件 UI 浮层展示，不插入货架列表，避免开启后把卡片整体顶下去。 */
+function PluginStoreExtrasLayer({ slots }: { slots: SlotsService }) {
+  const extras = useSlotEntries(slots, 'plugin-store-extras')
+  if (extras.length === 0) return null
+  return (
+    <div
+      className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center p-6"
+      data-testid="plugin-store-extras"
+    >
+      <div className="pointer-events-auto flex max-h-full flex-col gap-2 overflow-auto">
+        {extras
+          .sort((a, b) => a.order - b.order)
+          .map((entry) => {
+            const Component = entry.Component
+            return <Component key={entry.id} renderSlot={() => null} />
+          })}
+      </div>
+    </div>
+  )
 }
 
 export function apply(ctx: Context) {
@@ -219,14 +228,19 @@ export function apply(ctx: Context) {
   slots.place('app-modules', PluginStorePage, {
     key: 'plugin-store-module',
     order: 30,
-    props: () => ({ ...moduleProps, slots }),
-    children: {
-      'plugin-store-extras': { kind: 'list' },
-    },
+    props: () => moduleProps,
   })
   slots.place('inspector-panels', PluginStoreInspectorPanel, {
     key: 'plugin-store-inspector',
     order: 11,
-    props: () => ({ ...inspectorProps, slots }),
+    props: () => inspectorProps,
+  })
+  slots.place('root-overlays', PluginStoreExtrasLayer, {
+    key: 'plugin-store-extras-layer',
+    order: 20,
+    props: () => ({ slots }),
+    children: {
+      'plugin-store-extras': { kind: 'list' },
+    },
   })
 }
