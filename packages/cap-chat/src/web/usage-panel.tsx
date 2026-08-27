@@ -4,6 +4,7 @@ import { EventDetailBody } from './trajectory.tsx'
 import { type SessionViewService } from '@biu/web-session-view'
 import type { DerivedMessage, SessionEvent } from '@biu/web-session-view'
 import type { UsageTrend, UsageTrendPoint } from '@biu/web-session-view'
+import { pickDomAttrs } from '@biu/cap-pick/web'
 
 export interface UsagePanelProps {
   useSessionView: <T>(selector: (state: unknown) => T) => T
@@ -258,6 +259,7 @@ interface EChartsOption {
 
 /** 侧边栏用量面板：Input/Output 各自独立 Y 轴，展示 Step 用量与回合用量。 */
 export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
+  const sessionId = useSessionView((state: { sessionId?: string }) => state.sessionId)
   const [trend, setTrend] = useUsageTrend(useSessionView, sessionView)
 
   const track = useMemo(() => splitTrendData(trend?.points ?? []), [trend])
@@ -334,7 +336,11 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
   }
 
   return (
-    <div className="usage-panel" data-testid="usage-panel">
+    <div
+      className="usage-panel"
+      data-testid="usage-panel"
+      {...(sessionId ? pickDomAttrs('usage', sessionId, 'Token usage') : {})}
+    >
       <div className="usage-panel-head">
         <div className="usage-panel-title">
           <span className="usage-panel-title-icon" aria-hidden>
@@ -360,7 +366,10 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
 
       {trend && trend.points.length > 0 ? (
         <>
-          <div className="usage-panel-section">
+          <div
+            className="usage-panel-section"
+            {...(sessionId ? pickDomAttrs('usage', `${sessionId}:steps`, 'Step Token Usage') : {})}
+          >
             <div className="usage-panel-section-title">
               Step Token Usage
               <span className="usage-panel-section-hint">{trend.points.length} calls</span>
@@ -380,7 +389,10 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
             />
           </div>
 
-          <div className="usage-panel-section">
+          <div
+            className="usage-panel-section"
+            {...(sessionId ? pickDomAttrs('usage', `${sessionId}:turns`, 'Turn Token Usage') : {})}
+          >
             <div className="usage-panel-section-title">
               Turn Token Usage
               <span className="usage-panel-section-hint">{turns.length} turns</span>
@@ -399,7 +411,10 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
             />
           </div>
 
-          <div className="usage-panel-section">
+          <div
+            className="usage-panel-section"
+            {...(sessionId ? pickDomAttrs('usage', `${sessionId}:steps-per-turn`, 'Steps per Turn') : {})}
+          >
             <div className="usage-panel-section-title">
               Steps per Turn
               <span className="usage-panel-section-hint">每回合 step 数</span>

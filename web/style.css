@@ -195,7 +195,17 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  border-bottom: 1px solid var(--dsw-border);
+  border-bottom: 0;
+  padding: 0 12px;
+}
+
+.app-side-bar-head {
+  display: flex;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 0 12px;
 }
 
