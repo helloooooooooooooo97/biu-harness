@@ -33,8 +33,8 @@
   /* Hairline-first depth (Cursor prefers border rings over heavy elevation) */
   --dsw-shadow-lv2: 0 0 0 1px rgba(242, 241, 237, 0.06), 0 8px 24px rgba(0, 0, 0, 0.35);
   --dsw-chat-width: 748px;
-  /* 中间对话默认正文字号 */
-  --dsw-chat-font-size: 16px;
+  /* 右侧对话正文字号 */
+  --dsw-chat-font-size: 13px;
   --dsw-chat-line-height: 1.6;
   --dsw-chat-composer-font-size: 13px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
