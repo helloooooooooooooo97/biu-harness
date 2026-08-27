@@ -25,6 +25,10 @@
   --dsw-danger: #cf2d56;
   --dsw-danger-soft: rgba(207, 45, 86, 0.14);
   --dsw-ok: #1f8a65;
+  /* Notion-like selection wash（框选 / 指针所在块） */
+  --dsw-pick: #2383e2;
+  --dsw-pick-fill: rgba(35, 131, 226, 0.18);
+  --dsw-pick-stroke: rgba(35, 131, 226, 0.4);
   --dsw-hover: rgba(242, 241, 237, 0.06);
   --dsw-hover-strong: rgba(242, 241, 237, 0.1);
   --dsw-muted-fill: rgba(242, 241, 237, 0.04);
@@ -2822,14 +2826,14 @@ html.pick-mode * {
   z-index: 9998;
   box-sizing: border-box;
   pointer-events: none;
-  border: 1px solid var(--dsw-business);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--dsw-business) 10%, transparent);
+  border: 1px solid var(--dsw-pick-stroke);
+  border-radius: 3px;
+  background: var(--dsw-pick-fill);
 }
 
 .pick-overlay-marquee {
   z-index: 9997;
-  border-style: dashed;
   border-radius: 2px;
-  background: color-mix(in srgb, var(--dsw-business) 8%, transparent);
+  border-color: var(--dsw-pick);
+  background: var(--dsw-pick-fill);
 }

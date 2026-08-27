@@ -124,7 +124,7 @@ export function PickOverlay({ pick }: { pick: PickService }) {
       {(marquee ? marqueeHits : hover ? [hover] : []).map((box, index) => (
         <div
           key={`${box.left}-${box.top}-${index}`}
-          className="pick-overlay-box"
+          className="pick-overlay-box pick-overlay-hit"
           data-biu-ignore
           style={{
             top: box.top,

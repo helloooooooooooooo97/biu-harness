@@ -28,4 +28,12 @@ describe('composer dock stacking above sticky user', () => {
     expect(composer).toMatch(/has-chips/)
     expect(css).toMatch(/\.composer-pill\.has-chips[\s\S]*border-radius:\s*var\(--dsw-radius-bubble\)/)
   })
+
+  it('uses Notion-like translucent blue for pick hover and marquee', () => {
+    const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
+    expect(css).toMatch(/--dsw-pick-fill:\s*rgba\(35,\s*131,\s*226/)
+    expect(css).toMatch(/\.pick-overlay-box[\s\S]*background:\s*var\(--dsw-pick-fill\)/)
+    expect(css).toMatch(/\.pick-overlay-marquee[\s\S]*background:\s*var\(--dsw-pick-fill\)/)
+    expect(css).not.toMatch(/\.pick-overlay-marquee\s*\{[^}]*border-style:\s*dashed/s)
+  })
 })
