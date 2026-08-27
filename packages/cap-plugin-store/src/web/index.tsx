@@ -38,6 +38,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
   const [items, setItems] = useState<StoreListing[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  const [pendingUninstall, setPendingUninstall] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     try {
@@ -91,8 +92,8 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
   }
 
   async function uninstall(id: string) {
-    if (!window.confirm(`卸载「${id}」？会删掉 .plugin/${id}/ 全部代码。关闭只停运行、不删代码。`)) return
     setBusy(`rm:${id}`)
+    setPendingUninstall(null)
     try {
       await readJson('/api/plugin-store/uninstall', {
         method: 'POST',
@@ -159,6 +160,37 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                 </p>
               ) : null}
             </div>
+            {pendingUninstall === item.id ? (
+              <div className="flex min-w-0 max-w-[240px] shrink-0 flex-col items-end gap-1.5">
+                <p
+                  className="m-0 text-right text-[11px] leading-4 text-[var(--dsw-danger)]"
+                  data-testid={`plugin-store-uninstall-hint-${item.id}`}
+                >
+                  卸载会永久删除「{item.name}」的插件代码，货架上也会消失。只想停用请点关闭。
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    className="rounded-[8px] border border-[var(--dsw-border)] px-3 py-1.5 text-[12px] text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]"
+                    data-testid={`plugin-store-uninstall-cancel-${item.id}`}
+                    disabled={busy === `rm:${item.id}`}
+                    onClick={() => setPendingUninstall(null)}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-[8px] bg-[var(--dsw-danger)] px-3 py-1.5 text-[12px] font-medium text-[var(--dsw-bg)] hover:opacity-90"
+                    data-testid={`plugin-store-uninstall-confirm-${item.id}`}
+                    data-biu-action="uninstall"
+                    disabled={busy === `rm:${item.id}`}
+                    onClick={() => void uninstall(item.id)}
+                  >
+                    {busy === `rm:${item.id}` ? '卸载中…' : '确认卸载'}
+                  </button>
+                </div>
+              </div>
+            ) : (
             <div className="flex shrink-0 items-center gap-1.5">
               {item.enabled ? (
                 <button
@@ -187,13 +219,13 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                 type="button"
                 className="rounded-[8px] border border-[var(--dsw-border)] px-3 py-1.5 text-[12px] text-[var(--dsw-danger)] hover:bg-[var(--dsw-hover)]"
                 data-testid={`plugin-store-uninstall-${item.id}`}
-                data-biu-action="uninstall"
                 disabled={Boolean(busy?.endsWith(`:${item.id}`))}
-                onClick={() => void uninstall(item.id)}
+                onClick={() => setPendingUninstall(item.id)}
               >
-                {busy === `rm:${item.id}` ? '卸载中…' : '卸载'}
+                卸载
               </button>
             </div>
+            )}
           </li>
         ))}
       </ul>
