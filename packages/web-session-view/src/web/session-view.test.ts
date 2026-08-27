@@ -76,6 +76,23 @@ test('setSessionTitle patches config title', async () => {
   assert.equal(view.get().sessions[0]?.title, '新名称')
 })
 
+test('setSessionTitle empty sends null title', async () => {
+  const calls = mockFetch({
+    '/api/sessions/s1/config': () => ({ id: 's1' }),
+    '/api/sessions': () => ({ sessions: [{ id: 's1', title: '旧名', eventCount: 1, updatedAt: 1 }] }),
+    '/api/approvals': () => ({ mode: 'auto', pending: [] }),
+  })
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  await view.refreshSessions()
+  await view.setSessionTitle('s1', '   ')
+  const patch = calls.find((call) => call.url.includes('/config') && call.init?.method === 'PATCH')
+  assert.ok(patch)
+  assert.match(String(patch!.init?.body), /"title":null/)
+})
+
+test('send inject posts kind without clearing running state', async () => {
   const calls = mockFetch({
     '/api/sessions': () => ({ sessions: [] }),
     '/api/approvals': () => ({ mode: 'auto', pending: [] }),

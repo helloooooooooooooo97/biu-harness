@@ -3897,7 +3897,7 @@ if (typeof document !== 'undefined') {
 
 /* ---- 依赖（DAG）视图 ---- */
 /* ---- DAG 依赖图（自绘 SVG + 缩放）---- */
-.tasks-graph { margin-top:8px; border:1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent); border-radius:10px; background:color-mix(in srgb, var(--dsw-muted-fill) 26%, transparent); overflow:hidden; flex:1; min-height:320px; display:flex; flex-direction:column; }
+.tasks-graph { margin-top:8px; border:1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent); border-radius:10px; background:color-mix(in srgb, var(--dsw-muted-fill) 26%, transparent); overflow:hidden; flex:1; min-width:0; min-height:320px; display:flex; flex-direction:column; }
 .tasks-graph.is-compact { min-height:200px; }
 .tasks-graph-rf { width:100%; flex:1; min-height:0; }
 .tasks-graph .react-flow__attribution { display:none; }
@@ -3921,7 +3921,7 @@ if (typeof document !== 'undefined') {
 .tasks-graph-node-meta .tasks-card-badge { font-size:8.5px; padding:0 4px; }
 
 /* ---- 队列视图（清单风格：只展示叶节点，按状态分组）---- */
-.tasks-queue { display:flex; flex-direction:column; gap:14px; margin-top:10px; overflow:auto; flex:1; min-height:0; padding-bottom:4px; }
+.tasks-queue { display:flex; flex-direction:column; gap:14px; margin-top:10px; overflow:auto; flex:1; min-width:0; width:100%; max-width:100%; min-height:0; padding-bottom:4px; }
 .tasks-queue.is-compact { gap:10px; margin-top:6px; }
 .tasks-queue-group { display:flex; flex-direction:column; gap:6px; }
 .tasks-queue-ghead { display:flex; align-items:center; gap:6px; padding:4px 6px; color:var(--dsw-label-2); font-size:11px; font-weight:650; letter-spacing:.01em; }
