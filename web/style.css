@@ -209,6 +209,51 @@ body {
   padding: 0 12px;
 }
 
+/* 右侧检查器 tab：选中用底部白色指示条，与左栏 activity 的侧边条同一套语言 */
+.inspector-tabs {
+  display: flex;
+  min-width: 0;
+  align-items: stretch;
+  align-self: stretch;
+  gap: 2px;
+}
+
+.inspector-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  padding: 0 8px;
+  color: var(--dsw-label-3);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.inspector-tab:hover {
+  color: var(--dsw-label);
+}
+
+.inspector-tab.is-active {
+  color: var(--dsw-label);
+}
+
+.inspector-tab-indicator {
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  left: 8px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: transparent;
+}
+
+.inspector-tab.is-active .inspector-tab-indicator {
+  background: var(--dsw-business);
+}
+
 .chat-view-header-left,
 .chat-view-header-right {
   display: flex;
