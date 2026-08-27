@@ -1,6 +1,6 @@
 import {
   LuCoins,
-  LuGitCommit,
+  LuGitCommitHorizontal,
   LuHash,
   LuLayers,
   LuListTodo,
@@ -21,7 +21,7 @@ const KIND_ICONS: Record<string, IconType> = {
   reply: LuMessageSquare,
   tool: LuWrench,
   step: LuLayers,
-  event: LuGitCommit,
+  event: LuGitCommitHorizontal,
   turn: LuHash,
   usage: LuCoins,
 }
