@@ -61,6 +61,10 @@ describe('sticky user message markers', () => {
     expect(turns[1]?.querySelectorAll('[data-chat-kind="user"]')).toHaveLength(1)
     expect(userRows[0]?.getAttribute('data-node-id')).toBe('u-1')
     expect(userRows[1]?.getAttribute('data-node-id')).toBe('u-2')
+    expect(userRows[0]?.getAttribute('data-biu-kind')).toBe('message')
+    expect(userRows[0]?.getAttribute('data-biu-id')).toBe('u-1')
+    expect(document.querySelector('[data-testid="user-bubble"]')?.getAttribute('data-biu-kind')).toBe('message')
+    expect(replyRows[0]?.getAttribute('data-biu-kind')).toBe('reply')
   })
 
   it('keeps user sticky markers after re-render (scroll-back safe)', () => {

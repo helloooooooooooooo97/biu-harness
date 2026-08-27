@@ -126,7 +126,7 @@ export const SessionInspector = memo(function SessionInspector({
 
   return (
     <aside
-      className="relative flex min-h-0 min-w-0 flex-col border-l border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] text-[var(--dsw-label)]"
+      className="relative flex min-h-0 min-w-0 flex-col border-l border-[var(--dsw-border)] bg-[var(--dsw-bg)] text-[var(--dsw-label)]"
       data-testid="session-inspector"
       aria-label="会话检查器"
     >
@@ -142,7 +142,7 @@ export const SessionInspector = memo(function SessionInspector({
         }}
       />
 
-      <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-[var(--dsw-border)] px-2.5">
+      <div className="app-side-bar-head">
         <div className="flex min-w-0 items-center gap-1" role="tablist" aria-label="检查器分区">
           {extraTabs.map((item) => (
             <button

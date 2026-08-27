@@ -29,7 +29,7 @@ import { SidebarMascot } from '@biu/web-mascot'
 import { StaticMascotMark } from '@biu/web-mascot'
 import { DEFAULT_SESSION_MASCOT, resolveSessionMascot } from '@biu/web-mascot'
 import type { SessionMascotIdentity } from '@biu/web-mascot'
-import { parsePicks, pickKey, PickChipLabel } from '@biu/cap-pick/web'
+import { parsePicks, pickDomAttrs, pickKey, pickPreview, PickChipLabel } from '@biu/cap-pick/web'
 import { MarkdownBody } from './markdown.tsx'
 import { ToolCard } from './tool-card.tsx'
 import { LiveDispatchTable } from './live-dispatch-table.tsx'
@@ -87,7 +87,7 @@ function MetaItem({
   )
 }
 
-function StepBar({ stat }: { stat: ChatStepStat }) {
+function StepBar({ stat, replyId }: { stat: ChatStepStat; replyId: string }) {
   const usage: TrajectoryUsage = {
     inputTokens: stat.inputTokens,
     outputTokens: stat.outputTokens,
@@ -96,7 +96,12 @@ function StepBar({ stat }: { stat: ChatStepStat }) {
     ...(stat.histPct !== undefined ? { histPct: stat.histPct } : {}),
   }
   return (
-    <div className="chat-step-bar" role="group" aria-label={stepLabel(stat.step)}>
+    <div
+      className="chat-step-bar"
+      role="group"
+      aria-label={stepLabel(stat.step)}
+      {...pickDomAttrs('step', `${replyId}:${stat.step}`, stepLabel(stat.step))}
+    >
       <div className="chat-reply-meta">
         <MetaItem icon={<LuLayers className="size-3" />} value={stat.step + 1} title={stepLabel(stat.step)} />
         <MetaItem
@@ -127,11 +132,15 @@ function renderReplyPartList({
   stepMap,
   onInspect,
   showSteps,
+  replyId,
+  streaming,
 }: {
   parts: ChatReplyPart[]
   stepMap: Map<number, ChatStepStat>
   onInspect: (callId: string) => void
   showSteps: boolean
+  replyId: string
+  streaming: boolean
 }) {
   const elements: ReactNode[] = []
   let lastStep: number | undefined
@@ -146,14 +155,18 @@ function renderReplyPartList({
         toolCount: 0,
         messageChars: 0,
       }
-      elements.push(<StepBar key={`step-${step}`} stat={stat} />)
+      elements.push(<StepBar key={`step-${step}`} stat={stat} replyId={replyId} />)
       lastStep = step
     }
 
     if (part.kind === 'assistant') {
       const partStreaming = Boolean(part.streaming)
       elements.push(
-        <div key={part.id} className="chat-assistant-body">
+        <div
+          key={part.id}
+          className="chat-assistant-body"
+          {...pickDomAttrs('message', part.id, pickPreview(part.text) || 'assistant')}
+        >
           {part.text ? (
             <MarkdownBody text={part.text} streaming={partStreaming} />
           ) : partStreaming ? (
@@ -165,7 +178,7 @@ function renderReplyPartList({
         </div>,
       )
     } else {
-      elements.push(<ToolCard key={part.id} node={part} onInspect={onInspect} />)
+      elements.push(<ToolCard key={part.id} node={part} onInspect={onInspect} live={streaming} />)
     }
   }
 
@@ -187,7 +200,7 @@ function ReplyParts({
 
   // 流式中结构还在变，整段展开渲染
   if (streaming) {
-    return <>{renderReplyPartList({ parts: node.parts, stepMap, onInspect, showSteps: true })}</>
+    return <>{renderReplyPartList({ parts: node.parts, stepMap, onInspect, showSteps: true, replyId: node.id, streaming })}</>
   }
 
   const { detailParts, finalParts, hasDetails } = splitReplyForDisplay(node)
@@ -201,11 +214,25 @@ function ReplyParts({
           hidden={!expanded}
           aria-hidden={!expanded}
         >
-          {renderReplyPartList({ parts: detailParts, stepMap, onInspect, showSteps: true })}
+          {renderReplyPartList({
+            parts: detailParts,
+            stepMap,
+            onInspect,
+            showSteps: true,
+            replyId: node.id,
+            streaming,
+          })}
         </div>
       ) : null}
       {/* 展开 Details 时也要带上最终 Message 所在 step 的统计条 */}
-      {renderReplyPartList({ parts: finalParts, stepMap, onInspect, showSteps: expanded })}
+      {renderReplyPartList({
+        parts: finalParts,
+        stepMap,
+        onInspect,
+        showSteps: expanded,
+        replyId: node.id,
+        streaming,
+      })}
     </>
   )
 }
@@ -528,11 +555,15 @@ function NodeView({
     const picked = parsePicks(node.text)
     const canExpand = overflows || expanded
     return (
-      <div className="flex w-full flex-col gap-0 overflow-hidden rounded-[var(--dsw-radius-bubble)] border border-[var(--dsw-bubble)] bg-[var(--dsw-bg)]">
+      <div
+        className="flex w-full flex-col gap-0 overflow-hidden rounded-[var(--dsw-radius-bubble)] border border-[var(--dsw-bubble)] bg-[var(--dsw-sidebar)]"
+        {...pickDomAttrs('message', node.id, pickPreview(picked.rest || node.text) || 'user')}
+      >
         <div className="block w-full max-w-full border-0 bg-transparent px-3 py-2.5 text-[var(--dsw-label)]">
           <div
             className={`w-full max-w-full border-0 bg-transparent p-0 text-[length:var(--dsw-chat-font-size)] leading-[var(--dsw-chat-line-height)] text-[var(--dsw-label)] outline-none${canExpand && !expanded ? ' max-h-[80px] overflow-hidden' : ''}${expanded ? ' max-h-none overflow-visible' : ''}`}
             data-testid="user-bubble"
+            {...pickDomAttrs('message', node.id, pickPreview(picked.rest || node.text) || 'user')}
           >
             {node.kindTag === 'inject' ? (
               <div className="mb-1 text-[10px] text-[var(--dsw-label-3)]">inject</div>
@@ -575,6 +606,7 @@ function NodeView({
       <div
         className={`chat-reply-block${streaming ? ' is-streaming' : ''}${expanded ? ' is-details-open' : ''}`}
         id={`reply-details-${node.id}`}
+        {...pickDomAttrs('reply', node.id, pickPreview(node.copyText) || 'reply')}
       >
         <div className="chat-reply-body">
           <ReplyParts node={node} onInspect={onInspect} expanded={expanded} />
@@ -631,7 +663,7 @@ export const ChatNodeList = memo(function ChatNodeList({
         const anchor = turn[0]!
         const startIndex = nodes.indexOf(anchor)
         return (
-          <div key={anchor.id} className="flex flex-col gap-4" data-testid="chat-turn" data-turn-anchor={anchor.id}>
+          <div key={anchor.id} className="flex flex-col gap-4" data-testid="chat-turn" data-turn-anchor={anchor.id} {...pickDomAttrs('turn', anchor.id, pickPreview(anchor.kind === 'user' ? anchor.text : anchor.id) || 'turn')}>
             {turn.map((node, offset) => {
               const index = startIndex + offset
               const replyForUser = node.kind === 'user' ? findReplyForUser(nodes, index) : undefined
@@ -642,7 +674,7 @@ export const ChatNodeList = memo(function ChatNodeList({
                 replyNode?.turn != null ? dispatchedTasksByTurn[String(replyNode.turn)] : undefined
               const stickyUser =
                 node.kind === 'user'
-                  ? 'sticky top-0 z-[1] -mt-1 bg-[var(--dsw-bg)] pt-2 pb-2.5 shadow-[0_1px_0_color-mix(in_srgb,var(--dsw-border)_80%,transparent),0_6px_16px_-6px_rgba(0,0,0,0.12)]'
+                  ? 'sticky top-0 z-[1] bg-[var(--dsw-bg)] pb-1'
                   : ''
               const skipPaint =
                 node.kind === 'reply' || node.kind === 'turn'
@@ -654,6 +686,11 @@ export const ChatNodeList = memo(function ChatNodeList({
                   className={[stickyUser, skipPaint].filter(Boolean).join(' ')}
                   data-node-id={node.id}
                   data-chat-kind={node.kind}
+                  {...(node.kind === 'user'
+                    ? pickDomAttrs('message', node.id, pickPreview(node.text) || 'user')
+                    : node.kind === 'reply'
+                      ? pickDomAttrs('reply', node.id, pickPreview(node.copyText) || 'reply')
+                      : pickDomAttrs('turn', node.id, node.text))}
                 >
                   <NodeViewMemo
                     node={node}

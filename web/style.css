@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Neutral dark chrome — canvas/nav #191919, rails #202020 */
+/* Neutral dark chrome — canvas/right inspector #191919, left rails #202020 */
 :root {
   color-scheme: dark;
   --dsw-bg: #191919;
@@ -13,8 +13,8 @@
   --dsw-business: #f2f1ed;
   --dsw-business-soft: rgba(242, 241, 237, 0.1);
   --dsw-input: var(--dsw-bg);
-  --dsw-tool: #202020;
-  --dsw-surface: #202020;
+  --dsw-tool: var(--dsw-bg);
+  --dsw-surface: var(--dsw-bg);
   --dsw-danger: #cf2d56;
   --dsw-danger-soft: rgba(207, 45, 86, 0.14);
   --dsw-ok: #1f8a65;
@@ -195,7 +195,17 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  border-bottom: 1px solid var(--dsw-border);
+  border-bottom: 0;
+  padding: 0 12px;
+}
+
+.app-side-bar-head {
+  display: flex;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 0 12px;
 }
 
@@ -487,7 +497,7 @@ body {
   flex-direction: column;
   align-items: stretch;
   border-right: 1px solid var(--dsw-border);
-  background: var(--dsw-bg);
+  background: var(--dsw-sidebar);
 }
 
 .app-activity-brand {
@@ -610,7 +620,7 @@ body {
 }
 
 .app-activity-item.is-active .app-activity-indicator {
-  background: var(--dsw-pick);
+  background: var(--dsw-business);
 }
 
 .app-activity-live {
@@ -849,9 +859,13 @@ body {
   border-top: 1px solid var(--dsw-border);
 }
 
-/* 右侧三个检查器板块底板与左侧栏同一色 */
-[data-testid='session-inspector'] .usage-panel {
-  background: var(--dsw-sidebar);
+/* 右侧检查器底板与中间画布同色，不跟左侧栏 */
+[data-testid='session-inspector'] .usage-panel,
+[data-testid='session-inspector'] .traj-root,
+[data-testid='session-inspector'] .traj-meta,
+[data-testid='session-inspector'] .traj-head,
+[data-testid='session-inspector'] .traj-detail {
+  background: var(--dsw-bg);
   box-shadow: none;
 }
 
@@ -1987,14 +2001,13 @@ body {
 
 .chat-step-bar {
   display: flex;
-  height: 30px;
   align-items: center;
   width: 100%;
-  margin: 2px 0;
-  border: 1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent);
+  margin: 6px 0;
+  border: 0;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--dsw-bg) 55%, var(--dsw-surface));
-  padding: 0 12px;
+  background: var(--dsw-sidebar);
+  padding: 8px 12px;
   box-shadow: none;
 }
 
@@ -2348,7 +2361,7 @@ body {
   width: 100%;
   border: 1px solid var(--dsw-bubble);
   border-radius: 999px;
-  background: var(--dsw-bg);
+  background: var(--dsw-sidebar);
   box-shadow: none;
   transition: border-radius 0.12s ease;
 }

@@ -170,6 +170,24 @@ test('deriveMessages skips orphan tool results after error assistant', () => {
   assert.match(String(messages[1]?.content), /interrupted/)
 })
 
+test('rebuildHealedEvents keeps tool/call then matching tool/result', () => {
+  assert.equal(
+    rebuildHealedEvents([
+      ev({ type: 'turn/start', turn: 1, seq: 0 }),
+      ev({
+        type: 'assistant/message',
+        text: '',
+        tool_calls: [{ id: 'c1', name: 'bash', arguments: '{}' }],
+        seq: 1,
+      }),
+      ev({ type: 'tool/call', id: 'c1', name: 'bash', arguments: '{}', seq: 2 }),
+      ev({ type: 'tool/result', id: 'c1', name: 'bash', ok: true, detail: 'ok', seq: 3 }),
+      ev({ type: 'turn/end', turn: 1, reason: 'complete', seq: 4 }),
+    ]),
+    null,
+  )
+})
+
 test('rebuildHealedEvents returns null when log is already healthy', () => {
   assert.equal(
     rebuildHealedEvents([

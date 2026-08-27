@@ -13,6 +13,7 @@ import {
   type TrajectoryUsage,
 } from '@biu/web-session-view'
 import { UsageInline } from './usage-inline.tsx'
+import { pickDomAttrs, pickPreview } from '@biu/cap-pick/web'
 
 type TagTone = 'user' | 'assistant' | 'tool' | 'system' | 'turn' | 'step'
 
@@ -258,6 +259,7 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
                   onClick={() =>
                     setCollapsedTurns((prev) => ({ ...prev, [turnKey]: !prev[turnKey] }))
                   }
+                  {...pickDomAttrs('turn', group.turn == null ? 'meta' : String(group.turn), group.turn == null ? 'meta' : `Turn ${group.turn}`)}
                 >
                   <span className="traj-group-bar-left">
                     <FoldCaret open={!turnCollapsed} />
@@ -298,6 +300,7 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
                           row.type === 'assistant/message' ? ' traj-row-assistant' : ''
                         }`}
                         onClick={() => setSelectedSeq(row.seq)}
+                        {...pickDomAttrs('event', String(row.seq), pickPreview(`${row.type} ${row.summary}`) || row.type)}
                       >
                         <span className="traj-col-seq">{row.seq}</span>
                         <span className="traj-col-type">

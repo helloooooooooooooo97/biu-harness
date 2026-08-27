@@ -128,8 +128,8 @@ export function rebuildHealedEvents(
       continue
     }
 
-    // chunk 可夹在 tool_calls 与 tool/result 之间；其余事件前先闭合未配对 tool
-    if (pending.size && event.type !== 'assistant/chunk') {
+    // chunk / tool/call 可夹在 tool_calls 与 tool/result 之间；其余事件前先闭合未配对 tool
+    if (pending.size && event.type !== 'assistant/chunk' && event.type !== 'tool/call') {
       flushPending()
     }
     push(stripSeqTs(event), event.ts)

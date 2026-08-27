@@ -12,6 +12,7 @@ import {
   LuCalendarClock,
   LuCircleCheck,
   LuCircleDashed,
+  LuClipboardList,
   LuClock,
   LuCoins,
   LuFlag,
@@ -3497,7 +3498,7 @@ export const name = 'tasks-ui'
 export const inject = ['slots', 'appModules', 'snapshot']
 
 const tasksModuleProps = { moduleId: 'tasks' }
-const tasksInspectorProps = { tabId: 'tasks', tabLabel: '任务', tabIcon: TasksRailIcon }
+const tasksInspectorProps = { tabId: 'tasks', tabLabel: '任务', tabIcon: LuClipboardList }
 
 function TasksRailIcon({ className }: { className?: string }) {
   return (
@@ -3568,7 +3569,7 @@ if (typeof document !== 'undefined') {
   radial-gradient(900px 360px at 10% -12%, color-mix(in srgb, var(--dsw-business) 8%, transparent), transparent 58%),
   linear-gradient(180deg, color-mix(in srgb, var(--dsw-surface) 55%, var(--dsw-bg)), var(--dsw-bg));
   color:var(--dsw-label); }
-.tasks-inspector-panel { display:flex; min-height:0; flex:1; flex-direction:column; overflow:hidden; background:var(--dsw-sidebar); }
+.tasks-inspector-panel { display:flex; min-height:0; flex:1; flex-direction:column; overflow:hidden; background:var(--dsw-bg); }
 .tasks-root { display:flex; min-height:0; flex:1; gap:0; overflow:hidden; }
 .tasks-root.is-compact { flex-direction:column; }
 .tasks-main { display:flex; min-width:0; min-height:0; flex:1; flex-direction:column; gap:10px; padding:12px 14px 14px; overflow:auto; }

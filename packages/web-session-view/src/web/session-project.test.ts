@@ -96,6 +96,20 @@ test('keeps reply streaming across tools until turn/end (Details stay open)', ()
   }
 })
 
+test('tool/call after tool/result keeps a single completed tool part', () => {
+  const nodes = projectNodes([
+    { type: 'tool/result', id: 'c1', name: 'bash', ok: true, detail: 'ok', seq: 1, ts: 1 },
+    { type: 'tool/call', id: 'c1', name: 'bash', arguments: '{}', seq: 2, ts: 2 },
+  ])
+  const reply = nodes.find((node) => node.kind === 'reply')
+  assert.equal(reply?.kind, 'reply')
+  if (reply?.kind !== 'reply') return
+  const tools = reply.parts.filter((part) => part.kind === 'tool')
+  assert.equal(tools.length, 1)
+  assert.equal(tools[0]?.kind === 'tool' && tools[0].result?.ok, true)
+  assert.equal(tools[0]?.kind === 'tool' && tools[0].arguments, '{}')
+})
+
 test('turn/end non-complete becomes a status row', () => {
   const nodes = projectNodes([
     { type: 'turn/start', turn: 1, seq: 0, ts: 1 },

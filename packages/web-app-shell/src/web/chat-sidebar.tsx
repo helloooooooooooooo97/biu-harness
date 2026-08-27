@@ -258,20 +258,19 @@ export const ChatSidebar = memo(function ChatSidebar({
       }`}
       aria-hidden={!visible}
     >
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pt-3 pb-3">
-        <div className="mb-1 flex items-center justify-between gap-2 px-2">
-          <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Chat</span>
-          <button
-            type="button"
-            className="grid size-6 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
-            title="Collapse sidebar"
-            aria-label="Collapse sidebar"
-            onClick={onCollapse}
-          >
-            <LuPanelLeftClose className="size-3.5" />
-          </button>
-        </div>
-
+      <div className="app-side-bar-head">
+        <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Chat</span>
+        <button
+          type="button"
+          className="grid size-[26px] place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
+          title="Collapse sidebar"
+          aria-label="Collapse sidebar"
+          onClick={onCollapse}
+        >
+          <LuPanelLeftClose className="size-3.5" />
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
         <div className="app-side-actions" role="navigation" aria-label="Chat actions">
           <button
             type="button"
