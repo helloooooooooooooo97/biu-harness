@@ -2088,14 +2088,6 @@ function TasksBoard({
                   {task.blocked ? (
                     <span className="tasks-card-blocked" title="被依赖任务阻塞，无法开工"><LuLock size={11} aria-hidden /></span>
                   ) : null}
-                  <span className={`tasks-card-badge is-p-${task.priority}`} title={`优先级：${PRIORITY_LABEL[task.priority]}`}>
-                    <LuFlag size={10} aria-hidden />
-                    {PRIORITY_LABEL[task.priority]}
-                  </span>
-                  <span className={`tasks-card-badge is-d-${task.difficulty}`} title={`难度：${DIFFICULTY_LABEL[task.difficulty]}`}>
-                    <LuGauge size={10} aria-hidden />
-                    {DIFFICULTY_LABEL[task.difficulty]}
-                  </span>
                 </div>
                 {task.description ? (
                   <div className="tasks-card-desc" title={task.description}>
@@ -2119,6 +2111,16 @@ function TasksBoard({
                       {new Date(task.dueAt).toLocaleDateString()}
                     </span>
                   ) : null}
+                </div>
+                <div className="tasks-card-badges">
+                  <span className={`tasks-card-badge is-p-${task.priority}`} title={`优先级：${PRIORITY_LABEL[task.priority]}`}>
+                    <LuFlag size={10} aria-hidden />
+                    {PRIORITY_LABEL[task.priority]}
+                  </span>
+                  <span className={`tasks-card-badge is-d-${task.difficulty}`} title={`难度：${DIFFICULTY_LABEL[task.difficulty]}`}>
+                    <LuGauge size={10} aria-hidden />
+                    {DIFFICULTY_LABEL[task.difficulty]}
+                  </span>
                 </div>
                 {(task.project || task.tags?.length) ? (
                   <div className="tasks-card-tags">
@@ -3690,6 +3692,7 @@ if (typeof document !== 'undefined') {
 .tasks-card-meta { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--dsw-label-3); margin-top:2px; }
 .tasks-card-assignee { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tasks-card-reports { margin-left:auto; color:var(--dsw-label-2); }
+.tasks-card-badges { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
 .tasks-card-tags { display:flex; align-items:center; gap:4px; flex-wrap:wrap; padding-top:5px; border-top:1px solid color-mix(in srgb, var(--dsw-border) 60%, transparent); }
 .tasks-card-due.is-overdue { color:var(--dsw-danger); font-weight:650; }
 .tasks-board-empty { color:var(--dsw-label-3); font-size:11px; padding:14px 6px; text-align:center; }
