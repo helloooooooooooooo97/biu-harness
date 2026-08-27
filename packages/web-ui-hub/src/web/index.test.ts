@@ -48,6 +48,8 @@ test('ui-hub mounts configured ui packages including chat', async () => {
       settings: { kind: 'list' },
       'app-modules': { kind: 'list' },
       'inspector-panels': { kind: 'list' },
+      'header-tools': { kind: 'list' },
+      'root-overlays': { kind: 'list' },
     },
   })
   const uiIds = Object.keys(uiPackageLoaders)

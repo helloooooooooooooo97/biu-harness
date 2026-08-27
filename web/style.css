@@ -2768,3 +2768,18 @@ body {
   50% { transform: translate(var(--dancer-x), calc(var(--dancer-y) - 4px)) scale(0.97); }
   75% { transform: translate(var(--dancer-x), calc(var(--dancer-y) + 8px)) scale(1.03); }
 }
+
+html.pick-mode,
+html.pick-mode * {
+  cursor: crosshair !important;
+}
+
+.pick-overlay-box {
+  position: fixed;
+  z-index: 9998;
+  box-sizing: border-box;
+  pointer-events: none;
+  border: 1px solid var(--dsw-business);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--dsw-business) 10%, transparent);
+}

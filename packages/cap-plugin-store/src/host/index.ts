@@ -2,7 +2,6 @@ import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promi
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { pathToFileURL } from 'node:url'
 import type { Context, Plugin } from 'cordis'
 import { findRepoRoot } from '@biu/host-plugin-loader'
 import type { CatalogEntry } from '@biu/host-hub'

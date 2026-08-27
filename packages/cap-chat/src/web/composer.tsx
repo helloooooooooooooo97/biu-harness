@@ -3,6 +3,7 @@ import { LuChevronDown, LuPlus, LuSettings } from 'react-icons/lu'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
+import { formatPicks, usePickState, type PickService } from '@biu/cap-pick/web'
 import { ModelConfigDialog } from './model-config-dialog.tsx'
 
 /** 按键不驱动受控 value；仅防抖更新发送按钮可用态，避免每个字符打穿 React 渲染。 */
@@ -124,6 +125,8 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   const inbox = useSessionView((state) => state.inbox)
   const sessionId = useSessionView((state) => state.sessionId)
   const sessionView = props.sessionView as SessionViewService
+  const pick = props.pick as PickService | undefined
+  const { refs: pickRefs } = usePickState(pick)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -328,8 +331,8 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     setActiveIndex(0)
   }, [slash?.query, slash?.open, filtered.length])
 
-  function scheduleCanSubmit(value: string, tools: string[] = picked) {
-    const next = Boolean(value.trim()) || tools.length > 0
+  function scheduleCanSubmit(value: string, tools: string[] = picked, picks = pickRefs.length) {
+    const next = Boolean(value.trim()) || tools.length > 0 || picks > 0
     if (debounceRef.current != null) clearTimeout(debounceRef.current)
     if (next === canSubmitRef.current) {
       if (next) {
@@ -344,6 +347,11 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       setCanSubmit(next)
     }, INPUT_DEBOUNCE_MS)
   }
+
+  useEffect(() => {
+    scheduleCanSubmit(textareaRef.current?.value ?? '', picked, pickRefs.length)
+    syncComposerShape(textareaRef.current, picked.length + pickRefs.length)
+  }, [pickRefs.length, picked.length])
 
   /** 输入防抖写草稿：停止输入约 300ms 后写入当前 session 的 localStorage 草稿。 */
   function schedulePersistDraft(text: string) {
@@ -489,7 +497,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     }
     const content = (textareaRef.current?.value ?? '').trim()
     // 空回车 + 队列有 wake：abort 当前回合并立刻 claim
-    if (!content && !picked.length) {
+    if (!content && !picked.length && !pickRefs.length) {
       if (inbox.some((item) => item.kind === 'wake')) {
         try {
           await sessionView.flushInbox()
@@ -500,8 +508,10 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       return
     }
     const tools = [...picked]
-    const text = content || (tools.length ? `请使用工具：${tools.join(', ')}` : '')
+    const fallback = tools.length ? `请使用工具：${tools.join(', ')}` : ''
+    const text = [formatPicks(pickRefs), content || fallback].filter(Boolean).join('\n')
     clearInput()
+    pick?.clear()
     try {
       await sessionView.send(text, 'wake', tools)
       const id = sessionView.get().sessionId
@@ -554,7 +564,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   }
 
   return (
-    <div className="composer-stack">
+    <div className="composer-stack" data-biu-ignore>
       {inbox.length > 0 ? (
         <div className="composer-inbox" aria-label="排队中">
           <div className="composer-inbox-head">排队中 · {inbox.length}</div>
@@ -616,6 +626,24 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
               }}
             >
               <span>/{name}</span>
+              <span aria-hidden>×</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {pickRefs.length ? (
+        <div className="composer-tool-chips" aria-label="已选取对象" data-biu-ignore>
+          {pickRefs.map((ref) => (
+            <button
+              key={`${ref.kind}:${ref.id}:${ref.action ?? ''}`}
+              type="button"
+              className="composer-tool-chip"
+              title="移除选取"
+              data-testid="pick-chip"
+              onClick={() => pick?.remove(`${ref.kind}:${ref.id}:${ref.action ?? ''}`)}
+            >
+              <span>{ref.action ? `${ref.label} · ${ref.action}` : ref.label}</span>
               <span aria-hidden>×</span>
             </button>
           ))}

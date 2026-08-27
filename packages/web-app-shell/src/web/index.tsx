@@ -25,7 +25,6 @@ import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import {
-  LuMousePointer2,
   LuPanelLeft,
   LuPanelRight,
   LuSettings2,
@@ -64,7 +63,7 @@ function ModuleRail({
   onSettings: () => void
 }) {
   return (
-    <nav className="app-activity-bar" aria-label="Activity bar">
+    <nav className="app-activity-bar" aria-label="Activity bar" data-biu-ignore>
       <div className="app-activity-list">
         {modules.map((module) => {
           const to = module.id === 'agent' ? agentHref : module.path
@@ -342,7 +341,7 @@ function Shell(props: SlotProps) {
           className={`min-h-0 min-w-0 flex-col overflow-hidden ${activeModule === 'agent' ? 'flex flex-1' : 'hidden'}`}
           aria-hidden={activeModule !== 'agent'}
         >
-          <header className="chat-view-header">
+          <header className="chat-view-header" data-biu-ignore>
             <div className="chat-view-header-left">
               {sidebarCollapsed ? (
                 <button
@@ -358,27 +357,11 @@ function Shell(props: SlotProps) {
               {project ? (
                 <div className="chat-view-project" title={project.path ?? project.name}>
                   <FolderGlyph className="chat-view-project-icon" />
-                  <button
-                    type="button"
-                    className="chat-view-header-expand"
-                    title="选取对象"
-                    aria-label="选取对象"
-                    data-testid="header-pick-toggle"
-                  >
-                    <LuMousePointer2 className="size-3.5" />
-                  </button>
+                  {props.renderSlot('header-tools')}
                   <span className="chat-view-project-name">{project.name}</span>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  className="chat-view-header-expand"
-                  title="选取对象"
-                  aria-label="选取对象"
-                  data-testid="header-pick-toggle"
-                >
-                  <LuMousePointer2 className="size-3.5" />
-                </button>
+                props.renderSlot('header-tools')
               )}
             </div>
             <div className="chat-view-header-right">
@@ -495,6 +478,7 @@ function Shell(props: SlotProps) {
           </div>
         </div>
       </div>
+      {props.renderSlot('root-overlays')}
     </div>
   )
 }
@@ -524,6 +508,8 @@ export function apply(ctx: Context) {
       routes: { kind: 'single' },
       'app-modules': { kind: 'list' },
       'inspector-panels': { kind: 'list' },
+      'header-tools': { kind: 'list' },
+      'root-overlays': { kind: 'list' },
     },
     props: () => shellProps,
   })

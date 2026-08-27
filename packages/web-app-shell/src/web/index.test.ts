@@ -20,6 +20,8 @@ test('declares generic module slots, not plugin ids', async () => {
   assert.equal(ctx.slots.specOf('demos')?.kind, 'list')
   assert.equal(ctx.slots.specOf('app-modules')?.kind, 'list')
   assert.equal(ctx.slots.specOf('inspector-panels')?.kind, 'list')
+  assert.equal(ctx.slots.specOf('header-tools')?.kind, 'list')
+  assert.equal(ctx.slots.specOf('root-overlays')?.kind, 'list')
   assert.equal(ctx.slots.specOf('tasks'), undefined)
   assert.equal(ctx.slots.specOf('channels'), undefined)
   assert.equal(ctx.slots.specOf('dashboard'), undefined)

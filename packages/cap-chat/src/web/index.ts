@@ -10,6 +10,7 @@ import { ChatThread } from './thread.tsx'
 import { TrajectoryView } from './trajectory.tsx'
 import { UsagePanel } from './usage-panel.tsx'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
+import type { PickService } from '@biu/cap-pick/web'
 
 export const name = 'chat-ui'
 export const inject = ['slots', 'sessionView', 'projectView']
@@ -45,7 +46,11 @@ export function apply(ctx: Context) {
   const props = () => slotProps
   ctx.slots.place('stage', ChatThread, { key: 'chat-thread', order: 1, props })
   ctx.slots.place('trajectory', TrajectoryView, { key: 'trajectory', order: 1, props })
-  ctx.slots.place('composer', ChatComposer, { key: 'chat', order: 10, props })
+  ctx.slots.place('composer', ChatComposer, {
+    key: 'chat',
+    order: 10,
+    props: () => ({ ...slotProps, pick: ctx.get('pick') as PickService | undefined }),
+  })
   ctx.slots.place('dock', ChatConfigBanner, { key: 'chat-config-banner', order: 1 })
   ctx.slots.place('dock', ApprovalsRail, { key: 'approvals', order: 5, props })
   ctx.slots.place('inspector-panels', InspectorTrajectory, {

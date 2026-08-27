@@ -84,7 +84,12 @@ const SessionRow = memo(function SessionRow({
   const identity = resolveSessionMascot(item.id, item.mascot)
   const pinned = Boolean(item.pinned)
   return (
-    <div className={`chat-session-row group${active ? ' is-active' : ''}${pinned ? ' is-pinned' : ''}`}>
+    <div
+      className={`chat-session-row group${active ? ' is-active' : ''}${pinned ? ' is-pinned' : ''}`}
+      data-biu-kind="session"
+      data-biu-id={item.id}
+      data-biu-label={item.title}
+    >
       <Link
         to={`/s/${item.id}`}
         className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-[12px] leading-4"

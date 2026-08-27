@@ -1,0 +1,15 @@
+{
+  "name": "@biu/cap-pick",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "页面对象选取：采集数据句柄，不采集 UI",
+  "exports": {
+    "./host": "./src/host/index.ts",
+    "./web": "./src/web/index.tsx"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "react": "^19.1.1"
+  }
+}

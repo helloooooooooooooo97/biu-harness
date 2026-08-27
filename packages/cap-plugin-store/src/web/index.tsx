@@ -119,6 +119,9 @@ function PluginStorePage({ slots }: { slots: SlotsService }) {
             key={item.id}
             className="flex items-center justify-between gap-4 rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-4 py-3"
             data-testid={`plugin-store-card-${item.id}`}
+            data-biu-kind="plugin"
+            data-biu-id={item.id}
+            data-biu-label={item.name}
           >
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -141,6 +144,7 @@ function PluginStorePage({ slots }: { slots: SlotsService }) {
                 type="button"
                 className="shrink-0 rounded-[8px] border border-[var(--dsw-border)] px-3 py-1.5 text-[12px] text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]"
                 data-testid={`plugin-store-uninstall-${item.id}`}
+                data-biu-action="uninstall"
                 disabled={busy === item.id}
                 onClick={() => void uninstall(item.id)}
               >
@@ -151,6 +155,7 @@ function PluginStorePage({ slots }: { slots: SlotsService }) {
                 type="button"
                 className="shrink-0 rounded-[8px] bg-[var(--dsw-business)] px-3 py-1.5 text-[12px] font-medium text-[var(--dsw-bg)] hover:opacity-90"
                 data-testid={`plugin-store-install-${item.id}`}
+                data-biu-action="install"
                 disabled={busy === item.id}
                 onClick={() => void install(item.id)}
               >

@@ -37,6 +37,16 @@
   ],
   "plugins": [
     {
+      "id": "pick",
+      "name": "选取",
+      "layer": "capability",
+      "blurb": "@biu/cap-pick。界面选取数据句柄。",
+      "package": "@biu/cap-pick/host",
+      "web": "@biu/cap-pick/web",
+      "togglable": true,
+      "enabled": true
+    },
+    {
       "id": "chat",
       "name": "对话",
       "layer": "capability",

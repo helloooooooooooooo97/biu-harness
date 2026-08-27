@@ -2076,6 +2076,9 @@ function TasksBoard({
                 key={task.id}
                 type="button"
                 className={`tasks-card${detailId === task.id ? ' is-active' : ''} is-p-${task.priority}`}
+                data-biu-kind="task"
+                data-biu-id={task.id}
+                data-biu-label={task.title}
                 onClick={() => onOpenDetail(task.id)}
               >
                 <div className="tasks-card-title">
@@ -2350,7 +2353,13 @@ function TasksQueue({
               {items.map((task) => {
                 const isActive = detailId === task.id
                 return (
-                  <li key={task.id} className={`tasks-queue-item${isActive ? ' is-active' : ''} is-${colOf(task)} is-p-${task.priority}`}>
+                  <li
+                    key={task.id}
+                    className={`tasks-queue-item${isActive ? ' is-active' : ''} is-${colOf(task)} is-p-${task.priority}`}
+                    data-biu-kind="task"
+                    data-biu-id={task.id}
+                    data-biu-label={task.title}
+                  >
                     <button
                       type="button"
                       className="tasks-queue-item-main"
@@ -2596,6 +2605,9 @@ function TasksTable({
             <tr
               key={task.id}
               className={`${detailId === task.id ? 'is-active' : ''}`}
+              data-biu-kind="task"
+              data-biu-id={task.id}
+              data-biu-label={task.title}
               onClick={() => onOpenDetail(task.id)}
             >
               <td className="tasks-col-project">
