@@ -5,6 +5,7 @@ import { pickKindIcon } from './chip.tsx'
 
 test('chip icons exist on react-icons/lu (Vite ESM named exports)', () => {
   const needed = [
+    'LuBot',
     'LuCoins',
     'LuGitCommitHorizontal',
     'LuHash',
@@ -21,4 +22,5 @@ test('chip icons exist on react-icons/lu (Vite ESM named exports)', () => {
   assert.equal('LuGitCommit' in lu, false)
   assert.equal(typeof pickKindIcon('event'), 'function')
   assert.equal(typeof pickKindIcon('usage'), 'function')
+  assert.equal(typeof pickKindIcon('session'), 'function')
 })

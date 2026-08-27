@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { resolvePickFromNode, resolvePicksInRect } from './resolve.ts'
 import { formatPicks, parsePicks, chipLabel, dedupePicks } from './types.ts'
 import { pickKindIcon } from './chip.tsx'
-import { LuListTodo, LuMessageSquare, LuPuzzle, LuTag } from 'react-icons/lu'
+import { LuBot, LuListTodo, LuMessageSquare, LuPuzzle, LuTag } from 'react-icons/lu'
 
 test('merges child action onto parent kind/id', () => {
   const card = document.createElement('div')
@@ -56,7 +56,9 @@ test('parsePicks recovers chips that markdown would strip', () => {
 })
 
 test('kind maps to distinct icons', () => {
-  assert.equal(pickKindIcon('session'), LuMessageSquare)
+  assert.equal(pickKindIcon('session'), LuBot)
+  assert.equal(pickKindIcon('message'), LuMessageSquare)
+  assert.notEqual(pickKindIcon('session'), pickKindIcon('message'))
   assert.equal(pickKindIcon('task'), LuListTodo)
   assert.equal(pickKindIcon('plugin'), LuPuzzle)
   assert.equal(pickKindIcon('unknown'), LuTag)

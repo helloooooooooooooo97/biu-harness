@@ -1,4 +1,5 @@
 import {
+  LuBot,
   LuCoins,
   LuGitCommitHorizontal,
   LuHash,
@@ -14,7 +15,7 @@ import type { PickRef } from './types.ts'
 import { chipLabel } from './types.ts'
 
 const KIND_ICONS: Record<string, IconType> = {
-  session: LuMessageSquare,
+  session: LuBot,
   task: LuListTodo,
   plugin: LuPuzzle,
   message: LuMessageSquare,
