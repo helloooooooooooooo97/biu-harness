@@ -1987,14 +1987,13 @@ body {
 
 .chat-step-bar {
   display: flex;
-  height: 30px;
   align-items: center;
   width: 100%;
-  margin: 2px 0;
+  margin: 6px 0;
   border: 1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--dsw-bg) 55%, var(--dsw-surface));
-  padding: 0 12px;
+  padding: 8px 12px;
   box-shadow: none;
 }
 
