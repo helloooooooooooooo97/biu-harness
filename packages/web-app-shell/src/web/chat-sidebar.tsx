@@ -19,6 +19,8 @@ import { SidebarMascot } from '@biu/web-mascot'
 import { resolveSessionMascot } from '@biu/web-mascot'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import {
+  LuChevronDown,
+  LuChevronRight,
   LuFolderTree,
   LuPanelLeftClose,
   LuPlus,
@@ -93,7 +95,7 @@ const SessionRow = memo(function SessionRow({
         className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-[12px] leading-4"
       >
         <SidebarMascot
-          size={24}
+          size={20}
           sessionId={item.id}
           identity={identity}
           busy={busy}
@@ -123,7 +125,7 @@ const SessionRow = memo(function SessionRow({
           onPin(item)
         }}
       >
-        <LuStar className={`size-3.5${pinned ? ' text-[#f5b700]' : ''}`} fill={pinned ? 'currentColor' : 'none'} />
+        <LuStar className={`size-5${pinned ? ' text-[#f5b700]' : ''}`} fill={pinned ? 'currentColor' : 'none'} />
       </button>
       <button
         type="button"
@@ -136,7 +138,7 @@ const SessionRow = memo(function SessionRow({
           onDelete(item)
         }}
       >
-        <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M10 7V5h4v2m-6 3v8m4-8v8m-7-11 1 14h10l1-14" />
         </svg>
       </button>
@@ -265,7 +267,7 @@ export const ChatSidebar = memo(function ChatSidebar({
           aria-label="Collapse sidebar"
           onClick={onCollapse}
         >
-          <LuPanelLeftClose className="size-3.5" />
+          <LuPanelLeftClose className="size-5" />
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
@@ -332,7 +334,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                           className={`grid h-[20px] w-5 place-items-center rounded-[6px] ${groupBy === 'project' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
                           onClick={() => changeGroupBy('project')}
                         >
-                          <LuFolderTree className="size-2.5" />
+                          <LuFolderTree className="size-5" />
                         </button>
                         <button
                           type="button"
@@ -341,7 +343,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                           className={`grid h-[20px] w-5 place-items-center rounded-[6px] ${groupBy === 'tag' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
                           onClick={() => changeGroupBy('tag')}
                         >
-                          <LuTags className="size-2.5" />
+                          <LuTags className="size-5" />
                         </button>
                       </div>
                     ) : null}
@@ -382,24 +384,27 @@ export const ChatSidebar = memo(function ChatSidebar({
                                   }
                                 }}
                               >
-                                {group.kind === 'pinned' ? (
-                                  <span className="sidebar-rail-icon">
-                                    <LuStar className="size-5 text-[#f5b700]" fill="currentColor" />
+                                <span className="sidebar-rail-icon sidebar-group-fold" aria-hidden>
+                                  <span className="sidebar-group-fold-face">
+                                    {group.kind === 'pinned' ? (
+                                      <LuStar className="size-5 text-[#f5b700]" fill="currentColor" />
+                                    ) : group.kind === 'tag' ? (
+                                      <LuTag className="size-5 opacity-80" />
+                                    ) : isUngrouped ? (
+                                      <span className="text-[11px] opacity-70">—</span>
+                                    ) : (
+                                      <FolderGlyph className="size-5 opacity-80" />
+                                    )}
                                   </span>
-                                ) : group.kind === 'tag' ? (
-                                  <span className="sidebar-rail-icon">
-                                    <LuTag className="size-5 opacity-80" />
+                                  <span className="sidebar-group-fold-chevron">
+                                    {collapsed ? (
+                                      <LuChevronRight className="size-5 opacity-80" />
+                                    ) : (
+                                      <LuChevronDown className="size-5 opacity-80" />
+                                    )}
                                   </span>
-                                ) : isUngrouped ? (
-                                  <span className="sidebar-rail-icon text-[11px] opacity-70" aria-hidden>
-                                    —
-                                  </span>
-                                ) : (
-                                  <span className="sidebar-rail-icon">
-                                    <FolderGlyph className="size-5 opacity-80" />
-                                  </span>
-                                )}
-                                <span className="min-w-0 flex-1 truncate tracking-normal">{group.label}</span>
+                                </span>
+                                <span className="min-w-0 flex-1 truncate text-[12px] font-medium tracking-normal">{group.label}</span>
                                 <span className="shrink-0 font-mono text-[10px] opacity-60">{group.sessions.length}</span>
                                 {canAddHere ? (
                                   <button
@@ -415,7 +420,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                       })
                                     }}
                                   >
-                                    <LuPlus className="size-3" />
+                                    <LuPlus className="size-5" />
                                   </button>
                                 ) : null}
                               </div>

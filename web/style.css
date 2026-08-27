@@ -559,8 +559,39 @@ body {
   place-items: center;
 }
 
+.sidebar-group-fold {
+  position: relative;
+}
+
+.sidebar-group-fold-face,
+.sidebar-group-fold-chevron {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+}
+
+.sidebar-group-fold-chevron {
+  display: none;
+}
+
+.sidebar-group-head:hover .sidebar-group-fold-face,
+.sidebar-group-head:focus-within .sidebar-group-fold-face {
+  display: none;
+}
+
+.sidebar-group-head:hover .sidebar-group-fold-chevron,
+.sidebar-group-head:focus-within .sidebar-group-fold-chevron {
+  display: grid;
+}
+
+/* 不推整行背景，只给会话内容加约 2/3 图标宽的左内边距 */
 .sidebar-session-list {
-  padding-left: 32px;
+  padding-left: 0;
+}
+
+.sidebar-session-list .chat-session-row > a {
+  padding-left: 19px;
 }
 
 .sidebar-group-head {
