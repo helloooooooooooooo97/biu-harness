@@ -60,3 +60,41 @@ export function resolvePickAtPoint(x: number, y: number, route: string) {
   }
   return null
 }
+
+export type ClientBox = { left: number; top: number; width: number; height: number }
+
+export function boxFromPoints(ax: number, ay: number, bx: number, by: number): ClientBox {
+  const left = Math.min(ax, bx)
+  const top = Math.min(ay, by)
+  return { left, top, width: Math.abs(bx - ax), height: Math.abs(by - ay) }
+}
+
+export function boxesOverlap(a: ClientBox, b: ClientBox) {
+  return a.left < b.left + b.width && a.left + a.width > b.left && a.top < b.top + b.height && a.top + a.height > b.top
+}
+
+function boxOf(el: Element): ClientBox {
+  const r = el.getBoundingClientRect()
+  return { left: r.left, top: r.top, width: r.width, height: r.height }
+}
+
+/**
+ * 框选：命中所有带 kind+id 的对象节点（不采内部 action）。
+ * 点选仍走 resolvePickFromNode，可以打到按钮上的 action。
+ */
+export function resolvePicksInRect(box: ClientBox, route: string, root: ParentNode = document) {
+  const nodes = root.querySelectorAll('[data-biu-kind][data-biu-id]')
+  const seen = new Set<string>()
+  const hits: { el: HTMLElement; ref: PickRef }[] = []
+  for (const node of nodes) {
+    if (!(node instanceof HTMLElement) || isPickIgnored(node)) continue
+    if (!boxesOverlap(box, boxOf(node))) continue
+    const hit = resolvePickFromNode(node, route)
+    if (!hit) continue
+    const key = `${hit.ref.kind}:${hit.ref.id}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    hits.push(hit)
+  }
+  return hits
+}

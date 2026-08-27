@@ -8,6 +8,8 @@ export class PickService extends Service {
   picking = false
   refs: PickRef[] = []
   hover: PickHover | null = null
+  marquee: PickHover | null = null
+  marqueeHits: PickHover[] = []
   private seq = 0
   private listeners = new Set<() => void>()
 
@@ -26,13 +28,17 @@ export class PickService extends Service {
     if (this.picking) return
     this.picking = true
     this.hover = null
+    this.marquee = null
+    this.marqueeHits = []
     this.bump()
   }
 
   exit() {
-    if (!this.picking && !this.hover) return
+    if (!this.picking && !this.hover && !this.marquee) return
     this.picking = false
     this.hover = null
+    this.marquee = null
+    this.marqueeHits = []
     this.bump()
   }
 
@@ -42,10 +48,27 @@ export class PickService extends Service {
   }
 
   add(ref: PickRef) {
-    const key = pickKey(ref)
-    this.refs = [...this.refs.filter((item) => pickKey(item) !== key), ref]
+    this.addMany([ref])
+  }
+
+  addMany(refs: PickRef[]) {
+    if (!refs.length) {
+      this.hover = null
+      this.marquee = null
+      this.marqueeHits = []
+      this.bump()
+      return
+    }
+    let next = this.refs
+    for (const ref of refs) {
+      const key = pickKey(ref)
+      next = [...next.filter((item) => pickKey(item) !== key), ref]
+    }
+    this.refs = next
     this.picking = false
     this.hover = null
+    this.marquee = null
+    this.marqueeHits = []
     this.bump()
   }
 
@@ -74,6 +97,13 @@ export class PickService extends Service {
     this.bump()
   }
 
+  setMarquee(marquee: PickHover | null, hits: PickHover[] = []) {
+    this.marquee = marquee
+    this.marqueeHits = marquee ? hits : []
+    if (marquee) this.hover = null
+    this.bump()
+  }
+
   private bump() {
     this.seq += 1
     for (const fn of this.listeners) fn()
@@ -90,5 +120,7 @@ export function usePickState(pick?: PickService) {
     picking: pick?.picking ?? false,
     refs: pick?.refs ?? [],
     hover: pick?.hover ?? null,
+    marquee: pick?.marquee ?? null,
+    marqueeHits: pick?.marqueeHits ?? [],
   }
 }

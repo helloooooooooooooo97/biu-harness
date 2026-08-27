@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { resolvePickFromNode } from './resolve.ts'
+import { resolvePickFromNode, resolvePicksInRect } from './resolve.ts'
 import { formatPicks, parsePicks, chipLabel } from './types.ts'
 import { pickKindIcon } from './chip.tsx'
 import { LuListTodo, LuMessageSquare, LuPuzzle, LuTag } from 'react-icons/lu'
@@ -60,4 +60,72 @@ test('kind maps to distinct icons', () => {
   assert.equal(pickKindIcon('task'), LuListTodo)
   assert.equal(pickKindIcon('plugin'), LuPuzzle)
   assert.equal(pickKindIcon('unknown'), LuTag)
+})
+
+function stubBox(el: HTMLElement, left: number, top: number, width: number, height: number) {
+  el.getBoundingClientRect = () =>
+    ({
+      left,
+      top,
+      width,
+      height,
+      right: left + width,
+      bottom: top + height,
+      x: left,
+      y: top,
+      toJSON() {
+        return {}
+      },
+    }) as DOMRect
+}
+
+test('marquee selects every kind+id object inside the rect', () => {
+  const a = document.createElement('div')
+  a.setAttribute('data-biu-kind', 'task')
+  a.setAttribute('data-biu-id', 't1')
+  a.setAttribute('data-biu-label', '甲')
+  const b = document.createElement('div')
+  b.setAttribute('data-biu-kind', 'task')
+  b.setAttribute('data-biu-id', 't2')
+  b.setAttribute('data-biu-label', '乙')
+  const outside = document.createElement('div')
+  outside.setAttribute('data-biu-kind', 'task')
+  outside.setAttribute('data-biu-id', 't3')
+  document.body.append(a, b, outside)
+  stubBox(a, 10, 10, 40, 20)
+  stubBox(b, 60, 12, 40, 20)
+  stubBox(outside, 200, 10, 40, 20)
+  const hits = resolvePicksInRect({ left: 0, top: 0, width: 120, height: 40 }, '/tasks')
+  assert.deepEqual(
+    hits.map((item) => item.ref.id).sort(),
+    ['t1', 't2'],
+  )
+  a.remove()
+  b.remove()
+  outside.remove()
+})
+
+test('marquee skips ignored subtrees and inner action buttons', () => {
+  const card = document.createElement('div')
+  card.setAttribute('data-biu-kind', 'task')
+  card.setAttribute('data-biu-id', 't1')
+  const btn = document.createElement('button')
+  btn.setAttribute('data-biu-action', 'open')
+  card.append(btn)
+  const ignored = document.createElement('div')
+  ignored.setAttribute('data-biu-ignore', '')
+  const inner = document.createElement('div')
+  inner.setAttribute('data-biu-kind', 'session')
+  inner.setAttribute('data-biu-id', 's1')
+  ignored.append(inner)
+  document.body.append(card, ignored)
+  stubBox(card, 0, 0, 80, 40)
+  stubBox(btn, 4, 4, 20, 12)
+  stubBox(inner, 10, 10, 20, 20)
+  const hits = resolvePicksInRect({ left: 0, top: 0, width: 100, height: 50 }, '/')
+  assert.equal(hits.length, 1)
+  assert.equal(hits[0]?.ref.kind, 'task')
+  assert.equal(hits[0]?.ref.action, undefined)
+  card.remove()
+  ignored.remove()
 })

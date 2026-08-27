@@ -7,7 +7,7 @@ import { PickToggle } from './toggle.tsx'
 export { PickService, usePickState } from './service.ts'
 export { formatPicks, parsePicks, chipLabel, pickKey, type PickRef } from './types.ts'
 export { PickChipLabel, PickKindGlyph, pickKindIcon } from './chip.tsx'
-export { resolvePickFromNode, resolvePickAtPoint } from './resolve.ts'
+export { resolvePickFromNode, resolvePickAtPoint, resolvePicksInRect } from './resolve.ts'
 
 export const name = 'pick-ui'
 export const inject = ['slots']

@@ -2814,6 +2814,7 @@ body {
 html.pick-mode,
 html.pick-mode * {
   cursor: crosshair !important;
+  user-select: none !important;
 }
 
 .pick-overlay-box {
@@ -2824,4 +2825,11 @@ html.pick-mode * {
   border: 1px solid var(--dsw-business);
   border-radius: 6px;
   background: color-mix(in srgb, var(--dsw-business) 10%, transparent);
+}
+
+.pick-overlay-marquee {
+  z-index: 9997;
+  border-style: dashed;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--dsw-business) 8%, transparent);
 }
