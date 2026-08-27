@@ -70,9 +70,9 @@ function SessionTagBadges({ tags }: { tags?: string[] }) {
 
 function ChatCount({ count }: { count: number }) {
   return (
-    <span className="inline-flex shrink-0 items-center gap-0.5 leading-none tabular-nums opacity-70">
-      <ChatBubbleLeftIcon className="size-4 shrink-0" aria-hidden />
+    <span className="sidebar-chat-count">
       <span>{count}</span>
+      <ChatBubbleLeftIcon aria-hidden />
     </span>
   )
 }
@@ -328,13 +328,6 @@ export const ChatSidebar = memo(function ChatSidebar({
                       onClick={() => toggleSection(section.kind)}
                     >
                       <span className="min-w-0 flex-1 truncate tracking-normal">{section.label}</span>
-                      <ChatCount
-                        count={
-                          section.sessions
-                            ? section.sessions.length
-                            : section.groups?.reduce((sum, g) => sum + g.sessions.length, 0) ?? 0
-                        }
-                      />
                     </button>
                     {section.kind !== 'pinned' ? (
                       <div
@@ -362,6 +355,13 @@ export const ChatSidebar = memo(function ChatSidebar({
                         </button>
                       </div>
                     ) : null}
+                    <ChatCount
+                      count={
+                        section.sessions
+                          ? section.sessions.length
+                          : section.groups?.reduce((sum, g) => sum + g.sessions.length, 0) ?? 0
+                      }
+                    />
                   </div>
 
                   {!sectionCollapsed ? (
@@ -422,7 +422,6 @@ export const ChatSidebar = memo(function ChatSidebar({
                                   </span>
                                 </span>
                                 <span className="min-w-0 flex-1 truncate">{group.label}</span>
-                                <ChatCount count={group.sessions.length} />
                                 {canAddHere ? (
                                   <button
                                     type="button"
@@ -440,6 +439,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                     <PlusIcon {...chromeIcon} />
                                   </button>
                                 ) : null}
+                                <ChatCount count={group.sessions.length} />
                               </div>
                             </div>
                             <div className={`sidebar-session-list min-w-0 ${collapsed ? 'hidden' : ''}`} aria-hidden={collapsed}>
