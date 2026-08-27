@@ -7,6 +7,7 @@ import * as snapshot from '@biu/web-snapshot'
 import * as sessionView from '@biu/web-session-view'
 import * as projectView from '@biu/web-project-view'
 import * as uiHub from './index.ts'
+import { isRuntimeWebModule } from './index.ts'
 import { uiPackageLoaders } from 'virtual:cordis-ui-loaders'
 
 const Dummy = () => null
@@ -24,6 +25,11 @@ function plugin(id: string, enabled: boolean, web?: string) {
     ...(web ? { web } : {}),
   }
 }
+
+test('store plugin web urls are runtime modules', () => {
+  assert.equal(isRuntimeWebModule('/api/plugin-store/files/store-hello/web.js'), true)
+  assert.equal(isRuntimeWebModule('@biu/cap-tasks/web'), false)
+})
 
 test('ui-hub mounts configured ui packages including chat', async () => {
   const ctx = new Context()

@@ -1,10 +1,21 @@
 import type { Context, Fiber, Plugin } from 'cordis'
+import * as React from 'react'
 import { uiPackageLoaders } from 'virtual:cordis-ui-loaders'
 
 export const name = 'ui-hub'
 export const inject = ['slots', 'snapshot']
 
+/** 商店包的 web 入口是已编译 ESM 的 URL，不在 Vite 虚拟表里。 */
+export function isRuntimeWebModule(web: string) {
+  return web.startsWith('/') || /^https?:\/\//.test(web)
+}
+
 export function apply(ctx: Context) {
+  if (typeof globalThis !== 'undefined') {
+    const g = globalThis as typeof globalThis & { React?: typeof React }
+    g.React = React
+  }
+
   const forks = new Map<string, Fiber>()
   let pending = false
   let running = false
@@ -13,6 +24,10 @@ export function apply(ctx: Context) {
     if (!web) return undefined
     const loader = uiPackageLoaders[web]
     if (loader) return loader()
+    if (isRuntimeWebModule(web)) {
+      const href = web.startsWith('/') ? new URL(web, window.location.origin).href : web
+      return import(/* @vite-ignore */ href)
+    }
     return undefined
   }
 

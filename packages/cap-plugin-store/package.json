@@ -1,0 +1,15 @@
+{
+  "name": "@biu/cap-plugin-store",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "插件商店：安装已编译包，不重编主应用",
+  "exports": {
+    "./host": "./src/host/index.ts",
+    "./web": "./src/web/index.tsx"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "react": "^19.1.1"
+  }
+}

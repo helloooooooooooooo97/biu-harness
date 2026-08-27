@@ -73,6 +73,16 @@
       "web": "@biu/cap-tasks/web",
       "togglable": true,
       "enabled": true
+    },
+    {
+      "id": "plugin-store",
+      "name": "插件商店",
+      "layer": "capability",
+      "blurb": "@biu/cap-plugin-store。安装已编译包，不重编主应用。",
+      "package": "@biu/cap-plugin-store/host",
+      "web": "@biu/cap-plugin-store/web",
+      "togglable": true,
+      "enabled": true
     }
   ]
 }

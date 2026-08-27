@@ -108,6 +108,32 @@ export class HubService extends Service {
     return this.snapshot()
   }
 
+  /** 运行时挂上商店已安装包（预编译 ESM），不改 cordis.plugins.json。 */
+  async adopt(entry: CatalogEntry) {
+    const existing = this.forks.get(entry.id)
+    if (existing && !isStorePackage(existing.entry.packageName)) {
+      throw new Error(`cannot replace built-in plugin ${entry.id}`)
+    }
+    if (existing?.fiber) await this.unmount(entry.id)
+    this.forks.set(entry.id, { entry })
+    if (entry.enabled !== false) await this.mount(entry.id)
+    this.ctx.emit(HUB_CHANGE)
+    return this.snapshot()
+  }
+
+  /** 卸掉商店包，内置 cap 不能走这条路径。 */
+  async drop(id: string) {
+    const existing = this.forks.get(id)
+    if (!existing) return this.snapshot()
+    if (!isStorePackage(existing.entry.packageName)) {
+      throw new Error(`cannot drop built-in plugin ${id}`)
+    }
+    await this.unmount(id)
+    this.forks.delete(id)
+    this.ctx.emit(HUB_CHANGE)
+    return this.snapshot()
+  }
+
   private async mount(id: string) {
     const record = this.forks.get(id)
     if (!record || (record.fiber && record.fiber.uid !== null)) return
@@ -130,6 +156,12 @@ function clone(value: unknown): unknown[] {
     return ['[unserializable]']
   }
 }
+
+function isStorePackage(packageName?: string) {
+  return typeof packageName === 'string' && packageName.startsWith('store:')
+}
+
+export type { CatalogEntry } from './catalog.ts'
 
 export const name = 'hub'
 export const inject = ['http', 'tools']
