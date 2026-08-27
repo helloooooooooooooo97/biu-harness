@@ -476,7 +476,7 @@ function UserSenderAvatar({
         title={hit?.title || 'Live session'}
         data-testid="user-sender-mascot"
       >
-        <StaticMascotMark identity={identity} title={hit?.title || identity.shape} className="size-4" />
+        <StaticMascotMark identity={identity} size={16} title={hit?.title || identity.shape} />
       </span>
     )
   }
@@ -726,7 +726,13 @@ function EmptyHero({
       <div className="chat-empty-hero-glow" aria-hidden />
       <div className="chat-empty-hero-inner">
         <div className="chat-empty-hero-mascot">
-          <SidebarMascot sessionId={sessionId} identity={identity} busy={busy} title={`${identity.shape} · ${identity.color}`} className="size-[112px]" />
+          <SidebarMascot
+            size={112}
+            sessionId={sessionId}
+            identity={identity}
+            busy={busy}
+            title={`${identity.shape} · ${identity.color}`}
+          />
         </div>
         <h2 className="chat-empty-hero-title">Need a hand?</h2>
       </div>

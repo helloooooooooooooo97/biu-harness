@@ -121,7 +121,14 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
                 </td>
                 <td className="px-2 py-2 align-middle">
                   <div className="flex justify-center">
-                    <SidebarMascot sessionId={task.sessionId} identity={identity} busy={running} animate={false} title={task.title ?? identity.shape} className="size-[22px]" />
+                    <SidebarMascot
+                      size={22}
+                      sessionId={task.sessionId}
+                      identity={identity}
+                      busy={running}
+                      animate={false}
+                      title={task.title ?? identity.shape}
+                    />
                   </div>
                 </td>
                 <td className="min-w-0 px-3 py-2 align-middle">
