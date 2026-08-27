@@ -70,7 +70,7 @@ function SessionTagBadges({ tags }: { tags?: string[] }) {
 
 function ChatCount({ count }: { count: number }) {
   return (
-    <span className="inline-flex shrink-0 items-center gap-0.5 opacity-60">
+    <span className="sidebar-chat-count">
       <span>{count}</span>
       <ChatBubbleLeftIcon className="size-4 shrink-0" width={16} height={16} aria-hidden />
     </span>
@@ -321,47 +321,49 @@ export const ChatSidebar = memo(function ChatSidebar({
                 <section key={section.kind} className="min-w-0">
                   {/* 板块标题：收藏 / (项目|标签)，可点击整行展开/收缩；层级靠 kind 图标表达；悬浮时右侧露出分组切换 tab */}
                   <div className="sidebar-section-head min-w-0">
-                    <button
-                      type="button"
-                      className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)]"
-                      aria-expanded={!sectionCollapsed}
-                      onClick={() => toggleSection(section.kind)}
-                    >
-                      <span className="min-w-0 flex-1 truncate tracking-normal">{section.label}</span>
-                      <ChatCount
-                        count={
-                          section.sessions
-                            ? section.sessions.length
-                            : section.groups?.reduce((sum, g) => sum + g.sessions.length, 0) ?? 0
-                        }
-                      />
-                    </button>
-                    {section.kind !== 'pinned' ? (
-                      <div
-                        className="sidebar-view-switch"
-                        role="group"
-                        aria-label="分组视图切换"
+                    <div className="flex min-w-0 min-h-[32px] flex-1 items-center">
+                      <button
+                        type="button"
+                        className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)]"
+                        aria-expanded={!sectionCollapsed}
+                        onClick={() => toggleSection(section.kind)}
                       >
-                        <button
-                          type="button"
-                          title="按项目分组"
-                          aria-pressed={groupBy === 'project'}
-                          className={`sidebar-view-switch-btn${groupBy === 'project' ? ' is-on' : ''}`}
-                          onClick={() => changeGroupBy('project')}
+                        <span className="min-w-0 flex-1 truncate tracking-normal">{section.label}</span>
+                      </button>
+                      {section.kind !== 'pinned' ? (
+                        <div
+                          className="sidebar-view-switch"
+                          role="group"
+                          aria-label="分组视图切换"
                         >
-                          <FolderGroupIcon {...groupIcon} />
-                        </button>
-                        <button
-                          type="button"
-                          title="按标签分组"
-                          aria-pressed={groupBy === 'tag'}
-                          className={`sidebar-view-switch-btn${groupBy === 'tag' ? ' is-on' : ''}`}
-                          onClick={() => changeGroupBy('tag')}
-                        >
-                          <TagGroupIcon {...groupIcon} />
-                        </button>
-                      </div>
-                    ) : null}
+                          <button
+                            type="button"
+                            title="按项目分组"
+                            aria-pressed={groupBy === 'project'}
+                            className={`sidebar-view-switch-btn${groupBy === 'project' ? ' is-on' : ''}`}
+                            onClick={() => changeGroupBy('project')}
+                          >
+                            <FolderGroupIcon {...groupIcon} />
+                          </button>
+                          <button
+                            type="button"
+                            title="按标签分组"
+                            aria-pressed={groupBy === 'tag'}
+                            className={`sidebar-view-switch-btn${groupBy === 'tag' ? ' is-on' : ''}`}
+                            onClick={() => changeGroupBy('tag')}
+                          >
+                            <TagGroupIcon {...groupIcon} />
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                    <ChatCount
+                      count={
+                        section.sessions
+                          ? section.sessions.length
+                          : section.groups?.reduce((sum, g) => sum + g.sessions.length, 0) ?? 0
+                      }
+                    />
                   </div>
 
                   {!sectionCollapsed ? (
@@ -384,7 +386,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                         const canAddHere = group.kind === 'project' || group.kind === 'ungrouped'
                         return (
                           <div key={group.key} className="min-w-0">
-                            <div className="sidebar-group-head mb-0.5 flex items-center">
+                            <div className="sidebar-group-head mb-0.5">
                               <div
                                 role="button"
                                 tabIndex={0}
@@ -422,7 +424,6 @@ export const ChatSidebar = memo(function ChatSidebar({
                                   </span>
                                 </span>
                                 <span className="min-w-0 flex-1 truncate">{group.label}</span>
-                                <ChatCount count={group.sessions.length} />
                                 {canAddHere ? (
                                   <button
                                     type="button"
@@ -441,6 +442,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                   </button>
                                 ) : null}
                               </div>
+                              <ChatCount count={group.sessions.length} />
                             </div>
                             <div className={`sidebar-session-list min-w-0 ${collapsed ? 'hidden' : ''}`} aria-hidden={collapsed}>
                               {group.sessions.map((item) => (
