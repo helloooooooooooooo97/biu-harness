@@ -42,9 +42,9 @@ test('default plugin dir is repo-root .plugin, not nested catalog', () => {
   assert.equal(dir.includes('.biu'), false)
 })
 
-test('default store state is a json file under .plugin', () => {
+test('default store state is .plugin/index.json', () => {
   const path = defaultStatePath().replace(/\\/g, '/')
-  assert.ok(path.endsWith('/.plugin/store.json') || path.endsWith('.plugin/store.json'))
+  assert.ok(path.endsWith('/.plugin/index.json') || path.endsWith('.plugin/index.json'))
 })
 
 test('restore skips a broken enabled plugin and continues', async () => {
@@ -53,7 +53,7 @@ test('restore skips a broken enabled plugin and continues', async () => {
   try {
     const ctx = new Context()
     const { adopted } = stubHub(ctx)
-    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
+    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'index.json'), join(dir, '.plugin-dev')).open()
     await store.create({
       id: 'store-ok',
       name: 'Ok',
@@ -67,7 +67,7 @@ test('restore skips a broken enabled plugin and continues', async () => {
     })
     await store.openPlugin('store-bad')
     await writeFile(join(pluginDir, 'store-bad', 'host.js'), 'throw new SyntaxError("nope")\n')
-    const store2 = new PluginStoreService(ctx, pluginDir, join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
+    const store2 = new PluginStoreService(ctx, pluginDir, join(dir, 'index.json'), join(dir, '.plugin-dev')).open()
     await store2.restore()
     assert.ok(adopted.includes('store-ok'))
   } finally {
@@ -80,7 +80,7 @@ test('missing .plugin lists no plugins', async () => {
   try {
     const ctx = new Context()
     stubHub(ctx)
-    const store = new PluginStoreService(ctx, join(dir, 'missing'), join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
+    const store = new PluginStoreService(ctx, join(dir, 'missing'), join(dir, 'index.json'), join(dir, '.plugin-dev')).open()
     assert.deepEqual(await store.list(), [])
   } finally {
     await rm(dir, { recursive: true, force: true })
@@ -93,7 +93,7 @@ test('create writes .plugin/<id>/; close keeps code; uninstall deletes .plugin/<
   try {
     const ctx = new Context()
     const { adopted, dropped, forks } = stubHub(ctx)
-    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
+    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'index.json'), join(dir, '.plugin-dev')).open()
     const created = await store.create({
       id: 'store-echo',
       name: 'Echo',
@@ -106,7 +106,7 @@ test('create writes .plugin/<id>/; close keeps code; uninstall deletes .plugin/<
 
     const opened = await store.openPlugin('store-echo')
     assert.equal(opened?.enabled, true)
-    const saved = JSON.parse(await readFile(join(dir, 'store.json'), 'utf8')) as { enabled: string[] }
+    const saved = JSON.parse(await readFile(join(dir, 'index.json'), 'utf8')) as { enabled: string[] }
     assert.deepEqual(saved.enabled, ['store-echo'])
     assert.deepEqual(adopted, ['store-echo'])
     assert.equal(forks.get('store-echo')?.packageName, 'store:store-echo')
@@ -131,7 +131,7 @@ test('web-only plugin opens without host.js', async () => {
   try {
     const ctx = new Context()
     const { forks } = stubHub(ctx)
-    const store = new PluginStoreService(ctx, join(dir, '.plugin'), join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
+    const store = new PluginStoreService(ctx, join(dir, '.plugin'), join(dir, 'index.json'), join(dir, '.plugin-dev')).open()
     await store.initSandbox({
       id: 'store-banner',
       name: 'Banner',
