@@ -352,7 +352,7 @@ function Shell(props: SlotProps) {
                   aria-label="Expand sidebar"
                   onClick={expandSidebar}
                 >
-                  <LuPanelLeft className="size-3.5" />
+                  <LuPanelLeft className="size-5" />
                 </button>
               ) : null}
               {project ? (
@@ -372,7 +372,7 @@ function Shell(props: SlotProps) {
                 data-testid="header-config-toggle"
                 onClick={() => setConfigOpen(true)}
               >
-                <LuSettings2 className="size-3.5" />
+                <LuSettings2 className="size-5" />
               </button>
               <button
                 type="button"
@@ -383,7 +383,7 @@ function Shell(props: SlotProps) {
                 data-testid="inspector-toggle"
                 onClick={toggleInspector}
               >
-                <LuPanelRight className="size-3.5" />
+                <LuPanelRight className="size-5" />
               </button>
             </div>
           </header>

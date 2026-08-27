@@ -150,7 +150,7 @@ export const SessionInspector = memo(function SessionInspector({
                 data-testid={`inspector-tab-${item.id}`}
               >
                 <span className="inspector-tab-indicator" aria-hidden />
-                {item.Icon ? <item.Icon className="size-3.5" /> : <LuLayoutGrid className="size-3.5" />}
+                {item.Icon ? <item.Icon className="size-5" /> : <LuLayoutGrid className="size-5" />}
                 {item.label}
               </button>
             )
@@ -158,12 +158,12 @@ export const SessionInspector = memo(function SessionInspector({
         </div>
         <button
           type="button"
-          className="grid size-6 cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
+          className="grid size-7 cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
           title="收起右侧栏"
           aria-label="收起右侧栏"
           onClick={onClose}
         >
-          <LuPanelRightClose className="size-3.5" />
+          <LuPanelRightClose className="size-5" />
         </button>
       </div>
 

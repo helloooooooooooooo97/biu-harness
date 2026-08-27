@@ -338,8 +338,8 @@ body {
 }
 
 .chat-view-project-icon {
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   color: var(--dsw-label-3);
 }
@@ -829,8 +829,8 @@ body {
 }
 
 .project-chip-icon {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 
@@ -1363,8 +1363,8 @@ body {
 }
 .usage-panel-title-icon {
   flex: none;
-  width: 13px;
-  height: 13px;
+  width: 20px;
+  height: 20px;
   color: var(--dsw-business);
 }
 .usage-panel-legend {
