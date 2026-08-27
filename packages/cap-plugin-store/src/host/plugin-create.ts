@@ -31,12 +31,11 @@ export async function compileStoreModule(source: string, kind: 'host' | 'web') {
 }
 
 const PLUGIN_CREATE_DESCRIPTION = [
-  '把 Cordis 商店插件写入 .cordis/plugins.sqlite（与 tasks 插件同一套 node:sqlite）。不要用 fs_write/bash 改 packages/ 或 cordis.plugins.json，也不要写 .biu 目录。',
-  'hostJs 与 webJs 按需二选一即可：只要后端（路由/服务）就只交 hostJs；只要前端 UI 就只交 webJs；两边都要才两个都交。至少交一个。',
-  '库空时商店显示「没有插件」。本工具 INSERT/UPDATE 一行。可交 TS/TSX：当前 host 进程内 esbuild.transform 成 ESM 再入库，不重启主进程、不跑 Vite。',
-  '写完出现在商店，需用户点「安装」才会把 enabled 置 1 并运行。「卸载」只把 enabled 置 0 并停运行，SQLite 行和代码保留。',
-  '契约：id 与 export const name 必须相同。Host inject 只能写真正用到的服务（http 等）。Web inject 一般是 ["slots"]。',
-  '副作用必须走 ctx。Host：ctx.http.route。Web：ctx.slots.place("plugin-store-extras", Comp, { key: 唯一且稳定 })。禁止 import "react" / "@biu/..." / 相对路径。',
+  '把 Cordis 商店插件写入仓库根 .plugin/<id>/（manifest.json，以及按需的 host.js / web.js）。不要用 fs_write/bash 改 packages/ 或 cordis.plugins.json，也不要写 .biu 或 plugin-catalog。',
+  'hostJs 与 webJs 按需二选一：只要后端就只交 hostJs；只要前端就只交 webJs；两边都要才两个都交。至少交一个。',
+  '没有 .plugin 或目录为空时商店显示「没有插件」。本工具会建 .plugin/<id>/。可交 TS/TSX：当前 host 进程内 esbuild.transform 成 ESM 再落盘。',
+  '安装状态写在 .cordis/plugins.sqlite（enabled）。「卸载」只把 enabled 置 0 并停运行，.plugin/<id>/ 原文件保留。',
+  '契约：id 与 export const name 必须相同。副作用必须走 ctx。Host：ctx.http.route。Web：ctx.slots.place("plugin-store-extras", Comp, { key })。',
   'Host 最小示例：export const name = "store-echo"; export const inject = ["http"]; export function apply(ctx) { ctx.http.route("GET", "/api/store-echo", (route) => { route.send(200, { ok: true }); }); }',
   'Web 最小示例：export const name = "store-echo-web"; export const inject = ["slots"]; function Banner() { return <div>echo 已运行</div>; } export function apply(ctx) { ctx.slots.place("plugin-store-extras", Banner, { key: "store-echo-banner", order: 10 }); }',
 ].join(' ')
@@ -50,7 +49,7 @@ export function registerPluginCreate(ctx: Context, store: PluginStoreService) {
       properties: {
         id: {
           type: 'string',
-          description: '插件 id：小写字母开头，仅 [a-z0-9-]，最长 41。建议 store-foo。不要用大写或路径。',
+          description: '插件 id：小写字母开头，仅 [a-z0-9-]，最长 41。建议 store-foo。目录就是 .plugin/<id>/。',
         },
         name: { type: 'string', description: '商店卡片标题，给人看的短名' },
         blurb: { type: 'string', description: '一行简介，出现在卡片上' },

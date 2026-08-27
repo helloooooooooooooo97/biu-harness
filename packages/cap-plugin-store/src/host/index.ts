@@ -1,4 +1,6 @@
 import { mkdirSync } from 'node:fs'
+import { existsSync } from 'node:fs'
+import { readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import { Service, type Context, type Plugin } from 'cordis'
@@ -20,13 +22,10 @@ export type StoreListing = {
   running: boolean
 }
 
-type PluginRow = {
+export type StoreManifest = {
   id: string
   name: string
   blurb: string
-  host_js: string
-  web_js: string
-  enabled: number
 }
 
 type StoreHub = {
@@ -37,43 +36,12 @@ type StoreHub = {
 
 const ALLOWED_FILES = new Set(['manifest.json', 'host.js', 'web.js'])
 
-const HELLO_HOST_JS = `export const name = 'store-hello'
-export const inject = ['http']
-
-export function apply(ctx) {
-  ctx.http.route('GET', '/api/store-hello', (route) => {
-    route.send(200, { message: 'hello from store plugin', installed: true })
-  })
-}
-`
-
-const HELLO_WEB_JS = `const React = globalThis.React
-
-export const name = 'store-hello-web'
-export const inject = ['slots']
-
-function HelloBanner() {
-  return React.createElement(
-    'div',
-    {
-      'data-testid': 'store-hello-banner',
-      className:
-        'rounded-[8px] border border-[var(--dsw-ok)]/40 bg-[var(--dsw-surface)] px-3 py-2 text-[13px] text-[var(--dsw-label)]',
-    },
-    'Hello 商店插件已运行',
-  )
-}
-
-export function apply(ctx) {
-  ctx.slots.place('plugin-store-extras', HelloBanner, {
-    key: 'store-hello-banner',
-    order: 10,
-  })
-}
-`
-
 export function storeWebUrl(id: string) {
   return `/api/plugin-store/files/${encodeURIComponent(id)}/web.js`
+}
+
+export function defaultPluginDir() {
+  return process.env.BIU_PLUGIN_DIR || join(process.cwd(), '.plugin')
 }
 
 export function defaultDbPath() {
@@ -88,10 +56,20 @@ function importHostModule(code: string) {
   return import(`data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`)
 }
 
+async function readManifest(dir: string): Promise<StoreManifest> {
+  const raw = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf8')) as StoreManifest
+  if (!raw.id || !raw.name) throw new Error(`invalid plugin manifest in ${dir}`)
+  return raw
+}
+
 export class PluginStoreService extends Service {
   private db!: DatabaseSync
 
-  constructor(ctx: Context, private readonly dbPath: string) {
+  constructor(
+    ctx: Context,
+    readonly pluginDir: string,
+    private readonly dbPath: string,
+  ) {
     super(ctx, 'pluginStore')
   }
 
@@ -102,48 +80,36 @@ export class PluginStoreService extends Service {
     this.db.exec('PRAGMA journal_mode = WAL')
     this.db.exec('PRAGMA synchronous = NORMAL')
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS plugins (
+      CREATE TABLE IF NOT EXISTS store_plugins (
         id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        blurb TEXT NOT NULL DEFAULT '',
-        host_js TEXT NOT NULL DEFAULT '',
-        web_js TEXT NOT NULL DEFAULT '',
-        enabled INTEGER NOT NULL DEFAULT 0,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
+        enabled INTEGER NOT NULL DEFAULT 0
       );
     `)
     return this
-  }
-
-  ensureHello() {
-    const existing = this.getRow('store-hello')
-    if (existing) return
-    const now = Date.now()
-    this.db
-      .prepare(
-        `INSERT INTO plugins (id, name, blurb, host_js, web_js, enabled, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
-      )
-      .run(
-        'store-hello',
-        'Hello',
-        '内置测试插件：安装后在本页显示横幅，并提供 GET /api/store-hello。',
-        HELLO_HOST_JS,
-        HELLO_WEB_JS,
-        now,
-        now,
-      )
   }
 
   private hub(): StoreHub {
     return this.ctx.hub as unknown as StoreHub
   }
 
-  private getRow(id: string) {
-    return this.db.prepare('SELECT id, name, blurb, host_js, web_js, enabled FROM plugins WHERE id = ?').get(id) as
-      | PluginRow
+  private isEnabled(id: string) {
+    const row = this.db.prepare('SELECT enabled FROM store_plugins WHERE id = ?').get(id) as
+      | { enabled: number }
       | undefined
+    return row?.enabled === 1
+  }
+
+  private setEnabled(id: string, enabled: boolean) {
+    this.db
+      .prepare(
+        `INSERT INTO store_plugins (id, enabled) VALUES (?, ?)
+         ON CONFLICT(id) DO UPDATE SET enabled = excluded.enabled`,
+      )
+      .run(id, enabled ? 1 : 0)
+  }
+
+  pluginPath(id: string) {
+    return join(this.pluginDir, id)
   }
 
   async create(input: PluginCreateInput) {
@@ -154,106 +120,120 @@ export class PluginStoreService extends Service {
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
     if (!name) throw new Error('plugin name required')
     if (!hostJs && !webSrc) throw new Error('hostJs or webJs required')
-    const hostCompiled = hostJs ? await compileStoreModule(hostJs, 'host') : ''
-    const webCompiled = webSrc ? await compileStoreModule(webSrc, 'web') : ''
-    const now = Date.now()
-    const prev = this.getRow(id)
-    this.db
-      .prepare(
-        `INSERT INTO plugins (id, name, blurb, host_js, web_js, enabled, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET
-           name = excluded.name,
-           blurb = excluded.blurb,
-           host_js = excluded.host_js,
-           web_js = excluded.web_js,
-           updated_at = excluded.updated_at`,
-      )
-      .run(id, name, String(input.blurb ?? '').trim() || name, hostCompiled, webCompiled, prev?.enabled ?? 0, now, now)
-    if (prev?.enabled === 1) await this.mount(this.getRow(id)!)
-    return { id }
+    const dest = this.pluginPath(id)
+    mkdirSync(dest, { recursive: true })
+    await writeFile(
+      join(dest, 'manifest.json'),
+      `${JSON.stringify({ id, name, blurb: String(input.blurb ?? '').trim() || name }, null, 2)}\n`,
+    )
+    if (hostJs) await writeFile(join(dest, 'host.js'), await compileStoreModule(hostJs, 'host'))
+    else if (existsSync(join(dest, 'host.js'))) await rm(join(dest, 'host.js'))
+    if (webSrc) await writeFile(join(dest, 'web.js'), await compileStoreModule(webSrc, 'web'))
+    else if (existsSync(join(dest, 'web.js'))) await rm(join(dest, 'web.js'))
+    if (this.isEnabled(id)) await this.mountFromDisk(await readManifest(dest), dest)
+    return { id, pluginPath: dest }
   }
 
   async list(): Promise<StoreListing[]> {
+    const names = existsSync(this.pluginDir) ? await readdir(this.pluginDir) : []
     const running = new Set(
       this.hub()
         .snapshot()
         .plugins.filter((row) => row.enabled || row.state === 'active')
         .map((row) => row.id),
     )
-    const rows = this.db
-      .prepare('SELECT id, name, blurb, host_js, web_js, enabled FROM plugins ORDER BY name COLLATE NOCASE, id')
-      .all() as PluginRow[]
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      blurb: row.blurb,
-      installed: row.enabled === 1,
-      running: row.enabled === 1 && running.has(row.id),
-    }))
+    const items: StoreListing[] = []
+    for (const name of names.sort()) {
+      const dir = join(this.pluginDir, name)
+      if (!(await stat(dir)).isDirectory()) continue
+      if (!existsSync(join(dir, 'manifest.json'))) continue
+      const manifest = await readManifest(dir)
+      const installed = this.isEnabled(manifest.id)
+      items.push({
+        ...manifest,
+        installed,
+        running: installed && running.has(manifest.id),
+      })
+    }
+    return items
   }
 
   async install(id: string) {
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
-    const row = this.getRow(id)
-    if (!row) throw new Error(`unknown store plugin: ${id}`)
-    this.db.prepare('UPDATE plugins SET enabled = 1, updated_at = ? WHERE id = ?').run(Date.now(), id)
-    await this.mount({ ...row, enabled: 1 })
-    return (await this.list()).find((item) => item.id === id)
+    const hit = await this.findPluginDir(id)
+    if (!hit) throw new Error(`unknown store plugin: ${id}`)
+    const manifest = await readManifest(hit)
+    this.setEnabled(manifest.id, true)
+    await this.mountFromDisk(manifest, hit)
+    return (await this.list()).find((item) => item.id === manifest.id)
   }
 
   async uninstall(id: string) {
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
     await this.hub().drop(id)
-    this.db.prepare('UPDATE plugins SET enabled = 0, updated_at = ? WHERE id = ?').run(Date.now(), id)
+    this.setEnabled(id, false)
   }
 
   async restore() {
-    const rows = this.db.prepare('SELECT id, name, blurb, host_js, web_js, enabled FROM plugins WHERE enabled = 1').all() as PluginRow[]
-    for (const row of rows) await this.mount(row)
+    const rows = this.db.prepare('SELECT id FROM store_plugins WHERE enabled = 1').all() as Array<{ id: string }>
+    for (const row of rows) {
+      const hit = await this.findPluginDir(row.id)
+      if (!hit) continue
+      await this.mountFromDisk(await readManifest(hit), hit)
+    }
   }
 
   async readInstalledFile(id: string, file: string) {
     if (!isSafeId(id) || !ALLOWED_FILES.has(file)) throw new Error('not found')
-    const row = this.getRow(id)
-    if (!row || row.enabled !== 1) throw new Error('not found')
-    if (file === 'host.js') {
-      if (!row.host_js.trim()) throw new Error('not found')
-      return row.host_js
-    }
-    if (file === 'web.js') {
-      if (!row.web_js.trim()) throw new Error('not found')
-      return row.web_js
-    }
-    return `${JSON.stringify({ id: row.id, name: row.name, blurb: row.blurb }, null, 2)}\n`
+    if (!this.isEnabled(id)) throw new Error('not found')
+    const hit = await this.findPluginDir(id)
+    if (!hit) throw new Error('not found')
+    const path = join(hit, file)
+    if (!existsSync(path)) throw new Error('not found')
+    return readFile(path, 'utf8')
   }
 
-  private async mount(row: PluginRow) {
-    const hostCode = row.host_js.trim()
-    const webCode = row.web_js.trim()
-    if (!hostCode && !webCode) throw new Error(`plugin ${row.id} has neither host nor web`)
+  private async findPluginDir(id: string) {
+    if (!existsSync(this.pluginDir)) return null
+    const guess = this.pluginPath(id)
+    if (existsSync(join(guess, 'manifest.json'))) return guess
+    for (const name of await readdir(this.pluginDir)) {
+      const dir = join(this.pluginDir, name)
+      if (!(await stat(dir)).isDirectory()) continue
+      if (!existsSync(join(dir, 'manifest.json'))) continue
+      const manifest = await readManifest(dir)
+      if (manifest.id === id) return dir
+    }
+    return null
+  }
+
+  private async mountFromDisk(manifest: StoreManifest, dir: string) {
+    const hostFile = join(dir, 'host.js')
+    const webFile = join(dir, 'web.js')
+    const hostCode = existsSync(hostFile) ? (await readFile(hostFile, 'utf8')).trim() : ''
+    const hasWeb = existsSync(webFile)
+    if (!hostCode && !hasWeb) throw new Error(`plugin ${manifest.id} has neither host nor web`)
     const mod = (hostCode
       ? await importHostModule(hostCode)
-      : { name: row.id, apply() {} }) as Plugin & { inject?: string[] }
+      : { name: manifest.id, apply() {} }) as Plugin & { inject?: string[] }
     const entry: CatalogEntry = {
-      id: row.id,
-      name: row.name,
+      id: manifest.id,
+      name: manifest.name,
       layer: 'capability',
-      blurb: row.blurb,
+      blurb: manifest.blurb,
       plugin: mod,
       inject: mod.inject,
       togglable: true,
       enabled: true,
-      web: webCode ? storeWebUrl(row.id) : undefined,
-      packageName: `store:${row.id}`,
+      web: hasWeb ? storeWebUrl(manifest.id) : undefined,
+      packageName: `store:${manifest.id}`,
     }
     await this.hub().adopt(entry)
   }
 }
 
 export async function apply(ctx: Context) {
-  const store = new PluginStoreService(ctx, defaultDbPath()).open()
-  store.ensureHello()
+  const store = new PluginStoreService(ctx, defaultPluginDir(), defaultDbPath()).open()
   await store.restore()
   registerPluginCreate(ctx, store)
 
