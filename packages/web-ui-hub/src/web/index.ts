@@ -26,7 +26,13 @@ export function apply(ctx: Context) {
     if (loader) return loader()
     if (isRuntimeWebModule(web)) {
       const href = web.startsWith('/') ? new URL(web, window.location.origin).href : web
-      return import(/* @vite-ignore */ href)
+      const bust = href.includes('?') ? `&v=${Date.now()}` : `?v=${Date.now()}`
+      try {
+        return await import(/* @vite-ignore */ `${href}${bust}`)
+      } catch (error) {
+        console.error(`ui-hub: failed to load ${web}`, error)
+        return undefined
+      }
     }
     return undefined
   }
