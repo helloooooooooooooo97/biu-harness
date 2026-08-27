@@ -2097,7 +2097,11 @@ function TasksBoard({
                     {DIFFICULTY_LABEL[task.difficulty]}
                   </span>
                 </div>
-                {task.description ? <div className="tasks-card-desc">{task.description}</div> : null}
+                {task.description ? (
+                  <div className="tasks-card-desc" title={task.description}>
+                    {task.description}
+                  </div>
+                ) : null}
                 <div className="tasks-card-meta">
                   {task.assignee && task.assignee.kind === 'agent' && task.assignee.mascot ? (
                     <MascotAvatar
@@ -3659,7 +3663,7 @@ if (typeof document !== 'undefined') {
 /* ---- 看板视图（Notion 风格：极轻边框、无重色、悬浮轻阴影）---- */
 .tasks-board { display:grid; grid-template-columns:repeat(5, minmax(190px, 1fr)); gap:10px; margin-top:10px; align-items:start; overflow-x:auto; }
 .tasks-board.is-compact { gap:8px; }
-.tasks-board-col { display:flex; flex-direction:column; min-height:120px; background:color-mix(in srgb, var(--dsw-muted-fill) 38%, transparent); border-radius:10px; padding:6px; }
+.tasks-board-col { display:flex; flex-direction:column; min-width:0; min-height:120px; background:color-mix(in srgb, var(--dsw-muted-fill) 38%, transparent); border-radius:10px; padding:6px; }
 .tasks-board-colhead { display:flex; align-items:center; gap:6px; padding:4px 6px 8px; color:var(--dsw-label-2); font-size:11px; font-weight:600; }
 .tasks-board-col.is-overdue .tasks-board-colhead { color:var(--dsw-danger); font-weight:700; }
 .tasks-board-col.is-blocked .tasks-board-colhead { color:#9a6700; }
@@ -3667,7 +3671,7 @@ if (typeof document !== 'undefined') {
 .tasks-board-col.is-done .tasks-board-colhead { color:#2f7d4c; }
 .tasks-board-count { margin-left:auto; color:var(--dsw-label-3); font-size:10px; font-weight:600; background:var(--dsw-muted-fill); border-radius:8px; padding:1px 6px; }
 .tasks-board-list { display:flex; flex-direction:column; gap:6px; }
-.tasks-card { display:flex; flex-direction:column; gap:5px; width:100%; text-align:left; border:0; border-radius:7px; padding:8px 9px; background:var(--dsw-surface); color:var(--dsw-label); font:inherit; cursor:pointer; box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 65%, transparent); transition:box-shadow .12s ease, transform .08s ease; }
+.tasks-card { display:flex; flex-direction:column; gap:5px; width:100%; min-width:0; overflow:hidden; text-align:left; border:0; border-radius:7px; padding:8px 9px; background:var(--dsw-surface); color:var(--dsw-label); font:inherit; cursor:pointer; box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 65%, transparent); transition:box-shadow .12s ease, transform .08s ease; }
 .tasks-card:hover { box-shadow:0 1px 3px rgba(0,0,0,.08), 0 0 0 1px color-mix(in srgb, var(--dsw-border) 85%, transparent); transform:translateY(-1px); }
 .tasks-card.is-active { background:color-mix(in srgb, var(--dsw-business) 6%, var(--dsw-surface)); }
 .tasks-card-title { display:flex; align-items:flex-start; gap:6px; font-size:12px; font-weight:620; line-height:1.35; }
@@ -3682,7 +3686,7 @@ if (typeof document !== 'undefined') {
 .tasks-card-badge.is-d-high { color:#d64545; background:color-mix(in srgb, #d64545 12%, transparent); }
 .tasks-card-badge.is-d-med { color:#e07a2f; background:color-mix(in srgb, #e07a2f 12%, transparent); }
 .tasks-card-badge.is-d-low { color:#3d9a5f; background:color-mix(in srgb, #3d9a5f 12%, transparent); }
-.tasks-card-desc { font-size:11px; color:var(--dsw-label-2); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.tasks-card-desc { min-width:0; max-width:100%; font-size:11px; color:var(--dsw-label-2); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; word-break:break-word; }
 .tasks-card-meta { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--dsw-label-3); margin-top:2px; }
 .tasks-card-assignee { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tasks-card-reports { margin-left:auto; color:var(--dsw-label-2); }
