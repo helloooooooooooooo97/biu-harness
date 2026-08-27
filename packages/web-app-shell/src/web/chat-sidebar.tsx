@@ -19,8 +19,6 @@ import { SidebarMascot } from '@biu/web-mascot'
 import { resolveSessionMascot } from '@biu/web-mascot'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import {
-  LuChevronDown,
-  LuChevronRight,
   LuFolderTree,
   LuPanelLeftClose,
   LuPlus,
@@ -92,17 +90,19 @@ const SessionRow = memo(function SessionRow({
     >
       <Link
         to={`/s/${item.id}`}
-        className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-[12px] leading-4"
+        className="flex min-w-0 flex-1 items-center gap-2 py-1 pr-1.5 text-left text-[12px] leading-4"
       >
-        <SidebarMascot
-          size={24}
-          sessionId={item.id}
-          identity={identity}
-          busy={busy}
-          animate={false}
-          dancing={dancing}
-          title={dancing ? '跳舞中 🎉' : `${identity.shape} · ${identity.color}`}
-        />
+        <span className="grid size-5 shrink-0 place-items-center">
+          <SidebarMascot
+            size={20}
+            sessionId={item.id}
+            identity={identity}
+            busy={busy}
+            animate={false}
+            dancing={dancing}
+            title={dancing ? '跳舞中 🎉' : `${identity.shape} · ${identity.color}`}
+          />
+        </span>
         <span className="min-w-0 flex-1 truncate font-medium">
           {(item.type ?? 'chat') === 'live' ? (
             <span className="mr-1 text-[9px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
@@ -280,7 +280,7 @@ export const ChatSidebar = memo(function ChatSidebar({
             onClick={() => createChat({ type: 'chat' })}
           >
             <span className="app-side-actions-icon" aria-hidden>
-              <LuPlus className="size-4" />
+              <LuPlus className="size-5" />
             </span>
             <span className="app-side-actions-label">添加聊天</span>
           </button>
@@ -292,7 +292,7 @@ export const ChatSidebar = memo(function ChatSidebar({
             onClick={() => createChat({ type: 'live' })}
           >
             <span className="app-side-actions-icon" aria-hidden>
-              <LuRadio className="size-4" />
+              <LuRadio className="size-5" />
             </span>
             <span className="app-side-actions-label">新建 Live</span>
           </button>
@@ -310,16 +310,22 @@ export const ChatSidebar = memo(function ChatSidebar({
                   <div className="sidebar-section-head min-w-0">
                     <button
                       type="button"
-                      className="flex min-w-0 flex-1 items-center gap-1 rounded-[6px] text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
+                      className="flex min-w-0 flex-1 items-center gap-2 rounded-[6px] text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
                       aria-expanded={!sectionCollapsed}
                       onClick={() => toggleSection(section.kind)}
                     >
                       {section.kind === 'pinned' ? (
-                        <LuStar className="size-3.5 shrink-0 text-[#f5b700]" fill="currentColor" />
+                        <span className="sidebar-rail-icon">
+                          <LuStar className="size-5 text-[#f5b700]" fill="currentColor" />
+                        </span>
                       ) : section.kind === 'tag' ? (
-                        <LuTag className="size-3.5 shrink-0 opacity-80" />
+                        <span className="sidebar-rail-icon">
+                          <LuTag className="size-5 opacity-80" />
+                        </span>
                       ) : (
-                        <FolderGlyph className="size-3.5 shrink-0 opacity-80" />
+                        <span className="sidebar-rail-icon">
+                          <FolderGlyph className="size-5 opacity-80" />
+                        </span>
                       )}
                       <span className="min-w-0 flex-1 truncate tracking-normal">{section.label}</span>
                       <span className="shrink-0 font-mono text-[10px] opacity-60">
@@ -359,7 +365,9 @@ export const ChatSidebar = memo(function ChatSidebar({
                   {!sectionCollapsed ? (
                     <div className="min-w-0 space-y-1.5 pt-0.5">
                       {section.sessions
-                        ? section.sessions.map((item) => (
+                        ? (
+                          <div className="sidebar-session-list min-w-0">
+                            {section.sessions.map((item) => (
                             <SessionRow
                               key={`pinned:${item.id}`}
                               item={item}
@@ -369,18 +377,20 @@ export const ChatSidebar = memo(function ChatSidebar({
                               onDelete={deleteChat}
                               onPin={pinChat}
                             />
-                          ))
+                            ))}
+                          </div>
+                          )
                         : section.groups?.map((group) => {
                         const collapsed = Boolean(collapsedProjects[group.key])
                         const isUngrouped = group.key === UNGROUPED_PROJECT_KEY || group.key === UNGROUPED_TAG_KEY
                         const canAddHere = group.kind === 'project' || group.kind === 'ungrouped'
                         return (
                           <div key={group.key} className="min-w-0">
-                            <div className="sidebar-group-head mb-0.5 flex items-center px-1">
+                            <div className="sidebar-group-head mb-0.5 flex items-center">
                               <div
                                 role="button"
                                 tabIndex={0}
-                                className="flex min-h-[24px] min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-[6px] text-left text-[12px] font-semibold tracking-wide text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
+                                className="flex min-h-[24px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-[6px] text-left text-[12px] font-semibold tracking-wide text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
                                 title={group.path ?? group.label}
                                 aria-expanded={!collapsed}
                                 onClick={() => toggleProjectGroup(group.key)}
@@ -391,21 +401,22 @@ export const ChatSidebar = memo(function ChatSidebar({
                                   }
                                 }}
                               >
-                                {collapsed ? (
-                                  <LuChevronRight className="size-3 shrink-0 opacity-70" />
-                                ) : (
-                                  <LuChevronDown className="size-3 shrink-0 opacity-70" />
-                                )}
                                 {group.kind === 'pinned' ? (
-                                  <LuStar className="size-3.5 shrink-0 text-[#f5b700]" fill="currentColor" />
+                                  <span className="sidebar-rail-icon">
+                                    <LuStar className="size-5 text-[#f5b700]" fill="currentColor" />
+                                  </span>
                                 ) : group.kind === 'tag' ? (
-                                  <LuTag className="size-3.5 shrink-0 opacity-80" />
+                                  <span className="sidebar-rail-icon">
+                                    <LuTag className="size-5 opacity-80" />
+                                  </span>
                                 ) : isUngrouped ? (
-                                  <span className="grid size-3.5 place-items-center text-[11px] opacity-70" aria-hidden>
+                                  <span className="sidebar-rail-icon text-[11px] opacity-70" aria-hidden>
                                     —
                                   </span>
                                 ) : (
-                                  <FolderGlyph className="size-3.5 shrink-0 opacity-80" />
+                                  <span className="sidebar-rail-icon">
+                                    <FolderGlyph className="size-5 opacity-80" />
+                                  </span>
                                 )}
                                 <span className="min-w-0 flex-1 truncate tracking-normal">{group.label}</span>
                                 <span className="shrink-0 font-mono text-[10px] opacity-60">{group.sessions.length}</span>
@@ -428,7 +439,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                 ) : null}
                               </div>
                             </div>
-                            <div className={`min-w-0 ${collapsed ? 'hidden' : ''}`} aria-hidden={collapsed}>
+                            <div className={`sidebar-session-list min-w-0 ${collapsed ? 'hidden' : ''}`} aria-hidden={collapsed}>
                               {group.sessions.map((item) => (
                                 <SessionRow
                                   key={`${group.key}:${item.id}`}

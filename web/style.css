@@ -394,7 +394,7 @@ body {
   align-items: center;
   gap: 8px;
   border-radius: 8px;
-  padding: 5px 8px;
+  padding: 5px 4px;
   color: var(--dsw-sidebar-fg);
   font-size: 12px;
   font-weight: 500;
@@ -430,8 +430,8 @@ body {
 
 .app-side-actions-icon {
   display: grid;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   place-items: center;
   color: var(--dsw-label-3);
@@ -551,12 +551,28 @@ body {
   opacity: 1;
 }
 
+.sidebar-rail-icon {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  place-items: center;
+}
+
+.sidebar-session-list {
+  padding-left: 32px;
+}
+
+.sidebar-group-head {
+  padding: 0 4px;
+}
+
 /* 顶部「收藏/项目/标签」板块标题行：普通透明形态(无胶囊质感)。
-   保留固定 22px 行高(items-center)，确保 view-switch 悬浮出现不撑高行 */
+   保留固定 24px 行高(items-center)，确保 view-switch 悬浮出现不撑高行 */
 .sidebar-section-head {
   display: flex;
   align-items: center;
-  height: 22px;
+  height: 24px;
   margin: 0 0 4px;
   padding: 0 4px;
 }
