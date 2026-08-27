@@ -70,9 +70,9 @@ function SessionTagBadges({ tags }: { tags?: string[] }) {
 
 function ChatCount({ count }: { count: number }) {
   return (
-    <span className="sidebar-chat-count">
+    <span className="inline-flex shrink-0 items-center gap-0.5 leading-none tabular-nums opacity-70">
       <span>{count}</span>
-      <ChatBubbleLeftIcon aria-hidden />
+      <ChatBubbleLeftIcon className="size-4 shrink-0" aria-hidden />
     </span>
   )
 }
@@ -328,6 +328,13 @@ export const ChatSidebar = memo(function ChatSidebar({
                       onClick={() => toggleSection(section.kind)}
                     >
                       <span className="min-w-0 flex-1 truncate tracking-normal">{section.label}</span>
+                      <ChatCount
+                        count={
+                          section.sessions
+                            ? section.sessions.length
+                            : section.groups?.reduce((sum, g) => sum + g.sessions.length, 0) ?? 0
+                        }
+                      />
                     </button>
                     {section.kind !== 'pinned' ? (
                       <div
@@ -355,13 +362,6 @@ export const ChatSidebar = memo(function ChatSidebar({
                         </button>
                       </div>
                     ) : null}
-                    <ChatCount
-                      count={
-                        section.sessions
-                          ? section.sessions.length
-                          : section.groups?.reduce((sum, g) => sum + g.sessions.length, 0) ?? 0
-                      }
-                    />
                   </div>
 
                   {!sectionCollapsed ? (
