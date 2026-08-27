@@ -34,7 +34,7 @@ const PLUGIN_CREATE_DESCRIPTION = [
   '把 Cordis 商店插件写入仓库根 .plugin/<id>/（manifest.json，以及按需的 host.js / web.js）。不要用 fs_write/bash 改 packages/ 或 cordis.plugins.json，也不要写 .biu 或 plugin-catalog。',
   'hostJs 与 webJs 按需二选一：只要后端就只交 hostJs；只要前端就只交 webJs；两边都要才两个都交。至少交一个。',
   '没有 .plugin 或目录为空时商店显示「没有插件」。本工具会建 .plugin/<id>/。可交 TS/TSX：当前 host 进程内 esbuild.transform 成 ESM 再落盘。',
-  '安装状态写在 .cordis/plugins.sqlite（enabled）。「卸载」只把 enabled 置 0 并停运行，.plugin/<id>/ 原文件保留。',
+  '开启把 enabled 置 1 并运行。「关闭」停运行并保留 .plugin/<id>/ 与 .cordis/plugin-data/<id>/。「卸载」才删目录和数据。',
   '契约：id 与 export const name 必须相同。副作用必须走 ctx。Host：ctx.http.route。Web：ctx.slots.place("plugin-store-extras", Comp, { key })。',
   'Host 最小示例：export const name = "store-echo"; export const inject = ["http"]; export function apply(ctx) { ctx.http.route("GET", "/api/store-echo", (route) => { route.send(200, { ok: true }); }); }',
   'Web 最小示例：export const name = "store-echo-web"; export const inject = ["slots"]; function Banner() { return <div>echo 已运行</div>; } export function apply(ctx) { ctx.slots.place("plugin-store-extras", Banner, { key: "store-echo-banner", order: 10 }); }',
