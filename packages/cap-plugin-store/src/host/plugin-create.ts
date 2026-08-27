@@ -10,6 +10,27 @@ export type PluginCreateInput = {
   webJs?: string
 }
 
+/** 当前进程内把 TS/TSX 编成 ESM 字符串。不 spawn vite/tsc，不 watch，不重启 host。 */
+export async function compileStoreModule(source: string, kind: 'host' | 'web') {
+  const trimmed = source.trim()
+  if (!trimmed) throw new Error(`${kind} source is empty`)
+  const { transform } = await import('esbuild')
+  const result = await transform(trimmed, {
+    loader: kind === 'web' ? 'tsx' : 'ts',
+    format: 'esm',
+    target: 'es2022',
+    jsx: 'transform',
+    jsxFactory: 'React.createElement',
+    jsxFragment: 'React.Fragment',
+    sourcemap: false,
+  })
+  let code = result.code.trim()
+  if (kind === 'web' && /React\.createElement/.test(code) && !code.includes('globalThis.React')) {
+    code = `const React = globalThis.React\n${code}`
+  }
+  return code.endsWith('\n') ? code : `${code}\n`
+}
+
 function isSafeId(id: string) {
   return /^[a-z][a-z0-9-]{1,40}$/.test(id)
 }
@@ -32,10 +53,10 @@ export async function writePluginToCatalog(catalogDir: string, input: PluginCrea
     join(dest, 'manifest.json'),
     `${JSON.stringify({ id, name, blurb: String(input.blurb ?? '').trim() || name }, null, 2)}\n`,
   )
-  await writeFile(join(dest, 'host.js'), hostJs.endsWith('\n') ? hostJs : `${hostJs}\n`)
+  await writeFile(join(dest, 'host.js'), await compileStoreModule(hostJs, 'host'))
   const webJs = input.webJs != null ? String(input.webJs).trim() : ''
   if (webJs) {
-    await writeFile(join(dest, 'web.js'), webJs.endsWith('\n') ? webJs : `${webJs}\n`)
+    await writeFile(join(dest, 'web.js'), await compileStoreModule(webJs, 'web'))
   }
   return { id, catalogPath: dest }
 }
@@ -44,15 +65,15 @@ export function registerPluginCreate(ctx: Context, catalogDir: string) {
   ctx.tools.register({
     name: 'plugin_create',
     description:
-      '把插件写进商店货架 packages/cap-plugin-store/fixtures（manifest.json、host.js，可选 web.js）。写完会出现在插件商店，再点安装。hostJs 必须是 ESM：export const name、export function apply(ctx)。web 里 React 用 globalThis.React。',
+      '把插件写进商店货架 packages/cap-plugin-store/fixtures（manifest.json、host.js，可选 web.js）。可交 TypeScript/TSX，工具在当前 host 进程内编成 ESM 再落盘，不会重启主进程、也不会跑 Vite。写完会出现在插件商店，再点安装。必须 export function apply(ctx)。web 不要 import react，用 JSX 即可。',
     parameters: {
       type: 'object',
       properties: {
         id: { type: 'string', description: '插件 id，小写 kebab-case，如 echo' },
         name: { type: 'string', description: '商店显示名' },
         blurb: { type: 'string', description: '一行简介' },
-        hostJs: { type: 'string', description: 'host.js（ESM JavaScript）' },
-        webJs: { type: 'string', description: '可选 web.js' },
+        hostJs: { type: 'string', description: 'Host 源码（TS 或 ESM JS），进程内编成 host.js' },
+        webJs: { type: 'string', description: '可选 Web 源码（TSX/JS），进程内编成 web.js' },
       },
       required: ['id', 'name', 'hostJs'],
     },
