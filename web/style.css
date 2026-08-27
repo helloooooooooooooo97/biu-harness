@@ -676,7 +676,6 @@ body {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
-  place-items-center: center;
   place-items: center;
   border-radius: 6px;
 }
