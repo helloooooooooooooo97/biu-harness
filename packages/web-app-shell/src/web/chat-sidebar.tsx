@@ -19,19 +19,18 @@ import { useSidebarCollapseStore } from '@biu/web-session-view'
 import { SidebarMascot } from '@biu/web-mascot'
 import { resolveSessionMascot } from '@biu/web-mascot'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
-import { chromeIcon } from './chrome-icon.ts'
+import { chromeIcon, chromeIconClass } from './chrome-icon.ts'
 import {
-  LuChevronDown,
-  LuChevronRight,
-  LuFolderTree,
-  LuPanelLeftClose,
-  LuPlus,
-  LuRadio,
-  LuStar,
-  LuTag,
-  LuTags,
-  LuTrash2,
-} from 'react-icons/lu'
+  ChevronDownIcon,
+  ChevronRightIcon,
+  FolderIcon,
+  ChevronDoubleLeftIcon,
+  PlusIcon,
+  SignalIcon,
+  StarIcon,
+  TagIcon,
+  TrashIcon,
+} from '@heroicons/react/16/solid'
 
 /** 项目/标签分组视图的持久化 key。 */
 const GROUP_BY_KEY = 'cordis.sidebar.groupBy'
@@ -97,15 +96,7 @@ const SessionRow = memo(function SessionRow({
         to={`/s/${item.id}`}
         className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
       >
-        <SidebarMascot
-          size={24}
-          sessionId={item.id}
-          identity={identity}
-          busy={busy}
-          animate={false}
-          dancing={dancing}
-          title={dancing ? '跳舞中 🎉' : `${identity.shape} · ${identity.color}`}
-        />
+        <SidebarMascot sessionId={item.id} identity={identity} busy={busy} animate={false} dancing={dancing} title={dancing ? '跳舞中 🎉' : `${identity.shape} · ${identity.color}`} className="size-[24px]" />
         <span className="min-w-0 flex-1 truncate font-medium">
           {(item.type ?? 'chat') === 'live' ? (
             <span className="mr-1 text-[9px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
@@ -128,7 +119,7 @@ const SessionRow = memo(function SessionRow({
           onPin(item)
         }}
       >
-        <LuStar {...chromeIcon} className={pinned ? 'text-[#f5b700]' : undefined} fill={pinned ? 'currentColor' : 'none'} />
+        <StarIcon className={chromeIconClass(pinned ? 'text-[#f5b700]' : undefined)} />
       </button>
       <button
         type="button"
@@ -141,7 +132,7 @@ const SessionRow = memo(function SessionRow({
           onDelete(item)
         }}
       >
-        <LuTrash2 {...chromeIcon} />
+        <TrashIcon {...chromeIcon} />
       </button>
     </div>
   )
@@ -272,7 +263,7 @@ export const ChatSidebar = memo(function ChatSidebar({
           aria-label="Collapse sidebar"
           onClick={onCollapse}
         >
-          <LuPanelLeftClose {...chromeIcon} />
+          <ChevronDoubleLeftIcon {...chromeIcon} />
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
@@ -285,7 +276,7 @@ export const ChatSidebar = memo(function ChatSidebar({
             onClick={() => createChat({ type: 'chat' })}
           >
             <span className="app-side-actions-icon" aria-hidden>
-              <LuPlus {...chromeIcon} />
+              <PlusIcon {...chromeIcon} />
             </span>
             <span className="app-side-actions-label">添加聊天</span>
           </button>
@@ -297,7 +288,7 @@ export const ChatSidebar = memo(function ChatSidebar({
             onClick={() => createChat({ type: 'live' })}
           >
             <span className="app-side-actions-icon" aria-hidden>
-              <LuRadio {...chromeIcon} />
+              <SignalIcon {...chromeIcon} />
             </span>
             <span className="app-side-actions-label">新建 Live</span>
           </button>
@@ -339,7 +330,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                           className={`sidebar-view-switch-btn${groupBy === 'project' ? ' is-on' : ''}`}
                           onClick={() => changeGroupBy('project')}
                         >
-                          <LuFolderTree {...chromeIcon} />
+                          <FolderIcon {...chromeIcon} />
                         </button>
                         <button
                           type="button"
@@ -348,7 +339,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                           className={`sidebar-view-switch-btn${groupBy === 'tag' ? ' is-on' : ''}`}
                           onClick={() => changeGroupBy('tag')}
                         >
-                          <LuTags {...chromeIcon} />
+                          <TagIcon {...chromeIcon} />
                         </button>
                       </div>
                     ) : null}
@@ -392,9 +383,9 @@ export const ChatSidebar = memo(function ChatSidebar({
                                 <span className="sidebar-rail-icon sidebar-group-fold" aria-hidden>
                                   <span className="sidebar-group-fold-face">
                                     {group.kind === 'pinned' ? (
-                                      <LuStar {...chromeIcon} className="text-[#f5b700]" fill="currentColor" />
+                                      <StarIcon className={chromeIconClass('text-[#f5b700]')} />
                                     ) : group.kind === 'tag' ? (
-                                      <LuTag {...chromeIcon} className="opacity-80" />
+                                      <TagIcon className={chromeIconClass('opacity-80')} />
                                     ) : isUngrouped ? (
                                       <span className="text-[11px] opacity-70">—</span>
                                     ) : (
@@ -403,9 +394,9 @@ export const ChatSidebar = memo(function ChatSidebar({
                                   </span>
                                   <span className="sidebar-group-fold-chevron">
                                     {collapsed ? (
-                                      <LuChevronRight {...chromeIcon} className="opacity-80" />
+                                      <ChevronRightIcon className={chromeIconClass('opacity-80')} />
                                     ) : (
-                                      <LuChevronDown {...chromeIcon} className="opacity-80" />
+                                      <ChevronDownIcon className={chromeIconClass('opacity-80')} />
                                     )}
                                   </span>
                                 </span>
@@ -425,7 +416,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                       })
                                     }}
                                   >
-                                    <LuPlus {...chromeIcon} />
+                                    <PlusIcon {...chromeIcon} />
                                   </button>
                                 ) : null}
                               </div>

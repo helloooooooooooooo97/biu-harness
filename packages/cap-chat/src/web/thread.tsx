@@ -1,21 +1,20 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  LuCheck,
-  LuChevronDown,
-  LuChevronRight,
-  LuChevronUp,
-  LuClock,
-  LuCoins,
-  LuCopy,
-  LuGitFork,
-  LuHash,
-  LuLayers,
-  LuTimer,
-  LuType,
-  LuUser,
-  LuWrench,
-} from 'react-icons/lu'
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+  ClockIcon,
+  CircleStackIcon,
+  Square2StackIcon,
+  ShareIcon,
+  HashtagIcon,
+  Square3Stack3DIcon,
+  LanguageIcon,
+  UserIcon,
+  WrenchScrewdriverIcon,
+} from '@heroicons/react/16/solid'
 import { ImageThumbs } from './image-thumbs.tsx'
 import { bindSessionView, type SessionListItem, type SessionViewService } from '@biu/web-session-view'
 import {
@@ -103,21 +102,21 @@ function StepBar({ stat, replyId }: { stat: ChatStepStat; replyId: string }) {
       {...pickDomAttrs('step', `${replyId}:${stat.step}`, stepLabel(stat.step))}
     >
       <div className="chat-reply-meta">
-        <MetaItem icon={<LuLayers className="size-3" />} value={stat.step + 1} title={stepLabel(stat.step)} />
+        <MetaItem icon={<Square3Stack3DIcon className="size-3" />} value={stat.step + 1} title={stepLabel(stat.step)} />
         <MetaItem
-          icon={<LuCoins className="size-3" />}
+          icon={<CircleStackIcon className="size-3" />}
           value={<UsageInline usage={usage} />}
           title="本步 Token 用量"
         />
-        <MetaItem icon={<LuWrench className="size-3" />} value={stat.toolCount} title={`本步 ${stat.toolCount} 个工具`} />
+        <MetaItem icon={<WrenchScrewdriverIcon className="size-3" />} value={stat.toolCount} title={`本步 ${stat.toolCount} 个工具`} />
         <MetaItem
-          icon={<LuType className="size-3" />}
+          icon={<LanguageIcon className="size-3" />}
           value={formatTok(stat.messageChars)}
           title={`本步 Message ${formatTok(stat.messageChars)} 字`}
         />
         {stat.durationMs != null ? (
           <MetaItem
-            icon={<LuTimer className="size-3" />}
+            icon={<ClockIcon className="size-3" />}
             value={formatDuration(stat.durationMs)}
             title="本步耗时"
           />
@@ -313,7 +312,7 @@ function ReplyActions({
         aria-label={copied ? '已复制' : '复制本回合回复'}
         onClick={() => void copy()}
       >
-        {copied ? <LuCheck className="size-3.5" /> : <LuCopy className="size-3.5" />}
+        {copied ? <CheckIcon className="size-3.5" /> : <Square2StackIcon className="size-3.5" />}
       </button>
       <button
         type="button"
@@ -323,7 +322,7 @@ function ReplyActions({
         disabled={forkBusy}
         onClick={() => void fork()}
       >
-        <LuGitFork className="size-3.5" />
+        <ShareIcon className="size-3.5" />
       </button>
     </div>
   )
@@ -398,36 +397,36 @@ function UserTurnBar({
             data-testid="details-toggle"
             onClick={() => onToggleDetails(reply.id)}
           >
-            {detailsOpen ? <LuChevronDown className="size-3.5" /> : <LuChevronRight className="size-3.5" />}
+            {detailsOpen ? <ChevronDownIcon className="size-3.5" /> : <ChevronRightIcon className="size-3.5" />}
             <span>Details</span>
           </button>
         ) : null}
         {hasMeta && reply ? (
           <div className="chat-reply-meta">
             {reply.turn != null ? (
-              <MetaItem icon={<LuHash className="size-3" />} value={reply.turn} title={`第 ${reply.turn} 轮`} />
+              <MetaItem icon={<HashtagIcon className="size-3" />} value={reply.turn} title={`第 ${reply.turn} 轮`} />
             ) : null}
             {reply.stepCount != null ? (
               <MetaItem
-                icon={<LuLayers className="size-3" />}
+                icon={<Square3Stack3DIcon className="size-3" />}
                 value={reply.stepCount}
                 title={`本回合 ${reply.stepCount} 个 step`}
               />
             ) : null}
             <MetaItem
-              icon={<LuWrench className="size-3" />}
+              icon={<WrenchScrewdriverIcon className="size-3" />}
               value={<span data-testid="user-tool-count">{toolCount}</span>}
               title={`本回合 ${toolCount} 次工具调用`}
             />
             {reply.durationMs != null ? (
               <MetaItem
-                icon={<LuTimer className="size-3" />}
+                icon={<ClockIcon className="size-3" />}
                 value={formatDuration(reply.durationMs)}
                 title="本回合耗时"
               />
             ) : null}
             {reply.usage ? (
-              <MetaItem icon={<LuCoins className="size-3" />} value={<UsageInline usage={reply.usage} />} title="Token 用量" />
+              <MetaItem icon={<CircleStackIcon className="size-3" />} value={<UsageInline usage={reply.usage} />} title="Token 用量" />
             ) : null}
           </div>
         ) : null}
@@ -442,7 +441,7 @@ function UserTurnBar({
             data-testid="user-expand-toggle"
             onClick={onToggleExpand}
           >
-            {expanded ? <LuChevronUp className="size-3.5" /> : <LuChevronDown className="size-3.5" />}
+            {expanded ? <ChevronUpIcon className="size-3.5" /> : <ChevronDownIcon className="size-3.5" />}
           </button>
         ) : null}
         <UserSenderAvatar sender={user.sender} sessions={sessions} />
@@ -452,7 +451,7 @@ function UserTurnBar({
             title="发送时间"
             data-testid="user-sent-at"
           >
-            <LuClock className="size-3" aria-hidden />
+            <ClockIcon className="size-3" aria-hidden />
             <span>{sentLabel}</span>
           </span>
         ) : null}
@@ -477,7 +476,7 @@ function UserSenderAvatar({
         title={hit?.title || 'Live session'}
         data-testid="user-sender-mascot"
       >
-        <StaticMascotMark identity={identity} size={16} title={hit?.title || identity.shape} />
+        <StaticMascotMark identity={identity} title={hit?.title || identity.shape} className="size-4" />
       </span>
     )
   }
@@ -488,7 +487,7 @@ function UserSenderAvatar({
       data-testid="user-sender-human"
       aria-hidden
     >
-      <LuUser className="size-3" />
+      <UserIcon className="size-3" />
     </span>
   )
 }
@@ -727,13 +726,7 @@ function EmptyHero({
       <div className="chat-empty-hero-glow" aria-hidden />
       <div className="chat-empty-hero-inner">
         <div className="chat-empty-hero-mascot">
-          <SidebarMascot
-            size={112}
-            sessionId={sessionId}
-            identity={identity}
-            busy={busy}
-            title={`${identity.shape} · ${identity.color}`}
-          />
+          <SidebarMascot sessionId={sessionId} identity={identity} busy={busy} title={`${identity.shape} · ${identity.color}`} className="size-[112px]" />
         </div>
         <h2 className="chat-empty-hero-title">Need a hand?</h2>
       </div>

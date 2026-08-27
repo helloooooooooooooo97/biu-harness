@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
-import { LuChevronDown, LuPlus, LuSettings } from 'react-icons/lu'
+import { ChevronDownIcon, PlusIcon, Cog6ToothIcon, PaperAirplaneIcon } from '@heroicons/react/16/solid'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
@@ -776,7 +776,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           aria-label="添加工具"
           onClick={openSlashMenu}
         >
-          <LuPlus className="size-4" />
+          <PlusIcon className="size-4" />
         </button>
 
         <textarea
@@ -815,7 +815,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
               onClick={() => setModelOpen((open) => !open)}
             >
               <span className="composer-model-label">{modelOption.label}</span>
-              <LuChevronDown className="size-3.5 opacity-70" />
+              <ChevronDownIcon className="size-3.5 opacity-70" />
             </button>
             {modelOpen ? (
               <div className="composer-model-menu" role="listbox" aria-label="模型">
@@ -829,7 +829,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
                     aria-label="配置模型"
                     onClick={openModelConfig}
                   >
-                    <LuSettings className="size-3.5" />
+                    <Cog6ToothIcon className="size-3.5" />
                   </button>
                 </div>
                 {(() => {
@@ -910,9 +910,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
             aria-label={pending ? 'Queue' : 'Send'}
             title={pending ? (inbox.some((item) => item.kind === 'wake') ? '注入排队' : '加入排队') : '发送'}
           >
-            <svg viewBox="0 0 24 24" className="size-3.5" fill="currentColor" aria-hidden>
-              <path d="M3.4 20.6 21 12 3.4 3.4 3 10.3 15 12 3 13.7z" />
-            </svg>
+            <PaperAirplaneIcon className="size-3.5" aria-hidden />
           </button>
         </div>
       </div>

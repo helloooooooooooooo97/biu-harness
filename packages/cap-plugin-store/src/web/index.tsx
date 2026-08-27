@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Context } from 'cordis'
-import { LuPlay, LuPuzzle, LuSquare, LuTrash2 } from 'react-icons/lu'
+import { PlayIcon, PuzzlePieceIcon, StopIcon, TrashIcon } from '@heroicons/react/16/solid'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 
@@ -100,7 +100,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
   const pending = items.find((item) => item.id === pendingUninstall) ?? null
   const iconBtn =
     'inline-grid size-6 shrink-0 cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent p-0 leading-none text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] disabled:opacity-40'
-  const actionIcon = { size: 16, strokeWidth: 2, className: 'block' } as const
+  const actionIcon = { className: 'block size-4' } as const
 
   return (
     <div
@@ -169,7 +169,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                   disabled={Boolean(busy?.endsWith(`:${item.id}`))}
                   onClick={() => void closePlugin(item.id)}
                 >
-                  <LuSquare {...actionIcon} />
+                  <StopIcon {...actionIcon} />
                 </button>
               ) : (
                 <button
@@ -182,7 +182,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                   disabled={Boolean(busy?.endsWith(`:${item.id}`))}
                   onClick={() => void openPlugin(item.id)}
                 >
-                  <LuPlay {...actionIcon} />
+                  <PlayIcon {...actionIcon} />
                 </button>
               )}
               <button
@@ -194,7 +194,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                 disabled={Boolean(busy?.endsWith(`:${item.id}`))}
                 onClick={() => setPendingUninstall(item.id)}
               >
-                <LuTrash2 {...actionIcon} />
+                <TrashIcon {...actionIcon} />
               </button>
             </div>
           </li>
@@ -267,7 +267,7 @@ type AppModulesService = {
 }
 
 const moduleProps = { moduleId: 'plugins' }
-const inspectorProps = { tabId: 'plugins', tabLabel: '插件', tabIcon: LuPuzzle }
+const inspectorProps = { tabId: 'plugins', tabLabel: '插件', tabIcon: PuzzlePieceIcon }
 
 function PluginStoreInspectorPanel() {
   return <PluginStorePage compact />
@@ -305,7 +305,7 @@ export function apply(ctx: Context) {
     path: '/plugins',
     description: 'Install prebuilt plugins without rebuilding the app',
     order: 30,
-    Icon: LuPuzzle,
+    Icon: PuzzlePieceIcon,
   })
   slots.place('app-modules', PluginStorePage, {
     key: 'plugin-store-module',

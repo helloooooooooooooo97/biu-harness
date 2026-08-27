@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LuEraser } from 'react-icons/lu'
+import { PaintBrushIcon } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type ChatNode, type SessionViewService } from '@biu/web-session-view'
 import { SessionProjectPanel } from './project-panel.tsx'
@@ -158,7 +158,7 @@ export function ApprovalsRail(props: SlotProps) {
                 aria-hidden
               />
             ) : null}
-            <LuEraser size={16} strokeWidth={2} className="relative z-[1]" aria-hidden />
+            <PaintBrushIcon className="size-4 relative z-[1]" aria-hidden />
           </button>
           <span className="sr-only">Agent mode</span>
           <div className="dock-seg">

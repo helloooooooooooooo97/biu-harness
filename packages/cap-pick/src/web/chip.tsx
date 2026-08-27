@@ -1,34 +1,36 @@
 import {
-  LuBot,
-  LuCoins,
-  LuGitCommitHorizontal,
-  LuHash,
-  LuLayers,
-  LuListTodo,
-  LuMessageSquare,
-  LuPuzzle,
-  LuTag,
-  LuWrench,
-} from 'react-icons/lu'
-import type { IconType } from 'react-icons'
+  CpuChipIcon,
+  CircleStackIcon,
+  StopCircleIcon,
+  HashtagIcon,
+  Square3Stack3DIcon,
+  ClipboardDocumentCheckIcon,
+  ChatBubbleLeftIcon,
+  PuzzlePieceIcon,
+  TagIcon,
+  WrenchScrewdriverIcon,
+} from '@heroicons/react/16/solid'
+import type { ComponentType } from 'react'
 import type { PickRef } from './types.ts'
 import { chipLabel } from './types.ts'
 
-const KIND_ICONS: Record<string, IconType> = {
-  session: LuBot,
-  task: LuListTodo,
-  plugin: LuPuzzle,
-  message: LuMessageSquare,
-  reply: LuMessageSquare,
-  tool: LuWrench,
-  step: LuLayers,
-  event: LuGitCommitHorizontal,
-  turn: LuHash,
-  usage: LuCoins,
+type Glyph = ComponentType<{ className?: string }>
+
+const KIND_ICONS: Record<string, Glyph> = {
+  session: CpuChipIcon,
+  task: ClipboardDocumentCheckIcon,
+  plugin: PuzzlePieceIcon,
+  message: ChatBubbleLeftIcon,
+  reply: ChatBubbleLeftIcon,
+  tool: WrenchScrewdriverIcon,
+  step: Square3Stack3DIcon,
+  event: StopCircleIcon,
+  turn: HashtagIcon,
+  usage: CircleStackIcon,
 }
 
-export function pickKindIcon(kind: string): IconType {
-  return KIND_ICONS[kind] ?? LuTag
+export function pickKindIcon(kind: string): Glyph {
+  return KIND_ICONS[kind] ?? TagIcon
 }
 
 export function PickKindGlyph({ kind }: { kind: string }) {

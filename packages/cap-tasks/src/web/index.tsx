@@ -7,43 +7,42 @@ import { bindSnapshot, type Snapshot, type SnapshotService } from '@biu/web-snap
 const MASCOT_GEO_SRC = '/grok-bot/geometry-data.js'
 type GrokGeo = NonNullable<Window['GROK_GEO']>
 import {
-  LuActivity,
-  LuBot,
-  LuCalendarClock,
-  LuCircleCheck,
-  LuCircleDashed,
-  LuClipboardList,
-  LuClock,
-  LuCoins,
-  LuFlag,
-  LuLock,
-  LuMaximize2,
-  LuLoaderCircle,
-  LuColumns3,
-  LuPanelRight,
-  LuPanelsTopLeft,
-  LuChevronDown,
-  LuChevronRight,
-  LuGitBranch,
-  LuListChecks,
-  LuZap,
-  LuPlay,
-  LuMousePointerClick,
-  LuGauge,
-  LuSearch,
-  LuSlidersHorizontal,
-  LuTable2,
-  LuTags,
-  LuText,
-  LuTrash2,
-  LuUserRound,
-  LuX,
-  LuPlus,
-  LuArrowUpDown,
-  LuArrowUp,
-  LuArrowDown,
-  LuPenLine,
-} from 'react-icons/lu'
+  SignalIcon,
+  CpuChipIcon,
+  CalendarDaysIcon,
+  CheckCircleIcon,
+  MinusCircleIcon,
+  ClipboardDocumentListIcon,
+  ClockIcon,
+  CircleStackIcon,
+  FlagIcon,
+  LockClosedIcon,
+  ArrowsPointingOutIcon,
+  ArrowPathIcon,
+  ViewColumnsIcon,
+  Squares2X2Icon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ShareIcon,
+  ClipboardDocumentCheckIcon,
+  BoltIcon,
+  PlayIcon,
+  CursorArrowRippleIcon,
+  ChartBarIcon,
+  MagnifyingGlassIcon,
+  AdjustmentsHorizontalIcon,
+  TableCellsIcon,
+  TagIcon,
+  Bars3BottomLeftIcon,
+  TrashIcon,
+  UserIcon,
+  XMarkIcon,
+  PlusIcon,
+  ArrowsUpDownIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  PencilSquareIcon,
+} from '@heroicons/react/16/solid'
 import {
   ReactFlow,
   Background,
@@ -197,10 +196,10 @@ const SORT_FIELD_LABEL: Record<TaskViewSortField, string> = {
 }
 
 const VIEW_MODE_ICON: Record<TaskViewMode, ReactNode> = {
-  queue: <LuListChecks size={13} aria-hidden />,
-  table: <LuTable2 size={13} aria-hidden />,
-  board: <LuColumns3 size={13} aria-hidden />,
-  graph: <LuGitBranch size={13} aria-hidden />,
+  queue: <ClipboardDocumentCheckIcon aria-hidden className="size-[13px]" />,
+  table: <TableCellsIcon aria-hidden className="size-[13px]" />,
+  board: <ViewColumnsIcon aria-hidden className="size-[13px]" />,
+  graph: <ShareIcon aria-hidden className="size-[13px]" />,
 }
 
 const PRIORITY_RANK: Record<TaskPriority, number> = { low: 0, med: 1, high: 2 }
@@ -239,9 +238,9 @@ export function sortTasks(tasks: Task[], sort: TaskViewSort): Task[] {
 }
 
 const STATUS_META: Array<{ id: TaskStatus; label: string; icon: ReactNode }> = [
-  { id: 'todo', label: '待办', icon: <LuCircleDashed size={13} aria-hidden /> },
-  { id: 'doing', label: '进行中', icon: <LuLoaderCircle size={13} aria-hidden /> },
-  { id: 'done', label: '已完成', icon: <LuCircleCheck size={13} aria-hidden /> },
+  { id: 'todo', label: '待办', icon: <MinusCircleIcon aria-hidden className="size-[13px]" /> },
+  { id: 'doing', label: '进行中', icon: <ArrowPathIcon aria-hidden className="size-[13px]" /> },
+  { id: 'done', label: '已完成', icon: <CheckCircleIcon aria-hidden className="size-[13px]" /> },
 ]
 
 const PRIORITY_LABEL: Record<TaskPriority, string> = {
@@ -511,14 +510,14 @@ function TimeLabel({ ts, empty = '—' }: { ts: number | null | undefined; empty
   if (!ts) {
     return (
       <span className="tasks-time is-empty">
-        <LuClock size={12} aria-hidden />
+        <ClockIcon aria-hidden className="size-3" />
         {empty}
       </span>
     )
   }
   return (
     <span className="tasks-time" title={new Date(ts).toLocaleString()}>
-      <LuClock size={12} aria-hidden />
+      <ClockIcon aria-hidden className="size-3" />
       {formatWhen(ts)}
     </span>
   )
@@ -629,7 +628,7 @@ function MascotAvatar({
         </svg>
       ) : (
         <span className="tasks-avatar" style={{ background: fill }}>
-          <LuBot size={size * 0.68} />
+          <CpuChipIcon style={{ width: size * 0.68, height: size * 0.68 }} />
         </span>
       )}
       {busy ? <span className="tasks-mascot-busy" aria-hidden /> : null}
@@ -641,7 +640,7 @@ function ActorChip({ actor, empty = '未分配' }: { actor: TaskActor | null | u
   if (!actor) {
     return (
       <span className="tasks-actor is-empty">
-        <LuUserRound size={13} aria-hidden />
+        <UserIcon aria-hidden className="size-[13px]" />
         {empty}
       </span>
     )
@@ -658,10 +657,10 @@ function ActorChip({ actor, empty = '未分配' }: { actor: TaskActor | null | u
       title={actor.sessionId ? `${actor.name} · ${actor.sessionId.slice(0, 8)}` : actor.name}
     >
       {actor.kind === 'agent' && actor.mascot ? (
-        <MascotAvatar shape={actor.mascot.shape} color={actor.mascot.color} eye={actor.mascot.eye} size={16} />
+        <MascotAvatar shape={actor.mascot.shape} color={actor.mascot.color} eye={actor.mascot.eye} className="size-4" />
       ) : (
         <span className="tasks-avatar" style={{ background: color }} aria-hidden>
-          {actor.kind === 'agent' ? <LuBot size={11} /> : initial}
+          {actor.kind === 'agent' ? <CpuChipIcon className="size-[11px]" /> : initial}
         </span>
       )}
       <span className="tasks-actor-name">{actor.name}</span>
@@ -723,7 +722,7 @@ function AssigneePicker({
             }}
           >
             <span className="tasks-avatar tasks-avatar-clear" aria-hidden>
-              <LuX size={11} />
+              <XMarkIcon className="size-[11px]" />
             </span>
             <span className="tasks-actor-name">未分配</span>
           </button>
@@ -740,15 +739,10 @@ function AssigneePicker({
               }}
             >
               {agent.mascot ? (
-                <MascotAvatar
-                  shape={agent.mascot.shape}
-                  color={agent.mascot.color}
-                  eye={agent.mascot.eye}
-                  size={16}
-                />
+                <MascotAvatar shape={agent.mascot.shape} color={agent.mascot.color} eye={agent.mascot.eye} className="size-4" />
               ) : (
                 <span className="tasks-avatar">
-                  <LuBot size={11} />
+                  <CpuChipIcon className="size-[11px]" />
                 </span>
               )}
               <span className="tasks-actor-name">{agent.name}</span>
@@ -756,7 +750,7 @@ function AssigneePicker({
           ))}
           {loading ? (
             <div className="tasks-assignee-loading">
-              <LuLoaderCircle size={12} className="tasks-spin" aria-hidden />
+              <ArrowPathIcon className="size-3 tasks-spin" aria-hidden />
               加载 Agent…
             </div>
           ) : null}
@@ -778,14 +772,14 @@ function ReportBadge({ reports }: { reports: TaskReport[] }) {
   if (done) {
     return (
       <span className="tasks-exec is-idle" title={tip}>
-        <LuCircleCheck size={12} aria-hidden />
+        <CheckCircleIcon aria-hidden className="size-3" />
         report {reports.length}次 · 已完成
       </span>
     )
   }
   return (
     <span className="tasks-exec is-running" title={tip}>
-      <LuLoaderCircle size={12} className="tasks-spin" aria-hidden />
+      <ArrowPathIcon className="size-3 tasks-spin" aria-hidden />
       report {reports.length}次 · 进行中
     </span>
   )
@@ -977,7 +971,7 @@ function TriggerMark({ trigger }: { trigger?: Task['trigger'] }) {
   const title = parts.join('｜')
   return (
     <span className={`tasks-trigger-mark ${enabled ? `is-${state}` : 'is-off'}`} title={title} aria-label="自动触发">
-      <LuClock size={11} aria-hidden />
+      <ClockIcon aria-hidden className="size-[11px]" />
       <span className="tasks-trigger-mark-state">{enabled ? state : 'off'}</span>
       <span className="tasks-trigger-count">{count}</span>
     </span>
@@ -1001,7 +995,7 @@ function TriggerToggle({ task, onUpdate }: { task: Task; onUpdate: (id: string, 
         void onUpdate(task.id, { trigger: { enabled: !enabled } })
       }}
     >
-      <LuClock size={12} aria-hidden />
+      <ClockIcon aria-hidden className="size-3" />
       {count > 0 ? <span className="tasks-trigger-count">{count}</span> : null}
     </button>
   )
@@ -1096,14 +1090,14 @@ function ExecBadge({ execution, reports }: { execution?: TaskExecution; reports?
   if (!execution || execution.status === 'unassigned') {
     return (
       <span className="tasks-exec is-muted">
-        <LuCircleDashed size={12} aria-hidden />
+        <MinusCircleIcon aria-hidden className="size-3" />
         未派工
       </span>
     )
   }
   return (
     <span className="tasks-exec is-muted" title="尚无 agent 上报执行进度">
-      <LuActivity size={12} aria-hidden />
+      <SignalIcon aria-hidden className="size-3" />
       未执行
     </span>
   )
@@ -1122,7 +1116,7 @@ function StatusPill({ status, reportCount, blocked, dueAt, now = Date.now() }: {
   if (overdue) {
     return (
       <span className="tasks-status-pill is-overdue" title={blocked ? '已过截止时间（且被前置任务阻塞）' : '已过截止时间'}>
-        <LuClock size={12} aria-hidden />
+        <ClockIcon aria-hidden className="size-3" />
         <span className="tasks-status-label">已逾期</span>
       </span>
     )
@@ -1131,7 +1125,7 @@ function StatusPill({ status, reportCount, blocked, dueAt, now = Date.now() }: {
   if (blocked) {
     return (
       <span className="tasks-status-pill is-blocked" title="依赖前置未完成，暂时无法开工">
-        <LockIcon size={12} aria-hidden />
+        <LockIcon aria-hidden className="size-3" />
         <span className="tasks-status-label">被阻塞</span>
       </span>
     )
@@ -1148,7 +1142,7 @@ function StatusPill({ status, reportCount, blocked, dueAt, now = Date.now() }: {
     </span>
   )
 }
-const LockIcon = LuLock
+const LockIcon = LockClosedIcon
 
 function ThIcon({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
@@ -1630,9 +1624,9 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
               aria-expanded={viewMenuOpen}
               onClick={() => setViewMenuOpen((v) => !v)}
             >
-              <LuPanelsTopLeft size={13} aria-hidden />
+              <Squares2X2Icon aria-hidden className="size-[13px]" />
               <span className="tasks-viewdd-name">{activeView?.name ?? '未保存'}</span>
-              <LuChevronDown size={13} aria-hidden />
+              <ChevronDownIcon aria-hidden className="size-[13px]" />
             </button>
             {viewMenuOpen ? (
               <div className="tasks-viewdd-menu" role="menu">
@@ -1650,21 +1644,21 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
                       onClick={() => { switchView(v.id); setViewMenuOpen(false) }}
                     >
                       <span className="tasks-viewdd-item-name">{v.name}</span>
-                      {v.id === activeViewId ? <LuCircleCheck size={13} aria-hidden className="tasks-viewdd-check" /> : null}
+                      {v.id === activeViewId ? <CheckCircleIcon aria-hidden className="size-[13px] tasks-viewdd-check" /> : null}
                     </button>
                     <span className="tasks-viewdd-item-actions">
                       <button type="button" className="tasks-viewdd-act" title="重命名" onClick={() => openDlg({ kind: 'rename', view: v })}>
-                        <LuPenLine size={12} aria-hidden />
+                        <PencilSquareIcon aria-hidden className="size-3" />
                       </button>
                       <button type="button" className="tasks-viewdd-act is-danger" title="删除" onClick={() => openDlg({ kind: 'delete', view: v })}>
-                        <LuTrash2 size={12} aria-hidden />
+                        <TrashIcon aria-hidden className="size-3" />
                       </button>
                     </span>
                   </div>
                 ))}
                 <div className="tasks-viewdd-foot">
                   <button type="button" className="tasks-viewdd-saveas" onClick={() => { setViewMenuOpen(false); openDlg({ kind: 'saveAs' }) }}>
-                    <LuPlus size={13} aria-hidden />
+                    <PlusIcon aria-hidden className="size-[13px]" />
                     另存为视图
                   </button>
                 </div>
@@ -1675,7 +1669,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
 
           <div className="tasks-toolbar-right">
           <label className="tasks-search-wrap">
-            <LuSearch size={14} aria-hidden />
+            <MagnifyingGlassIcon aria-hidden className="size-3.5" />
             <input
               className="tasks-search"
               value={query}
@@ -1715,7 +1709,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
                       <span className="tasks-mode-item-ico">{VIEW_MODE_ICON[opt.id]}</span>
                       {opt.label}
                     </span>
-                    {mode === opt.id ? <LuCircleCheck size={13} aria-hidden className="tasks-sort-item-icon is-on" /> : null}
+                    {mode === opt.id ? <CheckCircleIcon aria-hidden className="size-[13px] tasks-sort-item-icon is-on" /> : null}
                   </button>
                 ))}
               </div>
@@ -1732,7 +1726,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
               aria-expanded={sortMenuOpen}
               onClick={() => setSortMenuOpen((v) => !v)}
             >
-              <LuArrowUpDown size={14} aria-hidden />
+              <ArrowsUpDownIcon aria-hidden className="size-3.5" />
               {sortCustom ? <span className="tasks-sort-dot" aria-hidden /> : null}
             </button>
             {sortMenuOpen ? (
@@ -1750,8 +1744,8 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
                   const isCurrent = sort.field === field
                   const stateIcon = isCurrent
                     ? sort.dir === 'asc'
-                      ? <LuArrowUp size={13} aria-hidden />
-                      : <LuArrowDown size={13} aria-hidden />
+                      ? <ArrowUpIcon aria-hidden className="size-[13px]" />
+                      : <ArrowDownIcon aria-hidden className="size-[13px]" />
                     : null
                   return (
                     <button
@@ -1781,7 +1775,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
               aria-expanded={filterOpen}
               onClick={() => setFilterOpen((v) => !v)}
             >
-              <LuSlidersHorizontal size={14} aria-hidden />
+              <AdjustmentsHorizontalIcon aria-hidden className="size-3.5" />
               {filterActive ? <span className="tasks-filter-dot" aria-hidden /> : null}
             </button>
             {filterOpen ? (
@@ -1852,7 +1846,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
             title="刷新"
             onClick={refresh}
           >
-            <LuLoaderCircle size={14} aria-hidden />
+            <ArrowPathIcon aria-hidden className="size-3.5" />
           </button>
           </div>
         </div>
@@ -1997,11 +1991,11 @@ function isOverdue(t: Task, now = Date.now()): boolean {
 // 队列视图分组键：已逾期 → 进行中 → 待办 → 阻塞 → 已完成
 type QueueKey = 'overdue' | 'doing' | 'todo' | 'blocked' | 'done'
 const QUEUE_GROUPS: { key: QueueKey; label: string; icon: ReactNode }[] = [
-  { key: 'overdue', label: '已逾期', icon: <LuClock size={13} aria-hidden /> },
-  { key: 'doing', label: '进行中', icon: <LuLoaderCircle size={13} aria-hidden /> },
-  { key: 'todo', label: '待办', icon: <LuCircleDashed size={13} aria-hidden /> },
-  { key: 'blocked', label: '阻塞', icon: <LuLock size={13} aria-hidden /> },
-  { key: 'done', label: '已完成', icon: <LuCircleCheck size={13} aria-hidden /> },
+  { key: 'overdue', label: '已逾期', icon: <ClockIcon aria-hidden className="size-[13px]" /> },
+  { key: 'doing', label: '进行中', icon: <ArrowPathIcon aria-hidden className="size-[13px]" /> },
+  { key: 'todo', label: '待办', icon: <MinusCircleIcon aria-hidden className="size-[13px]" /> },
+  { key: 'blocked', label: '阻塞', icon: <LockClosedIcon aria-hidden className="size-[13px]" /> },
+  { key: 'done', label: '已完成', icon: <CheckCircleIcon aria-hidden className="size-[13px]" /> },
 ]
 
 /**
@@ -2030,11 +2024,11 @@ export function buildQueueRows(tasks: Task[]): Task[] {
 
 type BoardKey = 'overdue' | 'todo' | 'blocked' | 'doing' | 'done'
 const BOARD_COLUMNS: { key: BoardKey; label: string; icon: ReactNode }[] = [
-  { key: 'overdue', label: '已逾期', icon: <LuClock size={13} aria-hidden /> },
-  { key: 'todo', label: '待办', icon: <LuCircleDashed size={13} aria-hidden /> },
-  { key: 'blocked', label: '阻塞', icon: <LuLock size={13} aria-hidden /> },
-  { key: 'doing', label: '进行中', icon: <LuLoaderCircle size={13} aria-hidden /> },
-  { key: 'done', label: '完成', icon: <LuCircleCheck size={13} aria-hidden /> },
+  { key: 'overdue', label: '已逾期', icon: <ClockIcon aria-hidden className="size-[13px]" /> },
+  { key: 'todo', label: '待办', icon: <MinusCircleIcon aria-hidden className="size-[13px]" /> },
+  { key: 'blocked', label: '阻塞', icon: <LockClosedIcon aria-hidden className="size-[13px]" /> },
+  { key: 'doing', label: '进行中', icon: <ArrowPathIcon aria-hidden className="size-[13px]" /> },
+  { key: 'done', label: '完成', icon: <CheckCircleIcon aria-hidden className="size-[13px]" /> },
 ]
 
 function TasksBoard({
@@ -2086,7 +2080,7 @@ function TasksBoard({
                   <span className="tasks-card-titletext">{task.title}</span>
                   <TriggerMark trigger={task.trigger} />
                   {task.blocked ? (
-                    <span className="tasks-card-blocked" title="被依赖任务阻塞，无法开工"><LuLock size={11} aria-hidden /></span>
+                    <span className="tasks-card-blocked" title="被依赖任务阻塞，无法开工"><LockClosedIcon aria-hidden className="size-[11px]" /></span>
                   ) : null}
                 </div>
                 {task.description ? (
@@ -2096,13 +2090,7 @@ function TasksBoard({
                 ) : null}
                 <div className="tasks-card-meta">
                   {task.assignee && task.assignee.kind === 'agent' && task.assignee.mascot ? (
-                    <MascotAvatar
-                      shape={task.assignee.mascot.shape}
-                      color={task.assignee.mascot.color}
-                      eye={task.assignee.mascot.eye}
-                      size={14}
-                      busy={task.status === 'doing'}
-                    />
+                    <MascotAvatar shape={task.assignee.mascot.shape} color={task.assignee.mascot.color} eye={task.assignee.mascot.eye} busy={task.status === 'doing'} className="size-3.5" />
                   ) : null}
                   <span className="tasks-card-assignee">{task.assignee?.name ?? '未分配'}</span>
                   {task.reports?.length ? <span className="tasks-card-reports">report {task.reports.length}次</span> : null}
@@ -2114,11 +2102,11 @@ function TasksBoard({
                 </div>
                 <div className="tasks-card-badges">
                   <span className={`tasks-card-badge is-p-${task.priority}`} title={`优先级：${PRIORITY_LABEL[task.priority]}`}>
-                    <LuFlag size={10} aria-hidden />
+                    <FlagIcon aria-hidden className="size-2.5" />
                     {PRIORITY_LABEL[task.priority]}
                   </span>
                   <span className={`tasks-card-badge is-d-${task.difficulty}`} title={`难度：${DIFFICULTY_LABEL[task.difficulty]}`}>
-                    <LuGauge size={10} aria-hidden />
+                    <ChartBarIcon aria-hidden className="size-2.5" />
                     {DIFFICULTY_LABEL[task.difficulty]}
                   </span>
                 </div>
@@ -2218,11 +2206,11 @@ function GraphTaskNode({ data }: NodeProps) {
         <span className="tasks-graph-node-meta">
           <span className={`tasks-graph-status is-${blocked ? 'blocked' : task.status}`}>{statusLabel}</span>
           <span className={`tasks-card-badge is-p-${task.priority}`} title={`优先级：${PRIORITY_LABEL[task.priority]}`}>
-            <LuFlag size={9} aria-hidden />
+            <FlagIcon aria-hidden className="size-2.5" />
             {PRIORITY_LABEL[task.priority]}
           </span>
           <span className={`tasks-card-badge is-d-${task.difficulty}`} title={`难度：${DIFFICULTY_LABEL[task.difficulty]}`}>
-            <LuGauge size={9} aria-hidden />
+            <ChartBarIcon aria-hidden className="size-2.5" />
             {DIFFICULTY_LABEL[task.difficulty]}
           </span>
         </span>
@@ -2378,14 +2366,14 @@ function TasksQueue({
                         {task.title}
                       </span>
                       <span className={`tasks-queue-pill is-p-${task.priority}`} title={`优先级：${PRIORITY_LABEL[task.priority]}`}>
-                        <LuFlag size={10} aria-hidden />
+                        <FlagIcon aria-hidden className="size-2.5" />
                         {PRIORITY_LABEL[task.priority]}
                       </span>
                       {task.status !== 'done' && task.dueAt && task.dueAt <= Date.now() ? (
-                        <span className="tasks-queue-overdue" title="已过截止时间"><LuClock size={10} aria-hidden />逾期</span>
+                        <span className="tasks-queue-overdue" title="已过截止时间"><ClockIcon aria-hidden className="size-2.5" />逾期</span>
                       ) : null}
                       {task.blocked ? (
-                        <span className="tasks-queue-lock" title="被依赖任务阻塞"><LuLock size={11} aria-hidden /></span>
+                        <span className="tasks-queue-lock" title="被依赖任务阻塞"><LockClosedIcon aria-hidden className="size-[11px]" /></span>
                       ) : null}
                       <UsageCapsule usage={task.usage ?? ZERO_USAGE} aggregate={false} />
                       <span className="tasks-queue-meta">
@@ -2593,17 +2581,17 @@ function TasksTable({
       <table className="tasks-table">
         <thead>
           <tr>
-            <ThIcon icon={<LuPanelsTopLeft size={12} aria-hidden />}>项目</ThIcon>
-            <ThIcon icon={<LuText size={12} aria-hidden />}>标题</ThIcon>
-            <ThIcon icon={<LuCircleDashed size={12} aria-hidden />}>状态</ThIcon>
-            <ThIcon icon={<LuFlag size={12} aria-hidden />}>优先级</ThIcon>
-            <ThIcon icon={<LuGauge size={12} aria-hidden />}>难度</ThIcon>
-            <ThIcon icon={<LuCoins size={12} aria-hidden />}>消耗</ThIcon>
-            {!compact ? <ThIcon icon={<LuUserRound size={12} aria-hidden />}>创建人</ThIcon> : null}
-            {!compact ? <ThIcon icon={<LuClock size={12} aria-hidden />}>创建时间</ThIcon> : null}
-            <ThIcon icon={<LuUserRound size={12} aria-hidden />}>实施人</ThIcon>
-            {!compact ? <ThIcon icon={<LuClock size={12} aria-hidden />}>分配时间</ThIcon> : null}
-            {!compact ? <ThIcon icon={<LuTags size={12} aria-hidden />}>标签</ThIcon> : null}
+            <ThIcon icon={<Squares2X2Icon aria-hidden className="size-3" />}>项目</ThIcon>
+            <ThIcon icon={<Bars3BottomLeftIcon aria-hidden className="size-3" />}>标题</ThIcon>
+            <ThIcon icon={<MinusCircleIcon aria-hidden className="size-3" />}>状态</ThIcon>
+            <ThIcon icon={<FlagIcon aria-hidden className="size-3" />}>优先级</ThIcon>
+            <ThIcon icon={<ChartBarIcon aria-hidden className="size-3" />}>难度</ThIcon>
+            <ThIcon icon={<CircleStackIcon aria-hidden className="size-3" />}>消耗</ThIcon>
+            {!compact ? <ThIcon icon={<UserIcon aria-hidden className="size-3" />}>创建人</ThIcon> : null}
+            {!compact ? <ThIcon icon={<ClockIcon aria-hidden className="size-3" />}>创建时间</ThIcon> : null}
+            <ThIcon icon={<UserIcon aria-hidden className="size-3" />}>实施人</ThIcon>
+            {!compact ? <ThIcon icon={<ClockIcon aria-hidden className="size-3" />}>分配时间</ThIcon> : null}
+            {!compact ? <ThIcon icon={<TagIcon aria-hidden className="size-3" />}>标签</ThIcon> : null}
             <th aria-label="操作" />
           </tr>
         </thead>
@@ -2629,7 +2617,7 @@ function TasksTable({
                       aria-label={collapsed[task.id] ? '展开子任务' : '收起子任务'}
                       onClick={() => setCollapsed((c) => ({ ...c, [task.id]: !c[task.id] }))}
                     >
-                      {collapsed[task.id] ? <LuChevronRight size={12} aria-hidden /> : <LuChevronDown size={12} aria-hidden />}
+                      {collapsed[task.id] ? <ChevronRightIcon aria-hidden className="size-3" /> : <ChevronDownIcon aria-hidden className="size-3" />}
                     </button>
                   ) : null}
                   <input
@@ -2650,7 +2638,7 @@ function TasksTable({
                     title="查看详情"
                     onClick={() => onOpenDetail(task.id)}
                   >
-                    <LuMaximize2 size={12} aria-hidden />
+                    <ArrowsPointingOutIcon aria-hidden className="size-3" />
                   </button>
                 </div>
               </td>
@@ -2666,13 +2654,13 @@ function TasksTable({
                   options={(Object.keys(PRIORITY_LABEL) as TaskPriority[]).map((k) => ({
                     value: k,
                     label: PRIORITY_LABEL[k],
-                    icon: <LuFlag size={12} aria-hidden />,
+                    icon: <FlagIcon aria-hidden className="size-3" />,
                   }))}
                   onSelect={(priority) => void onUpdate(task.id, { priority })}
                   valueClass={`is-p-${task.priority}`}
                   renderValue={(cur) => (
                     <>
-                      <LuFlag size={12} aria-hidden />
+                      <FlagIcon aria-hidden className="size-3" />
                       <span className="tasks-chip-text">{cur?.label ?? task.priority}</span>
                     </>
                   )}
@@ -2684,13 +2672,13 @@ function TasksTable({
                   options={(Object.keys(DIFFICULTY_LABEL) as TaskDifficulty[]).map((k) => ({
                     value: k,
                     label: DIFFICULTY_LABEL[k],
-                    icon: <LuGauge size={12} aria-hidden />,
+                    icon: <ChartBarIcon aria-hidden className="size-3" />,
                   }))}
                   onSelect={(difficulty) => void onUpdate(task.id, { difficulty })}
                   valueClass={`is-d-${task.difficulty}`}
                   renderValue={(cur) => (
                     <>
-                      <LuGauge size={12} aria-hidden />
+                      <ChartBarIcon aria-hidden className="size-3" />
                       <span className="tasks-chip-text">{cur?.label ?? task.difficulty}</span>
                     </>
                   )}
@@ -2741,7 +2729,7 @@ function TasksTable({
               <td className="tasks-col-action" onClick={(e) => e.stopPropagation()}>
                 <div className="tasks-row-actions">
                   <button type="button" className="tasks-icon-btn is-danger" title="删除" aria-label="删除任务" onClick={() => void onDelete(task.id)}>
-                    <LuTrash2 size={14} aria-hidden />
+                    <TrashIcon aria-hidden className="size-3.5" />
                   </button>
                 </div>
               </td>
@@ -2860,7 +2848,7 @@ function TaskDetailPanel({
           </button>
         </nav>
         <button type="button" className="tasks-icon-btn" title="关闭 (Esc)" onClick={onClose} aria-label="关闭">
-          <LuX size={14} aria-hidden />
+          <XMarkIcon aria-hidden className="size-3.5" />
         </button>
       </header>
 
@@ -2926,7 +2914,7 @@ function TaskDetailPanel({
                 options={(Object.keys(PRIORITY_LABEL) as TaskPriority[]).map((k) => ({
                   value: k,
                   label: PRIORITY_LABEL[k],
-                  icon: <LuFlag size={12} aria-hidden />,
+                  icon: <FlagIcon aria-hidden className="size-3" />,
                 }))}
                 onSelect={(priority) => void onUpdate(task.id, { priority })}
                 valueClass={`is-p-${task.priority}`}
@@ -2945,7 +2933,7 @@ function TaskDetailPanel({
                 options={(Object.keys(DIFFICULTY_LABEL) as TaskDifficulty[]).map((k) => ({
                   value: k,
                   label: DIFFICULTY_LABEL[k],
-                  icon: <LuGauge size={12} aria-hidden />,
+                  icon: <ChartBarIcon aria-hidden className="size-3" />,
                 }))}
                 onSelect={(difficulty) => void onUpdate(task.id, { difficulty })}
                 valueClass={`is-d-${task.difficulty}`}
@@ -3027,7 +3015,7 @@ function TaskDetailPanel({
         <div className="tasks-detail-pane">
 <div className="tasks-field tasks-l-field tasks-automation">
           <div className="tasks-auto-head">
-            <span className="tasks-auto-title"><LuClock size={13} aria-hidden /> 自动触发</span>
+            <span className="tasks-auto-title"><ClockIcon aria-hidden className="size-[13px]" /> 自动触发</span>
             <label className={`tasks-auto-switch${triggerEnabled ? ' is-on' : ''}`} title={triggerEnabled ? '点击关闭此规则' : '点击开启此规则'}>
               <input
                 type="checkbox"
@@ -3053,21 +3041,21 @@ function TaskDetailPanel({
               </div>
 
               {/* Trigger 区 */}
-              <div className="tasks-auto-sec-head"><LuMousePointerClick size={12} aria-hidden /> Trigger · 触发</div>
+              <div className="tasks-auto-sec-head"><CursorArrowRippleIcon aria-hidden className="size-3" /> Trigger · 触发</div>
               <div className="tasks-auto-sec">
                 <div className="tasks-auto-cond-list">
                   {/* 定时 cron 条件 */}
                   {triggerCron ? (
                     <div className="tasks-auto-cond">
                       <div className="tasks-auto-cond-head">
-                        <span className="tasks-auto-cond-type"><LuCalendarClock size={12} aria-hidden /> 定时</span>
+                        <span className="tasks-auto-cond-type"><CalendarDaysIcon aria-hidden className="size-3" /> 定时</span>
                         <button type="button" className="tasks-auto-cond-del" title="删除定时条件"
                           onClick={() => {
                             setTriggerCron('')
                             setTriggerMode('min')
                             setCronFields(spawnCronFields(''))
                             if (task.trigger?.cron) void onUpdate(task.id, { trigger: { cron: null } })
-                          }}><LuX size={12} aria-hidden /></button>
+                          }}><XMarkIcon aria-hidden className="size-3" /></button>
                       </div>
                       <div className="tasks-auto-cond-body">
                         <div className="tasks-trigger-field">
@@ -3232,12 +3220,12 @@ function TaskDetailPanel({
                   {triggerAt ? (
                     <div className="tasks-auto-cond">
                       <div className="tasks-auto-cond-head">
-                        <span className="tasks-auto-cond-type"><LuClock size={12} aria-hidden /> 特定时间</span>
+                        <span className="tasks-auto-cond-type"><ClockIcon aria-hidden className="size-3" /> 特定时间</span>
                         <button type="button" className="tasks-auto-cond-del" title="删除特定时间条件"
                           onClick={() => {
                             setTriggerAt('')
                             if (task.trigger?.at) void onUpdate(task.id, { trigger: { at: null } })
-                          }}><LuX size={12} aria-hidden /></button>
+                          }}><XMarkIcon aria-hidden className="size-3" /></button>
                       </div>
                       <div className="tasks-auto-cond-body">
                         <label className="tasks-trigger-field">
@@ -3261,13 +3249,13 @@ function TaskDetailPanel({
                   {triggerOn.map((ev) => (
                     <div key={ev} className="tasks-auto-cond">
                       <div className="tasks-auto-cond-head">
-                        <span className="tasks-auto-cond-type"><LuZap size={12} aria-hidden /> {ev === 'dep:done' ? '依赖完成' : '回合结束'}</span>
+                        <span className="tasks-auto-cond-type"><BoltIcon aria-hidden className="size-3" /> {ev === 'dep:done' ? '依赖完成' : '回合结束'}</span>
                         <button type="button" className="tasks-auto-cond-del" title="删除该事件条件"
                           onClick={() => {
                             const next = triggerOn.filter((e) => e !== ev)
                             setTriggerOn(next)
                             void onUpdate(task.id, { trigger: { on: next } })
-                          }}><LuX size={12} aria-hidden /></button>
+                          }}><XMarkIcon aria-hidden className="size-3" /></button>
                       </div>
                     </div>
                   ))}
@@ -3284,14 +3272,14 @@ function TaskDetailPanel({
                         setTriggerCron(cronStr)
                         setCondAddOpen(false)
                         if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                      }}><LuCalendarClock size={12} aria-hidden /> 定时</button>
+                      }}><CalendarDaysIcon aria-hidden className="size-3" /> 定时</button>
                       <button type="button" onClick={() => {
                         const atStr = formatDueInput(Date.now())
                         setTriggerAt(atStr)
                         setCondAddOpen(false)
                         const atMs = atStr.trim() ? new Date(`${atStr}T00:00:00`).getTime() : null
                         if (atMs !== (task.trigger?.at ?? null)) void onUpdate(task.id, { trigger: { at: atMs } })
-                      }}><LuClock size={12} aria-hidden /> 特定时间</button>
+                      }}><ClockIcon aria-hidden className="size-3" /> 特定时间</button>
                       <button type="button" onClick={() => {
                         const next = triggerOn.includes('dep:done') ? triggerOn : [...triggerOn, 'dep:done']
                         setTriggerOn(next)
@@ -3306,15 +3294,15 @@ function TaskDetailPanel({
                       }}>回合结束</button>
                     </div>
                   ) : (
-                    <button type="button" className="tasks-auto-add-btn" onClick={() => setCondAddOpen(true)}><LuPlus size={12} aria-hidden /> 触发条件</button>
+                    <button type="button" className="tasks-auto-add-btn" onClick={() => setCondAddOpen(true)}><PlusIcon aria-hidden className="size-3" /> 触发条件</button>
                   )}
                 </div>
               </div>
 
               {/* Then 区 */}
-              <div className="tasks-auto-sec-head"><LuPlay size={12} aria-hidden /> Then · 执行</div>
+              <div className="tasks-auto-sec-head"><PlayIcon aria-hidden className="size-3" /> Then · 执行</div>
               <div className="tasks-auto-sec tasks-auto-then">
-                <span className="tasks-auto-then-arrow"><LuPlay size={12} aria-hidden /></span>
+                <span className="tasks-auto-then-arrow"><PlayIcon aria-hidden className="size-3" /></span>
                 <span className="tasks-auto-then-text">自动派工给承担者并开始执行任务</span>
               </div>
 
@@ -3350,7 +3338,7 @@ function TaskDetailPanel({
         <div className="tasks-detail-meta">
           <div className="tasks-exec-stats">
             <div className="tasks-exec-stat">
-              <span className="tasks-exec-stat-label"><LuUserRound size={11} aria-hidden /> 创建人</span>
+              <span className="tasks-exec-stat-label"><UserIcon aria-hidden className="size-[11px]" /> 创建人</span>
               <span className="tasks-exec-stat-value">
                 <ActorChip actor={task.creator} empty="—" />
                 <TimeLabel ts={task.createdAt} />
@@ -3358,13 +3346,13 @@ function TaskDetailPanel({
             </div>
             {task.assignedAt ? (
               <div className="tasks-exec-stat">
-                <span className="tasks-exec-stat-label"><LuClock size={11} aria-hidden /> 实施时间</span>
+                <span className="tasks-exec-stat-label"><ClockIcon aria-hidden className="size-[11px]" /> 实施时间</span>
                 <span className="tasks-exec-stat-value"><TimeLabel ts={task.assignedAt} /></span>
               </div>
             ) : null}
             {task.blocked && task.blockedBy?.length ? (
               <div className="tasks-exec-stat">
-                <span className="tasks-exec-stat-label"><LuLock size={11} aria-hidden /> 阻塞</span>
+                <span className="tasks-exec-stat-label"><LockClosedIcon aria-hidden className="size-[11px]" /> 阻塞</span>
                 <span className="tasks-exec-stat-value">
                   <span className="tasks-blocked-head">被 {task.blockedBy.length} 个前置任务阻塞</span>
                   <ul className="tasks-blocked-list">
@@ -3383,10 +3371,10 @@ function TaskDetailPanel({
             ) : null}
             {task.usage && task.usage.totalTokens > 0 ? (
               <div className="tasks-exec-stat">
-                <span className="tasks-exec-stat-label"><LuCoins size={11} aria-hidden /> 消耗</span>
+                <span className="tasks-exec-stat-label"><CircleStackIcon aria-hidden className="size-[11px]" /> 消耗</span>
                 <span className="tasks-exec-stat-value">
                   <span className="tasks-detail-usage-total-capsule">
-                    <LuCoins size={12} aria-hidden />
+                    <CircleStackIcon aria-hidden className="size-3" />
                     共 {formatTokens(task.usage.totalTokens)} tokens
                     <span className="tasks-detail-usage-breakdown">
                       in {formatTokens(task.usage.inputTokens)} / out {formatTokens(task.usage.outputTokens)}
@@ -3412,12 +3400,12 @@ function TaskDetailPanel({
                   const consumed = !!usage && usage.totalTokens > 0
                   return (
                     <li key={`${r.ts}-${i}`} className={`tasks-report-item is-${r.status}`}>
-                      <span className="tasks-report-node">{r.status === 'done' ? <LuCircleCheck size={11} aria-hidden /> : <LuLoaderCircle size={11} aria-hidden />}</span>
+                      <span className="tasks-report-node">{r.status === 'done' ? <CheckCircleIcon aria-hidden className="size-[11px]" /> : <ArrowPathIcon aria-hidden className="size-[11px]" />}</span>
                       <span className="tasks-report-rail" />
                       <div className="tasks-report-content">
                         <div className="tasks-report-head">
                           <span className="tasks-report-status">
-                            {r.status === 'done' ? <LuCircleCheck size={12} aria-hidden /> : <LuLoaderCircle size={12} aria-hidden />}
+                            {r.status === 'done' ? <CheckCircleIcon aria-hidden className="size-3" /> : <ArrowPathIcon aria-hidden className="size-3" />}
                             {r.status === 'done' ? '完成' : '进行中'}
                           </span>
                           {r.turn != null ? <span className="tasks-report-turn">T{r.turn}</span> : null}
@@ -3456,7 +3444,7 @@ function TaskDetailPanel({
             if (window.confirm('删除这个任务？')) void onDelete(task.id)
           }}
         >
-          <LuTrash2 size={13} aria-hidden />
+          <TrashIcon aria-hidden className="size-[13px]" />
           删除任务
         </button>
       </footer>
@@ -3504,7 +3492,7 @@ export const name = 'tasks-ui'
 export const inject = ['slots', 'appModules', 'snapshot']
 
 const tasksModuleProps = { moduleId: 'tasks' }
-const tasksInspectorProps = { tabId: 'tasks', tabLabel: '任务', tabIcon: LuClipboardList }
+const tasksInspectorProps = { tabId: 'tasks', tabLabel: '任务', tabIcon: ClipboardDocumentListIcon }
 
 type AppModulesService = {
   register: (mod: {
@@ -3528,7 +3516,7 @@ export function apply(ctx: Context) {
     path: '/tasks',
     description: 'Task table and board',
     order: 20,
-    Icon: LuListChecks,
+    Icon: ClipboardDocumentCheckIcon,
   })
   const tasksView = new TasksViewService(ctx)
   // 依赖 snapshot 总线：注册本插件关心的 'tasks' 消息（Agent 远程切换看板事件），由总线转发

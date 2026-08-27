@@ -1,5 +1,5 @@
 import { memo, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { LuArrowUp } from 'react-icons/lu'
+import { ArrowUpIcon } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import {
@@ -222,7 +222,7 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
               disabled={trajectoryLoading}
               onClick={() => void sessionView.loadOlderTrajectory()}
             >
-              <LuArrowUp size={12} aria-hidden />
+              <ArrowUpIcon aria-hidden className="size-3" />
             </button>
           ) : null}
           <span className="traj-meta-stat">

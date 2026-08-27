@@ -27,11 +27,11 @@ import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import { chromeIcon } from './chrome-icon.ts'
 import {
-  LuMessageSquare,
-  LuPanelLeft,
-  LuPanelRight,
-  LuSettings,
-} from 'react-icons/lu'
+  ChatBubbleLeftIcon,
+  ChevronDoubleLeftIcon,
+  ChevronDoubleRightIcon,
+  Cog6ToothIcon,
+} from '@heroicons/react/16/solid'
 
 export const name = 'shell'
 export const inject = ['slots', 'snapshot', 'sessionView', 'projectView', 'appModules']
@@ -41,7 +41,7 @@ function ModuleIcon({ module }: { module: AppModule }) {
     const Icon = module.Icon
     return <Icon {...chromeIcon} />
   }
-  return <LuMessageSquare {...chromeIcon} aria-hidden />
+  return <ChatBubbleLeftIcon {...chromeIcon} aria-hidden />
 }
 
 function ModuleRail({
@@ -92,7 +92,7 @@ function ModuleRail({
           aria-label="Settings"
           onClick={onSettings}
         >
-          <LuSettings {...chromeIcon} />
+          <Cog6ToothIcon {...chromeIcon} />
         </button>
       </div>
     </nav>
@@ -339,7 +339,7 @@ function Shell(props: SlotProps) {
                   aria-label="Expand sidebar"
                   onClick={expandSidebar}
                 >
-                  <LuPanelLeft {...chromeIcon} />
+                  <ChevronDoubleLeftIcon {...chromeIcon} />
                 </button>
               ) : null}
               {project ? (
@@ -359,7 +359,7 @@ function Shell(props: SlotProps) {
                 data-testid="header-config-toggle"
                 onClick={() => setConfigOpen(true)}
               >
-                <LuSettings {...chromeIcon} />
+                <Cog6ToothIcon {...chromeIcon} />
               </button>
               <button
                 type="button"
@@ -370,7 +370,7 @@ function Shell(props: SlotProps) {
                 data-testid="inspector-toggle"
                 onClick={toggleInspector}
               >
-                <LuPanelRight {...chromeIcon} />
+                <ChevronDoubleRightIcon {...chromeIcon} />
               </button>
             </div>
           </header>

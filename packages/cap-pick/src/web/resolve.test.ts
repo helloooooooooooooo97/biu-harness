@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { resolvePickFromNode, resolvePicksInRect } from './resolve.ts'
 import { formatPicks, parsePicks, chipLabel, dedupePicks } from './types.ts'
 import { pickKindIcon } from './chip.tsx'
-import { LuBot, LuListTodo, LuMessageSquare, LuPuzzle, LuTag } from 'react-icons/lu'
+import { CpuChipIcon, ClipboardDocumentCheckIcon, ChatBubbleLeftIcon, PuzzlePieceIcon, TagIcon } from '@heroicons/react/16/solid'
 
 test('merges child action onto parent kind/id', () => {
   const card = document.createElement('div')
@@ -56,12 +56,12 @@ test('parsePicks recovers chips that markdown would strip', () => {
 })
 
 test('kind maps to distinct icons', () => {
-  assert.equal(pickKindIcon('session'), LuBot)
-  assert.equal(pickKindIcon('message'), LuMessageSquare)
+  assert.equal(pickKindIcon('session'), CpuChipIcon)
+  assert.equal(pickKindIcon('message'), ChatBubbleLeftIcon)
   assert.notEqual(pickKindIcon('session'), pickKindIcon('message'))
-  assert.equal(pickKindIcon('task'), LuListTodo)
-  assert.equal(pickKindIcon('plugin'), LuPuzzle)
-  assert.equal(pickKindIcon('unknown'), LuTag)
+  assert.equal(pickKindIcon('task'), ClipboardDocumentCheckIcon)
+  assert.equal(pickKindIcon('plugin'), PuzzlePieceIcon)
+  assert.equal(pickKindIcon('unknown'), TagIcon)
 })
 
 function stubBox(el: HTMLElement, left: number, top: number, width: number, height: number) {
