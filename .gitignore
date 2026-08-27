@@ -1,7 +1,9 @@
 node_modules/
 dist/
 .cordis/
-.plugin-dev/
+.plugin-dev/*
+!.plugin-dev/store-heavy-ping/
+!.plugin-dev/store-heavy-ping/**
 .workspace/
 *.log
 .DS_Store
