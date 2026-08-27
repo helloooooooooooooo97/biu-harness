@@ -312,19 +312,6 @@ export const ChatSidebar = memo(function ChatSidebar({
                       aria-expanded={!sectionCollapsed}
                       onClick={() => toggleSection(section.kind)}
                     >
-                      {section.kind === 'pinned' ? (
-                        <span className="sidebar-rail-icon">
-                          <LuStar className="size-5 text-[#f5b700]" fill="currentColor" />
-                        </span>
-                      ) : section.kind === 'tag' ? (
-                        <span className="sidebar-rail-icon">
-                          <LuTag className="size-5 opacity-80" />
-                        </span>
-                      ) : (
-                        <span className="sidebar-rail-icon">
-                          <FolderGlyph className="size-5 opacity-80" />
-                        </span>
-                      )}
                       <span className="min-w-0 flex-1 truncate tracking-normal">{section.label}</span>
                       <span className="shrink-0 font-mono text-[10px] opacity-60">
                         {section.sessions
@@ -363,9 +350,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                   {!sectionCollapsed ? (
                     <div className="min-w-0 space-y-1.5 pt-0.5">
                       {section.sessions
-                        ? (
-                          <div className="sidebar-session-list min-w-0">
-                            {section.sessions.map((item) => (
+                        ? section.sessions.map((item) => (
                             <SessionRow
                               key={`pinned:${item.id}`}
                               item={item}
@@ -375,9 +360,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                               onDelete={deleteChat}
                               onPin={pinChat}
                             />
-                            ))}
-                          </div>
-                          )
+                          ))
                         : section.groups?.map((group) => {
                         const collapsed = Boolean(collapsedProjects[group.key])
                         const isUngrouped = group.key === UNGROUPED_PROJECT_KEY || group.key === UNGROUPED_TAG_KEY
