@@ -23,6 +23,8 @@
   --dsw-pick-stroke: rgba(35, 131, 226, 0.4);
   --dsw-hover: #2c2c2c;
   --dsw-hover-strong: #2c2c2c;
+  --dsw-sidebar-fg: #bcbab7;
+  --dsw-sidebar-fg-active: #f0efed;
   --dsw-muted-fill: rgba(242, 241, 237, 0.04);
   --dsw-overlay: rgba(25, 25, 25, 0.72);
   /* Cursor radii: 8px buttons/cards, softer bubble */
@@ -31,8 +33,8 @@
   /* Hairline-first depth (Cursor prefers border rings over heavy elevation) */
   --dsw-shadow-lv2: 0 0 0 1px rgba(242, 241, 237, 0.06), 0 8px 24px rgba(0, 0, 0, 0.35);
   --dsw-chat-width: 748px;
-  /* 右侧对话正文字号（略小于原先 15px，更接近 Cursor 阅读密度） */
-  --dsw-chat-font-size: 13px;
+  /* 中间对话默认正文字号 */
+  --dsw-chat-font-size: 16px;
   --dsw-chat-line-height: 1.6;
   --dsw-chat-composer-font-size: 13px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
@@ -293,7 +295,7 @@ body {
   gap: 8px;
   border-radius: 8px;
   padding: 5px 8px;
-  color: var(--dsw-label-2);
+  color: var(--dsw-sidebar-fg);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
@@ -319,7 +321,7 @@ body {
 }
 
 .app-side-actions-item:hover {
-  color: var(--dsw-label);
+  color: var(--dsw-sidebar-fg-active);
 }
 
 .app-side-actions-item:hover::before {
@@ -358,6 +360,7 @@ body {
   border-radius: 6px;
   contain: layout style;
   transition: none;
+  color: var(--dsw-sidebar-fg);
 }
 
 .chat-session-row::before {
@@ -380,7 +383,7 @@ body {
 }
 
 .chat-session-row.is-active {
-  color: var(--dsw-business);
+  color: var(--dsw-sidebar-fg-active);
 }
 
 .chat-session-row.is-active::before {
