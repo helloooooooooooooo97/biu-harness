@@ -18,6 +18,7 @@ import {
   type AppModulesService,
 } from '@biu/web-app-modules'
 import { ChatSidebar } from './chat-sidebar.tsx'
+import { ChatSessionTitle } from './chat-session-title.tsx'
 import { DanceStage } from '@biu/web-mascot'
 import { SessionInspector } from './session-inspector.tsx'
 import { SessionConfigDialog } from '@biu/web-session-view/dialog'
@@ -361,6 +362,7 @@ function Shell(props: SlotProps) {
                 </div>
               ) : null}
             </div>
+            <ChatSessionTitle useSessionView={useSessionView} sessionView={sessionView} />
             <div className="chat-view-header-right">
               <button
                 type="button"

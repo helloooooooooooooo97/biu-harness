@@ -1136,6 +1136,28 @@ export class SessionViewService extends Service {
     void this.refreshSessions()
   }
 
+  async setSessionTitle(id: string, title: string) {
+    const next = title.trim()
+    const prev = this.value.sessions
+    if (next) {
+      this.replace({
+        sessions: prev.map((item) => (item.id === id ? { ...item, title: next } : item)),
+      })
+    }
+    try {
+      const res = await fetch(`/api/sessions/${id}/config`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title: next || null }),
+      })
+      if (!res.ok) throw new Error(`rename failed HTTP ${res.status}`)
+    } catch (error) {
+      this.replace({ sessions: prev, error: String(error) })
+      throw error
+    }
+    void this.refreshSessions()
+  }
+
   async deleteSession(id: string) {
     const prevSessions = this.value.sessions
     const wasActive = this.value.sessionId === id

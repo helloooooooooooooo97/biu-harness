@@ -199,6 +199,51 @@ body {
   padding: 0 12px;
 }
 
+.chat-view-session-title-wrap {
+  position: absolute;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  max-width: min(420px, calc(100% - 220px));
+  min-width: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.chat-view-session-title {
+  width: 100%;
+  min-width: 80px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  padding: 4px 10px;
+  color: var(--dsw-label);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  outline: none;
+  pointer-events: auto;
+}
+
+.chat-view-session-title::placeholder {
+  color: var(--dsw-label-3);
+  font-weight: 500;
+}
+
+.chat-view-session-title:hover {
+  background: var(--dsw-hover);
+}
+
+.chat-view-session-title:focus {
+  background: var(--dsw-hover);
+  overflow: visible;
+  text-overflow: clip;
+}
+
 .app-side-bar-head {
   display: flex;
   height: 36px;
