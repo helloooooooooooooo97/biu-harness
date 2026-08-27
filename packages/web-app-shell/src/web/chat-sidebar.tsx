@@ -24,6 +24,7 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   FolderIcon,
+  InboxIcon,
   ChevronDoubleLeftIcon,
   PlusIcon,
   SignalIcon,
@@ -96,7 +97,15 @@ const SessionRow = memo(function SessionRow({
         to={`/s/${item.id}`}
         className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
       >
-        <SidebarMascot sessionId={item.id} identity={identity} busy={busy} animate={false} dancing={dancing} title={dancing ? '跳舞中 🎉' : `${identity.shape} · ${identity.color}`} className="size-[24px]" />
+        <SidebarMascot
+          size={24}
+          sessionId={item.id}
+          identity={identity}
+          busy={busy}
+          animate={false}
+          dancing={dancing}
+          title={dancing ? '跳舞中 🎉' : `${identity.shape} · ${identity.color}`}
+        />
         <span className="min-w-0 flex-1 truncate font-medium">
           {(item.type ?? 'chat') === 'live' ? (
             <span className="mr-1 text-[9px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
@@ -387,7 +396,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                     ) : group.kind === 'tag' ? (
                                       <TagIcon className={chromeIconClass('opacity-80')} />
                                     ) : isUngrouped ? (
-                                      <span className="text-[11px] opacity-70">—</span>
+                                      <InboxIcon className={chromeIconClass('opacity-80')} />
                                     ) : (
                                       <FolderGlyph className="opacity-80" />
                                     )}
