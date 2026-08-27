@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { Context } from 'cordis'
-import { LuPuzzle } from 'react-icons/lu'
+import { LuPlay, LuPuzzle, LuSquare, LuTrash2 } from 'react-icons/lu'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 
@@ -108,6 +109,10 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
     }
   }
 
+  const pending = items.find((item) => item.id === pendingUninstall) ?? null
+  const iconBtn =
+    'grid size-8 shrink-0 cursor-pointer place-items-center rounded-[8px] border-0 bg-transparent text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] disabled:opacity-40'
+
   return (
     <div
       className={`flex min-h-0 flex-1 flex-col overflow-auto ${compact ? 'px-3 py-3' : 'px-8 py-6'}`}
@@ -160,76 +165,100 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                 </p>
               ) : null}
             </div>
-            {pendingUninstall === item.id ? (
-              <div className="flex min-w-0 max-w-[240px] shrink-0 flex-col items-end gap-1.5">
-                <p
-                  className="m-0 text-right text-[11px] leading-4 text-[var(--dsw-danger)]"
-                  data-testid={`plugin-store-uninstall-hint-${item.id}`}
+            <div className="flex shrink-0 items-center gap-0.5">
+              {item.enabled ? (
+                <button
+                  type="button"
+                  className={iconBtn}
+                  data-testid={`plugin-store-close-${item.id}`}
+                  data-biu-action="close"
+                  title="关闭"
+                  aria-label={`关闭 ${item.name}`}
+                  disabled={Boolean(busy?.endsWith(`:${item.id}`))}
+                  onClick={() => void closePlugin(item.id)}
                 >
-                  卸载会永久删除「{item.name}」的插件代码，货架上也会消失。只想停用请点关闭。
+                  <LuSquare className="size-3.5" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={iconBtn}
+                  data-testid={`plugin-store-open-${item.id}`}
+                  data-biu-action="open"
+                  title="打开"
+                  aria-label={`打开 ${item.name}`}
+                  disabled={Boolean(busy?.endsWith(`:${item.id}`))}
+                  onClick={() => void openPlugin(item.id)}
+                >
+                  <LuPlay className="size-3.5" />
+                </button>
+              )}
+              <button
+                type="button"
+                className={`${iconBtn} hover:text-[var(--dsw-danger)]`}
+                data-testid={`plugin-store-uninstall-${item.id}`}
+                title="卸载"
+                aria-label={`卸载 ${item.name}`}
+                disabled={Boolean(busy?.endsWith(`:${item.id}`))}
+                onClick={() => setPendingUninstall(item.id)}
+              >
+                <LuTrash2 className="size-3.5" />
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      )}
+
+      {pending && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-4"
+              data-testid="plugin-store-uninstall-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="plugin-store-uninstall-title"
+              onClick={() => {
+                if (busy?.startsWith('rm:')) return
+                setPendingUninstall(null)
+              }}
+            >
+              <div
+                className="w-[min(100%,360px)] rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-bg)] p-5 text-[var(--dsw-label)] shadow-lg"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <h2 id="plugin-store-uninstall-title" className="m-0 text-[15px] font-semibold">
+                  卸载「{pending.name}」？
+                </h2>
+                <p className="mt-2 mb-0 text-[13px] leading-5 text-[var(--dsw-label-3)]">
+                  卸载后会永久删除这份插件代码，货架上也会消失。若只是暂时不用，请点关闭。
                 </p>
-                <div className="flex items-center gap-1.5">
+                <div className="mt-4 flex justify-end gap-2">
                   <button
                     type="button"
                     className="rounded-[8px] border border-[var(--dsw-border)] px-3 py-1.5 text-[12px] text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]"
-                    data-testid={`plugin-store-uninstall-cancel-${item.id}`}
-                    disabled={busy === `rm:${item.id}`}
+                    data-testid="plugin-store-uninstall-cancel"
+                    disabled={busy === `rm:${pending.id}`}
                     onClick={() => setPendingUninstall(null)}
                   >
                     取消
                   </button>
                   <button
                     type="button"
-                    className="rounded-[8px] bg-[var(--dsw-danger)] px-3 py-1.5 text-[12px] font-medium text-[var(--dsw-bg)] hover:opacity-90"
-                    data-testid={`plugin-store-uninstall-confirm-${item.id}`}
+                    className="rounded-[8px] border border-[var(--dsw-danger)] px-3 py-1.5 text-[12px] font-medium text-[var(--dsw-danger)] hover:bg-[var(--dsw-hover)]"
+                    data-testid="plugin-store-uninstall-confirm"
                     data-biu-action="uninstall"
-                    disabled={busy === `rm:${item.id}`}
-                    onClick={() => void uninstall(item.id)}
+                    disabled={busy === `rm:${pending.id}`}
+                    onClick={() => void uninstall(pending.id)}
                   >
-                    {busy === `rm:${item.id}` ? '卸载中…' : '确认卸载'}
+                    {busy === `rm:${pending.id}` ? '卸载中…' : '确认卸载'}
                   </button>
                 </div>
               </div>
-            ) : (
-            <div className="flex shrink-0 items-center gap-1.5">
-              {item.enabled ? (
-                <button
-                  type="button"
-                  className="rounded-[8px] border border-[var(--dsw-border)] px-3 py-1.5 text-[12px] text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]"
-                  data-testid={`plugin-store-close-${item.id}`}
-                  data-biu-action="close"
-                  disabled={Boolean(busy?.endsWith(`:${item.id}`))}
-                  onClick={() => void closePlugin(item.id)}
-                >
-                  {busy === `off:${item.id}` ? '关闭中…' : '关闭'}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="rounded-[8px] bg-[var(--dsw-business)] px-3 py-1.5 text-[12px] font-medium text-[var(--dsw-bg)] hover:opacity-90"
-                  data-testid={`plugin-store-open-${item.id}`}
-                  data-biu-action="open"
-                  disabled={Boolean(busy?.endsWith(`:${item.id}`))}
-                  onClick={() => void openPlugin(item.id)}
-                >
-                  {busy === `on:${item.id}` ? '打开中…' : '打开'}
-                </button>
-              )}
-              <button
-                type="button"
-                className="rounded-[8px] border border-[var(--dsw-border)] px-3 py-1.5 text-[12px] text-[var(--dsw-danger)] hover:bg-[var(--dsw-hover)]"
-                data-testid={`plugin-store-uninstall-${item.id}`}
-                disabled={Boolean(busy?.endsWith(`:${item.id}`))}
-                onClick={() => setPendingUninstall(item.id)}
-              >
-                卸载
-              </button>
-            </div>
-            )}
-          </li>
-        ))}
-      </ul>
-      )}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   )
 }
