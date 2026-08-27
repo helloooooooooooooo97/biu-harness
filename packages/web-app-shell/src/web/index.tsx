@@ -25,6 +25,7 @@ import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import {
+  LuMousePointer2,
   LuPanelLeft,
   LuPanelRight,
   LuSettings2,
@@ -357,9 +358,28 @@ function Shell(props: SlotProps) {
               {project ? (
                 <div className="chat-view-project" title={project.path ?? project.name}>
                   <FolderGlyph className="chat-view-project-icon" />
+                  <button
+                    type="button"
+                    className="chat-view-header-expand"
+                    title="选取对象"
+                    aria-label="选取对象"
+                    data-testid="header-pick-toggle"
+                  >
+                    <LuMousePointer2 className="size-3.5" />
+                  </button>
                   <span className="chat-view-project-name">{project.name}</span>
                 </div>
-              ) : null}
+              ) : (
+                <button
+                  type="button"
+                  className="chat-view-header-expand"
+                  title="选取对象"
+                  aria-label="选取对象"
+                  data-testid="header-pick-toggle"
+                >
+                  <LuMousePointer2 className="size-3.5" />
+                </button>
+              )}
             </div>
             <div className="chat-view-header-right">
               <button
