@@ -1,2 +1,2 @@
-/** 壳层描边图标：一律 Lucide 规格，避免 size-5 / 1em / 手画 path 混用导致看起来忽大忽小。 */
-export const chromeIcon = { size: 20, strokeWidth: 2 } as const
+/** 壳层描边图标：Lucide 16×16、线宽 2。头像另用 24×24，不走这套。 */
+export const chromeIcon = { size: 16, strokeWidth: 2 } as const
