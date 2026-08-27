@@ -1,9 +1,7 @@
-import { mkdirSync } from 'node:fs'
-import { existsSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { createRequire } from 'node:module'
 import { Service, type Context, type Plugin } from 'cordis'
 import type { CatalogEntry } from '@biu/host-hub'
 import {
@@ -16,10 +14,6 @@ import {
   WEB_ENTRIES,
   type PluginCreateInput,
 } from './plugin-create.ts'
-
-type DatabaseSync = import('node:sqlite').DatabaseSync
-
-const require = createRequire(import.meta.url)
 
 export const name = 'plugin-store'
 export const inject = ['http', 'hub', 'tools']
@@ -58,8 +52,8 @@ export function defaultSandboxDir() {
   return process.env.BIU_PLUGIN_DEV_DIR || join(process.cwd(), '.plugin-dev')
 }
 
-export function defaultDbPath() {
-  return process.env.BIU_PLUGIN_DB || join(process.cwd(), 'plugins.sqlite')
+export function defaultStatePath() {
+  return process.env.BIU_PLUGIN_STATE || join(process.cwd(), '.plugin', 'store.json')
 }
 
 function isSafeId(id: string) {
@@ -84,30 +78,36 @@ async function readManifest(dir: string): Promise<StoreManifest> {
   return raw
 }
 
+type StoreState = { enabled: string[] }
+
+function emptyState(): StoreState {
+  return { enabled: [] }
+}
+
+function parseState(raw: unknown): StoreState {
+  if (!raw || typeof raw !== 'object') return emptyState()
+  const enabled = (raw as { enabled?: unknown }).enabled
+  if (!Array.isArray(enabled)) return emptyState()
+  return {
+    enabled: [...new Set(enabled.map((id) => String(id)).filter((id) => /^[a-z][a-z0-9-]{1,40}$/.test(id)))].sort(),
+  }
+}
+
 export class PluginStoreService extends Service {
-  private db!: DatabaseSync
+  private state: StoreState = emptyState()
 
   constructor(
     ctx: Context,
     readonly pluginDir: string,
-    private readonly dbPath: string,
+    private readonly statePath: string,
     readonly sandboxDir: string = defaultSandboxDir(),
   ) {
     super(ctx, 'pluginStore')
   }
 
   open() {
-    mkdirSync(dirname(this.dbPath), { recursive: true })
-    const { DatabaseSync } = require('node:sqlite') as typeof import('node:sqlite')
-    this.db = new DatabaseSync(this.dbPath)
-    this.db.exec('PRAGMA journal_mode = WAL')
-    this.db.exec('PRAGMA synchronous = NORMAL')
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS store_plugins (
-        id TEXT PRIMARY KEY,
-        enabled INTEGER NOT NULL DEFAULT 0
-      );
-    `)
+    mkdirSync(dirname(this.statePath), { recursive: true })
+    this.state = this.readState()
     return this
   }
 
@@ -115,20 +115,30 @@ export class PluginStoreService extends Service {
     return this.ctx.hub as unknown as StoreHub
   }
 
+  private readState(): StoreState {
+    if (!existsSync(this.statePath)) return emptyState()
+    try {
+      return parseState(JSON.parse(readFileSync(this.statePath, 'utf8')))
+    } catch {
+      return emptyState()
+    }
+  }
+
+  private writeState() {
+    mkdirSync(dirname(this.statePath), { recursive: true })
+    writeFileSync(this.statePath, `${JSON.stringify(this.state, null, 2)}\n`)
+  }
+
   private isEnabled(id: string) {
-    const row = this.db.prepare('SELECT enabled FROM store_plugins WHERE id = ?').get(id) as
-      | { enabled: number }
-      | undefined
-    return row?.enabled === 1
+    return this.state.enabled.includes(id)
   }
 
   private setEnabled(id: string, enabled: boolean) {
-    this.db
-      .prepare(
-        `INSERT INTO store_plugins (id, enabled) VALUES (?, ?)
-         ON CONFLICT(id) DO UPDATE SET enabled = excluded.enabled`,
-      )
-      .run(id, enabled ? 1 : 0)
+    const next = new Set(this.state.enabled)
+    if (enabled) next.add(id)
+    else next.delete(id)
+    this.state = { enabled: [...next].sort() }
+    this.writeState()
   }
 
   pluginPath(id: string) {
@@ -244,15 +254,14 @@ export class PluginStoreService extends Service {
   async uninstall(id: string) {
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
     await this.hub().drop(id)
-    this.db.prepare('DELETE FROM store_plugins WHERE id = ?').run(id)
+    this.setEnabled(id, false)
     const hit = await this.findPluginDir(id)
     if (hit) await rm(hit, { recursive: true, force: true })
   }
 
   async restore() {
-    const rows = this.db.prepare('SELECT id FROM store_plugins WHERE enabled = 1').all() as Array<{ id: string }>
-    for (const row of rows) {
-      const hit = await this.findPluginDir(row.id)
+    for (const id of this.state.enabled) {
+      const hit = await this.findPluginDir(id)
       if (!hit) continue
       try {
         await this.mountFromDisk(await readManifest(hit), hit)
@@ -312,7 +321,7 @@ export class PluginStoreService extends Service {
 }
 
 export async function apply(ctx: Context) {
-  const store = new PluginStoreService(ctx, defaultPluginDir(), defaultDbPath(), defaultSandboxDir()).open()
+  const store = new PluginStoreService(ctx, defaultPluginDir(), defaultStatePath(), defaultSandboxDir()).open()
   try {
     await store.restore()
   } catch (error) {
