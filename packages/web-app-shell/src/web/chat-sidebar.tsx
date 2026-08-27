@@ -19,7 +19,7 @@ import { useSidebarCollapseStore } from '@biu/web-session-view'
 import { SidebarMascot } from '@biu/web-mascot'
 import { resolveSessionMascot } from '@biu/web-mascot'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
-import { chromeIcon, chromeIconClass, groupIcon, groupIconClass } from './chrome-icon.ts'
+import { chromeIcon, chromeIconClass } from './chrome-icon.ts'
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -29,8 +29,11 @@ import {
   StarIcon,
   TrashIcon,
   ChatBubbleLeftIcon,
+  FolderIcon,
+  TagIcon,
+  FolderMinusIcon,
+  BookmarkSlashIcon,
 } from '@heroicons/react/16/solid'
-import { FolderIcon as FolderGroupIcon, TagIcon as TagGroupIcon, FolderMinusIcon as FolderMinusGroupIcon, BookmarkSlashIcon as BookmarkSlashGroupIcon } from '@heroicons/react/20/solid'
 
 /** 项目/标签分组视图的持久化 key。 */
 const GROUP_BY_KEY = 'cordis.sidebar.groupBy'
@@ -126,6 +129,19 @@ const SessionRow = memo(function SessionRow({
       </Link>
       <button
         type="button"
+        className="chat-session-row-delete"
+        aria-label={`Delete session ${item.title}`}
+        title="Delete"
+        onClick={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          onDelete(item)
+        }}
+      >
+        <TrashIcon {...chromeIcon} />
+      </button>
+      <button
+        type="button"
         className={`chat-session-row-star${pinned ? ' is-on' : ''}`}
         aria-pressed={pinned}
         aria-label={pinned ? `取消收藏 ${item.title}` : `收藏 ${item.title}`}
@@ -137,19 +153,6 @@ const SessionRow = memo(function SessionRow({
         }}
       >
         <StarIcon className={chromeIconClass(pinned ? 'text-[#f5b700]' : undefined)} />
-      </button>
-      <button
-        type="button"
-        className="chat-session-row-delete"
-        aria-label={`Delete session ${item.title}`}
-        title="Delete"
-        onClick={(event) => {
-          event.preventDefault()
-          event.stopPropagation()
-          onDelete(item)
-        }}
-      >
-        <TrashIcon {...chromeIcon} />
       </button>
     </div>
   )
@@ -343,7 +346,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                             className={`sidebar-view-switch-btn${groupBy === 'project' ? ' is-on' : ''}`}
                             onClick={() => changeGroupBy('project')}
                           >
-                            <FolderGroupIcon {...groupIcon} />
+                            <FolderIcon {...chromeIcon} />
                           </button>
                           <button
                             type="button"
@@ -352,7 +355,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                             className={`sidebar-view-switch-btn${groupBy === 'tag' ? ' is-on' : ''}`}
                             onClick={() => changeGroupBy('tag')}
                           >
-                            <TagGroupIcon {...groupIcon} />
+                            <TagIcon {...chromeIcon} />
                           </button>
                         </div>
                       ) : null}
@@ -406,13 +409,13 @@ export const ChatSidebar = memo(function ChatSidebar({
                                     {group.kind === 'pinned' ? (
                                       <StarIcon className={chromeIconClass('text-[#f5b700]')} />
                                     ) : group.key === UNGROUPED_PROJECT_KEY ? (
-                                      <FolderMinusGroupIcon className={groupIconClass('opacity-80')} />
+                                      <FolderMinusIcon className={chromeIconClass('opacity-80')} />
                                     ) : group.key === UNGROUPED_TAG_KEY ? (
-                                      <BookmarkSlashGroupIcon className={groupIconClass('opacity-80')} />
+                                      <BookmarkSlashIcon className={chromeIconClass('opacity-80')} />
                                     ) : group.kind === 'tag' ? (
-                                      <TagGroupIcon className={groupIconClass('opacity-80')} />
+                                      <TagIcon className={chromeIconClass('opacity-80')} />
                                     ) : (
-                                      <FolderGlyph className="size-5 opacity-80" />
+                                      <FolderGlyph className="opacity-80" />
                                     )}
                                   </span>
                                   <span className="sidebar-group-fold-chevron">
