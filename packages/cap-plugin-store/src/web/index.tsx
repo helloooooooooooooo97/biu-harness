@@ -113,6 +113,11 @@ function PluginStorePage({ slots }: { slots: SlotsService }) {
         </div>
       ) : null}
 
+      {items.length === 0 && !error ? (
+        <p className="m-0 text-[13px] text-[var(--dsw-label-3)]" data-testid="plugin-store-empty">
+          没有插件
+        </p>
+      ) : (
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {items.map((item) => (
           <li
@@ -165,6 +170,7 @@ function PluginStorePage({ slots }: { slots: SlotsService }) {
           </li>
         ))}
       </ul>
+      )}
     </div>
   )
 }

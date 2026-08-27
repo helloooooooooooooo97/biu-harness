@@ -39,7 +39,7 @@ export function catalogSlug(id: string) {
   return id.replace(/^store-/, '')
 }
 
-/** 把商店插件三件套写进 cap-plugin-store/fixtures/<slug>/，list() 会自己扫到。 */
+/** 把商店插件三件套写进仓库根 .biu/plugin-catalog/<slug>/（没有 .biu 则创建）。 */
 export async function writePluginToCatalog(catalogDir: string, input: PluginCreateInput) {
   const id = String(input.id ?? '').trim()
   const name = String(input.name ?? '').trim()
@@ -65,7 +65,7 @@ export function registerPluginCreate(ctx: Context, catalogDir: string) {
   ctx.tools.register({
     name: 'plugin_create',
     description:
-      '把插件写进商店货架 packages/cap-plugin-store/fixtures（manifest.json、host.js，可选 web.js）。可交 TypeScript/TSX，工具在当前 host 进程内编成 ESM 再落盘，不会重启主进程、也不会跑 Vite。写完会出现在插件商店，再点安装。必须 export function apply(ctx)。web 不要 import react，用 JSX 即可。',
+      '把插件写进仓库根目录 .biu/plugin-catalog（manifest.json、host.js，可选 web.js）。没有 .biu 时商店显示没有插件；本工具会按需创建该目录。可交 TypeScript/TSX，在当前 host 进程内编成 ESM 再落盘，不重启主进程、不跑 Vite。写完会出现在插件商店，再点安装。必须 export function apply(ctx)。',
     parameters: {
       type: 'object',
       properties: {

@@ -6,8 +6,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { compileStoreModule, writePluginToCatalog } from './plugin-create.ts'
 
-test('writePluginToCatalog dumps hello-shaped files into fixtures dir', async () => {
-  const catalogDir = await mkdtemp(join(tmpdir(), 'plugin-fixtures-'))
+test('writePluginToCatalog dumps files into catalog dir', async () => {
+  const catalogDir = await mkdtemp(join(tmpdir(), 'plugin-catalog-'))
   try {
     const result = await writePluginToCatalog(catalogDir, {
       id: 'store-echo',

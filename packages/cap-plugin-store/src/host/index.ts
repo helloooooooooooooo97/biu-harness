@@ -35,7 +35,7 @@ export function storeWebUrl(id: string) {
 }
 
 export function defaultCatalogDir() {
-  return join(findRepoRoot(), 'packages/cap-plugin-store/fixtures')
+  return process.env.BIU_PLUGIN_CATALOG_DIR || join(findRepoRoot(), '.biu', 'plugin-catalog')
 }
 
 export function defaultDataDir() {
@@ -77,6 +77,7 @@ export class PluginStoreService {
     for (const name of names.sort()) {
       const dir = join(this.catalogDir, name)
       if (!(await stat(dir)).isDirectory()) continue
+      if (!existsSync(join(dir, 'manifest.json'))) continue
       const manifest = await readManifest(dir)
       const installed = existsSync(join(this.dataDir, manifest.id, 'host.js'))
       items.push({
