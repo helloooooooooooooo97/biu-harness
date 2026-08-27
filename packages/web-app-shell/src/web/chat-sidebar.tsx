@@ -90,19 +90,17 @@ const SessionRow = memo(function SessionRow({
     >
       <Link
         to={`/s/${item.id}`}
-        className="flex min-w-0 flex-1 items-center gap-2 py-1 pr-1.5 text-left text-[12px] leading-4"
+        className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-[12px] leading-4"
       >
-        <span className="grid size-5 shrink-0 place-items-center">
-          <SidebarMascot
-            size={20}
-            sessionId={item.id}
-            identity={identity}
-            busy={busy}
-            animate={false}
-            dancing={dancing}
-            title={dancing ? '跳舞中 🎉' : `${identity.shape} · ${identity.color}`}
-          />
-        </span>
+        <SidebarMascot
+          size={24}
+          sessionId={item.id}
+          identity={identity}
+          busy={busy}
+          animate={false}
+          dancing={dancing}
+          title={dancing ? '跳舞中 🎉' : `${identity.shape} · ${identity.color}`}
+        />
         <span className="min-w-0 flex-1 truncate font-medium">
           {(item.type ?? 'chat') === 'live' ? (
             <span className="mr-1 text-[9px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
