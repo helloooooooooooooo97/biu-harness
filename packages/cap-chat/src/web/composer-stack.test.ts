@@ -36,4 +36,10 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\.pick-overlay-marquee[\s\S]*background:\s*var\(--dsw-pick-fill\)/)
     expect(css).not.toMatch(/\.pick-overlay-marquee\s*\{[^}]*border-style:\s*dashed/s)
   })
+
+  it('Enter in composer pops pick chips instead of sending while any remain', () => {
+    const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
+    expect(composer).toMatch(/if \(pickRefs\.length\) \{/)
+    expect(composer).toMatch(/pick\?\.removeLast\(\)/)
+  })
 })

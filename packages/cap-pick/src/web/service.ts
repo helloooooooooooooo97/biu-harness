@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { Service, type Context } from 'cordis'
-import { pickKey, type PickRef } from './types.ts'
+import { pickKey, dedupePicks, type PickRef } from './types.ts'
 
 export type PickHover = { top: number; left: number; width: number; height: number }
 
@@ -59,16 +59,17 @@ export class PickService extends Service {
       this.bump()
       return
     }
-    let next = this.refs
-    for (const ref of refs) {
-      const key = pickKey(ref)
-      next = [...next.filter((item) => pickKey(item) !== key), ref]
-    }
-    this.refs = next
+    this.refs = dedupePicks([...this.refs, ...refs])
     this.picking = false
     this.hover = null
     this.marquee = null
     this.marqueeHits = []
+    this.bump()
+  }
+
+  removeLast() {
+    if (!this.refs.length) return
+    this.refs = this.refs.slice(0, -1)
     this.bump()
   }
 

@@ -10,8 +10,33 @@ export function pickKey(ref: PickRef) {
   return `${ref.kind}:${ref.id}:${ref.action ?? ''}`
 }
 
+export function objectKey(ref: PickRef) {
+  return `${ref.kind}:${ref.id}`
+}
+
+/** 同一 kind+id 只保留一条；后写覆盖，并保留已有 action/label。 */
+export function dedupePicks(refs: PickRef[]): PickRef[] {
+  const map = new Map<string, PickRef>()
+  for (const ref of refs) {
+    const key = objectKey(ref)
+    const prev = map.get(key)
+    if (!prev) {
+      map.set(key, ref)
+      continue
+    }
+    map.set(key, {
+      kind: ref.kind,
+      id: ref.id,
+      label: ref.label || prev.label,
+      route: ref.route || prev.route,
+      ...(ref.action || prev.action ? { action: ref.action || prev.action } : {}),
+    })
+  }
+  return [...map.values()]
+}
+
 export function formatPicks(refs: PickRef[]) {
-  return refs
+  return dedupePicks(refs)
     .map((ref) => {
       const attrs = [`kind="${escapeAttr(ref.kind)}"`, `id="${escapeAttr(ref.id)}"`]
       if (ref.action) attrs.push(`action="${escapeAttr(ref.action)}"`)
@@ -60,7 +85,7 @@ export function parsePicks(text: string): { refs: PickRef[]; rest: string } {
     })
     .replace(/\n{3,}/g, '\n\n')
     .trim()
-  return { refs, rest }
+  return { refs: dedupePicks(refs), rest }
 }
 
 function escapeAttr(value: string) {

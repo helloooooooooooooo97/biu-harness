@@ -1,7 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { resolvePickFromNode, resolvePicksInRect } from './resolve.ts'
-import { formatPicks, parsePicks, chipLabel } from './types.ts'
+import { formatPicks, parsePicks, chipLabel, dedupePicks } from './types.ts'
 import { pickKindIcon } from './chip.tsx'
 import { LuListTodo, LuMessageSquare, LuPuzzle, LuTag } from 'react-icons/lu'
 
@@ -128,4 +128,16 @@ test('marquee skips ignored subtrees and inner action buttons', () => {
   assert.equal(hits[0]?.ref.action, undefined)
   card.remove()
   ignored.remove()
+})
+
+test('dedupePicks keeps one chip per kind+id', () => {
+  const refs = dedupePicks([
+    { kind: 'task', id: 't1', label: '甲', route: '/tasks' },
+    { kind: 'task', id: 't1', label: '甲', action: 'open', route: '/tasks' },
+    { kind: 'task', id: 't2', label: '乙', route: '/tasks' },
+  ])
+  assert.equal(refs.length, 2)
+  assert.equal(refs[0]?.id, 't1')
+  assert.equal(refs[0]?.action, 'open')
+  assert.equal(refs[1]?.id, 't2')
 })

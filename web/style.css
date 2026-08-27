@@ -699,9 +699,9 @@ body {
 }
 
 .project-chip.is-active {
-  border-color: color-mix(in srgb, var(--dsw-business) 45%, var(--dsw-border));
-  background: color-mix(in srgb, var(--dsw-business) 16%, transparent);
-  color: var(--dsw-business);
+  border-color: var(--dsw-pick-stroke);
+  background: var(--dsw-pick-fill);
+  color: var(--dsw-pick);
 }
 
 .dock-seg {
@@ -2659,6 +2659,13 @@ body {
   padding: 10px 12px 0;
 }
 
+.user-pick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
 .composer-tool-chip {
   display: inline-flex;
   align-items: center;
@@ -2673,32 +2680,31 @@ body {
   cursor: pointer;
 }
 
-.composer-tool-chip:hover {
-  color: var(--dsw-business);
-}
-
-.user-pick-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0 0 8px;
-}
-
+.composer-tool-chip.is-pick,
 .user-pick-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   max-width: 100%;
   overflow: hidden;
-  border: 1px solid var(--dsw-border);
+  border: 1px solid var(--dsw-pick-stroke);
   border-radius: 999px;
-  background: var(--dsw-business-soft);
+  background: var(--dsw-pick-fill);
   padding: 3px 8px;
-  color: var(--dsw-label-2);
+  color: var(--dsw-pick);
   font-family: var(--font-mono);
   font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.composer-tool-chip.is-pick {
+  cursor: pointer;
+}
+
+.composer-tool-chip.is-pick:hover {
+  border-color: var(--dsw-pick);
+  color: var(--dsw-pick);
 }
 
 .pick-kind-icon {

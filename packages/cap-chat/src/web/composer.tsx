@@ -560,6 +560,11 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     if (event.key !== 'Enter' || event.shiftKey) return
     if (event.nativeEvent.isComposing || event.keyCode === 229) return
     event.preventDefault()
+    if (pickRefs.length) {
+      pick?.removeLast()
+      return
+    }
+    if (event.repeat) return
     event.currentTarget.form?.requestSubmit()
   }
 
@@ -641,10 +646,9 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
             <button
               key={`${ref.kind}:${ref.id}:${ref.action ?? ''}`}
               type="button"
-              className="composer-tool-chip"
-              title="移除选取"
+              className="composer-tool-chip is-pick"
               data-testid="pick-chip"
-              title={`${ref.kind} · ${ref.label}${ref.action ? ` · ${ref.action}` : ''}`}
+              title={`${ref.kind} · ${ref.label}${ref.action ? ` · ${ref.action}` : ''} · 回车可逐个移除`}
               onClick={() => pick?.remove(`${ref.kind}:${ref.id}:${ref.action ?? ''}`)}
             >
               <PickChipLabel pick={ref} />
