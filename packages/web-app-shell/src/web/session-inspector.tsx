@@ -32,7 +32,7 @@ function inspectorStoredTab(sid: string | null | undefined, allowed: string[]): 
 const tabClass = (active: boolean) =>
   `inline-flex cursor-pointer items-center gap-1.5 rounded-[6px] border-0 px-2 py-1.5 text-[11px] font-semibold ${
     active
-      ? 'bg-[color-mix(in_srgb,var(--dsw-business)_14%,transparent)] text-[var(--dsw-business)]'
+      ? 'bg-[var(--dsw-pick)] text-[var(--dsw-label)]'
       : 'bg-transparent text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]'
   }`
 

@@ -1,38 +1,30 @@
 @import "tailwindcss";
 
-/* Cursor-aligned tokens — warm dark IDE chat (neutral white/gray accents) */
+/* Neutral dark chrome — canvas/nav #191919, rails #202020 */
 :root {
   color-scheme: dark;
-  /* Canvas / chrome — warm near-black (from Cursor Dark #26251e family) */
-  --dsw-bg: #14120f;
-  --dsw-sidebar: #1a1814;
-  /* Cream-on-dark type (Cursor Cream #f2f1ed as ink on dark) */
+  --dsw-bg: #191919;
+  --dsw-sidebar: #202020;
   --dsw-label: #f2f1ed;
   --dsw-label-2: rgba(242, 241, 237, 0.72);
   --dsw-label-3: rgba(242, 241, 237, 0.45);
-  /* oklab warm border ≈ rgba(242,241,237,0.1) on dark */
   --dsw-border: rgba(242, 241, 237, 0.1);
-  /* User prompt / composer — fill uses canvas; this token is the thin border accent */
   --dsw-bubble: #262626;
-  /* Accent: white / gray (no brand orange) */
   --dsw-business: #f2f1ed;
   --dsw-business-soft: rgba(242, 241, 237, 0.1);
-  /* Composer fill matches canvas; border uses --dsw-bubble */
   --dsw-input: var(--dsw-bg);
-  --dsw-tool: #1e1c18;
-  --dsw-surface: #1e1c18;
-  /* Semantic — muted, not orange */
+  --dsw-tool: #202020;
+  --dsw-surface: #202020;
   --dsw-danger: #cf2d56;
   --dsw-danger-soft: rgba(207, 45, 86, 0.14);
   --dsw-ok: #1f8a65;
-  /* Notion-like selection wash（框选 / 指针所在块） */
-  --dsw-pick: #2383e2;
-  --dsw-pick-fill: rgba(35, 131, 226, 0.18);
-  --dsw-pick-stroke: rgba(35, 131, 226, 0.4);
-  --dsw-hover: rgba(242, 241, 237, 0.06);
-  --dsw-hover-strong: rgba(242, 241, 237, 0.1);
+  --dsw-pick: #233850;
+  --dsw-pick-fill: #233850;
+  --dsw-pick-stroke: #233850;
+  --dsw-hover: #2c2c2c;
+  --dsw-hover-strong: #2c2c2c;
   --dsw-muted-fill: rgba(242, 241, 237, 0.04);
-  --dsw-overlay: rgba(20, 18, 15, 0.72);
+  --dsw-overlay: rgba(25, 25, 25, 0.72);
   /* Cursor radii: 8px buttons/cards, softer bubble */
   --dsw-radius-bubble: 8px;
   --dsw-radius-card: 8px;
@@ -392,7 +384,7 @@ body {
 }
 
 .chat-session-row.is-active::before {
-  background: var(--dsw-business-soft);
+  background: var(--dsw-hover);
 }
 
 /* 收藏/删除按钮：默认不占位（宽度塌陷），仅悬浮/聚焦该行时展开，避免不悬浮时右侧留白挤压左侧标签 */
@@ -492,7 +484,7 @@ body {
   flex-direction: column;
   align-items: stretch;
   border-right: 1px solid var(--dsw-border);
-  background: #0f0e0c;
+  background: var(--dsw-bg);
 }
 
 .app-activity-brand {
@@ -615,7 +607,7 @@ body {
 }
 
 .app-activity-item.is-active .app-activity-indicator {
-  background: var(--dsw-business);
+  background: var(--dsw-pick);
 }
 
 .app-activity-live {
@@ -701,7 +693,7 @@ body {
 .project-chip.is-active {
   border-color: var(--dsw-pick-stroke);
   background: var(--dsw-pick-fill);
-  color: var(--dsw-pick);
+  color: var(--dsw-label);
 }
 
 .dock-seg {
@@ -2697,7 +2689,7 @@ body {
   border-radius: 999px;
   background: var(--dsw-pick-fill);
   padding: 3px 8px;
-  color: var(--dsw-pick);
+  color: var(--dsw-label);
   font-family: var(--font-mono);
   font-size: 11px;
   text-overflow: ellipsis;
@@ -2710,7 +2702,7 @@ body {
 
 .composer-tool-chip.is-pick:hover {
   border-color: var(--dsw-pick);
-  color: var(--dsw-pick);
+  color: var(--dsw-label);
 }
 
 .pick-kind-icon {
