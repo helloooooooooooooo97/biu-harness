@@ -556,7 +556,7 @@ function NodeView({
     const canExpand = overflows || expanded
     return (
       <div
-        className="flex w-full flex-col gap-0 overflow-hidden rounded-[var(--dsw-radius-bubble)] border border-[var(--dsw-bubble)] bg-[var(--dsw-bg)]"
+        className="flex w-full flex-col gap-0 overflow-hidden rounded-[var(--dsw-radius-bubble)] border border-[var(--dsw-bubble)] bg-[var(--dsw-sidebar)]"
         {...pickDomAttrs('message', node.id, pickPreview(picked.rest || node.text) || 'user')}
       >
         <div className="block w-full max-w-full border-0 bg-transparent px-3 py-2.5 text-[var(--dsw-label)]">

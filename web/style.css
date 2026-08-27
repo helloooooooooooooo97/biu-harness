@@ -2361,7 +2361,7 @@ body {
   width: 100%;
   border: 1px solid var(--dsw-bubble);
   border-radius: 999px;
-  background: var(--dsw-bg);
+  background: var(--dsw-sidebar);
   box-shadow: none;
   transition: border-radius 0.12s ease;
 }
