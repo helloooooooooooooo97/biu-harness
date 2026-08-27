@@ -111,7 +111,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
 
   const pending = items.find((item) => item.id === pendingUninstall) ?? null
   const iconBtn =
-    'grid size-8 shrink-0 cursor-pointer place-items-center rounded-[8px] border-0 bg-transparent text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] disabled:opacity-40'
+    'grid size-8 shrink-0 cursor-pointer place-items-center rounded-[8px] border-0 bg-[var(--dsw-hover)] text-[var(--dsw-label-2)] hover:bg-[#353535] hover:text-[var(--dsw-label)] disabled:opacity-40'
 
   return (
     <div
@@ -224,7 +224,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
               }}
             >
               <div
-                className="w-[min(100%,360px)] rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-bg)] p-5 text-[var(--dsw-label)] shadow-lg"
+                className="w-[min(100%,360px)] rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] p-5 text-[var(--dsw-label)]"
                 onClick={(event) => event.stopPropagation()}
               >
                 <h2 id="plugin-store-uninstall-title" className="m-0 text-[15px] font-semibold">
@@ -236,7 +236,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                 <div className="mt-4 flex justify-end gap-2">
                   <button
                     type="button"
-                    className="rounded-[8px] border border-[var(--dsw-border)] px-3 py-1.5 text-[12px] text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]"
+                    className="rounded-[8px] border-0 bg-[var(--dsw-hover)] px-3 py-1.5 text-[12px] text-[var(--dsw-label)] hover:bg-[#353535]"
                     data-testid="plugin-store-uninstall-cancel"
                     disabled={busy === `rm:${pending.id}`}
                     onClick={() => setPendingUninstall(null)}
@@ -245,7 +245,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                   </button>
                   <button
                     type="button"
-                    className="rounded-[8px] border border-[var(--dsw-danger)] px-3 py-1.5 text-[12px] font-medium text-[var(--dsw-danger)] hover:bg-[var(--dsw-hover)]"
+                    className="rounded-[8px] border-0 bg-[var(--dsw-hover)] px-3 py-1.5 text-[12px] font-medium text-[var(--dsw-label)] hover:bg-[#353535]"
                     data-testid="plugin-store-uninstall-confirm"
                     data-biu-action="uninstall"
                     disabled={busy === `rm:${pending.id}`}
