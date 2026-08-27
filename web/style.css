@@ -394,9 +394,9 @@ body {
   align-items: center;
   gap: 8px;
   border-radius: 8px;
-  padding: 5px 4px;
+  padding: 8px 4px;
   color: var(--dsw-sidebar-fg);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.2;
   text-align: left;
@@ -598,20 +598,23 @@ body {
   padding: 0 4px;
 }
 
-/* 顶部「收藏/项目/标签」板块标题行：普通透明形态(无胶囊质感)。
-   保留固定 24px 行高(items-center)，确保 view-switch 悬浮出现不撑高行 */
+/* 顶部「收藏/项目/标签」：字号 12px，行高与会话行一致（头像 24 + 上下 4） */
 .sidebar-section-head {
   display: flex;
   align-items: center;
-  height: 24px;
-  margin: 0 0 4px;
-  padding: 0 4px;
+  height: 32px;
+  margin: 0 0 1px;
+  padding: 0 6px;
+  border-radius: 6px;
+}
+.sidebar-section-head:hover {
+  background: var(--dsw-hover);
 }
 
 /* 顶层板块右侧分组视图切换 tab：作为 flex 流右侧子元素参与行内布局；
    默认宽度塌陷不占位(计数贴右与「收藏」tab 对齐)，悬浮/聚焦时展开，自动令 label(flex-1 truncate)
    左移让位、文本靠左可截断，不遮字，行宽平滑过渡。无 border/padding，高度仅由按钮(20px)决定，
-   不高于标题行(24px)故悬浮出现绝不撑高行 */
+   不高于标题行(32px)故悬浮出现绝不撑高行 */
 .sidebar-view-switch {
   flex-shrink: 0;
   width: 0;
