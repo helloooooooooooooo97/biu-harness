@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
-/* Neutral dark chrome — canvas/nav #191919, rails #202020 */
+/* Neutral dark chrome — canvas, rails, inspector share #191919 */
 :root {
   color-scheme: dark;
   --dsw-bg: #191919;
-  --dsw-sidebar: #202020;
+  --dsw-sidebar: var(--dsw-bg);
   --dsw-label: #f2f1ed;
   --dsw-label-2: rgba(242, 241, 237, 0.72);
   --dsw-label-3: rgba(242, 241, 237, 0.45);
@@ -13,8 +13,8 @@
   --dsw-business: #f2f1ed;
   --dsw-business-soft: rgba(242, 241, 237, 0.1);
   --dsw-input: var(--dsw-bg);
-  --dsw-tool: #202020;
-  --dsw-surface: #202020;
+  --dsw-tool: var(--dsw-bg);
+  --dsw-surface: var(--dsw-bg);
   --dsw-danger: #cf2d56;
   --dsw-danger-soft: rgba(207, 45, 86, 0.14);
   --dsw-ok: #1f8a65;
