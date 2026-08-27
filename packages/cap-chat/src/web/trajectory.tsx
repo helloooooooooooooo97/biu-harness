@@ -58,13 +58,6 @@ function UsageCard({ usage, label = 'Token usage' }: { usage: TrajectoryUsage; l
           {usage.cacheReadTokens ? (
             <em className="traj-usage-stat-sub">cache {formatTok(usage.cacheReadTokens)}</em>
           ) : null}
-          {pct != null ? (
-            <span className="traj-usage-meters">
-              <span className="traj-usage-meter is-cache" aria-hidden>
-                <i style={{ width: `${pct}%` }} />
-              </span>
-            </span>
-          ) : null}
         </div>
         <div className="traj-usage-stat traj-usage-stat-out">
           <span>Output</span>

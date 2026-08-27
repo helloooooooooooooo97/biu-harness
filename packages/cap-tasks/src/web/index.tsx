@@ -2410,11 +2410,9 @@ function eventEndOf(t: Task): number | null {
   return null
 }
 
-/** 消耗胶囊：与 Live/thread 的 .traj-usage 对齐——cache 独立细条，不再绿底叠层。 */
+/** 消耗胶囊：与 Live/thread 的 .traj-usage 对齐——中性底板 + in → out。 */
 function UsageCapsule({ usage, aggregate }: { usage: SumUsage; aggregate: boolean }) {
   if (usage.totalTokens <= 0) return <span className="tasks-usage-empty">—</span>
-  const pct =
-    usage.inputTokens && usage.cacheReadTokens ? Math.min(100, Math.round((usage.cacheReadTokens / usage.inputTokens) * 100)) : null
   return (
     <span
       className={`tasks-usage-capsule${aggregate ? ' is-agg' : ''}`}
@@ -2424,18 +2422,7 @@ function UsageCapsule({ usage, aggregate }: { usage: SumUsage; aggregate: boolea
           : `本任务各回合消耗：in ${formatTokens(usage.inputTokens)} / out ${formatTokens(usage.outputTokens)}${usage.cacheReadTokens ? ` / cache ${formatTokens(usage.cacheReadTokens)}` : ''}`
       }
     >
-      <span className="traj-usage-in-col">
-        <span className={`tasks-usage-input${pct != null ? ' has-cache' : ''}`}>
-          {formatTokens(usage.inputTokens)}
-        </span>
-        {pct != null ? (
-          <span className="traj-usage-meters">
-            <span className="traj-usage-meter is-cache" aria-hidden>
-              <i style={{ width: `${pct}%` }} />
-            </span>
-          </span>
-        ) : null}
-      </span>
+      <span className="tasks-usage-input">{formatTokens(usage.inputTokens)}</span>
       <span className="tasks-usage-arrow">→</span>
       <span className="tasks-usage-output">{formatTokens(usage.outputTokens)}</span>
     </span>
@@ -3719,7 +3706,7 @@ if (typeof document !== 'undefined') {
 .tasks-col-usage { width:96px; min-width:96px; color:var(--dsw-label-2); font-variant-numeric:tabular-nums; }
 .tasks-usage-empty { color:var(--dsw-label-4); }
 
-/* 消耗胶囊：与 Live/thread 的 .traj-usage 对齐（数字 + cache 细条） */
+/* 消耗胶囊：与 Live/thread 的 .traj-usage 对齐 */
 .tasks-usage-capsule {
   display: inline-flex;
   align-items: center;
@@ -3738,10 +3725,9 @@ if (typeof document !== 'undefined') {
   border-radius: 999px;
   background: var(--dsw-hover);
   padding: 1px 7px;
-  color: var(--dsw-label-2);
+  color: var(--dsw-label);
   font-weight: 600;
 }
-.tasks-usage-input.has-cache { color: var(--dsw-label); }
 .tasks-usage-arrow { color: var(--dsw-label-3); opacity: 0.7; flex: none; }
 .tasks-usage-output { color: var(--dsw-label); font-weight: 600; flex: none; }
 .tasks-col-actor { width:130px; }
