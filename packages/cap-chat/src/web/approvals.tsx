@@ -1,10 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LuEraser } from 'react-icons/lu'
 import type { SlotProps } from '@biu/web-slots'
-import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
+import { bindSessionView, type ChatNode, type SessionViewService } from '@biu/web-session-view'
 import { SessionProjectPanel } from './project-panel.tsx'
 
 type AgentMode = 'standard' | 'minimal'
+
+/** 最新一条回复的历史输入占比（0..1），驱动橡皮擦底色。 */
+function latestHistRatio(nodes: ChatNode[]): number | null {
+  const last = nodes.at(-1)
+  if (!last || last.kind !== 'reply') return null
+  const hist = last.usage?.histPct
+  if (typeof hist !== 'number' || !Number.isFinite(hist)) return null
+  return Math.min(1, Math.max(0, hist))
+}
 
 /** Dock 顶栏：左侧文件 + 选取 + 清空上下文 + 标准/极简胶囊，右侧 auto/hold。 */
 export function ApprovalsRail(props: SlotProps) {
@@ -13,6 +22,8 @@ export function ApprovalsRail(props: SlotProps) {
   const sessionId = useSessionView((state) => state.sessionId)
   const approvals = useSessionView((state) => state.approvals)
   const approvalMode = useSessionView((state) => state.approvalMode)
+  const nodes = useSessionView((state) => state.nodes)
+  const histRatio = useMemo(() => latestHistRatio(nodes), [nodes])
   const [agentMode, setAgentMode] = useState<AgentMode>('standard')
   const [modeBusy, setModeBusy] = useState(false)
   const [clearBusy, setClearBusy] = useState(false)
@@ -132,11 +143,22 @@ export function ApprovalsRail(props: SlotProps) {
             type="button"
             disabled={!sessionId || clearBusy}
             aria-label="清空上下文"
-            title="清空上下文"
-            className="project-chip project-chip-icon-only"
+            title={
+              histRatio != null
+                ? `清空上下文 · 历史 ${Math.round(histRatio * 100)}%`
+                : '清空上下文'
+            }
+            className="project-chip project-chip-icon-only relative overflow-hidden"
             onClick={() => void clearContext()}
           >
-            <LuEraser className="project-chip-icon" aria-hidden />
+            {histRatio != null && histRatio > 0 ? (
+              <span
+                className="pointer-events-none absolute inset-y-0 left-0 bg-[var(--dsw-danger)]/20"
+                style={{ width: `${Math.round(histRatio * 100)}%` }}
+                aria-hidden
+              />
+            ) : null}
+            <LuEraser className="project-chip-icon relative z-[1]" aria-hidden />
           </button>
           <span className="sr-only">Agent mode</span>
           <div className="dock-seg">
