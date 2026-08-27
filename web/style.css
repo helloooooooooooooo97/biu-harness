@@ -498,7 +498,7 @@ body {
   flex-shrink: 0;
   place-items: center;
   width: 0;
-  height: 24px;
+  height: 16px;
   overflow: hidden;
   margin: 0;
   padding: 0;
@@ -524,7 +524,7 @@ body {
 .chat-session-row:hover .chat-session-row-star,
 .chat-session-row-star:focus,
 .chat-session-row-star.is-on {
-  width: 24px;
+  width: 16px;
   opacity: 1;
 }
 
@@ -549,7 +549,7 @@ body {
   place-items: center;
   width: 0;
   min-width: 0;
-  height: 24px;
+  height: 16px;
   overflow: hidden;
   margin: 0;
   padding: 0;
@@ -569,8 +569,8 @@ body {
 }
 .sidebar-group-head:hover .sidebar-add,
 .sidebar-add:focus {
-  width: 24px;
-  min-width: 24px;
+  width: 16px;
+  min-width: 16px;
   opacity: 1;
 }
 .sidebar-add:hover {
@@ -580,8 +580,8 @@ body {
 
 .sidebar-rail-icon {
   display: grid;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
   place-items: center;
 }
@@ -593,8 +593,8 @@ body {
 .sidebar-group-fold-face,
 .sidebar-group-fold-chevron {
   display: grid;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   place-items: center;
 }
 
@@ -618,7 +618,7 @@ body {
 }
 
 .sidebar-session-list .chat-session-row > a {
-  padding-left: 20px;
+  padding-left: 11px;
 }
 
 .sidebar-group-head {
@@ -654,8 +654,10 @@ body {
   gap: 2px;
   grid-column: 2;
   justify-self: end;
+  color: var(--dsw-label-3);
   font: inherit;
   opacity: 0.6;
+  pointer-events: none;
 }
 
 .sidebar-chat-count svg {
@@ -711,8 +713,8 @@ body {
 
 .sidebar-view-switch-btn svg {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
 }
 
 .sidebar-view-switch-btn:hover {
