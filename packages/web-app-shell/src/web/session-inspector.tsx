@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { LuLayoutGrid, LuPanelRightClose } from 'react-icons/lu'
+import { chromeIcon } from './chrome-icon.ts'
 import {
   bindSessionView,
   type SessionViewService,
@@ -52,7 +53,7 @@ export const SessionInspector = memo(function SessionInspector({
             entry,
             id: String(extra.tabId ?? entry.id),
             label: String(extra.tabLabel ?? '插件'),
-            Icon: extra.tabIcon as ComponentType<{ className?: string }> | undefined,
+            Icon: extra.tabIcon as ComponentType<{ className?: string; size?: number; strokeWidth?: number }> | undefined,
             ensureTrajectory: Boolean(extra.ensureTrajectory),
             focusOnCall: Boolean(extra.focusOnCall),
           }
@@ -150,7 +151,7 @@ export const SessionInspector = memo(function SessionInspector({
                 data-testid={`inspector-tab-${item.id}`}
               >
                 <span className="inspector-tab-indicator" aria-hidden />
-                {item.Icon ? <item.Icon className="size-5" /> : <LuLayoutGrid className="size-5" />}
+                {item.Icon ? <item.Icon {...chromeIcon} /> : <LuLayoutGrid {...chromeIcon} />}
                 {item.label}
               </button>
             )
@@ -163,7 +164,7 @@ export const SessionInspector = memo(function SessionInspector({
           aria-label="收起右侧栏"
           onClick={onClose}
         >
-          <LuPanelRightClose className="size-5" />
+          <LuPanelRightClose {...chromeIcon} />
         </button>
       </div>
 

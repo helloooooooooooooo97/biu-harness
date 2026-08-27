@@ -16,18 +16,6 @@ type StoreListing = {
   running: boolean
 }
 
-function PuzzleIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className ?? 'size-5'} fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M8 3.5a2 2 0 0 1 2 2V7h4V5.5a2 2 0 1 1 4 0V7h1.5A1.5 1.5 0 0 1 21 8.5V11h-1.5a2 2 0 1 0 0 4H21v2.5a1.5 1.5 0 0 1-1.5 1.5H18v1.5a2 2 0 1 1-4 0V19h-4v1.5a2 2 0 1 1-4 0V19H4.5A1.5 1.5 0 0 1 3 17.5V15h1.5a2 2 0 1 0 0-4H3V8.5A1.5 1.5 0 0 1 4.5 7H6V5.5a2 2 0 0 1 2-2z"
-      />
-    </svg>
-  )
-}
-
 async function readJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init)
   const body = (await res.json()) as T & { error?: string }
@@ -316,7 +304,7 @@ export function apply(ctx: Context) {
     path: '/plugins',
     description: 'Install prebuilt plugins without rebuilding the app',
     order: 30,
-    Icon: PuzzleIcon,
+    Icon: LuPuzzle,
   })
   slots.place('app-modules', PluginStorePage, {
     key: 'plugin-store-module',

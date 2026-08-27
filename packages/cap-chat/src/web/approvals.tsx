@@ -158,7 +158,7 @@ export function ApprovalsRail(props: SlotProps) {
                 aria-hidden
               />
             ) : null}
-            <LuEraser className="project-chip-icon relative z-[1]" aria-hidden />
+            <LuEraser size={20} strokeWidth={2} className="relative z-[1]" aria-hidden />
           </button>
           <span className="sr-only">Agent mode</span>
           <div className="dock-seg">
