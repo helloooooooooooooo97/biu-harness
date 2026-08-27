@@ -13,6 +13,7 @@ test('plugin store registers the plugins activity module', async () => {
     children: {
       'app-modules': { kind: 'list' },
       'inspector-panels': { kind: 'list' },
+      'root-overlays': { kind: 'list' },
     },
   })
   await ctx.plugin(storeUi)
@@ -25,5 +26,6 @@ test('plugin store registers the plugins activity module', async () => {
   const extra = inspector.props?.() ?? {}
   assert.equal(extra.tabId, 'plugins')
   assert.equal(extra.tabLabel, '插件')
+  assert.equal(ctx.slots.list('root-overlays').some((item) => item.id === 'plugin-store-extras-layer'), true)
   assert.ok(ctx.slots.specOf('plugin-store-extras'))
 })
