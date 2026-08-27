@@ -15,6 +15,10 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     host: '127.0.0.1',
+    watch: {
+      // 商店插件写在仓库根 .plugin，不能触发 Vite 整页刷新
+      ignored: ['**/.plugin/**'],
+    },
     proxy: {
       '/api': 'http://127.0.0.1:3141',
       '/ws': { target: 'ws://127.0.0.1:3141', ws: true },

@@ -1,4 +1,3 @@
-/** Prebuilt Host half — the app never compiles this file. */
 export const name = 'store-hello'
 export const inject = ['http']
 

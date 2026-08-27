@@ -1,4 +1,3 @@
-/** Prebuilt Client half — loaded with import(url), not Vite. React comes from globalThis. */
 const React = globalThis.React
 
 export const name = 'store-hello-web'
@@ -12,7 +11,7 @@ function HelloBanner() {
       className:
         'rounded-[8px] border border-[var(--dsw-ok)]/40 bg-[var(--dsw-surface)] px-3 py-2 text-[13px] text-[var(--dsw-label)]',
     },
-    'Hello 商店插件已运行（主应用没有为它二次编译）',
+    'Hello 商店插件已运行',
   )
 }
 

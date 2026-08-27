@@ -1,5 +1,0 @@
-{
-  "id": "store-hello",
-  "name": "Hello",
-  "blurb": "最小商店插件：安装后在本页显示横幅，并提供 GET /api/store-hello。发布物已是纯 JS。"
-}

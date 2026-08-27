@@ -1,68 +1,108 @@
+/** @vitest-environment node */
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { access, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { Context } from 'cordis'
 import type { CatalogEntry } from '@biu/host-hub'
-import { PluginStoreService, defaultCatalogDir } from './index.ts'
+import { PluginStoreService, defaultPluginDir } from './index.ts'
 
-test('catalog dir contains the prebuilt hello fixture', () => {
-  const dir = defaultCatalogDir()
-  assert.equal(dir.endsWith('fixtures'), true)
-  assert.equal(dirname(fileURLToPath(import.meta.url)).includes('cap-plugin-store'), true)
-})
-
-test('install copies prebuilt js and adopt; uninstall drops it', async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), 'plugin-store-'))
+function stubHub(ctx: Context) {
   const adopted: string[] = []
   const dropped: string[] = []
   const forks = new Map<string, CatalogEntry>()
+  ;(ctx as unknown as { hub: unknown }).hub = {
+    async adopt(entry: CatalogEntry) {
+      forks.set(entry.id, entry)
+      adopted.push(entry.id)
+    },
+    async drop(id: string) {
+      forks.delete(id)
+      dropped.push(id)
+    },
+    snapshot() {
+      return {
+        plugins: [...forks.values()].map((entry) => ({
+          id: entry.id,
+          enabled: true,
+          state: 'active',
+          web: entry.web,
+        })),
+      }
+    },
+  }
+  return { adopted, dropped, forks }
+}
+
+test('default plugin dir is repo-root .plugin, not nested catalog', () => {
+  const dir = defaultPluginDir().replace(/\\/g, '/')
+  assert.equal(dir.endsWith('/.plugin') || dir.endsWith('.plugin'), true)
+  assert.equal(dir.includes('plugin-catalog'), false)
+  assert.equal(dir.includes('.biu'), false)
+})
+
+test('missing .plugin lists no plugins', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'plugin-root-'))
   try {
     const ctx = new Context()
-    ;(ctx as unknown as { hub: unknown }).hub = {
-      async adopt(entry: CatalogEntry) {
-        forks.set(entry.id, entry)
-        adopted.push(entry.id)
-      },
-      async drop(id: string) {
-        forks.delete(id)
-        dropped.push(id)
-      },
-      snapshot() {
-        return {
-          plugins: [...forks.values()].map((entry) => ({
-            id: entry.id,
-            enabled: true,
-            state: 'active',
-            web: entry.web,
-          })),
-        }
-      },
-    }
-    const store = new PluginStoreService(ctx, defaultCatalogDir(), dataDir)
-    const listed = await store.list()
-    const hello = listed.find((item) => item.id === 'store-hello')
-    assert.ok(hello, 'hello fixture should be listed')
-    assert.equal(hello.installed, false)
-
-    const installed = await store.install('store-hello')
-    assert.equal(installed?.installed, true)
-    assert.equal(installed?.running, true)
-    assert.deepEqual(adopted, ['store-hello'])
-    const entry = forks.get('store-hello')
-    assert.equal(entry?.packageName, 'store:store-hello')
-    assert.equal(entry?.web, '/api/plugin-store/files/store-hello/web.js')
-    const hostJs = await store.readInstalledFile('store-hello', 'host.js')
-    assert.match(hostJs, /store-hello/)
-    assert.doesNotMatch(hostJs, /from ['"]typescript/)
-
-    await store.uninstall('store-hello')
-    assert.deepEqual(dropped, ['store-hello'])
-    const after = (await store.list()).find((item) => item.id === 'store-hello')
-    assert.equal(after?.installed, false)
+    stubHub(ctx)
+    const store = new PluginStoreService(ctx, join(dir, 'missing'), join(dir, 'plugins.sqlite')).open()
+    assert.deepEqual(await store.list(), [])
   } finally {
-    await rm(dataDir, { recursive: true, force: true })
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('create writes .plugin/<id>/; install toggles sqlite; uninstall keeps files', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'plugin-root-'))
+  const pluginDir = join(dir, '.plugin')
+  try {
+    const ctx = new Context()
+    const { adopted, dropped, forks } = stubHub(ctx)
+    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'plugins.sqlite')).open()
+    const created = await store.create({
+      id: 'store-echo',
+      name: 'Echo',
+      hostJs: `export const name = 'store-echo'\nexport function apply() {}\n`,
+    })
+    assert.equal(created.pluginPath, join(pluginDir, 'store-echo'))
+    const echo = (await store.list()).find((item) => item.id === 'store-echo')
+    assert.ok(echo)
+    assert.equal(echo.installed, false)
+
+    const installed = await store.install('store-echo')
+    assert.equal(installed?.installed, true)
+    assert.deepEqual(adopted, ['store-echo'])
+    assert.equal(forks.get('store-echo')?.packageName, 'store:store-echo')
+    assert.equal(forks.get('store-echo')?.web, undefined)
+    assert.match(await store.readInstalledFile('store-echo', 'host.js'), /store-echo/)
+
+    await store.uninstall('store-echo')
+    assert.deepEqual(dropped, ['store-echo'])
+    assert.equal((await store.list()).find((item) => item.id === 'store-echo')?.installed, false)
+    await access(join(pluginDir, 'store-echo', 'host.js'))
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('web-only plugin installs without host.js', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'plugin-root-'))
+  try {
+    const ctx = new Context()
+    const { forks } = stubHub(ctx)
+    const store = new PluginStoreService(ctx, join(dir, '.plugin'), join(dir, 'plugins.sqlite')).open()
+    await store.create({
+      id: 'store-banner',
+      name: 'Banner',
+      webJs: `export const name = 'store-banner-web'\nexport const inject = ['slots']\nexport function apply() {}\n`,
+    })
+    await assert.rejects(() => store.create({ id: 'store-empty', name: 'Empty' }), /hostJs or webJs/)
+    await store.install('store-banner')
+    assert.equal(forks.get('store-banner')?.web, '/api/plugin-store/files/store-banner/web.js')
+    await assert.rejects(() => store.readInstalledFile('store-banner', 'host.js'))
+  } finally {
+    await rm(dir, { recursive: true, force: true })
   }
 })

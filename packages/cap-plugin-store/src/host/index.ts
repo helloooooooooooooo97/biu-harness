@@ -1,13 +1,18 @@
-import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdirSync } from 'node:fs'
 import { existsSync } from 'node:fs'
-import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
-import type { Context, Plugin } from 'cordis'
-import { findRepoRoot } from '@biu/host-plugin-loader'
+import { readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { createRequire } from 'node:module'
+import { Service, type Context, type Plugin } from 'cordis'
 import type { CatalogEntry } from '@biu/host-hub'
+import { compileStoreModule, registerPluginCreate, type PluginCreateInput } from './plugin-create.ts'
+
+type DatabaseSync = import('node:sqlite').DatabaseSync
+
+const require = createRequire(import.meta.url)
 
 export const name = 'plugin-store'
-export const inject = ['http', 'hub']
+export const inject = ['http', 'hub', 'tools']
 
 export type StoreListing = {
   id: string
@@ -29,16 +34,26 @@ type StoreHub = {
   snapshot(): { plugins: Array<{ id: string; enabled?: boolean; state?: string }> }
 }
 
+const ALLOWED_FILES = new Set(['manifest.json', 'host.js', 'web.js'])
+
 export function storeWebUrl(id: string) {
   return `/api/plugin-store/files/${encodeURIComponent(id)}/web.js`
 }
 
-export function defaultCatalogDir() {
-  return join(findRepoRoot(), 'packages/cap-plugin-store/fixtures')
+export function defaultPluginDir() {
+  return process.env.BIU_PLUGIN_DIR || join(process.cwd(), '.plugin')
 }
 
-export function defaultDataDir() {
-  return process.env.BIU_PLUGIN_STORE_DIR || join(findRepoRoot(), '.biu', 'plugin-store')
+export function defaultDbPath() {
+  return process.env.BIU_PLUGIN_DB || join(process.cwd(), '.cordis', 'plugins.sqlite')
+}
+
+function isSafeId(id: string) {
+  return /^[a-z][a-z0-9-]{1,40}$/.test(id)
+}
+
+function importHostModule(code: string) {
+  return import(`data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`)
 }
 
 async function readManifest(dir: string): Promise<StoreManifest> {
@@ -47,25 +62,80 @@ async function readManifest(dir: string): Promise<StoreManifest> {
   return raw
 }
 
-function isSafeId(id: string) {
-  return /^[a-z][a-z0-9-]{1,40}$/.test(id)
-}
+export class PluginStoreService extends Service {
+  private db!: DatabaseSync
 
-const ALLOWED_FILES = new Set(['manifest.json', 'host.js', 'web.js'])
-
-export class PluginStoreService {
   constructor(
-    private readonly ctx: Context,
-    readonly catalogDir: string,
-    readonly dataDir: string,
-  ) {}
+    ctx: Context,
+    readonly pluginDir: string,
+    private readonly dbPath: string,
+  ) {
+    super(ctx, 'pluginStore')
+  }
+
+  open() {
+    mkdirSync(dirname(this.dbPath), { recursive: true })
+    const { DatabaseSync } = require('node:sqlite') as typeof import('node:sqlite')
+    this.db = new DatabaseSync(this.dbPath)
+    this.db.exec('PRAGMA journal_mode = WAL')
+    this.db.exec('PRAGMA synchronous = NORMAL')
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS store_plugins (
+        id TEXT PRIMARY KEY,
+        enabled INTEGER NOT NULL DEFAULT 0
+      );
+    `)
+    return this
+  }
 
   private hub(): StoreHub {
     return this.ctx.hub as unknown as StoreHub
   }
 
+  private isEnabled(id: string) {
+    const row = this.db.prepare('SELECT enabled FROM store_plugins WHERE id = ?').get(id) as
+      | { enabled: number }
+      | undefined
+    return row?.enabled === 1
+  }
+
+  private setEnabled(id: string, enabled: boolean) {
+    this.db
+      .prepare(
+        `INSERT INTO store_plugins (id, enabled) VALUES (?, ?)
+         ON CONFLICT(id) DO UPDATE SET enabled = excluded.enabled`,
+      )
+      .run(id, enabled ? 1 : 0)
+  }
+
+  pluginPath(id: string) {
+    return join(this.pluginDir, id)
+  }
+
+  async create(input: PluginCreateInput) {
+    const id = String(input.id ?? '').trim()
+    const name = String(input.name ?? '').trim()
+    const hostJs = String(input.hostJs ?? '').trim()
+    const webSrc = input.webJs != null ? String(input.webJs).trim() : ''
+    if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
+    if (!name) throw new Error('plugin name required')
+    if (!hostJs && !webSrc) throw new Error('hostJs or webJs required')
+    const dest = this.pluginPath(id)
+    mkdirSync(dest, { recursive: true })
+    await writeFile(
+      join(dest, 'manifest.json'),
+      `${JSON.stringify({ id, name, blurb: String(input.blurb ?? '').trim() || name }, null, 2)}\n`,
+    )
+    if (hostJs) await writeFile(join(dest, 'host.js'), await compileStoreModule(hostJs, 'host'))
+    else if (existsSync(join(dest, 'host.js'))) await rm(join(dest, 'host.js'))
+    if (webSrc) await writeFile(join(dest, 'web.js'), await compileStoreModule(webSrc, 'web'))
+    else if (existsSync(join(dest, 'web.js'))) await rm(join(dest, 'web.js'))
+    if (this.isEnabled(id)) await this.mountFromDisk(await readManifest(dest), dest)
+    return { id, pluginPath: dest }
+  }
+
   async list(): Promise<StoreListing[]> {
-    const names = existsSync(this.catalogDir) ? await readdir(this.catalogDir) : []
+    const names = existsSync(this.pluginDir) ? await readdir(this.pluginDir) : []
     const running = new Set(
       this.hub()
         .snapshot()
@@ -74,10 +144,11 @@ export class PluginStoreService {
     )
     const items: StoreListing[] = []
     for (const name of names.sort()) {
-      const dir = join(this.catalogDir, name)
+      const dir = join(this.pluginDir, name)
       if (!(await stat(dir)).isDirectory()) continue
+      if (!existsSync(join(dir, 'manifest.json'))) continue
       const manifest = await readManifest(dir)
-      const installed = existsSync(join(this.dataDir, manifest.id, 'host.js'))
+      const installed = this.isEnabled(manifest.id)
       items.push({
         ...manifest,
         installed,
@@ -89,56 +160,45 @@ export class PluginStoreService {
 
   async install(id: string) {
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
-    const source = join(this.catalogDir, id.replace(/^store-/, ''))
-    const catalogHit = existsSync(join(source, 'manifest.json'))
-      ? source
-      : await this.findCatalogById(id)
-    if (!catalogHit) throw new Error(`unknown store plugin: ${id}`)
-    const manifest = await readManifest(catalogHit)
-    const dest = join(this.dataDir, manifest.id)
-    await mkdir(this.dataDir, { recursive: true })
-    await rm(dest, { recursive: true, force: true })
-    await mkdir(dest, { recursive: true })
-    for (const file of ALLOWED_FILES) {
-      const from = join(catalogHit, file)
-      if (!existsSync(from)) continue
-      await cp(from, join(dest, file))
-    }
-    await this.mountInstalled(manifest)
-    await this.writeIndex()
+    const hit = await this.findPluginDir(id)
+    if (!hit) throw new Error(`unknown store plugin: ${id}`)
+    const manifest = await readManifest(hit)
+    this.setEnabled(manifest.id, true)
+    await this.mountFromDisk(manifest, hit)
     return (await this.list()).find((item) => item.id === manifest.id)
   }
 
   async uninstall(id: string) {
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
     await this.hub().drop(id)
-    await rm(join(this.dataDir, id), { recursive: true, force: true })
-    await this.writeIndex()
+    this.setEnabled(id, false)
   }
 
   async restore() {
-    if (!existsSync(this.dataDir)) return
-    const names = await readdir(this.dataDir)
-    for (const name of names) {
-      const dir = join(this.dataDir, name)
-      if (!(await stat(dir)).isDirectory()) continue
-      if (!existsSync(join(dir, 'manifest.json'))) continue
-      const manifest = await readManifest(dir)
-      await this.mountInstalled(manifest)
+    const rows = this.db.prepare('SELECT id FROM store_plugins WHERE enabled = 1').all() as Array<{ id: string }>
+    for (const row of rows) {
+      const hit = await this.findPluginDir(row.id)
+      if (!hit) continue
+      await this.mountFromDisk(await readManifest(hit), hit)
     }
   }
 
   async readInstalledFile(id: string, file: string) {
     if (!isSafeId(id) || !ALLOWED_FILES.has(file)) throw new Error('not found')
-    const path = join(this.dataDir, id, file)
+    if (!this.isEnabled(id)) throw new Error('not found')
+    const hit = await this.findPluginDir(id)
+    if (!hit) throw new Error('not found')
+    const path = join(hit, file)
     if (!existsSync(path)) throw new Error('not found')
     return readFile(path, 'utf8')
   }
 
-  private async findCatalogById(id: string) {
-    if (!existsSync(this.catalogDir)) return null
-    for (const name of await readdir(this.catalogDir)) {
-      const dir = join(this.catalogDir, name)
+  private async findPluginDir(id: string) {
+    if (!existsSync(this.pluginDir)) return null
+    const guess = this.pluginPath(id)
+    if (existsSync(join(guess, 'manifest.json'))) return guess
+    for (const name of await readdir(this.pluginDir)) {
+      const dir = join(this.pluginDir, name)
       if (!(await stat(dir)).isDirectory()) continue
       if (!existsSync(join(dir, 'manifest.json'))) continue
       const manifest = await readManifest(dir)
@@ -147,10 +207,15 @@ export class PluginStoreService {
     return null
   }
 
-  private async mountInstalled(manifest: StoreManifest) {
-    const hostFile = join(this.dataDir, manifest.id, 'host.js')
-    if (!existsSync(hostFile)) throw new Error(`missing host.js for ${manifest.id}`)
-    const mod = (await importHostModule(hostFile)) as Plugin & { inject?: string[] }
+  private async mountFromDisk(manifest: StoreManifest, dir: string) {
+    const hostFile = join(dir, 'host.js')
+    const webFile = join(dir, 'web.js')
+    const hostCode = existsSync(hostFile) ? (await readFile(hostFile, 'utf8')).trim() : ''
+    const hasWeb = existsSync(webFile)
+    if (!hostCode && !hasWeb) throw new Error(`plugin ${manifest.id} has neither host nor web`)
+    const mod = (hostCode
+      ? await importHostModule(hostCode)
+      : { name: manifest.id, apply() {} }) as Plugin & { inject?: string[] }
     const entry: CatalogEntry = {
       id: manifest.id,
       name: manifest.name,
@@ -160,31 +225,17 @@ export class PluginStoreService {
       inject: mod.inject,
       togglable: true,
       enabled: true,
-      web: storeWebUrl(manifest.id),
+      web: hasWeb ? storeWebUrl(manifest.id) : undefined,
       packageName: `store:${manifest.id}`,
     }
     await this.hub().adopt(entry)
   }
-
-  private async writeIndex() {
-    const items = existsSync(this.dataDir) ? await readdir(this.dataDir) : []
-    await mkdir(this.dataDir, { recursive: true })
-    await writeFile(join(this.dataDir, 'index.json'), JSON.stringify({ items }, null, 2))
-  }
-}
-
-async function importHostModule(hostFile: string) {
-  try {
-    return await import(pathToFileURL(hostFile).href)
-  } catch {
-    const code = await readFile(hostFile, 'utf8')
-    return import(`data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`)
-  }
 }
 
 export async function apply(ctx: Context) {
-  const store = new PluginStoreService(ctx, defaultCatalogDir(), defaultDataDir())
+  const store = new PluginStoreService(ctx, defaultPluginDir(), defaultDbPath()).open()
   await store.restore()
+  registerPluginCreate(ctx, store)
 
   ctx.http.route('GET', '/api/plugin-store', async (route) => {
     route.send(200, { items: await store.list() })
@@ -222,4 +273,10 @@ export async function apply(ctx: Context) {
       route.send(404, { error: 'not found' })
     }
   })
+}
+
+declare module 'cordis' {
+  interface Context {
+    pluginStore: PluginStoreService
+  }
 }

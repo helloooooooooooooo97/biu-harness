@@ -1,6 +1,5 @@
 node_modules/
 dist/
-.biu/
 .cordis/
 .workspace/
 *.log
