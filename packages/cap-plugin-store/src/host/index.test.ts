@@ -54,7 +54,7 @@ test('missing .plugin lists no plugins', async () => {
   }
 })
 
-test('create writes .plugin/<id>/; install toggles sqlite; uninstall keeps files', async () => {
+test('create writes .plugin/<id>/; close keeps code; uninstall deletes .plugin/<id>/', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'plugin-root-'))
   const pluginDir = join(dir, '.plugin')
   try {
@@ -71,8 +71,8 @@ test('create writes .plugin/<id>/; install toggles sqlite; uninstall keeps files
     assert.ok(echo)
     assert.equal(echo.enabled, false)
 
-    const installed = await store.install('store-echo')
-    assert.equal(installed?.enabled, true)
+    const opened = await store.openPlugin('store-echo')
+    assert.equal(opened?.enabled, true)
     assert.deepEqual(adopted, ['store-echo'])
     assert.equal(forks.get('store-echo')?.packageName, 'store:store-echo')
     assert.equal(forks.get('store-echo')?.web, undefined)
@@ -91,7 +91,7 @@ test('create writes .plugin/<id>/; install toggles sqlite; uninstall keeps files
   }
 })
 
-test('web-only plugin installs without host.js', async () => {
+test('web-only plugin opens without host.js', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'plugin-root-'))
   try {
     const ctx = new Context()
@@ -103,7 +103,7 @@ test('web-only plugin installs without host.js', async () => {
       webJs: `export const name = 'store-banner-web'\nexport const inject = ['slots']\nexport function apply() {}\n`,
     })
     await assert.rejects(() => store.create({ id: 'store-empty', name: 'Empty' }), /hostJs or webJs/)
-    await store.install('store-banner')
+    await store.openPlugin('store-banner')
     assert.equal(forks.get('store-banner')?.web, '/api/plugin-store/files/store-banner/web.js')
     await assert.rejects(() => store.readInstalledFile('store-banner', 'host.js'))
   } finally {
