@@ -29,13 +29,6 @@ function inspectorStoredTab(sid: string | null | undefined, allowed: string[]): 
   return undefined
 }
 
-const tabClass = (active: boolean) =>
-  `inline-flex cursor-pointer items-center gap-1.5 rounded-[6px] border-0 px-2 py-1.5 text-[11px] font-semibold ${
-    active
-      ? 'bg-[color-mix(in_srgb,var(--dsw-business)_14%,transparent)] text-[var(--dsw-business)]'
-      : 'bg-transparent text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]'
-  }`
-
 export const SessionInspector = memo(function SessionInspector({
   open,
   width,
@@ -143,21 +136,25 @@ export const SessionInspector = memo(function SessionInspector({
       />
 
       <div className="app-side-bar-head">
-        <div className="flex min-w-0 items-center gap-1" role="tablist" aria-label="检查器分区">
-          {extraTabs.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === item.id}
-              className={tabClass(tab === item.id)}
-              onClick={() => setTab(item.id)}
-              data-testid={`inspector-tab-${item.id}`}
-            >
-              {item.Icon ? <item.Icon className="size-3.5" /> : <LuLayoutGrid className="size-3.5" />}
-              {item.label}
-            </button>
-          ))}
+        <div className="inspector-tabs" role="tablist" aria-label="检查器分区">
+          {extraTabs.map((item) => {
+            const active = tab === item.id
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                className={`inspector-tab${active ? ' is-active' : ''}`}
+                onClick={() => setTab(item.id)}
+                data-testid={`inspector-tab-${item.id}`}
+              >
+                <span className="inspector-tab-indicator" aria-hidden />
+                {item.Icon ? <item.Icon className="size-3.5" /> : <LuLayoutGrid className="size-3.5" />}
+                {item.label}
+              </button>
+            )
+          })}
         </div>
         <button
           type="button"
