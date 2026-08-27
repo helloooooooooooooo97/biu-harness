@@ -1152,10 +1152,10 @@ export class TasksService extends Service {
     return this
   }
 
-  private emitChange() {
+  private emitChange(extra: Record<string, unknown> = {}) {
     try {
       const host = this.ctx as HostCtx
-      host.http?.broadcast?.('tasks', { ts: now() })
+      host.http?.broadcast?.('tasks', { ts: now(), ...extra })
     } catch {
       /* host http 未就绪（单测） */
     }
@@ -1453,7 +1453,7 @@ export class TasksService extends Service {
     this.db
       .prepare('INSERT INTO task_views (id, name, config_json, is_builtin, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)')
       .run(id, name, JSON.stringify(config), ts, ts)
-    this.emitChange()
+    this.emitChange({ type: 'view-changed', viewId: id })
     return this.getTaskView(id)!
   }
 
@@ -1465,7 +1465,7 @@ export class TasksService extends Service {
     this.db
       .prepare('UPDATE task_views SET name = ?, config_json = ?, updated_at = ? WHERE id = ?')
       .run(name, JSON.stringify(config), now(), id)
-    this.emitChange()
+    this.emitChange({ type: 'view-changed', viewId: id })
     return this.getTaskView(id)!
   }
 
@@ -1474,7 +1474,7 @@ export class TasksService extends Service {
     const current = this.getTaskView(id)
     if (!current) return false
     const result = this.db.prepare('DELETE FROM task_views WHERE id = ?').run(id) as { changes: number }
-    if (result.changes > 0) this.emitChange()
+    if (result.changes > 0) this.emitChange({ type: 'view-changed', viewId: id })
     return result.changes > 0
   }
 
@@ -2012,14 +2012,14 @@ export function apply(ctx: Context) {
 
   host.tools.register({
     name: 'tasks_view_list',
-    description: '列出任务面板已保存的视图及其筛选、排序配置（呈现方式不在视图里）',
+    description: '列出任务面板已保存的视图及其筛选、排序、呈现方式',
     parameters: { type: 'object', properties: {} },
     execute: () => ({ views: tasks.listTaskViews() }),
   })
 
   host.tools.register({
     name: 'tasks_view_create',
-    description: '新建一个任务面板视图：名称 + 筛选 filter + 排序 sort（呈现方式由前端独立选择，不必绑定视图）',
+    description: '新建一个任务面板视图：名称 + 呈现方式 mode + 筛选 filter + 排序 sort',
     parameters: {
       type: 'object',
       properties: {
@@ -2045,7 +2045,7 @@ export function apply(ctx: Context) {
 
   host.tools.register({
     name: 'tasks_view_update',
-    description: '更新任务面板视图：可重命名，或修改筛选/排序（只传要改的字段，其余保持不变）',
+    description: '更新任务面板视图：可重命名，或修改筛选/排序/呈现方式（只传要改的字段，其余保持不变）',
     parameters: {
       type: 'object',
       properties: {

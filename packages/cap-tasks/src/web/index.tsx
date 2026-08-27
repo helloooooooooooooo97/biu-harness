@@ -1160,23 +1160,57 @@ function ThIcon({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   )
 }
 
-/** Agent 远程切换看板事件的服务（注册为 ctx 'tasksView'；web-snapshot 收到 tasks 广播后调用 handleViewSwitch）。 */
+/** Agent 远程任务变更：WS `tasks` 广播。view-switch 切视图；view-changed 同步筛选/模式；其余刷新任务列表。 */
 class TasksViewService extends Service {
-  private listeners = new Set<(viewId: string, ts?: number) => void>()
+  private switchListeners = new Set<(viewId: string, ts?: number) => void>()
+  private changeListeners = new Set<() => void>()
+  private viewChangedListeners = new Set<(viewId: string) => void>()
 
   constructor(ctx: Context) {
     super(ctx, 'tasksView')
   }
 
   subscribeViewSwitch = (fn: (viewId: string, ts?: number) => void) => {
-    this.listeners.add(fn)
+    this.switchListeners.add(fn)
     return () => {
-      this.listeners.delete(fn)
+      this.switchListeners.delete(fn)
+    }
+  }
+
+  subscribeChange = (fn: () => void) => {
+    this.changeListeners.add(fn)
+    return () => {
+      this.changeListeners.delete(fn)
+    }
+  }
+
+  subscribeViewChanged = (fn: (viewId: string) => void) => {
+    this.viewChangedListeners.add(fn)
+    return () => {
+      this.viewChangedListeners.delete(fn)
     }
   }
 
   handleViewSwitch(viewId: string, ts?: number) {
-    for (const fn of this.listeners) fn(viewId, ts)
+    for (const fn of this.switchListeners) fn(viewId, ts)
+  }
+
+  handleViewChanged(viewId: string) {
+    for (const fn of this.viewChangedListeners) fn(viewId)
+  }
+
+  handleChange() {
+    for (const fn of this.changeListeners) fn()
+  }
+
+  handleTasksEvent(payload: unknown) {
+    const p = payload as { type?: string; viewId?: string; ts?: number } | undefined
+    if (p?.type === 'view-switch' && p.viewId) {
+      this.handleViewSwitch(p.viewId, p.ts)
+    } else if (p?.type === 'view-changed' && p.viewId) {
+      this.handleViewChanged(p.viewId)
+    }
+    this.handleChange()
   }
 }
 
@@ -1265,13 +1299,45 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
     }
   }
 
-  // Agent 远程切换看板：订阅 tasksView 服务的 view-switch 事件（后端广播 → WS → web-snapshot 转发）
+  const activeViewIdRef = useRef(activeViewId)
+  activeViewIdRef.current = activeViewId
+
+  // Agent 远程：tasks_update 刷新列表；tasks_view_* 同步当前筛选/模式
   useEffect(() => {
     if (!tasksView) return
-    return tasksView.subscribeViewSwitch((viewId) => {
+    const offSwitch = tasksView.subscribeViewSwitch((viewId) => {
       void switchView(viewId)
     })
-  }, [tasksView, views, hydrated])
+    const offChange = tasksView.subscribeChange(() => {
+      void refresh()
+    })
+    const offView = tasksView.subscribeViewChanged((viewId) => {
+      void (async () => {
+        try {
+          const list = await fetchTaskViews()
+          setViews(list)
+          const currentId = activeViewIdRef.current
+          const updated = list.find((v) => v.id === viewId)
+          if (updated && currentId === viewId) {
+            setConfig(updated.config)
+            return
+          }
+          if (!updated && currentId === viewId) {
+            const fallback = list[0]
+            setActiveViewId(fallback?.id ?? null)
+            if (fallback) setConfig(fallback.config)
+          }
+        } catch {
+          /* 服务不可用 */
+        }
+      })()
+    })
+    return () => {
+      offSwitch()
+      offChange()
+      offView()
+    }
+  }, [tasksView, views, hydrated, refresh])
 
   // ---- 视图对话框（自绘模态：另存为 / 重命名 / 删除确认，不使用系统 prompt/confirm/alert） ----
   type ViewDlgState =
@@ -3461,10 +3527,7 @@ export function apply(ctx: Context) {
   // 依赖 snapshot 总线：注册本插件关心的 'tasks' 消息（Agent 远程切换看板事件），由总线转发
   const snapshot = ctx.get('snapshot') as SnapshotService | undefined
   const off = snapshot?.onMessage?.('tasks', (payload) => {
-    const p = payload as { type?: string; viewId?: string; ts?: number } | undefined
-    if (p?.type === 'view-switch' && p.viewId) {
-      tasksView.handleViewSwitch(p.viewId, p.ts)
-    }
+    tasksView.handleTasksEvent(payload)
   })
   if (off) ctx.effect(() => off)
   slots.place('app-modules', TasksModulePage, {
