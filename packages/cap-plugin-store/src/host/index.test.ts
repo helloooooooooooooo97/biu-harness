@@ -69,19 +69,23 @@ test('create writes .plugin/<id>/; install toggles sqlite; uninstall keeps files
     assert.equal(created.pluginPath, join(pluginDir, 'store-echo'))
     const echo = (await store.list()).find((item) => item.id === 'store-echo')
     assert.ok(echo)
-    assert.equal(echo.installed, false)
+    assert.equal(echo.enabled, false)
 
     const installed = await store.install('store-echo')
-    assert.equal(installed?.installed, true)
+    assert.equal(installed?.enabled, true)
     assert.deepEqual(adopted, ['store-echo'])
     assert.equal(forks.get('store-echo')?.packageName, 'store:store-echo')
     assert.equal(forks.get('store-echo')?.web, undefined)
     assert.match(await store.readInstalledFile('store-echo', 'host.js'), /store-echo/)
 
-    await store.uninstall('store-echo')
+    await store.close('store-echo')
     assert.deepEqual(dropped, ['store-echo'])
-    assert.equal((await store.list()).find((item) => item.id === 'store-echo')?.installed, false)
+    assert.equal((await store.list()).find((item) => item.id === 'store-echo')?.enabled, false)
     await access(join(pluginDir, 'store-echo', 'host.js'))
+
+    await store.uninstall('store-echo')
+    assert.equal((await store.list()).find((item) => item.id === 'store-echo'), undefined)
+    await assert.rejects(() => access(join(pluginDir, 'store-echo', 'host.js')))
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
