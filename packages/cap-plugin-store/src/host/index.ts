@@ -58,6 +58,10 @@ export function defaultSandboxDir() {
   return process.env.BIU_PLUGIN_DEV_DIR || join(process.cwd(), '.plugin-dev')
 }
 
+export function defaultDbPath() {
+  return process.env.BIU_PLUGIN_DB || join(process.cwd(), 'plugins.sqlite')
+}
+
 function isSafeId(id: string) {
   return /^[a-z][a-z0-9-]{1,40}$/.test(id)
 }
@@ -250,7 +254,11 @@ export class PluginStoreService extends Service {
     for (const row of rows) {
       const hit = await this.findPluginDir(row.id)
       if (!hit) continue
-      await this.mountFromDisk(await readManifest(hit), hit)
+      try {
+        await this.mountFromDisk(await readManifest(hit), hit)
+      } catch (error) {
+        this.ctx.logger('plugin-store').error(error)
+      }
     }
   }
 
@@ -305,7 +313,11 @@ export class PluginStoreService extends Service {
 
 export async function apply(ctx: Context) {
   const store = new PluginStoreService(ctx, defaultPluginDir(), defaultDbPath(), defaultSandboxDir()).open()
-  await store.restore()
+  try {
+    await store.restore()
+  } catch (error) {
+    ctx.logger('plugin-store').error(error)
+  }
   registerPluginCreate(ctx, store)
 
   ctx.http.route('GET', '/api/plugin-store', async (route) => {
