@@ -18,17 +18,21 @@ import {
   type AppModulesService,
 } from '@biu/web-app-modules'
 import { ChatSidebar } from './chat-sidebar.tsx'
+import { ChatSessionTitle } from './chat-session-title.tsx'
 import { DanceStage } from '@biu/web-mascot'
 import { SessionInspector } from './session-inspector.tsx'
 import { SessionConfigDialog } from '@biu/web-session-view/dialog'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
+import { chromeIcon } from './chrome-icon.ts'
 import {
-  LuPanelLeft,
-  LuPanelRight,
-  LuSettings2,
-} from 'react-icons/lu'
+  ChatBubbleLeftIcon,
+  ChevronDoubleLeftIcon,
+  ChevronDoubleRightIcon,
+  Cog6ToothIcon,
+  AdjustmentsHorizontalIcon,
+} from '@heroicons/react/16/solid'
 
 export const name = 'shell'
 export const inject = ['slots', 'snapshot', 'sessionView', 'projectView', 'appModules']
@@ -36,17 +40,9 @@ export const inject = ['slots', 'snapshot', 'sessionView', 'projectView', 'appMo
 function ModuleIcon({ module }: { module: AppModule }) {
   if (module.Icon) {
     const Icon = module.Icon
-    return <Icon className="size-5" />
+    return <Icon {...chromeIcon} />
   }
-  return (
-    <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M8 9h8M8 13h5M7 5h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3.5L9 19v-3H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"
-      />
-    </svg>
-  )
+  return <ChatBubbleLeftIcon {...chromeIcon} aria-hidden />
 }
 
 function ModuleRail({
@@ -97,14 +93,7 @@ function ModuleRail({
           aria-label="Settings"
           onClick={onSettings}
         >
-          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10.3 3.2a1.8 1.8 0 0 1 3.4 0l.2 1a1.8 1.8 0 0 0 2.5 1.1l.9-.5a1.8 1.8 0 0 1 2.5 2.5l-.5.9a1.8 1.8 0 0 0 1.1 2.5l1 .2a1.8 1.8 0 0 1 0 3.4l-1 .2a1.8 1.8 0 0 0-1.1 2.5l.5.9a1.8 1.8 0 0 1-2.5 2.5l-.9-.5a1.8 1.8 0 0 0-2.5 1.1l-.2 1a1.8 1.8 0 0 1-3.4 0l-.2-1a1.8 1.8 0 0 0-2.5-1.1l-.9.5a1.8 1.8 0 0 1-2.5-2.5l.5-.9a1.8 1.8 0 0 0-1.1-2.5l-1-.2a1.8 1.8 0 0 1 0-3.4l1-.2a1.8 1.8 0 0 0 1.1-2.5l-.5-.9a1.8 1.8 0 0 1 2.5-2.5l.9.5a1.8 1.8 0 0 0 2.5-1.1z"
-            />
-            <circle cx="12" cy="12" r="2.4" />
-          </svg>
+          <Cog6ToothIcon {...chromeIcon} />
         </button>
       </div>
     </nav>
@@ -157,7 +146,7 @@ function PluginModuleStage({
         return (
           <div
             key={entry.id}
-            className={show ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : 'hidden'}
+            className={show ? 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden' : 'hidden'}
             aria-hidden={!show}
             data-testid={`${moduleId}-module`}
           >
@@ -351,7 +340,7 @@ function Shell(props: SlotProps) {
                   aria-label="Expand sidebar"
                   onClick={expandSidebar}
                 >
-                  <LuPanelLeft className="size-3.5" />
+                  <ChevronDoubleLeftIcon {...chromeIcon} />
                 </button>
               ) : null}
               {project ? (
@@ -361,6 +350,7 @@ function Shell(props: SlotProps) {
                 </div>
               ) : null}
             </div>
+            <ChatSessionTitle useSessionView={useSessionView} sessionView={sessionView} />
             <div className="chat-view-header-right">
               <button
                 type="button"
@@ -370,7 +360,7 @@ function Shell(props: SlotProps) {
                 data-testid="header-config-toggle"
                 onClick={() => setConfigOpen(true)}
               >
-                <LuSettings2 className="size-3.5" />
+                <AdjustmentsHorizontalIcon {...chromeIcon} />
               </button>
               <button
                 type="button"
@@ -381,7 +371,7 @@ function Shell(props: SlotProps) {
                 data-testid="inspector-toggle"
                 onClick={toggleInspector}
               >
-                <LuPanelRight className="size-3.5" />
+                <ChevronDoubleRightIcon {...chromeIcon} />
               </button>
             </div>
           </header>

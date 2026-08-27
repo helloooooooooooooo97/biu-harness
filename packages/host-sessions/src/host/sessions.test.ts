@@ -279,6 +279,28 @@ test('applyContextBudget: over budget keeps head + recent tail', () => {
   assert.ok(out.length < msgs.length)
 })
 
+test('deriveMessages projects pasted images as multimodal content', () => {
+  const events: SessionEvent[] = [
+    { type: 'session/open', version: 1, seq: 0, ts: 0 },
+    {
+      type: 'user/message',
+      text: '看看这张图',
+      kind: 'wake',
+      seq: 1,
+      ts: 1,
+      images: [{ name: 'shot.png', mime: 'image/png', url: 'data:image/png;base64,abc' }],
+    },
+  ]
+  const out = deriveMessages(events)
+  const user = out.find((item) => item.role === 'user')
+  assert.ok(Array.isArray(user?.content))
+  const parts = user?.content as Array<{ type: string; text?: string; image_url?: { url: string } }>
+  assert.equal(parts[0]?.type, 'text')
+  assert.equal(parts[0]?.text, '看看这张图')
+  assert.equal(parts[1]?.type, 'image_url')
+  assert.equal(parts[1]?.image_url?.url, 'data:image/png;base64,abc')
+})
+
 test('deriveMessages honors context_compact_submit tool/call as new prefix', () => {
   const events: SessionEvent[] = [
     { type: 'session/open', version: 1, seq: 0, ts: 0 },

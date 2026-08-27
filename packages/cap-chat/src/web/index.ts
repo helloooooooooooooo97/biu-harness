@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import type { Context } from 'cordis'
-import { LuActivity, LuLogs } from 'react-icons/lu'
+import { SignalIcon, QueueListIcon } from '@heroicons/react/16/solid'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import type { SlotProps } from '@biu/web-slots'
 import { ApprovalsRail } from './approvals.tsx'
@@ -60,7 +60,7 @@ export function apply(ctx: Context) {
       ...slotProps,
       tabId: 'traj',
       tabLabel: '轨迹',
-      tabIcon: LuLogs,
+      tabIcon: QueueListIcon,
       ensureTrajectory: true,
       focusOnCall: true,
     }),
@@ -68,6 +68,6 @@ export function apply(ctx: Context) {
   ctx.slots.place('inspector-panels', InspectorUsage, {
     key: 'chat-usage',
     order: 2,
-    props: () => ({ ...slotProps, tabId: 'usage', tabLabel: '用量', tabIcon: LuActivity }),
+    props: () => ({ ...slotProps, tabId: 'usage', tabLabel: '用量', tabIcon: SignalIcon }),
   })
 }

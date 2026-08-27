@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { LuCircleCheck, LuCircleDashed, LuCircleX, LuLoaderCircle } from 'react-icons/lu'
+import { CheckCircleIcon, MinusCircleIcon, XCircleIcon, ArrowPathIcon } from '@heroicons/react/16/solid'
 import type { TrajectoryUsage } from '@biu/web-session-view'
 import type { DispatchedTaskRow } from '@biu/web-session-view'
 import { SidebarMascot } from '@biu/web-mascot'
@@ -14,27 +14,27 @@ function statusMeta(status: LiveDispatchTaskRow['status'], reason?: string) {
     return {
       label: '已完成',
       className: 'text-[var(--dsw-ok,#34d399)]',
-      icon: <LuCircleCheck className="size-3.5" aria-hidden />,
+      icon: <CheckCircleIcon className="size-3.5" aria-hidden />,
     }
   }
   if (status === 'running') {
     return {
       label: '运行中',
       className: 'text-[var(--dsw-business)]',
-      icon: <LuLoaderCircle className="size-3.5 animate-spin" aria-hidden />,
+      icon: <ArrowPathIcon className="size-3.5 animate-spin" aria-hidden />,
     }
   }
   if (status === 'pending') {
     return {
       label: '等待中',
       className: 'text-[var(--dsw-label-3)]',
-      icon: <LuCircleDashed className="size-3.5" aria-hidden />,
+      icon: <MinusCircleIcon className="size-3.5" aria-hidden />,
     }
   }
   return {
     label: reason ? `结束(${reason})` : '已结束',
     className: 'text-[var(--dsw-label-2)]',
-    icon: <LuCircleX className="size-3.5" aria-hidden />,
+    icon: <XCircleIcon className="size-3.5" aria-hidden />,
   }
 }
 

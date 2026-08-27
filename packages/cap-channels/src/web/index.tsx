@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import type { Context } from 'cordis'
-import { LuHash, LuPlus, LuSend, LuUsers, LuLink, LuMessageSquare, LuServer } from 'react-icons/lu'
+import { HashtagIcon, PlusIcon, PaperAirplaneIcon, UsersIcon, LinkIcon, ChatBubbleLeftIcon, ServerIcon } from '@heroicons/react/16/solid'
 
 export type SlotProps = Record<string, unknown> & {
   renderSlot?: (name: string) => unknown
@@ -263,7 +263,7 @@ function ChannelModulePage(_props: ChannelModulePageProps) {
               aria-label="新建频道"
               onClick={() => setShowNew((v) => !v)}
             >
-              <LuPlus className="size-4" />
+              <PlusIcon className="size-4" />
             </button>
           </div>
           {showNew ? (
@@ -288,7 +288,7 @@ function ChannelModulePage(_props: ChannelModulePageProps) {
                   className={`channels-list-item${c.id === activeId ? ' is-active' : ''}`}
                   onClick={() => setActiveId(c.id)}
                 >
-                  <LuHash className="size-4 shrink-0" />
+                  <HashtagIcon className="size-4 shrink-0" />
                   <span className="min-w-0 flex-1 truncate">{c.name}</span>
                 </button>
               </li>
@@ -297,7 +297,7 @@ function ChannelModulePage(_props: ChannelModulePageProps) {
           </ul>
           <div className="channels-list-foot">
             <button className="channels-foot-btn" type="button" onClick={() => setShowJoin((v) => !v)}>
-              <LuLink className="size-4" /> 加入频道
+              <LinkIcon className="size-4" /> 加入频道
             </button>
             {showJoin ? (
               <form className="channels-new" onSubmit={onJoin}>
@@ -313,7 +313,7 @@ function ChannelModulePage(_props: ChannelModulePageProps) {
               </form>
             ) : null}
             <button className="channels-foot-btn" type="button" onClick={() => setShowBroker((v) => !v)}>
-              <LuServer className="size-4" />
+              <ServerIcon className="size-4" />
               {broker ? <span className="truncate">{broker}</span> : '状态：本机（broker）'}
             </button>
             {showBroker ? (
@@ -340,15 +340,15 @@ function ChannelModulePage(_props: ChannelModulePageProps) {
             <>
               <header className="channels-head">
                 <div className="channels-head-left">
-                  <LuHash className="size-4" />
+                  <HashtagIcon className="size-4" />
                   <span className="channels-title">{active.name}</span>
                 </div>
                 <div className="channels-head-right">
                   <span className="channels-members-count">
-                    <LuUsers className="size-3.5" /> {members.length}
+                    <UsersIcon className="size-3.5" /> {members.length}
                   </span>
                   <button className="channels-icon-btn" title="邀请" aria-label="邀请" onClick={onCreateInvite}>
-                    <LuLink className="size-4" />
+                    <LinkIcon className="size-4" />
                   </button>
                 </div>
               </header>
@@ -363,7 +363,7 @@ function ChannelModulePage(_props: ChannelModulePageProps) {
                 <div ref={bottomRef} />
               </div>
               <form className="channels-composer" onSubmit={onSend}>
-                <LuMessageSquare className="size-4 shrink-0 text-[var(--dsw-label-3)]" />
+                <ChatBubbleLeftIcon className="size-4 shrink-0 text-[var(--dsw-label-3)]" />
                 <input
                   className="channels-input"
                   placeholder="发消息到频道…"
@@ -371,7 +371,7 @@ function ChannelModulePage(_props: ChannelModulePageProps) {
                   onChange={(e) => setInput(e.target.value)}
                 />
                 <button className="channels-primary" type="submit">
-                  <LuSend className="size-4" />
+                  <PaperAirplaneIcon className="size-4" />
                 </button>
               </form>
             </>
@@ -402,15 +402,6 @@ export const inject = ['slots', 'appModules']
 
 const channelsModuleProps = { moduleId: 'channels' }
 
-function ChannelsRailIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className ?? 'size-5'} fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h10M7 3v4M11 3v4M15 3v4M19 3v4" />
-      <circle cx="19" cy="18" r="2.4" />
-    </svg>
-  )
-}
-
 type AppModulesService = {
   register: (mod: {
     id: string
@@ -433,7 +424,7 @@ export function apply(ctx: Context) {
     path: '/channels',
     description: '内网分布式群聊',
     order: 30,
-    Icon: ChannelsRailIcon,
+    Icon: HashtagIcon,
   })
   slots.place('app-modules', ChannelModulePage, {
     key: 'channels-module',

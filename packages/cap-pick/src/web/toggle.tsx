@@ -1,4 +1,4 @@
-import { LuMousePointer2 } from 'react-icons/lu'
+import { CursorArrowRaysIcon } from '@heroicons/react/16/solid'
 import type { PickService } from './service.ts'
 import { usePickState } from './service.ts'
 
@@ -15,7 +15,7 @@ export function PickToggle({ pick }: { pick: PickService }) {
       data-biu-ignore
       onClick={() => pick.toggle()}
     >
-      <LuMousePointer2 className="project-chip-icon" />
+      <CursorArrowRaysIcon className="size-4" />
     </button>
   )
 }

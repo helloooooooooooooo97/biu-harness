@@ -1136,6 +1136,28 @@ export class SessionViewService extends Service {
     void this.refreshSessions()
   }
 
+  async setSessionTitle(id: string, title: string) {
+    const next = title.trim()
+    const prev = this.value.sessions
+    if (next) {
+      this.replace({
+        sessions: prev.map((item) => (item.id === id ? { ...item, title: next } : item)),
+      })
+    }
+    try {
+      const res = await fetch(`/api/sessions/${id}/config`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title: next || null }),
+      })
+      if (!res.ok) throw new Error(`rename failed HTTP ${res.status}`)
+    } catch (error) {
+      this.replace({ sessions: prev, error: String(error) })
+      throw error
+    }
+    void this.refreshSessions()
+  }
+
   async deleteSession(id: string) {
     const prevSessions = this.value.sessions
     const wasActive = this.value.sessionId === id
@@ -1205,9 +1227,15 @@ export class SessionViewService extends Service {
     })
   }
 
-  async send(text: string, kind: 'wake' | 'inject' = 'wake', extraTools: string[] = []) {
+  async send(
+    text: string,
+    kind: 'wake' | 'inject' = 'wake',
+    extraTools: string[] = [],
+    images: Array<{ name: string; mime: string; url: string }> = [],
+  ) {
     const content = text.trim()
-    if (!content) return
+    const pics = images.filter((item) => item?.url?.startsWith('data:image/')).slice(0, 6)
+    if (!content && !pics.length) return
     const sessionId = await this.ensureSession()
     const tools = [...new Set(extraTools.map((name) => name.trim()).filter(Boolean))]
     const busy = this.value.pending || this.value.agentStatus === 'running'
@@ -1215,13 +1243,15 @@ export class SessionViewService extends Service {
     // 忙碌且已有 wake：再发 → inject；否则 wake。忙碌时 wait:false 立刻返回。
     const effectiveKind: 'wake' | 'inject' =
       kind === 'inject' || (kind === 'wake' && busy && hasWake) ? 'inject' : 'wake'
+    const imagePayload = pics.length ? { images: pics } : {}
     const body: Record<string, unknown> =
       effectiveKind === 'inject'
-        ? { text: content, kind: 'inject', ...(tools.length ? { extraTools: tools } : {}) }
+        ? { text: content || '（图片）', kind: 'inject', ...(tools.length ? { extraTools: tools } : {}), ...imagePayload }
         : {
-            text: content,
+            text: content || '（图片）',
             ...(busy ? { wait: false } : {}),
             ...(tools.length ? { extraTools: tools } : {}),
+            ...imagePayload,
           }
 
     if (effectiveKind === 'inject') {

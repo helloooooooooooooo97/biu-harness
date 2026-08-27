@@ -1,13 +1,6 @@
 import type { Context } from 'cordis'
+import { ChartBarSquareIcon } from '@heroicons/react/16/solid'
 import { DashboardModule } from './page.tsx'
-
-function DashRailIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className ?? 'size-5'} fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4.5h7v7H4zM13 4.5h7v4h-7zM13 11.5h7v8h-7zM4 14.5h7v5H4z" />
-    </svg>
-  )
-}
 
 type SlotsService = {
   place: (slot: string, view: unknown, opts: { key: string; order: number; props?: () => Record<string, unknown> }) => unknown
@@ -40,7 +33,7 @@ export function apply(ctx: Context) {
     path: '/dashboard',
     description: 'Usage and project overview console',
     order: 80,
-    Icon: DashRailIcon,
+    Icon: ChartBarSquareIcon,
   })
   slots.place('app-modules', DashboardModule, { key: 'dashboard-module', order: 80, props: () => moduleProps })
 }

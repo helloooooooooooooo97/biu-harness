@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
+import { CircleStackIcon } from '@heroicons/react/16/solid'
 import { EventDetailBody } from './trajectory.tsx'
 import { type SessionViewService } from '@biu/web-session-view'
 import type { DerivedMessage, SessionEvent } from '@biu/web-session-view'
@@ -100,7 +101,6 @@ function EChartsDualLine({
   inputData,
   outputData,
   cacheData,
-  xField,
   height,
   compactAt,
   onClick,
@@ -108,7 +108,6 @@ function EChartsDualLine({
   inputData: Array<{ x: number; value: number }>
   outputData: Array<{ x: number; value: number }>
   cacheData: Array<{ x: number; value: number }>
-  xField: string
   height: number
   compactAt?: number[]
   onClick?: (x: number) => void
@@ -122,7 +121,7 @@ function EChartsDualLine({
     const markLineData = (compactAt ?? []).map((x) => ({ xAxis: x }))
     return {
       animation: false,
-      grid: { left: 34, right: 34, top: 6, bottom: 4 },
+      grid: { left: 28, right: 28, top: 8, bottom: 4 },
       tooltip: {
         trigger: 'axis',
         backgroundColor: 'rgba(24,25,28,0.94)',
@@ -141,8 +140,6 @@ function EChartsDualLine({
       yAxis: [
         {
           type: 'value',
-          name: 'Input',
-          nameTextStyle: { color: IN, fontSize: 9 },
           position: 'left',
           splitNumber: 3,
           axisLabel: { fontSize: 9, color: 'rgba(160,167,178,0.7)', formatter: (v: number) => fmt(v) },
@@ -150,8 +147,6 @@ function EChartsDualLine({
         },
         {
           type: 'value',
-          name: 'Output',
-          nameTextStyle: { color: OUT, fontSize: 9 },
           position: 'right',
           splitNumber: 3,
           axisLabel: { fontSize: 9, color: 'rgba(160,167,178,0.7)', formatter: (v: number) => fmt(v) },
@@ -160,7 +155,7 @@ function EChartsDualLine({
       ],
       series: [
         {
-          name: `Input (${xField})`,
+          name: 'Input',
           type: 'line',
           data: toSeries(inputData),
           smooth: true,
@@ -180,7 +175,7 @@ function EChartsDualLine({
             : undefined,
         },
         {
-          name: `Input Cache (${xField})`,
+          name: 'Cache',
           type: 'line',
           data: toSeries(cacheData),
           smooth: true,
@@ -190,7 +185,7 @@ function EChartsDualLine({
           yAxisIndex: 0,
         },
         {
-          name: `Output (${xField})`,
+          name: 'Output',
           type: 'line',
           data: toSeries(outputData),
           smooth: true,
@@ -201,7 +196,7 @@ function EChartsDualLine({
         },
       ],
     }
-  }, [inputData, outputData, cacheData, xField, compactAt])
+  }, [inputData, outputData, cacheData, compactAt])
 
   return (
     <ReactECharts
@@ -227,11 +222,11 @@ function TurnStepChart({ data, height }: { data: Array<{ x: number; value: numbe
   const option = useMemo<EChartsOption>(() => {
     return {
       animation: false,
-      grid: { left: 26, right: 10, top: 6, bottom: 4 },
+      grid: { left: 26, right: 10, top: 8, bottom: 4 },
       tooltip: { trigger: 'axis', backgroundColor: 'rgba(24,25,28,0.94)', borderWidth: 0, textStyle: { color: 'rgba(210,214,220,0.95)', fontSize: 11 } },
       legend: { show: false },
       xAxis: { type: 'category', data: data.map((d) => d.x), boundaryGap: true, axisLabel: { show: data.length <= 40, fontSize: 9, color: 'rgba(160,167,178,0.7)' }, axisLine: { lineStyle: { color: 'rgba(130,140,155,0.25)' } }, axisTick: { show: false } },
-      yAxis: { type: 'value', name: 'steps', nameTextStyle: { color: 'rgba(160,167,178,0.7)', fontSize: 9 }, splitNumber: 3, axisLabel: { fontSize: 9, color: 'rgba(160,167,178,0.7)' }, splitLine: { lineStyle: { color: 'rgba(130,140,155,0.12)', type: 'dashed' } } },
+      yAxis: { type: 'value', splitNumber: 3, axisLabel: { fontSize: 9, color: 'rgba(160,167,178,0.7)' }, splitLine: { lineStyle: { color: 'rgba(130,140,155,0.12)', type: 'dashed' } } },
       series: [
         {
           name: 'steps',
@@ -343,9 +338,7 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
     >
       <div className="usage-panel-head">
         <div className="usage-panel-title">
-          <span className="usage-panel-title-icon" aria-hidden>
-            ◇
-          </span>
+          <CircleStackIcon aria-hidden className="size-4" />
           Token usage
         </div>
         <div className="usage-panel-legend">
@@ -382,7 +375,6 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
               inputData={track.input}
               outputData={track.output}
               cacheData={track.cache}
-              xField="step"
               height={150}
               compactAt={compactSteps.length ? compactSteps : undefined}
               onClick={onStepClick}
@@ -405,7 +397,6 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
               inputData={turnData.input}
               outputData={turnData.output}
               cacheData={turnData.cache}
-              xField="turn"
               height={130}
               onClick={onTurnClick}
             />
@@ -415,10 +406,7 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
             className="usage-panel-section"
             {...(sessionId ? pickDomAttrs('usage', `${sessionId}:steps-per-turn`, 'Steps per Turn') : {})}
           >
-            <div className="usage-panel-section-title">
-              Steps per Turn
-              <span className="usage-panel-section-hint">每回合 step 数</span>
-            </div>
+            <div className="usage-panel-section-title">Steps per Turn</div>
             <TurnStepChart data={turnSteps} height={110} />
           </div>
 

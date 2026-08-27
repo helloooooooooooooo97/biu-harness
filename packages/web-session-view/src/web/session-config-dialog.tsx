@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { LuWrench } from 'react-icons/lu'
+import { WrenchScrewdriverIcon } from '@heroicons/react/16/solid'
 import {
   bindSessionView,
   type SessionViewService,
@@ -299,7 +299,7 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
                         }`}
                         aria-hidden
                       >
-                        <LuWrench className="size-3.5" />
+                        <WrenchScrewdriverIcon className="size-3.5" />
                       </span>
                     )}
                     <span className="min-w-0 flex-1 truncate font-mono text-[11px] font-medium">{tool.name}</span>

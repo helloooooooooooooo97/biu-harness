@@ -1,4 +1,5 @@
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { isMascotDancing, subscribeMascotDance } from '@biu/web-mascot'
 import {
@@ -18,17 +19,21 @@ import { useSidebarCollapseStore } from '@biu/web-session-view'
 import { SidebarMascot } from '@biu/web-mascot'
 import { resolveSessionMascot } from '@biu/web-mascot'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
+import { chromeIcon, chromeIconClass } from './chrome-icon.ts'
 import {
-  LuChevronDown,
-  LuChevronRight,
-  LuFolderTree,
-  LuPanelLeftClose,
-  LuPlus,
-  LuStar,
-  LuRadio,
-  LuTag,
-  LuTags,
-} from 'react-icons/lu'
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ChevronDoubleLeftIcon,
+  PlusIcon,
+  SignalIcon,
+  StarIcon,
+  TrashIcon,
+  ChatBubbleLeftIcon,
+  FolderIcon,
+  TagIcon,
+  FolderMinusIcon,
+  BookmarkSlashIcon,
+} from '@heroicons/react/16/solid'
 
 /** 项目/标签分组视图的持久化 key。 */
 const GROUP_BY_KEY = 'cordis.sidebar.groupBy'
@@ -52,16 +57,27 @@ function SessionTagBadges({ tags }: { tags?: string[] }) {
       {shown.map((tag) => (
         <span
           key={tag}
-          className="max-w-[56px] truncate rounded-[4px] border border-[var(--dsw-border)] bg-[var(--dsw-hover-weak,var(--dsw-hover))] px-1 py-px text-[9px] leading-[13px] font-medium text-[var(--dsw-label-3)]"
+          className="max-w-[72px] truncate rounded-[4px] bg-[var(--dsw-hover-weak,var(--dsw-hover))] px-1 py-px text-[11px] leading-[15px] font-medium text-[var(--dsw-label-3)]"
         >
           {tag}
         </span>
       ))}
       {extra > 0 ? (
-        <span className="shrink-0 rounded-[4px] px-0.5 py-px text-[9px] leading-[13px] font-medium text-[var(--dsw-label-3)] opacity-80">
+        <span className="shrink-0 rounded-[4px] px-0.5 py-px text-[11px] leading-[15px] font-medium text-[var(--dsw-label-3)] opacity-80">
           +{extra}
         </span>
       ) : null}
+    </span>
+  )
+}
+
+function ChatCount({ count }: { count: number }) {
+  return (
+    <span className="sidebar-chat-count">
+      <span className="sidebar-chat-count-num">{count}</span>
+      <span className="sidebar-chat-count-icon">
+        <ChatBubbleLeftIcon className="size-4 shrink-0" width={16} height={16} aria-hidden />
+      </span>
     </span>
   )
 }
@@ -92,7 +108,7 @@ const SessionRow = memo(function SessionRow({
     >
       <Link
         to={`/s/${item.id}`}
-        className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-[12px] leading-4"
+        className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
       >
         <SidebarMascot
           size={24}
@@ -115,6 +131,19 @@ const SessionRow = memo(function SessionRow({
       </Link>
       <button
         type="button"
+        className="chat-session-row-delete"
+        aria-label={`Delete session ${item.title}`}
+        title="Delete"
+        onClick={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          onDelete(item)
+        }}
+      >
+        <TrashIcon {...chromeIcon} />
+      </button>
+      <button
+        type="button"
         className={`chat-session-row-star${pinned ? ' is-on' : ''}`}
         aria-pressed={pinned}
         aria-label={pinned ? `取消收藏 ${item.title}` : `收藏 ${item.title}`}
@@ -125,22 +154,7 @@ const SessionRow = memo(function SessionRow({
           onPin(item)
         }}
       >
-        <LuStar className={`size-3.5${pinned ? ' text-[#f5b700]' : ''}`} fill={pinned ? 'currentColor' : 'none'} />
-      </button>
-      <button
-        type="button"
-        className="chat-session-row-delete"
-        aria-label={`Delete session ${item.title}`}
-        title="Delete"
-        onClick={(event) => {
-          event.preventDefault()
-          event.stopPropagation()
-          onDelete(item)
-        }}
-      >
-        <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M10 7V5h4v2m-6 3v8m4-8v8m-7-11 1 14h10l1-14" />
-        </svg>
+        <StarIcon className={chromeIconClass(pinned ? 'text-[#f5b700]' : undefined)} />
       </button>
     </div>
   )
@@ -202,6 +216,7 @@ export const ChatSidebar = memo(function ChatSidebar({
   const sections = useMemo(() => buildSidebarSections(sessions, groupBy), [sessions, groupBy])
   // 板块级收缩（点击标题可展开/收缩，不显示收缩按钮，层级靠 kind 图标表达）
   const [collapsedSections, setCollapsedSections] = useState<Partial<Record<SidebarSectionKind, boolean>>>({})
+  const [pendingDelete, setPendingDelete] = useState<SessionListItem | null>(null)
   const toggleSection = useCallback((kind: SidebarSectionKind) => {
     setCollapsedSections((prev) => ({ ...prev, [kind]: !prev[kind] }))
   }, [])
@@ -231,18 +246,21 @@ export const ChatSidebar = memo(function ChatSidebar({
     [navigate, sessionView],
   )
 
-  const deleteChat = useCallback(
-    (item: SessionListItem) => {
-      if (!window.confirm(`Delete session “${item.title}”?`)) return
-      const wasActive = item.id === sessionId
-      void sessionView.deleteSession(item.id).then(() => {
-        if (!wasActive) return
-        const next = sessionView.get().sessionId
-        navigate(next ? `/s/${next}` : '/')
-      })
-    },
-    [navigate, sessionId, sessionView],
-  )
+  const requestDeleteChat = useCallback((item: SessionListItem) => {
+    setPendingDelete(item)
+  }, [])
+
+  const confirmDeleteChat = useCallback(() => {
+    if (!pendingDelete) return
+    const item = pendingDelete
+    setPendingDelete(null)
+    const wasActive = item.id === sessionId
+    void sessionView.deleteSession(item.id).then(() => {
+      if (!wasActive) return
+      const next = sessionView.get().sessionId
+      navigate(next ? `/s/${next}` : '/')
+    })
+  }, [navigate, pendingDelete, sessionId, sessionView])
 
   const pinChat = useCallback(
     (item: SessionListItem) => {
@@ -267,7 +285,7 @@ export const ChatSidebar = memo(function ChatSidebar({
           aria-label="Collapse sidebar"
           onClick={onCollapse}
         >
-          <LuPanelLeftClose className="size-3.5" />
+          <ChevronDoubleLeftIcon {...chromeIcon} />
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
@@ -280,7 +298,7 @@ export const ChatSidebar = memo(function ChatSidebar({
             onClick={() => createChat({ type: 'chat' })}
           >
             <span className="app-side-actions-icon" aria-hidden>
-              <LuPlus className="size-4" />
+              <PlusIcon {...chromeIcon} />
             </span>
             <span className="app-side-actions-label">添加聊天</span>
           </button>
@@ -292,7 +310,7 @@ export const ChatSidebar = memo(function ChatSidebar({
             onClick={() => createChat({ type: 'live' })}
           >
             <span className="app-side-actions-icon" aria-hidden>
-              <LuRadio className="size-4" />
+              <SignalIcon {...chromeIcon} />
             </span>
             <span className="app-side-actions-label">新建 Live</span>
           </button>
@@ -308,52 +326,49 @@ export const ChatSidebar = memo(function ChatSidebar({
                 <section key={section.kind} className="min-w-0">
                   {/* 板块标题：收藏 / (项目|标签)，可点击整行展开/收缩；层级靠 kind 图标表达；悬浮时右侧露出分组切换 tab */}
                   <div className="sidebar-section-head min-w-0">
-                    <button
-                      type="button"
-                      className="flex min-w-0 flex-1 items-center gap-1 rounded-[6px] text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
-                      aria-expanded={!sectionCollapsed}
-                      onClick={() => toggleSection(section.kind)}
-                    >
-                      {section.kind === 'pinned' ? (
-                        <LuStar className="size-3.5 shrink-0 text-[#f5b700]" fill="currentColor" />
-                      ) : section.kind === 'tag' ? (
-                        <LuTag className="size-3.5 shrink-0 opacity-80" />
-                      ) : (
-                        <FolderGlyph className="size-3.5 shrink-0 opacity-80" />
-                      )}
-                      <span className="min-w-0 flex-1 truncate tracking-normal">{section.label}</span>
-                      <span className="shrink-0 font-mono text-[10px] opacity-60">
-                        {section.sessions
-                          ? section.sessions.length
-                          : section.groups?.reduce((sum, g) => sum + g.sessions.length, 0) ?? 0}
-                      </span>
-                    </button>
-                    {section.kind !== 'pinned' ? (
-                      <div
-                        className="sidebar-view-switch flex shrink-0 items-center overflow-hidden rounded-[6px]"
-                        role="group"
-                        aria-label="分组视图切换"
+                    <div className="flex min-w-0 min-h-[32px] flex-1 items-center">
+                      <button
+                        type="button"
+                        className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)]"
+                        aria-expanded={!sectionCollapsed}
+                        onClick={() => toggleSection(section.kind)}
                       >
-                        <button
-                          type="button"
-                          title="按项目分组"
-                          aria-pressed={groupBy === 'project'}
-                          className={`grid h-[20px] w-5 place-items-center rounded-[6px] ${groupBy === 'project' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
-                          onClick={() => changeGroupBy('project')}
+                        <span className="min-w-0 flex-1 truncate tracking-normal">{section.label}</span>
+                      </button>
+                      {section.kind !== 'pinned' ? (
+                        <div
+                          className="sidebar-view-switch"
+                          role="group"
+                          aria-label="分组视图切换"
                         >
-                          <LuFolderTree className="size-2.5" />
-                        </button>
-                        <button
-                          type="button"
-                          title="按标签分组"
-                          aria-pressed={groupBy === 'tag'}
-                          className={`grid h-[20px] w-5 place-items-center rounded-[6px] ${groupBy === 'tag' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
-                          onClick={() => changeGroupBy('tag')}
-                        >
-                          <LuTags className="size-2.5" />
-                        </button>
-                      </div>
-                    ) : null}
+                          <button
+                            type="button"
+                            title="按项目分组"
+                            aria-pressed={groupBy === 'project'}
+                            className={`sidebar-view-switch-btn${groupBy === 'project' ? ' is-on' : ''}`}
+                            onClick={() => changeGroupBy('project')}
+                          >
+                            <FolderIcon {...chromeIcon} />
+                          </button>
+                          <button
+                            type="button"
+                            title="按标签分组"
+                            aria-pressed={groupBy === 'tag'}
+                            className={`sidebar-view-switch-btn${groupBy === 'tag' ? ' is-on' : ''}`}
+                            onClick={() => changeGroupBy('tag')}
+                          >
+                            <TagIcon {...chromeIcon} />
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                    <ChatCount
+                      count={
+                        section.sessions
+                          ? section.sessions.length
+                          : section.groups?.reduce((sum, g) => sum + g.sessions.length, 0) ?? 0
+                      }
+                    />
                   </div>
 
                   {!sectionCollapsed ? (
@@ -366,7 +381,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                               active={item.id === routeSessionId}
                               busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
                               dancing={dancing}
-                              onDelete={deleteChat}
+                              onDelete={requestDeleteChat}
                               onPin={pinChat}
                             />
                           ))
@@ -376,11 +391,11 @@ export const ChatSidebar = memo(function ChatSidebar({
                         const canAddHere = group.kind === 'project' || group.kind === 'ungrouped'
                         return (
                           <div key={group.key} className="min-w-0">
-                            <div className="sidebar-group-head mb-0.5 flex items-center px-1">
+                            <div className="sidebar-group-head mb-0.5">
                               <div
                                 role="button"
                                 tabIndex={0}
-                                className="flex min-h-[24px] min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-[6px] text-left text-[12px] font-semibold tracking-wide text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
+                                className="flex min-h-[32px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-[6px] text-left text-[14px] font-medium tracking-normal text-[var(--dsw-label-3)] outline-none hover:text-[var(--dsw-label)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
                                 title={group.path ?? group.label}
                                 aria-expanded={!collapsed}
                                 onClick={() => toggleProjectGroup(group.key)}
@@ -391,28 +406,33 @@ export const ChatSidebar = memo(function ChatSidebar({
                                   }
                                 }}
                               >
-                                {collapsed ? (
-                                  <LuChevronRight className="size-3 shrink-0 opacity-70" />
-                                ) : (
-                                  <LuChevronDown className="size-3 shrink-0 opacity-70" />
-                                )}
-                                {group.kind === 'pinned' ? (
-                                  <LuStar className="size-3.5 shrink-0 text-[#f5b700]" fill="currentColor" />
-                                ) : group.kind === 'tag' ? (
-                                  <LuTag className="size-3.5 shrink-0 opacity-80" />
-                                ) : isUngrouped ? (
-                                  <span className="grid size-3.5 place-items-center text-[11px] opacity-70" aria-hidden>
-                                    —
+                                <span className="sidebar-rail-icon sidebar-group-fold" aria-hidden>
+                                  <span className="sidebar-group-fold-face">
+                                    {group.kind === 'pinned' ? (
+                                      <StarIcon className={chromeIconClass('text-[#f5b700]')} />
+                                    ) : group.key === UNGROUPED_PROJECT_KEY ? (
+                                      <FolderMinusIcon className={chromeIconClass('opacity-80')} />
+                                    ) : group.key === UNGROUPED_TAG_KEY ? (
+                                      <BookmarkSlashIcon className={chromeIconClass('opacity-80')} />
+                                    ) : group.kind === 'tag' ? (
+                                      <TagIcon className={chromeIconClass('opacity-80')} />
+                                    ) : (
+                                      <FolderGlyph className="opacity-80" />
+                                    )}
                                   </span>
-                                ) : (
-                                  <FolderGlyph className="size-3.5 shrink-0 opacity-80" />
-                                )}
-                                <span className="min-w-0 flex-1 truncate tracking-normal">{group.label}</span>
-                                <span className="shrink-0 font-mono text-[10px] opacity-60">{group.sessions.length}</span>
+                                  <span className="sidebar-group-fold-chevron">
+                                    {collapsed ? (
+                                      <ChevronRightIcon className={chromeIconClass('opacity-80')} />
+                                    ) : (
+                                      <ChevronDownIcon className={chromeIconClass('opacity-80')} />
+                                    )}
+                                  </span>
+                                </span>
+                                <span className="min-w-0 flex-1 truncate">{group.label}</span>
                                 {canAddHere ? (
                                   <button
                                     type="button"
-                                    className="sidebar-add grid shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
+                                    className="sidebar-add"
                                     title={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
                                     aria-label={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
                                     onClick={(e) => {
@@ -423,12 +443,13 @@ export const ChatSidebar = memo(function ChatSidebar({
                                       })
                                     }}
                                   >
-                                    <LuPlus className="size-3" />
+                                    <PlusIcon {...chromeIcon} />
                                   </button>
                                 ) : null}
                               </div>
+                              <ChatCount count={group.sessions.length} />
                             </div>
-                            <div className={`min-w-0 ${collapsed ? 'hidden' : ''}`} aria-hidden={collapsed}>
+                            <div className={`sidebar-session-list min-w-0 ${collapsed ? 'hidden' : ''}`} aria-hidden={collapsed}>
                               {group.sessions.map((item) => (
                                 <SessionRow
                                   key={`${group.key}:${item.id}`}
@@ -436,7 +457,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                   active={item.id === routeSessionId}
                                   busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
                                   dancing={dancing}
-                                  onDelete={deleteChat}
+                                  onDelete={requestDeleteChat}
                                   onPin={pinChat}
                                 />
                               ))}
@@ -453,6 +474,49 @@ export const ChatSidebar = memo(function ChatSidebar({
           )}
         </div>
       </div>
+      {pendingDelete && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-4"
+              data-testid="chat-session-delete-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="chat-session-delete-title"
+              onClick={() => setPendingDelete(null)}
+            >
+              <div
+                className="w-[min(100%,320px)] rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] p-4 text-[var(--dsw-label)]"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <h2 id="chat-session-delete-title" className="m-0 text-[13px] font-semibold">
+                  删除「{pendingDelete.title}」？
+                </h2>
+                <p className="mt-1.5 mb-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
+                  删除后无法恢复这份会话。
+                </p>
+                <div className="mt-3 flex justify-end gap-1.5">
+                  <button
+                    type="button"
+                    className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] text-[var(--dsw-label)] hover:bg-[#353535]"
+                    data-testid="chat-session-delete-cancel"
+                    onClick={() => setPendingDelete(null)}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] font-medium text-[var(--dsw-label)] hover:bg-[#353535]"
+                    data-testid="chat-session-delete-confirm"
+                    onClick={confirmDeleteChat}
+                  >
+                    确认删除
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </aside>
   )
 })
