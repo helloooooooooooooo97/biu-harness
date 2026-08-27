@@ -7,7 +7,7 @@
  * 3. 一处保存，不再拆成三块互相抢焦点
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { LuCheck, LuChevronDown, LuLoaderCircle, LuPlus, LuSearch, LuTrash2, LuUnplug, LuX } from 'react-icons/lu'
+import { CheckIcon, ChevronDownIcon, ArrowPathIcon, PlusIcon, MagnifyingGlassIcon, TrashIcon, SignalSlashIcon, XMarkIcon } from '@heroicons/react/16/solid'
 
 type ChatProvider = 'deepseek' | 'openai' | 'anthropic'
 
@@ -555,7 +555,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
           {isDef ? (
             <span className="shrink-0 text-[9px] font-semibold tracking-wide opacity-70">默认</span>
           ) : null}
-          {activeRow && !removable ? <LuCheck className="size-3 shrink-0 opacity-80" /> : null}
+          {activeRow && !removable ? <CheckIcon className="size-3 shrink-0 opacity-80" /> : null}
         </button>
         {removable ? (
           <button
@@ -570,7 +570,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
               void onRemoveConnection(ep.id)
             }}
           >
-            <LuTrash2 className="size-3" />
+            <TrashIcon className="size-3" />
           </button>
         ) : null}
       </div>
@@ -601,7 +601,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
             aria-label="关闭"
             onClick={props?.onClose}
           >
-            <LuX className="size-4" />
+            <XMarkIcon className="size-4" />
           </button>
         ) : (
           <span className="text-[11px] text-[var(--dsw-label-3)]">官方 Key / 第三方 URL</span>
@@ -644,7 +644,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                 requestAnimationFrame(() => pickerInputRef.current?.focus())
               }}
             >
-              <LuPlus className="size-3.5" />
+              <PlusIcon className="size-3.5" />
               添加连接
             </button>
           </div>
@@ -703,7 +703,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                             }
                           }}
                         >
-                          <LuX className="size-3" />
+                          <XMarkIcon className="size-3" />
                         </span>
                       </button>
                     ) : (
@@ -714,7 +714,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                             : 'border-[var(--dsw-border)] bg-[var(--dsw-input)] hover:border-[var(--dsw-label-3)]'
                         }`}
                       >
-                        <LuSearch className="size-3.5 shrink-0 text-[var(--dsw-label-3)]" />
+                        <MagnifyingGlassIcon className="size-3.5 shrink-0 text-[var(--dsw-label-3)]" />
                         <input
                           ref={pickerInputRef}
                           className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--dsw-label)] outline-none placeholder:text-[var(--dsw-label-3)]"
@@ -739,7 +739,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                           aria-expanded={pickerOpen}
                           aria-controls="connection-picker-menu"
                         />
-                        <LuChevronDown
+                        <ChevronDownIcon
                           className={`size-3.5 shrink-0 text-[var(--dsw-label-3)] transition-transform ${
                             pickerOpen ? 'rotate-180' : ''
                           }`}
@@ -783,7 +783,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                                       </span>
                                     </span>
                                     {active ? (
-                                      <LuCheck className="size-3.5 shrink-0 text-[var(--dsw-label)]" />
+                                      <CheckIcon className="size-3.5 shrink-0 text-[var(--dsw-label)]" />
                                     ) : null}
                                   </button>
                                 )
@@ -808,7 +808,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                               onClick={() => createCustom(pickerQuery)}
                             >
                               <span className="grid size-5 shrink-0 place-items-center rounded-[4px] bg-[var(--dsw-muted-fill)] text-[var(--dsw-label-2)]">
-                                <LuPlus className="size-3" />
+                                <PlusIcon className="size-3" />
                               </span>
                               <span className="min-w-0 text-[13px] text-[var(--dsw-label)]">
                                 创建「
@@ -833,7 +833,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                               }}
                             >
                               <span className="grid size-5 shrink-0 place-items-center rounded-[4px] bg-[var(--dsw-muted-fill)] text-[var(--dsw-label-2)]">
-                                <LuPlus className="size-3" />
+                                <PlusIcon className="size-3" />
                               </span>
                               <span className="text-[13px] text-[var(--dsw-label-2)]">自定义 Base URL…</span>
                             </button>
@@ -972,9 +972,9 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                       onClick={() => void onTestConnection()}
                     >
                       {testing ? (
-                        <LuLoaderCircle className="size-3.5 animate-spin" />
+                        <ArrowPathIcon className="size-3.5 animate-spin" />
                       ) : (
-                        <LuUnplug className="size-3.5" />
+                        <SignalSlashIcon className="size-3.5" />
                       )}
                       {testing ? '测试中' : '测试连接'}
                     </button>
@@ -1068,10 +1068,10 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                                     }
                                   }}
                                 >
-                                  <LuTrash2 className="size-3" />
+                                  <TrashIcon className="size-3" />
                                 </span>
                               ) : selected ? (
-                                <LuCheck className="size-3.5 shrink-0" />
+                                <CheckIcon className="size-3.5 shrink-0" />
                               ) : null}
                             </button>
                           </li>
@@ -1100,7 +1100,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                       className="inline-flex shrink-0 items-center gap-1 rounded-[8px] border border-[var(--dsw-border)] px-2.5 py-[6px] text-[12px] text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]"
                       onClick={() => void onAddModel()}
                     >
-                      <LuPlus className="size-3.5" />
+                      <PlusIcon className="size-3.5" />
                       添加
                     </button>
                   </div>
@@ -1112,7 +1112,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                     className="inline-flex self-start items-center gap-1 text-[11px] text-[var(--dsw-danger,#b42318)] hover:underline"
                     onClick={() => void onRemoveConnection(active.id)}
                   >
-                    <LuTrash2 className="size-3" />
+                    <TrashIcon className="size-3" />
                     删除此连接
                   </button>
                 ) : null}

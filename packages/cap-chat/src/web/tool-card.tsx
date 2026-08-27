@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Image } from 'antd'
 import {
-  LuBug,
-  LuChevronDown,
-  LuChevronRight,
-  LuCircleCheck,
-  LuCircleX,
-  LuLoaderCircle,
-} from 'react-icons/lu'
+  BugAntIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ArrowPathIcon,
+} from '@heroicons/react/16/solid'
 import type { ChatToolPart } from '@biu/web-session-view'
 import { pickDomAttrs } from '@biu/cap-pick/web'
 import {
@@ -231,23 +231,23 @@ export function ToolCard({
       ? {
           label: '运行中',
           className: 'tool-call-status is-running',
-          icon: <LuLoaderCircle className="size-3.5 animate-spin" aria-hidden />,
+          icon: <ArrowPathIcon className="size-3.5 animate-spin" aria-hidden />,
         }
       : {
           label: '成功',
           className: 'tool-call-status is-ok',
-          icon: <LuCircleCheck className="size-3.5" aria-hidden />,
+          icon: <CheckCircleIcon className="size-3.5" aria-hidden />,
         }
     : node.result.ok
       ? {
           label: '成功',
           className: 'tool-call-status is-ok',
-          icon: <LuCircleCheck className="size-3.5" aria-hidden />,
+          icon: <CheckCircleIcon className="size-3.5" aria-hidden />,
         }
       : {
           label: '失败',
           className: 'tool-call-status is-fail',
-          icon: <LuCircleX className="size-3.5" aria-hidden />,
+          icon: <XCircleIcon className="size-3.5" aria-hidden />,
         }
 
   return (
@@ -260,7 +260,7 @@ export function ToolCard({
           onClick={() => setOpen((value) => !value)}
         >
           <span className="tool-call-chevron" aria-hidden>
-            {open ? <LuChevronDown className="size-3.5" /> : <LuChevronRight className="size-3.5" />}
+            {open ? <ChevronDownIcon className="size-3.5" /> : <ChevronRightIcon className="size-3.5" />}
           </span>
           <span className="tool-call-title">{title}</span>
           <span className="tool-call-summary">{summary}</span>
@@ -275,7 +275,7 @@ export function ToolCard({
           aria-label="在轨迹中查看"
           onClick={() => onInspect(node.callId)}
         >
-          <LuBug className="size-3.5" aria-hidden />
+          <BugAntIcon className="size-3.5" aria-hidden />
         </button>
       </div>
       {!open && previewLines && previewLines.length > 0 ? (

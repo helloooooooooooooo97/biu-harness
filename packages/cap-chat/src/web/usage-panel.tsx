@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { LuCoins } from 'react-icons/lu'
+import { CircleStackIcon } from '@heroicons/react/16/solid'
 import { EventDetailBody } from './trajectory.tsx'
 import { type SessionViewService } from '@biu/web-session-view'
 import type { DerivedMessage, SessionEvent } from '@biu/web-session-view'
@@ -338,7 +338,7 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
     >
       <div className="usage-panel-head">
         <div className="usage-panel-title">
-          <LuCoins size={16} strokeWidth={2} aria-hidden />
+          <CircleStackIcon aria-hidden className="size-4" />
           Token usage
         </div>
         <div className="usage-panel-legend">

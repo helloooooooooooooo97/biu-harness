@@ -1,5 +1,5 @@
 import type { Context } from 'cordis'
-import { LuLayoutDashboard } from 'react-icons/lu'
+import { ChartBarSquareIcon } from '@heroicons/react/16/solid'
 import { DashboardModule } from './page.tsx'
 
 type SlotsService = {
@@ -33,7 +33,7 @@ export function apply(ctx: Context) {
     path: '/dashboard',
     description: 'Usage and project overview console',
     order: 80,
-    Icon: LuLayoutDashboard,
+    Icon: ChartBarSquareIcon,
   })
   slots.place('app-modules', DashboardModule, { key: 'dashboard-module', order: 80, props: () => moduleProps })
 }
