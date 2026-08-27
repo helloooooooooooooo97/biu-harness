@@ -18,9 +18,9 @@
   --dsw-danger: #cf2d56;
   --dsw-danger-soft: rgba(207, 45, 86, 0.14);
   --dsw-ok: #1f8a65;
-  --dsw-pick: #233850;
-  --dsw-pick-fill: rgba(35, 56, 80, 0.42);
-  --dsw-pick-stroke: rgba(35, 56, 80, 0.72);
+  --dsw-pick: #2383e2;
+  --dsw-pick-fill: rgba(35, 131, 226, 0.18);
+  --dsw-pick-stroke: rgba(35, 131, 226, 0.4);
   --dsw-hover: #2c2c2c;
   --dsw-hover-strong: #2c2c2c;
   --dsw-muted-fill: rgba(242, 241, 237, 0.04);
