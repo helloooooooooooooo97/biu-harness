@@ -1,0 +1,5 @@
+{
+  "id": "store-heavy-ping",
+  "name": "Heavy Ping",
+  "blurb": "内置测试插件：用来测 heavy plugin（plugin_sandbox 多文件相对 import，再 plugin_pack）。打开后提供 GET /api/store-heavy-ping。"
+}
