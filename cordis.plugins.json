@@ -88,7 +88,7 @@
       "id": "plugin-store",
       "name": "插件商店",
       "layer": "capability",
-      "blurb": "@biu/cap-plugin-store。安装已编译包，不重编主应用。",
+      "blurb": "@biu/cap-plugin-store。安装已编译包；plugin_create 可把 agent 写的插件放到货架。",
       "package": "@biu/cap-plugin-store/host",
       "web": "@biu/cap-plugin-store/web",
       "togglable": true,
