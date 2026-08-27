@@ -656,18 +656,32 @@ body {
   background: var(--dsw-hover);
 }
 
-/* 数字在左、16px 聊天气泡贴右；各行图标落在同一条垂直线上 */
+/* 数字在左；聊天气泡 16px 包在 24×24 圆角底里，右缘与会话行星星对齐 */
 .sidebar-chat-count {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 2px;
   grid-column: 2;
   justify-self: end;
   color: var(--dsw-label-3);
   font: inherit;
+}
+
+.sidebar-chat-count-num {
   opacity: 0.6;
-  pointer-events: none;
+}
+
+.sidebar-chat-count-icon {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 6px;
+}
+
+.sidebar-chat-count-icon:hover {
+  background: #353535;
 }
 
 .sidebar-chat-count svg {
