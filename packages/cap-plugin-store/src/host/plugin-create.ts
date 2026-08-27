@@ -75,18 +75,47 @@ export async function readSandboxManifest(dir: string) {
   return { id: raw.id, name: raw.name, blurb: String(raw.blurb ?? '').trim() || raw.name }
 }
 
+const CONTRACT = [
+  '契约：id 与 export const name 相同。禁止 import npm / react / @biu/*。不要改 packages/ 或 cordis.plugins.json。',
+  'host 与 web 按需，至少一侧。Web：ctx.slots.place("plugin-store-extras", Comp, { key })。',
+].join(' ')
+
 const PLUGIN_CREATE_DESCRIPTION = [
-  '在仓库根 .plugin-dev/<id>/ 开一个插件沙箱（不是最终货架）。用 bash / str_replace_editor 在这个目录里写代码、加文件、相对 import，不要把整份源码塞进本工具参数。',
-  '本工具只建/更新沙箱：manifest.json，以及可选写入 host.ts / web.tsx 作为起点。不要改 packages/ 或 cordis.plugins.json。',
-  'host 与 web 按需：只要后端就 host.ts，只要前端就 web.tsx，两边都要就两个都有。可以再加 util.ts 等，打包时 esbuild bundle。',
-  '调完后必须再调 plugin_pack，才会打进 .plugin/<id>/ 出现在商店。打开/关闭只影响已打包货架；卸载删的是 .plugin/<id>/，沙箱还在。',
-  '契约：id 与 export const name 相同。禁止 import npm / react / @biu/*。Web：ctx.slots.place("plugin-store-extras", Comp, { key })。',
+  '直写货架：单文件小插件。把 host/web 源码放进本工具参数，立刻编译进 .plugin/<id>/，商店就能看到。',
+  '适合一两百行、无相对 import、无多文件。更大或要拆文件请改用 plugin_sandbox + plugin_pack。',
+  CONTRACT,
+].join(' ')
+
+const PLUGIN_SANDBOX_DESCRIPTION = [
+  '开沙箱：多文件/大插件。只建/更新 .plugin-dev/<id>/（manifest.json，可选起点 host.ts / web.tsx），不进货架。',
+  '然后用 bash / 文件工具在沙箱里写代码、相对 import。调完必须 plugin_pack 才会打进 .plugin/<id>/。',
+  '卸载删货架目录，沙箱还在。',
+  CONTRACT,
 ].join(' ')
 
 const PLUGIN_PACK_DESCRIPTION = [
-  '把 .plugin-dev/<id>/ 沙箱打包进 .plugin/<id>/（manifest.json + 编好的 host.js / web.js）。多文件会 bundle 成各一个入口文件。',
-  '入口：host.ts|host.tsx|host.js 与 web.tsx|web.ts|web.js，至少要有一个。调完商店才看得到。已打开的插件会重新挂上。',
+  '把 .plugin-dev/<id>/ 沙箱打包进 .plugin/<id>/（manifest.json + bundle 后的 host.js / web.js）。',
+  '入口：host.ts|tsx|js 与 web.tsx|ts|js，至少要有一个。已打开的插件会重新挂上。',
 ].join(' ')
+
+function createArgs(args: Record<string, unknown>): PluginCreateInput {
+  return {
+    id: String(args.id ?? ''),
+    name: String(args.name ?? ''),
+    blurb: args.blurb != null ? String(args.blurb) : undefined,
+    hostJs: args.hostJs != null ? String(args.hostJs) : undefined,
+    webJs: args.webJs != null ? String(args.webJs) : undefined,
+  }
+}
+
+const ID_NAME_BLURB = {
+  id: {
+    type: 'string',
+    description: '插件 id：小写字母开头，仅 [a-z0-9-]，最长 41。',
+  },
+  name: { type: 'string', description: '商店卡片标题' },
+  blurb: { type: 'string', description: '一行简介' },
+}
 
 export function registerPluginCreate(ctx: Context, store: PluginStoreService) {
   ctx.tools.register({
@@ -95,33 +124,39 @@ export function registerPluginCreate(ctx: Context, store: PluginStoreService) {
     parameters: {
       type: 'object',
       properties: {
-        id: {
-          type: 'string',
-          description: '插件 id：小写字母开头，仅 [a-z0-9-]，最长 41。沙箱目录 .plugin-dev/<id>/。',
-        },
-        name: { type: 'string', description: '商店卡片标题' },
-        blurb: { type: 'string', description: '一行简介' },
+        ...ID_NAME_BLURB,
         hostJs: {
           type: 'string',
-          description: '可选。写入沙箱 host.ts 的起点源码，不是最终货架。大逻辑请用文件工具在沙箱里改。',
+          description: 'host.ts 源码，编译成 .plugin/<id>/host.js。可与 webJs 二选一或都给。',
         },
         webJs: {
           type: 'string',
-          description: '可选。写入沙箱 web.tsx 的起点源码。大逻辑请在沙箱里改。',
+          description: 'web.tsx 源码，编译成 .plugin/<id>/web.js。可与 hostJs 二选一或都给。',
         },
       },
       required: ['id', 'name'],
     },
-    execute: async (args) => {
-      const result = await store.initSandbox({
-        id: String(args.id ?? ''),
-        name: String(args.name ?? ''),
-        blurb: args.blurb != null ? String(args.blurb) : undefined,
-        hostJs: args.hostJs != null ? String(args.hostJs) : undefined,
-        webJs: args.webJs != null ? String(args.webJs) : undefined,
-      })
-      return JSON.stringify(result)
+    execute: async (args) => JSON.stringify(await store.create(createArgs(args))),
+  })
+  ctx.tools.register({
+    name: 'plugin_sandbox',
+    description: PLUGIN_SANDBOX_DESCRIPTION,
+    parameters: {
+      type: 'object',
+      properties: {
+        ...ID_NAME_BLURB,
+        hostJs: {
+          type: 'string',
+          description: '可选。写入沙箱 host.ts 的起点，大逻辑请在沙箱目录里改。',
+        },
+        webJs: {
+          type: 'string',
+          description: '可选。写入沙箱 web.tsx 的起点。',
+        },
+      },
+      required: ['id', 'name'],
     },
+    execute: async (args) => JSON.stringify(await store.initSandbox(createArgs(args))),
   })
   ctx.tools.register({
     name: 'plugin_pack',

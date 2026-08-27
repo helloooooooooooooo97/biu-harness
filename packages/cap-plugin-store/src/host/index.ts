@@ -8,6 +8,7 @@ import { Service, type Context, type Plugin } from 'cordis'
 import type { CatalogEntry } from '@biu/host-hub'
 import {
   bundleStoreEntry,
+  compileStoreModule,
   findEntry,
   HOST_ENTRIES,
   readSandboxManifest,
@@ -132,6 +133,27 @@ export class PluginStoreService extends Service {
 
   sandboxPath(id: string) {
     return join(this.sandboxDir, id)
+  }
+
+  /** 小插件：把 host/web 源码直接编译进 .plugin/<id>/。 */
+  async create(input: PluginCreateInput) {
+    const id = String(input.id ?? '').trim()
+    const name = String(input.name ?? '').trim()
+    if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
+    if (!name) throw new Error('plugin name required')
+    const hostJs = String(input.hostJs ?? '').trim()
+    const webSrc = input.webJs != null ? String(input.webJs).trim() : ''
+    if (!hostJs && !webSrc) throw new Error('plugin_create needs hostJs and/or webJs')
+    const dest = this.pluginPath(id)
+    mkdirSync(dest, { recursive: true })
+    const manifest = { id, name, blurb: String(input.blurb ?? '').trim() || name }
+    await writeFile(join(dest, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
+    if (hostJs) await writeFile(join(dest, 'host.js'), await compileStoreModule(hostJs, 'host'))
+    else if (existsSync(join(dest, 'host.js'))) await rm(join(dest, 'host.js'))
+    if (webSrc) await writeFile(join(dest, 'web.js'), await compileStoreModule(webSrc, 'web'))
+    else if (existsSync(join(dest, 'web.js'))) await rm(join(dest, 'web.js'))
+    if (this.isEnabled(id)) await this.mountFromDisk(manifest, dest)
+    return { id, pluginPath: dest }
   }
 
   /** 在 .plugin-dev/<id>/ 开沙箱，不写入货架。 */
