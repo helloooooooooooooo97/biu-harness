@@ -37,9 +37,11 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).not.toMatch(/\.pick-overlay-marquee\s*\{[^}]*border-style:\s*dashed/s)
   })
 
-  it('Enter in composer pops pick chips instead of sending while any remain', () => {
+  it('Backspace/Delete pops pick chips when the composer has no text', () => {
     const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
-    expect(composer).toMatch(/if \(pickRefs\.length\) \{/)
+    expect(composer).toMatch(/event\.key === 'Backspace' \|\| event\.key === 'Delete'/)
+    expect(composer).toMatch(/if \(!event\.currentTarget\.value\)/)
     expect(composer).toMatch(/pick\?\.removeLast\(\)/)
+    expect(composer).not.toMatch(/if \(pickRefs\.length\) \{\s*pick\?\.removeLast\(\)/s)
   })
 })
