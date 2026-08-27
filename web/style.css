@@ -338,8 +338,8 @@ body {
 }
 
 .chat-view-project-icon {
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   color: var(--dsw-label-3);
 }
@@ -559,8 +559,39 @@ body {
   place-items: center;
 }
 
+.sidebar-group-fold {
+  position: relative;
+}
+
+.sidebar-group-fold-face,
+.sidebar-group-fold-chevron {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+}
+
+.sidebar-group-fold-chevron {
+  display: none;
+}
+
+.sidebar-group-head:hover .sidebar-group-fold-face,
+.sidebar-group-head:focus-within .sidebar-group-fold-face {
+  display: none;
+}
+
+.sidebar-group-head:hover .sidebar-group-fold-chevron,
+.sidebar-group-head:focus-within .sidebar-group-fold-chevron {
+  display: grid;
+}
+
+/* 不推整行背景，只给会话内容加约 2/3 图标宽的左内边距 */
 .sidebar-session-list {
-  padding-left: 32px;
+  padding-left: 0;
+}
+
+.sidebar-session-list .chat-session-row > a {
+  padding-left: 19px;
 }
 
 .sidebar-group-head {
@@ -798,8 +829,8 @@ body {
 }
 
 .project-chip-icon {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 
@@ -1332,8 +1363,8 @@ body {
 }
 .usage-panel-title-icon {
   flex: none;
-  width: 13px;
-  height: 13px;
+  width: 20px;
+  height: 20px;
   color: var(--dsw-business);
 }
 .usage-panel-legend {
