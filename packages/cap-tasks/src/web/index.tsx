@@ -2410,16 +2410,11 @@ function eventEndOf(t: Task): number | null {
   return null
 }
 
-/** 消耗胶囊：与 Live/thread 的 .traj-usage 对齐——绿色缓冲背景(=cache hit 覆盖) + 两侧 in/out 数值 + 分隔箭头。 */
+/** 消耗胶囊：与 Live/thread 的 .traj-usage 对齐——cache 独立细条，不再绿底叠层。 */
 function UsageCapsule({ usage, aggregate }: { usage: SumUsage; aggregate: boolean }) {
   if (usage.totalTokens <= 0) return <span className="tasks-usage-empty">—</span>
   const pct =
     usage.inputTokens && usage.cacheReadTokens ? Math.min(100, Math.round((usage.cacheReadTokens / usage.inputTokens) * 100)) : null
-  const inStyle: CSSProperties | undefined = pct
-    ? {
-        backgroundImage: `linear-gradient(90deg, rgba(34,140,90,0.30) 0%, rgba(34,140,90,0.30) ${pct}%, transparent ${pct}%, transparent 100%)`,
-      }
-    : undefined
   return (
     <span
       className={`tasks-usage-capsule${aggregate ? ' is-agg' : ''}`}
@@ -2429,8 +2424,17 @@ function UsageCapsule({ usage, aggregate }: { usage: SumUsage; aggregate: boolea
           : `本任务各回合消耗：in ${formatTokens(usage.inputTokens)} / out ${formatTokens(usage.outputTokens)}${usage.cacheReadTokens ? ` / cache ${formatTokens(usage.cacheReadTokens)}` : ''}`
       }
     >
-      <span className={`tasks-usage-input${pct != null ? ' has-cache' : ''}`} style={inStyle}>
-        {formatTokens(usage.inputTokens)}
+      <span className="traj-usage-in-col">
+        <span className={`tasks-usage-input${pct != null ? ' has-cache' : ''}`}>
+          {formatTokens(usage.inputTokens)}
+        </span>
+        {pct != null ? (
+          <span className="traj-usage-meters">
+            <span className="traj-usage-meter is-cache" aria-hidden>
+              <i style={{ width: `${pct}%` }} />
+            </span>
+          </span>
+        ) : null}
       </span>
       <span className="tasks-usage-arrow">→</span>
       <span className="tasks-usage-output">{formatTokens(usage.outputTokens)}</span>
@@ -3715,7 +3719,7 @@ if (typeof document !== 'undefined') {
 .tasks-col-usage { width:96px; min-width:96px; color:var(--dsw-label-2); font-variant-numeric:tabular-nums; }
 .tasks-usage-empty { color:var(--dsw-label-4); }
 
-/* 消耗胶囊：与 Live/thread 的 .traj-usage 对齐的设计 */
+/* 消耗胶囊：与 Live/thread 的 .traj-usage 对齐（数字 + cache 细条） */
 .tasks-usage-capsule {
   display: inline-flex;
   align-items: center;
@@ -3724,7 +3728,7 @@ if (typeof document !== 'undefined') {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-/* 输入胶囊：绿色缓冲背景(缓存命中覆盖)+左侧内边距留白给 ∑ */
+/* 输入胶囊底板 */
 .tasks-usage-input {
   display: inline-flex;
   align-items: center;

@@ -1,4 +1,4 @@
-import { memo, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { memo, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { LuArrowUp } from 'react-icons/lu'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
@@ -48,21 +48,22 @@ function cacheHitPct(usage: TrajectoryUsage): number | null {
 function UsageCard({ usage, label = 'Token usage' }: { usage: TrajectoryUsage; label?: string }) {
   const total = usage.totalTokens ?? usage.inputTokens + usage.outputTokens
   const pct = cacheHitPct(usage)
-  const inStyle: CSSProperties | undefined =
-    pct != null
-      ? {
-          backgroundImage: `linear-gradient(90deg, rgba(34, 140, 90, 0.22) 0%, rgba(34, 140, 90, 0.22) ${pct}%, rgba(15, 17, 21, 0.04) ${pct}%, rgba(15, 17, 21, 0.04) 100%)`,
-        }
-      : undefined
   return (
     <section className="traj-usage-card" aria-label={label}>
       <div className="traj-usage-card-title">{label}</div>
       <div className="traj-usage-grid">
-        <div className="traj-usage-stat traj-usage-stat-in" style={inStyle}>
+        <div className="traj-usage-stat traj-usage-stat-in">
           <span>Input{pct != null ? ` · cache ${pct}%` : ''}</span>
           <strong>{formatTok(usage.inputTokens)}</strong>
           {usage.cacheReadTokens ? (
             <em className="traj-usage-stat-sub">cache {formatTok(usage.cacheReadTokens)}</em>
+          ) : null}
+          {pct != null ? (
+            <span className="traj-usage-meters">
+              <span className="traj-usage-meter is-cache" aria-hidden>
+                <i style={{ width: `${pct}%` }} />
+              </span>
+            </span>
           ) : null}
         </div>
         <div className="traj-usage-stat traj-usage-stat-out">

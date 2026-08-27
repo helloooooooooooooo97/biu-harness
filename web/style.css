@@ -18,6 +18,9 @@
   --dsw-danger: #cf2d56;
   --dsw-danger-soft: rgba(207, 45, 86, 0.14);
   --dsw-ok: #1f8a65;
+  /* usage 胶囊：历史占比灰蓝 / cache 鼠尾草，避免红绿叠层 */
+  --dsw-usage-hist: #8a97ab;
+  --dsw-usage-cache: #7d9b8a;
   --dsw-pick: #2383e2;
   --dsw-pick-fill: rgba(35, 131, 226, 0.18);
   --dsw-pick-stroke: rgba(35, 131, 226, 0.4);
@@ -1127,6 +1130,15 @@ body {
   color: var(--dsw-label-3);
 }
 
+.traj-usage-in-col {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .traj-usage-in-wrap {
   display: inline-flex;
   align-items: center;
@@ -1140,7 +1152,8 @@ body {
   line-height: 1;
 }
 
-.traj-usage-in-wrap.has-cache {
+.traj-usage-in-wrap.has-cache,
+.traj-usage-in-wrap.has-hist {
   color: var(--dsw-label);
 }
 
@@ -1150,7 +1163,7 @@ body {
 }
 
 .traj-usage-cache-pct {
-  color: var(--dsw-ok);
+  color: var(--dsw-usage-cache);
   font-size: 10px;
   font-weight: 700;
 }
@@ -1166,14 +1179,39 @@ body {
 }
 
 .traj-usage-hist-pct {
-  color: var(--dsw-danger);
+  color: var(--dsw-usage-hist);
   font-size: 10px;
   font-weight: 700;
 }
 
-/* 历史占比红色层与 cache 绿色层都由 .traj-usage-in-wrap 的 backgroundImage 多段渐变合成 */
-.traj-usage-in-wrap.has-hist {
-  color: var(--dsw-label);
+.traj-usage-meters {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 0 1px;
+}
+
+.traj-usage-meter {
+  display: block;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(242, 241, 237, 0.08);
+}
+
+.traj-usage-meter > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.traj-usage-meter.is-hist > i {
+  background: var(--dsw-usage-hist);
+}
+
+.traj-usage-meter.is-cache > i {
+  background: var(--dsw-usage-cache);
 }
 
 .traj-usage-card {
@@ -1525,7 +1563,7 @@ body {
 
 .traj-usage-stat-sub {
   margin-top: 2px;
-  color: var(--dsw-ok);
+  color: var(--dsw-usage-cache);
   font-size: 10px;
   font-style: normal;
   font-weight: 600;
