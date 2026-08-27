@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LuEraser } from 'react-icons/lu'
 import type { SlotProps } from '@biu/web-slots'
-import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
-import { type ChatNode } from '@biu/web-session-view'
+import { bindSessionView, type ChatNode, type SessionViewService } from '@biu/web-session-view'
 import { SessionProjectPanel } from './project-panel.tsx'
 
 type AgentMode = 'standard' | 'minimal'
