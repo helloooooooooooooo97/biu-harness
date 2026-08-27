@@ -357,12 +357,9 @@ function Shell(props: SlotProps) {
               {project ? (
                 <div className="chat-view-project" title={project.path ?? project.name}>
                   <FolderGlyph className="chat-view-project-icon" />
-                  {props.renderSlot('header-tools')}
                   <span className="chat-view-project-name">{project.name}</span>
                 </div>
-              ) : (
-                props.renderSlot('header-tools')
-              )}
+              ) : null}
             </div>
             <div className="chat-view-header-right">
               <button

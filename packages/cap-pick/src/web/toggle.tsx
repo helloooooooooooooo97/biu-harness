@@ -7,7 +7,7 @@ export function PickToggle({ pick }: { pick: PickService }) {
   return (
     <button
       type="button"
-      className={`chat-view-header-expand${picking ? ' is-active' : ''}`}
+      className={`project-chip project-chip-icon-only${picking ? ' is-active' : ''}`}
       title="选取对象"
       aria-label="选取对象"
       aria-pressed={picking}
@@ -15,7 +15,7 @@ export function PickToggle({ pick }: { pick: PickService }) {
       data-biu-ignore
       onClick={() => pick.toggle()}
     >
-      <LuMousePointer2 className="size-3.5" />
+      <LuMousePointer2 className="project-chip-icon" />
     </button>
   )
 }

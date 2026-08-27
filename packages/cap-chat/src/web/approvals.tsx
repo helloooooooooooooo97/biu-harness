@@ -148,6 +148,7 @@ export function ApprovalsRail(props: SlotProps) {
       >
         <div className="flex min-w-0 items-center gap-2">
           <SessionProjectPanel {...props} />
+          {props.renderSlot('header-tools')}
           <span className="sr-only">Agent mode</span>
           <div className="dock-seg">
             {([

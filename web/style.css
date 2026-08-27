@@ -694,6 +694,12 @@ body {
   font-weight: 700;
 }
 
+.project-chip.is-active {
+  border-color: color-mix(in srgb, var(--dsw-business) 45%, var(--dsw-border));
+  background: color-mix(in srgb, var(--dsw-business) 16%, transparent);
+  color: var(--dsw-business);
+}
+
 .dock-seg {
   display: flex;
   flex-shrink: 0;
