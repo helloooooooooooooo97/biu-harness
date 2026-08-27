@@ -112,11 +112,6 @@ export class PluginStoreService extends Service {
     return join(this.pluginDir, id)
   }
 
-  /** 插件自己落盘的数据，关闭保留，卸载才删。 */
-  dataPath(id: string) {
-    return join(dirname(this.dbPath), 'plugin-data', id)
-  }
-
   async create(input: PluginCreateInput) {
     const id = String(input.id ?? '').trim()
     const name = String(input.name ?? '').trim()
@@ -163,7 +158,7 @@ export class PluginStoreService extends Service {
     return items
   }
 
-  async install(id: string) {
+  async openPlugin(id: string) {
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
     const hit = await this.findPluginDir(id)
     if (!hit) throw new Error(`unknown store plugin: ${id}`)
@@ -173,21 +168,20 @@ export class PluginStoreService extends Service {
     return (await this.list()).find((item) => item.id === manifest.id)
   }
 
-  /** 关闭：停运行，代码和数据都留着。 */
+  /** 关闭：停运行，.plugin 代码留着。 */
   async close(id: string) {
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
     await this.hub().drop(id)
     this.setEnabled(id, false)
   }
 
-  /** 卸载：停运行，删 .plugin/<id>/ 和 .cordis/plugin-data/<id>/。 */
+  /** 卸载：停运行，并删掉 .plugin/<id>/ 代码。 */
   async uninstall(id: string) {
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
     await this.hub().drop(id)
     this.db.prepare('DELETE FROM store_plugins WHERE id = ?').run(id)
     const hit = await this.findPluginDir(id)
     if (hit) await rm(hit, { recursive: true, force: true })
-    await rm(this.dataPath(id), { recursive: true, force: true })
   }
 
   async restore() {
@@ -256,10 +250,10 @@ export async function apply(ctx: Context) {
   ctx.http.route('GET', '/api/plugin-store', async (route) => {
     route.send(200, { items: await store.list() })
   })
-  ctx.http.route('POST', '/api/plugin-store/install', async (route) => {
+  ctx.http.route('POST', '/api/plugin-store/open', async (route) => {
     const payload = (await route.json()) as { id?: string }
     try {
-      route.send(200, { item: await store.install(String(payload?.id ?? '')) })
+      route.send(200, { item: await store.openPlugin(String(payload?.id ?? '')) })
     } catch (error) {
       route.send(400, { error: String(error) })
     }

@@ -58,10 +58,10 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
     return () => window.clearInterval(timer)
   }, [refresh])
 
-  async function enable(id: string) {
+  async function openPlugin(id: string) {
     setBusy(`on:${id}`)
     try {
-      await readJson('/api/plugin-store/install', {
+      await readJson('/api/plugin-store/open', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id }),
@@ -91,7 +91,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
   }
 
   async function uninstall(id: string) {
-    if (!window.confirm(`卸载「${id}」？代码和数据都会删掉，关闭则只停运行。`)) return
+    if (!window.confirm(`卸载「${id}」？会删掉 .plugin/${id}/ 全部代码。关闭只停运行、不删代码。`)) return
     setBusy(`rm:${id}`)
     try {
       await readJson('/api/plugin-store/uninstall', {
@@ -145,7 +145,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                 <span className="font-mono text-[11px] text-[var(--dsw-label-3)]">{item.id}</span>
                 {item.enabled ? (
                   <span className="rounded-[4px] bg-[var(--dsw-ok)]/15 px-1.5 py-px text-[10px] font-medium text-[var(--dsw-ok)]">
-                    {item.running ? '运行中' : '已开启'}
+                    {item.running ? '运行中' : '已打开'}
                   </span>
                 ) : (
                   <span className="rounded-[4px] bg-[var(--dsw-hover)] px-1.5 py-px text-[10px] text-[var(--dsw-label-3)]">
@@ -175,12 +175,12 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                 <button
                   type="button"
                   className="rounded-[8px] bg-[var(--dsw-business)] px-3 py-1.5 text-[12px] font-medium text-[var(--dsw-bg)] hover:opacity-90"
-                  data-testid={`plugin-store-enable-${item.id}`}
-                  data-biu-action="enable"
+                  data-testid={`plugin-store-open-${item.id}`}
+                  data-biu-action="open"
                   disabled={Boolean(busy?.endsWith(`:${item.id}`))}
-                  onClick={() => void enable(item.id)}
+                  onClick={() => void openPlugin(item.id)}
                 >
-                  {busy === `on:${item.id}` ? '开启中…' : '开启'}
+                  {busy === `on:${item.id}` ? '打开中…' : '打开'}
                 </button>
               )}
               <button
