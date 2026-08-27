@@ -393,7 +393,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                               <div
                                 role="button"
                                 tabIndex={0}
-                                className="flex min-h-[32px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-[6px] text-left text-[14px] font-medium tracking-normal text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
+                                className="flex min-h-[32px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-[6px] text-left text-[14px] font-medium tracking-normal text-[var(--dsw-label-3)] outline-none hover:text-[var(--dsw-label)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
                                 title={group.path ?? group.label}
                                 aria-expanded={!collapsed}
                                 onClick={() => toggleProjectGroup(group.key)}
