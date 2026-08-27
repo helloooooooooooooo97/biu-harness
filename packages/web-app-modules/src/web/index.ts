@@ -13,7 +13,7 @@ export type AppModule = {
   path: string
   description?: string
   order?: number
-  Icon?: ComponentType<{ className?: string }>
+  Icon?: ComponentType<{ className?: string; size?: number; strokeWidth?: number }>
 }
 
 const AGENT: AppModule = {

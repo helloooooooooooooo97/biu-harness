@@ -3506,18 +3506,6 @@ export const inject = ['slots', 'appModules', 'snapshot']
 const tasksModuleProps = { moduleId: 'tasks' }
 const tasksInspectorProps = { tabId: 'tasks', tabLabel: '任务', tabIcon: LuClipboardList }
 
-function TasksRailIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className ?? 'size-5'} fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M9 6h11M9 12h11M9 18h11M4.5 6.5l.8.8L7 5.5M4.5 12.5l.8.8L7 11.5M4.5 18.5l.8.8L7 17.5"
-      />
-    </svg>
-  )
-}
-
 type AppModulesService = {
   register: (mod: {
     id: string
@@ -3540,7 +3528,7 @@ export function apply(ctx: Context) {
     path: '/tasks',
     description: 'Task table and board',
     order: 20,
-    Icon: TasksRailIcon,
+    Icon: LuListChecks,
   })
   const tasksView = new TasksViewService(ctx)
   // 依赖 snapshot 总线：注册本插件关心的 'tasks' 消息（Agent 远程切换看板事件），由总线转发

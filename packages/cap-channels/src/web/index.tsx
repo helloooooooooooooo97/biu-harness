@@ -402,15 +402,6 @@ export const inject = ['slots', 'appModules']
 
 const channelsModuleProps = { moduleId: 'channels' }
 
-function ChannelsRailIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className ?? 'size-5'} fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h10M7 3v4M11 3v4M15 3v4M19 3v4" />
-      <circle cx="19" cy="18" r="2.4" />
-    </svg>
-  )
-}
-
 type AppModulesService = {
   register: (mod: {
     id: string
@@ -433,7 +424,7 @@ export function apply(ctx: Context) {
     path: '/channels',
     description: '内网分布式群聊',
     order: 30,
-    Icon: ChannelsRailIcon,
+    Icon: LuHash,
   })
   slots.place('app-modules', ChannelModulePage, {
     key: 'channels-module',

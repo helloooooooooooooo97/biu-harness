@@ -338,7 +338,7 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
     >
       <div className="usage-panel-head">
         <div className="usage-panel-title">
-          <LuCoins className="usage-panel-title-icon" aria-hidden />
+          <LuCoins size={20} strokeWidth={2} aria-hidden />
           Token usage
         </div>
         <div className="usage-panel-legend">

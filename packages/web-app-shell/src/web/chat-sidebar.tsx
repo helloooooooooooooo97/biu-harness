@@ -18,16 +18,18 @@ import { useSidebarCollapseStore } from '@biu/web-session-view'
 import { SidebarMascot } from '@biu/web-mascot'
 import { resolveSessionMascot } from '@biu/web-mascot'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
+import { chromeIcon } from './chrome-icon.ts'
 import {
   LuChevronDown,
   LuChevronRight,
   LuFolderTree,
   LuPanelLeftClose,
   LuPlus,
-  LuStar,
   LuRadio,
+  LuStar,
   LuTag,
   LuTags,
+  LuTrash2,
 } from 'react-icons/lu'
 
 /** 项目/标签分组视图的持久化 key。 */
@@ -125,7 +127,7 @@ const SessionRow = memo(function SessionRow({
           onPin(item)
         }}
       >
-        <LuStar className={`size-5${pinned ? ' text-[#f5b700]' : ''}`} fill={pinned ? 'currentColor' : 'none'} />
+        <LuStar {...chromeIcon} className={pinned ? 'text-[#f5b700]' : undefined} fill={pinned ? 'currentColor' : 'none'} />
       </button>
       <button
         type="button"
@@ -138,9 +140,7 @@ const SessionRow = memo(function SessionRow({
           onDelete(item)
         }}
       >
-        <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M10 7V5h4v2m-6 3v8m4-8v8m-7-11 1 14h10l1-14" />
-        </svg>
+        <LuTrash2 {...chromeIcon} />
       </button>
     </div>
   )
@@ -267,7 +267,7 @@ export const ChatSidebar = memo(function ChatSidebar({
           aria-label="Collapse sidebar"
           onClick={onCollapse}
         >
-          <LuPanelLeftClose className="size-5" />
+          <LuPanelLeftClose {...chromeIcon} />
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
@@ -280,7 +280,7 @@ export const ChatSidebar = memo(function ChatSidebar({
             onClick={() => createChat({ type: 'chat' })}
           >
             <span className="app-side-actions-icon" aria-hidden>
-              <LuPlus className="size-5" />
+              <LuPlus {...chromeIcon} />
             </span>
             <span className="app-side-actions-label">添加聊天</span>
           </button>
@@ -292,7 +292,7 @@ export const ChatSidebar = memo(function ChatSidebar({
             onClick={() => createChat({ type: 'live' })}
           >
             <span className="app-side-actions-icon" aria-hidden>
-              <LuRadio className="size-5" />
+              <LuRadio {...chromeIcon} />
             </span>
             <span className="app-side-actions-label">新建 Live</span>
           </button>
@@ -334,7 +334,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                           className={`grid h-[20px] w-5 place-items-center rounded-[6px] ${groupBy === 'project' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
                           onClick={() => changeGroupBy('project')}
                         >
-                          <LuFolderTree className="size-5" />
+                          <LuFolderTree {...chromeIcon} />
                         </button>
                         <button
                           type="button"
@@ -343,7 +343,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                           className={`grid h-[20px] w-5 place-items-center rounded-[6px] ${groupBy === 'tag' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
                           onClick={() => changeGroupBy('tag')}
                         >
-                          <LuTags className="size-5" />
+                          <LuTags {...chromeIcon} />
                         </button>
                       </div>
                     ) : null}
@@ -387,20 +387,20 @@ export const ChatSidebar = memo(function ChatSidebar({
                                 <span className="sidebar-rail-icon sidebar-group-fold" aria-hidden>
                                   <span className="sidebar-group-fold-face">
                                     {group.kind === 'pinned' ? (
-                                      <LuStar className="size-5 text-[#f5b700]" fill="currentColor" />
+                                      <LuStar {...chromeIcon} className="text-[#f5b700]" fill="currentColor" />
                                     ) : group.kind === 'tag' ? (
-                                      <LuTag className="size-5 opacity-80" />
+                                      <LuTag {...chromeIcon} className="opacity-80" />
                                     ) : isUngrouped ? (
                                       <span className="text-[11px] opacity-70">—</span>
                                     ) : (
-                                      <FolderGlyph className="size-5 opacity-80" />
+                                      <FolderGlyph className="opacity-80" />
                                     )}
                                   </span>
                                   <span className="sidebar-group-fold-chevron">
                                     {collapsed ? (
-                                      <LuChevronRight className="size-5 opacity-80" />
+                                      <LuChevronRight {...chromeIcon} className="opacity-80" />
                                     ) : (
-                                      <LuChevronDown className="size-5 opacity-80" />
+                                      <LuChevronDown {...chromeIcon} className="opacity-80" />
                                     )}
                                   </span>
                                 </span>
@@ -420,7 +420,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                       })
                                     }}
                                   >
-                                    <LuPlus className="size-5" />
+                                    <LuPlus {...chromeIcon} />
                                   </button>
                                 ) : null}
                               </div>
