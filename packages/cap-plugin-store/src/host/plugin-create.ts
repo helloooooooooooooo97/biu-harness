@@ -1,12 +1,11 @@
-import { mkdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
 import type { Context } from 'cordis'
+import type { PluginStoreService } from './index.ts'
 
 export type PluginCreateInput = {
   id: string
   name: string
   blurb?: string
-  hostJs: string
+  hostJs?: string
   webJs?: string
 }
 
@@ -31,47 +30,18 @@ export async function compileStoreModule(source: string, kind: 'host' | 'web') {
   return code.endsWith('\n') ? code : `${code}\n`
 }
 
-function isSafeId(id: string) {
-  return /^[a-z][a-z0-9-]{1,40}$/.test(id)
-}
-
-export function catalogSlug(id: string) {
-  return id.replace(/^store-/, '')
-}
-
-/** 把商店插件三件套写进仓库根 .biu/plugin-catalog/<slug>/（没有 .biu 则创建）。 */
-export async function writePluginToCatalog(catalogDir: string, input: PluginCreateInput) {
-  const id = String(input.id ?? '').trim()
-  const name = String(input.name ?? '').trim()
-  const hostJs = String(input.hostJs ?? '').trim()
-  if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
-  if (!name) throw new Error('plugin name required')
-  if (!hostJs) throw new Error('host.js is empty')
-  const dest = join(catalogDir, catalogSlug(id))
-  await mkdir(dest, { recursive: true })
-  await writeFile(
-    join(dest, 'manifest.json'),
-    `${JSON.stringify({ id, name, blurb: String(input.blurb ?? '').trim() || name }, null, 2)}\n`,
-  )
-  await writeFile(join(dest, 'host.js'), await compileStoreModule(hostJs, 'host'))
-  const webJs = input.webJs != null ? String(input.webJs).trim() : ''
-  if (webJs) {
-    await writeFile(join(dest, 'web.js'), await compileStoreModule(webJs, 'web'))
-  }
-  return { id, catalogPath: dest }
-}
-
 const PLUGIN_CREATE_DESCRIPTION = [
-  '把 Cordis 商店插件写入仓库根 .biu/plugin-catalog/<slug>/（manifest.json + host.js，可选 web.js）。不要用 fs_write/bash 改 packages/ 或 cordis.plugins.json。',
-  '没有 .biu/plugin-catalog 时商店显示「没有插件」。本工具会建目录。可交 TS/TSX：当前 host 进程内 esbuild.transform 成 ESM 再落盘，不重启主进程、不跑 Vite。',
-  '写完出现在商店，需用户点「安装」才会 hub.adopt 运行。「卸载」只停运行副本（.biu/plugin-store），原文件留在 plugin-catalog。',
+  '把 Cordis 商店插件写入 .cordis/plugins.sqlite（与 tasks 插件同一套 node:sqlite）。不要用 fs_write/bash 改 packages/ 或 cordis.plugins.json，也不要写 .biu 目录。',
+  'hostJs 与 webJs 按需二选一即可：只要后端（路由/服务）就只交 hostJs；只要前端 UI 就只交 webJs；两边都要才两个都交。至少交一个。',
+  '库空时商店显示「没有插件」。本工具 INSERT/UPDATE 一行。可交 TS/TSX：当前 host 进程内 esbuild.transform 成 ESM 再入库，不重启主进程、不跑 Vite。',
+  '写完出现在商店，需用户点「安装」才会把 enabled 置 1 并运行。「卸载」只把 enabled 置 0 并停运行，SQLite 行和代码保留。',
   '契约：id 与 export const name 必须相同。Host inject 只能写真正用到的服务（http 等）。Web inject 一般是 ["slots"]。',
-  '副作用必须走 ctx，这样卸载时 fiber.dispose 会拆掉。Host：ctx.http.route。Web：ctx.slots.place("plugin-store-extras", Comp, { key: 唯一且稳定 })。禁止 document/window 全局挂载、禁止 setInterval 不清理、禁止 import "react" / "@biu/..." / 相对路径。',
+  '副作用必须走 ctx。Host：ctx.http.route。Web：ctx.slots.place("plugin-store-extras", Comp, { key: 唯一且稳定 })。禁止 import "react" / "@biu/..." / 相对路径。',
   'Host 最小示例：export const name = "store-echo"; export const inject = ["http"]; export function apply(ctx) { ctx.http.route("GET", "/api/store-echo", (route) => { route.send(200, { ok: true }); }); }',
   'Web 最小示例：export const name = "store-echo-web"; export const inject = ["slots"]; function Banner() { return <div>echo 已运行</div>; } export function apply(ctx) { ctx.slots.place("plugin-store-extras", Banner, { key: "store-echo-banner", order: 10 }); }',
 ].join(' ')
 
-export function registerPluginCreate(ctx: Context, catalogDir: string) {
+export function registerPluginCreate(ctx: Context, store: PluginStoreService) {
   ctx.tools.register({
     name: 'plugin_create',
     description: PLUGIN_CREATE_DESCRIPTION,
@@ -87,22 +57,22 @@ export function registerPluginCreate(ctx: Context, catalogDir: string) {
         hostJs: {
           type: 'string',
           description:
-            'Host 半边完整源码（可 TS）。必须是单一 ESM 文件：export const name（等于 id）、export const inject（数组，只用到的服务如 http）、export function apply(ctx)。副作用只能挂在 ctx 上（如 ctx.http.route）。禁止 import 相对路径、禁止 import react、禁止 import @biu/*。',
+            '可选。需要后端时交 Host 源码（可 TS）：export const name（等于 id）、export const inject、export function apply(ctx)。不要为了凑数写空 host。',
         },
         webJs: {
           type: 'string',
           description:
-            '可选 Client 半边（可 TSX）。export const name、export const inject=[\'slots\']、export function apply(ctx)。UI 必须 ctx.slots.place(\'plugin-store-extras\', Component, { key })，卸载才能收回。JSX 可用；不要 import react 或任何 npm 包。禁止直接 document.body.append。',
+            "可选。需要前端时交 Client 源码（可 TSX）：export const name、export const inject=['slots']、export function apply(ctx)。UI 必须 ctx.slots.place('plugin-store-extras', Component, { key })。不要为了凑数写空 web。",
         },
       },
-      required: ['id', 'name', 'hostJs'],
+      required: ['id', 'name'],
     },
     execute: async (args) => {
-      const result = await writePluginToCatalog(catalogDir, {
+      const result = await store.create({
         id: String(args.id ?? ''),
         name: String(args.name ?? ''),
         blurb: args.blurb != null ? String(args.blurb) : undefined,
-        hostJs: String(args.hostJs ?? ''),
+        hostJs: args.hostJs != null ? String(args.hostJs) : undefined,
         webJs: args.webJs != null ? String(args.webJs) : undefined,
       })
       return JSON.stringify(result)
