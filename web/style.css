@@ -626,7 +626,13 @@ body {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 8px;
+  min-height: 32px;
   padding: 0 8px;
+  border-radius: 6px;
+}
+
+.sidebar-group-head:hover {
+  background: var(--dsw-hover);
 }
 
 .sidebar-group-head > [role='button'] {
@@ -644,6 +650,10 @@ body {
   margin: 0 0 1px;
   padding: 0 8px;
   border-radius: 6px;
+}
+
+.sidebar-section-head:hover {
+  background: var(--dsw-hover);
 }
 
 /* 数字在左、16px 聊天气泡贴右；各行图标落在同一条垂直线上 */
