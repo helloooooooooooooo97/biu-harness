@@ -22,7 +22,7 @@ test('create compiles host source straight into .plugin/<id>/', async () => {
     const ctx = new Context()
     stubHub(ctx)
     const pluginDir = join(dir, '.plugin')
-    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'index.json'), join(dir, '.plugin-dev')).open()
+    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
     await store.create({
       id: 'store-echo',
       name: 'Echo',
@@ -47,7 +47,7 @@ test('initSandbox writes source; pack bundles into .plugin/<id>/', async () => {
     stubHub(ctx)
     const pluginDir = join(dir, '.plugin')
     const sandboxDir = join(dir, '.plugin-dev')
-    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'index.json'), sandboxDir).open()
+    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'store.json'), sandboxDir).open()
     const result = await store.initSandbox({
       id: 'store-echo',
       name: 'Echo',
@@ -78,7 +78,7 @@ test('pack bundles relative imports from sandbox', async () => {
     const store = new PluginStoreService(
       ctx,
       join(dir, '.plugin'),
-      join(dir, 'index.json'),
+      join(dir, 'store.json'),
       join(dir, '.plugin-dev'),
     ).open()
     await store.initSandbox({ id: 'store-math', name: 'Math' })
@@ -108,7 +108,7 @@ test('registers plugin_create, plugin_sandbox, plugin_pack', () => {
   const store = new PluginStoreService(
     ctx,
     '/tmp/plugin-store-tools/.plugin',
-    '/tmp/plugin-store-tools/index.json',
+    '/tmp/plugin-store-tools/store.json',
     '/tmp/plugin-store-tools/.plugin-dev',
   )
   registerPluginCreate(ctx, store)

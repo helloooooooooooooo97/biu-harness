@@ -53,7 +53,7 @@ export function defaultSandboxDir() {
 }
 
 export function defaultStatePath() {
-  return process.env.BIU_PLUGIN_STATE || join(process.cwd(), '.plugin', 'index.json')
+  return process.env.BIU_PLUGIN_STATE || join(process.cwd(), '.plugin', 'store.json')
 }
 
 function isSafeId(id: string) {

@@ -1,7 +1,7 @@
 node_modules/
 dist/
 .cordis/
-.plugin/index.json
+.plugin/store.json
 .plugin-dev/*
 !.plugin-dev/store-heavy-ping/
 !.plugin-dev/store-heavy-ping/**
