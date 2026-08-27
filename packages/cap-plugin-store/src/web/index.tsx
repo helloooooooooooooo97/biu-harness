@@ -51,6 +51,11 @@ function PluginStorePage({ slots }: { slots: SlotsService }) {
 
   useEffect(() => {
     void refresh()
+    const timer = window.setInterval(() => {
+      if (document.hidden) return
+      void refresh()
+    }, 2000)
+    return () => window.clearInterval(timer)
   }, [refresh])
 
   async function install(id: string) {
