@@ -88,7 +88,7 @@ test('install copies catalog js and adopt; uninstall drops it', async () => {
     await store.uninstall('store-echo')
     assert.deepEqual(dropped, ['store-echo'])
     const after = (await store.list()).find((item) => item.id === 'store-echo')
-    assert.equal(after?.installed, false)
+    assert.equal(after, undefined)
   } finally {
     await rm(catalogDir, { recursive: true, force: true })
     await rm(dataDir, { recursive: true, force: true })
