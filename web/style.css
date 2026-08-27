@@ -580,8 +580,8 @@ body {
 
 .sidebar-rail-icon {
   display: grid;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   place-items: center;
 }
@@ -593,8 +593,8 @@ body {
 .sidebar-group-fold-face,
 .sidebar-group-fold-chevron {
   display: grid;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   place-items: center;
 }
 
@@ -618,7 +618,7 @@ body {
 }
 
 .sidebar-session-list .chat-session-row > a {
-  padding-left: 16px;
+  padding-left: 20px;
 }
 
 .sidebar-group-head {
@@ -678,8 +678,8 @@ body {
 
 .sidebar-view-switch-btn svg {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 
 .sidebar-view-switch-btn:hover {

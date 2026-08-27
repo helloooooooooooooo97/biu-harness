@@ -1,6 +1,6 @@
-import { FolderIcon } from '@heroicons/react/16/solid'
+import { FolderIcon } from '@heroicons/react/20/solid'
 
-/** 与侧栏其它 Heroicons 16 solid 对齐。 */
+/** 文件夹：默认 16px；侧栏项目行会再加 size-5。 */
 export function FolderGlyph({ className }: { className?: string }) {
   return <FolderIcon className={['size-4 shrink-0', className].filter(Boolean).join(' ')} aria-hidden />
 }

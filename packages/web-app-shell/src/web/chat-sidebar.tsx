@@ -19,20 +19,17 @@ import { useSidebarCollapseStore } from '@biu/web-session-view'
 import { SidebarMascot } from '@biu/web-mascot'
 import { resolveSessionMascot } from '@biu/web-mascot'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
-import { chromeIcon, chromeIconClass } from './chrome-icon.ts'
+import { chromeIcon, chromeIconClass, groupIcon, groupIconClass } from './chrome-icon.ts'
 import {
   ChevronDownIcon,
   ChevronRightIcon,
-  FolderIcon,
-  FolderMinusIcon,
-  BookmarkSlashIcon,
   ChevronDoubleLeftIcon,
   PlusIcon,
   SignalIcon,
   StarIcon,
-  TagIcon,
   TrashIcon,
 } from '@heroicons/react/16/solid'
+import { FolderIcon as FolderGroupIcon, TagIcon as TagGroupIcon, FolderMinusIcon as FolderMinusGroupIcon, BookmarkSlashIcon as BookmarkSlashGroupIcon } from '@heroicons/react/20/solid'
 
 /** 项目/标签分组视图的持久化 key。 */
 const GROUP_BY_KEY = 'cordis.sidebar.groupBy'
@@ -56,13 +53,13 @@ function SessionTagBadges({ tags }: { tags?: string[] }) {
       {shown.map((tag) => (
         <span
           key={tag}
-          className="max-w-[56px] truncate rounded-[4px] bg-[var(--dsw-hover-weak,var(--dsw-hover))] px-1 py-px text-[9px] leading-[13px] font-medium text-[var(--dsw-label-3)]"
+          className="max-w-[72px] truncate rounded-[4px] bg-[var(--dsw-hover-weak,var(--dsw-hover))] px-1 py-px text-[11px] leading-[15px] font-medium text-[var(--dsw-label-3)]"
         >
           {tag}
         </span>
       ))}
       {extra > 0 ? (
-        <span className="shrink-0 rounded-[4px] px-0.5 py-px text-[9px] leading-[13px] font-medium text-[var(--dsw-label-3)] opacity-80">
+        <span className="shrink-0 rounded-[4px] px-0.5 py-px text-[11px] leading-[15px] font-medium text-[var(--dsw-label-3)] opacity-80">
           +{extra}
         </span>
       ) : null}
@@ -340,7 +337,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                           className={`sidebar-view-switch-btn${groupBy === 'project' ? ' is-on' : ''}`}
                           onClick={() => changeGroupBy('project')}
                         >
-                          <FolderIcon {...chromeIcon} />
+                          <FolderGroupIcon {...groupIcon} />
                         </button>
                         <button
                           type="button"
@@ -349,7 +346,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                           className={`sidebar-view-switch-btn${groupBy === 'tag' ? ' is-on' : ''}`}
                           onClick={() => changeGroupBy('tag')}
                         >
-                          <TagIcon {...chromeIcon} />
+                          <TagGroupIcon {...groupIcon} />
                         </button>
                       </div>
                     ) : null}
@@ -395,13 +392,13 @@ export const ChatSidebar = memo(function ChatSidebar({
                                     {group.kind === 'pinned' ? (
                                       <StarIcon className={chromeIconClass('text-[#f5b700]')} />
                                     ) : group.key === UNGROUPED_PROJECT_KEY ? (
-                                      <FolderMinusIcon className={chromeIconClass('opacity-80')} />
+                                      <FolderMinusGroupIcon className={groupIconClass('opacity-80')} />
                                     ) : group.key === UNGROUPED_TAG_KEY ? (
-                                      <BookmarkSlashIcon className={chromeIconClass('opacity-80')} />
+                                      <BookmarkSlashGroupIcon className={groupIconClass('opacity-80')} />
                                     ) : group.kind === 'tag' ? (
-                                      <TagIcon className={chromeIconClass('opacity-80')} />
+                                      <TagGroupIcon className={groupIconClass('opacity-80')} />
                                     ) : (
-                                      <FolderGlyph className="opacity-80" />
+                                      <FolderGlyph className="size-5 opacity-80" />
                                     )}
                                   </span>
                                   <span className="sidebar-group-fold-chevron">
