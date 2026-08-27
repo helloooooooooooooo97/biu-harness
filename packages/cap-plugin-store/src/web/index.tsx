@@ -99,7 +99,8 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
 
   const pending = items.find((item) => item.id === pendingUninstall) ?? null
   const iconBtn =
-    'grid size-6 shrink-0 cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] disabled:opacity-40'
+    'inline-grid size-6 shrink-0 cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent p-0 leading-none text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] disabled:opacity-40'
+  const actionIcon = { size: 16, strokeWidth: 2, className: 'block' } as const
 
   return (
     <div
@@ -128,7 +129,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
         {items.map((item) => (
           <li
             key={item.id}
-            className="flex items-start justify-between gap-2 rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-2.5 py-2"
+            className="flex items-center justify-between gap-2 rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-2.5 py-2"
             data-testid={`plugin-store-card-${item.id}`}
             data-biu-kind="plugin"
             data-biu-id={item.id}
@@ -156,7 +157,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                 </p>
               ) : null}
             </div>
-            <div className="flex shrink-0 items-center gap-px pt-px">
+            <div className="flex shrink-0 items-center self-center gap-px">
               {item.enabled ? (
                 <button
                   type="button"
@@ -168,7 +169,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                   disabled={Boolean(busy?.endsWith(`:${item.id}`))}
                   onClick={() => void closePlugin(item.id)}
                 >
-                  <LuSquare className="size-3" />
+                  <LuSquare {...actionIcon} />
                 </button>
               ) : (
                 <button
@@ -181,7 +182,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                   disabled={Boolean(busy?.endsWith(`:${item.id}`))}
                   onClick={() => void openPlugin(item.id)}
                 >
-                  <LuPlay className="size-3" />
+                  <LuPlay {...actionIcon} />
                 </button>
               )}
               <button
@@ -193,7 +194,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                 disabled={Boolean(busy?.endsWith(`:${item.id}`))}
                 onClick={() => setPendingUninstall(item.id)}
               >
-                <LuTrash2 className="size-3" />
+                <LuTrash2 {...actionIcon} />
               </button>
             </div>
           </li>
