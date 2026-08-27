@@ -2039,6 +2039,99 @@ body {
   line-height: 1;
 }
 
+.tool-call {
+  width: 100%;
+  align-self: stretch;
+}
+
+.tool-call-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+.tool-call-toggle {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.tool-call-toggle:hover {
+  background: var(--dsw-hover);
+}
+
+.tool-call-chevron {
+  display: grid;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  place-items: center;
+  color: var(--dsw-label-3);
+}
+
+.tool-call-title {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dsw-label);
+}
+
+.tool-call-summary {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dsw-label-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-call-status,
+.tool-call-inspect {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-label-3);
+}
+
+.tool-call-status.is-ok {
+  color: var(--dsw-ok);
+}
+
+.tool-call-status.is-fail {
+  color: var(--dsw-danger);
+}
+
+.tool-call-status.is-running {
+  color: var(--dsw-label-3);
+}
+
+.tool-call-inspect {
+  cursor: pointer;
+}
+
+.tool-call-inspect:hover {
+  background: var(--dsw-hover);
+  color: var(--dsw-label);
+}
+
 .chat-reply-actions {
   display: inline-flex;
   height: 100%;

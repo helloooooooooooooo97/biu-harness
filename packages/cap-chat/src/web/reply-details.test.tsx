@@ -78,6 +78,9 @@ describe('Details collapse UI', () => {
     fireEvent.click(screen.getByTestId('details-toggle'))
     expect(screen.getByTestId('reply-details')).toHaveProperty('hidden', false)
     expect(screen.getByText('read_file')).toBeTruthy()
+    expect(screen.getByLabelText('成功')).toBeTruthy()
+    expect(screen.getByLabelText('在轨迹中查看')).toBeTruthy()
+    expect(screen.queryByText('Debug')).toBeNull()
     expect(screen.getByTestId('user-tool-count').textContent).toBe('1')
     // 展开后最终 Message 所在 step 的统计也要有
     expect(screen.getByRole('group', { name: 'Step 2' })).toBeTruthy()

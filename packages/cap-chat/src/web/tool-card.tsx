@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Image } from 'antd'
+import {
+  LuBug,
+  LuChevronDown,
+  LuChevronRight,
+  LuCircleCheck,
+  LuCircleX,
+  LuLoaderCircle,
+} from 'react-icons/lu'
 import type { ChatToolPart } from '@biu/web-session-view'
 import {
   diffStats,
@@ -214,32 +222,50 @@ export function ToolCard({
   const collapsedArtifacts =
     !open && formatted?.kind === 'bash' && formatted.artifacts?.length ? formatted.artifacts : null
 
+  const status = !node.result
+    ? {
+        label: '运行中',
+        className: 'tool-call-status is-running',
+        icon: <LuLoaderCircle className="size-3.5 animate-spin" aria-hidden />,
+      }
+    : node.result.ok
+      ? {
+          label: '成功',
+          className: 'tool-call-status is-ok',
+          icon: <LuCircleCheck className="size-3.5" aria-hidden />,
+        }
+      : {
+          label: '失败',
+          className: 'tool-call-status is-fail',
+          icon: <LuCircleX className="size-3.5" aria-hidden />,
+        }
+
   return (
-    <div className="w-full self-stretch">
-      <div className="flex items-center gap-1">
+    <div className="tool-call">
+      <div className="tool-call-head">
         <button
           type="button"
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-[12px] px-2 py-1.5 text-left text-[13px] hover:bg-[var(--dsw-hover)]"
+          className="tool-call-toggle"
+          aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
         >
-          <span className="grid size-4 place-items-center text-[10px] text-[var(--dsw-label-3)]">{open ? '▾' : '▸'}</span>
-          <span className="font-medium text-[var(--dsw-label)]">{title}</span>
-          <span className="text-[var(--dsw-label-3)]">·</span>
-          <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-[var(--dsw-label-3)]">{summary}</span>
-          {node.result ? (
-            <span className={node.result.ok ? 'text-[var(--dsw-ok)]' : 'text-[var(--dsw-danger)]'}>
-              {node.result.ok ? 'ok' : 'fail'}
-            </span>
-          ) : (
-            <span className="text-[var(--dsw-label-3)]">running</span>
-          )}
+          <span className="tool-call-chevron" aria-hidden>
+            {open ? <LuChevronDown className="size-3.5" /> : <LuChevronRight className="size-3.5" />}
+          </span>
+          <span className="tool-call-title">{title}</span>
+          <span className="tool-call-summary">{summary}</span>
         </button>
+        <span className={status.className} title={status.label} aria-label={status.label}>
+          {status.icon}
+        </span>
         <button
           type="button"
-          className="shrink-0 rounded-[8px] px-2 py-1 text-[11px] text-[var(--dsw-business)] hover:bg-[var(--dsw-business-soft)]"
+          className="tool-call-inspect"
+          title="在轨迹中查看"
+          aria-label="在轨迹中查看"
           onClick={() => onInspect(node.callId)}
         >
-          Debug
+          <LuBug className="size-3.5" aria-hidden />
         </button>
       </div>
       {!open && previewLines && previewLines.length > 0 ? (
