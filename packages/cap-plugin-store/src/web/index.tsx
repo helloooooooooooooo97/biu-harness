@@ -11,7 +11,7 @@ type StoreListing = {
   id: string
   name: string
   blurb: string
-  installed: boolean
+  enabled: boolean
   running: boolean
 }
 
@@ -58,8 +58,8 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
     return () => window.clearInterval(timer)
   }, [refresh])
 
-  async function install(id: string) {
-    setBusy(id)
+  async function enable(id: string) {
+    setBusy(`on:${id}`)
     try {
       await readJson('/api/plugin-store/install', {
         method: 'POST',
@@ -74,8 +74,25 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
     }
   }
 
+  async function closePlugin(id: string) {
+    setBusy(`off:${id}`)
+    try {
+      await readJson('/api/plugin-store/close', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      await refresh()
+    } catch (err) {
+      setError(String(err))
+    } finally {
+      setBusy(null)
+    }
+  }
+
   async function uninstall(id: string) {
-    setBusy(id)
+    if (!window.confirm(`卸载「${id}」？代码和数据都会删掉，关闭则只停运行。`)) return
+    setBusy(`rm:${id}`)
     try {
       await readJson('/api/plugin-store/uninstall', {
         method: 'POST',
@@ -126,13 +143,13 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
               <div className="flex items-center gap-2">
                 <span className="text-[14px] font-medium text-[var(--dsw-label)]">{item.name}</span>
                 <span className="font-mono text-[11px] text-[var(--dsw-label-3)]">{item.id}</span>
-                {item.installed ? (
+                {item.enabled ? (
                   <span className="rounded-[4px] bg-[var(--dsw-ok)]/15 px-1.5 py-px text-[10px] font-medium text-[var(--dsw-ok)]">
-                    {item.running ? '运行中' : '已安装'}
+                    {item.running ? '运行中' : '已开启'}
                   </span>
                 ) : (
                   <span className="rounded-[4px] bg-[var(--dsw-hover)] px-1.5 py-px text-[10px] text-[var(--dsw-label-3)]">
-                    未安装
+                    已关闭
                   </span>
                 )}
               </div>
@@ -142,29 +159,41 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                 </p>
               ) : null}
             </div>
-            {item.installed ? (
+            <div className="flex shrink-0 items-center gap-1.5">
+              {item.enabled ? (
+                <button
+                  type="button"
+                  className="rounded-[8px] border border-[var(--dsw-border)] px-3 py-1.5 text-[12px] text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]"
+                  data-testid={`plugin-store-close-${item.id}`}
+                  data-biu-action="close"
+                  disabled={Boolean(busy?.endsWith(`:${item.id}`))}
+                  onClick={() => void closePlugin(item.id)}
+                >
+                  {busy === `off:${item.id}` ? '关闭中…' : '关闭'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="rounded-[8px] bg-[var(--dsw-business)] px-3 py-1.5 text-[12px] font-medium text-[var(--dsw-bg)] hover:opacity-90"
+                  data-testid={`plugin-store-enable-${item.id}`}
+                  data-biu-action="enable"
+                  disabled={Boolean(busy?.endsWith(`:${item.id}`))}
+                  onClick={() => void enable(item.id)}
+                >
+                  {busy === `on:${item.id}` ? '开启中…' : '开启'}
+                </button>
+              )}
               <button
                 type="button"
-                className="shrink-0 rounded-[8px] border border-[var(--dsw-border)] px-3 py-1.5 text-[12px] text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]"
+                className="rounded-[8px] border border-[var(--dsw-border)] px-3 py-1.5 text-[12px] text-[var(--dsw-danger)] hover:bg-[var(--dsw-hover)]"
                 data-testid={`plugin-store-uninstall-${item.id}`}
                 data-biu-action="uninstall"
-                disabled={busy === item.id}
+                disabled={Boolean(busy?.endsWith(`:${item.id}`))}
                 onClick={() => void uninstall(item.id)}
               >
-                {busy === item.id ? '卸载中…' : '卸载'}
+                {busy === `rm:${item.id}` ? '卸载中…' : '卸载'}
               </button>
-            ) : (
-              <button
-                type="button"
-                className="shrink-0 rounded-[8px] bg-[var(--dsw-business)] px-3 py-1.5 text-[12px] font-medium text-[var(--dsw-bg)] hover:opacity-90"
-                data-testid={`plugin-store-install-${item.id}`}
-                data-biu-action="install"
-                disabled={busy === item.id}
-                onClick={() => void install(item.id)}
-              >
-                {busy === item.id ? '安装中…' : '安装'}
-              </button>
-            )}
+            </div>
           </li>
         ))}
       </ul>

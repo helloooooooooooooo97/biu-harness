@@ -18,7 +18,7 @@ export type StoreListing = {
   id: string
   name: string
   blurb: string
-  installed: boolean
+  enabled: boolean
   running: boolean
 }
 
@@ -112,6 +112,11 @@ export class PluginStoreService extends Service {
     return join(this.pluginDir, id)
   }
 
+  /** 插件自己落盘的数据，关闭保留，卸载才删。 */
+  dataPath(id: string) {
+    return join(dirname(this.dbPath), 'plugin-data', id)
+  }
+
   async create(input: PluginCreateInput) {
     const id = String(input.id ?? '').trim()
     const name = String(input.name ?? '').trim()
@@ -148,11 +153,11 @@ export class PluginStoreService extends Service {
       if (!(await stat(dir)).isDirectory()) continue
       if (!existsSync(join(dir, 'manifest.json'))) continue
       const manifest = await readManifest(dir)
-      const installed = this.isEnabled(manifest.id)
+      const enabled = this.isEnabled(manifest.id)
       items.push({
         ...manifest,
-        installed,
-        running: installed && running.has(manifest.id),
+        enabled,
+        running: enabled && running.has(manifest.id),
       })
     }
     return items
@@ -168,10 +173,21 @@ export class PluginStoreService extends Service {
     return (await this.list()).find((item) => item.id === manifest.id)
   }
 
-  async uninstall(id: string) {
+  /** 关闭：停运行，代码和数据都留着。 */
+  async close(id: string) {
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
     await this.hub().drop(id)
     this.setEnabled(id, false)
+  }
+
+  /** 卸载：停运行，删 .plugin/<id>/ 和 .cordis/plugin-data/<id>/。 */
+  async uninstall(id: string) {
+    if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
+    await this.hub().drop(id)
+    this.db.prepare('DELETE FROM store_plugins WHERE id = ?').run(id)
+    const hit = await this.findPluginDir(id)
+    if (hit) await rm(hit, { recursive: true, force: true })
+    await rm(this.dataPath(id), { recursive: true, force: true })
   }
 
   async restore() {
@@ -244,6 +260,15 @@ export async function apply(ctx: Context) {
     const payload = (await route.json()) as { id?: string }
     try {
       route.send(200, { item: await store.install(String(payload?.id ?? '')) })
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
+  })
+  ctx.http.route('POST', '/api/plugin-store/close', async (route) => {
+    const payload = (await route.json()) as { id?: string }
+    try {
+      await store.close(String(payload?.id ?? ''))
+      route.send(200, { ok: true, items: await store.list() })
     } catch (error) {
       route.send(400, { error: String(error) })
     }
