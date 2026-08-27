@@ -37,6 +37,12 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).not.toMatch(/\.pick-overlay-marquee\s*\{[^}]*border-style:\s*dashed/s)
   })
 
+  it('paints inspector trajectory and usage on the same sidebar token as the left rail', () => {
+    const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
+    expect(css).toMatch(/\.traj-root\s*\{[^}]*background:\s*var\(--dsw-sidebar\)/s)
+    expect(css).toMatch(/\[data-testid='session-inspector'\] \.usage-panel\s*\{[^}]*background:\s*var\(--dsw-sidebar\)/s)
+  })
+
   it('Backspace/Delete pops pick chips when the composer has no text', () => {
     const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
     expect(composer).toMatch(/event\.key === 'Backspace' \|\| event\.key === 'Delete'/)

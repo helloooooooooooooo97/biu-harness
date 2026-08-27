@@ -831,7 +831,7 @@ body {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background: var(--dsw-bg);
+  background: var(--dsw-sidebar);
   font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.25;
@@ -852,6 +852,12 @@ body {
   max-height: 42%;
   border-left: 0;
   border-top: 1px solid var(--dsw-border);
+}
+
+/* 右侧三个检查器板块底板与左侧栏同一色 */
+[data-testid='session-inspector'] .usage-panel {
+  background: var(--dsw-sidebar);
+  box-shadow: none;
 }
 
 .traj-pane {
