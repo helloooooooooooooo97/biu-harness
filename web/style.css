@@ -2683,6 +2683,7 @@ body {
 .user-pick-chip {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   max-width: 100%;
   overflow: hidden;
   border: 1px solid var(--dsw-border);
@@ -2694,6 +2695,12 @@ body {
   font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.pick-kind-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 .tool-artifacts {

@@ -3,7 +3,7 @@ import { LuChevronDown, LuPlus, LuSettings } from 'react-icons/lu'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
-import { formatPicks, usePickState, type PickService } from '@biu/cap-pick/web'
+import { formatPicks, PickChipLabel, usePickState, type PickService } from '@biu/cap-pick/web'
 import { ModelConfigDialog } from './model-config-dialog.tsx'
 
 /** 按键不驱动受控 value；仅防抖更新发送按钮可用态，避免每个字符打穿 React 渲染。 */
@@ -644,9 +644,10 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
               className="composer-tool-chip"
               title="移除选取"
               data-testid="pick-chip"
+              title={`${ref.kind} · ${ref.label}${ref.action ? ` · ${ref.action}` : ''}`}
               onClick={() => pick?.remove(`${ref.kind}:${ref.id}:${ref.action ?? ''}`)}
             >
-              <span>{ref.action ? `${ref.label} · ${ref.action}` : ref.label}</span>
+              <PickChipLabel pick={ref} />
               <span aria-hidden>×</span>
             </button>
           ))}

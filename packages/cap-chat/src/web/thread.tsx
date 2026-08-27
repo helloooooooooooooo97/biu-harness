@@ -29,7 +29,7 @@ import { SidebarMascot } from '@biu/web-mascot'
 import { StaticMascotMark } from '@biu/web-mascot'
 import { DEFAULT_SESSION_MASCOT, resolveSessionMascot } from '@biu/web-mascot'
 import type { SessionMascotIdentity } from '@biu/web-mascot'
-import { chipLabel, parsePicks, pickKey } from '@biu/cap-pick/web'
+import { parsePicks, pickKey, PickChipLabel } from '@biu/cap-pick/web'
 import { MarkdownBody } from './markdown.tsx'
 import { ToolCard } from './tool-card.tsx'
 import { LiveDispatchTable } from './live-dispatch-table.tsx'
@@ -540,8 +540,13 @@ function NodeView({
             {picked.refs.length ? (
               <div className="user-pick-chips" data-testid="user-pick-chips">
                 {picked.refs.map((ref) => (
-                  <span key={pickKey(ref)} className="user-pick-chip" data-testid="user-pick-chip">
-                    {chipLabel(ref)}
+                  <span
+                    key={pickKey(ref)}
+                    className="user-pick-chip"
+                    data-testid="user-pick-chip"
+                    title={`${ref.kind} · ${ref.label}${ref.action ? ` · ${ref.action}` : ''}`}
+                  >
+                    <PickChipLabel pick={ref} />
                   </span>
                 ))}
               </div>
