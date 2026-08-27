@@ -9,6 +9,7 @@ import {
   LuLoaderCircle,
 } from 'react-icons/lu'
 import type { ChatToolPart } from '@biu/web-session-view'
+import { pickDomAttrs } from '@biu/cap-pick/web'
 import {
   diffStats,
   formatToolDetail,
@@ -203,9 +204,12 @@ function ToolBody({ parsed, rawArguments, detail }: { parsed: ParsedToolCall; ra
 export function ToolCard({
   node,
   onInspect,
+  live = false,
 }: {
   node: ChatToolPart
   onInspect: (callId: string) => void
+  /** 所在回复仍在流式输出时，无 result 才算运行中 */
+  live?: boolean
 }) {
   const parsed = useMemo(() => parseToolCall(node.name, node.arguments), [node.name, node.arguments])
   const formatted = useMemo(
@@ -223,11 +227,17 @@ export function ToolCard({
     !open && formatted?.kind === 'bash' && formatted.artifacts?.length ? formatted.artifacts : null
 
   const status = !node.result
-    ? {
-        label: '运行中',
-        className: 'tool-call-status is-running',
-        icon: <LuLoaderCircle className="size-3.5 animate-spin" aria-hidden />,
-      }
+    ? live
+      ? {
+          label: '运行中',
+          className: 'tool-call-status is-running',
+          icon: <LuLoaderCircle className="size-3.5 animate-spin" aria-hidden />,
+        }
+      : {
+          label: '成功',
+          className: 'tool-call-status is-ok',
+          icon: <LuCircleCheck className="size-3.5" aria-hidden />,
+        }
     : node.result.ok
       ? {
           label: '成功',
@@ -241,7 +251,7 @@ export function ToolCard({
         }
 
   return (
-    <div className="tool-call">
+    <div className="tool-call" {...pickDomAttrs('tool', node.callId, title)}>
       <div className="tool-call-head">
         <button
           type="button"

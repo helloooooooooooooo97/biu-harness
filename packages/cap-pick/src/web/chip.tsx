@@ -1,4 +1,14 @@
-import { LuListTodo, LuMessageSquare, LuPuzzle, LuTag } from 'react-icons/lu'
+import {
+  LuCoins,
+  LuGitCommit,
+  LuHash,
+  LuLayers,
+  LuListTodo,
+  LuMessageSquare,
+  LuPuzzle,
+  LuTag,
+  LuWrench,
+} from 'react-icons/lu'
 import type { IconType } from 'react-icons'
 import type { PickRef } from './types.ts'
 import { chipLabel } from './types.ts'
@@ -7,6 +17,13 @@ const KIND_ICONS: Record<string, IconType> = {
   session: LuMessageSquare,
   task: LuListTodo,
   plugin: LuPuzzle,
+  message: LuMessageSquare,
+  reply: LuMessageSquare,
+  tool: LuWrench,
+  step: LuLayers,
+  event: LuGitCommit,
+  turn: LuHash,
+  usage: LuCoins,
 }
 
 export function pickKindIcon(kind: string): IconType {

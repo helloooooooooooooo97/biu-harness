@@ -383,26 +383,43 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       const r = ensureReply(event.seq)
       r.streamingId = null
       if (currentTurn != null) r.streaming = true
-      if (currentStep != null) ensureStepStat(currentStep).toolCount += 1
-      const part: ChatToolPart = {
-        id: `t-${event.id}`,
-        kind: 'tool',
-        callId: event.id,
-        name: event.name,
-        arguments: event.arguments,
-        ...(currentStep != null ? { step: currentStep } : {}),
+      const existing = r.tools.get(event.id)
+      if (existing) {
+        const next: ChatToolPart = {
+          ...existing,
+          name: event.name || existing.name,
+          arguments: event.arguments || existing.arguments,
+          ...(currentStep != null ? { step: existing.step ?? currentStep } : {}),
+        }
+        r.tools.set(event.id, next)
+        const idx = r.parts.findIndex((part) => part.kind === 'tool' && part.callId === event.id)
+        if (idx >= 0) r.parts[idx] = next
+        else r.parts.push(next)
+      } else {
+        if (currentStep != null) ensureStepStat(currentStep).toolCount += 1
+        const part: ChatToolPart = {
+          id: `t-${event.id}`,
+          kind: 'tool',
+          callId: event.id,
+          name: event.name,
+          arguments: event.arguments,
+          ...(currentStep != null ? { step: currentStep } : {}),
+        }
+        r.tools.set(event.id, part)
+        r.parts.push(part)
       }
-      r.tools.set(event.id, part)
-      r.parts.push(part)
     } else if (event.type === 'tool/result') {
       const r = ensureReply(event.seq)
       if (currentTurn != null) r.streaming = true
-      const existing = r.tools.get(event.id)
+      const existing =
+        r.tools.get(event.id) ??
+        r.parts.find((part): part is ChatToolPart => part.kind === 'tool' && part.callId === event.id)
       if (existing) {
         const next = { ...existing, result: { ok: event.ok, detail: event.detail } }
         r.tools.set(event.id, next)
-        const idx = r.parts.findIndex((part) => part.id === existing.id)
+        const idx = r.parts.findIndex((part) => part.kind === 'tool' && part.callId === event.id)
         if (idx >= 0) r.parts[idx] = next
+        else r.parts.push(next)
       } else {
         if (currentStep != null) ensureStepStat(currentStep).toolCount += 1
         const part: ChatToolPart = {

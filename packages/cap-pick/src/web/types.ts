@@ -96,3 +96,17 @@ export function chipLabel(ref: PickRef) {
   if (ref.action) return `${ref.label} · ${ref.action}`
   return ref.label
 }
+
+export function pickPreview(text: string, max = 48) {
+  const value = text.replace(/\s+/g, ' ').trim()
+  if (!value) return ''
+  return value.length > max ? `${value.slice(0, max)}…` : value
+}
+
+export function pickDomAttrs(kind: string, id: string, label?: string) {
+  return {
+    'data-biu-kind': kind,
+    'data-biu-id': id,
+    ...(label ? { 'data-biu-label': label } : {}),
+  }
+}

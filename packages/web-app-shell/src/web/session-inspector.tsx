@@ -142,7 +142,7 @@ export const SessionInspector = memo(function SessionInspector({
         }}
       />
 
-      <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-[var(--dsw-border)] px-2.5">
+      <div className="app-side-bar-head">
         <div className="flex min-w-0 items-center gap-1" role="tablist" aria-label="检查器分区">
           {extraTabs.map((item) => (
             <button
