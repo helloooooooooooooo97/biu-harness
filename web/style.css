@@ -338,8 +338,8 @@ body {
 }
 
 .chat-view-project-icon {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
   color: var(--dsw-label-3);
 }
@@ -430,8 +430,8 @@ body {
 
 .app-side-actions-icon {
   display: grid;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
   place-items: center;
   color: var(--dsw-label-3);
@@ -544,8 +544,8 @@ body {
 }
 .sidebar-group-head:hover .sidebar-add,
 .sidebar-add:focus {
-  width: 20px;
-  min-width: 20px;
+  width: 16px;
+  min-width: 16px;
   margin-left: 0;
   padding: 2px;
   opacity: 1;
@@ -553,8 +553,8 @@ body {
 
 .sidebar-rail-icon {
   display: grid;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
   place-items: center;
 }
@@ -566,8 +566,8 @@ body {
 .sidebar-group-fold-face,
 .sidebar-group-fold-chevron {
   display: grid;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   place-items: center;
 }
 
@@ -591,7 +591,7 @@ body {
 }
 
 .sidebar-session-list .chat-session-row > a {
-  padding-left: 19px;
+  padding-left: 17px;
 }
 
 .sidebar-group-head {
@@ -829,8 +829,8 @@ body {
 }
 
 .project-chip-icon {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
 }
 
@@ -1363,8 +1363,8 @@ body {
 }
 .usage-panel-title-icon {
   flex: none;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   color: var(--dsw-business);
 }
 .usage-panel-legend {

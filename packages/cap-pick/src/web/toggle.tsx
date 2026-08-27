@@ -15,7 +15,7 @@ export function PickToggle({ pick }: { pick: PickService }) {
       data-biu-ignore
       onClick={() => pick.toggle()}
     >
-      <LuMousePointer2 size={20} strokeWidth={2} />
+      <LuMousePointer2 size={16} strokeWidth={2} />
     </button>
   )
 }
