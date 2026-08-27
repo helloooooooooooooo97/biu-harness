@@ -31,6 +31,7 @@ import {
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
   Cog6ToothIcon,
+  AdjustmentsHorizontalIcon,
 } from '@heroicons/react/16/solid'
 
 export const name = 'shell'
@@ -359,7 +360,7 @@ function Shell(props: SlotProps) {
                 data-testid="header-config-toggle"
                 onClick={() => setConfigOpen(true)}
               >
-                <Cog6ToothIcon {...chromeIcon} />
+                <AdjustmentsHorizontalIcon {...chromeIcon} />
               </button>
               <button
                 type="button"
