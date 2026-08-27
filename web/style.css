@@ -394,7 +394,7 @@ body {
   align-items: center;
   gap: 8px;
   border-radius: 8px;
-  padding: 8px 4px;
+  padding: 8px;
   color: var(--dsw-sidebar-fg);
   font-size: 14px;
   font-weight: 500;
@@ -457,6 +457,7 @@ body {
   width: 100%;
   align-items: center;
   margin-bottom: 1px;
+  padding: 0 8px;
   border-radius: 6px;
   contain: layout style;
   transition: none;
@@ -541,26 +542,40 @@ body {
   color: var(--dsw-danger);
 }
 
-/* 分组添加按钮(+)：移入分组头主按钮内部、紧跟计数后。默认宽度塌陷，并用负 margin 抵消
-   count 与 add 之间 flex gap-1 的 4px，使计数精确贴右与板块计数对齐；仅悬浮分组头/聚焦时展开 */
+/* 分组添加按钮(+)：默认宽度塌陷；展开为 24×24，与收藏/删除同一套圆角底 */
 .sidebar-add {
+  display: inline-grid;
   flex-shrink: 0;
+  place-items: center;
   width: 0;
   min-width: 0;
-  height: 20px;
+  height: 24px;
   overflow: hidden;
-  margin-left: -4px;
+  margin: 0;
   padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-label-3);
   opacity: 0;
-  transition: width 150ms ease, margin-left 150ms ease, padding 150ms ease, opacity 150ms ease;
+  cursor: pointer;
+  line-height: 0;
+  transition: width 150ms ease, opacity 150ms ease, background-color 120ms ease, color 120ms ease;
+}
+.sidebar-add svg {
+  display: block;
+  width: 16px;
+  height: 16px;
 }
 .sidebar-group-head:hover .sidebar-add,
 .sidebar-add:focus {
-  width: 16px;
-  min-width: 16px;
-  margin-left: 0;
-  padding: 2px;
+  width: 24px;
+  min-width: 24px;
   opacity: 1;
+}
+.sidebar-add:hover {
+  background: #353535;
+  color: var(--dsw-label);
 }
 
 .sidebar-rail-icon {
@@ -603,11 +618,15 @@ body {
 }
 
 .sidebar-session-list .chat-session-row > a {
-  padding-left: 17px;
+  padding-left: 16px;
 }
 
 .sidebar-group-head {
-  padding: 0 4px;
+  padding: 0;
+}
+
+.sidebar-group-head > [role='button'] {
+  padding: 0 8px;
 }
 
 /* 顶部「收藏/项目/标签」：字号 12px，行高与会话行一致（头像 24 + 上下 4） */
@@ -616,7 +635,7 @@ body {
   align-items: center;
   height: 32px;
   margin: 0 0 1px;
-  padding: 0 6px;
+  padding: 0 8px;
   border-radius: 6px;
 }
 .sidebar-section-head:hover {
