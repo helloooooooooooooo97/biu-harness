@@ -328,7 +328,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                     </button>
                     {section.kind !== 'pinned' ? (
                       <div
-                        className="sidebar-view-switch flex shrink-0 items-center overflow-hidden rounded-[6px]"
+                        className="sidebar-view-switch"
                         role="group"
                         aria-label="分组视图切换"
                       >
@@ -336,7 +336,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                           type="button"
                           title="按项目分组"
                           aria-pressed={groupBy === 'project'}
-                          className={`grid h-[20px] w-5 place-items-center rounded-[6px] ${groupBy === 'project' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
+                          className={`sidebar-view-switch-btn${groupBy === 'project' ? ' is-on' : ''}`}
                           onClick={() => changeGroupBy('project')}
                         >
                           <LuFolderTree {...chromeIcon} />
@@ -345,7 +345,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                           type="button"
                           title="按标签分组"
                           aria-pressed={groupBy === 'tag'}
-                          className={`grid h-[20px] w-5 place-items-center rounded-[6px] ${groupBy === 'tag' ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]'}`}
+                          className={`sidebar-view-switch-btn${groupBy === 'tag' ? ' is-on' : ''}`}
                           onClick={() => changeGroupBy('tag')}
                         >
                           <LuTags {...chromeIcon} />
