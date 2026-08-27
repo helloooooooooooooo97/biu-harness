@@ -1,4 +1,5 @@
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { isMascotDancing, subscribeMascotDance } from '@biu/web-mascot'
 import {
@@ -202,6 +203,7 @@ export const ChatSidebar = memo(function ChatSidebar({
   const sections = useMemo(() => buildSidebarSections(sessions, groupBy), [sessions, groupBy])
   // 板块级收缩（点击标题可展开/收缩，不显示收缩按钮，层级靠 kind 图标表达）
   const [collapsedSections, setCollapsedSections] = useState<Partial<Record<SidebarSectionKind, boolean>>>({})
+  const [pendingDelete, setPendingDelete] = useState<SessionListItem | null>(null)
   const toggleSection = useCallback((kind: SidebarSectionKind) => {
     setCollapsedSections((prev) => ({ ...prev, [kind]: !prev[kind] }))
   }, [])
@@ -231,18 +233,21 @@ export const ChatSidebar = memo(function ChatSidebar({
     [navigate, sessionView],
   )
 
-  const deleteChat = useCallback(
-    (item: SessionListItem) => {
-      if (!window.confirm(`Delete session “${item.title}”?`)) return
-      const wasActive = item.id === sessionId
-      void sessionView.deleteSession(item.id).then(() => {
-        if (!wasActive) return
-        const next = sessionView.get().sessionId
-        navigate(next ? `/s/${next}` : '/')
-      })
-    },
-    [navigate, sessionId, sessionView],
-  )
+  const requestDeleteChat = useCallback((item: SessionListItem) => {
+    setPendingDelete(item)
+  }, [])
+
+  const confirmDeleteChat = useCallback(() => {
+    if (!pendingDelete) return
+    const item = pendingDelete
+    setPendingDelete(null)
+    const wasActive = item.id === sessionId
+    void sessionView.deleteSession(item.id).then(() => {
+      if (!wasActive) return
+      const next = sessionView.get().sessionId
+      navigate(next ? `/s/${next}` : '/')
+    })
+  }, [navigate, pendingDelete, sessionId, sessionView])
 
   const pinChat = useCallback(
     (item: SessionListItem) => {
@@ -359,7 +364,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                               active={item.id === routeSessionId}
                               busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
                               dancing={dancing}
-                              onDelete={deleteChat}
+                              onDelete={requestDeleteChat}
                               onPin={pinChat}
                             />
                           ))
@@ -433,7 +438,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                   active={item.id === routeSessionId}
                                   busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
                                   dancing={dancing}
-                                  onDelete={deleteChat}
+                                  onDelete={requestDeleteChat}
                                   onPin={pinChat}
                                 />
                               ))}
@@ -450,6 +455,49 @@ export const ChatSidebar = memo(function ChatSidebar({
           )}
         </div>
       </div>
+      {pendingDelete && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-4"
+              data-testid="chat-session-delete-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="chat-session-delete-title"
+              onClick={() => setPendingDelete(null)}
+            >
+              <div
+                className="w-[min(100%,320px)] rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] p-4 text-[var(--dsw-label)]"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <h2 id="chat-session-delete-title" className="m-0 text-[13px] font-semibold">
+                  删除「{pendingDelete.title}」？
+                </h2>
+                <p className="mt-1.5 mb-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
+                  删除后无法恢复这份会话。
+                </p>
+                <div className="mt-3 flex justify-end gap-1.5">
+                  <button
+                    type="button"
+                    className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] text-[var(--dsw-label)] hover:bg-[#353535]"
+                    data-testid="chat-session-delete-cancel"
+                    onClick={() => setPendingDelete(null)}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] font-medium text-[var(--dsw-label)] hover:bg-[#353535]"
+                    data-testid="chat-session-delete-confirm"
+                    onClick={confirmDeleteChat}
+                  >
+                    确认删除
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </aside>
   )
 })
