@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Context } from 'cordis'
+import { LuPuzzle } from 'react-icons/lu'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 
@@ -33,7 +34,7 @@ async function readJson<T>(path: string, init?: RequestInit): Promise<T> {
   return body
 }
 
-function PluginStorePage({ slots }: { slots: SlotsService }) {
+function PluginStorePage({ slots, compact = false }: { slots: SlotsService; compact?: boolean }) {
   const extras = useSlotEntries(slots, 'plugin-store-extras')
   const [items, setItems] = useState<StoreListing[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -91,10 +92,15 @@ function PluginStorePage({ slots }: { slots: SlotsService }) {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-auto px-8 py-6" data-testid="plugin-store-page">
-      <header className="mb-6">
-        <h1 className="m-0 text-[22px] font-semibold tracking-tight text-[var(--dsw-label)]">插件</h1>
-      </header>
+    <div
+      className={`flex min-h-0 flex-1 flex-col overflow-auto ${compact ? 'px-3 py-3' : 'px-8 py-6'}`}
+      data-testid={compact ? 'plugin-store-inspector' : 'plugin-store-page'}
+    >
+      {compact ? null : (
+        <header className="mb-6">
+          <h1 className="m-0 text-[22px] font-semibold tracking-tight text-[var(--dsw-label)]">插件</h1>
+        </header>
+      )}
 
       {error ? (
         <p className="mb-4 text-[13px] text-[var(--dsw-danger)]" data-testid="plugin-store-error">
@@ -122,7 +128,7 @@ function PluginStorePage({ slots }: { slots: SlotsService }) {
         {items.map((item) => (
           <li
             key={item.id}
-            className="flex items-center justify-between gap-4 rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-4 py-3"
+            className={`flex items-center justify-between gap-3 rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] ${compact ? 'px-3 py-2.5' : 'px-4 py-3'}`}
             data-testid={`plugin-store-card-${item.id}`}
             data-biu-kind="plugin"
             data-biu-id={item.id}
@@ -142,7 +148,11 @@ function PluginStorePage({ slots }: { slots: SlotsService }) {
                   </span>
                 )}
               </div>
-              <p className="mt-1 m-0 text-[12px] leading-5 text-[var(--dsw-label-3)]">{item.blurb}</p>
+              {item.blurb ? (
+                <p className={`mt-1 m-0 leading-5 text-[var(--dsw-label-3)] ${compact ? 'text-[11px]' : 'text-[12px]'}`}>
+                  {item.blurb}
+                </p>
+              ) : null}
             </div>
             {item.installed ? (
               <button
@@ -187,6 +197,11 @@ type AppModulesService = {
 }
 
 const moduleProps = { moduleId: 'plugins' }
+const inspectorProps = { tabId: 'plugins', tabLabel: '插件', tabIcon: LuPuzzle }
+
+function PluginStoreInspectorPanel({ slots }: { slots: SlotsService }) {
+  return <PluginStorePage slots={slots} compact />
+}
 
 export function apply(ctx: Context) {
   const slots = ctx.get('slots') as SlotsService | undefined
@@ -208,5 +223,10 @@ export function apply(ctx: Context) {
     children: {
       'plugin-store-extras': { kind: 'list' },
     },
+  })
+  slots.place('inspector-panels', PluginStoreInspectorPanel, {
+    key: 'plugin-store-inspector',
+    order: 11,
+    props: () => ({ ...inspectorProps, slots }),
   })
 }
