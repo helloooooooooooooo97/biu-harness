@@ -12,6 +12,7 @@ import {
   LuCalendarClock,
   LuCircleCheck,
   LuCircleDashed,
+  LuClipboardList,
   LuClock,
   LuCoins,
   LuFlag,
@@ -3497,7 +3498,7 @@ export const name = 'tasks-ui'
 export const inject = ['slots', 'appModules', 'snapshot']
 
 const tasksModuleProps = { moduleId: 'tasks' }
-const tasksInspectorProps = { tabId: 'tasks', tabLabel: '任务', tabIcon: TasksRailIcon }
+const tasksInspectorProps = { tabId: 'tasks', tabLabel: '任务', tabIcon: LuClipboardList }
 
 function TasksRailIcon({ className }: { className?: string }) {
   return (
