@@ -24,7 +24,8 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   FolderIcon,
-  InboxIcon,
+  FolderMinusIcon,
+  BookmarkSlashIcon,
   ChevronDoubleLeftIcon,
   PlusIcon,
   SignalIcon,
@@ -393,10 +394,12 @@ export const ChatSidebar = memo(function ChatSidebar({
                                   <span className="sidebar-group-fold-face">
                                     {group.kind === 'pinned' ? (
                                       <StarIcon className={chromeIconClass('text-[#f5b700]')} />
+                                    ) : group.key === UNGROUPED_PROJECT_KEY ? (
+                                      <FolderMinusIcon className={chromeIconClass('opacity-80')} />
+                                    ) : group.key === UNGROUPED_TAG_KEY ? (
+                                      <BookmarkSlashIcon className={chromeIconClass('opacity-80')} />
                                     ) : group.kind === 'tag' ? (
                                       <TagIcon className={chromeIconClass('opacity-80')} />
-                                    ) : isUngrouped ? (
-                                      <InboxIcon className={chromeIconClass('opacity-80')} />
                                     ) : (
                                       <FolderGlyph className="opacity-80" />
                                     )}
