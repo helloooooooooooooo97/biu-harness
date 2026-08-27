@@ -622,21 +622,57 @@ body {
 }
 
 .sidebar-group-head {
-  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  padding: 0 8px;
 }
 
 .sidebar-group-head > [role='button'] {
-  padding: 0 8px;
+  padding: 0;
+  min-width: 0;
 }
 
 /* 顶部「收藏/项目/标签」：字号 12px，行高与会话行一致（头像 24 + 上下 4） */
 .sidebar-section-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  column-gap: 8px;
   height: 32px;
   margin: 0 0 1px;
   padding: 0 8px;
   border-radius: 6px;
+}
+
+/* 数字在左、16px 聊天气泡贴右；各行图标落在同一条垂直线上 */
+.sidebar-chat-count {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  grid-column: 2;
+  justify-self: end;
+  font: inherit;
+  opacity: 0.6;
+}
+
+.sidebar-chat-count svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.sidebar-section-head .sidebar-chat-count {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sidebar-group-head .sidebar-chat-count {
+  font-size: 14px;
+  font-weight: 500;
 }
 
 /* 顶层板块右侧分组切换：两个 24×24 按钮，图标 16×16；默认塌陷，悬浮展开 */
