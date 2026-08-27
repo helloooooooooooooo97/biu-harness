@@ -47,7 +47,7 @@ test('missing .plugin lists no plugins', async () => {
   try {
     const ctx = new Context()
     stubHub(ctx)
-    const store = new PluginStoreService(ctx, join(dir, 'missing'), join(dir, 'plugins.sqlite')).open()
+    const store = new PluginStoreService(ctx, join(dir, 'missing'), join(dir, 'plugins.sqlite'), join(dir, '.plugin-dev')).open()
     assert.deepEqual(await store.list(), [])
   } finally {
     await rm(dir, { recursive: true, force: true })
@@ -60,13 +60,15 @@ test('create writes .plugin/<id>/; close keeps code; uninstall deletes .plugin/<
   try {
     const ctx = new Context()
     const { adopted, dropped, forks } = stubHub(ctx)
-    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'plugins.sqlite')).open()
-    const created = await store.create({
+    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'plugins.sqlite'), join(dir, '.plugin-dev')).open()
+    const created = await store.initSandbox({
       id: 'store-echo',
       name: 'Echo',
       hostJs: `export const name = 'store-echo'\nexport function apply() {}\n`,
     })
-    assert.equal(created.pluginPath, join(pluginDir, 'store-echo'))
+    assert.equal(created.sandboxPath, join(dir, '.plugin-dev', 'store-echo'))
+    const packed = await store.pack('store-echo')
+    assert.equal(packed.pluginPath, join(pluginDir, 'store-echo'))
     const echo = (await store.list()).find((item) => item.id === 'store-echo')
     assert.ok(echo)
     assert.equal(echo.enabled, false)
@@ -96,13 +98,14 @@ test('web-only plugin opens without host.js', async () => {
   try {
     const ctx = new Context()
     const { forks } = stubHub(ctx)
-    const store = new PluginStoreService(ctx, join(dir, '.plugin'), join(dir, 'plugins.sqlite')).open()
-    await store.create({
+    const store = new PluginStoreService(ctx, join(dir, '.plugin'), join(dir, 'plugins.sqlite'), join(dir, '.plugin-dev')).open()
+    await store.initSandbox({
       id: 'store-banner',
       name: 'Banner',
       webJs: `export const name = 'store-banner-web'\nexport const inject = ['slots']\nexport function apply() {}\n`,
     })
-    await assert.rejects(() => store.create({ id: 'store-empty', name: 'Empty' }), /hostJs or webJs/)
+    await assert.rejects(() => store.pack('store-empty'), /sandbox not found/)
+    await store.pack('store-banner')
     await store.openPlugin('store-banner')
     assert.equal(forks.get('store-banner')?.web, '/api/plugin-store/files/store-banner/web.js')
     await assert.rejects(() => store.readInstalledFile('store-banner', 'host.js'))

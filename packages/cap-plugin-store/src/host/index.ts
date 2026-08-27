@@ -2,10 +2,19 @@ import { mkdirSync } from 'node:fs'
 import { existsSync } from 'node:fs'
 import { readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
 import { Service, type Context, type Plugin } from 'cordis'
 import type { CatalogEntry } from '@biu/host-hub'
-import { compileStoreModule, registerPluginCreate, type PluginCreateInput } from './plugin-create.ts'
+import {
+  bundleStoreEntry,
+  findEntry,
+  HOST_ENTRIES,
+  readSandboxManifest,
+  registerPluginCreate,
+  WEB_ENTRIES,
+  type PluginCreateInput,
+} from './plugin-create.ts'
 
 type DatabaseSync = import('node:sqlite').DatabaseSync
 
@@ -44,8 +53,8 @@ export function defaultPluginDir() {
   return process.env.BIU_PLUGIN_DIR || join(process.cwd(), '.plugin')
 }
 
-export function defaultDbPath() {
-  return process.env.BIU_PLUGIN_DB || join(process.cwd(), '.cordis', 'plugins.sqlite')
+export function defaultSandboxDir() {
+  return process.env.BIU_PLUGIN_DEV_DIR || join(process.cwd(), '.plugin-dev')
 }
 
 function isSafeId(id: string) {
@@ -54,6 +63,14 @@ function isSafeId(id: string) {
 
 function importHostModule(code: string) {
   return import(`data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`)
+}
+
+async function importHostFile(hostFile: string) {
+  try {
+    return await import(`${pathToFileURL(hostFile).href}?t=${Date.now()}`)
+  } catch {
+    return importHostModule(await readFile(hostFile, 'utf8'))
+  }
 }
 
 async function readManifest(dir: string): Promise<StoreManifest> {
@@ -69,6 +86,7 @@ export class PluginStoreService extends Service {
     ctx: Context,
     readonly pluginDir: string,
     private readonly dbPath: string,
+    readonly sandboxDir: string = defaultSandboxDir(),
   ) {
     super(ctx, 'pluginStore')
   }
@@ -112,26 +130,47 @@ export class PluginStoreService extends Service {
     return join(this.pluginDir, id)
   }
 
-  async create(input: PluginCreateInput) {
+  sandboxPath(id: string) {
+    return join(this.sandboxDir, id)
+  }
+
+  /** 在 .plugin-dev/<id>/ 开沙箱，不写入货架。 */
+  async initSandbox(input: PluginCreateInput) {
     const id = String(input.id ?? '').trim()
     const name = String(input.name ?? '').trim()
-    const hostJs = String(input.hostJs ?? '').trim()
-    const webSrc = input.webJs != null ? String(input.webJs).trim() : ''
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
     if (!name) throw new Error('plugin name required')
-    if (!hostJs && !webSrc) throw new Error('hostJs or webJs required')
-    const dest = this.pluginPath(id)
+    const dest = this.sandboxPath(id)
     mkdirSync(dest, { recursive: true })
     await writeFile(
       join(dest, 'manifest.json'),
       `${JSON.stringify({ id, name, blurb: String(input.blurb ?? '').trim() || name }, null, 2)}\n`,
     )
-    if (hostJs) await writeFile(join(dest, 'host.js'), await compileStoreModule(hostJs, 'host'))
+    const hostJs = String(input.hostJs ?? '').trim()
+    const webSrc = input.webJs != null ? String(input.webJs).trim() : ''
+    if (hostJs) await writeFile(join(dest, 'host.ts'), hostJs.endsWith('\n') ? hostJs : `${hostJs}\n`)
+    if (webSrc) await writeFile(join(dest, 'web.tsx'), webSrc.endsWith('\n') ? webSrc : `${webSrc}\n`)
+    return { id, sandboxPath: dest }
+  }
+
+  /** 把沙箱 bundle 进 .plugin/<id>/。 */
+  async pack(id: string) {
+    if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
+    const sandbox = this.sandboxPath(id)
+    if (!existsSync(join(sandbox, 'manifest.json'))) throw new Error(`sandbox not found: ${sandbox}`)
+    const manifest = await readSandboxManifest(sandbox)
+    const hostEntry = findEntry(sandbox, HOST_ENTRIES)
+    const webEntry = findEntry(sandbox, WEB_ENTRIES)
+    if (!hostEntry && !webEntry) throw new Error('sandbox needs host.ts/js or web.tsx/ts/js')
+    const dest = this.pluginPath(manifest.id)
+    mkdirSync(dest, { recursive: true })
+    await writeFile(join(dest, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
+    if (hostEntry) await writeFile(join(dest, 'host.js'), await bundleStoreEntry(hostEntry, 'host'))
     else if (existsSync(join(dest, 'host.js'))) await rm(join(dest, 'host.js'))
-    if (webSrc) await writeFile(join(dest, 'web.js'), await compileStoreModule(webSrc, 'web'))
+    if (webEntry) await writeFile(join(dest, 'web.js'), await bundleStoreEntry(webEntry, 'web'))
     else if (existsSync(join(dest, 'web.js'))) await rm(join(dest, 'web.js'))
-    if (this.isEnabled(id)) await this.mountFromDisk(await readManifest(dest), dest)
-    return { id, pluginPath: dest }
+    if (this.isEnabled(manifest.id)) await this.mountFromDisk(manifest, dest)
+    return { id: manifest.id, sandboxPath: sandbox, pluginPath: dest }
   }
 
   async list(): Promise<StoreListing[]> {
@@ -224,7 +263,7 @@ export class PluginStoreService extends Service {
     const hasWeb = existsSync(webFile)
     if (!hostCode && !hasWeb) throw new Error(`plugin ${manifest.id} has neither host nor web`)
     const mod = (hostCode
-      ? await importHostModule(hostCode)
+      ? await importHostFile(hostFile)
       : { name: manifest.id, apply() {} }) as Plugin & { inject?: string[] }
     const entry: CatalogEntry = {
       id: manifest.id,
@@ -243,7 +282,7 @@ export class PluginStoreService extends Service {
 }
 
 export async function apply(ctx: Context) {
-  const store = new PluginStoreService(ctx, defaultPluginDir(), defaultDbPath()).open()
+  const store = new PluginStoreService(ctx, defaultPluginDir(), defaultDbPath(), defaultSandboxDir()).open()
   await store.restore()
   registerPluginCreate(ctx, store)
 

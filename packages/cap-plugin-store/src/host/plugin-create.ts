@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs'
+import { readFile, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 import type { Context } from 'cordis'
 import type { PluginStoreService } from './index.ts'
 
@@ -9,7 +12,14 @@ export type PluginCreateInput = {
   webJs?: string
 }
 
-/** 当前进程内把 TS/TSX 编成 ESM 字符串。不 spawn vite/tsc，不 watch，不重启 host。 */
+const HOST_ENTRIES = ['host.ts', 'host.tsx', 'host.js']
+const WEB_ENTRIES = ['web.tsx', 'web.ts', 'web.js']
+
+export function findEntry(dir: string, names: string[]) {
+  return names.map((name) => join(dir, name)).find((path) => existsSync(path)) ?? null
+}
+
+/** 单文件 TS/TSX → ESM（无 bundle）。 */
 export async function compileStoreModule(source: string, kind: 'host' | 'web') {
   const trimmed = source.trim()
   if (!trimmed) throw new Error(`${kind} source is empty`)
@@ -23,21 +33,59 @@ export async function compileStoreModule(source: string, kind: 'host' | 'web') {
     jsxFragment: 'React.Fragment',
     sourcemap: false,
   })
-  let code = result.code.trim()
-  if (kind === 'web' && /React\.createElement/.test(code) && !code.includes('globalThis.React')) {
-    code = `const React = globalThis.React\n${code}`
+  return finishBundle(result.code, kind)
+}
+
+/** 沙箱入口打包：可相对 import 同目录其它文件。 */
+export async function bundleStoreEntry(entryFile: string, kind: 'host' | 'web') {
+  const { build } = await import('esbuild')
+  const result = await build({
+    absWorkingDir: dirname(entryFile),
+    entryPoints: [entryFile],
+    bundle: true,
+    write: false,
+    format: 'esm',
+    platform: 'neutral',
+    target: 'es2022',
+    jsx: 'transform',
+    jsxFactory: 'React.createElement',
+    jsxFragment: 'React.Fragment',
+    logLevel: 'silent',
+  })
+  const text = result.outputFiles?.[0]?.text
+  if (!text?.trim()) throw new Error(`${kind} bundle is empty`)
+  return finishBundle(text, kind)
+}
+
+function finishBundle(code: string, kind: 'host' | 'web') {
+  let out = code.trim()
+  if (kind === 'web' && /React\.createElement/.test(out) && !out.includes('globalThis.React')) {
+    out = `const React = globalThis.React\n${out}`
   }
-  return code.endsWith('\n') ? code : `${code}\n`
+  return out.endsWith('\n') ? out : `${out}\n`
+}
+
+export async function readSandboxManifest(dir: string) {
+  const raw = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf8')) as {
+    id?: string
+    name?: string
+    blurb?: string
+  }
+  if (!raw.id || !raw.name) throw new Error(`invalid plugin manifest in ${dir}`)
+  return { id: raw.id, name: raw.name, blurb: String(raw.blurb ?? '').trim() || raw.name }
 }
 
 const PLUGIN_CREATE_DESCRIPTION = [
-  '把 Cordis 商店插件写入仓库根 .plugin/<id>/（manifest.json，以及按需的 host.js / web.js）。不要用 fs_write/bash 改 packages/ 或 cordis.plugins.json，也不要写 .biu 或 plugin-catalog。',
-  'hostJs 与 webJs 按需二选一：只要后端就只交 hostJs；只要前端就只交 webJs；两边都要才两个都交。至少交一个。',
-  '没有 .plugin 或目录为空时商店显示「没有插件」。本工具会建 .plugin/<id>/。可交 TS/TSX：当前 host 进程内 esbuild.transform 成 ESM 再落盘。',
-  '打开把 enabled 置 1 并运行；关闭停运行并保留 .plugin/<id>/。「卸载」才会删掉 .plugin/<id>/ 代码。没有「安装」。',
-  '契约：id 与 export const name 必须相同。副作用必须走 ctx。Host：ctx.http.route。Web：ctx.slots.place("plugin-store-extras", Comp, { key })。',
-  'Host 最小示例：export const name = "store-echo"; export const inject = ["http"]; export function apply(ctx) { ctx.http.route("GET", "/api/store-echo", (route) => { route.send(200, { ok: true }); }); }',
-  'Web 最小示例：export const name = "store-echo-web"; export const inject = ["slots"]; function Banner() { return <div>echo 已运行</div>; } export function apply(ctx) { ctx.slots.place("plugin-store-extras", Banner, { key: "store-echo-banner", order: 10 }); }',
+  '在仓库根 .plugin-dev/<id>/ 开一个插件沙箱（不是最终货架）。用 bash / str_replace_editor 在这个目录里写代码、加文件、相对 import，不要把整份源码塞进本工具参数。',
+  '本工具只建/更新沙箱：manifest.json，以及可选写入 host.ts / web.tsx 作为起点。不要改 packages/ 或 cordis.plugins.json。',
+  'host 与 web 按需：只要后端就 host.ts，只要前端就 web.tsx，两边都要就两个都有。可以再加 util.ts 等，打包时 esbuild bundle。',
+  '调完后必须再调 plugin_pack，才会打进 .plugin/<id>/ 出现在商店。打开/关闭只影响已打包货架；卸载删的是 .plugin/<id>/，沙箱还在。',
+  '契约：id 与 export const name 相同。禁止 import npm / react / @biu/*。Web：ctx.slots.place("plugin-store-extras", Comp, { key })。',
+].join(' ')
+
+const PLUGIN_PACK_DESCRIPTION = [
+  '把 .plugin-dev/<id>/ 沙箱打包进 .plugin/<id>/（manifest.json + 编好的 host.js / web.js）。多文件会 bundle 成各一个入口文件。',
+  '入口：host.ts|host.tsx|host.js 与 web.tsx|web.ts|web.js，至少要有一个。调完商店才看得到。已打开的插件会重新挂上。',
 ].join(' ')
 
 export function registerPluginCreate(ctx: Context, store: PluginStoreService) {
@@ -49,25 +97,23 @@ export function registerPluginCreate(ctx: Context, store: PluginStoreService) {
       properties: {
         id: {
           type: 'string',
-          description: '插件 id：小写字母开头，仅 [a-z0-9-]，最长 41。建议 store-foo。目录就是 .plugin/<id>/。',
+          description: '插件 id：小写字母开头，仅 [a-z0-9-]，最长 41。沙箱目录 .plugin-dev/<id>/。',
         },
-        name: { type: 'string', description: '商店卡片标题，给人看的短名' },
-        blurb: { type: 'string', description: '一行简介，出现在卡片上' },
+        name: { type: 'string', description: '商店卡片标题' },
+        blurb: { type: 'string', description: '一行简介' },
         hostJs: {
           type: 'string',
-          description:
-            '可选。需要后端时交 Host 源码（可 TS）：export const name（等于 id）、export const inject、export function apply(ctx)。不要为了凑数写空 host。',
+          description: '可选。写入沙箱 host.ts 的起点源码，不是最终货架。大逻辑请用文件工具在沙箱里改。',
         },
         webJs: {
           type: 'string',
-          description:
-            "可选。需要前端时交 Client 源码（可 TSX）：export const name、export const inject=['slots']、export function apply(ctx)。UI 必须 ctx.slots.place('plugin-store-extras', Component, { key })。不要为了凑数写空 web。",
+          description: '可选。写入沙箱 web.tsx 的起点源码。大逻辑请在沙箱里改。',
         },
       },
       required: ['id', 'name'],
     },
     execute: async (args) => {
-      const result = await store.create({
+      const result = await store.initSandbox({
         id: String(args.id ?? ''),
         name: String(args.name ?? ''),
         blurb: args.blurb != null ? String(args.blurb) : undefined,
@@ -77,4 +123,18 @@ export function registerPluginCreate(ctx: Context, store: PluginStoreService) {
       return JSON.stringify(result)
     },
   })
+  ctx.tools.register({
+    name: 'plugin_pack',
+    description: PLUGIN_PACK_DESCRIPTION,
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: '要打包的插件 id，对应 .plugin-dev/<id>/' },
+      },
+      required: ['id'],
+    },
+    execute: async (args) => JSON.stringify(await store.pack(String(args.id ?? ''))),
+  })
 }
+
+export { HOST_ENTRIES, WEB_ENTRIES }

@@ -17,7 +17,7 @@ export default defineConfig({
     host: '127.0.0.1',
     watch: {
       // 商店插件写在仓库根 .plugin，不能触发 Vite 整页刷新
-      ignored: ['**/.plugin/**'],
+      ignored: ['**/.plugin/**', '**/.plugin-dev/**'],
     },
     proxy: {
       '/api': 'http://127.0.0.1:3141',
