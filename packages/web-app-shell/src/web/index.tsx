@@ -158,7 +158,7 @@ function PluginModuleStage({
         return (
           <div
             key={entry.id}
-            className={show ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : 'hidden'}
+            className={show ? 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden' : 'hidden'}
             aria-hidden={!show}
             data-testid={`${moduleId}-module`}
           >
