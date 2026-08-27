@@ -70,9 +70,9 @@ function SessionTagBadges({ tags }: { tags?: string[] }) {
 
 function ChatCount({ count }: { count: number }) {
   return (
-    <span className="inline-flex shrink-0 items-center gap-0.5 leading-none tabular-nums opacity-70">
+    <span className="inline-flex shrink-0 items-center gap-0.5 opacity-60">
       <span>{count}</span>
-      <ChatBubbleLeftIcon className="size-4 shrink-0" aria-hidden />
+      <ChatBubbleLeftIcon className="size-4 shrink-0" width={16} height={16} aria-hidden />
     </span>
   )
 }
@@ -323,7 +323,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                   <div className="sidebar-section-head min-w-0">
                     <button
                       type="button"
-                      className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]"
+                      className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)]"
                       aria-expanded={!sectionCollapsed}
                       onClick={() => toggleSection(section.kind)}
                     >
@@ -422,6 +422,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                   </span>
                                 </span>
                                 <span className="min-w-0 flex-1 truncate">{group.label}</span>
+                                <ChatCount count={group.sessions.length} />
                                 {canAddHere ? (
                                   <button
                                     type="button"
@@ -439,7 +440,6 @@ export const ChatSidebar = memo(function ChatSidebar({
                                     <PlusIcon {...chromeIcon} />
                                   </button>
                                 ) : null}
-                                <ChatCount count={group.sessions.length} />
                               </div>
                             </div>
                             <div className={`sidebar-session-list min-w-0 ${collapsed ? 'hidden' : ''}`} aria-hidden={collapsed}>

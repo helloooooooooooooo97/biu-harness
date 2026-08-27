@@ -638,9 +638,6 @@ body {
   padding: 0 8px;
   border-radius: 6px;
 }
-.sidebar-section-head:hover {
-  background: var(--dsw-hover);
-}
 
 /* 顶层板块右侧分组切换：两个 24×24 按钮，图标 16×16；默认塌陷，悬浮展开 */
 .sidebar-view-switch {
