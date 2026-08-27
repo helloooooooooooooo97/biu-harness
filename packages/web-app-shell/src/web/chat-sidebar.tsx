@@ -95,7 +95,7 @@ const SessionRow = memo(function SessionRow({
     >
       <Link
         to={`/s/${item.id}`}
-        className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-[14px] leading-5"
+        className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
       >
         <SidebarMascot
           size={24}
@@ -414,7 +414,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                 {canAddHere ? (
                                   <button
                                     type="button"
-                                    className="sidebar-add grid shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
+                                    className="sidebar-add"
                                     title={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
                                     aria-label={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
                                     onClick={(e) => {
