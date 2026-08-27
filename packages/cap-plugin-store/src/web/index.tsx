@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Context } from 'cordis'
-import { PlayIcon, PuzzlePieceIcon, StopIcon, TrashIcon } from '@heroicons/react/16/solid'
+import { PuzzlePieceIcon } from '@heroicons/react/16/solid'
+import { PlayIcon, StopIcon, TrashIcon } from '@heroicons/react/20/solid'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 
@@ -100,7 +101,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
   const pending = items.find((item) => item.id === pendingUninstall) ?? null
   const iconBtn =
     'inline-grid size-6 shrink-0 cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent p-0 leading-none text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] disabled:opacity-40'
-  const actionIcon = { className: 'block size-4' } as const
+  const actionIcon = { className: 'block size-4', width: 16, height: 16 } as const
 
   return (
     <div
