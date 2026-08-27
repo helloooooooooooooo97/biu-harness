@@ -94,7 +94,7 @@ const SessionRow = memo(function SessionRow({
     >
       <Link
         to={`/s/${item.id}`}
-        className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-[12px] leading-4"
+        className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1 text-left text-[14px] leading-5"
       >
         <SidebarMascot
           size={24}
@@ -310,7 +310,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                   <div className="sidebar-section-head min-w-0">
                     <button
                       type="button"
-                      className="flex min-w-0 flex-1 items-center gap-2 rounded-[6px] text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
+                      className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)] hover:text-[var(--dsw-label)]"
                       aria-expanded={!sectionCollapsed}
                       onClick={() => toggleSection(section.kind)}
                     >
@@ -373,7 +373,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                               <div
                                 role="button"
                                 tabIndex={0}
-                                className="flex min-h-[24px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-[6px] text-left text-[12px] font-semibold tracking-wide text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
+                                className="flex min-h-[32px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-[6px] text-left text-[14px] font-medium tracking-normal text-[var(--dsw-label-3)] outline-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
                                 title={group.path ?? group.label}
                                 aria-expanded={!collapsed}
                                 onClick={() => toggleProjectGroup(group.key)}
@@ -404,7 +404,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                     )}
                                   </span>
                                 </span>
-                                <span className="min-w-0 flex-1 truncate text-[12px] font-medium tracking-normal">{group.label}</span>
+                                <span className="min-w-0 flex-1 truncate">{group.label}</span>
                                 <span className="shrink-0 font-mono text-[10px] opacity-60">{group.sessions.length}</span>
                                 {canAddHere ? (
                                   <button
