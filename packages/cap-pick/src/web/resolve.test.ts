@@ -57,6 +57,8 @@ test('parsePicks recovers chips that markdown would strip', () => {
 
 test('kind maps to distinct icons', () => {
   assert.equal(pickKindIcon('session'), LuBot)
+  assert.equal(pickKindIcon('message'), LuMessageSquare)
+  assert.notEqual(pickKindIcon('session'), pickKindIcon('message'))
   assert.equal(pickKindIcon('task'), LuListTodo)
   assert.equal(pickKindIcon('plugin'), LuPuzzle)
   assert.equal(pickKindIcon('unknown'), LuTag)
