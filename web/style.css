@@ -498,7 +498,7 @@ body {
   flex-shrink: 0;
   place-items: center;
   width: 0;
-  height: 16px;
+  height: 24px;
   overflow: hidden;
   margin: 0;
   padding: 0;
@@ -524,7 +524,7 @@ body {
 .chat-session-row:hover .chat-session-row-star,
 .chat-session-row-star:focus,
 .chat-session-row-star.is-on {
-  width: 16px;
+  width: 24px;
   opacity: 1;
 }
 
@@ -549,7 +549,7 @@ body {
   place-items: center;
   width: 0;
   min-width: 0;
-  height: 16px;
+  height: 24px;
   overflow: hidden;
   margin: 0;
   padding: 0;
@@ -569,8 +569,8 @@ body {
 }
 .sidebar-group-head:hover .sidebar-add,
 .sidebar-add:focus {
-  width: 16px;
-  min-width: 16px;
+  width: 24px;
+  min-width: 24px;
   opacity: 1;
 }
 .sidebar-add:hover {
