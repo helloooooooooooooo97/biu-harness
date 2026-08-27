@@ -155,7 +155,7 @@ export type TaskViewSort = {
   dir: TaskViewSortDir
 }
 
-/** 视图配置：筛选 + 排序；mode 仍写入后端，但前端查看模式可独立切换。 */
+/** 视图配置：呈现方式 + 筛选 + 排序 */
 export type TaskViewConfig = {
   mode: TaskViewMode
   filter: TaskViewFilter
@@ -168,34 +168,6 @@ export const VIEW_MODE_OPTIONS: Array<{ id: TaskViewMode; label: string }> = [
   { id: 'board', label: '看板' },
   { id: 'graph', label: '依赖' },
 ]
-
-const VIEW_MODE_STORAGE_KEY = 'tasks.viewMode'
-
-export function isTaskViewMode(value: unknown): value is TaskViewMode {
-  return value === 'queue' || value === 'table' || value === 'board' || value === 'graph'
-}
-
-/** 套用已存视图时保留当前查看模式（前端视图 ≠ 呈现方式）。 */
-export function applyViewKeepMode(viewConfig: TaskViewConfig, mode: TaskViewMode): TaskViewConfig {
-  return { ...viewConfig, mode }
-}
-
-export function readStoredViewMode(): TaskViewMode | null {
-  try {
-    const raw = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY)
-    return isTaskViewMode(raw) ? raw : null
-  } catch {
-    return null
-  }
-}
-
-export function writeStoredViewMode(mode: TaskViewMode) {
-  try {
-    window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode)
-  } catch {
-    /* ignore */
-  }
-}
 
 export type TaskView = {
   id: string
@@ -1235,12 +1207,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
         }
         const target = (savedId ? list.find((v) => v.id === savedId) : undefined) ?? list[0] ?? null
         setActiveViewId(target?.id ?? null)
-        const storedMode = readStoredViewMode()
-        if (target) {
-          setConfig(storedMode ? applyViewKeepMode(target.config, storedMode) : target.config)
-        } else if (storedMode) {
-          setConfig(applyViewKeepMode(defaultViewConfig(), storedMode))
-        }
+        if (target) setConfig(target.config)
       } catch {
         /* 服务不可用：留在默认配置 */
       } finally {
@@ -1260,16 +1227,13 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
   // 排序非默认（字段≠status 或 非升序）时，排序按钮右上角显示圆点（与筛选按钮一致）
   const sortCustom = sort.field !== 'status' || sort.dir !== 'asc'
 
-  // 自动保存：只写回筛选/排序；查看模式独立，不绑到视图
-  const configKey = JSON.stringify({ filter: config.filter, sort: config.sort })
+  // 自动保存：配置变化（mode / 筛选 / 排序）→ 防抖 PATCH 回当前视图
+  const configKey = JSON.stringify(config)
   useEffect(() => {
     if (!hydrated || !activeView) return
-    const persist: TaskViewConfig = { ...config, mode: activeView.config.mode }
-    if (JSON.stringify({ filter: persist.filter, sort: persist.sort }) === JSON.stringify({ filter: activeView.config.filter, sort: activeView.config.sort })) {
-      return
-    }
+    if (configKey === JSON.stringify(activeView.config)) return
     const timer = window.setTimeout(() => {
-      patchTaskView(activeView.id, { config: persist })
+      patchTaskView(activeView.id, { config })
         .then((updated) => {
           setViews((prev) => prev.map((v) => (v.id === updated.id ? updated : v)))
         })
@@ -1293,7 +1257,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
     }
     if (!v) return
     setActiveViewId(id)
-    setConfig(applyViewKeepMode(v.config, config.mode))
+    setConfig(v.config)
     try {
       window.localStorage.setItem('tasks.activeViewId', id)
     } catch {
@@ -1359,7 +1323,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
         if (activeViewId === dlg.view.id) {
           const next = rest[0] ?? null
           setActiveViewId(next?.id ?? null)
-          if (next) setConfig(applyViewKeepMode(next.config, config.mode))
+          if (next) setConfig(next.config)
         }
         setDlg(null)
       } catch (err) {
@@ -1379,7 +1343,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
         const v = await createTaskView(name, config)
         setViews((prev) => [...prev, v])
         setActiveViewId(v.id)
-        setConfig(applyViewKeepMode(v.config, config.mode))
+        setConfig(v.config)
         try {
           window.localStorage.setItem('tasks.activeViewId', v.id)
         } catch {
@@ -1441,13 +1405,12 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
     return [...new Set(tasks.flatMap((t) => t.tags))].sort()
   }, [tasks])
 
-  // 配置更新助手：改筛选 / 改排序；查看模式单独落 localStorage，不跟视图下拉绑死
+  // 配置更新助手：改筛选 / 改排序 / 改呈现方式（均绑定当前视图并自动保存）
   const patchConfig = (patch: Partial<TaskViewConfig>) => setConfig((c) => ({ ...c, ...patch }))
   const patchFilter = (patch: Partial<TaskViewFilter>) => setConfig((c) => ({ ...c, filter: { ...c.filter, ...patch } }))
   const setDisplayMode = (next: TaskViewMode) => {
     if (next === mode) return
     patchConfig({ mode: next })
-    writeStoredViewMode(next)
   }
 
   // 排序字段点击循环：未选中 → 升序 → 降序 → 还原（默认：状态升序）
