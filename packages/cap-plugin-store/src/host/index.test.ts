@@ -61,14 +61,12 @@ test('create writes .plugin/<id>/; close keeps code; uninstall deletes .plugin/<
     const ctx = new Context()
     const { adopted, dropped, forks } = stubHub(ctx)
     const store = new PluginStoreService(ctx, pluginDir, join(dir, 'plugins.sqlite'), join(dir, '.plugin-dev')).open()
-    const created = await store.initSandbox({
+    const created = await store.create({
       id: 'store-echo',
       name: 'Echo',
       hostJs: `export const name = 'store-echo'\nexport function apply() {}\n`,
     })
-    assert.equal(created.sandboxPath, join(dir, '.plugin-dev', 'store-echo'))
-    const packed = await store.pack('store-echo')
-    assert.equal(packed.pluginPath, join(pluginDir, 'store-echo'))
+    assert.equal(created.pluginPath, join(pluginDir, 'store-echo'))
     const echo = (await store.list()).find((item) => item.id === 'store-echo')
     assert.ok(echo)
     assert.equal(echo.enabled, false)

@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from 'cordis'
 import { PluginStoreService } from './index.ts'
-import { compileStoreModule } from './plugin-create.ts'
+import { compileStoreModule, registerPluginCreate } from './plugin-create.ts'
 
 function stubHub(ctx: Context) {
   ;(ctx as unknown as { hub: unknown }).hub = {
@@ -15,6 +15,30 @@ function stubHub(ctx: Context) {
     snapshot: () => ({ plugins: [] }),
   }
 }
+
+test('create compiles host source straight into .plugin/<id>/', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'plugin-create-small-'))
+  try {
+    const ctx = new Context()
+    stubHub(ctx)
+    const pluginDir = join(dir, '.plugin')
+    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'plugins.sqlite'), join(dir, '.plugin-dev')).open()
+    await store.create({
+      id: 'store-echo',
+      name: 'Echo',
+      hostJs: `export const name = 'store-echo'\nexport function apply(ctx: { ok: boolean }) { return ctx.ok }`,
+    })
+    const hostJs = await readFile(join(pluginDir, 'store-echo', 'host.js'), 'utf8')
+    assert.match(hostJs, /\bapply\b/)
+    assert.doesNotMatch(hostJs, /ctx: \{/)
+    await assert.rejects(
+      () => store.create({ id: 'store-empty', name: 'Empty' }),
+      /hostJs and\/or webJs/,
+    )
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
 
 test('initSandbox writes source; pack bundles into .plugin/<id>/', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'plugin-create-'))
@@ -71,6 +95,24 @@ test('pack bundles relative imports from sandbox', async () => {
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
+})
+
+test('registers plugin_create, plugin_sandbox, plugin_pack', () => {
+  const ctx = new Context()
+  const names: string[] = []
+  ;(ctx as unknown as { tools: { register: (spec: { name: string }) => void } }).tools = {
+    register(spec) {
+      names.push(spec.name)
+    },
+  }
+  const store = new PluginStoreService(
+    ctx,
+    '/tmp/plugin-store-tools/.plugin',
+    '/tmp/plugin-store-tools/plugins.sqlite',
+    '/tmp/plugin-store-tools/.plugin-dev',
+  )
+  registerPluginCreate(ctx, store)
+  assert.deepEqual(names, ['plugin_create', 'plugin_sandbox', 'plugin_pack'])
 })
 
 test('compileStoreModule strips TypeScript in-process', async () => {
