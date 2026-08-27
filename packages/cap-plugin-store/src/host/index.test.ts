@@ -1,12 +1,12 @@
 /** @vitest-environment node */
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { access, mkdtemp, rm } from 'node:fs/promises'
+import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from 'cordis'
 import type { CatalogEntry } from '@biu/host-hub'
-import { PluginStoreService, defaultPluginDir } from './index.ts'
+import { PluginStoreService, defaultPluginDir, defaultStatePath } from './index.ts'
 
 function stubHub(ctx: Context) {
   const adopted: string[] = []
@@ -42,12 +42,45 @@ test('default plugin dir is repo-root .plugin, not nested catalog', () => {
   assert.equal(dir.includes('.biu'), false)
 })
 
+test('default store state is .plugin/store.json', () => {
+  const path = defaultStatePath().replace(/\\/g, '/')
+  assert.ok(path.endsWith('/.plugin/store.json') || path.endsWith('.plugin/store.json'))
+})
+
+test('restore skips a broken enabled plugin and continues', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'plugin-root-'))
+  const pluginDir = join(dir, '.plugin')
+  try {
+    const ctx = new Context()
+    const { adopted } = stubHub(ctx)
+    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
+    await store.create({
+      id: 'store-ok',
+      name: 'Ok',
+      hostJs: `export const name = 'store-ok'\nexport function apply() {}\n`,
+    })
+    await store.openPlugin('store-ok')
+    await store.create({
+      id: 'store-bad',
+      name: 'Bad',
+      hostJs: `export const name = 'store-bad'\nexport function apply() {}\n`,
+    })
+    await store.openPlugin('store-bad')
+    await writeFile(join(pluginDir, 'store-bad', 'host.js'), 'throw new SyntaxError("nope")\n')
+    const store2 = new PluginStoreService(ctx, pluginDir, join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
+    await store2.restore()
+    assert.ok(adopted.includes('store-ok'))
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
 test('missing .plugin lists no plugins', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'plugin-root-'))
   try {
     const ctx = new Context()
     stubHub(ctx)
-    const store = new PluginStoreService(ctx, join(dir, 'missing'), join(dir, 'plugins.sqlite'), join(dir, '.plugin-dev')).open()
+    const store = new PluginStoreService(ctx, join(dir, 'missing'), join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
     assert.deepEqual(await store.list(), [])
   } finally {
     await rm(dir, { recursive: true, force: true })
@@ -60,7 +93,7 @@ test('create writes .plugin/<id>/; close keeps code; uninstall deletes .plugin/<
   try {
     const ctx = new Context()
     const { adopted, dropped, forks } = stubHub(ctx)
-    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'plugins.sqlite'), join(dir, '.plugin-dev')).open()
+    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
     const created = await store.create({
       id: 'store-echo',
       name: 'Echo',
@@ -73,6 +106,8 @@ test('create writes .plugin/<id>/; close keeps code; uninstall deletes .plugin/<
 
     const opened = await store.openPlugin('store-echo')
     assert.equal(opened?.enabled, true)
+    const saved = JSON.parse(await readFile(join(dir, 'store.json'), 'utf8')) as { enabled: string[] }
+    assert.deepEqual(saved.enabled, ['store-echo'])
     assert.deepEqual(adopted, ['store-echo'])
     assert.equal(forks.get('store-echo')?.packageName, 'store:store-echo')
     assert.equal(forks.get('store-echo')?.web, undefined)
@@ -96,7 +131,7 @@ test('web-only plugin opens without host.js', async () => {
   try {
     const ctx = new Context()
     const { forks } = stubHub(ctx)
-    const store = new PluginStoreService(ctx, join(dir, '.plugin'), join(dir, 'plugins.sqlite'), join(dir, '.plugin-dev')).open()
+    const store = new PluginStoreService(ctx, join(dir, '.plugin'), join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
     await store.initSandbox({
       id: 'store-banner',
       name: 'Banner',
