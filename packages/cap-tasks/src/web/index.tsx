@@ -1237,8 +1237,18 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
     return () => window.clearTimeout(timer)
   }, [configKey, config, activeView, hydrated])
 
-  const switchView = (id: string) => {
-    const v = views.find((x) => x.id === id)
+  const switchView = async (id: string) => {
+    let v: TaskView | undefined = views.find((x) => x.id === id)
+    if (!v) {
+      // 本地视图列表可能已过期（如 Agent 刚新建的视图还没同步过来）→ 先拉取最新列表再切
+      try {
+        const list = await fetchTaskViews()
+        setViews(list)
+        v = list.find((x) => x.id === id)
+      } catch {
+        /* 服务不可用：保持现状 */
+      }
+    }
     if (!v) return
     setActiveViewId(id)
     setConfig(v.config)
