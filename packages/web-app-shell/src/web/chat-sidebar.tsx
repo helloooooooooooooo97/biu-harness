@@ -28,6 +28,7 @@ import {
   SignalIcon,
   StarIcon,
   TrashIcon,
+  ChatBubbleLeftIcon,
 } from '@heroicons/react/16/solid'
 import { FolderIcon as FolderGroupIcon, TagIcon as TagGroupIcon, FolderMinusIcon as FolderMinusGroupIcon, BookmarkSlashIcon as BookmarkSlashGroupIcon } from '@heroicons/react/20/solid'
 
@@ -63,6 +64,15 @@ function SessionTagBadges({ tags }: { tags?: string[] }) {
           +{extra}
         </span>
       ) : null}
+    </span>
+  )
+}
+
+function ChatCount({ count }: { count: number }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-0.5 leading-none tabular-nums opacity-70">
+      <ChatBubbleLeftIcon className="size-4 shrink-0" aria-hidden />
+      <span>{count}</span>
     </span>
   )
 }
@@ -318,11 +328,13 @@ export const ChatSidebar = memo(function ChatSidebar({
                       onClick={() => toggleSection(section.kind)}
                     >
                       <span className="min-w-0 flex-1 truncate tracking-normal">{section.label}</span>
-                      <span className="shrink-0 font-mono text-[10px] opacity-60">
-                        {section.sessions
-                          ? section.sessions.length
-                          : section.groups?.reduce((sum, g) => sum + g.sessions.length, 0) ?? 0}
-                      </span>
+                      <ChatCount
+                        count={
+                          section.sessions
+                            ? section.sessions.length
+                            : section.groups?.reduce((sum, g) => sum + g.sessions.length, 0) ?? 0
+                        }
+                      />
                     </button>
                     {section.kind !== 'pinned' ? (
                       <div
@@ -410,7 +422,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                   </span>
                                 </span>
                                 <span className="min-w-0 flex-1 truncate">{group.label}</span>
-                                <span className="shrink-0 font-mono text-[10px] opacity-60">{group.sessions.length}</span>
+                                <ChatCount count={group.sessions.length} />
                                 {canAddHere ? (
                                   <button
                                     type="button"
