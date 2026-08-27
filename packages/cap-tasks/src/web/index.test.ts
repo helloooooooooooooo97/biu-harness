@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { buildQueueRows, buildTreeRows, sortTasks } from './index.tsx'
+import { applyViewKeepMode, buildQueueRows, buildTreeRows, sortTasks } from './index.tsx'
 import type { Task, TaskPriority, TaskStatus } from './index.tsx'
 
 function makeTask(id: string, patch: Partial<Task> = {}): Task {
@@ -78,6 +78,22 @@ describe('buildQueueRows（队列：仅叶节点，组内保持排序）', () =>
     const ids = rows.map((t) => t.id)
     // 父节点 p1 不展示；todo 组内：leafB(high) → leafC(med) → leafA(low)
     expect(ids).toEqual(['leafB', 'leafC', 'leafA'])
+  })
+})
+
+describe('applyViewKeepMode（视图与查看模式解绑）', () => {
+  test('套用已存筛选时保留当前呈现方式', () => {
+    const kept = applyViewKeepMode(
+      {
+        mode: 'table',
+        filter: { project: 'biu', tags: ['a'], time: '7d' },
+        sort: { field: 'due', dir: 'asc' },
+      },
+      'board',
+    )
+    expect(kept.mode).toBe('board')
+    expect(kept.filter.project).toBe('biu')
+    expect(kept.sort.field).toBe('due')
   })
 })
 

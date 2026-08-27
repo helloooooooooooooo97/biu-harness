@@ -155,11 +155,46 @@ export type TaskViewSort = {
   dir: TaskViewSortDir
 }
 
-/** 视图 = 呈现方式 + 筛选 + 排序 的完整配置 */
+/** 视图配置：筛选 + 排序；mode 仍写入后端，但前端查看模式可独立切换。 */
 export type TaskViewConfig = {
   mode: TaskViewMode
   filter: TaskViewFilter
   sort: TaskViewSort
+}
+
+export const VIEW_MODE_OPTIONS: Array<{ id: TaskViewMode; label: string }> = [
+  { id: 'queue', label: '队列' },
+  { id: 'table', label: '表格' },
+  { id: 'board', label: '看板' },
+  { id: 'graph', label: '依赖' },
+]
+
+const VIEW_MODE_STORAGE_KEY = 'tasks.viewMode'
+
+export function isTaskViewMode(value: unknown): value is TaskViewMode {
+  return value === 'queue' || value === 'table' || value === 'board' || value === 'graph'
+}
+
+/** 套用已存视图时保留当前查看模式（前端视图 ≠ 呈现方式）。 */
+export function applyViewKeepMode(viewConfig: TaskViewConfig, mode: TaskViewMode): TaskViewConfig {
+  return { ...viewConfig, mode }
+}
+
+export function readStoredViewMode(): TaskViewMode | null {
+  try {
+    const raw = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY)
+    return isTaskViewMode(raw) ? raw : null
+  } catch {
+    return null
+  }
+}
+
+export function writeStoredViewMode(mode: TaskViewMode) {
+  try {
+    window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode)
+  } catch {
+    /* ignore */
+  }
 }
 
 export type TaskView = {
@@ -1200,7 +1235,12 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
         }
         const target = (savedId ? list.find((v) => v.id === savedId) : undefined) ?? list[0] ?? null
         setActiveViewId(target?.id ?? null)
-        if (target) setConfig(target.config)
+        const storedMode = readStoredViewMode()
+        if (target) {
+          setConfig(storedMode ? applyViewKeepMode(target.config, storedMode) : target.config)
+        } else if (storedMode) {
+          setConfig(applyViewKeepMode(defaultViewConfig(), storedMode))
+        }
       } catch {
         /* 服务不可用：留在默认配置 */
       } finally {
@@ -1220,13 +1260,16 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
   // 排序非默认（字段≠status 或 非升序）时，排序按钮右上角显示圆点（与筛选按钮一致）
   const sortCustom = sort.field !== 'status' || sort.dir !== 'asc'
 
-  // 自动保存：配置变化 → 防抖 PATCH 回当前视图
-  const configKey = JSON.stringify(config)
+  // 自动保存：只写回筛选/排序；查看模式独立，不绑到视图
+  const configKey = JSON.stringify({ filter: config.filter, sort: config.sort })
   useEffect(() => {
     if (!hydrated || !activeView) return
-    if (configKey === JSON.stringify(activeView.config)) return
+    const persist: TaskViewConfig = { ...config, mode: activeView.config.mode }
+    if (JSON.stringify({ filter: persist.filter, sort: persist.sort }) === JSON.stringify({ filter: activeView.config.filter, sort: activeView.config.sort })) {
+      return
+    }
     const timer = window.setTimeout(() => {
-      patchTaskView(activeView.id, { config })
+      patchTaskView(activeView.id, { config: persist })
         .then((updated) => {
           setViews((prev) => prev.map((v) => (v.id === updated.id ? updated : v)))
         })
@@ -1240,7 +1283,6 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
   const switchView = async (id: string) => {
     let v: TaskView | undefined = views.find((x) => x.id === id)
     if (!v) {
-      // 本地视图列表可能已过期（如 Agent 刚新建的视图还没同步过来）→ 先拉取最新列表再切
       try {
         const list = await fetchTaskViews()
         setViews(list)
@@ -1251,7 +1293,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
     }
     if (!v) return
     setActiveViewId(id)
-    setConfig(v.config)
+    setConfig(applyViewKeepMode(v.config, config.mode))
     try {
       window.localStorage.setItem('tasks.activeViewId', id)
     } catch {
@@ -1263,7 +1305,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
   useEffect(() => {
     if (!tasksView) return
     return tasksView.subscribeViewSwitch((viewId) => {
-      switchView(viewId)
+      void switchView(viewId)
     })
   }, [tasksView, views, hydrated])
 
@@ -1317,7 +1359,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
         if (activeViewId === dlg.view.id) {
           const next = rest[0] ?? null
           setActiveViewId(next?.id ?? null)
-          if (next) setConfig(next.config)
+          if (next) setConfig(applyViewKeepMode(next.config, config.mode))
         }
         setDlg(null)
       } catch (err) {
@@ -1337,7 +1379,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
         const v = await createTaskView(name, config)
         setViews((prev) => [...prev, v])
         setActiveViewId(v.id)
-        setConfig(v.config)
+        setConfig(applyViewKeepMode(v.config, config.mode))
         try {
           window.localStorage.setItem('tasks.activeViewId', v.id)
         } catch {
@@ -1367,19 +1409,29 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
   // ---- 排序下拉菜单 ----
   const [sortMenuOpen, setSortMenuOpen] = useState(false)
   const sortMenuRef = useRef<HTMLDivElement>(null)
+  const [modeMenuOpen, setModeMenuOpen] = useState(false)
+  const modeMenuRef = useRef<HTMLDivElement>(null)
   // 点击外部关闭所有弹出菜单
   useEffect(() => {
-    if (!viewMenuOpen && !sortMenuOpen && !filterOpen) return
+    if (!viewMenuOpen && !sortMenuOpen && !filterOpen && !modeMenuOpen) return
     const onDown = (event: MouseEvent) => {
       const node = event.target as Node
-      if (viewMenuRef.current?.contains(node) || sortMenuRef.current?.contains(node) || filterRef.current?.contains(node)) return
+      if (
+        viewMenuRef.current?.contains(node) ||
+        sortMenuRef.current?.contains(node) ||
+        filterRef.current?.contains(node) ||
+        modeMenuRef.current?.contains(node)
+      ) {
+        return
+      }
       setViewMenuOpen(false)
       setSortMenuOpen(false)
       setFilterOpen(false)
+      setModeMenuOpen(false)
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
-  }, [viewMenuOpen, sortMenuOpen, filterOpen])
+  }, [viewMenuOpen, sortMenuOpen, filterOpen, modeMenuOpen])
 
   // 项目 / 标签筛选
   const allProjects = useMemo(() => {
@@ -1389,9 +1441,14 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
     return [...new Set(tasks.flatMap((t) => t.tags))].sort()
   }, [tasks])
 
-  // 配置更新助手：改筛选 / 改排序 / 改呈现方式（触发自动保存）
+  // 配置更新助手：改筛选 / 改排序；查看模式单独落 localStorage，不跟视图下拉绑死
   const patchConfig = (patch: Partial<TaskViewConfig>) => setConfig((c) => ({ ...c, ...patch }))
   const patchFilter = (patch: Partial<TaskViewFilter>) => setConfig((c) => ({ ...c, filter: { ...c.filter, ...patch } }))
+  const setDisplayMode = (next: TaskViewMode) => {
+    if (next === mode) return
+    patchConfig({ mode: next })
+    writeStoredViewMode(next)
+  }
 
   // 排序字段点击循环：未选中 → 升序 → 降序 → 还原（默认：状态升序）
   const cycleSort = (field: TaskViewSortField) => {
@@ -1543,13 +1600,16 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
               aria-expanded={viewMenuOpen}
               onClick={() => setViewMenuOpen((v) => !v)}
             >
-              {VIEW_MODE_ICON[mode]}
-              <span className="tasks-viewdd-name">{activeView?.name ?? (mode === 'queue' ? '队列' : mode === 'board' ? '看板' : mode === 'graph' ? '依赖' : '表格')}</span>
+              <LuPanelsTopLeft size={13} aria-hidden />
+              <span className="tasks-viewdd-name">{activeView?.name ?? '未保存'}</span>
               <LuChevronDown size={13} aria-hidden />
             </button>
             {viewMenuOpen ? (
               <div className="tasks-viewdd-menu" role="menu">
                 <div className="tasks-viewdd-head">视图</div>
+                {views.length === 0 ? (
+                  <div className="tasks-viewdd-empty">还没有已保存的视图</div>
+                ) : null}
                 {views.map((v) => (
                   <div key={v.id} className={`tasks-viewdd-item${v.id === activeViewId ? ' is-active' : ''}`}>
                     <button
@@ -1559,20 +1619,17 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
                       aria-checked={v.id === activeViewId}
                       onClick={() => { switchView(v.id); setViewMenuOpen(false) }}
                     >
-                      {VIEW_MODE_ICON[v.config.mode]}
                       <span className="tasks-viewdd-item-name">{v.name}</span>
                       {v.id === activeViewId ? <LuCircleCheck size={13} aria-hidden className="tasks-viewdd-check" /> : null}
                     </button>
-                    {!v.isBuiltin ? (
-                      <span className="tasks-viewdd-item-actions">
-                        <button type="button" className="tasks-viewdd-act" title="重命名" onClick={() => openDlg({ kind: 'rename', view: v })}>
-                          <LuPenLine size={12} aria-hidden />
-                        </button>
-                        <button type="button" className="tasks-viewdd-act is-danger" title="删除" onClick={() => openDlg({ kind: 'delete', view: v })}>
-                          <LuTrash2 size={12} aria-hidden />
-                        </button>
-                      </span>
-                    ) : null}
+                    <span className="tasks-viewdd-item-actions">
+                      <button type="button" className="tasks-viewdd-act" title="重命名" onClick={() => openDlg({ kind: 'rename', view: v })}>
+                        <LuPenLine size={12} aria-hidden />
+                      </button>
+                      <button type="button" className="tasks-viewdd-act is-danger" title="删除" onClick={() => openDlg({ kind: 'delete', view: v })}>
+                        <LuTrash2 size={12} aria-hidden />
+                      </button>
+                    </span>
                   </div>
                 ))}
                 <div className="tasks-viewdd-foot">
@@ -1597,6 +1654,43 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
+          <div className="tasks-sort-wrap" ref={modeMenuRef}>
+            <button
+              type="button"
+              className={`tasks-sort-btn${modeMenuOpen ? ' is-active' : ''}`}
+              aria-label="查看模式"
+              title={`模式：${VIEW_MODE_OPTIONS.find((opt) => opt.id === mode)?.label ?? mode}`}
+              aria-haspopup="menu"
+              aria-expanded={modeMenuOpen}
+              onClick={() => setModeMenuOpen((v) => !v)}
+            >
+              {VIEW_MODE_ICON[mode]}
+            </button>
+            {modeMenuOpen ? (
+              <div className="tasks-sort-menu" role="menu">
+                <div className="tasks-sort-head">查看模式</div>
+                {VIEW_MODE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className={`tasks-sort-item${mode === opt.id ? ' is-active' : ''}`}
+                    role="menuitemradio"
+                    aria-checked={mode === opt.id}
+                    onClick={() => {
+                      setDisplayMode(opt.id)
+                      setModeMenuOpen(false)
+                    }}
+                  >
+                    <span className="tasks-sort-item-label">
+                      <span className="tasks-mode-item-ico">{VIEW_MODE_ICON[opt.id]}</span>
+                      {opt.label}
+                    </span>
+                    {mode === opt.id ? <LuCircleCheck size={13} aria-hidden className="tasks-sort-item-icon is-on" /> : null}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
           {/* 排序按钮（仅图标：字段+升降序在菜单内，位于筛选按钮左侧） */}
           <div className="tasks-sort-wrap" ref={sortMenuRef}>
             <button
@@ -3472,6 +3566,7 @@ if (typeof document !== 'undefined') {
 .tasks-viewdd-name { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tasks-viewdd-menu { position:absolute; top:calc(100% + 6px); left:0; z-index:40; min-width:230px; padding:6px; background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:2px; }
 .tasks-viewdd-head { padding:5px 8px 3px; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--dsw-label-3); }
+.tasks-viewdd-empty { padding:8px; font-size:11.5px; color:var(--dsw-label-3); }
 .tasks-viewdd-item { display:flex; align-items:center; gap:2px; border-radius:7px; }
 .tasks-viewdd-item:hover { background:var(--dsw-hover); }
 .tasks-viewdd-item.is-active { background:color-mix(in srgb, var(--dsw-business) 10%, transparent); }
@@ -3515,10 +3610,12 @@ if (typeof document !== 'undefined') {
 .tasks-sort-menu { position:absolute; top:calc(100% + 6px); right:0; z-index:40; min-width:180px; padding:8px; background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:8px; }
 .tasks-sort-head { font-size:10.5px; font-weight:600; color:var(--dsw-label-3); }
 .tasks-sort-item { display:inline-flex; align-items:center; justify-content:space-between; gap:8px; border:0; border-radius:7px; padding:6px 8px; background:transparent; color:var(--dsw-label-2); font:inherit; font-size:12px; font-weight:550; cursor:pointer; text-align:left; }
+.tasks-sort-item-label { display:inline-flex; align-items:center; min-width:0; }
 .tasks-sort-item:hover { background:var(--dsw-hover); }
 .tasks-sort-item.is-active { color:var(--dsw-business); font-weight:650; }
 .tasks-sort-item-icon { display:inline-flex; align-items:center; justify-content:center; width:16px; flex:none; color:var(--dsw-label-3); }
 .tasks-sort-item-icon.is-on { color:var(--dsw-business); }
+.tasks-mode-item-ico { display:inline-flex; align-items:center; margin-right:6px; }
 
 /* ---- 看板视图（Notion 风格：极轻边框、无重色、悬浮轻阴影）---- */
 .tasks-board { display:grid; grid-template-columns:repeat(5, minmax(190px, 1fr)); gap:10px; margin-top:10px; align-items:start; overflow-x:auto; }

@@ -218,15 +218,6 @@ export function normalizeViewName(value: unknown): string {
   return s ? s.slice(0, 80) : '未命名视图'
 }
 
-/** 内置 4 个默认视图：首次启动自动 seed，不可删除。 */
-const BUILTIN_VIEWS: Array<{ id: string; name: string; config: TaskViewConfig }> = [
-  { id: 'builtin-queue', name: '队列', config: { ...defaultViewConfig(), mode: 'queue' } },
-  { id: 'builtin-table', name: '表格', config: { ...defaultViewConfig(), mode: 'table' } },
-  { id: 'builtin-board', name: '看板', config: { ...defaultViewConfig(), mode: 'board' } },
-  { id: 'builtin-graph', name: '依赖', config: { ...defaultViewConfig(), mode: 'graph' } },
-]
-
-
 export type TaskCreateInput = {
   title: string
   status?: TaskStatus
@@ -1144,7 +1135,7 @@ export class TasksService extends Service {
         /* already exists */
       }
     }
-    // ---- 视图持久化：task_views 表 + 内置视图首次启动自动 seed ----
+    // ---- 视图持久化：task_views 表。呈现方式（队列/表格/看板/依赖）不是视图，不 seed 内置行。 ----
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS task_views (
         id TEXT PRIMARY KEY,
@@ -1155,16 +1146,9 @@ export class TasksService extends Service {
         updated_at INTEGER NOT NULL
       );
     `)
-    const viewCount = (this.db.prepare('SELECT COUNT(*) AS c FROM task_views').get() as { c: number }).c
-    if (!viewCount) {
-      const ts = now()
-      const insertView = this.db.prepare(
-        'INSERT INTO task_views (id, name, config_json, is_builtin, created_at, updated_at) VALUES (?, ?, ?, 1, ?, ?)',
-      )
-      for (const v of BUILTIN_VIEWS) {
-        insertView.run(v.id, v.name, JSON.stringify(v.config), ts, ts)
-      }
-    }
+    this.db.exec(
+      `DELETE FROM task_views WHERE is_builtin = 1 OR id IN ('builtin-queue','builtin-table','builtin-board','builtin-graph')`,
+    )
     return this
   }
 
@@ -1485,11 +1469,10 @@ export class TasksService extends Service {
     return this.getTaskView(id)!
   }
 
-  /** 内置视图不可删除；返回是否删除成功。 */
+  /** 返回是否删除成功。 */
   deleteTaskView(id: string): boolean {
     const current = this.getTaskView(id)
     if (!current) return false
-    if (current.isBuiltin) throw new Error('builtin view cannot be deleted')
     const result = this.db.prepare('DELETE FROM task_views WHERE id = ?').run(id) as { changes: number }
     if (result.changes > 0) this.emitChange()
     return result.changes > 0
@@ -2029,14 +2012,14 @@ export function apply(ctx: Context) {
 
   host.tools.register({
     name: 'tasks_view_list',
-    description: '列出任务面板的所有视图（含内置：队列/表格/看板/依赖）及其筛选、排序配置',
+    description: '列出任务面板已保存的视图及其筛选、排序配置（呈现方式不在视图里）',
     parameters: { type: 'object', properties: {} },
     execute: () => ({ views: tasks.listTaskViews() }),
   })
 
   host.tools.register({
     name: 'tasks_view_create',
-    description: '新建一个任务面板视图（Notion 风格）：可同时指定呈现方式 mode、筛选 filter、排序 sort',
+    description: '新建一个任务面板视图：名称 + 筛选 filter + 排序 sort（呈现方式由前端独立选择，不必绑定视图）',
     parameters: {
       type: 'object',
       properties: {
@@ -2062,7 +2045,7 @@ export function apply(ctx: Context) {
 
   host.tools.register({
     name: 'tasks_view_update',
-    description: '更新任务面板视图：可重命名，或修改筛选/排序/呈现方式（只传要改的字段，其余保持不变）',
+    description: '更新任务面板视图：可重命名，或修改筛选/排序（只传要改的字段，其余保持不变）',
     parameters: {
       type: 'object',
       properties: {
@@ -2093,7 +2076,7 @@ export function apply(ctx: Context) {
 
   host.tools.register({
     name: 'tasks_view_delete',
-    description: '删除任务面板的自定义视图（内置视图不可删除）',
+    description: '删除任务面板的已保存视图',
     parameters: {
       type: 'object',
       properties: { id: { type: 'string', description: '视图 id' } },
@@ -2223,7 +2206,7 @@ export function apply(ctx: Context) {
   // GET    /api/task-views      —— 视图列表
   // POST   /api/task-views      —— 新建/另存为（body: { name, config }）
   // PATCH  /api/task-views/:id  —— 重命名/更新配置（body: { name?, config? }）
-  // DELETE /api/task-views/:id  —— 删除（内置视图返回 400）
+  // DELETE /api/task-views/:id  —— 删除已保存视图
   host.http.route('GET', '/api/task-views', async (route) => {
     route.send(200, { views: tasks.listTaskViews() })
   })
