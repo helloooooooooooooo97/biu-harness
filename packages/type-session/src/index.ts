@@ -7,6 +7,12 @@ export type MessageSender =
   | { type: 'user' }
   | { type: 'session'; sessionId: string }
 
+export type UserMessageImage = {
+  name: string
+  mime: string
+  url: string
+}
+
 /** 写入 append 的正文（不含 seq/ts）；与 SessionEvent 判别联合一一对应。 */
 export type SessionEventBody =
   | { type: 'session/open'; version: number }
@@ -16,7 +22,7 @@ export type SessionEventBody =
   | { type: 'step/end'; turn: number; step: number }
   | { type: 'system/prompt'; text: string }
   | { type: 'system/compact'; text: string }
-  | { type: 'user/message'; text: string; kind: InboxKind; sender?: MessageSender }
+  | { type: 'user/message'; text: string; kind: InboxKind; sender?: MessageSender; images?: UserMessageImage[] }
   | {
       type: 'assistant/message'
       text: string

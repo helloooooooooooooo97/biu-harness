@@ -11,6 +11,7 @@ export interface ClaimedInput {
   id?: string
   extraTools?: string[]
   sender?: MessageSender
+  images?: Array<{ name: string; mime: string; url: string }>
 }
 
 export interface PreStepReq {

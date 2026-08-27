@@ -199,6 +199,51 @@ body {
   padding: 0 12px;
 }
 
+.chat-view-session-title-wrap {
+  position: absolute;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  max-width: min(420px, calc(100% - 220px));
+  min-width: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.chat-view-session-title {
+  width: 100%;
+  min-width: 80px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  padding: 4px 10px;
+  color: var(--dsw-label);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  outline: none;
+  pointer-events: auto;
+}
+
+.chat-view-session-title::placeholder {
+  color: var(--dsw-label-3);
+  font-weight: 500;
+}
+
+.chat-view-session-title:hover {
+  background: var(--dsw-hover);
+}
+
+.chat-view-session-title:focus {
+  background: var(--dsw-hover);
+  overflow: visible;
+  text-overflow: clip;
+}
+
 .app-side-bar-head {
   display: flex;
   height: 36px;
@@ -349,7 +394,7 @@ body {
   align-items: center;
   gap: 8px;
   border-radius: 8px;
-  padding: 5px 8px;
+  padding: 5px 4px;
   color: var(--dsw-sidebar-fg);
   font-size: 12px;
   font-weight: 500;
@@ -385,8 +430,8 @@ body {
 
 .app-side-actions-icon {
   display: grid;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   place-items: center;
   color: var(--dsw-label-3);
@@ -506,12 +551,28 @@ body {
   opacity: 1;
 }
 
+.sidebar-rail-icon {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  place-items: center;
+}
+
+.sidebar-session-list {
+  padding-left: 32px;
+}
+
+.sidebar-group-head {
+  padding: 0 4px;
+}
+
 /* 顶部「收藏/项目/标签」板块标题行：普通透明形态(无胶囊质感)。
-   保留固定 22px 行高(items-center)，确保 view-switch 悬浮出现不撑高行 */
+   保留固定 24px 行高(items-center)，确保 view-switch 悬浮出现不撑高行 */
 .sidebar-section-head {
   display: flex;
   align-items: center;
-  height: 22px;
+  height: 24px;
   margin: 0 0 4px;
   padding: 0 4px;
 }
@@ -519,7 +580,7 @@ body {
 /* 顶层板块右侧分组视图切换 tab：作为 flex 流右侧子元素参与行内布局；
    默认宽度塌陷不占位(计数贴右与「收藏」tab 对齐)，悬浮/聚焦时展开，自动令 label(flex-1 truncate)
    左移让位、文本靠左可截断，不遮字，行宽平滑过渡。无 border/padding，高度仅由按钮(20px)决定，
-   不高于标题行(22px)故悬浮出现绝不撑高行 */
+   不高于标题行(24px)故悬浮出现绝不撑高行 */
 .sidebar-view-switch {
   flex-shrink: 0;
   width: 0;
@@ -1270,8 +1331,10 @@ body {
   letter-spacing: 0.02em;
 }
 .usage-panel-title-icon {
+  flex: none;
+  width: 13px;
+  height: 13px;
   color: var(--dsw-business);
-  font-size: 10px;
 }
 .usage-panel-legend {
   display: inline-flex;
@@ -2809,6 +2872,78 @@ body {
   flex-wrap: wrap;
   gap: 6px;
   padding: 10px 12px 0;
+}
+
+.composer-image-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px 0;
+}
+
+[data-testid="user-bubble"] + .composer-image-row {
+  padding: 8px 0 0;
+}
+
+.composer-image-thumb-wrap {
+  position: relative;
+  width: 56px;
+  height: 56px;
+}
+
+.composer-image-thumb {
+  display: block;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--dsw-border);
+  border-radius: 8px;
+  background: var(--dsw-hover);
+  cursor: zoom-in;
+}
+
+.composer-image-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.composer-image-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #3a3a3a;
+  color: var(--dsw-label);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.composer-image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.72);
+  cursor: zoom-out;
+}
+
+.composer-image-lightbox img {
+  max-width: min(920px, 92vw);
+  max-height: 88vh;
+  border-radius: 10px;
+  box-shadow: var(--dsw-shadow-lv2);
+  object-fit: contain;
 }
 
 .user-pick-chips {

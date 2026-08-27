@@ -111,61 +111,64 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
 
   const pending = items.find((item) => item.id === pendingUninstall) ?? null
   const iconBtn =
-    'grid size-8 shrink-0 cursor-pointer place-items-center rounded-[8px] border-0 bg-[var(--dsw-hover)] text-[var(--dsw-label-2)] hover:bg-[#353535] hover:text-[var(--dsw-label)] disabled:opacity-40'
+    'grid size-6 shrink-0 cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] disabled:opacity-40'
 
   return (
     <div
-      className={`flex min-h-0 flex-1 flex-col overflow-auto ${compact ? 'px-3 py-3' : 'px-8 py-6'}`}
+      className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-auto ${compact ? 'px-2.5 py-2.5' : 'px-5 py-4'}`}
       data-testid={compact ? 'plugin-store-inspector' : 'plugin-store-page'}
     >
       {compact ? null : (
-        <header className="mb-6">
-          <h1 className="m-0 text-[22px] font-semibold tracking-tight text-[var(--dsw-label)]">插件</h1>
+        <header className="mb-3 flex items-baseline gap-2">
+          <h1 className="m-0 text-[13px] font-semibold tracking-tight text-[var(--dsw-label)]">插件</h1>
+          <span className="text-[11px] tabular-nums text-[var(--dsw-label-3)]">{items.length}</span>
         </header>
       )}
 
       {error ? (
-        <p className="mb-4 text-[13px] text-[var(--dsw-danger)]" data-testid="plugin-store-error">
+        <p className="mb-3 text-[11px] leading-[1.45] text-[var(--dsw-danger)]" data-testid="plugin-store-error">
           {error}
         </p>
       ) : null}
 
       {items.length === 0 && !error ? (
-        <p className="m-0 text-[13px] text-[var(--dsw-label-3)]" data-testid="plugin-store-empty">
+        <p className="m-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]" data-testid="plugin-store-empty">
           没有插件
         </p>
       ) : (
-      <ul className="m-0 flex list-none flex-col gap-3 p-0">
+      <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
         {items.map((item) => (
           <li
             key={item.id}
-            className={`flex items-center justify-between gap-3 rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] ${compact ? 'px-3 py-2.5' : 'px-4 py-3'}`}
+            className="flex items-start justify-between gap-2 rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-2.5 py-2"
             data-testid={`plugin-store-card-${item.id}`}
             data-biu-kind="plugin"
             data-biu-id={item.id}
             data-biu-label={item.name}
           >
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[14px] font-medium text-[var(--dsw-label)]">{item.name}</span>
-                <span className="font-mono text-[11px] text-[var(--dsw-label-3)]">{item.id}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span className="min-w-0 truncate text-[12px] font-medium leading-[1.3] text-[var(--dsw-label)]">
+                  {item.name}
+                </span>
+                <span className="shrink-0 font-mono text-[10px] leading-[1.3] text-[var(--dsw-label-3)]">{item.id}</span>
                 {item.enabled ? (
-                  <span className="rounded-[4px] bg-[var(--dsw-ok)]/15 px-1.5 py-px text-[10px] font-medium text-[var(--dsw-ok)]">
+                  <span className="shrink-0 rounded-[4px] bg-[var(--dsw-ok)]/12 px-1 py-px text-[9px] font-semibold tracking-wide text-[var(--dsw-ok)]">
                     {item.running ? '运行中' : '已打开'}
                   </span>
                 ) : (
-                  <span className="rounded-[4px] bg-[var(--dsw-hover)] px-1.5 py-px text-[10px] text-[var(--dsw-label-3)]">
+                  <span className="shrink-0 rounded-[4px] bg-[var(--dsw-hover)] px-1 py-px text-[9px] font-medium text-[var(--dsw-label-3)]">
                     已关闭
                   </span>
                 )}
               </div>
               {item.blurb ? (
-                <p className={`mt-1 m-0 leading-5 text-[var(--dsw-label-3)] ${compact ? 'text-[11px]' : 'text-[12px]'}`}>
+                <p className="mt-0.5 mb-0 line-clamp-2 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
                   {item.blurb}
                 </p>
               ) : null}
             </div>
-            <div className="flex shrink-0 items-center gap-0.5">
+            <div className="flex shrink-0 items-center gap-px pt-px">
               {item.enabled ? (
                 <button
                   type="button"
@@ -177,7 +180,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                   disabled={Boolean(busy?.endsWith(`:${item.id}`))}
                   onClick={() => void closePlugin(item.id)}
                 >
-                  <LuSquare className="size-3.5" />
+                  <LuSquare className="size-3" />
                 </button>
               ) : (
                 <button
@@ -190,7 +193,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                   disabled={Boolean(busy?.endsWith(`:${item.id}`))}
                   onClick={() => void openPlugin(item.id)}
                 >
-                  <LuPlay className="size-3.5" />
+                  <LuPlay className="size-3" />
                 </button>
               )}
               <button
@@ -202,7 +205,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                 disabled={Boolean(busy?.endsWith(`:${item.id}`))}
                 onClick={() => setPendingUninstall(item.id)}
               >
-                <LuTrash2 className="size-3.5" />
+                <LuTrash2 className="size-3" />
               </button>
             </div>
           </li>
@@ -224,19 +227,19 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
               }}
             >
               <div
-                className="w-[min(100%,360px)] rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] p-5 text-[var(--dsw-label)]"
+                className="w-[min(100%,320px)] rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] p-4 text-[var(--dsw-label)]"
                 onClick={(event) => event.stopPropagation()}
               >
-                <h2 id="plugin-store-uninstall-title" className="m-0 text-[15px] font-semibold">
+                <h2 id="plugin-store-uninstall-title" className="m-0 text-[13px] font-semibold">
                   卸载「{pending.name}」？
                 </h2>
-                <p className="mt-2 mb-0 text-[13px] leading-5 text-[var(--dsw-label-3)]">
+                <p className="mt-1.5 mb-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
                   卸载后会永久删除这份插件代码，货架上也会消失。若只是暂时不用，请点关闭。
                 </p>
-                <div className="mt-4 flex justify-end gap-2">
+                <div className="mt-3 flex justify-end gap-1.5">
                   <button
                     type="button"
-                    className="rounded-[8px] border-0 bg-[var(--dsw-hover)] px-3 py-1.5 text-[12px] text-[var(--dsw-label)] hover:bg-[#353535]"
+                    className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] text-[var(--dsw-label)] hover:bg-[#353535]"
                     data-testid="plugin-store-uninstall-cancel"
                     disabled={busy === `rm:${pending.id}`}
                     onClick={() => setPendingUninstall(null)}
@@ -245,7 +248,7 @@ function PluginStorePage({ compact = false }: { compact?: boolean }) {
                   </button>
                   <button
                     type="button"
-                    className="rounded-[8px] border-0 bg-[var(--dsw-hover)] px-3 py-1.5 text-[12px] font-medium text-[var(--dsw-label)] hover:bg-[#353535]"
+                    className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] font-medium text-[var(--dsw-label)] hover:bg-[#353535]"
                     data-testid="plugin-store-uninstall-confirm"
                     data-biu-action="uninstall"
                     disabled={busy === `rm:${pending.id}`}

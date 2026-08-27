@@ -1236,6 +1236,7 @@ export function apply(ctx: Context) {
       kind?: 'wake' | 'inject'
       wait?: boolean
       extraTools?: string[]
+      images?: Array<{ name?: string; mime?: string; url?: string }>
     }
     const agent = await ctx.agents.create(route.params.id)
     // re-sync in-memory LLM without rewriting disk
@@ -1246,6 +1247,7 @@ export function apply(ctx: Context) {
     const sendOpts = {
       ...(extraTools.length ? { extraTools } : {}),
       ...(payload.wait === false ? { wait: false as const } : {}),
+      ...(Array.isArray(payload.images) ? { images: payload.images } : {}),
     }
     if (payload.kind === 'inject') {
       agent.inject(payload.text ?? '', sendOpts)

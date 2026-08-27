@@ -11,6 +11,7 @@ export interface AgentSendOptions {
   wait?: boolean
   /** 消息来源：Live 派工时传入 { type: 'session', sessionId } */
   sender?: MessageSender
+  images?: Array<{ name: string; mime: string; url: string }>
 }
 
 export interface AgentHandle {
@@ -134,14 +135,16 @@ export class AgentsService extends Service {
       sessionId: id,
       send: async (text: string, opts?: AgentSendOptions) => {
         const trimmed = text.trim()
-        if (!trimmed) return { text: '请先输入内容。', steps: [] }
+        const images = sanitizeImages(opts?.images)
+        if (!trimmed && !images?.length) return { text: '请先输入内容。', steps: [] }
         const extraTools = sanitizeExtraTools(opts?.extraTools)
         const wait = opts?.wait !== false
         const entry = {
-          text: trimmed,
+          text: trimmed || '（图片）',
           id: nextInboxId(),
           ...(extraTools.length ? { extraTools } : {}),
           ...(opts?.sender ? { sender: opts.sender } : {}),
+          ...(images ? { images } : {}),
         }
 
         // Cursor 同款：忙碌且已有 wake 排队时，再发送 → inject（并入该 wake 的下一回合）
@@ -162,14 +165,16 @@ export class AgentsService extends Service {
       },
       inject: (text: string, opts?: AgentSendOptions) => {
         const trimmed = text.trim()
-        if (!trimmed) return
+        const images = sanitizeImages(opts?.images)
+        if (!trimmed && !images?.length) return
         const extraTools = sanitizeExtraTools(opts?.extraTools)
         live.inbox.push({
           kind: 'inject',
-          text: trimmed,
+          text: trimmed || '（图片）',
           id: nextInboxId(),
           ...(extraTools.length ? { extraTools } : {}),
           ...(opts?.sender ? { sender: opts.sender } : {}),
+          ...(images ? { images } : {}),
         })
         this.emitInbox(id)
       },
@@ -209,6 +214,22 @@ export class AgentsService extends Service {
     const agent = await this.create()
     return agent.send(last)
   }
+}
+
+function sanitizeImages(raw: AgentSendOptions['images']): ClaimedInput['images'] {
+  if (!Array.isArray(raw) || !raw.length) return undefined
+  const out: NonNullable<ClaimedInput['images']> = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const mime = String(item.mime ?? '')
+    const url = String(item.url ?? '')
+    const name = String(item.name ?? 'image.png').slice(0, 80)
+    if (!/^image\/(png|jpe?g|gif|webp)$/i.test(mime)) continue
+    if (!url.startsWith('data:image/') || url.length > 8 * 1024 * 1024) continue
+    out.push({ name: name || 'image.png', mime, url })
+    if (out.length >= 6) break
+  }
+  return out.length ? out : undefined
 }
 
 function sanitizeExtraTools(names: string[] | undefined): string[] {

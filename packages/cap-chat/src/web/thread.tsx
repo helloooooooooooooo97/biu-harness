@@ -16,7 +16,7 @@ import {
   LuUser,
   LuWrench,
 } from 'react-icons/lu'
-import type { SlotProps } from '@biu/web-slots'
+import { ImageThumbs } from './image-thumbs.tsx'
 import { bindSessionView, type SessionListItem, type SessionViewService } from '@biu/web-session-view'
 import {
   formatTokens,
@@ -584,6 +584,7 @@ function NodeView({
             ) : null}
             {picked.rest ? <MarkdownBody text={picked.rest} /> : null}
           </div>
+          {node.images?.length ? <ImageThumbs images={node.images} /> : null}
         </div>
         <UserTurnBar
           user={node}
