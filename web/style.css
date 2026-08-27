@@ -455,7 +455,7 @@ body {
   isolation: isolate;
   display: flex;
   width: 100%;
-  align-items: stretch;
+  align-items: center;
   margin-bottom: 1px;
   border-radius: 6px;
   contain: layout style;
@@ -490,30 +490,40 @@ body {
   background: var(--dsw-hover);
 }
 
-/* 收藏/删除按钮：默认不占位（宽度塌陷），仅悬浮/聚焦该行时展开，避免不悬浮时右侧留白挤压左侧标签 */
+/* 收藏/删除：默认宽度塌陷；展开为 24×24 圆角底，图标 16×16，对齐插件卡片操作按钮 */
 .chat-session-row-delete,
 .chat-session-row-star {
+  display: inline-grid;
   flex-shrink: 0;
+  place-items: center;
   width: 0;
+  height: 24px;
   overflow: hidden;
+  margin: 0;
   padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
   color: var(--dsw-label-3);
   opacity: 0;
-  transition: width 150ms ease, margin-left 150ms ease, padding 150ms ease, opacity 150ms ease;
+  cursor: pointer;
+  line-height: 0;
+  transition: width 150ms ease, opacity 150ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.chat-session-row-delete svg,
+.chat-session-row-star svg {
+  display: block;
+  width: 16px;
+  height: 16px;
 }
 
 .chat-session-row:hover .chat-session-row-delete,
-.chat-session-row-delete:focus {
-  width: auto;
-  padding: 0 6px;
-  opacity: 1;
-}
-
+.chat-session-row-delete:focus,
 .chat-session-row:hover .chat-session-row-star,
 .chat-session-row-star:focus,
 .chat-session-row-star.is-on {
-  width: auto;
-  padding: 0 4px;
+  width: 24px;
   opacity: 1;
 }
 
@@ -522,10 +532,12 @@ body {
 }
 
 .chat-session-row-star:hover {
+  background: #353535;
   color: #fbd96d;
 }
 
 .chat-session-row-delete:hover {
+  background: #353535;
   color: var(--dsw-danger);
 }
 
@@ -611,24 +623,54 @@ body {
   background: var(--dsw-hover);
 }
 
-/* 顶层板块右侧分组视图切换 tab：作为 flex 流右侧子元素参与行内布局；
-   默认宽度塌陷不占位(计数贴右与「收藏」tab 对齐)，悬浮/聚焦时展开，自动令 label(flex-1 truncate)
-   左移让位、文本靠左可截断，不遮字，行宽平滑过渡。无 border/padding，高度仅由按钮(20px)决定，
-   不高于标题行(32px)故悬浮出现绝不撑高行 */
+/* 顶层板块右侧分组切换：两个 24×24 按钮，图标 16×16；默认塌陷，悬浮展开 */
 .sidebar-view-switch {
+  display: flex;
   flex-shrink: 0;
+  align-items: center;
   width: 0;
+  height: 24px;
   overflow: hidden;
   margin-left: 0;
-  height: 20px;
   opacity: 0;
   transition: width 150ms ease, margin-left 150ms ease, opacity 150ms ease;
 }
 .sidebar-section-head:hover .sidebar-view-switch,
 .sidebar-view-switch:focus-within {
-  width: 40px;
+  width: 48px;
   margin-left: 4px;
   opacity: 1;
+}
+
+.sidebar-view-switch-btn {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-label-3);
+  cursor: pointer;
+  line-height: 0;
+}
+
+.sidebar-view-switch-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar-view-switch-btn:hover {
+  background: #353535;
+  color: var(--dsw-label);
+}
+
+.sidebar-view-switch-btn.is-on {
+  background: #353535;
+  color: var(--dsw-label);
 }
 
 .app-activity-bar {
