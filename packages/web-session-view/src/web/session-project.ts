@@ -84,6 +84,7 @@ export type ChatNode =
       text: string
       kindTag?: string
       ts?: number
+      images?: Array<{ name: string; mime: string; url: string }>
       /** 缺省 / user = 真人；session = Live 等其它会话派工 */
       sender?: { type: 'user' } | { type: 'session'; sessionId: string }
     }
@@ -326,6 +327,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
         kindTag: event.kind,
         ts: event.ts,
         ...(event.sender ? { sender: event.sender } : {}),
+        ...(event.images?.length ? { images: event.images } : {}),
       })
     } else if (event.type === 'assistant/chunk') {
       const r = ensureReply(event.seq)

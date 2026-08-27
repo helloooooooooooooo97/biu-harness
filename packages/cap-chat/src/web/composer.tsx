@@ -1,10 +1,11 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { LuChevronDown, LuPlus, LuSettings } from 'react-icons/lu'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import { formatPicks, PickChipLabel, usePickState, type PickService } from '@biu/cap-pick/web'
 import { ModelConfigDialog } from './model-config-dialog.tsx'
+import { ImageThumbs } from './image-thumbs.tsx'
 
 /** 按键不驱动受控 value；仅防抖更新发送按钮可用态，避免每个字符打穿 React 渲染。 */
 const INPUT_DEBOUNCE_MS = 120
@@ -52,7 +53,30 @@ function clearDraft(sessionId: string) {
   }
 }
 
-type ToolCatalogItem = { name: string; description: string }
+const IMAGE_MIMES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp'])
+const MAX_PENDING_IMAGES = 6
+
+type PendingImage = { id: string; name: string; mime: string; previewUrl: string; file: File }
+
+function collectImageFiles(list: FileList | File[] | null | undefined): File[] {
+  if (!list) return []
+  return [...list].filter((file) => IMAGE_MIMES.has(file.type))
+}
+
+function readFileDataUrl(file: File): Promise<{ name: string; mime: string; url: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('read image failed'))
+    reader.onload = () => {
+      resolve({
+        name: file.name || 'image.png',
+        mime: file.type || 'image/png',
+        url: String(reader.result ?? ''),
+      })
+    }
+    reader.readAsDataURL(file)
+  })
+}
 type ChatProvider = 'deepseek' | 'openai' | 'anthropic'
 
 type ModelOption = {
@@ -63,6 +87,8 @@ type ModelOption = {
   model: string
   note?: string
 }
+
+type ToolCatalogItem = { name: string; description: string }
 
 type SlashState = {
   open: boolean
@@ -114,6 +140,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   })
   const [modelBusy, setModelBusy] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
   /** 全部目录模型（含未配置的），用于下拉只展示已配置入口，但当前选中可能来自任一。 */
   const [allModels, setAllModels] = useState<ModelOption[]>([])
   /** 各入口是否已配置 token（key = endpointId）。 */
@@ -147,15 +174,16 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   function syncComposerShape(
     el: HTMLTextAreaElement | null = textareaRef.current,
     toolsCount = picked.length + pickRefs.length,
+    imageCount = pendingImages.length,
   ) {
     if (!el) {
-      setExpanded(toolsCount > 0)
+      setExpanded(toolsCount > 0 || imageCount > 0)
       return
     }
     el.style.height = 'auto'
     const next = Math.min(el.scrollHeight, 140)
     el.style.height = `${Math.max(28, next)}px`
-    const multi = next > 36 || el.value.includes('\n') || toolsCount > 0
+    const multi = next > 36 || el.value.includes('\n') || toolsCount > 0 || imageCount > 0
     setExpanded(multi)
   }
 
@@ -331,8 +359,13 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     setActiveIndex(0)
   }, [slash?.query, slash?.open, filtered.length])
 
-  function scheduleCanSubmit(value: string, tools: string[] = picked, picks = pickRefs.length) {
-    const next = Boolean(value.trim()) || tools.length > 0 || picks > 0
+  function scheduleCanSubmit(
+    value: string,
+    tools: string[] = picked,
+    picks = pickRefs.length,
+    imageCount = pendingImages.length,
+  ) {
+    const next = Boolean(value.trim()) || tools.length > 0 || picks > 0 || imageCount > 0
     if (debounceRef.current != null) clearTimeout(debounceRef.current)
     if (next === canSubmitRef.current) {
       if (next) {
@@ -349,9 +382,9 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   }
 
   useEffect(() => {
-    scheduleCanSubmit(textareaRef.current?.value ?? '', picked, pickRefs.length)
-    syncComposerShape(textareaRef.current, picked.length + pickRefs.length)
-  }, [pickRefs.length, picked.length])
+    scheduleCanSubmit(textareaRef.current?.value ?? '', picked, pickRefs.length, pendingImages.length)
+    syncComposerShape(textareaRef.current, picked.length + pickRefs.length, pendingImages.length)
+  }, [pickRefs.length, picked.length, pendingImages.length])
 
   /** 输入防抖写草稿：停止输入约 300ms 后写入当前 session 的 localStorage 草稿。 */
   function schedulePersistDraft(text: string) {
@@ -386,7 +419,45 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     setCanSubmit(false)
     setSlash(null)
     setPicked([])
+    setPendingImages((prev) => {
+      for (const item of prev) URL.revokeObjectURL(item.previewUrl)
+      return []
+    })
     setExpanded(false)
+  }
+
+  const addImageFiles = useCallback((files: File[]) => {
+    const next = collectImageFiles(files)
+    if (!next.length) return
+    setPendingImages((prev) => {
+      const room = MAX_PENDING_IMAGES - prev.length
+      const take = next.slice(0, Math.max(0, room)).map((file) => ({
+        id: `${Date.now()}-${file.name}-${file.size}-${Math.random().toString(36).slice(2, 8)}`,
+        name: file.name || 'image.png',
+        mime: file.type || 'image/png',
+        previewUrl: URL.createObjectURL(file),
+        file,
+      }))
+      return take.length ? [...prev, ...take] : prev
+    })
+  }, [])
+
+  function onPaste(event: ClipboardEvent<HTMLTextAreaElement>) {
+    const files = collectImageFiles(event.clipboardData?.files)
+    const fromItems = [...(event.clipboardData?.items ?? [])]
+      .map((item) => (item.kind === 'file' ? item.getAsFile() : null))
+      .filter((file): file is File => Boolean(file))
+    const images = collectImageFiles([...files, ...fromItems])
+    if (!images.length) return
+    addImageFiles(images)
+    if (!event.clipboardData?.getData('text/plain')) event.preventDefault()
+  }
+
+  function onDrop(event: DragEvent<HTMLFormElement>) {
+    const images = collectImageFiles(event.dataTransfer?.files)
+    if (!images.length) return
+    event.preventDefault()
+    addImageFiles(images)
   }
 
   const openSlashMenu = useCallback(() => {
@@ -497,7 +568,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     }
     const content = (textareaRef.current?.value ?? '').trim()
     // 空回车 + 队列有 wake：abort 当前回合并立刻 claim
-    if (!content && !picked.length && !pickRefs.length) {
+    if (!content && !picked.length && !pickRefs.length && !pendingImages.length) {
       if (inbox.some((item) => item.kind === 'wake')) {
         try {
           await sessionView.flushInbox()
@@ -508,12 +579,18 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       return
     }
     const tools = [...picked]
-    const fallback = tools.length ? `请使用工具：${tools.join(', ')}` : ''
+    const fallback = tools.length ? `请使用工具：${tools.join(', ')}` : pendingImages.length ? '（图片）' : ''
     const text = [formatPicks(pickRefs), content || fallback].filter(Boolean).join('\n')
+    const packed = await Promise.all(pendingImages.map((item) => readFileDataUrl(item.file)))
     clearInput()
     pick?.clear()
     try {
-      await sessionView.send(text, 'wake', tools)
+      await sessionView.send(
+        text,
+        'wake',
+        tools,
+        packed.filter((item) => item.url.startsWith('data:image/')),
+      )
       const id = sessionView.get().sessionId
       if (id) {
         clearDraft(id)
@@ -564,6 +641,15 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
         return
       }
     }
+    if ((event.key === 'Backspace' || event.key === 'Delete') && pendingImages.length && !event.currentTarget.value) {
+      event.preventDefault()
+      setPendingImages((prev) => {
+        const last = prev[prev.length - 1]
+        if (last) URL.revokeObjectURL(last.previewUrl)
+        return prev.slice(0, -1)
+      })
+      return
+    }
 
     if (event.key !== 'Enter' || event.shiftKey) return
     if (event.nativeEvent.isComposing || event.keyCode === 229) return
@@ -592,8 +678,12 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       ) : null}
 
       <form
-        className={`composer-pill${expanded ? ' is-expanded' : ''}${pickRefs.length || picked.length ? ' has-chips' : ''}`}
+        className={`composer-pill${expanded ? ' is-expanded' : ''}${pickRefs.length || picked.length || pendingImages.length ? ' has-chips' : ''}`}
         onSubmit={onSubmit}
+        onDragOver={(event) => {
+          if ([...(event.dataTransfer?.types ?? [])].includes('Files')) event.preventDefault()
+        }}
+        onDrop={onDrop}
       >
       {slash?.open ? (
         <div className="composer-slash" role="listbox" aria-label="工具列表">
@@ -661,6 +751,23 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
         </div>
       ) : null}
 
+      {pendingImages.length ? (
+        <ImageThumbs
+          images={pendingImages.map((item) => ({
+            name: item.name,
+            mime: item.mime,
+            url: item.previewUrl,
+          }))}
+          onRemove={(index) => {
+            setPendingImages((prev) => {
+              const hit = prev[index]
+              if (hit) URL.revokeObjectURL(hit.previewUrl)
+              return prev.filter((_, i) => i !== index)
+            })
+          }}
+        />
+      ) : null}
+
       <div className="composer-pill-row">
         <button
           type="button"
@@ -693,6 +800,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           onClick={syncSlashFromTextarea}
           onKeyUp={syncSlashFromTextarea}
           onKeyDown={onKeyDown}
+          onPaste={onPaste}
         />
 
         <div className="composer-pill-right">

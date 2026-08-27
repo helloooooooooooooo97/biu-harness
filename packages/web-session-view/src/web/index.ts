@@ -1227,9 +1227,15 @@ export class SessionViewService extends Service {
     })
   }
 
-  async send(text: string, kind: 'wake' | 'inject' = 'wake', extraTools: string[] = []) {
+  async send(
+    text: string,
+    kind: 'wake' | 'inject' = 'wake',
+    extraTools: string[] = [],
+    images: Array<{ name: string; mime: string; url: string }> = [],
+  ) {
     const content = text.trim()
-    if (!content) return
+    const pics = images.filter((item) => item?.url?.startsWith('data:image/')).slice(0, 6)
+    if (!content && !pics.length) return
     const sessionId = await this.ensureSession()
     const tools = [...new Set(extraTools.map((name) => name.trim()).filter(Boolean))]
     const busy = this.value.pending || this.value.agentStatus === 'running'
@@ -1237,13 +1243,15 @@ export class SessionViewService extends Service {
     // 忙碌且已有 wake：再发 → inject；否则 wake。忙碌时 wait:false 立刻返回。
     const effectiveKind: 'wake' | 'inject' =
       kind === 'inject' || (kind === 'wake' && busy && hasWake) ? 'inject' : 'wake'
+    const imagePayload = pics.length ? { images: pics } : {}
     const body: Record<string, unknown> =
       effectiveKind === 'inject'
-        ? { text: content, kind: 'inject', ...(tools.length ? { extraTools: tools } : {}) }
+        ? { text: content || '（图片）', kind: 'inject', ...(tools.length ? { extraTools: tools } : {}), ...imagePayload }
         : {
-            text: content,
+            text: content || '（图片）',
             ...(busy ? { wait: false } : {}),
             ...(tools.length ? { extraTools: tools } : {}),
+            ...imagePayload,
           }
 
     if (effectiveKind === 'inject') {

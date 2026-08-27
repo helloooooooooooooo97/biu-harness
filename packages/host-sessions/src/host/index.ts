@@ -76,7 +76,18 @@ export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
       system = event.text
     } else if (event.type === 'user/message') {
       flushOrphanTools()
-      messages.push({ role: 'user', content: event.text })
+      const images = event.images?.filter((item) => item?.url && item.url.startsWith('data:image/')) ?? []
+      if (images.length) {
+        messages.push({
+          role: 'user',
+          content: [
+            ...(event.text.trim() ? [{ type: 'text' as const, text: event.text }] : []),
+            ...images.map((item) => ({ type: 'image_url' as const, image_url: { url: item.url } })),
+          ],
+        })
+      } else {
+        messages.push({ role: 'user', content: event.text })
+      }
     } else if (event.type === 'assistant/message') {
       flushOrphanTools()
       const hasToolCalls = Boolean(event.tool_calls?.length)
@@ -236,6 +247,14 @@ export function estimateTokens(text: string): number {
 }
 
 function msgTokens(m: LlmMessage): number {
+  if (Array.isArray(m.content)) {
+    let n = 0
+    for (const part of m.content) {
+      if (part.type === 'text') n += estimateTokens(part.text)
+      else n += 1200
+    }
+    return n + (typeof m.tool_calls?.length === 'number' ? m.tool_calls.length * 6 : 0)
+  }
   const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content ?? '')
   return estimateTokens(content) + (typeof m.tool_calls?.length === 'number' ? m.tool_calls.length * 6 : 0)
 }

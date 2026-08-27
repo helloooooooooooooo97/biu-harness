@@ -83,6 +83,7 @@ export class AgentLoop implements AgentRunner {
         text: item.text,
         kind: item.kind,
         ...(item.sender ? { sender: item.sender } : {}),
+        ...(item.images?.length ? { images: item.images } : {}),
       })
     }
 
@@ -232,7 +233,8 @@ export class AgentLoopService extends Service {
       : {
           chat: async (messages: LlmMessage[], _tools?: unknown[], _signal?: AbortSignal, options?: ChatOptions) => {
             const last = [...messages].reverse().find((item) => item.role === 'user')?.content
-            const text = `未配置 API Key，本地回声：${last ?? ''}`
+            const preview = typeof last === 'string' ? last : Array.isArray(last) ? '（含图片）' : ''
+            const text = `未配置 API Key，本地回声：${preview}`
             await options?.onDelta?.(text)
             return { content: text, toolCalls: [] }
           },
