@@ -86,16 +86,20 @@ function PluginStorePage({ slots }: { slots: SlotsService }) {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-auto px-8 py-6" data-testid="plugin-store-page">
-      <header className="mb-6">
+    <div
+      className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-auto px-8 py-6"
+      data-testid="plugin-store-page"
+    >
+      <div className="w-full max-w-[42rem]">
+      <header className="mb-6 text-center">
         <h1 className="m-0 text-[22px] font-semibold tracking-tight text-[var(--dsw-label)]">插件</h1>
-        <p className="mt-1.5 max-w-[42rem] text-[13px] leading-5 text-[var(--dsw-label-3)]">
+        <p className="mx-auto mt-1.5 max-w-[42rem] text-[13px] leading-5 text-[var(--dsw-label-3)]">
           商店包是作者已经编译好的 ESM。安装只是复制到本地并动态 import，不会重编本应用。
         </p>
       </header>
 
       {error ? (
-        <p className="mb-4 text-[13px] text-[var(--dsw-danger)]" data-testid="plugin-store-error">
+        <p className="mb-4 text-center text-[13px] text-[var(--dsw-danger)]" data-testid="plugin-store-error">
           {error}
         </p>
       ) : null}
@@ -115,7 +119,7 @@ function PluginStorePage({ slots }: { slots: SlotsService }) {
         {items.map((item) => (
           <li
             key={item.id}
-            className="flex items-start justify-between gap-4 rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-4 py-3"
+            className="flex items-center justify-between gap-4 rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-4 py-3"
             data-testid={`plugin-store-card-${item.id}`}
           >
             <div className="min-w-0">
@@ -158,6 +162,7 @@ function PluginStorePage({ slots }: { slots: SlotsService }) {
           </li>
         ))}
       </ul>
+      </div>
     </div>
   )
 }
