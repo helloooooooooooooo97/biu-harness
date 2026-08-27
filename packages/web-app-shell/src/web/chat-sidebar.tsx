@@ -50,7 +50,7 @@ function SessionTagBadges({ tags }: { tags?: string[] }) {
       {shown.map((tag) => (
         <span
           key={tag}
-          className="max-w-[56px] truncate rounded-[4px] border border-[var(--dsw-border)] bg-[var(--dsw-hover-weak,var(--dsw-hover))] px-1 py-px text-[9px] leading-[13px] font-medium text-[var(--dsw-label-3)]"
+          className="max-w-[56px] truncate rounded-[4px] bg-[var(--dsw-hover-weak,var(--dsw-hover))] px-1 py-px text-[9px] leading-[13px] font-medium text-[var(--dsw-label-3)]"
         >
           {tag}
         </span>
