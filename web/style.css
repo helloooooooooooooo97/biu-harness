@@ -1315,8 +1315,10 @@ body {
   letter-spacing: 0.02em;
 }
 .usage-panel-title-icon {
+  flex: none;
+  width: 13px;
+  height: 13px;
   color: var(--dsw-business);
-  font-size: 10px;
 }
 .usage-panel-legend {
   display: inline-flex;
