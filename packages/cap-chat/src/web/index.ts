@@ -6,6 +6,7 @@ import type { SlotProps } from '@biu/web-slots'
 import { ApprovalsRail } from './approvals.tsx'
 import { ChatComposer } from './composer.tsx'
 import { ChatConfigBanner } from './config-banner.tsx'
+import { ChatLiveHud } from './live-hud.tsx'
 import { ChatThread } from './thread.tsx'
 import { TrajectoryView } from './trajectory.tsx'
 import { UsagePanel } from './usage-panel.tsx'
@@ -53,6 +54,7 @@ export function apply(ctx: Context) {
   })
   ctx.slots.place('dock', ChatConfigBanner, { key: 'chat-config-banner', order: 1 })
   ctx.slots.place('dock', ApprovalsRail, { key: 'approvals', order: 5, props })
+  ctx.slots.place('dock', ChatLiveHud, { key: 'chat-live-hud', order: 4, props })
   ctx.slots.place('inspector-panels', InspectorTrajectory, {
     key: 'chat-traj',
     order: 1,

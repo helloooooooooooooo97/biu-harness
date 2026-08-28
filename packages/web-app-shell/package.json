@@ -5,7 +5,8 @@
   "type": "module",
   "description": "应用壳",
   "exports": {
-    ".": "./src/web/index.tsx"
+    ".": "./src/web/index.tsx",
+    "./chat-overlay": "./src/web/chat-overlay.ts"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8",

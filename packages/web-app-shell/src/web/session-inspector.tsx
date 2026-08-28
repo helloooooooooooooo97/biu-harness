@@ -127,17 +127,18 @@ export const SessionInspector = memo(function SessionInspector({
 
   return (
     <aside
-      className="relative flex min-h-0 min-w-0 flex-col border-l border-(--dsw-border) bg-(--dsw-bg) text-(--dsw-label)"
+      className="session-inspector relative flex min-h-0 min-w-0 flex-col bg-(--dsw-bg) text-(--dsw-label)"
       data-testid="session-inspector"
       aria-label="会话检查器"
     >
       <div
-        className="absolute inset-y-0 left-0 z-10 w-1 cursor-col-resize touch-none"
+        className="inspector-resize"
         data-testid="inspector-resize"
         title="拖动调整宽度"
         onPointerDown={(event) => {
           event.preventDefault()
-          dragRef.current = { startX: event.clientX, startWidth: width }
+          const visual = event.currentTarget.parentElement?.getBoundingClientRect().width ?? width
+          dragRef.current = { startX: event.clientX, startWidth: visual }
           document.body.style.cursor = 'col-resize'
           document.body.style.userSelect = 'none'
         }}

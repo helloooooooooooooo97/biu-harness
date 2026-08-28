@@ -82,6 +82,7 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
           <col style={{ width: '5.5rem' }} />
           <col style={{ width: '2.75rem' }} />
           <col />
+          <col style={{ width: '4.25rem' }} />
           <col style={{ width: '9.5rem' }} />
           <col style={{ width: '2.75rem' }} />
         </colgroup>
@@ -90,7 +91,8 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
             <th className="px-2 py-1.5 text-center font-medium">项目</th>
             <th className="px-2 py-1.5 text-center font-medium">代理</th>
             <th className="px-3 py-1.5 text-center font-medium">任务</th>
-            <th className="px-2 py-1.5 text-center font-medium">usage</th>
+            <th className="px-2 py-1.5 text-center font-medium">轮次</th>
+            <th className="px-2 py-1.5 text-center font-medium">用量</th>
             <th className="px-2 py-1.5 text-center font-medium">状态</th>
           </tr>
         </thead>
@@ -102,7 +104,7 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
             return (
               <tr
                 key={`${task.sessionId}-${task.wakeTs ?? index}`}
-                className="border-t border-(color-mix(in_srgb,var(--dsw-border)_70%,transparent))"
+                className="live-dispatch-row"
               >
                 <td className="min-w-0 px-2 py-2 align-middle">
                   <div
@@ -138,21 +140,19 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
                   >
                     {task.preview?.trim() || '（无派工文本）'}
                   </div>
-                  <div className="mt-0.5 truncate text-(length:--dsw-chat-ui-font-size) text-(--dsw-label-3)">
-                    派工{task.workerTurn != null ? ` · t${task.workerTurn}` : ''}
-                  </div>
+                </td>
+                <td className="px-2 py-2 align-middle tabular-nums text-(--dsw-label-2)">
+                  {task.workerTurn != null ? `Turn${task.workerTurn}` : '—'}
+                </td>
+                <td className="px-2 py-2 align-middle text-left">
+                  {task.usage ? (
+                    <UsageInline usage={task.usage} />
+                  ) : (
+                    <span className="traj-usage-empty">—</span>
+                  )}
                 </td>
                 <td className="px-2 py-2 align-middle">
-                  <div className="flex justify-end">
-                    {task.usage ? (
-                      <UsageInline usage={task.usage} />
-                    ) : (
-                      <span className="traj-usage-empty">—</span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-2 py-2 align-middle">
-                  <div className={`flex justify-end ${status.className}`} title={status.label}>
+                  <div className={`flex justify-center ${status.className}`} title={status.label}>
                     <span className="inline-flex" aria-label={status.label}>
                       {status.icon}
                     </span>
@@ -166,10 +166,9 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
           <tr className="border-t border-(--dsw-border) bg-(color-mix(in_srgb,var(--dsw-hover)_50%,transparent))">
             <td className="px-2 py-2" colSpan={2} />
             <td className="px-3 py-2 font-semibold text-(--dsw-label)">合计（{tasks.length}）</td>
-            <td className="px-2 py-2">
-              <div className="flex justify-end">
-                {total ? <UsageInline usage={total} /> : <span className="traj-usage-empty">—</span>}
-              </div>
+            <td className="px-2 py-2" />
+            <td className="px-2 py-2 text-left">
+              {total ? <UsageInline usage={total} /> : <span className="traj-usage-empty">—</span>}
             </td>
             <td className="px-2 py-2" />
           </tr>

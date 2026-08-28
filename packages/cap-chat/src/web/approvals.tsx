@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
 import {
   BoltIcon,
   CheckCircleIcon,
@@ -8,10 +8,22 @@ import {
   PauseIcon,
   SparklesIcon,
   Squares2X2Icon,
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon,
 } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/web-slots'
-import { bindSessionView, type ChatNode, type SessionViewService } from '@biu/web-session-view'
+import { bindSessionView, type ChatNode, type DispatchedTaskRow, type SessionViewService } from '@biu/web-session-view'
+import { SidebarMascot } from '@biu/web-mascot'
+import { resolveSessionMascot } from '@biu/web-mascot'
 import { SessionProjectPanel } from './project-panel.tsx'
+import { ChatLiveMetrics } from './live-hud.tsx'
+import {
+  getChatOverlay,
+  inspectorWidthForExpandedChat,
+  requestInspectorWidth,
+  setChatOverlay,
+  subscribeChatOverlay,
+} from '@biu/web-app-shell/chat-overlay'
 
 type AgentMode = 'minimal' | 'standard' | 'create'
 
@@ -105,11 +117,55 @@ function DockIconMenu<T extends string>({
   )
 }
 
-/** Dock 顶栏：左侧文件 + 选取 + 清空上下文 + 模式图标菜单，右侧审批图标菜单。 */
+function dockAgentLabel(title?: string, fallback = 'Agent') {
+  const line = (title ?? '')
+    .split('\n')
+    .map((part) => part.trim())
+    .find(Boolean)
+  const raw = line || fallback
+  return raw.length > 36 ? `${raw.slice(0, 35)}…` : raw
+}
+const DOCK_WORKER_CAP = 3
+
+function workerRecency(row: DispatchedTaskRow) {
+  return row.wakeTs ?? (row.liveTurn ?? 0) * 1_000_000_000
+}
+
+function activeWorkerAgents(
+  byTurn: Record<string, DispatchedTaskRow[]>,
+  sessionId: string | null,
+): DispatchedTaskRow[] {
+  const latest = new Map<string, DispatchedTaskRow>()
+  for (const rows of Object.values(byTurn)) {
+    for (const row of rows) {
+      if (row.status !== 'running' && row.status !== 'pending') continue
+      if (!row.sessionId || row.sessionId === sessionId) continue
+      const prev = latest.get(row.sessionId)
+      if (!prev || workerRecency(row) >= workerRecency(prev)) latest.set(row.sessionId, row)
+    }
+  }
+  return [...latest.values()].sort((a, b) => workerRecency(b) - workerRecency(a))
+}
 export function ApprovalsRail(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
   const sessionId = useSessionView((state) => state.sessionId)
+  const sessions = useSessionView((state) => state.sessions)
+  const agentStatus = useSessionView((state) => state.agentStatus)
+  const currentSession = sessions.find((item) => item.id === sessionId)
+  const sessionIdentity = sessionId
+    ? resolveSessionMascot(sessionId, currentSession?.mascot)
+    : null
+  const dispatchedTasksByTurn = useSessionView((state) => state.dispatchedTasksByTurn)
+  const workerAgents = useMemo(
+    () => activeWorkerAgents(dispatchedTasksByTurn, sessionId),
+    [dispatchedTasksByTurn, sessionId],
+  )
+  const visibleWorkers = workerAgents.slice(0, DOCK_WORKER_CAP)
+  const hiddenWorkerCount = Math.max(0, workerAgents.length - visibleWorkers.length)
+  const mainAgentName = sessionIdentity
+    ? dockAgentLabel(currentSession?.title, sessionIdentity.shape)
+    : ''
   const approvals = useSessionView((state) => state.approvals)
   const approvalMode = useSessionView((state) => state.approvalMode)
   const nodes = useSessionView((state) => state.nodes)
@@ -121,6 +177,30 @@ export function ApprovalsRail(props: SlotProps) {
   const [approvalMenuOpen, setApprovalMenuOpen] = useState(false)
   const agentMenuRef = useRef<HTMLDivElement>(null)
   const approvalMenuRef = useRef<HTMLDivElement>(null)
+  const chatOverlay = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
+
+  const toggleChatOverlay = () => {
+    if (chatOverlay) {
+      let inspectorWidth = 320
+      try {
+        const n = Number(localStorage.getItem('cordis.inspector.width'))
+        if (Number.isFinite(n) && n >= 240) inspectorWidth = n
+      } catch {
+        /* ignore */
+      }
+      const sidebarCollapsed = Boolean(document.querySelector('.app-shell-agent.is-sidebar-collapsed'))
+      requestInspectorWidth(
+        inspectorWidthForExpandedChat({
+          viewportWidth: window.innerWidth,
+          inspectorWidth,
+          sidebarCollapsed,
+        }),
+      )
+      setChatOverlay(false)
+      return
+    }
+    setChatOverlay(true)
+  }
 
   const refreshAgentMode = useCallback(async () => {
     try {
@@ -247,11 +327,11 @@ export function ApprovalsRail(props: SlotProps) {
       ) : null}
 
       <div
-        className="flex items-center justify-between gap-2 bg-transparent px-1 text-(length:--dsw-chat-ui-font-size) text-(--dsw-label-3)"
+        className="chat-dock-toolbar bg-transparent px-1 text-(length:--dsw-chat-ui-font-size) text-(--dsw-label-3)"
         role="toolbar"
         aria-label="Session controls"
       >
-        <div className="flex min-w-0 items-center gap-1">
+        <div className="chat-dock-toolbar-start flex min-w-0 items-center gap-1">
           {props.renderSlot('header-tools')}
           <button
             type="button"
@@ -272,8 +352,59 @@ export function ApprovalsRail(props: SlotProps) {
             ) : null}
             <PaintBrushIcon className="size-4 relative z-1" aria-hidden />
           </button>
+          {sessionId && sessionIdentity ? (
+            <span className="dock-agent-stack" data-testid="dock-agent-stack">
+              <span
+                className="dock-session-mascot"
+                data-testid="dock-session-mascot"
+                data-dock-tip={mainAgentName}
+              >
+                <SidebarMascot
+                  size={28}
+                  sessionId={sessionId}
+                  identity={sessionIdentity}
+                  busy={agentStatus === 'running' || Boolean(currentSession?.busy)}
+                  animate={false}
+                  title={mainAgentName}
+                />
+              </span>
+              {visibleWorkers.map((worker, index) => {
+                const identity = resolveSessionMascot(worker.sessionId, worker.mascot)
+                const listed = sessions.find((item) => item.id === worker.sessionId)
+                const name = dockAgentLabel(listed?.title ?? worker.title ?? worker.preview, identity.shape)
+                return (
+                  <span
+                    key={worker.sessionId}
+                    className="dock-worker-mascot"
+                    data-testid="dock-worker-mascot"
+                    data-dock-tip={name}
+                    style={{ zIndex: 6 - index }}
+                  >
+                    <SidebarMascot
+                      size={28}
+                      sessionId={worker.sessionId}
+                      identity={identity}
+                      busy={worker.status === 'running'}
+                      animate={false}
+                      title={name}
+                    />
+                  </span>
+                )
+              })}
+              {hiddenWorkerCount > 0 ? (
+                <span
+                  className="dock-worker-more"
+                  data-testid="dock-worker-more"
+                  title={`还有 ${hiddenWorkerCount} 个 Agent 在干活`}
+                >
+                  +{hiddenWorkerCount}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <ChatLiveMetrics useSessionView={useSessionView} />
+        <div className="chat-dock-toolbar-end flex shrink-0 items-center justify-end gap-1">
           <SessionProjectPanel {...props} />
           <DockIconMenu
             label="Agent 模式"
@@ -334,6 +465,21 @@ export function ApprovalsRail(props: SlotProps) {
               },
             ]}
           />
+          <button
+            type="button"
+            className={`project-chip project-chip-icon-only${chatOverlay ? ' is-on' : ''}`}
+            title={chatOverlay ? '放大聊天窗口' : '缩小聊天窗口'}
+            aria-label={chatOverlay ? '放大聊天窗口' : '缩小聊天窗口'}
+            aria-pressed={chatOverlay}
+            data-testid="chat-overlay-toggle"
+            onClick={toggleChatOverlay}
+          >
+            {chatOverlay ? (
+              <ArrowsPointingOutIcon className="size-4" aria-hidden />
+            ) : (
+              <ArrowsPointingInIcon className="size-4" aria-hidden />
+            )}
+          </button>
         </div>
       </div>
     </div>

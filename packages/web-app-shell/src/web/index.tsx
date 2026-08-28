@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useState, useSyncExternalStore, type CSSProperties } from 'react'
+import { chatColumnWidth, setChatOverlay, subscribeChatOverlay, getChatOverlay, CHAT_OVERLAY_ENTER } from './chat-overlay.ts'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
 import type { SlotProps } from '@biu/web-slots'
@@ -159,7 +160,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
             {renderSlot('stage')}
           </div>
           <div className="chat-composer-dock pointer-events-none absolute inset-x-0 bottom-0 bg-transparent px-6 pb-4 md:px-8 lg:px-10">
-            <div className="pointer-events-auto space-y-2 bg-transparent">
+            <div className="pointer-events-auto w-full space-y-2 bg-transparent">
               {renderSlot('dock')}
               {renderSlot('composer')}
             </div>
@@ -250,6 +251,7 @@ function Shell(props: SlotProps) {
     }
     return 320
   })
+  const chatOverlay = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
   const toggleInspector = useCallback(() => {
     setInspectorOpen((prev) => {
       const next = !prev
@@ -270,6 +272,32 @@ function Shell(props: SlotProps) {
       /* ignore */
     }
   }, [])
+  const syncChatOverlay = useCallback(() => {
+    if (!inspectorOpen) {
+      setChatOverlay(false)
+      return
+    }
+    const width = chatColumnWidth({
+      viewportWidth: window.innerWidth,
+      inspectorOpen,
+      inspectorWidth,
+      sidebarCollapsed,
+    })
+    if (width < CHAT_OVERLAY_ENTER) setChatOverlay(true)
+  }, [inspectorOpen, inspectorWidth, sidebarCollapsed])
+  useEffect(() => {
+    syncChatOverlay()
+    window.addEventListener('resize', syncChatOverlay)
+    return () => window.removeEventListener('resize', syncChatOverlay)
+  }, [syncChatOverlay])
+  useEffect(() => {
+    const onWidth = (event: Event) => {
+      const n = (event as CustomEvent<number>).detail
+      if (typeof n === 'number' && Number.isFinite(n)) onInspectorWidthChange(n)
+    }
+    window.addEventListener('biu:inspector-width', onWidth)
+    return () => window.removeEventListener('biu:inspector-width', onWidth)
+  }, [onInspectorWidthChange])
   const activeModule = moduleIdFromPath(location.pathname, pluginModules)
   const appRoute = parseAppPath(location.pathname, pluginModules)
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
@@ -329,10 +357,11 @@ function Shell(props: SlotProps) {
   return (
     <div
       className={`app-shell${activeModule === 'agent'
-          ? ` app-shell-agent${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}${inspectorOpen ? ' is-inspector-open' : ''
+          ? ` app-shell-agent${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}${inspectorOpen ? ' is-inspector-open' : ''}${chatOverlay ? ' is-chat-overlay' : ''
           }`
           : ' app-shell-module'
         }`}
+      data-testid={chatOverlay ? 'chat-overlay' : undefined}
       style={
         inspectorOpen
           ? ({ ['--inspector-width' as string]: `${inspectorWidth}px` } as CSSProperties)

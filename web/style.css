@@ -381,6 +381,175 @@ body {
   grid-template-columns: 48px minmax(0, 1fr) var(--inspector-width, 320px);
 }
 
+.app-shell-agent.is-inspector-open.is-chat-overlay {
+  grid-template-columns: 48px 280px 0 minmax(0, 1fr);
+}
+
+.app-shell-agent.is-sidebar-collapsed.is-inspector-open.is-chat-overlay {
+  grid-template-columns: 48px 0 minmax(0, 1fr);
+}
+
+.session-inspector {
+  border-left: 1px solid var(--dsw-border);
+}
+
+.app-shell-agent.is-chat-overlay .session-inspector {
+  border-left: none;
+}
+
+.inspector-resize {
+  position: absolute;
+  inset-block: 0;
+  left: -1px;
+  z-index: 10;
+  width: 0;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.inspector-resize::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: -3px;
+  width: 7px;
+}
+
+.app-shell-agent.is-chat-overlay > main {
+  overflow: visible;
+}
+
+.app-shell-agent.is-chat-overlay .chat-stage {
+  visibility: hidden;
+}
+
+.app-shell-agent.is-chat-overlay .chat-composer-dock {
+  position: fixed;
+  left: calc(48px + 280px);
+  right: 0;
+  bottom: 20px;
+  width: min(var(--dsw-chat-width), calc(100vw - 48px - 280px - 40px));
+  margin-inline: auto;
+  align-items: stretch;
+  z-index: 40;
+  padding: 10px 12px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--dsw-surface) 92%, transparent);
+  box-shadow: var(--dsw-shadow-lv2);
+  pointer-events: auto;
+}
+
+.app-shell-agent.is-sidebar-collapsed.is-chat-overlay .chat-composer-dock {
+  left: 48px;
+  width: min(var(--dsw-chat-width), calc(100vw - 48px - 40px));
+}
+
+.app-shell-agent.is-chat-overlay .chat-composer-dock > * {
+  width: 100%;
+  max-width: none;
+}
+
+.chat-dock-toolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+}
+
+.chat-dock-toolbar-end {
+  margin-left: auto;
+}
+
+.chat-live-hud-metrics {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: none;
+  max-width: min(100%, 28rem);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.app-shell-agent.is-chat-overlay .chat-live-hud-metrics {
+  display: flex;
+  max-width: min(100%, 36rem);
+  gap: 12px;
+  font-size: 14px;
+  color: var(--dsw-sidebar-fg);
+}
+
+.app-shell-agent.is-chat-overlay .chat-live-hud-metrics .chat-reply-meta-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.app-shell-agent.is-chat-overlay .chat-live-hud-metrics .traj-usage-ring {
+  width: 14px;
+  height: 14px;
+}
+
+.chat-live-hud {
+  display: none;
+}
+
+.app-shell-agent.is-chat-overlay .chat-live-hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  display: flex;
+  width: 100%;
+  margin-bottom: 8px;
+  color: var(--dsw-label-2);
+  pointer-events: auto;
+}
+
+.chat-live-hud-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: var(--dsw-muted-fill);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.chat-live-hud-chip.is-live {
+  color: var(--dsw-business);
+  background: color-mix(in srgb, var(--dsw-business) 14%, transparent);
+}
+
+.chat-live-hud-flash {
+  min-width: 0;
+  width: 100%;
+  max-height: 7.5em;
+  overflow: auto;
+  padding: 4px 2px;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: transparent;
+  box-shadow: none;
+  animation: chat-live-hud-pop 0.18s ease;
+}
+
+.chat-live-hud-flash.is-tool {
+  color: var(--dsw-business);
+}
+
+.chat-live-hud-flash.is-output {
+  color: var(--dsw-label);
+}
+
+@keyframes chat-live-hud-pop {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .app-shell-module {
   grid-template-columns: 48px minmax(0, 1fr);
 }
@@ -950,6 +1119,47 @@ body {
 .project-chip-icon-only {
   width: 32px;
   height: 32px;
+}
+
+.dock-agent-stack {
+  display: inline-flex;
+  overflow: visible;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.dock-session-mascot,
+.dock-worker-mascot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.dock-session-mascot {
+  z-index: 8;
+}
+
+.dock-worker-more {
+  display: inline-flex;
+  z-index: 0;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border: 1px solid var(--dsw-border);
+  border-radius: 999px;
+  background: #2c2c2c;
+  color: var(--dsw-label-2);
+  font-size: 11px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .project-chip-hist {
@@ -2929,6 +3139,10 @@ body {
   border: 0;
   border-top: 1px solid var(--dsw-border);
   margin: 0.9em 0;
+}
+
+[data-testid="live-dispatch-table"] .live-dispatch-row {
+  border-top: 1px solid var(--dsw-border);
 }
 
 @media (max-width: 720px) {
