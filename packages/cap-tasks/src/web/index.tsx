@@ -2425,14 +2425,14 @@ function UsageCapsule({ usage, aggregate }: { usage: SumUsage; aggregate: boolea
       <span className="traj-usage-in-pair" title={cacheTitle}>
         <span className="traj-usage-in">{formatTokens(usage.inputTokens)}</span>
         <svg className="traj-usage-ring is-cache" width="12" height="12" viewBox="0 0 12 12" aria-hidden>
-          <circle cx="6" cy="6" r="4.5" fill="none" stroke="#2A3A30" strokeWidth="2.5" />
+          <circle cx="6" cy="6" r="4.5" fill="none" stroke="#0a3d28" strokeWidth="2.5" />
           {(pct ?? 0) > 0 ? (
             <circle
               cx="6"
               cy="6"
               r="4.5"
               fill="none"
-              stroke="#57C577"
+              stroke="#00c972"
               strokeWidth="2.5"
               strokeDasharray={`${((pct ?? 0) / 100) * 2 * Math.PI * 4.5} ${2 * Math.PI * 4.5}`}
               transform="rotate(-90 6 6)"

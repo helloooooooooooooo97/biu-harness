@@ -47,7 +47,7 @@ describe('composer dock stacking above sticky user', () => {
   it('paints the context-clear hist fill as opaque cherry red without blend or color-scheme overrides', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const approvals = readFileSync(resolve(root, 'packages/cap-chat/src/web/approvals.tsx'), 'utf8')
-    expect(css).toMatch(/--dsw-chat-hist-fill:\s*#EA5955/)
+    expect(css).toMatch(/--dsw-chat-hist-fill:\s*#ff3e51/)
     expect(css).toMatch(/\.project-chip-hist-bar\s*\{[^}]*background:\s*var\(--dsw-chat-hist-fill\)/s)
     expect(css).not.toMatch(/\.project-chip-hist-bar\s*\{[^}]*color-scheme:/s)
     expect(css).not.toMatch(/\.project-chip-hist-bar\s*\{[^}]*mix-blend-mode:/s)

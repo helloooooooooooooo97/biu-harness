@@ -47,7 +47,7 @@
   --dsw-chat-reply-pad-x: 12px;
   --dsw-chat-max-width: 768px;
   --dsw-chat-code-bg: var(--dsw-sidebar);
-  --dsw-chat-hist-fill: #EA5955;
+  --dsw-chat-hist-fill: #ff3e51;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, Consolas, monospace;
@@ -905,7 +905,7 @@ body {
   height: 14px;
   padding: 0 4px;
   border-radius: 999px;
-  background: #EA5955;
+  background: #ff3e51;
   color: #fff;
   font-size: 9px;
   font-weight: 700;
@@ -2734,11 +2734,11 @@ body {
 }
 
 .tool-call-status.is-ok {
-  color: #57C577;
+  color: #00c972;
 }
 
 .tool-call-status.is-fail {
-  color: #E85854;
+  color: #ff3e51;
 }
 
 .tool-call-status.is-running {

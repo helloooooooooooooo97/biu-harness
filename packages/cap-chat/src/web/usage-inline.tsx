@@ -4,10 +4,10 @@ import {
   type TrajectoryUsage,
 } from '@biu/web-session-view'
 
-const CACHE_RING = '#57C577'
-const HIST_RING = '#E85854'
-const CACHE_TRACK = '#2A3A30'
-const HIST_TRACK = '#3D2423'
+const CACHE_RING = '#00c972'
+const HIST_RING = '#ff3e51'
+const CACHE_TRACK = '#0a3d28'
+const HIST_TRACK = '#4a1218'
 const RING_R = 4.5
 const RING_C = 2 * Math.PI * RING_R
 
