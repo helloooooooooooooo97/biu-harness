@@ -3890,10 +3890,10 @@ if (typeof document !== 'undefined') {
 .tasks-queue-glabel { font-weight:650; }
 .tasks-queue-count { margin-left:auto; color:var(--dsw-label-3); font-size:10px; font-weight:600; background:var(--dsw-muted-fill); border-radius:8px; padding:1px 7px; }
 .tasks-queue-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
-.tasks-queue-item { display:flex; border:0; border-radius:7px; }
-.tasks-queue-item-main { display:flex; align-items:center; gap:8px; width:100%; text-align:left; border:0; border-radius:7px; padding:7px 10px; background:color-mix(in srgb, var(--dsw-surface) 94%, transparent); color:var(--dsw-label); font:inherit; cursor:pointer; box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 65%, transparent); transition:box-shadow .12s ease, background .12s ease; }
-.tasks-queue-item-main:hover { background:color-mix(in srgb, var(--dsw-hover) 55%, var(--dsw-surface)); box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 90%, transparent); }
-.tasks-queue-item.is-active .tasks-queue-item-main { background:color-mix(in srgb, var(--dsw-business) 8%, var(--dsw-surface)); box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-business) 50%, transparent); }
+.tasks-queue-item { display:flex; min-width:0; border:0; border-radius:0; }
+.tasks-queue-item-main { display:flex; align-items:center; gap:8px; width:100%; min-width:0; box-sizing:border-box; overflow:hidden; text-align:left; border:0; border-top:1px solid color-mix(in srgb, var(--dsw-border) 65%, transparent); border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 65%, transparent); border-radius:0; padding:7px 8px; background:color-mix(in srgb, var(--dsw-surface) 94%, transparent); color:var(--dsw-label); font:inherit; cursor:pointer; box-shadow:none; transition:border-color .12s ease, background .12s ease; }
+.tasks-queue-item-main:hover { background:color-mix(in srgb, var(--dsw-hover) 55%, var(--dsw-surface)); border-top-color:color-mix(in srgb, var(--dsw-border) 90%, transparent); border-bottom-color:color-mix(in srgb, var(--dsw-border) 90%, transparent); }
+.tasks-queue-item.is-active .tasks-queue-item-main { background:color-mix(in srgb, var(--dsw-business) 8%, var(--dsw-surface)); border-top-color:color-mix(in srgb, var(--dsw-business) 50%, transparent); border-bottom-color:color-mix(in srgb, var(--dsw-business) 50%, transparent); }
 .tasks-queue-item-title { flex:1; min-width:0; font-size:11px; font-weight:600; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tasks-queue-chain { color:var(--dsw-label-3); font-weight:500; }
 .tasks-queue-item.is-done .tasks-queue-item-title { text-decoration:line-through; color:var(--dsw-label-3); }
