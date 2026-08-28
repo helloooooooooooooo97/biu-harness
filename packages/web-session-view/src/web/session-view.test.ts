@@ -630,3 +630,57 @@ test('ensureTrajectory keeps live index on chat route after new session navigate
   assert.equal(view.get().trajectory.length, 1)
   assert.equal(view.get().view, 'chat')
 })
+
+test('forkCurrent inserts the child into the sidebar list', async () => {
+  let sessions: Array<{
+    id: string
+    title: string
+    eventCount: number
+    updatedAt: number
+    type?: string
+    mascot?: { shape: string; color: string }
+  }> = [{ id: 's1', title: 'keep', eventCount: 2, updatedAt: 1 }]
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input)
+    const method = init?.method ?? 'GET'
+    if (url.endsWith('/api/sessions') && method === 'GET') {
+      return { ok: true, status: 200, json: async () => ({ sessions }) } as Response
+    }
+    if (url.includes('/api/sessions/s1/fork') && method === 'POST') {
+      sessions = [
+        { id: 's2', title: 'keep', eventCount: 2, updatedAt: 9, mascot: { shape: 'circle', color: '#111' } },
+        { id: 's1', title: 'keep', eventCount: 2, updatedAt: 1 },
+      ]
+      return {
+        ok: true,
+        status: 201,
+        json: async () => ({ id: 's2', parentId: 's1', type: 'chat', mascot: { shape: 'circle', color: '#111' } }),
+      } as Response
+    }
+    if (url.includes('/api/sessions/s2')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 's2',
+          events: [{ type: 'session/open', version: 1, seq: 0, ts: 1 }],
+          hasMore: false,
+        }),
+      } as Response
+    }
+    if (url.includes('/api/approvals')) {
+      return { ok: true, status: 200, json: async () => ({ mode: 'auto', pending: [] }) } as Response
+    }
+    return { ok: false, status: 404, json: async () => ({}) } as Response
+  }) as typeof fetch
+
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  view.ingest('s1', { type: 'session/open', version: 1, seq: 0, ts: 1 })
+  await view.refreshSessions()
+  const childId = await view.forkCurrent()
+  assert.equal(childId, 's2')
+  assert.equal(view.get().sessionId, 's2')
+  assert.equal(view.get().sessions.some((item) => item.id === 's2'), true)
+})

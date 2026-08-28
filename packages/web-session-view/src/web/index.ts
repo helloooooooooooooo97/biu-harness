@@ -1111,9 +1111,33 @@ export class SessionViewService extends Service {
     const sessionId = this.value.sessionId
     if (!sessionId) throw new Error('no session')
     const res = await fetch(`/api/sessions/${sessionId}/fork`, { method: 'POST' })
-    const body = (await res.json()) as { id?: string; error?: string }
+    const body = (await res.json()) as {
+      id?: string
+      error?: string
+      type?: SessionListItem['type']
+      mascot?: SessionListItem['mascot']
+    }
     if (!res.ok || !body.id) throw new Error(body.error || 'fork failed')
+    markSidebarMascotFresh(body.id)
+    const parent = this.value.sessions.find((item) => item.id === sessionId)
+    if (parent && !this.value.sessions.some((item) => item.id === body.id)) {
+      this.replace({
+        sessions: [
+          {
+            ...parent,
+            id: body.id,
+            pinned: false,
+            tags: [],
+            type: body.type ?? parent.type,
+            ...(body.mascot ? { mascot: body.mascot } : {}),
+            updatedAt: Date.now(),
+          },
+          ...this.value.sessions,
+        ],
+      })
+    }
     await this.load(body.id, { view: 'chat' })
+    await this.refreshSessions()
     return body.id
   }
 
