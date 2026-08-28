@@ -3,7 +3,7 @@
  * 且包在 .chat-turn 里，同时只会有一条贴顶。
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render } from '@testing-library/react'
+import { cleanup, render, waitFor } from '@testing-library/react'
 import { ChatNodeList, groupNodesIntoTurns } from './thread.tsx'
 import type { ChatNode } from '@biu/web-session-view'
 import { resetMarkdownRenderForTests } from './markdown-render.ts'
@@ -108,7 +108,7 @@ describe('sticky user message markers', () => {
     expect(document.querySelectorAll('.chat-reply-bar')).toHaveLength(0)
   })
 
-  it('renders pick handles as chips in the user bubble', () => {
+  it('renders pick handles as chips in the user bubble', async () => {
     const onInspect = vi.fn()
     const onFork = vi.fn(async () => {})
     render(
@@ -125,10 +125,16 @@ describe('sticky user message markers', () => {
         onFork={onFork}
       />,
     )
+    await waitFor(() => {
+      expect(document.querySelectorAll('[data-testid="user-pick-chip"]')).toHaveLength(1)
+    })
     const chips = document.querySelectorAll('[data-testid="user-pick-chip"]')
-    expect(chips).toHaveLength(1)
     expect(chips[0]?.querySelector('[data-pick-kind="task"]')).toBeTruthy()
     expect(chips[0]?.textContent).toContain('写需求 · open')
-    expect(document.querySelector('[data-testid="user-bubble"]')?.textContent).toContain('处理这个')
+    const bubble = document.querySelector('[data-testid="user-bubble"]')
+    const html = bubble?.innerHTML ?? ''
+    expect(html.indexOf('user-pick-chip')).toBeGreaterThanOrEqual(0)
+    expect(html.indexOf('user-pick-chip')).toBeLessThan(html.indexOf('处理这个'))
+    expect(bubble?.textContent).toContain('处理这个')
   })
 })

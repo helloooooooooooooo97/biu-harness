@@ -112,7 +112,7 @@ export function ApprovalsRail(props: SlotProps) {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="rounded-full px-3 py-1 text-[11px] text-[var(--dsw-bg)]"
+                  className="rounded-full px-3 py-1 text-[length:var(--dsw-chat-ui-font-size)] text-[var(--dsw-bg)]"
                   style={{ background: 'var(--dsw-business)' }}
                   onClick={() => void sessionView.decideApproval(item.id, true)}
                 >
@@ -120,7 +120,7 @@ export function ApprovalsRail(props: SlotProps) {
                 </button>
                 <button
                   type="button"
-                  className="rounded-full border border-[var(--dsw-border)] px-3 py-1 text-[11px]"
+                  className="rounded-full border border-[var(--dsw-border)] px-3 py-1 text-[length:var(--dsw-chat-ui-font-size)]"
                   onClick={() => void sessionView.decideApproval(item.id, false)}
                 >
                   Deny
@@ -132,11 +132,11 @@ export function ApprovalsRail(props: SlotProps) {
       ) : null}
 
       <div
-        className="flex items-center justify-between gap-2 bg-transparent px-1 text-[11px] text-[var(--dsw-label-3)]"
+        className="flex items-center justify-between gap-2 bg-transparent px-1 text-[length:var(--dsw-chat-ui-font-size)] text-[var(--dsw-label-3)]"
         role="toolbar"
         aria-label="Session controls"
       >
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-center gap-1">
           <SessionProjectPanel {...props} />
           {props.renderSlot('header-tools')}
           <button
@@ -171,7 +171,7 @@ export function ApprovalsRail(props: SlotProps) {
                 type="button"
                 disabled={modeBusy}
                 aria-pressed={agentMode === mode}
-                className={`px-2.5 py-1 ${
+                className={`px-1.5 py-1 ${
                   agentMode === mode
                     ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
                     : 'hover:bg-[var(--dsw-hover)]'

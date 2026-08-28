@@ -110,7 +110,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
     <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       <div className="absolute inset-0 z-[1] flex min-h-0 overflow-hidden">
         <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-          <div className="chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 py-1 pb-44 md:px-8 lg:px-10">
+          <div className="chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 py-3 pb-44 md:px-8 lg:px-10">
             {renderSlot('stage')}
           </div>
           <div className="chat-composer-dock pointer-events-none absolute inset-x-0 bottom-0 bg-transparent px-6 pb-4 md:px-8 lg:px-10">
@@ -218,14 +218,6 @@ function Shell(props: SlotProps) {
       }
       return next
     })
-  }, [])
-  const closeInspector = useCallback(() => {
-    setInspectorOpen(false)
-    try {
-      localStorage.setItem('cordis.inspector.open', '0')
-    } catch {
-      /* ignore */
-    }
   }, [])
   const onInspectorWidthChange = useCallback((width: number) => {
     const next = Math.min(1000, Math.max(240, Math.round(width)))
@@ -393,7 +385,6 @@ function Shell(props: SlotProps) {
           open={inspectorOpen}
           width={inspectorWidth}
           onWidthChange={onInspectorWidthChange}
-          onClose={closeInspector}
           useSessionView={useSessionView}
           sessionView={sessionView}
           slots={slots}

@@ -5,7 +5,7 @@ import { PickOverlay } from './overlay.tsx'
 import { PickToggle } from './toggle.tsx'
 
 export { PickService, usePickState } from './service.ts'
-export { formatPicks, parsePicks, dedupePicks, chipLabel, pickKey, pickPreview, pickDomAttrs, type PickRef } from './types.ts'
+export { formatPicks, formatPick, parsePicks, splitPickStream, dedupePicks, chipLabel, pickKey, pickPreview, pickDomAttrs, type PickRef } from './types.ts'
 export { PickChipLabel, PickKindGlyph, pickKindIcon } from './chip.tsx'
 export { resolvePickFromNode, resolvePickAtPoint, resolvePicksInRect } from './resolve.ts'
 

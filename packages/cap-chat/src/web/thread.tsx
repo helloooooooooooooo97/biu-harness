@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  CheckCircleIcon,
   CheckIcon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -14,6 +15,7 @@ import {
   LanguageIcon,
   UserIcon,
   WrenchScrewdriverIcon,
+  XCircleIcon,
 } from '@heroicons/react/16/solid'
 import { ImageThumbs } from './image-thumbs.tsx'
 import { bindSessionView, type SessionListItem, type SessionViewService } from '@biu/web-session-view'
@@ -28,8 +30,9 @@ import { SidebarMascot } from '@biu/web-mascot'
 import { StaticMascotMark } from '@biu/web-mascot'
 import { DEFAULT_SESSION_MASCOT, resolveSessionMascot } from '@biu/web-mascot'
 import type { SessionMascotIdentity } from '@biu/web-mascot'
-import { parsePicks, pickDomAttrs, pickKey, pickPreview, PickChipLabel } from '@biu/cap-pick/web'
+import { parsePicks, pickDomAttrs, pickPreview } from '@biu/cap-pick/web'
 import { MarkdownBody } from './markdown.tsx'
+import { UserBubbleEditor } from './user-bubble-editor.tsx'
 import { ToolCard } from './tool-card.tsx'
 import { LiveDispatchTable } from './live-dispatch-table.tsx'
 import { UsageInline } from './usage-inline.tsx'
@@ -275,9 +278,11 @@ export function splitReplyForDisplay(node: Extract<ChatNode, { kind: 'reply' }>)
 function ReplyActions({
   text,
   onFork,
+  cancelled,
 }: {
   text: string
   onFork: () => void | Promise<void>
+  cancelled?: boolean
 }) {
   const [copied, setCopied] = useState(false)
   const [forkBusy, setForkBusy] = useState(false)
@@ -304,27 +309,42 @@ function ReplyActions({
   }
 
   return (
-    <div className="chat-reply-actions" role="group" aria-label="回合操作">
-      <button
-        type="button"
-        className={`chat-assistant-action${copied ? ' is-done' : ''}`}
-        title={copied ? '已复制' : '复制'}
-        aria-label={copied ? '已复制' : '复制本回合回复'}
-        onClick={() => void copy()}
-      >
-        {copied ? <CheckIcon className="size-3.5" /> : <Square2StackIcon className="size-3.5" />}
-      </button>
-      <button
-        type="button"
-        className="chat-assistant-action"
-        title="Fork 会话"
-        aria-label="Fork 会话"
-        disabled={forkBusy}
-        onClick={() => void fork()}
-      >
-        <ShareIcon className="size-3.5" />
-      </button>
-    </div>
+    <>
+      <div className="chat-reply-actions" role="group" aria-label="回合操作">
+        {text.trim() ? (
+          <>
+            <button
+              type="button"
+              className={`chat-assistant-action${copied ? ' is-done' : ''}`}
+              title={copied ? '已复制' : '复制'}
+              aria-label={copied ? '已复制' : '复制本回合回复'}
+              onClick={() => void copy()}
+            >
+              {copied ? <CheckIcon className="size-3.5" /> : <Square2StackIcon className="size-3.5" />}
+            </button>
+            <button
+              type="button"
+              className="chat-assistant-action"
+              title="Fork 会话"
+              aria-label="Fork 会话"
+              disabled={forkBusy}
+              onClick={() => void fork()}
+            >
+              <ShareIcon className="size-3.5" />
+            </button>
+          </>
+        ) : null}
+      </div>
+      {cancelled ? (
+        <span className="chat-reply-end-status tool-call-status is-fail" title="回合已取消" aria-label="回合已取消">
+          <XCircleIcon className="size-3.5" aria-hidden />
+        </span>
+      ) : (
+        <span className="chat-reply-end-status tool-call-status is-ok" title="回合完成" aria-label="回合完成">
+          <CheckCircleIcon className="size-3.5" aria-hidden />
+        </span>
+      )}
+    </>
   )
 }
 
@@ -383,7 +403,7 @@ function UserTurnBar({
 
   return (
     <div
-      className="box-border flex h-[30px] min-h-[30px] w-full items-center justify-between gap-3 border-0 border-t border-[var(--dsw-bubble)] bg-transparent px-3 text-[11px] leading-none text-[var(--dsw-label-3)]"
+      className="box-border flex h-[30px] min-h-[30px] w-full items-center justify-between gap-3 border-0 border-t border-[var(--dsw-bubble)] bg-transparent px-[var(--dsw-chat-pad-x)] text-[length:var(--dsw-chat-ui-font-size)] leading-none text-[var(--dsw-sidebar-fg)]"
       aria-label="回合摘要"
       data-testid="user-turn-bar"
     >
@@ -391,7 +411,7 @@ function UserTurnBar({
         {hasDetails && reply ? (
           <button
             type="button"
-            className={`inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-[6px] border border-transparent bg-transparent py-0.5 pr-2 pl-1 text-[11px] leading-none text-[var(--dsw-label-3)] hover:border-[color-mix(in_srgb,var(--dsw-border)_80%,transparent)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label-2)]${detailsOpen ? ' border-[color-mix(in_srgb,var(--dsw-border)_80%,transparent)] bg-[var(--dsw-hover)] text-[var(--dsw-label-2)]' : ''}`}
+            className={`inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-[6px] border border-transparent bg-transparent py-0.5 pr-2 pl-1 text-[length:var(--dsw-chat-ui-font-size)] leading-none text-[var(--dsw-sidebar-fg)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-sidebar-fg-active)]${detailsOpen ? ' bg-[var(--dsw-hover)] text-[var(--dsw-sidebar-fg-active)]' : ''}`}
             aria-expanded={detailsOpen}
             aria-controls={`reply-details-${reply.id}`}
             data-testid="details-toggle"
@@ -435,7 +455,7 @@ function UserTurnBar({
         {canExpand && onToggleExpand ? (
           <button
             type="button"
-            className="inline-grid size-[22px] cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
+            className="inline-grid size-[22px] cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--dsw-sidebar-fg)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-sidebar-fg-active)]"
             aria-expanded={Boolean(expanded)}
             aria-label={expanded ? '收起请求全文' : '展开请求全文'}
             data-testid="user-expand-toggle"
@@ -447,7 +467,7 @@ function UserTurnBar({
         <UserSenderAvatar sender={user.sender} sessions={sessions} />
         {sentLabel ? (
           <span
-            className="inline-flex shrink-0 items-center gap-1 text-[11px] leading-none text-[var(--dsw-label-3)] tabular-nums"
+            className="inline-flex shrink-0 items-center gap-1 text-[length:var(--dsw-chat-ui-font-size)] leading-none text-[var(--dsw-sidebar-fg)] tabular-nums"
             title="发送时间"
             data-testid="user-sent-at"
           >
@@ -555,33 +575,19 @@ function NodeView({
     const canExpand = overflows || expanded
     return (
       <div
-        className="flex w-full flex-col gap-0 overflow-hidden rounded-[var(--dsw-radius-bubble)] border border-[var(--dsw-bubble)] bg-[var(--dsw-sidebar)]"
+        className="chat-user-card"
         {...pickDomAttrs('message', node.id, pickPreview(picked.rest || node.text) || 'user')}
       >
-        <div className="block w-full max-w-full border-0 bg-transparent px-3 py-2.5 text-[var(--dsw-label)]">
+        <div className="chat-user-card-body text-[var(--dsw-label)]">
           <div
-            className={`w-full max-w-full border-0 bg-transparent p-0 text-[length:var(--dsw-chat-font-size)] leading-[var(--dsw-chat-line-height)] text-[var(--dsw-label)] outline-none${canExpand && !expanded ? ' max-h-[80px] overflow-hidden' : ''}${expanded ? ' max-h-none overflow-visible' : ''}`}
+            className={`w-full max-w-full border-0 bg-transparent p-0 text-[var(--dsw-label)] outline-none${canExpand && !expanded ? ' max-h-[80px] overflow-hidden' : ''}${expanded ? ' max-h-none overflow-visible' : ''}`}
             data-testid="user-bubble"
             {...pickDomAttrs('message', node.id, pickPreview(picked.rest || node.text) || 'user')}
           >
             {node.kindTag === 'inject' ? (
-              <div className="mb-1 text-[10px] text-[var(--dsw-label-3)]">inject</div>
+              <div className="mb-1 text-[length:var(--dsw-chat-ui-font-size)] text-[var(--dsw-label-3)]">inject</div>
             ) : null}
-            {picked.refs.length ? (
-              <div className="user-pick-chips" data-testid="user-pick-chips">
-                {picked.refs.map((ref) => (
-                  <span
-                    key={pickKey(ref)}
-                    className="user-pick-chip"
-                    data-testid="user-pick-chip"
-                    title={`${ref.kind} · ${ref.label}${ref.action ? ` · ${ref.action}` : ''}`}
-                  >
-                    <PickChipLabel pick={ref} />
-                  </span>
-                ))}
-              </div>
-            ) : null}
-            {picked.rest ? <MarkdownBody text={picked.rest} /> : null}
+            <UserBubbleEditor text={node.text} />
           </div>
           {node.images?.length ? <ImageThumbs images={node.images} /> : null}
         </div>
@@ -614,9 +620,13 @@ function NodeView({
             <LiveDispatchTable tasks={dispatchTasks} />
           ) : null}
         </div>
-        {!streaming && node.copyText.trim() ? (
+        {!streaming ? (
           <div className="chat-reply-actions-row">
-            <ReplyActions text={node.copyText} onFork={onFork} />
+            <ReplyActions
+              text={node.copyText}
+              onFork={onFork}
+              cancelled={Boolean(node.endReason && node.endReason !== 'complete')}
+            />
           </div>
         ) : null}
       </div>
@@ -658,12 +668,12 @@ export const ChatNodeList = memo(function ChatNodeList({
   const turns = useMemo(() => groupNodesIntoTurns(nodes), [nodes])
 
   return (
-    <div className="chat-node-list flex flex-col gap-4">
+    <div className="chat-node-list">
       {turns.map((turn) => {
         const anchor = turn[0]!
         const startIndex = nodes.indexOf(anchor)
         return (
-          <div key={anchor.id} className="flex flex-col gap-4" data-testid="chat-turn" data-turn-anchor={anchor.id} {...pickDomAttrs('turn', anchor.id, pickPreview(anchor.kind === 'user' ? anchor.text : anchor.id) || 'turn')}>
+          <div key={anchor.id} className="chat-turn" data-testid="chat-turn" data-turn-anchor={anchor.id} {...pickDomAttrs('turn', anchor.id, pickPreview(anchor.kind === 'user' ? anchor.text : anchor.id) || 'turn')}>
             {turn.map((node, offset) => {
               const index = startIndex + offset
               const replyForUser = node.kind === 'user' ? findReplyForUser(nodes, index) : undefined
@@ -674,7 +684,7 @@ export const ChatNodeList = memo(function ChatNodeList({
                 replyNode?.turn != null ? dispatchedTasksByTurn[String(replyNode.turn)] : undefined
               const stickyUser =
                 node.kind === 'user'
-                  ? 'sticky top-0 z-[1] bg-[var(--dsw-bg)] pb-1'
+                  ? 'sticky top-0 z-[1] bg-[var(--dsw-bg)]'
                   : ''
               const skipPaint =
                 node.kind === 'reply' || node.kind === 'turn'
@@ -877,7 +887,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     >
       <StatusRow agentStatus={agentStatus} agentStep={agentStep} />
       {loadingOlder ? (
-        <div className="mb-3 text-center text-[11px] text-[var(--dsw-label-3)]">加载更早消息…</div>
+        <div className="mb-3 text-center text-[length:var(--dsw-chat-ui-font-size)] text-[var(--dsw-label-3)]">加载更早消息…</div>
       ) : null}
       <ChatNodeList
         nodes={nodes}

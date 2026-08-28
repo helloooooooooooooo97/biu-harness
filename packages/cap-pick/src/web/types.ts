@@ -73,7 +73,26 @@ function parsePickAttrs(raw: string): PickRef | null {
   }
 }
 
-/** 从用户消息里拆出 <pick /> 句柄，剩下的才走 Markdown（否则标签会被消毒掉）。 */
+export function formatPick(ref: PickRef) {
+  return formatPicks([ref])
+}
+
+/** 按原文顺序拆成文字段和 pick 块，供输入框混排还原。 */
+export function splitPickStream(text: string): Array<{ type: 'text'; value: string } | { type: 'pick'; ref: PickRef }> {
+  const parts: Array<{ type: 'text'; value: string } | { type: 'pick'; ref: PickRef }> = []
+  const re = /<pick\b([^>]*)\/>/gi
+  let last = 0
+  let match: RegExpExecArray | null
+  while ((match = re.exec(text))) {
+    if (match.index > last) parts.push({ type: 'text', value: text.slice(last, match.index) })
+    const ref = parsePickAttrs(match[1] ?? '')
+    if (ref) parts.push({ type: 'pick', ref })
+    else parts.push({ type: 'text', value: match[0] })
+    last = match.index + match[0].length
+  }
+  if (last < text.length) parts.push({ type: 'text', value: text.slice(last) })
+  return parts
+}
 export function parsePicks(text: string): { refs: PickRef[]; rest: string } {
   const refs: PickRef[] = []
   PICK_TAG.lastIndex = 0
