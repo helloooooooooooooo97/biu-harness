@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { Service, type Context } from 'cordis'
+export { posixShellArgv, posixShellBin, hostShellKind, describeHostRuntime } from './posix-shell.ts'
 
 export interface SpawnRequest {
   argv: string[]
@@ -27,6 +28,7 @@ export class SubprocessService extends Service {
         cwd: wrapped.cwd,
         env: wrapped.env,
         stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
       })
       let stdout = ''
       let stderr = ''

@@ -1,4 +1,5 @@
 import { Service, type Context } from 'cordis'
+import { posixShellArgv } from '@biu/host-subprocess'
 
 interface Job {
   id: string
@@ -62,7 +63,10 @@ export function apply(ctx: Context) {
       properties: { argv: { type: 'array', items: { type: 'string' } } },
       required: ['argv'],
     },
-    execute: (args) => jobs.start(Array.isArray(args.argv) ? args.argv.map(String) : ['/bin/sh', '-c', String(args.command ?? 'true')]),
+    execute: (args) =>
+      jobs.start(
+        Array.isArray(args.argv) ? args.argv.map(String) : posixShellArgv(String(args.command ?? 'true')),
+      ),
   })
   ctx.tools.register({
     name: 'job_list',

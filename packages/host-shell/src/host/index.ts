@@ -1,5 +1,6 @@
 import { Service, type Context } from 'cordis'
 import type { SpawnResult } from '@biu/host-subprocess'
+import { posixShellArgv, describeHostRuntime, hostShellKind } from '@biu/host-subprocess'
 import { currentSessionId } from '@biu/host-sessions/scope'
 import {
   extractImagePathCandidates,
@@ -16,7 +17,7 @@ export class ShellService extends Service {
   constructor(ctx: Context) {
     super(ctx, 'shell')
     this.runner = (command, signal) =>
-      ctx.subprocess.run({ argv: ['/bin/sh', '-c', command], timeoutMs: 15_000 }, signal)
+      ctx.subprocess.run({ argv: posixShellArgv(command), timeoutMs: 15_000 }, signal)
   }
 
   setRunner(runner: ShellRunner) {
@@ -36,7 +37,9 @@ export function apply(ctx: Context) {
   ctx.tools.register({
     name: 'bash',
     description:
-      '在沙箱工作区执行命令（/bin/sh -c）。截图/图片文件会尽量收录到会话 artifacts，并在对话里展示（命令或输出中带图片路径，或工作区内新写入的图片）。',
+      hostShellKind() === 'cmd'
+        ? '在沙箱工作区执行命令（当前为 Windows cmd.exe /c）。用 dir/type/del，不要用 ls/cat。图片路径会尽量收录到会话 artifacts。'
+        : '在沙箱工作区执行命令（当前为 POSIX shell）。截图/图片文件会尽量收录到会话 artifacts，并在对话里展示（命令或输出中带图片路径，或工作区内新写入的图片）。',
     parameters: {
       type: 'object',
       properties: { command: { type: 'string' } },
@@ -79,5 +82,8 @@ export function apply(ctx: Context) {
         return base
       }
     },
+  })
+  ctx.inject(['systemPrompt'], (inner) => {
+    inner.systemPrompt.register('host.runtime', () => describeHostRuntime())
   })
 }

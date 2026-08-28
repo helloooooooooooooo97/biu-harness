@@ -30,7 +30,7 @@ test('bash and jobs run inside sandbox', async () => {
   const bash = (await ctx.tools.invoke('bash', { command: 'echo hi' })) as { stdout: string; code: number | null }
   assert.equal(bash.code, 0)
   assert.match(bash.stdout, /hi/)
-  const started = (await ctx.tools.invoke('job_start', { argv: ['/bin/echo', 'job'] })) as { id: string }
+  const started = (await ctx.tools.invoke('job_start', { argv: subprocess.posixShellArgv('echo job') })) as { id: string }
   const deadline = Date.now() + 3000
   let collected: { status: string; result?: { stdout: string } } | undefined
   while (Date.now() < deadline) {
@@ -80,7 +80,7 @@ test('bash copies printed image paths into session artifacts', async () => {
   }
 })
 
-test('bash ingests silently written workspace screenshots without printing path', async () => {
+test.skipIf(process.platform === 'win32')('bash ingests silently written workspace screenshots without printing path', async () => {
   const base = await mkdtemp(join(tmpdir(), 'cordis-sh-silent-'))
   const prev = process.cwd()
   process.chdir(base)

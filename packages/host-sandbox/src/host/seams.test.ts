@@ -41,7 +41,7 @@ test('jobs start and collect a process', async () => {
   await ctx.plugin(sandbox)
   await ctx.plugin(subprocess)
   await ctx.plugin(jobs)
-  const started = (await ctx.tools.invoke('job_start', { argv: ['/bin/echo', 'job'] })) as { id: string }
+  const started = (await ctx.tools.invoke('job_start', { argv: subprocess.posixShellArgv('echo job') })) as { id: string }
   for (let i = 0; i < 40; i++) {
     const collected = (await ctx.tools.invoke('job_collect', { id: started.id })) as { status: string; result?: { stdout: string } }
     if (collected.status === 'done') {

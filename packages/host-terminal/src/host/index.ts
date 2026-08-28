@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { Service, type Context } from 'cordis'
+import { posixShellBin } from '@biu/host-subprocess'
 
 interface Term {
   id: string
@@ -16,9 +17,11 @@ export class TerminalService extends Service {
 
   open() {
     const id = crypto.randomUUID().slice(0, 8)
-    const child = spawn('/bin/sh', [], {
-      cwd: this.ctx.sandbox.wrap({ argv: ['/bin/sh'] }).cwd,
-      env: this.ctx.sandbox.wrap({ argv: ['/bin/sh'] }).env,
+    const sh = posixShellBin()
+    const wrapped = this.ctx.sandbox.wrap({ argv: [sh] })
+    const child = spawn(sh, [], {
+      cwd: wrapped.cwd,
+      env: wrapped.env,
       stdio: ['pipe', 'pipe', 'pipe'],
     })
     const term: Term = { id, child, buffer: '' }
