@@ -1,8 +1,10 @@
 import { CursorArrowRaysIcon } from '@heroicons/react/16/solid'
+import type { SlotProps } from '@biu/type-slots'
 import type { PickService } from './service.ts'
 import { usePickState } from './service.ts'
 
-export function PickToggle({ pick }: { pick: PickService }) {
+export function PickToggle(props: SlotProps) {
+  const pick = props.pick as PickService
   const { picking } = usePickState(pick)
   return (
     <button

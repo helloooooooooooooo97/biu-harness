@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import type { SlotProps } from '@biu/type-slots'
 import type { PickService } from './service.ts'
 import { usePickState } from './service.ts'
 import { boxFromPoints, resolvePickAtPoint, resolvePicksInRect } from './resolve.ts'
@@ -10,7 +11,8 @@ function hoverBox(el: HTMLElement) {
   return { top: box.top, left: box.left, width: box.width, height: box.height }
 }
 
-export function PickOverlay({ pick }: { pick: PickService }) {
+export function PickOverlay(props: SlotProps) {
+  const pick = props.pick as PickService
   const { picking, hover, marquee, marqueeHits } = usePickState(pick)
 
   useEffect(() => {

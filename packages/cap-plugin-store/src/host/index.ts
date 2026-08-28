@@ -5,10 +5,12 @@ import { pathToFileURL } from 'node:url'
 import { Service, type Context, type Plugin } from 'cordis'
 import type { CatalogEntry } from '@biu/host-hub'
 import {
+  buildStoreManifest,
   bundleStoreEntry,
   compileStoreModule,
   findEntry,
   HOST_ENTRIES,
+  parseStoreManifest,
   readSandboxManifest,
   registerPluginCreate,
   WEB_ENTRIES,
@@ -22,14 +24,27 @@ export type StoreListing = {
   id: string
   name: string
   blurb: string
+  tags: string[]
+  author: string
+  authorUrl: string
   enabled: boolean
   running: boolean
+  bytes: number
+  createdAt: number
+  updatedAt: number
+  lastRunAt: number | null
+  hasHost: boolean
+  hasWeb: boolean
 }
 
 export type StoreManifest = {
   id: string
   name: string
   blurb: string
+  tags: string[]
+  author: string
+  authorUrl: string
+  createdAt: number
 }
 
 type StoreHub = {
@@ -72,24 +87,60 @@ async function importHostFile(hostFile: string) {
   }
 }
 
-async function readManifest(dir: string): Promise<StoreManifest> {
-  const raw = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf8')) as StoreManifest
-  if (!raw.id || !raw.name) throw new Error(`invalid plugin manifest in ${dir}`)
-  return raw
+async function pluginDirStats(dir: string): Promise<Pick<StoreListing, 'bytes' | 'createdAt' | 'updatedAt' | 'hasHost' | 'hasWeb'>> {
+  const names = await readdir(dir)
+  let bytes = 0
+  let createdAt = Number.MAX_SAFE_INTEGER
+  let updatedAt = 0
+  for (const name of names) {
+    const file = join(dir, name)
+    const st = await stat(file)
+    if (!st.isFile()) continue
+    bytes += st.size
+    const born = Math.floor(st.birthtimeMs || st.ctimeMs || st.mtimeMs)
+    const modified = Math.floor(st.mtimeMs)
+    if (born < createdAt) createdAt = born
+    if (modified > updatedAt) updatedAt = modified
+  }
+  return {
+    bytes,
+    createdAt: createdAt === Number.MAX_SAFE_INTEGER ? updatedAt : createdAt,
+    updatedAt,
+    hasHost: existsSync(join(dir, 'host.js')),
+    hasWeb: existsSync(join(dir, 'web.js')),
+  }
 }
 
-type StoreState = { enabled: string[] }
+async function readManifest(dir: string): Promise<StoreManifest> {
+  const raw = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf8')) as unknown
+  try {
+    return parseStoreManifest(raw)
+  } catch {
+    throw new Error(`invalid plugin manifest in ${dir}`)
+  }
+}
+
+type StoreState = { enabled: string[]; lastRunAt: Record<string, number> }
 
 function emptyState(): StoreState {
-  return { enabled: [] }
+  return { enabled: [], lastRunAt: {} }
 }
 
 function parseState(raw: unknown): StoreState {
   if (!raw || typeof raw !== 'object') return emptyState()
   const enabled = (raw as { enabled?: unknown }).enabled
-  if (!Array.isArray(enabled)) return emptyState()
+  const lastRaw = (raw as { lastRunAt?: unknown }).lastRunAt
+  const lastRunAt: Record<string, number> = {}
+  if (lastRaw && typeof lastRaw === 'object') {
+    for (const [id, ts] of Object.entries(lastRaw as Record<string, unknown>)) {
+      const n = Number(ts)
+      if (/^[a-z][a-z0-9-]{1,40}$/.test(id) && Number.isFinite(n) && n > 0) lastRunAt[id] = Math.floor(n)
+    }
+  }
+  if (!Array.isArray(enabled)) return { enabled: [], lastRunAt }
   return {
     enabled: [...new Set(enabled.map((id) => String(id)).filter((id) => /^[a-z][a-z0-9-]{1,40}$/.test(id)))].sort(),
+    lastRunAt,
   }
 }
 
@@ -137,7 +188,12 @@ export class PluginStoreService extends Service {
     const next = new Set(this.state.enabled)
     if (enabled) next.add(id)
     else next.delete(id)
-    this.state = { enabled: [...next].sort() }
+    this.state = { enabled: [...next].sort(), lastRunAt: this.state.lastRunAt }
+    this.writeState()
+  }
+
+  private touchLastRun(id: string) {
+    this.state = { ...this.state, lastRunAt: { ...this.state.lastRunAt, [id]: Date.now() } }
     this.writeState()
   }
 
@@ -160,7 +216,8 @@ export class PluginStoreService extends Service {
     if (!hostJs && !webSrc) throw new Error('plugin_create needs hostJs and/or webJs')
     const dest = this.pluginPath(id)
     mkdirSync(dest, { recursive: true })
-    const manifest = { id, name, blurb: String(input.blurb ?? '').trim() || name }
+    const existing = existsSync(join(dest, 'manifest.json')) ? await readManifest(dest).catch(() => undefined) : undefined
+    const manifest = buildStoreManifest(input, existing)
     await writeFile(join(dest, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
     if (hostJs) await writeFile(join(dest, 'host.js'), await compileStoreModule(hostJs, 'host'))
     else if (existsSync(join(dest, 'host.js'))) await rm(join(dest, 'host.js'))
@@ -178,10 +235,9 @@ export class PluginStoreService extends Service {
     if (!name) throw new Error('plugin name required')
     const dest = this.sandboxPath(id)
     mkdirSync(dest, { recursive: true })
-    await writeFile(
-      join(dest, 'manifest.json'),
-      `${JSON.stringify({ id, name, blurb: String(input.blurb ?? '').trim() || name }, null, 2)}\n`,
-    )
+    const existing = existsSync(join(dest, 'manifest.json')) ? await readManifest(dest).catch(() => undefined) : undefined
+    const manifest = buildStoreManifest(input, existing)
+    await writeFile(join(dest, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
     const hostJs = String(input.hostJs ?? '').trim()
     const webSrc = input.webJs != null ? String(input.webJs).trim() : ''
     if (hostJs) await writeFile(join(dest, 'host.ts'), hostJs.endsWith('\n') ? hostJs : `${hostJs}\n`)
@@ -224,10 +280,17 @@ export class PluginStoreService extends Service {
       if (!existsSync(join(dir, 'manifest.json'))) continue
       const manifest = await readManifest(dir)
       const enabled = this.isEnabled(manifest.id)
+      const stats = await pluginDirStats(dir)
       items.push({
         ...manifest,
         enabled,
         running: enabled && running.has(manifest.id),
+        bytes: stats.bytes,
+        createdAt: manifest.createdAt || stats.createdAt,
+        updatedAt: stats.updatedAt,
+        lastRunAt: this.state.lastRunAt[manifest.id] ?? null,
+        hasHost: stats.hasHost,
+        hasWeb: stats.hasWeb,
       })
     }
     return items
@@ -239,6 +302,7 @@ export class PluginStoreService extends Service {
     if (!hit) throw new Error(`unknown store plugin: ${id}`)
     const manifest = await readManifest(hit)
     this.setEnabled(manifest.id, true)
+    this.touchLastRun(manifest.id)
     await this.mountFromDisk(manifest, hit)
     return (await this.list()).find((item) => item.id === manifest.id)
   }
@@ -257,6 +321,10 @@ export class PluginStoreService extends Service {
     this.setEnabled(id, false)
     const hit = await this.findPluginDir(id)
     if (hit) await rm(hit, { recursive: true, force: true })
+    const lastRunAt = { ...this.state.lastRunAt }
+    delete lastRunAt[id]
+    this.state = { ...this.state, lastRunAt }
+    this.writeState()
   }
 
   async restore() {

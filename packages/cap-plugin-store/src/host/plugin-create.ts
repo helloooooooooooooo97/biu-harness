@@ -8,8 +8,67 @@ export type PluginCreateInput = {
   id: string
   name: string
   blurb?: string
+  tags?: string[]
+  author?: string
+  authorUrl?: string
   hostJs?: string
   webJs?: string
+}
+
+export type StoreManifestFields = {
+  id: string
+  name: string
+  blurb: string
+  tags: string[]
+  author: string
+  authorUrl: string
+  createdAt: number
+}
+
+export function parseTags(value: unknown): string[] {
+  const list = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(/[,，]/)
+      : []
+  return [...new Set(list.map((item) => String(item).trim()).filter(Boolean))]
+}
+
+export function buildStoreManifest(
+  input: Pick<PluginCreateInput, 'id' | 'name' | 'blurb' | 'tags' | 'author' | 'authorUrl'>,
+  existing?: Partial<StoreManifestFields>,
+  now = Date.now(),
+): StoreManifestFields {
+  const createdAt = Number(existing?.createdAt)
+  return {
+    id: String(input.id).trim(),
+    name: String(input.name).trim(),
+    blurb: String(input.blurb ?? existing?.blurb ?? '').trim() || String(input.name).trim(),
+    tags: input.tags?.length ? parseTags(input.tags) : parseTags(existing?.tags),
+    author: String(input.author ?? existing?.author ?? '').trim(),
+    authorUrl: String(input.authorUrl ?? existing?.authorUrl ?? '').trim(),
+    createdAt: Number.isFinite(createdAt) && createdAt > 0 ? createdAt : now,
+  }
+}
+
+export function parseStoreManifest(raw: unknown): StoreManifestFields {
+  const data = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+  const id = String(data.id ?? '').trim()
+  const name = String(data.name ?? '').trim()
+  if (!id || !name) throw new Error('invalid plugin manifest')
+  const createdAt = Number(data.createdAt)
+  return buildStoreManifest(
+    {
+      id,
+      name,
+      blurb: data.blurb != null ? String(data.blurb) : undefined,
+      tags: parseTags(data.tags),
+      author: data.author != null ? String(data.author) : undefined,
+      authorUrl: data.authorUrl != null ? String(data.authorUrl) : data.author_url != null ? String(data.author_url) : undefined,
+    },
+    { createdAt },
+    Number.isFinite(createdAt) && createdAt > 0 ? createdAt : 0,
+  )
 }
 
 const HOST_ENTRIES = ['host.ts', 'host.tsx', 'host.js']
@@ -66,13 +125,8 @@ function finishBundle(code: string, kind: 'host' | 'web') {
 }
 
 export async function readSandboxManifest(dir: string) {
-  const raw = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf8')) as {
-    id?: string
-    name?: string
-    blurb?: string
-  }
-  if (!raw.id || !raw.name) throw new Error(`invalid plugin manifest in ${dir}`)
-  return { id: raw.id, name: raw.name, blurb: String(raw.blurb ?? '').trim() || raw.name }
+  const raw = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf8')) as unknown
+  return parseStoreManifest(raw)
 }
 
 const CONTRACT = [
@@ -103,6 +157,9 @@ function createArgs(args: Record<string, unknown>): PluginCreateInput {
     id: String(args.id ?? ''),
     name: String(args.name ?? ''),
     blurb: args.blurb != null ? String(args.blurb) : undefined,
+    tags: parseTags(args.tags),
+    author: args.author != null ? String(args.author) : undefined,
+    authorUrl: args.authorUrl != null ? String(args.authorUrl) : undefined,
     hostJs: args.hostJs != null ? String(args.hostJs) : undefined,
     webJs: args.webJs != null ? String(args.webJs) : undefined,
   }
@@ -115,6 +172,13 @@ const ID_NAME_BLURB = {
   },
   name: { type: 'string', description: '商店卡片标题' },
   blurb: { type: 'string', description: '一行简介' },
+  tags: {
+    type: 'array',
+    items: { type: 'string' },
+    description: '标签，如 game、tool。也可写成逗号分隔字符串。',
+  },
+  author: { type: 'string', description: '作者名' },
+  authorUrl: { type: 'string', description: '作者主页 / 仓库链接' },
 }
 
 export function registerPluginCreate(ctx: Context, store: PluginStoreService) {

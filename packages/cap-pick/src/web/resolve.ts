@@ -86,7 +86,7 @@ export function resolvePicksInRect(box: ClientBox, route: string, root: ParentNo
   const nodes = root.querySelectorAll('[data-biu-kind][data-biu-id]')
   const seen = new Set<string>()
   const hits: { el: HTMLElement; ref: PickRef }[] = []
-  for (const node of nodes) {
+  for (const node of Array.from(nodes)) {
     if (!(node instanceof HTMLElement) || isPickIgnored(node)) continue
     if (!boxesOverlap(box, boxOf(node))) continue
     const hit = resolvePickFromNode(node, route)

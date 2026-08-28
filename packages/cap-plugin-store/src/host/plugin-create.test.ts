@@ -26,8 +26,22 @@ test('create compiles host source straight into .plugin/<id>/', async () => {
     await store.create({
       id: 'store-echo',
       name: 'Echo',
+      tags: ['tool', 'demo'],
+      author: 'Biu',
+      authorUrl: 'https://example.com',
       hostJs: `export const name = 'store-echo'\nexport function apply(ctx: { ok: boolean }) { return ctx.ok }`,
     })
+    const manifest = JSON.parse(await readFile(join(pluginDir, 'store-echo', 'manifest.json'), 'utf8')) as {
+      tags: string[]
+      author: string
+      createdAt: number
+    }
+    assert.deepEqual(manifest.tags, ['tool', 'demo'])
+    assert.equal(manifest.author, 'Biu')
+    assert.ok(manifest.createdAt > 0)
+    const listed = await store.list()
+    assert.equal(listed[0]?.createdAt, manifest.createdAt)
+    assert.equal(listed[0]?.lastRunAt, null)
     const hostJs = await readFile(join(pluginDir, 'store-echo', 'host.js'), 'utf8')
     assert.match(hostJs, /\bapply\b/)
     assert.doesNotMatch(hostJs, /ctx: \{/)

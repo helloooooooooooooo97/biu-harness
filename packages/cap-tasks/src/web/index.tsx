@@ -27,12 +27,13 @@ import {
   ChevronRightIcon,
   ShareIcon,
   ClipboardDocumentCheckIcon,
+  ListBulletIcon,
   BoltIcon,
   PlayIcon,
   CursorArrowRippleIcon,
   ChartBarIcon,
   MagnifyingGlassIcon,
-  AdjustmentsHorizontalIcon,
+  FunnelIcon,
   TableCellsIcon,
   TagIcon,
   FolderIcon,
@@ -143,7 +144,7 @@ export type Task = {
 }
 
 // ==================== 视图系统（Notion 风格）类型 ====================
-export type TaskViewMode = 'queue' | 'table' | 'board' | 'graph'
+export type TaskViewMode = 'queue' | 'table' | 'cards' | 'board' | 'graph'
 export type TaskViewSortField = 'priority' | 'due' | 'updated' | 'created' | 'status'
 export type TaskViewSortDir = 'asc' | 'desc'
 
@@ -166,8 +167,9 @@ export type TaskViewConfig = {
 }
 
 export const VIEW_MODE_OPTIONS: Array<{ id: TaskViewMode; label: string }> = [
-  { id: 'queue', label: '队列' },
+  { id: 'queue', label: '列表' },
   { id: 'table', label: '表格' },
+  { id: 'cards', label: '卡片' },
   { id: 'board', label: '看板' },
   { id: 'graph', label: '依赖' },
 ]
@@ -199,8 +201,9 @@ const SORT_FIELD_LABEL: Record<TaskViewSortField, string> = {
 }
 
 const VIEW_MODE_ICON: Record<TaskViewMode, ReactNode> = {
-  queue: <ClipboardDocumentCheckIcon aria-hidden className="size-[14px]" />,
+  queue: <ListBulletIcon aria-hidden className="size-[14px]" />,
   table: <TableCellsIcon aria-hidden className="size-[14px]" />,
+  cards: <Squares2X2Icon aria-hidden className="size-[14px]" />,
   board: <ViewColumnsIcon aria-hidden className="size-[14px]" />,
   graph: <ShareIcon aria-hidden className="size-[14px]" />,
 }
@@ -1670,6 +1673,8 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
 
   const detailNavIds = useMemo(() => {
     if (mode === 'queue') return buildQueueRows(sortedTasks).map((t) => t.id)
+    if (mode === 'cards') return sortedTasks.map((t) => t.id)
+    if (mode === 'graph') return tasksLinkedByDepends(sortedTasks).map((t) => t.id)
     if (mode === 'board') {
       const cols: BoardKey[] = ['overdue', 'todo', 'blocked', 'doing', 'done']
       const colOf = (t: Task): BoardKey => (isOverdue(t) ? 'overdue' : t.blocked ? 'blocked' : t.status)
@@ -1891,7 +1896,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
                 aria-expanded={filterOpen}
                 onClick={() => setFilterOpen((v) => !v)}
               >
-                <AdjustmentsHorizontalIcon aria-hidden className="size-[14px]" />
+                <FunnelIcon aria-hidden className="size-[14px]" />
                 {filterActive ? <span className="tasks-filter-dot" aria-hidden /> : null}
               </button>
               {filterOpen ? (
@@ -1979,6 +1984,13 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
             compact={compact}
             agents={agents}
             agentsLoading={agentsLoading}
+          />
+        ) : mode === 'cards' ? (
+          <TasksCardGrid
+            tasks={sortedTasks}
+            detailId={detailId}
+            onOpenDetail={setDetailId}
+            compact={compact}
           />
         ) : mode === 'board' ? (
           <TasksBoard
@@ -2149,6 +2161,56 @@ const BOARD_COLUMNS: { key: BoardKey; label: string; icon: ReactNode }[] = [
   { key: 'done', label: '完成', icon: <CheckCircleIcon aria-hidden className="size-[14px]" /> },
 ]
 
+function TasksCardGrid({
+  tasks,
+  detailId,
+  onOpenDetail,
+  compact,
+}: {
+  tasks: Task[]
+  detailId: string | null
+  onOpenDetail: (id: string) => void
+  compact: boolean
+}) {
+  if (!tasks.length) return <TasksEmpty compact={compact} />
+  return (
+    <div className={`tasks-cardgrid${compact ? ' is-compact' : ''}`}>
+      {tasks.map((task) => (
+        <button
+          key={task.id}
+          type="button"
+          className={`tasks-minicard${detailId === task.id ? ' is-active' : ''} is-p-${task.priority}`}
+          data-biu-kind="task"
+          data-biu-id={task.id}
+          data-biu-label={task.title}
+          onClick={() => onOpenDetail(task.id)}
+        >
+          <div className="tasks-minicard-title">
+            <span className="tasks-minicard-titletext">{task.title}</span>
+            <TriggerMark trigger={task.trigger} iconClass="size-[14px]" />
+            {task.blocked ? (
+              <span className="tasks-card-blocked" title="被依赖任务阻塞，无法开工">
+                <LockClosedIcon aria-hidden className="size-[14px]" />
+              </span>
+            ) : null}
+          </div>
+          <div className="tasks-minicard-foot">
+            <StatusPill
+              status={task.status}
+              reportCount={0}
+              blocked={task.blocked}
+              dueAt={task.dueAt}
+            />
+            <span className="tasks-minicard-assignee">
+              <ActorChip actor={task.assignee} />
+            </span>
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function TasksBoard({
   tasks,
   detailId,
@@ -2250,11 +2312,25 @@ function TasksBoard({
 // ---- DAG 依赖图视图（ReactFlow）----
 const GNODE_W = 248
 const GNODE_H = 112
-const GLAYER_GAP_X = 88
-const GLAYER_GAP_Y = 40
+const GLAYER_GAP_X = 48
+const GLAYER_GAP_Y = 72
+
+function tasksLinkedByDepends(tasks: Task[]): Task[] {
+  const ids = new Set(tasks.map((t) => t.id))
+  const linked = new Set<string>()
+  for (const t of tasks) {
+    for (const depId of t.dependsOn ?? []) {
+      if (!ids.has(depId)) continue
+      linked.add(t.id)
+      linked.add(depId)
+    }
+  }
+  return tasks.filter((t) => linked.has(t.id))
+}
 
 function buildGraph(tasks: Task[]): { nodes: RFNode[]; edges: Edge[] } {
-  const byId = new Map(tasks.map((t) => [t.id, t]))
+  const linked = tasksLinkedByDepends(tasks)
+  const byId = new Map(linked.map((t) => [t.id, t]))
   const layerOf = new Map<string, number>()
   const visit = (id: string, visited: Set<string>): number => {
     if (layerOf.has(id)) return layerOf.get(id)!
@@ -2270,7 +2346,7 @@ function buildGraph(tasks: Task[]): { nodes: RFNode[]; edges: Edge[] } {
     return layer
   }
   const layerGroups: Task[][] = []
-  for (const t of tasks) {
+  for (const t of linked) {
     const layer = visit(t.id, new Set())
       ; (layerGroups[layer] ??= []).push(t)
   }
@@ -2288,7 +2364,15 @@ function buildGraph(tasks: Task[]): { nodes: RFNode[]; edges: Edge[] } {
     let x = -totalW / 2
     const y = li * (GNODE_H + GLAYER_GAP_Y)
     group.forEach((t) => {
-      nodes.push({ id: t.id, position: { x, y }, width: GNODE_W, height: GNODE_H, data: { task: t } } as RFNode)
+      nodes.push({
+        id: t.id,
+        position: { x, y },
+        width: GNODE_W,
+        height: GNODE_H,
+        sourcePosition: Position.Bottom,
+        targetPosition: Position.Top,
+        data: { task: t },
+      } as RFNode)
       x += GNODE_W + GLAYER_GAP_X
     })
   })
@@ -2303,6 +2387,9 @@ function buildGraph(tasks: Task[]): { nodes: RFNode[]; edges: Edge[] } {
           id: `${depId}->${t.id}`,
           source: depId,
           target: t.id,
+          sourceHandle: 'out',
+          targetHandle: 'in',
+          type: 'smoothstep',
           animated: blocked,
           style: { stroke: blocked ? '#d9822b' : '#3b6fd9', strokeWidth: 2.2 },
           markerEnd: { type: 'arrowclosed', color: blocked ? '#d9822b' : '#3b6fd9' },
@@ -2336,8 +2423,8 @@ function GraphTaskNode({ data }: NodeProps) {
           </span>
         </span>
       </button>
-      <Handle type="target" position={Position.Left} />
-      <Handle type="source" position={Position.Right} />
+      <Handle type="target" id="in" position={Position.Top} />
+      <Handle type="source" id="out" position={Position.Bottom} />
     </div>
   )
 }
@@ -2366,6 +2453,13 @@ function TasksGraph({
   const usedNodes = useMemo(() => tree.nodes.map((n) => ({ ...n, type: 'task' as const })), [tree])
 
   if (tasks.length === 0) return <TasksEmpty compact={compact} />
+  if (tree.nodes.length === 0) {
+    return (
+      <div className={`tasks-empty${compact ? ' is-compact' : ''}`}>
+        暂无依赖关系，有前置/后置依赖的任务才会出现在这里
+      </div>
+    )
+  }
   return (
     <div className={`tasks-graph${compact ? ' is-compact' : ''}`}>
       <ReactFlow
@@ -3793,6 +3887,18 @@ if (typeof document !== 'undefined') {
 .tasks-card-tags { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding-top:8px; border-top:1px solid color-mix(in srgb, var(--dsw-border) 60%, transparent); }
 .tasks-card-due.is-overdue { color:var(--dsw-danger); font-weight:650; }
 .tasks-board-empty { color:var(--dsw-label-3); font-size:14px; padding:14px 6px; text-align:center; }
+.tasks-cardgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(168px, 1fr)); gap:8px; margin-top:10px; }
+.tasks-cardgrid.is-compact { grid-template-columns:repeat(auto-fill, minmax(148px, 1fr)); gap:7px; }
+.tasks-minicard { display:flex; flex-direction:column; gap:8px; width:100%; min-width:0; min-height:92px; overflow:hidden; text-align:left; border:0; border-radius:8px; padding:10px 11px; background:var(--dsw-surface); color:var(--dsw-label); font:inherit; cursor:pointer; box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 65%, transparent); transition:box-shadow .12s ease, transform .08s ease; }
+.tasks-minicard:hover { box-shadow:0 1px 3px rgba(0,0,0,.08), 0 0 0 1px color-mix(in srgb, var(--dsw-border) 85%, transparent); transform:translateY(-1px); }
+.tasks-minicard.is-active { background:color-mix(in srgb, var(--dsw-business) 6%, var(--dsw-surface)); }
+.tasks-minicard-title { display:flex; align-items:flex-start; gap:6px; font-size:13px; font-weight:620; line-height:1.35; }
+.tasks-minicard-titletext { flex:1; min-width:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; word-break:break-word; }
+.tasks-minicard-foot { display:flex; align-items:center; gap:6px; margin-top:auto; min-width:0; }
+.tasks-minicard-foot .tasks-status-pill { flex:none; padding:1px 6px; font-size:12px; }
+.tasks-minicard-assignee { min-width:0; flex:1; overflow:hidden; }
+.tasks-minicard-assignee .tasks-actor { font-size:12px; max-width:100%; overflow:hidden; }
+.tasks-minicard-assignee .tasks-actor-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 .tasks-error { border-radius:7px; padding:6px 8px; background:var(--dsw-danger-soft); color:var(--dsw-danger); font-size:11px; }
 .tasks-empty { color:var(--dsw-label-3); font-size:14px; line-height:1.45; padding:28px 16px; text-align:center; }
@@ -3989,8 +4095,8 @@ if (typeof document !== 'undefined') {
 .tasks-graph .react-flow__control-button { background:var(--dsw-surface); color:var(--dsw-label-2); border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 60%, transparent); }
 .tasks-graph-node-wrap { position:relative; width:100%; height:100%; }
 .tasks-graph-node-wrap .react-flow__handle { width:10px; height:10px; border:2px solid var(--dsw-surface); border-radius:50%; background:var(--dsw-border); }
-.tasks-graph-node-wrap .react-flow__handle-left { left:-6px; }
-.tasks-graph-node-wrap .react-flow__handle-right { right:-6px; }
+.tasks-graph-node-wrap .react-flow__handle-top { top:-6px; }
+.tasks-graph-node-wrap .react-flow__handle-bottom { bottom:-6px; }
 .tasks-graph-node { display:flex; flex-direction:column; gap:8px; width:100%; height:100%; text-align:left; border:1px solid color-mix(in srgb, var(--dsw-border) 78%, transparent); border-radius:10px; padding:10px 12px; background:var(--dsw-surface); color:var(--dsw-label); font:inherit; cursor:pointer; box-sizing:border-box; box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 60%, transparent); }
 .tasks-graph-node:hover { border-color:color-mix(in srgb, var(--dsw-business) 55%, transparent); }
 .tasks-graph-node.is-active { outline:2px solid color-mix(in srgb, var(--dsw-business) 65%, transparent); background:color-mix(in srgb, var(--dsw-business) 8%, var(--dsw-surface)); }

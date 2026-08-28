@@ -254,7 +254,7 @@ interface EChartsOption {
 
 /** 侧边栏用量面板：Input/Output 各自独立 Y 轴，展示 Step 用量与回合用量。 */
 export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
-  const sessionId = useSessionView((state: { sessionId?: string }) => state.sessionId)
+  const sessionId = useSessionView((state) => (state as { sessionId?: string }).sessionId)
   const [trend, setTrend] = useUsageTrend(useSessionView, sessionView)
 
   const track = useMemo(() => splitTrendData(trend?.points ?? []), [trend])

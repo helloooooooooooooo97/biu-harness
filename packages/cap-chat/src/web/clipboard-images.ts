@@ -9,7 +9,7 @@ function fileFingerprint(file: File): string {
 /** Drop / file-input: keep image files only. */
 export function collectImageFiles(list: FileList | File[] | null | undefined): File[] {
   if (!list) return []
-  return uniqueImageFiles([...list])
+  return uniqueImageFiles(Array.from(list))
 }
 
 /**
@@ -32,8 +32,8 @@ export function uniqueImageFiles(files: Array<File | null | undefined>): File[] 
 
 export function collectClipboardImages(clipboard: DataTransfer | null | undefined): File[] {
   if (!clipboard) return []
-  const fromFiles = [...(clipboard.files ?? [])]
-  const fromItems = [...clipboard.items]
+  const fromFiles = Array.from(clipboard.files ?? [])
+  const fromItems = Array.from(clipboard.items)
     .map((item) => (item.kind === 'file' ? item.getAsFile() : null))
   return uniqueImageFiles([...fromFiles, ...fromItems])
 }

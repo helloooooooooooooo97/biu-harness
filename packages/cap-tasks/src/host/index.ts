@@ -145,7 +145,7 @@ export type TaskRow = {
 
 
 // ==================== 视图系统（Notion 风格）：task_views 表 + 配置归一化 ====================
-export type TaskViewMode = 'queue' | 'table' | 'board' | 'graph'
+export type TaskViewMode = 'queue' | 'table' | 'cards' | 'board' | 'graph'
 export type TaskViewSortField = 'priority' | 'due' | 'updated' | 'created' | 'status'
 export type TaskViewSortDir = 'asc' | 'desc'
 
@@ -178,7 +178,7 @@ export type TaskView = {
   updatedAt: number
 }
 
-const VIEW_MODES = new Set<TaskViewMode>(['queue', 'table', 'board', 'graph'])
+const VIEW_MODES = new Set<TaskViewMode>(['queue', 'table', 'cards', 'board', 'graph'])
 const VIEW_SORT_FIELDS = new Set<TaskViewSortField>(['priority', 'due', 'updated', 'created', 'status'])
 const VIEW_SORT_DIRS = new Set<TaskViewSortDir>(['asc', 'desc'])
 const VIEW_TIME_FILTERS = new Set<string>(['', '1h', '24h', '7d', '30d'])
@@ -1135,7 +1135,7 @@ export class TasksService extends Service {
         /* already exists */
       }
     }
-    // ---- 视图持久化：task_views 表。呈现方式（队列/表格/看板/依赖）不是视图，不 seed 内置行。 ----
+    // ---- 视图持久化：task_views 表。呈现方式（列表/表格/看板/依赖）不是视图，不 seed 内置行。 ----
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS task_views (
         id TEXT PRIMARY KEY,
@@ -1991,7 +1991,7 @@ export function apply(ctx: Context) {
   })
 
   // ==================== 视图（task_views）Agent 工具：新建视图 / 筛选 / 排序 ====================
-  const VIEW_MODE_PARAM = { type: 'string', enum: ['queue', 'table', 'board', 'graph'] as const, description: '呈现方式：队列 / 表格 / 看板 / 依赖图' }
+  const VIEW_MODE_PARAM = { type: 'string', enum: ['queue', 'table', 'cards', 'board', 'graph'] as const, description: '呈现方式：列表 / 表格 / 卡片 / 看板 / 依赖图' }
   const VIEW_FILTER_PARAM = {
     type: 'object',
     properties: {

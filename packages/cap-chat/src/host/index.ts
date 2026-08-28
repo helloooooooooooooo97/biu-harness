@@ -1244,10 +1244,19 @@ export function apply(ctx: Context) {
     const extraTools = Array.isArray(payload.extraTools)
       ? [...new Set(payload.extraTools.map((name) => String(name).trim()).filter(Boolean))]
       : []
+    const images = Array.isArray(payload.images)
+      ? payload.images
+          .map((img) => ({
+            name: String(img.name ?? '').trim(),
+            mime: String(img.mime ?? '').trim(),
+            url: String(img.url ?? '').trim(),
+          }))
+          .filter((img) => img.name && img.mime && img.url)
+      : []
     const sendOpts = {
       ...(extraTools.length ? { extraTools } : {}),
       ...(payload.wait === false ? { wait: false as const } : {}),
-      ...(Array.isArray(payload.images) ? { images: payload.images } : {}),
+      ...(images.length ? { images } : {}),
     }
     if (payload.kind === 'inject') {
       agent.inject(payload.text ?? '', sendOpts)

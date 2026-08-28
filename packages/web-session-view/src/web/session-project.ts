@@ -14,6 +14,7 @@ export type SessionEvent = {
       text: string
       kind?: string
       sender?: { type: 'user' } | { type: 'session'; sessionId: string }
+      images?: Array<{ name: string; mime: string; url: string }>
     }
   | {
       type: 'assistant/message'
