@@ -1,15 +1,61 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent } from 'react'
 import { ArrowUpIcon, ChevronDownIcon, PlusIcon, Cog6ToothIcon } from '@heroicons/react/16/solid'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { EditorContent, useEditor } from '@tiptap/react'
+import Placeholder from '@tiptap/extension-placeholder'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
-import { formatPicks, PickChipLabel, usePickState, type PickService } from '@biu/cap-pick/web'
+import { pickKey, usePickState, type PickService } from '@biu/cap-pick/web'
+import { composerDocExtensions } from './composer-kit.ts'
+import {
+  collectPickKeys,
+  deletePlainRange,
+  editorCaretPlain,
+  insertPickChip,
+  jsonFromDraft,
+  serializeComposer,
+} from './composer-tiptap.ts'
 import { ModelConfigDialog } from './model-config-dialog.tsx'
 import { ImageThumbs } from './image-thumbs.tsx'
 import { collectClipboardImages, collectImageFiles } from './clipboard-images.ts'
 
 /** 按键不驱动受控 value；仅防抖更新发送按钮可用态，避免每个字符打穿 React 渲染。 */
 const INPUT_DEBOUNCE_MS = 120
+
+/** 胶囊行：左右 padding 10+10、两段 gap 8、与 CSS `.composer-pill-row` 一致。 */
+const COMPACT_ROW_PAD_X = 20
+const COMPACT_ROW_GAP_X = 16
+const COMPOSER_LINE_PX = 28
+
+/** 用「按钮还在同一行时」的编辑器宽度测是否折行，避免变方后变宽又缩回导致闪跳。 */
+function editorWrapsInCompactRow(form: HTMLElement, editorDom: HTMLElement) {
+  const plus = form.querySelector('.composer-plus') as HTMLElement | null
+  const right = form.querySelector('.composer-pill-right') as HTMLElement | null
+  const compactW =
+    form.clientWidth -
+    COMPACT_ROW_PAD_X -
+    COMPACT_ROW_GAP_X -
+    (plus?.offsetWidth ?? 28) -
+    (right?.offsetWidth ?? 80)
+  if (compactW <= 0) return false
+  const probe = editorDom.cloneNode(true) as HTMLElement
+  probe.removeAttribute('contenteditable')
+  probe.style.cssText = [
+    'position:absolute',
+    'left:-9999px',
+    'top:0',
+    `width:${compactW}px`,
+    'height:auto',
+    'max-height:none',
+    'overflow:visible',
+    `line-height:${COMPOSER_LINE_PX}px`,
+    'word-break:break-word',
+  ].join(';')
+  document.body.append(probe)
+  const wraps = probe.scrollHeight > COMPOSER_LINE_PX + 4
+  probe.remove()
+  return wraps
+}
 
 /** 草稿持久化：跟随 session 存 localStorage，停止输入该时长后写入。草稿内容完整保存、完整恢复，不限制长度。 */
 const DRAFT_KEY = 'chat.draft'
@@ -115,7 +161,9 @@ function matchModelOption(catalog: ModelOption[], provider: string, model: strin
 }
 
 export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+  const pickKeysRef = useRef(new Set<string>())
+  const pendingRef = useRef(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const canSubmitRef = useRef(false)
@@ -166,42 +214,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     setConfigOpen(true)
   }
 
-  function syncComposerShape(
-    el: HTMLTextAreaElement | null = textareaRef.current,
-    toolsCount = picked.length + pickRefs.length,
-    imageCount = pendingImages.length,
-  ) {
-    if (!el) {
-      setExpanded(toolsCount > 0 || imageCount > 0)
-      return
-    }
-    el.style.height = 'auto'
-    const next = Math.min(el.scrollHeight, 140)
-    el.style.height = `${Math.max(28, next)}px`
-    const multi = next > 36 || el.value.includes('\n') || toolsCount > 0 || imageCount > 0
-    setExpanded(multi)
-  }
-
-  useEffect(
-    () => () => {
-      if (debounceRef.current != null) clearTimeout(debounceRef.current)
-      if (draftTimerRef.current != null) clearTimeout(draftTimerRef.current)
-    },
-    [],
-  )
-
-  // 挂载/session 切换时恢复该 session 草稿并同步高度/形状
-  useEffect(() => {
-    const el = textareaRef.current
-    if (!el || !sessionId) return
-    const draft = readDraftMap()[sessionId]
-    if (typeof draft === 'string' && draft) {
-      el.value = draft
-      syncComposerShape(el)
-    }
-    // 仅关注 session 切换；首挂载 sessionId 初始值也会触发一次（无害）
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId])
+  pendingRef.current = pending
 
   useEffect(() => {
     let cancelled = false
@@ -376,12 +389,6 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     }, INPUT_DEBOUNCE_MS)
   }
 
-  useEffect(() => {
-    scheduleCanSubmit(textareaRef.current?.value ?? '', picked, pickRefs.length, pendingImages.length)
-    syncComposerShape(textareaRef.current, picked.length + pickRefs.length, pendingImages.length)
-  }, [pickRefs.length, picked.length, pendingImages.length])
-
-  /** 输入防抖写草稿：停止输入约 300ms 后写入当前 session 的 localStorage 草稿。 */
   function schedulePersistDraft(text: string) {
     if (!sessionId) return
     if (draftTimerRef.current != null) clearTimeout(draftTimerRef.current)
@@ -391,34 +398,11 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     }, DRAFT_DEBOUNCE_MS)
   }
 
-  /** 清理挂起的草稿写定时器（切会话/发送时不残留脏写）。 */
   function flushDraftTimer() {
     if (draftTimerRef.current != null) {
       clearTimeout(draftTimerRef.current)
       draftTimerRef.current = null
     }
-  }
-
-  function clearInput() {
-    if (debounceRef.current != null) {
-      clearTimeout(debounceRef.current)
-      debounceRef.current = null
-    }
-    flushDraftTimer()
-    const el = textareaRef.current
-    if (el) {
-      el.value = ''
-      el.style.height = '28px'
-    }
-    canSubmitRef.current = false
-    setCanSubmit(false)
-    setSlash(null)
-    setPicked([])
-    setPendingImages((prev) => {
-      for (const item of prev) URL.revokeObjectURL(item.previewUrl)
-      return []
-    })
-    setExpanded(false)
   }
 
   const addImageFiles = useCallback((files: File[]) => {
@@ -437,11 +421,174 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     })
   }, [])
 
-  function onPaste(event: ClipboardEvent<HTMLTextAreaElement>) {
-    const images = collectClipboardImages(event.clipboardData)
-    if (!images.length) return
-    addImageFiles(images)
-    if (!event.clipboardData?.getData('text/plain')) event.preventDefault()
+  const live = useRef({
+    slash,
+    filtered,
+    pick,
+    pickRefs,
+    pendingImages,
+    picked,
+    catalog,
+  })
+  live.current = { slash, filtered, pick, pickRefs, pendingImages, picked, catalog }
+  const pickToolRef = useRef<(name: string) => void>(() => {})
+  const activeIndexRef = useRef(0)
+  activeIndexRef.current = activeIndex
+
+  const editor = useEditor({
+    immediatelyRender: true,
+    extensions: [
+      ...composerDocExtensions(),
+      Placeholder.configure({
+        placeholder: () => (pendingRef.current ? 'Add a follow up…' : 'Add a follow up'),
+      }),
+    ],
+    editorProps: {
+      attributes: {
+        class: 'composer-tiptap',
+        role: 'textbox',
+        'aria-label': '对话输入',
+      },
+      handlePaste(_view, event) {
+        const images = collectClipboardImages(event.clipboardData)
+        if (!images.length) return false
+        addImageFiles(images)
+        return !event.clipboardData?.getData('text/plain')
+      },
+      handleKeyDown(_view, event) {
+        const menu = live.current.slash
+        const list = live.current.filtered
+        if (menu?.open && list.length) {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault()
+            setActiveIndex((i) => (i + 1) % list.length)
+            return true
+          }
+          if (event.key === 'ArrowUp') {
+            event.preventDefault()
+            setActiveIndex((i) => (i - 1 + list.length) % list.length)
+            return true
+          }
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            setSlash(null)
+            return true
+          }
+          if (event.key === 'Tab' || (event.key === 'Enter' && !event.shiftKey)) {
+            if (event.isComposing) return false
+            event.preventDefault()
+            const item = list[activeIndexRef.current] ?? list[0]
+            if (item) pickToolRef.current(item.name)
+            return true
+          }
+        }
+        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+          event.preventDefault()
+          formRef.current?.requestSubmit()
+          return true
+        }
+        if (
+          (event.key === 'Backspace' || event.key === 'Delete') &&
+          live.current.pendingImages.length
+        ) {
+          const doc = _view.state.doc
+          const plain = doc.textBetween(0, doc.content.size, '\n', '')
+          let chips = false
+          doc.descendants((node) => {
+            if (node.type.name === 'pickChip') chips = true
+          })
+          if (!plain.trim() && !chips) {
+            event.preventDefault()
+            setPendingImages((prev) => {
+              const last = prev[prev.length - 1]
+              if (last) URL.revokeObjectURL(last.previewUrl)
+              return prev.slice(0, -1)
+            })
+            return true
+          }
+        }
+        return false
+      },
+    },
+    onUpdate: ({ editor: ed }) => {
+      const packed = serializeComposer(ed)
+      scheduleCanSubmit(packed.plain, live.current.picked, packed.refs.length, live.current.pendingImages.length)
+      const el = ed.view.dom
+      const form = formRef.current
+      const wraps = form ? editorWrapsInCompactRow(form, el) : el.scrollHeight > COMPOSER_LINE_PX + 4
+      setExpanded(
+        wraps ||
+          packed.plain.includes('\n') ||
+          packed.refs.length > 0 ||
+          live.current.picked.length > 0 ||
+          live.current.pendingImages.length > 0,
+      )
+      schedulePersistDraft(packed.text)
+      const caret = editorCaretPlain(ed)
+      setSlash(readSlashAtCursor(caret.value, caret.cursor))
+      const liveKeys = collectPickKeys(ed)
+      for (const ref of live.current.pick?.refs ?? []) {
+        const key = pickKey(ref)
+        if (!liveKeys.has(key)) live.current.pick?.remove(key)
+      }
+      pickKeysRef.current = liveKeys
+    },
+  })
+
+  useEffect(
+    () => () => {
+      if (debounceRef.current != null) clearTimeout(debounceRef.current)
+      if (draftTimerRef.current != null) clearTimeout(draftTimerRef.current)
+    },
+    [],
+  )
+
+  useEffect(() => {
+    if (!editor || !sessionId) return
+    const draft = readDraftMap()[sessionId]
+    pick?.clear()
+    pickKeysRef.current = new Set()
+    if (typeof draft === 'string' && draft) {
+      editor.commands.setContent(jsonFromDraft(draft))
+      const { refs } = serializeComposer(editor)
+      if (refs.length) pick?.addMany(refs)
+      pickKeysRef.current = collectPickKeys(editor)
+    } else {
+      editor.commands.clearContent()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, editor])
+
+  useEffect(() => {
+    if (!editor) return
+    const nextKeys = new Set(pickRefs.map((item) => pickKey(item)))
+    for (const ref of pickRefs) {
+      const key = pickKey(ref)
+      if (pickKeysRef.current.has(key)) continue
+      insertPickChip(editor, ref)
+    }
+    pickKeysRef.current = nextKeys
+    const packed = serializeComposer(editor)
+    scheduleCanSubmit(packed.plain, picked, packed.refs.length, pendingImages.length)
+  }, [pickRefs, editor, picked.length, pendingImages.length])
+
+  function clearInput() {
+    if (debounceRef.current != null) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
+    flushDraftTimer()
+    editor?.commands.clearContent(true)
+    canSubmitRef.current = false
+    setCanSubmit(false)
+    setSlash(null)
+    setPicked([])
+    setPendingImages((prev) => {
+      for (const item of prev) URL.revokeObjectURL(item.previewUrl)
+      return []
+    })
+    pickKeysRef.current = new Set()
+    setExpanded(false)
   }
 
   function onDrop(event: DragEvent<HTMLFormElement>) {
@@ -452,18 +599,12 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   }
 
   const openSlashMenu = useCallback(() => {
-    const el = textareaRef.current
-    if (!el) return
-    const start = el.selectionStart ?? el.value.length
-    const needsSpace = start > 0 && !/\s$/.test(el.value.slice(0, start))
-    const insert = `${needsSpace ? ' ' : ''}/`
-    el.value = `${el.value.slice(0, start)}${insert}${el.value.slice(el.selectionEnd ?? start)}`
-    const caret = start + insert.length
-    el.focus()
-    el.setSelectionRange(caret, caret)
-    scheduleCanSubmit(el.value)
-    syncComposerShape(el)
-    setSlash(readSlashAtCursor(el.value, caret))
+    if (!editor) return
+    const { value, cursor } = editorCaretPlain(editor)
+    const needsSpace = cursor > 0 && !/\s$/.test(value.slice(0, cursor))
+    editor.chain().focus().insertContent(`${needsSpace ? ' ' : ''}/`).run()
+    const caret = editorCaretPlain(editor)
+    setSlash(readSlashAtCursor(caret.value, caret.cursor))
     if (catalog.length === 0) {
       void fetch('/api/chat/config')
         .then((res) => res.json())
@@ -475,50 +616,22 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           /* ignore */
         })
     }
-  }, [catalog.length, picked])
-
-  const syncSlashFromTextarea = useCallback(() => {
-    const el = textareaRef.current
-    if (!el) return
-    const next = readSlashAtCursor(el.value, el.selectionStart ?? el.value.length)
-    setSlash(next)
-    if (next?.open && catalog.length === 0) {
-      void fetch('/api/chat/config')
-        .then((res) => res.json())
-        .then((data: { toolCatalog?: ToolCatalogItem[] }) => {
-          const items = Array.isArray(data.toolCatalog) ? data.toolCatalog : []
-          setCatalog(items.filter((item) => item?.name))
-        })
-        .catch(() => {
-          /* ignore */
-        })
-    }
-  }, [catalog.length])
+  }, [catalog.length, editor])
 
   const pickTool = useCallback(
     (name: string, slashState: SlashState | null = slash) => {
-      const el = textareaRef.current
       setPicked((prev) => {
         const nextTools = prev.includes(name) ? prev : [...prev, name]
-        if (el && slashState) {
-          const before = el.value.slice(0, slashState.start)
-          const after = el.value.slice(slashState.end)
-          el.value = `${before}${after}`.replace(/\s{2,}/g, ' ')
-          const caret = Math.min(before.length, el.value.length)
-          el.focus()
-          el.setSelectionRange(caret, caret)
-          scheduleCanSubmit(el.value, nextTools)
-          syncComposerShape(el, nextTools.length)
-        } else {
-          scheduleCanSubmit(el?.value ?? '', nextTools)
-          syncComposerShape(el, nextTools.length)
-        }
+        if (editor && slashState) deletePlainRange(editor, slashState.start, slashState.end)
+        const packed = serializeComposer(editor)
+        scheduleCanSubmit(packed.plain, nextTools, packed.refs.length)
         return nextTools
       })
       setSlash(null)
     },
-    [slash, picked],
+    [slash, editor],
   )
+  pickToolRef.current = pickTool
 
   async function selectModel(option: ModelOption) {
     if (modelBusy || option.id === modelOption.id) {
@@ -557,9 +670,10 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       clearTimeout(debounceRef.current)
       debounceRef.current = null
     }
-    const content = (textareaRef.current?.value ?? '').trim()
+    const packedEditor = serializeComposer(editor)
+    const content = packedEditor.plain.trim()
     // 空回车 + 队列有 wake：abort 当前回合并立刻 claim
-    if (!content && !picked.length && !pickRefs.length && !pendingImages.length) {
+    if (!content && !picked.length && !packedEditor.refs.length && !pendingImages.length) {
       if (inbox.some((item) => item.kind === 'wake')) {
         try {
           await sessionView.flushInbox()
@@ -571,7 +685,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     }
     const tools = [...picked]
     const fallback = tools.length ? `请使用工具：${tools.join(', ')}` : pendingImages.length ? '（图片）' : ''
-    const text = [formatPicks(pickRefs), content || fallback].filter(Boolean).join('\n')
+    const text = packedEditor.text || fallback
     const packed = await Promise.all(pendingImages.map((item) => readFileDataUrl(item.file)))
     clearInput()
     pick?.clear()
@@ -591,61 +705,6 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     } catch {
       /* error 已写入 sessionView */
     }
-  }
-
-  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (slash?.open && filtered.length) {
-      if (event.key === 'ArrowDown') {
-        event.preventDefault()
-        setActiveIndex((i) => (i + 1) % filtered.length)
-        return
-      }
-      if (event.key === 'ArrowUp') {
-        event.preventDefault()
-        setActiveIndex((i) => (i - 1 + filtered.length) % filtered.length)
-        return
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        setSlash(null)
-        return
-      }
-      if (event.key === 'Enter' && !event.shiftKey) {
-        if (event.nativeEvent.isComposing || event.keyCode === 229) return
-        event.preventDefault()
-        const item = filtered[activeIndex] ?? filtered[0]
-        if (item) pickTool(item.name)
-        return
-      }
-      if (event.key === 'Tab') {
-        event.preventDefault()
-        const item = filtered[activeIndex] ?? filtered[0]
-        if (item) pickTool(item.name)
-        return
-      }
-    }
-
-    if ((event.key === 'Backspace' || event.key === 'Delete') && pickRefs.length) {
-      if (!event.currentTarget.value) {
-        event.preventDefault()
-        pick?.removeLast()
-        return
-      }
-    }
-    if ((event.key === 'Backspace' || event.key === 'Delete') && pendingImages.length && !event.currentTarget.value) {
-      event.preventDefault()
-      setPendingImages((prev) => {
-        const last = prev[prev.length - 1]
-        if (last) URL.revokeObjectURL(last.previewUrl)
-        return prev.slice(0, -1)
-      })
-      return
-    }
-
-    if (event.key !== 'Enter' || event.shiftKey) return
-    if (event.nativeEvent.isComposing || event.keyCode === 229) return
-    event.preventDefault()
-    event.currentTarget.form?.requestSubmit()
   }
 
   return (
@@ -669,6 +728,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       ) : null}
 
       <form
+        ref={formRef}
         className={`composer-pill${expanded ? ' is-expanded' : ''}${pickRefs.length || picked.length || pendingImages.length ? ' has-chips' : ''}`}
         onSubmit={onSubmit}
         onDragOver={(event) => {
@@ -711,31 +771,13 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
               onClick={() => {
                 setPicked((prev) => {
                   const next = prev.filter((item) => item !== name)
-                  scheduleCanSubmit(textareaRef.current?.value ?? '', next)
-                  syncComposerShape(textareaRef.current, next.length)
+                  const packed = serializeComposer(editor)
+                  scheduleCanSubmit(packed.plain, next, packed.refs.length)
                   return next
                 })
               }}
             >
               <span>/{name}</span>
-              <span aria-hidden>×</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {pickRefs.length ? (
-        <div className="composer-tool-chips" aria-label="已选取对象" data-biu-ignore>
-          {pickRefs.map((ref) => (
-            <button
-              key={`${ref.kind}:${ref.id}:${ref.action ?? ''}`}
-              type="button"
-              className="composer-tool-chip is-pick"
-              data-testid="pick-chip"
-              title={`${ref.kind} · ${ref.label}${ref.action ? ` · ${ref.action}` : ''} · 无文字时删除键可逐个移除`}
-              onClick={() => pick?.remove(`${ref.kind}:${ref.id}:${ref.action ?? ''}`)}
-            >
-              <PickChipLabel pick={ref} />
               <span aria-hidden>×</span>
             </button>
           ))}
@@ -770,29 +812,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           <PlusIcon className="size-4" />
         </button>
 
-        <textarea
-          ref={textareaRef}
-          className="composer-pill-input"
-          defaultValue=""
-          rows={1}
-          placeholder={pending ? 'Add a follow up…' : 'Add a follow up'}
-          aria-label="对话输入"
-          aria-expanded={Boolean(slash?.open)}
-          onChange={(event) => {
-            scheduleCanSubmit(event.target.value)
-            syncComposerShape(event.target)
-            schedulePersistDraft(event.target.value)
-            const next = readSlashAtCursor(
-              event.target.value,
-              event.target.selectionStart ?? event.target.value.length,
-            )
-            setSlash(next)
-          }}
-          onClick={syncSlashFromTextarea}
-          onKeyUp={syncSlashFromTextarea}
-          onKeyDown={onKeyDown}
-          onPaste={onPaste}
-        />
+        <EditorContent editor={editor} className="composer-editor" />
 
         <div className="composer-pill-right">
           <div className="composer-model">

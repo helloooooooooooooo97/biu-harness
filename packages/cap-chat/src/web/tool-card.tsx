@@ -30,15 +30,15 @@ function DiffBlock({ lines, path }: { lines: DiffLine[]; path?: string }) {
     <div className="overflow-hidden rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)]">
       {path ? (
         <div className="flex items-center justify-between gap-2 border-b border-[var(--dsw-border)] bg-[var(--dsw-tool)] px-3 py-1.5">
-          <span className="min-w-0 truncate font-mono text-[11px] text-[var(--dsw-label-2)]">{path}</span>
-          <span className="shrink-0 font-mono text-[10px] tabular-nums text-[var(--dsw-label-3)]">
+          <span className="min-w-0 truncate font-mono text-[length:var(--dsw-chat-ui-font-size)] text-[var(--dsw-label-2)]">{path}</span>
+          <span className="shrink-0 font-mono text-[length:var(--dsw-chat-ui-font-size)] tabular-nums text-[var(--dsw-label-3)]">
             {stats.removed ? <span className="text-[var(--dsw-danger)]">−{stats.removed}</span> : null}
             {stats.removed && stats.added ? ' ' : null}
             {stats.added ? <span className="text-[var(--dsw-ok)]">+{stats.added}</span> : null}
           </span>
         </div>
       ) : null}
-      <pre className="max-h-80 overflow-auto py-1 font-mono text-[11px] leading-5">
+      <pre className="max-h-80 overflow-auto py-1 font-mono text-[length:var(--dsw-chat-ui-font-size)] leading-5">
         {lines.map((line, index) => {
           const prefix = line.type === 'add' ? '+' : line.type === 'remove' ? '−' : ' '
           const rowClass =
@@ -90,16 +90,16 @@ function DetailView({ detail }: { detail: FormattedDetail }) {
       <div className="space-y-2">
         <div className="overflow-hidden rounded-[10px] border border-[var(--dsw-border)] bg-[#1e1f24]">
           <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-1.5">
-            <span className="font-mono text-[10px] tracking-wide text-white/45 uppercase">output</span>
+            <span className="font-mono text-[length:var(--dsw-chat-ui-font-size)] tracking-wide text-white/45 uppercase">output</span>
             <span
-              className={`font-mono text-[10px] tabular-nums ${
+              className={`font-mono text-[length:var(--dsw-chat-ui-font-size)] tabular-nums ${
                 detail.code === 0 || detail.code == null ? 'text-[#7dcea0]' : 'text-[#f1948a]'
               }`}
             >
               exit {detail.code ?? '—'}
             </span>
           </div>
-          <pre className="max-h-72 overflow-auto px-3 py-2 font-mono text-[11px] leading-5 text-[#e8eaed]">
+          <pre className="max-h-72 overflow-auto px-3 py-2 font-mono text-[length:var(--dsw-chat-ui-font-size)] leading-5 text-[#e8eaed]">
             {hasOut ? <span className="whitespace-pre-wrap">{detail.stdout.replace(/\n$/, '')}</span> : null}
             {hasOut && hasErr ? '\n\n' : null}
             {hasErr ? <span className="whitespace-pre-wrap text-[#f5b7b1]">{detail.stderr.replace(/\n$/, '')}</span> : null}
@@ -113,14 +113,14 @@ function DetailView({ detail }: { detail: FormattedDetail }) {
 
   if (detail.kind === 'json') {
     return (
-      <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] px-3 py-2 font-mono text-[11px] leading-5 text-[var(--dsw-label-2)]">
+      <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] px-3 py-2 font-mono text-[length:var(--dsw-chat-ui-font-size)] leading-5 text-[var(--dsw-label-2)]">
         {detail.text}
       </pre>
     )
   }
 
   return (
-    <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] px-3 py-2 font-mono text-[11px] leading-5 text-[var(--dsw-label)]">
+    <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] px-3 py-2 font-mono text-[length:var(--dsw-chat-ui-font-size)] leading-5 text-[var(--dsw-label)]">
       {detail.text}
     </pre>
   )
@@ -168,7 +168,7 @@ function ToolBody({ parsed, rawArguments, detail }: { parsed: ParsedToolCall; ra
   if (parsed.kind === 'bash') {
     return (
       <div className="space-y-2">
-        <pre className="overflow-x-auto rounded-[10px] border border-[var(--dsw-border)] bg-[#1e1f24] px-3 py-2 font-mono text-[11px] leading-5 text-[#e8eaed]">
+        <pre className="overflow-x-auto rounded-[10px] border border-[var(--dsw-border)] bg-[#1e1f24] px-3 py-2 font-mono text-[length:var(--dsw-chat-ui-font-size)] leading-5 text-[#e8eaed]">
           <span className="text-[#8ab4f8]">$ </span>
           {parsed.command}
         </pre>
@@ -180,7 +180,7 @@ function ToolBody({ parsed, rawArguments, detail }: { parsed: ParsedToolCall; ra
   if (parsed.kind === 'view') {
     return (
       <div className="space-y-2">
-        <div className="font-mono text-[11px] text-[var(--dsw-label-3)]">
+        <div className="font-mono text-[length:var(--dsw-chat-ui-font-size)] text-[var(--dsw-label-3)]">
           {parsed.path}
           {parsed.viewRange ? `:${parsed.viewRange[0]}-${parsed.viewRange[1]}` : ''}
         </div>
@@ -192,7 +192,7 @@ function ToolBody({ parsed, rawArguments, detail }: { parsed: ParsedToolCall; ra
   return (
     <div className="space-y-2">
       {rawArguments ? (
-        <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] px-3 py-2 font-mono text-[11px] leading-5 text-[var(--dsw-label-2)]">
+        <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-tool)] px-3 py-2 font-mono text-[length:var(--dsw-chat-ui-font-size)] leading-5 text-[var(--dsw-label-2)]">
           {prettyJsonString(rawArguments)}
         </pre>
       ) : null}
@@ -252,7 +252,7 @@ export function ToolCard({
 
   return (
     <div className="tool-call" {...pickDomAttrs('tool', node.callId, title)}>
-      <div className="tool-call-head">
+      <div className={`tool-call-head${open ? ' is-open' : ''}`}>
         <button
           type="button"
           className="tool-call-toggle"
@@ -279,17 +279,17 @@ export function ToolCard({
         </button>
       </div>
       {!open && previewLines && previewLines.length > 0 ? (
-        <div className="mt-1 px-2">
+        <div className="tool-call-body">
           <DiffBlock path={parsed.kind === 'str_replace' ? parsed.path : undefined} lines={previewLines} />
         </div>
       ) : null}
       {collapsedArtifacts ? (
-        <div className="mt-1 px-2">
+        <div className="tool-call-body">
           <ArtifactGallery artifacts={collapsedArtifacts} />
         </div>
       ) : null}
       {open ? (
-        <div className="mt-1 px-2">
+        <div className="tool-call-body">
           <ToolBody parsed={parsed} rawArguments={node.arguments} detail={node.result?.detail} />
         </div>
       ) : null}

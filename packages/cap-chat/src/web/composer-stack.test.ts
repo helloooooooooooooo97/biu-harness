@@ -50,11 +50,10 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\[data-testid='session-inspector'\] \.usage-panel\s*\{[^}]*background:\s*var\(--dsw-sidebar\)/s)
   })
 
-  it('Backspace/Delete pops pick chips when the composer has no text', () => {
+  it('uses Tiptap for inline pick chips in the composer', () => {
     const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
-    expect(composer).toMatch(/event\.key === 'Backspace' \|\| event\.key === 'Delete'/)
-    expect(composer).toMatch(/if \(!event\.currentTarget\.value\)/)
-    expect(composer).toMatch(/pick\?\.removeLast\(\)/)
-    expect(composer).not.toMatch(/if \(pickRefs\.length\) \{\s*pick\?\.removeLast\(\)/s)
+    expect(composer).toMatch(/useEditor/)
+    expect(composer).toMatch(/composerDocExtensions/)
+    expect(composer).toMatch(/EditorContent/)
   })
 })

@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
-import { Squares2X2Icon, ChevronDoubleRightIcon } from '@heroicons/react/16/solid'
+import { Squares2X2Icon } from '@heroicons/react/16/solid'
 import { chromeIcon } from './chrome-icon.ts'
 import {
   bindSessionView,
@@ -12,7 +12,6 @@ export type SessionInspectorProps = {
   open: boolean
   width: number
   onWidthChange: (width: number) => void
-  onClose: () => void
   useSessionView: ReturnType<typeof bindSessionView>
   sessionView: SessionViewService
   slots: SlotsService
@@ -34,7 +33,6 @@ export const SessionInspector = memo(function SessionInspector({
   open,
   width,
   onWidthChange,
-  onClose,
   useSessionView,
   sessionView,
   slots,
@@ -158,15 +156,6 @@ export const SessionInspector = memo(function SessionInspector({
             )
           })}
         </div>
-        <button
-          type="button"
-          className="grid size-6 cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent text-[var(--dsw-sidebar-fg)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-sidebar-fg-active)]"
-          title="收起右侧栏"
-          aria-label="收起右侧栏"
-          onClick={onClose}
-        >
-          <ChevronDoubleRightIcon {...chromeIcon} />
-        </button>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

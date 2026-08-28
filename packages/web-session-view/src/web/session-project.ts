@@ -101,6 +101,8 @@ export type ChatNode =
       durationMs?: number
       streaming?: boolean
       finished?: boolean
+      /** turn/end reason，如 complete / cancelled */
+      endReason?: string
     }
   | { id: string; kind: 'turn'; text: string }
 
@@ -251,7 +253,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
     }
   }
 
-  function flushReply(endTs?: number, finished = false) {
+  function flushReply(endTs?: number, finished = false, reason?: string) {
     if (!reply || reply.parts.length === 0) {
       reply = null
       currentStep = undefined
@@ -294,6 +296,7 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
       ...(durationMs != null ? { durationMs } : {}),
       streaming: reply.streaming && !finished,
       finished,
+      ...(reason ? { endReason: reason } : {}),
     })
     reply = null
     currentStep = undefined
@@ -437,11 +440,12 @@ export function projectNodes(events: SessionEvent[]): ChatNode[] {
         r.parts.push(part)
       }
     } else if (event.type === 'turn/end') {
-      flushReply(event.ts, true)
+      flushReply(event.ts, true, event.reason)
       turnStartTs = undefined
       currentTurn = undefined
       currentStep = undefined
-      if (event.reason && event.reason !== 'complete') {
+      const last = nodes.at(-1)
+      if (event.reason && event.reason !== 'complete' && last?.kind !== 'reply') {
         nodes.push({ id: `turn-${event.seq}`, kind: 'turn', text: `回合结束：${event.reason}` })
       }
     }

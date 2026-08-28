@@ -71,13 +71,13 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
 
   return (
     <div
-      className="mt-3 overflow-hidden rounded-[10px] border border-[var(--dsw-border)] bg-[color-mix(in_srgb,var(--dsw-sidebar)_65%,transparent)]"
+      className="overflow-hidden rounded-[10px] border border-[var(--dsw-border)] bg-[color-mix(in_srgb,var(--dsw-sidebar)_65%,transparent)]"
       data-testid="live-dispatch-table"
     >
-      <div className="border-b border-[var(--dsw-border)] px-3 py-2 text-[11px] font-semibold text-[var(--dsw-label-2)]">
+      <div className="border-b border-[var(--dsw-border)] px-3 py-2 text-[length:var(--dsw-chat-ui-font-size)] font-semibold text-[var(--dsw-label-2)]">
         本回合派工
       </div>
-      <table className="w-full table-fixed border-collapse text-left text-[11px]">
+      <table className="w-full table-fixed border-collapse text-left text-[length:var(--dsw-chat-ui-font-size)]">
         <colgroup>
           <col style={{ width: '5.5rem' }} />
           <col style={{ width: '2.75rem' }} />
@@ -86,7 +86,7 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
           <col style={{ width: '2.75rem' }} />
         </colgroup>
         <thead>
-          <tr className="text-[10px] uppercase tracking-wide text-[var(--dsw-label-3)]">
+          <tr className="text-[length:var(--dsw-chat-ui-font-size)] uppercase tracking-wide text-[var(--dsw-label-3)]">
             <th className="px-2 py-1.5 text-center font-medium">项目</th>
             <th className="px-2 py-1.5 text-center font-medium">代理</th>
             <th className="px-3 py-1.5 text-center font-medium">任务</th>
@@ -106,7 +106,7 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
               >
                 <td className="min-w-0 px-2 py-2 align-middle">
                   <div
-                    className="flex min-w-0 items-center justify-center gap-1 text-[10px] text-[var(--dsw-label-2)]"
+                    className="flex min-w-0 items-center justify-center gap-1 text-[length:var(--dsw-chat-ui-font-size)] text-[var(--dsw-label-2)]"
                     title={task.project?.path ?? task.project?.name}
                   >
                     {task.project?.name ? (
@@ -138,7 +138,7 @@ export const LiveDispatchTable = memo(function LiveDispatchTable({
                   >
                     {task.preview?.trim() || '（无派工文本）'}
                   </div>
-                  <div className="mt-0.5 truncate text-[10px] text-[var(--dsw-label-3)]">
+                  <div className="mt-0.5 truncate text-[length:var(--dsw-chat-ui-font-size)] text-[var(--dsw-label-3)]">
                     派工{task.workerTurn != null ? ` · t${task.workerTurn}` : ''}
                   </div>
                 </td>

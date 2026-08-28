@@ -28,7 +28,6 @@ import {
   SignalIcon,
   StarIcon,
   TrashIcon,
-  ChatBubbleLeftIcon,
   FolderIcon,
   TagIcon,
   FolderMinusIcon,
@@ -75,9 +74,6 @@ function ChatCount({ count }: { count: number }) {
   return (
     <span className="sidebar-chat-count">
       <span className="sidebar-chat-count-num">{count}</span>
-      <span className="sidebar-chat-count-icon">
-        <ChatBubbleLeftIcon className="size-4 shrink-0" width={16} height={16} aria-hidden />
-      </span>
     </span>
   )
 }

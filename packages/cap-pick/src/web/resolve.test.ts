@@ -1,9 +1,19 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { resolvePickFromNode, resolvePicksInRect } from './resolve.ts'
-import { formatPicks, parsePicks, chipLabel, dedupePicks } from './types.ts'
+import { formatPicks, parsePicks, splitPickStream, chipLabel, dedupePicks } from './types.ts'
 import { pickKindIcon } from './chip.tsx'
 import { CpuChipIcon, ClipboardDocumentCheckIcon, ChatBubbleLeftIcon, PuzzlePieceIcon, TagIcon } from '@heroicons/react/16/solid'
+
+test('splitPickStream keeps text and chips in order', () => {
+  const parts = splitPickStream('看 <pick kind="task" id="t1" label="写需求" /> 和 <pick kind="plugin" id="p1" label="Hello" /> 吧')
+  assert.equal(parts.length, 5)
+  assert.equal(parts[0]?.type, 'text')
+  assert.equal(parts[1]?.type, 'pick')
+  assert.equal(parts[1]?.type === 'pick' ? parts[1].ref.id : '', 't1')
+  assert.equal(parts[3]?.type, 'pick')
+  assert.equal(parts[3]?.type === 'pick' ? parts[3].ref.id : '', 'p1')
+})
 
 test('merges child action onto parent kind/id', () => {
   const card = document.createElement('div')
