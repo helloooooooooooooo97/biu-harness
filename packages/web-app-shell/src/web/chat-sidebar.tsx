@@ -57,13 +57,13 @@ function SessionTagBadges({ tags }: { tags?: string[] }) {
       {shown.map((tag) => (
         <span
           key={tag}
-          className="max-w-[72px] truncate rounded-[4px] bg-[var(--dsw-hover-weak,var(--dsw-hover))] px-1 py-px text-[11px] leading-[15px] font-medium text-[var(--dsw-label-3)]"
+          className="max-w-[72px] truncate rounded-[4px] bg-[var(--dsw-hover-weak,var(--dsw-hover))] px-1 py-px text-[11px] leading-[15px] font-medium"
         >
           {tag}
         </span>
       ))}
       {extra > 0 ? (
-        <span className="shrink-0 rounded-[4px] px-0.5 py-px text-[11px] leading-[15px] font-medium text-[var(--dsw-label-3)] opacity-80">
+        <span className="shrink-0 rounded-[4px] px-0.5 py-px text-[11px] leading-[15px] font-medium opacity-80">
           +{extra}
         </span>
       ) : null}
@@ -121,7 +121,7 @@ const SessionRow = memo(function SessionRow({
         />
         <span className="min-w-0 flex-1 truncate font-medium">
           {(item.type ?? 'chat') === 'live' ? (
-            <span className="mr-1 text-[9px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
+            <span className="mr-1 text-[9px] font-semibold tracking-wide uppercase">
               live
             </span>
           ) : null}
@@ -277,10 +277,10 @@ export const ChatSidebar = memo(function ChatSidebar({
       aria-hidden={!visible}
     >
       <div className="app-side-bar-head">
-        <span className="text-[11px] font-semibold tracking-wider text-[var(--dsw-label-3)] uppercase">Chat</span>
+        <span className="text-[11px] font-semibold tracking-wider uppercase">Chat</span>
         <button
           type="button"
-          className="grid size-[26px] place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
+          className="grid size-[26px] place-items-center rounded-[6px] text-inherit hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-sidebar-fg-active)]"
           title="Collapse sidebar"
           aria-label="Collapse sidebar"
           onClick={onCollapse}
@@ -318,7 +318,7 @@ export const ChatSidebar = memo(function ChatSidebar({
 
         <div className="mt-2 space-y-1.5">
           {sessions.length === 0 ? (
-            <p className="px-2 text-[11px] leading-4 text-[var(--dsw-label-3)]">No chats yet. Send a message or create one.</p>
+            <p className="px-2 text-[11px] leading-4">No chats yet. Send a message or create one.</p>
           ) : (
             sections.map((section) => {
               const sectionCollapsed = Boolean(collapsedSections[section.kind])
@@ -329,7 +329,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                     <div className="flex min-w-0 min-h-[32px] flex-1 items-center">
                       <button
                         type="button"
-                        className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider text-[var(--dsw-label-3)]"
+                        className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider"
                         aria-expanded={!sectionCollapsed}
                         onClick={() => toggleSection(section.kind)}
                       >
@@ -395,7 +395,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                               <div
                                 role="button"
                                 tabIndex={0}
-                                className="flex min-h-[32px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-[6px] text-left text-[14px] font-medium tracking-normal text-[var(--dsw-label-3)] outline-none hover:text-[var(--dsw-label)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
+                                className="flex min-h-[32px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-[6px] text-left text-[14px] font-medium tracking-normal text-inherit outline-none hover:text-[var(--dsw-sidebar-fg-active)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
                                 title={group.path ?? group.label}
                                 aria-expanded={!collapsed}
                                 onClick={() => toggleProjectGroup(group.key)}

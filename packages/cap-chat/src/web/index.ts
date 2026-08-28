@@ -63,11 +63,18 @@ export function apply(ctx: Context) {
       tabIcon: QueueListIcon,
       ensureTrajectory: true,
       focusOnCall: true,
+      requiresSession: true,
     }),
   })
   ctx.slots.place('inspector-panels', InspectorUsage, {
     key: 'chat-usage',
     order: 2,
-    props: () => ({ ...slotProps, tabId: 'usage', tabLabel: '用量', tabIcon: SignalIcon }),
+    props: () => ({
+      ...slotProps,
+      tabId: 'usage',
+      tabLabel: '用量',
+      tabIcon: SignalIcon,
+      requiresSession: true,
+    }),
   })
 }

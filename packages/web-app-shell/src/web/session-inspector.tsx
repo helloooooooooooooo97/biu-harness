@@ -43,23 +43,24 @@ export const SessionInspector = memo(function SessionInspector({
   const sessionId = useSessionView((state) => state.sessionId)
   const focusCallId = useSessionView((state) => state.focusCallId)
   const extras = useSlotEntries(slots, 'inspector-panels')
-  const extraTabs = useMemo(
-    () =>
-      [...extras]
-        .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
-        .map((entry) => {
-          const extra = entry.props?.() ?? {}
-          return {
-            entry,
-            id: String(extra.tabId ?? entry.id),
-            label: String(extra.tabLabel ?? '插件'),
-            Icon: extra.tabIcon as ComponentType<{ className?: string }> | undefined,
-            ensureTrajectory: Boolean(extra.ensureTrajectory),
-            focusOnCall: Boolean(extra.focusOnCall),
-          }
-        }),
-    [extras],
-  )
+  const extraTabs = useMemo(() => {
+    const tabs = [...extras]
+      .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+      .map((entry) => {
+        const extra = entry.props?.() ?? {}
+        return {
+          entry,
+          id: String(extra.tabId ?? entry.id),
+          label: String(extra.tabLabel ?? '插件'),
+          Icon: extra.tabIcon as ComponentType<{ className?: string }> | undefined,
+          ensureTrajectory: Boolean(extra.ensureTrajectory),
+          focusOnCall: Boolean(extra.focusOnCall),
+          requiresSession: Boolean(extra.requiresSession),
+        }
+      })
+    // 轨迹 / 用量只在进入具体会话后出现；首页无 session 时只留插件、任务等常驻页签。
+    return sessionId ? tabs : tabs.filter((item) => !item.requiresSession)
+  }, [extras, sessionId])
   const allowedTabs = useMemo(() => extraTabs.map((item) => item.id), [extraTabs])
   const defaultTab = extraTabs[0]?.id ?? ''
 
