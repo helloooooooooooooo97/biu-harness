@@ -3041,6 +3041,10 @@ body {
   margin: 0;
 }
 
+.composer-tiptap p+p {
+  margin-top: 18px;
+}
+
 .composer-tiptap p.is-empty::before,
 .composer-tiptap p.is-editor-empty::before {
   content: attr(data-placeholder);
@@ -3065,6 +3069,12 @@ body {
   min-height: 0;
   line-height: 1.45;
   padding: 2px 0;
+}
+
+.composer-pill.is-expanded .composer-tiptap p,
+.composer-pill.has-chips .composer-tiptap p,
+.composer-tiptap.is-readonly p {
+  line-height: 2;
 }
 
 .composer-tiptap.is-readonly {
@@ -3513,11 +3523,13 @@ body {
   overflow: hidden;
   border: 0;
   border-radius: 6px;
-  background: rgba(0, 123, 255, 0.184);
-  padding: 1px 6px 1px 6px;
-  color: #e8f1fc;
-  font-family: var(--font-mono);
+  background: var(--dsw-pick-fill);
+  padding: 2px 4px;
+  color: #b8c0de;
+  font-family: var(--font-sans);
   font-size: var(--dsw-chat-chip-font-size);
+  font-weight: 400;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
@@ -3534,8 +3546,8 @@ body {
 }
 
 .composer-tool-chip.is-pick:hover {
-  background: rgba(81, 166, 255, 0.62);
-  color: #e8f1fc;
+  background: color-mix(in srgb, var(--dsw-pick) 28%, transparent);
+  color: #c5cee8;
 }
 
 .pick-kind-icon-wrap {
@@ -3557,7 +3569,7 @@ body {
 .user-pick-chip .pick-kind-icon {
   width: 12px;
   height: 12px;
-  color: #e8f1fc;
+  color: color-mix(in srgb, #3bc9d9 48%, var(--dsw-label-3));
 }
 
 .tool-artifacts {
