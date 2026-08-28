@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import {
   BoltIcon,
   CheckCircleIcon,
@@ -8,8 +8,6 @@ import {
   PauseIcon,
   SparklesIcon,
   Squares2X2Icon,
-  ArrowsPointingInIcon,
-  ArrowsPointingOutIcon,
 } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type ChatNode, type DispatchedTaskRow, type SessionViewService } from '@biu/web-session-view'
@@ -17,15 +15,7 @@ import { SidebarMascot } from '@biu/web-mascot'
 import { resolveSessionMascot } from '@biu/web-mascot'
 import { SessionProjectPanel } from './project-panel.tsx'
 import { ChatLiveMetrics } from './live-hud.tsx'
-import {
-  getChatOverlay,
-  inspectorWidthForExpandedChat,
-  requestInspectorOpen,
-  requestInspectorWidth,
-  setChatOverlay,
-  setOverlayAutohide,
-  subscribeChatOverlay,
-} from '@biu/web-app-shell/chat-overlay'
+import { setOverlayAutohide } from '@biu/web-app-shell/chat-overlay'
 
 type AgentMode = 'minimal' | 'standard' | 'create'
 
@@ -179,31 +169,6 @@ export function ApprovalsRail(props: SlotProps) {
   const [approvalMenuOpen, setApprovalMenuOpen] = useState(false)
   const agentMenuRef = useRef<HTMLDivElement>(null)
   const approvalMenuRef = useRef<HTMLDivElement>(null)
-  const chatOverlay = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
-
-  const toggleChatOverlay = () => {
-    if (chatOverlay) {
-      let inspectorWidth = 320
-      try {
-        const n = Number(localStorage.getItem('cordis.inspector.width'))
-        if (Number.isFinite(n) && n >= 240) inspectorWidth = n
-      } catch {
-        /* ignore */
-      }
-      const sidebarCollapsed = Boolean(document.querySelector('.app-shell-agent.is-sidebar-collapsed'))
-      requestInspectorWidth(
-        inspectorWidthForExpandedChat({
-          viewportWidth: window.innerWidth,
-          inspectorWidth,
-          sidebarCollapsed,
-        }),
-      )
-      setChatOverlay(false)
-      return
-    }
-    requestInspectorOpen()
-    setChatOverlay(true)
-  }
 
   const refreshAgentMode = useCallback(async () => {
     try {
@@ -472,21 +437,6 @@ export function ApprovalsRail(props: SlotProps) {
               },
             ]}
           />
-          <button
-            type="button"
-            className={`project-chip project-chip-icon-only${chatOverlay ? ' is-on' : ''}`}
-            title={chatOverlay ? '放大聊天窗口' : '缩小聊天窗口'}
-            aria-label={chatOverlay ? '放大聊天窗口' : '缩小聊天窗口'}
-            aria-pressed={chatOverlay}
-            data-testid="chat-overlay-toggle"
-            onClick={toggleChatOverlay}
-          >
-            {chatOverlay ? (
-              <ArrowsPointingOutIcon className="size-4" aria-hidden />
-            ) : (
-              <ArrowsPointingInIcon className="size-4" aria-hidden />
-            )}
-          </button>
         </div>
       </div>
     </div>

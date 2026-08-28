@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent } from 'react'
+import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import {
   chatColumnWidth,
   setChatOverlay,
@@ -7,11 +7,16 @@ import {
   CHAT_OVERLAY_ENTER,
   clampOverlayChatHeight,
   OVERLAY_CHAT_HEIGHT_DEFAULT,
+  OVERLAY_CHAT_HEIGHT_MIN,
   getOverlayAutohide,
   setOverlayAutohide,
-  scheduleOverlayAutohide,
-  setOverlayResizing,
   subscribeOverlayAutohide,
+  requestOverlayAutohide,
+  setOverlayResizing,
+  getOverlayPinned,
+  subscribeOverlayPinned,
+  toggleOverlayPinned,
+  toggleChatOverlay,
 } from './chat-overlay.ts'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
@@ -47,6 +52,9 @@ import {
   ChevronDoubleRightIcon,
   Cog6ToothIcon,
   AdjustmentsHorizontalIcon,
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon,
+  MapPinIcon,
 } from '@heroicons/react/16/solid'
 
 export const name = 'shell'
@@ -172,8 +180,10 @@ function UpdateButton() {
 /** 主区固定聊天；轨迹改在右侧检查器。 */
 const AgentMainPanels = memo(function AgentMainPanels({
   renderSlot,
+  header,
 }: {
   renderSlot: SlotProps['renderSlot']
+  header: ReactNode
 }) {
   const overlay = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
   const hidden = useSyncExternalStore(subscribeOverlayAutohide, getOverlayAutohide, () => false)
@@ -185,7 +195,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
       if (raw == null) return OVERLAY_CHAT_HEIGHT_DEFAULT
       const n = Number(raw)
       if (!Number.isFinite(n)) return OVERLAY_CHAT_HEIGHT_DEFAULT
-      return clampOverlayChatHeight(n, typeof window === 'undefined' ? 800 : window.innerHeight)
+      return clampOverlayChatHeight(n, typeof window === 'undefined' ? 800 : window.innerHeight - 20)
     } catch {
       return OVERLAY_CHAT_HEIGHT_DEFAULT
     }
@@ -194,9 +204,9 @@ const AgentMainPanels = memo(function AgentMainPanels({
   const keepVisible = useCallback(() => {
     setOverlayAutohide(false)
   }, [])
-  const hideSoon = useCallback(() => {
+  const hideIfIdle = useCallback(() => {
     if (!overlay) return
-    scheduleOverlayAutohide()
+    requestOverlayAutohide()
   }, [overlay])
   useEffect(() => {
     if (!overlay) setOverlayAutohide(false)
@@ -206,20 +216,24 @@ const AgentMainPanels = memo(function AgentMainPanels({
     const el = stageRef.current
     if (el) el.scrollTop = el.scrollHeight
   }, [overlay])
-  const onResizeHeight = useCallback((event: PointerEvent<HTMLDivElement>) => {
+  const onResizeHeight = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault()
     event.currentTarget.setPointerCapture(event.pointerId)
     setOverlayResizing(true)
     const startH = heightRef.current
     const originY = event.clientY
-    const onMove = (move: PointerEvent) => {
-      const next = clampOverlayChatHeight(startH + (originY - move.clientY), window.innerHeight)
+    const panel = event.currentTarget.closest('.chat-overlay-panel')
+    const chrome = panel instanceof HTMLElement ? Math.max(0, panel.offsetHeight - heightRef.current) : 180
+    const maxH = Math.max(OVERLAY_CHAT_HEIGHT_MIN, window.innerHeight - 20 - chrome)
+    const onMove = (move: globalThis.PointerEvent) => {
+      const next = clampOverlayChatHeight(startH + (originY - move.clientY), maxH)
       setOverlayChatHeight(next)
       heightRef.current = next
     }
-    const onUp = (up: PointerEvent) => {
+    const onUp = (up: globalThis.PointerEvent) => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
       setOverlayResizing(false)
       try {
         localStorage.setItem('cordis.overlay.chatHeight', String(heightRef.current))
@@ -227,10 +241,11 @@ const AgentMainPanels = memo(function AgentMainPanels({
         /* ignore */
       }
       const hit = document.elementFromPoint(up.clientX, up.clientY)
-      if (!hit?.closest('.chat-overlay-panel')) scheduleOverlayAutohide()
+      if (!hit?.closest('.chat-overlay-panel')) requestOverlayAutohide()
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
   }, [])
 
   const stage = (
@@ -262,17 +277,16 @@ const AgentMainPanels = memo(function AgentMainPanels({
             if (hidden) return
             keepVisible()
           }}
-          onMouseLeave={hideSoon}
+          onMouseLeave={hideIfIdle}
         >
-          <div className="chat-overlay-thread">
-            <div
-              className="chat-overlay-resize"
-              data-testid="chat-overlay-resize"
-              title="拖动调节聊天高度"
-              onPointerDown={onResizeHeight}
-            />
-            {stage}
-          </div>
+          <div
+            className="chat-overlay-resize"
+            data-testid="chat-overlay-resize"
+            title="拖动调节聊天高度"
+            onPointerDown={onResizeHeight}
+          />
+          {header}
+          <div className="chat-overlay-thread">{stage}</div>
           <div className="chat-composer-dock pointer-events-none">{dockInner}</div>
         </div>
       </div>
@@ -290,7 +304,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
               if (hidden) return
               keepVisible()
             }}
-            onMouseLeave={hideSoon}
+            onMouseLeave={hideIfIdle}
           >
             {dockInner}
           </div>
@@ -382,6 +396,7 @@ function Shell(props: SlotProps) {
   })
   const chatOverlay = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
   const overlayAutohide = useSyncExternalStore(subscribeOverlayAutohide, getOverlayAutohide, () => false)
+  const overlayPinned = useSyncExternalStore(subscribeOverlayPinned, getOverlayPinned, () => false)
   const toggleInspector = useCallback(() => {
     setInspectorOpen((prev) => {
       const next = !prev
@@ -498,6 +513,76 @@ function Shell(props: SlotProps) {
     }
   }, [projectView, sessionView])
 
+  const chatHeader = (
+    <header className="chat-view-header" data-biu-ignore>
+      <div className="chat-view-header-left">
+        {project ? (
+          <div className="chat-view-project" title={project.path ?? project.name}>
+            <FolderGlyph className="chat-view-project-icon" />
+            <span className="chat-view-project-name">{project.name}</span>
+          </div>
+        ) : null}
+      </div>
+      <ChatSessionTitle useSessionView={useSessionView} sessionView={sessionView} />
+      <div className="chat-view-header-right">
+        <button
+          type="button"
+          className="chat-view-header-expand"
+          title="配置"
+          aria-label="配置"
+          data-testid="header-config-toggle"
+          onClick={() => setConfigOpen(true)}
+        >
+          <AdjustmentsHorizontalIcon {...chromeIcon} />
+        </button>
+        <button
+          type="button"
+          className={`chat-view-header-expand${chatOverlay ? ' is-active' : ''}`}
+          title={chatOverlay ? '放大聊天窗口' : '缩小聊天窗口'}
+          aria-label={chatOverlay ? '放大聊天窗口' : '缩小聊天窗口'}
+          aria-pressed={chatOverlay}
+          data-testid="chat-overlay-toggle"
+          onClick={toggleChatOverlay}
+        >
+          {chatOverlay ? (
+            <ArrowsPointingOutIcon {...chromeIcon} />
+          ) : (
+            <ArrowsPointingInIcon {...chromeIcon} />
+          )}
+        </button>
+        {chatOverlay ? (
+          <button
+            type="button"
+            className={`chat-view-header-expand${overlayPinned ? ' is-active' : ''}`}
+            title={overlayPinned ? '取消固定聊天窗口' : '固定聊天窗口'}
+            aria-label={overlayPinned ? '取消固定聊天窗口' : '固定聊天窗口'}
+            aria-pressed={overlayPinned}
+            data-testid="chat-overlay-pin"
+            onClick={toggleOverlayPinned}
+          >
+            <MapPinIcon {...chromeIcon} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={`chat-view-header-expand${inspectorOpen ? ' is-active' : ''}`}
+            title={inspectorOpen ? '收起检查器' : '打开检查器'}
+            aria-label={inspectorOpen ? '收起检查器' : '打开检查器'}
+            aria-pressed={inspectorOpen}
+            data-testid="inspector-toggle"
+            onClick={toggleInspector}
+          >
+            {inspectorOpen ? (
+              <ChevronDoubleRightIcon {...chromeIcon} />
+            ) : (
+              <ChevronDoubleLeftIcon {...chromeIcon} />
+            )}
+          </button>
+        )}
+      </div>
+    </header>
+  )
+
   return (
     <div
       className={`app-shell${activeModule === 'agent'
@@ -534,45 +619,8 @@ function Shell(props: SlotProps) {
           className={`min-h-0 min-w-0 flex-col overflow-hidden ${activeModule === 'agent' ? 'flex flex-1' : 'hidden'}`}
           aria-hidden={activeModule !== 'agent'}
         >
-          <header className="chat-view-header" data-biu-ignore>
-            <div className="chat-view-header-left">
-              {project ? (
-                <div className="chat-view-project" title={project.path ?? project.name}>
-                  <FolderGlyph className="chat-view-project-icon" />
-                  <span className="chat-view-project-name">{project.name}</span>
-                </div>
-              ) : null}
-            </div>
-            <ChatSessionTitle useSessionView={useSessionView} sessionView={sessionView} />
-            <div className="chat-view-header-right">
-              <button
-                type="button"
-                className="chat-view-header-expand"
-                title="配置"
-                aria-label="配置"
-                data-testid="header-config-toggle"
-                onClick={() => setConfigOpen(true)}
-              >
-                <AdjustmentsHorizontalIcon {...chromeIcon} />
-              </button>
-              <button
-                type="button"
-                className={`chat-view-header-expand${inspectorOpen ? ' is-active' : ''}`}
-                title={inspectorOpen ? '收起检查器' : '打开检查器'}
-                aria-label={inspectorOpen ? '收起检查器' : '打开检查器'}
-                aria-pressed={inspectorOpen}
-                data-testid="inspector-toggle"
-                onClick={toggleInspector}
-              >
-                {inspectorOpen ? (
-                  <ChevronDoubleRightIcon {...chromeIcon} />
-                ) : (
-                  <ChevronDoubleLeftIcon {...chromeIcon} />
-                )}
-              </button>
-            </div>
-          </header>
-          <AgentMainPanels renderSlot={props.renderSlot} />
+          {chatOverlay ? null : chatHeader}
+          <AgentMainPanels renderSlot={props.renderSlot} header={chatHeader} />
         </div>
         <PluginModuleStage
           slots={slots}

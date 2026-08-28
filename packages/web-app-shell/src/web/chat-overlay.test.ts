@@ -1,4 +1,4 @@
-import { test, vi } from 'vitest'
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import {
   chatColumnWidth,
@@ -8,11 +8,11 @@ import {
   setChatOverlay,
   getOverlayAutohide,
   setOverlayAutohide,
-  scheduleOverlayAutohide,
+  requestOverlayAutohide,
   setOverlayResizing,
+  setOverlayPinned,
   clampOverlayChatHeight,
   OVERLAY_CHAT_HEIGHT_MIN,
-  OVERLAY_AUTOHIDE_DELAY_MS,
 } from './chat-overlay.ts'
 
 test('chat column subtracts rail, sidebar and inspector', () => {
@@ -57,37 +57,28 @@ test('autohide resets when overlay closes', () => {
 
 test('overlay chat height clamps', () => {
   assert.equal(clampOverlayChatHeight(20, 800), OVERLAY_CHAT_HEIGHT_MIN)
-  assert.equal(clampOverlayChatHeight(900, 800), Math.round(800 * 0.7))
+  assert.equal(clampOverlayChatHeight(900, 800), 800)
 })
 
-test('autohide waits 500ms and can be cancelled', () => {
-  vi.useFakeTimers()
-  setChatOverlay(true)
-  setOverlayAutohide(false)
-  scheduleOverlayAutohide()
-  vi.advanceTimersByTime(OVERLAY_AUTOHIDE_DELAY_MS - 1)
-  assert.equal(getOverlayAutohide(), false)
-  vi.advanceTimersByTime(1)
-  assert.equal(getOverlayAutohide(), true)
-  setOverlayAutohide(false)
-  scheduleOverlayAutohide()
-  setOverlayAutohide(false)
-  vi.advanceTimersByTime(OVERLAY_AUTOHIDE_DELAY_MS + 50)
-  assert.equal(getOverlayAutohide(), false)
-  vi.useRealTimers()
-})
-
-test('autohide does not fire while resizing', () => {
-  vi.useFakeTimers()
+test('autohide requires leaving and not resizing', () => {
   setChatOverlay(true)
   setOverlayAutohide(false)
   setOverlayResizing(true)
-  scheduleOverlayAutohide()
-  vi.advanceTimersByTime(OVERLAY_AUTOHIDE_DELAY_MS + 50)
+  requestOverlayAutohide()
   assert.equal(getOverlayAutohide(), false)
   setOverlayResizing(false)
-  scheduleOverlayAutohide()
-  vi.advanceTimersByTime(OVERLAY_AUTOHIDE_DELAY_MS)
+  requestOverlayAutohide()
   assert.equal(getOverlayAutohide(), true)
-  vi.useRealTimers()
+})
+
+test('autohide does not fire when overlay is pinned', () => {
+  setChatOverlay(true)
+  setOverlayAutohide(false)
+  setOverlayResizing(false)
+  setOverlayPinned(true)
+  requestOverlayAutohide()
+  assert.equal(getOverlayAutohide(), false)
+  setOverlayPinned(false)
+  requestOverlayAutohide()
+  assert.equal(getOverlayAutohide(), true)
 })

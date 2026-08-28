@@ -28,16 +28,10 @@ export function inspectorWidthForExpandedChat(opts: {
 let overlay = false
 let autohide = false
 let resizing = false
-let hideTimer: ReturnType<typeof setTimeout> | null = null
-export const OVERLAY_AUTOHIDE_DELAY_MS = 500
+let pinned = false
 const listeners = new Set<() => void>()
 const autohideListeners = new Set<() => void>()
-
-function clearHideTimer() {
-  if (!hideTimer) return
-  clearTimeout(hideTimer)
-  hideTimer = null
-}
+const pinListeners = new Set<() => void>()
 
 function emit() {
   for (const fn of listeners) fn()
@@ -45,6 +39,10 @@ function emit() {
 
 function emitAutohide() {
   for (const fn of autohideListeners) fn()
+}
+
+function emitPin() {
+  for (const fn of pinListeners) fn()
 }
 
 export function getChatOverlay() {
@@ -77,27 +75,41 @@ export function subscribeOverlayAutohide(fn: () => void) {
 }
 
 export function setOverlayAutohide(next: boolean) {
-  clearHideTimer()
   if (autohide === next) return
   autohide = next
   emitAutohide()
 }
 
-export function setOverlayResizing(next: boolean) {
-  resizing = next
-  if (next) clearHideTimer()
+export function getOverlayPinned() {
+  return pinned
 }
 
-export function scheduleOverlayAutohide(delay = OVERLAY_AUTOHIDE_DELAY_MS) {
-  if (!overlay || resizing) return
-  clearHideTimer()
-  hideTimer = setTimeout(() => {
-    hideTimer = null
-    if (!overlay || resizing) return
-    if (autohide) return
-    autohide = true
-    emitAutohide()
-  }, delay)
+export function subscribeOverlayPinned(fn: () => void) {
+  pinListeners.add(fn)
+  return () => {
+    pinListeners.delete(fn)
+  }
+}
+
+export function setOverlayPinned(next: boolean) {
+  if (pinned === next) return
+  pinned = next
+  if (next) setOverlayAutohide(false)
+  emitPin()
+}
+
+export function toggleOverlayPinned() {
+  setOverlayPinned(!pinned)
+}
+
+export function setOverlayResizing(next: boolean) {
+  resizing = next
+}
+
+/** 仅在未钉住、未拖高度、且指针已离开时收起。 */
+export function requestOverlayAutohide() {
+  if (!overlay || resizing || pinned) return
+  setOverlayAutohide(true)
 }
 
 export function requestInspectorWidth(width: number) {
@@ -108,11 +120,35 @@ export function requestInspectorOpen() {
   window.dispatchEvent(new Event('biu:inspector-open'))
 }
 
+export function toggleChatOverlay() {
+  if (overlay) {
+    let inspectorWidth = 320
+    try {
+      const n = Number(localStorage.getItem('cordis.inspector.width'))
+      if (Number.isFinite(n) && n >= 240) inspectorWidth = n
+    } catch {
+      /* ignore */
+    }
+    const sidebarCollapsed = Boolean(document.querySelector('.app-shell-agent.is-sidebar-collapsed'))
+    requestInspectorWidth(
+      inspectorWidthForExpandedChat({
+        viewportWidth: window.innerWidth,
+        inspectorWidth,
+        sidebarCollapsed,
+      }),
+    )
+    setChatOverlay(false)
+    return
+  }
+  requestInspectorOpen()
+  setChatOverlay(true)
+}
+
 export const OVERLAY_CHAT_HEIGHT_MIN = 96
 export const OVERLAY_CHAT_HEIGHT_DEFAULT = 200
 
-export function clampOverlayChatHeight(height: number, viewportHeight = 800) {
-  const max = Math.max(OVERLAY_CHAT_HEIGHT_MIN, Math.round(viewportHeight * 0.7))
+export function clampOverlayChatHeight(height: number, maxHeight = 800) {
+  const max = Math.max(OVERLAY_CHAT_HEIGHT_MIN, Math.round(maxHeight))
   if (!Number.isFinite(height)) return OVERLAY_CHAT_HEIGHT_DEFAULT
   return Math.min(max, Math.max(OVERLAY_CHAT_HEIGHT_MIN, Math.round(height)))
 }

@@ -293,7 +293,7 @@ body {
   background: transparent;
   padding: 0 8px;
   color: var(--dsw-sidebar-fg);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -361,7 +361,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.2;
 }
 
@@ -429,7 +429,7 @@ body {
   flex-direction: column;
   width: min(var(--dsw-chat-width), calc(100vw - 48px - 280px - 40px));
   margin-inline: auto;
-  padding: 4px 12px 12px;
+  padding: 0 12px 12px;
   border-radius: 14px;
   background: color-mix(in srgb, var(--dsw-surface) 92%, transparent);
   box-shadow: var(--dsw-shadow-lv2);
@@ -449,10 +449,11 @@ body {
 .app-shell-agent.is-chat-overlay .chat-overlay-resize {
   position: absolute;
   top: 0;
-  right: 0;
-  left: 0;
-  z-index: 2;
-  height: 14px;
+  left: 50%;
+  z-index: 3;
+  width: 48px;
+  height: 16px;
+  transform: translateX(-50%);
   cursor: ns-resize;
   touch-action: none;
 }
@@ -462,9 +463,13 @@ body {
   display: block;
   width: 36px;
   height: 3px;
-  margin: 5px auto 0;
+  margin: 6px auto 0;
   border-radius: 999px;
   background: var(--dsw-border);
+}
+
+.app-shell-agent.is-chat-overlay .chat-overlay-panel .chat-view-header {
+  padding-inline: 4px;
 }
 
 .app-shell-agent.is-chat-overlay .chat-stage {
@@ -500,6 +505,7 @@ body {
 
 .app-shell-agent.is-chat-overlay-autohide .chat-overlay-resize,
 .app-shell-agent.is-chat-overlay-autohide .chat-overlay-thread,
+.app-shell-agent.is-chat-overlay-autohide .chat-view-header,
 .app-shell-agent.is-chat-overlay-autohide .chat-stage {
   display: none !important;
 }
