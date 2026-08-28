@@ -26,6 +26,7 @@ import {
   StopIcon,
   TableCellsIcon,
   TrashIcon,
+  LinkIcon,
 } from '@heroicons/react/16/solid'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
@@ -147,10 +148,15 @@ function formatBytes(n: number | undefined) {
 function formatWhen(ts: number | undefined | null) {
   if (!ts) return '—'
   const d = new Date(ts)
-  const now = new Date()
-  const sameDay = d.toDateString() === now.toDateString()
-  if (sameDay) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  return d.toLocaleDateString()
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
 }
 
 function pluginTags(item: StoreListing) {
@@ -161,9 +167,9 @@ function PluginTags({ item }: { item: StoreListing }) {
   const tags = pluginTags(item)
   if (!tags.length) return <span className="pstore-muted">—</span>
   return (
-    <span className="pstore-tags">
+    <span className="tasks-tags">
       {tags.map((tag) => (
-        <span key={tag} className="pstore-tag">{tag}</span>
+        <span key={tag} className="tasks-tag">{tag}</span>
       ))}
     </span>
   )
@@ -171,16 +177,23 @@ function PluginTags({ item }: { item: StoreListing }) {
 
 function PluginAuthor({ item }: { item: StoreListing }) {
   const author = item.author?.trim()
-  if (!author) return <span className="pstore-muted">—</span>
   const href = item.authorUrl?.trim()
-  if (href && /^https?:\/\//i.test(href)) {
-    return (
-      <a className="pstore-author-link" href={href} target="_blank" rel="noreferrer">
-        {author}
-      </a>
-    )
-  }
-  return <span>{author}</span>
+  const link = href && /^https?:\/\//i.test(href) ? href : ''
+  if (!author && !link) return <span className="pstore-muted">—</span>
+  if (!link) return <span>{author}</span>
+  return (
+    <a
+      className="pstore-author-link"
+      href={link}
+      target="_blank"
+      rel="noreferrer"
+      title={link}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <span>{author || link}</span>
+      <LinkIcon aria-hidden className="size-[12px]" />
+    </a>
+  )
 }
 
 function pluginKindLabel(item: StoreListing) {
@@ -200,7 +213,7 @@ function pluginGroup(item: StoreListing): PluginGroupKey {
 function PluginStatusPill({ item }: { item: StoreListing }) {
   if (item.running) {
     return (
-      <span className="pstore-status-pill is-doing">
+      <span className="tasks-status-pill is-doing">
         <ArrowPathIcon aria-hidden className="size-[14px]" />
         <span>运行中</span>
       </span>
@@ -208,14 +221,14 @@ function PluginStatusPill({ item }: { item: StoreListing }) {
   }
   if (item.enabled) {
     return (
-      <span className="pstore-status-pill is-done">
+      <span className="tasks-status-pill is-done">
         <CheckCircleIcon aria-hidden className="size-[14px]" />
         <span>已打开</span>
       </span>
     )
   }
   return (
-    <span className="pstore-status-pill is-todo">
+    <span className="tasks-status-pill is-todo">
       <MinusCircleIcon aria-hidden className="size-[14px]" />
       <span>已关闭</span>
     </span>
@@ -237,11 +250,11 @@ function PluginRowActions({
 }) {
   const disabled = Boolean(busy?.endsWith(`:${item.id}`))
   return (
-    <div className="pstore-actions">
+    <div className="tasks-row-actions">
       {item.enabled ? (
         <button
           type="button"
-          className="pstore-iconbtn"
+          className="tasks-icon-btn"
           data-testid={`plugin-store-close-${item.id}`}
           data-biu-action="close"
           title="关闭"
@@ -254,7 +267,7 @@ function PluginRowActions({
       ) : (
         <button
           type="button"
-          className="pstore-iconbtn"
+          className="tasks-icon-btn"
           data-testid={`plugin-store-open-${item.id}`}
           data-biu-action="open"
           title="打开"
@@ -267,7 +280,7 @@ function PluginRowActions({
       )}
       <button
         type="button"
-        className="pstore-iconbtn is-danger"
+        className="tasks-icon-btn is-danger"
         data-testid={`plugin-store-uninstall-${item.id}`}
         title="卸载"
         aria-label={`卸载 ${item.name}`}
@@ -596,7 +609,7 @@ function PluginStorePage(props: SlotProps) {
               <input
                 className="tasks-search"
                 value={query}
-                placeholder="搜索名称 / ID / 说明 / 作者 / 标签"
+                placeholder="搜索"
                 aria-label="搜索插件"
                 onChange={(event) => setQuery(event.target.value)}
               />
@@ -781,51 +794,47 @@ function PluginStorePage(props: SlotProps) {
         </div>
 
         {error ? (
-          <p className="pstore-error" data-testid="plugin-store-error">
+          <p className="tasks-error" data-testid="plugin-store-error">
             {error}
           </p>
         ) : null}
 
         {visible.length === 0 && !error ? (
-          <p className="pstore-empty" data-testid="plugin-store-empty">
+          <p className="tasks-empty" data-testid="plugin-store-empty">
             {items.length === 0 ? '没有插件' : '没有符合筛选的插件'}
           </p>
         ) : mode === 'queue' ? (
-          <div className={`pstore-list${compact ? ' is-compact' : ''}`}>
+          <div className={`tasks-queue${compact ? ' is-compact' : ''}`}>
             {listGroups.map((group) => {
               const rows = grouped[group.key]
               if (!rows.length) return null
               return (
-                <section key={group.key} className="pstore-list-group">
-                  <header className={`pstore-list-ghead is-${group.tone}`}>
+                <section key={group.key} className={`tasks-queue-group is-${group.tone}`}>
+                  <header className={`tasks-queue-ghead is-${group.tone}`}>
                     {group.icon}
-                    <span>{group.label}</span>
-                    <span className="pstore-list-count">{rows.length}</span>
+                    <span className="tasks-queue-glabel">{group.label}</span>
+                    <span className="tasks-queue-count">{rows.length}</span>
                   </header>
-                  <ul className="pstore-list-ul">
+                  <ul className="tasks-queue-list">
                     {rows.map((item) => (
                       <li
                         key={item.id}
-                        className="pstore-list-item"
+                        className={`tasks-queue-item is-${group.tone}`}
                         data-testid={`plugin-store-card-${item.id}`}
                         data-biu-kind="plugin"
                         data-biu-id={item.id}
                         data-biu-label={item.name}
                       >
-                        <div className="pstore-list-main">
-                          <span className="pstore-list-title">{item.name}</span>
-                          <span className="pstore-list-id">{item.id}</span>
-                          <span className="pstore-list-size">{formatBytes(item.bytes)}</span>
+                        <div className="tasks-queue-item-main">
+                          <span className="tasks-queue-item-title">{item.name}</span>
+                          {pluginTags(item).length ? <PluginTags item={item} /> : null}
+                          <span className="tasks-queue-meta">
+                            <PluginAuthor item={item} />
+                            <span className="tasks-time">{pluginKindLabel(item)}</span>
+                            <span className="tasks-time">{formatWhen(item.createdAt)}</span>
+                            <span className="tasks-time">{formatBytes(item.bytes)}</span>
+                          </span>
                           {actions(item)}
-                        </div>
-                        <div className="pstore-list-sub">
-                          <PluginTags item={item} />
-                          <span className="pstore-list-sep">·</span>
-                          <PluginAuthor item={item} />
-                          <span className="pstore-list-sep">·</span>
-                          <span>创建 {formatWhen(item.createdAt)}</span>
-                          <span className="pstore-list-sep">·</span>
-                          <span>上次运行 {formatWhen(item.lastRunAt)}</span>
                         </div>
                       </li>
                     ))}
@@ -835,104 +844,103 @@ function PluginStorePage(props: SlotProps) {
             })}
           </div>
         ) : mode === 'cards' ? (
-          <div className={`pstore-cardgrid${compact ? ' is-compact' : ''}`}>
+          <div className={`tasks-cardgrid${compact ? ' is-compact' : ''}`}>
             {visible.map((item) => (
               <div
                 key={item.id}
-                className="pstore-minicard"
+                className="tasks-minicard"
                 data-testid={`plugin-store-card-${item.id}`}
                 data-biu-kind="plugin"
                 data-biu-id={item.id}
                 data-biu-label={item.name}
               >
-                <div className="pstore-minicard-title">{item.name}</div>
-                <div className="pstore-minicard-meta">{formatBytes(item.bytes)} · {pluginKindLabel(item)}</div>
-                <div className="pstore-minicard-meta">
-                  <PluginAuthor item={item} />
-                  {' · 创建 '}
-                  {formatWhen(item.createdAt)}
-                  {' · 上次 '}
-                  {formatWhen(item.lastRunAt)}
+                <div className="tasks-minicard-title">
+                  <span className="tasks-minicard-titletext">{item.name}</span>
                 </div>
-                <PluginTags item={item} />
-                <div className="pstore-minicard-foot">
+                {pluginTags(item).length ? <PluginTags item={item} /> : null}
+                <div className="tasks-minicard-foot">
                   <PluginStatusPill item={item} />
+                  <span className="tasks-minicard-assignee">
+                    <span className="tasks-actor">
+                      <span className="tasks-actor-name"><PluginAuthor item={item} /></span>
+                    </span>
+                  </span>
                   {actions(item)}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="pstore-table-wrap">
-            <table className="pstore-table">
+          <div className="tasks-table-wrap">
+            <table className="tasks-table">
               <thead>
                 <tr>
                   <th>
-                    <span className="pstore-th">
+                    <span className="tasks-th">
+                      <HashtagIcon aria-hidden className="size-[14px]" />
+                      ID
+                    </span>
+                  </th>
+                  <th>
+                    <span className="tasks-th">
                       <PuzzlePieceIcon aria-hidden className="size-[14px]" />
                       名称
                     </span>
                   </th>
-                  {!compact ? (
-                    <th>
-                      <span className="pstore-th">
-                        <HashtagIcon aria-hidden className="size-[14px]" />
-                        ID
-                      </span>
-                    </th>
-                  ) : null}
                   <th>
-                    <span className="pstore-th">
+                    <span className="tasks-th">
+                      <TagIcon aria-hidden className="size-[14px]" />
+                      标签
+                    </span>
+                  </th>
+                  <th>
+                    <span className="tasks-th">
+                      <Bars3BottomLeftIcon aria-hidden className="size-[14px]" />
+                      简介
+                    </span>
+                  </th>
+                  <th>
+                    <span className="tasks-th">
                       <MinusCircleIcon aria-hidden className="size-[14px]" />
                       状态
                     </span>
                   </th>
-                  {!compact ? (
-                    <th>
-                      <span className="pstore-th">
-                        <TagIcon aria-hidden className="size-[14px]" />
-                        标签
-                      </span>
-                    </th>
-                  ) : null}
-                  {!compact ? (
-                    <th>
-                      <span className="pstore-th">
-                        <UserIcon aria-hidden className="size-[14px]" />
-                        作者
-                      </span>
-                    </th>
-                  ) : null}
                   <th>
-                    <span className="pstore-th">
+                    <span className="tasks-th">
+                      <UserIcon aria-hidden className="size-[14px]" />
+                      作者
+                    </span>
+                  </th>
+                  <th>
+                    <span className="tasks-th">
                       <CircleStackIcon aria-hidden className="size-[14px]" />
                       大小
                     </span>
                   </th>
-                  {!compact ? (
-                    <th>
-                      <span className="pstore-th">
-                        <ClockIcon aria-hidden className="size-[14px]" />
-                        创建
-                      </span>
-                    </th>
-                  ) : null}
-                  {!compact ? (
-                    <th>
-                      <span className="pstore-th">
-                        <PlayIcon aria-hidden className="size-[14px]" />
-                        上次运行
-                      </span>
-                    </th>
-                  ) : null}
-                  {!compact ? (
-                    <th>
-                      <span className="pstore-th">
-                        <Bars3BottomLeftIcon aria-hidden className="size-[14px]" />
-                        类型
-                      </span>
-                    </th>
-                  ) : null}
+                  <th>
+                    <span className="tasks-th">
+                      <PuzzlePieceIcon aria-hidden className="size-[14px]" />
+                      类型
+                    </span>
+                  </th>
+                  <th>
+                    <span className="tasks-th">
+                      <ClockIcon aria-hidden className="size-[14px]" />
+                      创建
+                    </span>
+                  </th>
+                  <th>
+                    <span className="tasks-th">
+                      <PencilSquareIcon aria-hidden className="size-[14px]" />
+                      更新
+                    </span>
+                  </th>
+                  <th>
+                    <span className="tasks-th">
+                      <PlayIcon aria-hidden className="size-[14px]" />
+                      上次运行
+                    </span>
+                  </th>
                   <th aria-label="操作" />
                 </tr>
               </thead>
@@ -945,18 +953,22 @@ function PluginStorePage(props: SlotProps) {
                     data-biu-id={item.id}
                     data-biu-label={item.name}
                   >
-                    <td className="pstore-col-name">{item.name}</td>
-                    {!compact ? <td className="pstore-col-id">{item.id}</td> : null}
-                    <td>
+                    <td className="pstore-col-id">{item.id}</td>
+                    <td className="pstore-col-name" title={item.name}>{item.name}</td>
+                    <td className="pstore-col-tags"><PluginTags item={item} /></td>
+                    <td className="pstore-col-blurb" title={item.blurb || undefined}>
+                      {item.blurb?.trim() || <span className="pstore-muted">—</span>}
+                    </td>
+                    <td className="tasks-col-status">
                       <PluginStatusPill item={item} />
                     </td>
-                    {!compact ? <td><PluginTags item={item} /></td> : null}
-                    {!compact ? <td className="pstore-col-author"><PluginAuthor item={item} /></td> : null}
-                    <td className="pstore-col-size">{formatBytes(item.bytes)}</td>
-                    {!compact ? <td className="pstore-col-time">{formatWhen(item.createdAt)}</td> : null}
-                    {!compact ? <td className="pstore-col-time">{formatWhen(item.lastRunAt)}</td> : null}
-                    {!compact ? <td className="pstore-col-kind">{pluginKindLabel(item)}</td> : null}
-                    <td className="pstore-col-action">{actions(item)}</td>
+                    <td className="tasks-col-actor"><PluginAuthor item={item} /></td>
+                    <td className="tasks-col-usage">{formatBytes(item.bytes)}</td>
+                    <td className="tasks-col-project">{pluginKindLabel(item)}</td>
+                    <td className="tasks-col-time">{formatWhen(item.createdAt)}</td>
+                    <td className="tasks-col-time">{formatWhen(item.updatedAt)}</td>
+                    <td className="tasks-col-time">{formatWhen(item.lastRunAt)}</td>
+                    <td className="tasks-col-action">{actions(item)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1503,137 +1515,19 @@ if (typeof document !== 'undefined') {
   style.id = id
   style.textContent = `
 .pstore-root { display:flex; min-width:0; min-height:0; flex:1; flex-direction:column; overflow:hidden; color:var(--dsw-label); }
-.pstore-root.is-compact { }
-.pstore-root .tasks-main { display:flex; min-width:0; min-height:0; flex:1; flex-direction:column; gap:10px; padding:12px 14px 14px; overflow-x:hidden; overflow-y:auto; }
 .pstore-root.is-compact .tasks-main { padding:8px 10px 10px; gap:8px; }
-.pstore-root .tasks-toolbar { display:flex; gap:12px; align-items:center; justify-content:space-between; min-width:0; }
-.pstore-root .tasks-toolbar-left { display:flex; align-items:center; gap:6px; flex:none; min-width:0; }
-.pstore-root .tasks-toolbar-right { display:flex; align-items:center; gap:6px; flex:none; margin-left:auto; }
-.pstore-root .tasks-search { min-width:0; border:0; border-radius:8px; padding:6px 8px; background:transparent; color:var(--dsw-label); font:inherit; font-size:12px; outline:none; }
-.pstore-root .tasks-search-wrap { flex:0 1 180px; display:flex; align-items:center; gap:6px; border:0; border-radius:8px; padding:0 8px; background:transparent; color:var(--dsw-label-3); min-width:0; }
-.pstore-root .tasks-search-wrap:hover, .pstore-root .tasks-search-wrap:focus-within { background:var(--dsw-hover); }
-.pstore-root .tasks-search-wrap .tasks-search { flex:1; border:0; padding-left:0; background:transparent; }
-.pstore-root .tasks-refresh { display:inline-flex; align-items:center; justify-content:center; flex:none; width:28px; height:26px; border:0; border-radius:8px; padding:0; background:transparent; color:var(--dsw-label-2); font:inherit; cursor:pointer; }
-.pstore-root .tasks-refresh:hover { background:var(--dsw-hover); }
-.pstore-root .tasks-refresh.is-active { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 10%, var(--dsw-input)); }
-.pstore-root .tasks-filter-btn-wrap { position:relative; display:inline-flex; flex:none; }
-.pstore-root .tasks-filter-btn-wrap .tasks-refresh { position:relative; }
-.pstore-root .tasks-filter-dot, .pstore-root .tasks-sort-dot { position:absolute; top:4px; right:4px; width:5px; height:5px; border-radius:50%; background:var(--dsw-business); box-shadow:0 0 0 1px var(--dsw-surface); }
-.pstore-root .tasks-filter-menu { position:absolute; top:calc(100% + 6px); right:0; z-index:40; min-width:180px; padding:8px; background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:8px; }
-.pstore-root .tasks-filter-menu-label { display:flex; flex-direction:column; gap:4px; font-size:10.5px; font-weight:600; color:var(--dsw-label-3); }
-.pstore-root .tasks-filter-menu-label .tasks-filter { width:100%; max-width:none; }
-.pstore-root .tasks-filter-clear { width:100%; border:0; border-radius:7px; padding:6px 8px; background:transparent; color:var(--dsw-danger); font:inherit; font-size:11px; font-weight:600; cursor:pointer; }
-.pstore-root .tasks-filter { border:1px solid var(--dsw-border); border-radius:7px; padding:5px 7px; background:var(--dsw-input); color:var(--dsw-label); font:inherit; font-size:11px; outline:none; }
-.pstore-root .tasks-viewdd-wrap { position:relative; display:inline-flex; align-items:center; gap:6px; flex:none; }
-.pstore-root .tasks-viewdd-btn { display:inline-flex; align-items:center; gap:6px; border:0; border-radius:8px; padding:5px 9px; background:transparent; color:var(--dsw-label); font:inherit; font-size:12px; font-weight:650; cursor:pointer; }
-.pstore-root .tasks-viewdd-btn:hover { background:var(--dsw-hover); }
-.pstore-root .tasks-viewdd-btn.is-active { background:color-mix(in srgb, var(--dsw-business) 10%, transparent); }
-.pstore-root .tasks-viewdd-name { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.pstore-root .tasks-viewdd-menu { position:absolute; top:calc(100% + 6px); left:0; z-index:40; min-width:230px; padding:6px; background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:2px; }
-.pstore-root .tasks-viewdd-head { padding:5px 8px 3px; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--dsw-label-3); }
-.pstore-root .tasks-viewdd-item { display:flex; align-items:center; gap:2px; border-radius:7px; }
-.pstore-root .tasks-viewdd-item:hover { background:var(--dsw-hover); }
-.pstore-root .tasks-viewdd-item.is-active { background:color-mix(in srgb, var(--dsw-business) 10%, transparent); }
-.pstore-root .tasks-viewdd-item-main { flex:1; display:inline-flex; align-items:center; gap:7px; min-width:0; border:0; border-radius:7px; padding:6px 8px; background:transparent; color:var(--dsw-label); font:inherit; font-size:12px; font-weight:550; cursor:pointer; text-align:left; }
-.pstore-root .tasks-viewdd-item.is-active .tasks-viewdd-item-main { color:var(--dsw-business); font-weight:650; }
-.pstore-root .tasks-viewdd-item-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.pstore-root .tasks-viewdd-check { flex:none; color:var(--dsw-business); }
-.pstore-root .tasks-viewdd-item-actions { display:none; align-items:center; gap:2px; flex:none; padding-right:4px; }
-.pstore-root .tasks-viewdd-item:hover .tasks-viewdd-item-actions { display:inline-flex; }
-.pstore-root .tasks-viewdd-act { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border:0; border-radius:6px; background:transparent; color:var(--dsw-label-3); cursor:pointer; }
-.pstore-root .tasks-viewdd-foot { border-top:1px solid var(--dsw-border); margin-top:4px; padding-top:4px; }
-.pstore-root .tasks-viewdd-saveas { width:100%; display:inline-flex; align-items:center; gap:6px; border:0; border-radius:7px; padding:6px 8px; background:transparent; color:var(--dsw-label-2); font:inherit; font-size:11.5px; font-weight:600; cursor:pointer; }
-.pstore-root .tasks-sort-wrap { position:relative; display:inline-flex; flex:none; }
-.pstore-root .tasks-sort-btn { position:relative; display:inline-flex; align-items:center; justify-content:center; width:28px; height:26px; border:0; border-radius:8px; padding:0; background:transparent; color:var(--dsw-label-2); font:inherit; cursor:pointer; }
-.pstore-root .tasks-sort-btn:hover { background:var(--dsw-hover); }
-.pstore-root .tasks-sort-btn.is-custom, .pstore-root .tasks-sort-btn.is-active { color:var(--dsw-business); }
-.pstore-root .tasks-sort-btn.is-active { background:color-mix(in srgb, var(--dsw-business) 10%, var(--dsw-input)); }
-.pstore-root .tasks-sort-menu { position:absolute; top:calc(100% + 6px); right:0; z-index:40; min-width:180px; padding:8px; background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:8px; }
-.pstore-root .tasks-sort-head { font-size:10.5px; font-weight:600; color:var(--dsw-label-3); }
-.pstore-root .tasks-sort-item { display:inline-flex; align-items:center; justify-content:space-between; gap:8px; border:0; border-radius:7px; padding:6px 8px; background:transparent; color:var(--dsw-label-2); font:inherit; font-size:12px; font-weight:550; cursor:pointer; text-align:left; }
-.pstore-root .tasks-sort-item:hover { background:var(--dsw-hover); }
-.pstore-root .tasks-sort-item.is-active { color:var(--dsw-business); font-weight:650; }
-.pstore-root .tasks-sort-item-label { display:inline-flex; align-items:center; }
-.pstore-root .tasks-mode-item-ico { display:inline-flex; margin-right:6px; }
-.pstore-root .tasks-sort-item-icon { display:inline-flex; width:16px; justify-content:center; color:var(--dsw-label-3); }
-.pstore-root .tasks-sort-item-icon.is-on { color:var(--dsw-business); }
-.pstore-col-size { font-variant-numeric:tabular-nums; color:var(--dsw-label-2); white-space:nowrap; }
-.pstore-col-time, .pstore-col-kind, .pstore-col-author { color:var(--dsw-label-2); white-space:nowrap; }
 .pstore-muted { color:var(--dsw-label-3); }
-.pstore-tags { display:inline-flex; flex-wrap:wrap; gap:4px; }
-.pstore-tag { display:inline-flex; align-items:center; border-radius:999px; padding:1px 7px; font-size:11px; font-weight:600; color:var(--dsw-label-2); background:color-mix(in srgb, var(--dsw-label-3) 12%, transparent); }
-.pstore-author-link { color:var(--dsw-business); text-decoration:none; }
+.pstore-author-link { display:inline-flex; align-items:center; gap:4px; color:var(--dsw-business); text-decoration:none; white-space:nowrap; }
 .pstore-author-link:hover { text-decoration:underline; }
-.pstore-list-sub { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:0 8px 8px; font-size:12px; color:var(--dsw-label-3); }
-.pstore-list-sep { color:var(--dsw-label-3); opacity:.6; }
-.pstore-list-size { flex:none; color:var(--dsw-label-3); font-size:14px; }
-.pstore-minicard-meta { font-size:12px; color:var(--dsw-label-3); }
-.pstore-root.is-compact { padding:8px 10px 10px; gap:8px; }
-.pstore-toolbar { display:flex; gap:12px; align-items:center; justify-content:space-between; min-width:0; }
-.pstore-heading { display:flex; align-items:baseline; gap:8px; min-width:0; }
-.pstore-heading h1 { margin:0; font-size:14px; font-weight:600; letter-spacing:-.01em; }
-.pstore-heading span, .pstore-toolbar-count { color:var(--dsw-label-3); font-size:14px; font-variant-numeric:tabular-nums; }
-.pstore-mode-wrap { position:relative; display:inline-flex; margin-left:auto; }
-.pstore-mode-btn { display:inline-flex; align-items:center; justify-content:center; width:28px; height:26px; border:0; border-radius:8px; padding:0; background:transparent; color:var(--dsw-label-2); cursor:pointer; }
-.pstore-mode-btn:hover { background:var(--dsw-hover); }
-.pstore-mode-btn.is-active { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 10%, var(--dsw-input)); }
-.pstore-mode-menu { position:absolute; top:calc(100% + 6px); right:0; z-index:40; min-width:180px; padding:8px; background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:4px; }
-.pstore-mode-head { font-size:10.5px; font-weight:600; color:var(--dsw-label-3); padding:2px 8px; }
-.pstore-mode-item { display:inline-flex; align-items:center; justify-content:space-between; gap:8px; border:0; border-radius:7px; padding:6px 8px; background:transparent; color:var(--dsw-label-2); font:inherit; font-size:12px; font-weight:550; cursor:pointer; text-align:left; }
-.pstore-mode-item:hover { background:var(--dsw-hover); }
-.pstore-mode-item.is-active { color:var(--dsw-business); font-weight:650; }
-.pstore-mode-item-label { display:inline-flex; align-items:center; }
-.pstore-mode-item-ico { display:inline-flex; margin-right:6px; }
-.pstore-error { margin:0; color:var(--dsw-danger); font-size:14px; }
-.pstore-empty { margin:0; color:var(--dsw-label-3); font-size:14px; line-height:1.45; padding:28px 16px; text-align:center; }
-.pstore-status-pill { display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:2px 8px; font-size:14px; font-weight:600; white-space:nowrap; }
-.pstore-status-pill.is-todo { color:var(--dsw-label-3); background:color-mix(in srgb, var(--dsw-label-3) 10%, transparent); }
-.pstore-status-pill.is-doing { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 12%, transparent); }
-.pstore-status-pill.is-done { color:#2f7d4c; background:color-mix(in srgb, #2f7d4c 12%, transparent); }
-.pstore-actions { display:inline-flex; align-items:center; gap:2px; }
-.pstore-iconbtn { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border:0; border-radius:6px; padding:0; background:transparent; color:var(--dsw-label-3); cursor:pointer; }
-.pstore-iconbtn:hover { background:var(--dsw-hover); color:var(--dsw-label); }
-.pstore-iconbtn.is-danger:hover { color:var(--dsw-danger); background:var(--dsw-danger-soft); }
-.pstore-iconbtn:disabled { opacity:.4; cursor:default; }
-.pstore-table-wrap { min-width:0; width:100%; overflow:auto; border:1px solid var(--dsw-border); border-radius:10px; background:color-mix(in srgb, var(--dsw-surface) 92%, transparent); }
-.pstore-table { width:max-content; min-width:100%; border-collapse:collapse; table-layout:auto; font-size:14px; }
-.pstore-table th { padding:6px; border-bottom:1px solid var(--dsw-border); color:var(--dsw-label-3); font-weight:600; text-align:left; white-space:nowrap; position:sticky; top:0; background:var(--dsw-surface); z-index:1; }
-.pstore-th { display:inline-flex; align-items:center; gap:4px; }
-.pstore-table td { padding:4px 6px; border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent); vertical-align:middle; }
-.pstore-table tr:last-child td { border-bottom:0; }
-.pstore-table tr:hover td { background:color-mix(in srgb, var(--dsw-hover) 55%, transparent); }
-.pstore-col-name { font-weight:600; white-space:nowrap; }
+.pstore-col-name { max-width:120px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pstore-col-id { color:var(--dsw-label-3); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; white-space:nowrap; }
-.pstore-col-blurb { max-width:360px; color:var(--dsw-label-2); white-space:normal; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.pstore-col-action { width:64px; }
-.pstore-list { display:flex; flex-direction:column; gap:14px; margin-top:4px; }
-.pstore-list.is-compact { gap:10px; }
-.pstore-list-group { display:flex; flex-direction:column; gap:6px; }
-.pstore-list-ghead { display:flex; align-items:center; gap:6px; padding:4px 6px; color:var(--dsw-label-2); font-size:14px; font-weight:650; }
-.pstore-list-ghead.is-doing { color:var(--dsw-business); }
-.pstore-list-ghead.is-done { color:#2f7d4c; }
-.pstore-list-count { margin-left:auto; color:var(--dsw-label-3); font-size:14px; font-weight:600; background:var(--dsw-muted-fill); border-radius:8px; padding:1px 7px; }
-.pstore-list-ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
-.pstore-list-item { min-width:0; }
-.pstore-list-main { display:flex; align-items:center; gap:8px; width:100%; min-width:0; border-radius:6px; padding:7px 8px; }
-.pstore-list-main:hover { background:var(--dsw-hover); }
-.pstore-list-title { flex:1; min-width:0; font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.pstore-list-id { flex:none; color:var(--dsw-label-3); font-size:14px; }
-.pstore-cardgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(168px, 1fr)); gap:8px; margin-top:4px; }
-.pstore-cardgrid.is-compact { grid-template-columns:repeat(auto-fill, minmax(148px, 1fr)); gap:7px; }
-.pstore-minicard { display:flex; flex-direction:column; gap:8px; min-width:0; min-height:92px; overflow:hidden; border-radius:8px; padding:10px 11px; background:var(--dsw-surface); box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 65%, transparent); }
-.pstore-minicard:hover { box-shadow:0 1px 3px rgba(0,0,0,.08), 0 0 0 1px color-mix(in srgb, var(--dsw-border) 85%, transparent); }
-.pstore-minicard-title { font-size:13px; font-weight:620; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.pstore-minicard-foot { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:auto; }
-.tasks-viewdlg-backdrop { position:fixed; inset:0; z-index:120; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.35); }
-.tasks-viewdlg { width:min(360px, calc(100vw - 32px)); background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,.25); padding:16px; display:flex; flex-direction:column; gap:12px; }
-.tasks-viewdlg-title { font-size:14px; font-weight:700; color:var(--dsw-label); }
-.tasks-viewdlg-body p { margin:0; font-size:12.5px; line-height:1.6; color:var(--dsw-label-2); }
-.tasks-viewdlg-input { width:100%; box-sizing:border-box; border:1px solid var(--dsw-border); border-radius:8px; padding:8px 10px; background:var(--dsw-input); color:var(--dsw-label); font:inherit; font-size:13px; outline:none; }
-.tasks-viewdlg-actions { display:flex; justify-content:end; gap:8px; }
-.tasks-viewdlg-cancel, .tasks-viewdlg-ok { border:1px solid var(--dsw-border); border-radius:8px; padding:6px 14px; background:transparent; color:var(--dsw-label-2); font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
-.tasks-viewdlg-ok { border-color:var(--dsw-business); background:var(--dsw-business); color:var(--dsw-bg); }
-.tasks-viewdlg-ok.is-danger { border-color:var(--dsw-danger); background:var(--dsw-danger); color:var(--dsw-bg); }
+.pstore-col-blurb { max-width:280px; color:var(--dsw-label-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pstore-col-tags { white-space:nowrap; }
+.pstore-col-tags .tasks-tags { flex-wrap:nowrap; }
+.pstore-col-tags .tasks-tag { max-width:none; }
+.pstore-root .tasks-queue-item-main .tasks-tags { flex:none; flex-wrap:nowrap; }
+.pstore-root .tasks-minicard .tasks-tags { flex-wrap:wrap; }
+.pstore-root .tasks-icon-btn:disabled { opacity:.4; cursor:default; }
 `
   document.head.appendChild(style)
 }

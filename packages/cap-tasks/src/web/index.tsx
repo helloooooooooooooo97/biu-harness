@@ -1794,7 +1794,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
               <input
                 className="tasks-search"
                 value={query}
-                placeholder="搜索标题 / 人 / 描述"
+                placeholder="搜索"
                 aria-label="搜索任务"
                 onChange={(event) => setQuery(event.target.value)}
               />
