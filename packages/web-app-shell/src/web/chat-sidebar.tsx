@@ -1,4 +1,4 @@
-import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { memo, useCallback, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { isMascotDancing, subscribeMascotDance } from '@biu/web-mascot'
@@ -33,6 +33,38 @@ import {
   FolderMinusIcon,
   BookmarkSlashIcon,
 } from '@heroicons/react/16/solid'
+
+const SIDEBAR_BRAND_GRADIENT =
+  'linear-gradient(105deg, color-mix(in srgb, #0066B0 42%, var(--dsw-hover)), color-mix(in srgb, #5B3E90 40%, var(--dsw-hover)) 52%, color-mix(in srgb, #E22726 42%, var(--dsw-hover)))'
+
+function SidebarBrandMascot({ className }: { className?: string }) {
+  const uid = useId().replace(/:/g, '')
+  return (
+    <svg className={className} viewBox="-15 -15 259 259" width={30} height={30} fill="none" aria-hidden>
+      <defs>
+        <linearGradient id={uid} x1="0" y1="0.15" x2="1" y2="0.85">
+          <stop offset="0%" stopColor="color-mix(in srgb, #0066B0 42%, var(--dsw-hover))" />
+          <stop offset="52%" stopColor="color-mix(in srgb, #5B3E90 40%, var(--dsw-hover))" />
+          <stop offset="100%" stopColor="color-mix(in srgb, #E22726 42%, var(--dsw-hover))" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M0.27 170.27C0.27 94.06 51.31 32.27 114.27 32.27C177.23 32.27 228.27 94.06 228.27 170.27L228.27 170.27C228.27 196.27 228.27 196.27 202.27 196.27L26.27 196.27C0.27 196.27 0.27 196.27 0.27 170.27Z"
+        fill={`url(#${uid})`}
+      />
+      <g transform="translate(114.2705 118.2705) scale(1.003 0.68) translate(-114.2705 -114.2705)">
+        <path
+          d="M39.78 104.3L42.64 105.01L45.03 106.74L46.73 109.15L47.75 111.93L48.35 114.83L48.81 117.76L49.31 120.68L49.87 123.6L50.48 126.5L51.15 129.39L51.86 132.27L52.63 135.13L53.44 137.98L54.3 140.82L55.19 143.65L56.13 146.46L57.1 149.26L58.1 152.05L58.86 154.92L58.96 157.87L58.18 160.72L56.43 163.09L53.84 164.48L50.9 164.62L48.08 163.75L45.58 162.16L43.51 160.05L41.89 157.57L40.67 154.87L39.67 152.08L38.73 149.26L37.81 146.44L36.94 143.61L36.11 140.76L35.34 137.9L34.61 135.03L33.92 132.14L33.28 129.24L32.7 126.34L32.16 123.42L31.67 120.5L31.23 117.57L31.14 114.61L31.65 111.69L32.74 108.94L34.47 106.54L36.89 104.86Z"
+          fill="#fff"
+        />
+        <path
+          d="M108.97 125.73L111.9 126.2L114.63 127.37L117 129.16L118.84 131.49L119.99 134.23L120.32 137.18L119.85 140.11L118.59 142.8L116.78 145.16L114.84 147.42L112.89 149.67L110.93 151.92L108.97 154.16L107.01 156.39L105.03 158.62L103.05 160.85L101.07 163.06L99.07 165.28L97.09 167.5L95.09 169.71L93.05 171.88L90.69 173.67L87.89 174.66L84.93 174.81L82.02 174.22L79.31 173L76.92 171.24L74.99 168.98L73.7 166.3L73.26 163.37L73.74 160.45L75.2 157.86L77.17 155.63L79.18 153.43L81.18 151.23L83.17 149.02L85.16 146.8L87.14 144.58L89.11 142.35L91.08 140.11L93.04 137.87L95 135.63L96.95 133.38L98.89 131.12L100.87 128.89L103.25 127.12L106.02 126.04Z"
+          fill="#fff"
+        />
+      </g>
+    </svg>
+  )
+}
 
 /** 项目/标签分组视图的持久化 key。 */
 const GROUP_BY_KEY = 'cordis.sidebar.groupBy'
@@ -267,13 +299,20 @@ export const ChatSidebar = memo(function ChatSidebar({
 
   return (
     <aside
-      className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] ${
-        visible ? 'flex' : 'hidden'
-      }`}
+      className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] ${visible ? 'flex' : 'hidden'
+        }`}
       aria-hidden={!visible}
     >
       <div className="app-side-bar-head">
-        <span className="text-[11px] font-semibold tracking-wider uppercase">Chat</span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <SidebarBrandMascot className="size-8 shrink-0" />
+          <span
+            className="inline-flex min-w-0 max-w-full items-center truncate rounded-md px-2 py-0.5 text-[14px] font-semibold tracking-wide text-white"
+            style={{ background: SIDEBAR_BRAND_GRADIENT }}
+          >
+            biu harness
+          </span>
+        </span>
         <button
           type="button"
           className="grid size-[26px] place-items-center rounded-[6px] text-inherit hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-sidebar-fg-active)]"
@@ -371,97 +410,97 @@ export const ChatSidebar = memo(function ChatSidebar({
                     <div className="min-w-0 space-y-1.5 pt-0.5">
                       {section.sessions
                         ? section.sessions.map((item) => (
-                            <SessionRow
-                              key={`pinned:${item.id}`}
-                              item={item}
-                              active={item.id === routeSessionId}
-                              busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
-                              dancing={dancing}
-                              onDelete={requestDeleteChat}
-                              onPin={pinChat}
-                            />
-                          ))
+                          <SessionRow
+                            key={`pinned:${item.id}`}
+                            item={item}
+                            active={item.id === routeSessionId}
+                            busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
+                            dancing={dancing}
+                            onDelete={requestDeleteChat}
+                            onPin={pinChat}
+                          />
+                        ))
                         : section.groups?.map((group) => {
-                        const collapsed = Boolean(collapsedProjects[group.key])
-                        const isUngrouped = group.key === UNGROUPED_PROJECT_KEY || group.key === UNGROUPED_TAG_KEY
-                        const canAddHere = group.kind === 'project' || group.kind === 'ungrouped'
-                        return (
-                          <div key={group.key} className="min-w-0">
-                            <div className="sidebar-group-head mb-0.5">
-                              <div
-                                role="button"
-                                tabIndex={0}
-                                className="flex min-h-[32px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-[6px] text-left text-[14px] font-medium tracking-normal text-inherit outline-none hover:text-[var(--dsw-sidebar-fg-active)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
-                                title={group.path ?? group.label}
-                                aria-expanded={!collapsed}
-                                onClick={() => toggleProjectGroup(group.key)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault()
-                                    toggleProjectGroup(group.key)
-                                  }
-                                }}
-                              >
-                                <span className="sidebar-rail-icon sidebar-group-fold" aria-hidden>
-                                  <span className="sidebar-group-fold-face">
-                                    {group.kind === 'pinned' ? (
-                                      <StarIcon className={chromeIconClass('text-[#f5b700]')} />
-                                    ) : group.key === UNGROUPED_PROJECT_KEY ? (
-                                      <FolderMinusIcon className={chromeIconClass('opacity-80')} />
-                                    ) : group.key === UNGROUPED_TAG_KEY ? (
-                                      <BookmarkSlashIcon className={chromeIconClass('opacity-80')} />
-                                    ) : group.kind === 'tag' ? (
-                                      <TagIcon className={chromeIconClass('opacity-80')} />
-                                    ) : (
-                                      <FolderGlyph className="opacity-80" />
-                                    )}
+                          const collapsed = Boolean(collapsedProjects[group.key])
+                          const isUngrouped = group.key === UNGROUPED_PROJECT_KEY || group.key === UNGROUPED_TAG_KEY
+                          const canAddHere = group.kind === 'project' || group.kind === 'ungrouped'
+                          return (
+                            <div key={group.key} className="min-w-0">
+                              <div className="sidebar-group-head mb-0.5">
+                                <div
+                                  role="button"
+                                  tabIndex={0}
+                                  className="flex min-h-[32px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-[6px] text-left text-[14px] font-medium tracking-normal text-inherit outline-none hover:text-[var(--dsw-sidebar-fg-active)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
+                                  title={group.path ?? group.label}
+                                  aria-expanded={!collapsed}
+                                  onClick={() => toggleProjectGroup(group.key)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault()
+                                      toggleProjectGroup(group.key)
+                                    }
+                                  }}
+                                >
+                                  <span className="sidebar-rail-icon sidebar-group-fold" aria-hidden>
+                                    <span className="sidebar-group-fold-face">
+                                      {group.kind === 'pinned' ? (
+                                        <StarIcon className={chromeIconClass('text-[#f5b700]')} />
+                                      ) : group.key === UNGROUPED_PROJECT_KEY ? (
+                                        <FolderMinusIcon className={chromeIconClass('opacity-80')} />
+                                      ) : group.key === UNGROUPED_TAG_KEY ? (
+                                        <BookmarkSlashIcon className={chromeIconClass('opacity-80')} />
+                                      ) : group.kind === 'tag' ? (
+                                        <TagIcon className={chromeIconClass('opacity-80')} />
+                                      ) : (
+                                        <FolderGlyph className="opacity-80" />
+                                      )}
+                                    </span>
+                                    <span className="sidebar-group-fold-chevron">
+                                      {collapsed ? (
+                                        <ChevronRightIcon className={chromeIconClass('opacity-80')} />
+                                      ) : (
+                                        <ChevronDownIcon className={chromeIconClass('opacity-80')} />
+                                      )}
+                                    </span>
                                   </span>
-                                  <span className="sidebar-group-fold-chevron">
-                                    {collapsed ? (
-                                      <ChevronRightIcon className={chromeIconClass('opacity-80')} />
-                                    ) : (
-                                      <ChevronDownIcon className={chromeIconClass('opacity-80')} />
-                                    )}
-                                  </span>
-                                </span>
-                                <span className="min-w-0 flex-1 truncate">{group.label}</span>
-                                {canAddHere ? (
-                                  <button
-                                    type="button"
-                                    className="sidebar-add"
-                                    title={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
-                                    aria-label={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      createChat({
-                                        type: 'chat',
-                                        ...(group.path ? { projectPath: group.path } : {}),
-                                      })
-                                    }}
-                                  >
-                                    <PlusIcon {...chromeIcon} />
-                                  </button>
-                                ) : null}
+                                  <span className="min-w-0 flex-1 truncate">{group.label}</span>
+                                  {canAddHere ? (
+                                    <button
+                                      type="button"
+                                      className="sidebar-add"
+                                      title={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
+                                      aria-label={isUngrouped ? '在未分组下添加聊天' : `在 ${group.label} 下添加聊天`}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        createChat({
+                                          type: 'chat',
+                                          ...(group.path ? { projectPath: group.path } : {}),
+                                        })
+                                      }}
+                                    >
+                                      <PlusIcon {...chromeIcon} />
+                                    </button>
+                                  ) : null}
+                                </div>
+                                <ChatCount count={group.sessions.length} />
                               </div>
-                              <ChatCount count={group.sessions.length} />
+                              <div className={`sidebar-session-list min-w-0 ${collapsed ? 'hidden' : ''}`} aria-hidden={collapsed}>
+                                {group.sessions.map((item) => (
+                                  <SessionRow
+                                    key={`${group.key}:${item.id}`}
+                                    item={item}
+                                    active={item.id === routeSessionId}
+                                    busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
+                                    dancing={dancing}
+                                    onDelete={requestDeleteChat}
+                                    onPin={pinChat}
+                                  />
+                                ))}
+                              </div>
                             </div>
-                            <div className={`sidebar-session-list min-w-0 ${collapsed ? 'hidden' : ''}`} aria-hidden={collapsed}>
-                              {group.sessions.map((item) => (
-                                <SessionRow
-                                  key={`${group.key}:${item.id}`}
-                                  item={item}
-                                  active={item.id === routeSessionId}
-                                  busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
-                                  dancing={dancing}
-                                  onDelete={requestDeleteChat}
-                                  onPin={pinChat}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        )
+                          )
                         })
-                    }
+                      }
                     </div>
                   ) : null}
                 </section>
@@ -472,46 +511,46 @@ export const ChatSidebar = memo(function ChatSidebar({
       </div>
       {pendingDelete && typeof document !== 'undefined'
         ? createPortal(
+          <div
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-4"
+            data-testid="chat-session-delete-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="chat-session-delete-title"
+            onClick={() => setPendingDelete(null)}
+          >
             <div
-              className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-4"
-              data-testid="chat-session-delete-dialog"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="chat-session-delete-title"
-              onClick={() => setPendingDelete(null)}
+              className="w-[min(100%,320px)] rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] p-4 text-[var(--dsw-label)]"
+              onClick={(event) => event.stopPropagation()}
             >
-              <div
-                className="w-[min(100%,320px)] rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] p-4 text-[var(--dsw-label)]"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <h2 id="chat-session-delete-title" className="m-0 text-[13px] font-semibold">
-                  删除「{pendingDelete.title}」？
-                </h2>
-                <p className="mt-1.5 mb-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
-                  删除后无法恢复这份会话。
-                </p>
-                <div className="mt-3 flex justify-end gap-1.5">
-                  <button
-                    type="button"
-                    className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] text-[var(--dsw-label)] hover:bg-[#353535]"
-                    data-testid="chat-session-delete-cancel"
-                    onClick={() => setPendingDelete(null)}
-                  >
-                    取消
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] font-medium text-[var(--dsw-label)] hover:bg-[#353535]"
-                    data-testid="chat-session-delete-confirm"
-                    onClick={confirmDeleteChat}
-                  >
-                    确认删除
-                  </button>
-                </div>
+              <h2 id="chat-session-delete-title" className="m-0 text-[13px] font-semibold">
+                删除「{pendingDelete.title}」？
+              </h2>
+              <p className="mt-1.5 mb-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
+                删除后无法恢复这份会话。
+              </p>
+              <div className="mt-3 flex justify-end gap-1.5">
+                <button
+                  type="button"
+                  className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] text-[var(--dsw-label)] hover:bg-[#353535]"
+                  data-testid="chat-session-delete-cancel"
+                  onClick={() => setPendingDelete(null)}
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] font-medium text-[var(--dsw-label)] hover:bg-[#353535]"
+                  data-testid="chat-session-delete-confirm"
+                  onClick={confirmDeleteChat}
+                >
+                  确认删除
+                </button>
               </div>
-            </div>,
-            document.body,
-          )
+            </div>
+          </div>,
+          document.body,
+        )
         : null}
     </aside>
   )

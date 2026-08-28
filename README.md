@@ -1,9 +1,7 @@
 <div align="center">
 
 <p>
-  <img src="public/mascot-blue.svg" width="54" height="54" alt="biu-harness mascot" />
-  <img src="public/mascot-violet.svg" width="54" height="54" alt="biu-harness mascot" />
-  <img src="public/mascot-red.svg" width="54" height="54" alt="biu-harness mascot" />
+  <img src="public/brand-lockup.svg" width="268" height="54" alt="biu harness" />
 </p>
 
 # biu-harness
@@ -230,7 +228,8 @@ biu-harness
 ├── scripts/
 │   └── link-cordis-plugins.mjs
 ├── public/
-│   ├── favicon.svg
+│   ├── favicon.svg            # Brand mascot (sidebar gradient)
+│   ├── brand-lockup.svg       # README: mascot + biu harness tag
 │   ├── mascot-blue.svg        # README mascots (BMW M tricolor)
 │   ├── mascot-violet.svg
 │   ├── mascot-red.svg

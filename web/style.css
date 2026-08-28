@@ -209,7 +209,7 @@ body {
 .chat-view-header {
   position: relative;
   display: flex;
-  height: 36px;
+  height: 44px;
   flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
@@ -265,7 +265,7 @@ body {
 
 .app-side-bar-head {
   display: flex;
-  height: 36px;
+  height: 44px;
   flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
