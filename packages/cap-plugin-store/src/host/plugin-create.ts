@@ -77,7 +77,7 @@ export async function readSandboxManifest(dir: string) {
 
 const CONTRACT = [
   '契约：id 与 export const name 相同。禁止 import npm / react / @biu/*。不要改 packages/ 或 cordis.plugins.json。',
-  'host 与 web 按需，至少一侧。Web：ctx.slots.place("plugin-store-extras", Comp, { key })。',
+  'host 与 web 按需，至少一侧。Web：ctx.slots.place("plugin-store-extras", Comp, { key })。货架会给 extras 套 macOS 窗口框（关/缩/全屏），key 尽量用插件 id。',
 ].join(' ')
 
 const PLUGIN_CREATE_DESCRIPTION = [
