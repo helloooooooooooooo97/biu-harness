@@ -119,20 +119,24 @@ body {
 .chat-empty-hero {
   position: relative;
   display: flex;
-  flex: 1;
+  flex: 1 1 auto;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: min(52vh, 420px);
-  padding: 48px 24px 72px;
+  box-sizing: border-box;
+  /* 输入栏是 absolute 悬浮，不占文档流。stage 的 pb-44 只给消息列表垫底，
+     空态按整块可视主区垂直居中，不跟着那块 padding 上移。 */
+  min-height: calc(100% + 11rem);
+  margin-bottom: -11rem;
+  padding: 0;
 }
 
 .chat-empty-hero-glow {
   pointer-events: none;
   position: absolute;
-  inset: 12% 18% 28%;
+  inset: 18% 20% 22%;
   background:
-    radial-gradient(ellipse at 50% 42%, rgba(242, 241, 237, 0.16), transparent 62%),
+    radial-gradient(ellipse at 50% 48%, rgba(242, 241, 237, 0.16), transparent 62%),
     radial-gradient(ellipse at 50% 58%, rgba(120, 160, 180, 0.08), transparent 70%);
   filter: blur(2px);
 }
