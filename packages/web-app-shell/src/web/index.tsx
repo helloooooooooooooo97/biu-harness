@@ -340,7 +340,7 @@ function Shell(props: SlotProps) {
                   aria-label="Expand sidebar"
                   onClick={expandSidebar}
                 >
-                  <ChevronDoubleLeftIcon {...chromeIcon} />
+                  <ChevronDoubleRightIcon {...chromeIcon} />
                 </button>
               ) : null}
               {project ? (
@@ -371,7 +371,11 @@ function Shell(props: SlotProps) {
                 data-testid="inspector-toggle"
                 onClick={toggleInspector}
               >
-                <ChevronDoubleRightIcon {...chromeIcon} />
+                {inspectorOpen ? (
+                  <ChevronDoubleRightIcon {...chromeIcon} />
+                ) : (
+                  <ChevronDoubleLeftIcon {...chromeIcon} />
+                )}
               </button>
             </div>
           </header>
