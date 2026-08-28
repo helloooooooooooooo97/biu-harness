@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
-import { ChevronDownIcon, PlusIcon, Cog6ToothIcon, PaperAirplaneIcon } from '@heroicons/react/16/solid'
+import { ArrowUpIcon, ChevronDownIcon, PlusIcon, Cog6ToothIcon } from '@heroicons/react/16/solid'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
@@ -901,7 +901,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
             aria-label={pending ? 'Queue' : 'Send'}
             title={pending ? (inbox.some((item) => item.kind === 'wake') ? '注入排队' : '加入排队') : '发送'}
           >
-            <PaperAirplaneIcon className="size-3.5" aria-hidden />
+            <ArrowUpIcon className="size-3.5" aria-hidden />
           </button>
         </div>
       </div>

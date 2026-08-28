@@ -136,7 +136,7 @@ export function ApprovalsRail(props: SlotProps) {
         role="toolbar"
         aria-label="Session controls"
       >
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-center gap-1">
           <SessionProjectPanel {...props} />
           {props.renderSlot('header-tools')}
           <button
@@ -171,7 +171,7 @@ export function ApprovalsRail(props: SlotProps) {
                 type="button"
                 disabled={modeBusy}
                 aria-pressed={agentMode === mode}
-                className={`px-2.5 py-1 ${
+                className={`px-1.5 py-1 ${
                   agentMode === mode
                     ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
                     : 'hover:bg-[var(--dsw-hover)]'

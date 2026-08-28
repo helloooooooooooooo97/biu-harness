@@ -258,11 +258,11 @@ body {
   padding: 0 12px;
 }
 
-/* 右侧检查器 tab：选中用底部白色指示条，与左栏 activity 的侧边条同一套语言 */
+/* 右侧检查器 tab：选中态与顶栏收起检查器按钮相同，无底边指示条 */
 .inspector-tabs {
   display: flex;
   min-width: 0;
-  align-items: stretch;
+  align-items: center;
   align-self: stretch;
   gap: 2px;
 }
@@ -272,35 +272,29 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: 26px;
   border: 0;
+  border-radius: 6px;
   background: transparent;
   padding: 0 8px;
-  color: var(--dsw-label-3);
-  font-size: 11px;
+  color: var(--dsw-sidebar-fg);
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .inspector-tab:hover {
-  color: var(--dsw-label);
+  background: var(--dsw-hover);
+  color: var(--dsw-sidebar-fg-active);
 }
 
 .inspector-tab.is-active {
-  color: var(--dsw-label);
+  background: var(--dsw-hover);
+  color: var(--dsw-sidebar-fg-active);
 }
 
 .inspector-tab-indicator {
-  position: absolute;
-  right: 8px;
-  bottom: 0;
-  left: 8px;
-  height: 2px;
-  border-radius: 2px 2px 0 0;
-  background: transparent;
-}
-
-.inspector-tab.is-active .inspector-tab-indicator {
-  background: var(--dsw-business);
+  display: none;
 }
 
 .chat-view-header-left,
@@ -323,13 +317,13 @@ body {
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--dsw-label-3);
+  color: var(--dsw-sidebar-fg);
   cursor: pointer;
 }
 
 .chat-view-header-expand:hover {
   background: var(--dsw-hover);
-  color: var(--dsw-business);
+  color: var(--dsw-sidebar-fg-active);
 }
 
 .chat-view-project {
@@ -338,14 +332,14 @@ body {
   max-width: 220px;
   align-items: center;
   gap: 6px;
-  color: var(--dsw-label-2);
+  color: var(--dsw-sidebar-fg);
 }
 
 .chat-view-project-icon {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-  color: var(--dsw-label-3);
+  color: var(--dsw-sidebar-fg);
 }
 
 .chat-view-project-name {
@@ -927,7 +921,7 @@ body {
   border-radius: 999px;
   background: color-mix(in srgb, var(--dsw-bg) 82%, transparent);
   padding: 0;
-  color: var(--dsw-label-3);
+  color: var(--dsw-sidebar-fg);
   cursor: pointer;
   box-shadow: none;
 }
@@ -942,7 +936,7 @@ body {
 }
 
 .project-chip:hover:not(:disabled) {
-  color: var(--dsw-label-2);
+  color: var(--dsw-sidebar-fg-active);
 }
 
 .project-chip:disabled,
@@ -952,7 +946,7 @@ body {
 }
 
 .project-chip-muted {
-  color: var(--dsw-label-3);
+  color: var(--dsw-sidebar-fg);
   cursor: default;
 }
 
@@ -971,7 +965,7 @@ body {
 .project-chip.is-active {
   border-color: var(--dsw-pick-stroke);
   background: var(--dsw-pick-fill);
-  color: var(--dsw-label);
+  color: var(--dsw-sidebar-fg-active);
 }
 
 .dock-seg {
@@ -2666,12 +2660,12 @@ body {
   border: 1px solid var(--dsw-border);
   border-radius: 999px;
   background: transparent;
-  color: var(--dsw-label-3);
+  color: var(--dsw-sidebar-fg);
   cursor: pointer;
 }
 
 .composer-plus:hover {
-  color: var(--dsw-label);
+  color: var(--dsw-sidebar-fg-active);
   background: var(--dsw-hover);
 }
 
@@ -2722,14 +2716,14 @@ body {
   border-radius: 8px;
   background: transparent;
   padding: 4px 6px;
-  color: var(--dsw-label-2);
+  color: var(--dsw-sidebar-fg);
   font-size: 12px;
   cursor: pointer;
 }
 
 .composer-model-trigger:hover {
   background: var(--dsw-hover);
-  color: var(--dsw-label);
+  color: var(--dsw-sidebar-fg-active);
 }
 
 .composer-model-label {
@@ -2880,12 +2874,14 @@ body {
 }
 
 .composer-send {
-  background: var(--dsw-business);
+  background: var(--dsw-sidebar-fg-active);
   color: var(--dsw-bg);
 }
 
 .composer-send:disabled {
-  opacity: 0.35;
+  background: var(--dsw-sidebar-fg);
+  color: var(--dsw-bg);
+  opacity: 1;
   cursor: default;
 }
 
@@ -3202,8 +3198,8 @@ body {
 
 
 .chat-view-header-expand.is-active {
-  background: color-mix(in srgb, var(--dsw-business) 16%, transparent);
-  color: var(--dsw-business);
+  background: var(--dsw-hover);
+  color: var(--dsw-sidebar-fg-active);
 }
 
 /* ===== Mascot Dance Stage（彩蛋）===== */

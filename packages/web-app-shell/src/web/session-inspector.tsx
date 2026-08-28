@@ -160,7 +160,7 @@ export const SessionInspector = memo(function SessionInspector({
         </div>
         <button
           type="button"
-          className="grid size-6 cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)]"
+          className="grid size-6 cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent text-[var(--dsw-sidebar-fg)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-sidebar-fg-active)]"
           title="收起右侧栏"
           aria-label="收起右侧栏"
           onClick={onClose}
