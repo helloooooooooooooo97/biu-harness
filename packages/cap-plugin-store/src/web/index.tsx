@@ -132,7 +132,7 @@ function PluginStorePage(props: SlotProps) {
         {items.map((item) => (
           <li
             key={item.id}
-            className="flex items-center justify-between gap-2 rounded-lg border border-(--dsw-border) bg-(--dsw-surface) px-2.5 py-2"
+            className="flex items-center justify-between gap-2 rounded-lg bg-(--dsw-surface) px-2.5 py-2"
             data-testid={`plugin-store-card-${item.id}`}
             data-biu-kind="plugin"
             data-biu-id={item.id}

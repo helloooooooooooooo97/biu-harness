@@ -728,7 +728,7 @@ function AssigneePicker({
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <ActorChip actor={actor} avatar={false} />
+        <ActorChip actor={actor} />
       </button>
       {open ? (
         <div className="tasks-assignee-menu" role="listbox">
@@ -3082,6 +3082,13 @@ function TaskDetailPanel({
                   renderValue={(cur) => <span className="tasks-chip-text">{cur?.label ?? task.difficulty}</span>}
                 />
               </label>
+              <div className="tasks-prop">
+                <span>
+                  <UserIcon aria-hidden className="size-[14px]" />
+                  创建人
+                </span>
+                <ActorChip actor={task.creator} empty="—" />
+              </div>
               <label className="tasks-prop">
                 <span>
                   <UserIcon aria-hidden className="size-[14px]" />
