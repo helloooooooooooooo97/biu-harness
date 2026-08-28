@@ -5,12 +5,6 @@ import { describe, expect, it } from 'vitest'
 const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
 
 describe('panel collapse chevrons follow panel state', () => {
-  it('points right to expand a collapsed left sidebar', () => {
-    expect(shell).toMatch(
-      /onClick=\{expandSidebar\}\s*>\s*<ChevronDoubleRightIcon/,
-    )
-  })
-
   it('points left to open the inspector and right to collapse it', () => {
     expect(shell).toMatch(
       /inspectorOpen \?\s*\(\s*<ChevronDoubleRightIcon[\s\S]*:\s*\(\s*<ChevronDoubleLeftIcon/,

@@ -23,7 +23,6 @@ import { chromeIcon, chromeIconClass } from './chrome-icon.ts'
 import {
   ChevronDownIcon,
   ChevronRightIcon,
-  ChevronDoubleLeftIcon,
   PlusIcon,
   SignalIcon,
   StarIcon,
@@ -193,7 +192,6 @@ export type ChatSidebarProps = {
   routeSessionId: string | null
   useSessionView: ReturnType<typeof bindSessionView>
   sessionView: SessionViewService
-  onCollapse: () => void
 }
 
 /**
@@ -204,7 +202,6 @@ export const ChatSidebar = memo(function ChatSidebar({
   routeSessionId,
   useSessionView,
   sessionView,
-  onCollapse,
 }: ChatSidebarProps) {
   const navigate = useNavigate()
   const sessions = useSessionView((state) => state.sessions)
@@ -313,15 +310,6 @@ export const ChatSidebar = memo(function ChatSidebar({
             biu harness
           </span>
         </span>
-        <button
-          type="button"
-          className="grid size-6.5 place-items-center rounded-md text-inherit hover:bg-(--dsw-hover) hover:text-(--dsw-sidebar-fg-active)"
-          title="Collapse sidebar"
-          aria-label="Collapse sidebar"
-          onClick={onCollapse}
-        >
-          <ChevronDoubleLeftIcon {...chromeIcon} />
-        </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
         <div className="app-side-actions" role="navigation" aria-label="Chat actions">

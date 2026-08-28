@@ -1,5 +1,18 @@
-import { memo, useCallback, useEffect, useState, useSyncExternalStore, type CSSProperties } from 'react'
-import { chatColumnWidth, setChatOverlay, subscribeChatOverlay, getChatOverlay, CHAT_OVERLAY_ENTER } from './chat-overlay.ts'
+import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent } from 'react'
+import {
+  chatColumnWidth,
+  setChatOverlay,
+  subscribeChatOverlay,
+  getChatOverlay,
+  CHAT_OVERLAY_ENTER,
+  clampOverlayChatHeight,
+  OVERLAY_CHAT_HEIGHT_DEFAULT,
+  getOverlayAutohide,
+  setOverlayAutohide,
+  scheduleOverlayAutohide,
+  setOverlayResizing,
+  subscribeOverlayAutohide,
+} from './chat-overlay.ts'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
 import type { SlotProps } from '@biu/web-slots'
@@ -52,11 +65,13 @@ function ModuleRail({
   agentHref,
   modules,
   onSettings,
+  onAgentRailClick,
 }: {
   active: string
   agentHref: string
   modules: AppModule[]
   onSettings: () => void
+  onAgentRailClick: (alreadyActive: boolean) => void
 }) {
   return (
     <nav className="app-activity-bar" aria-label="Activity bar" data-biu-ignore>
@@ -72,6 +87,14 @@ function ModuleRail({
               title={module.label}
               aria-label={module.label}
               aria-current={isActive ? 'page' : undefined}
+              onClick={
+                module.id === 'agent'
+                  ? (event) => {
+                      if (isActive) event.preventDefault()
+                      onAgentRailClick(isActive)
+                    }
+                  : undefined
+              }
             >
               <span className="app-activity-indicator" aria-hidden />
               <ModuleIcon module={module} />
@@ -152,18 +175,124 @@ const AgentMainPanels = memo(function AgentMainPanels({
 }: {
   renderSlot: SlotProps['renderSlot']
 }) {
+  const overlay = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
+  const hidden = useSyncExternalStore(subscribeOverlayAutohide, getOverlayAutohide, () => false)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const heightRef = useRef(OVERLAY_CHAT_HEIGHT_DEFAULT)
+  const [overlayChatHeight, setOverlayChatHeight] = useState(() => {
+    try {
+      const raw = localStorage.getItem('cordis.overlay.chatHeight')
+      if (raw == null) return OVERLAY_CHAT_HEIGHT_DEFAULT
+      const n = Number(raw)
+      if (!Number.isFinite(n)) return OVERLAY_CHAT_HEIGHT_DEFAULT
+      return clampOverlayChatHeight(n, typeof window === 'undefined' ? 800 : window.innerHeight)
+    } catch {
+      return OVERLAY_CHAT_HEIGHT_DEFAULT
+    }
+  })
+  heightRef.current = overlayChatHeight
+  const keepVisible = useCallback(() => {
+    setOverlayAutohide(false)
+  }, [])
+  const hideSoon = useCallback(() => {
+    if (!overlay) return
+    scheduleOverlayAutohide()
+  }, [overlay])
+  useEffect(() => {
+    if (!overlay) setOverlayAutohide(false)
+  }, [overlay])
+  useEffect(() => {
+    if (!overlay) return
+    const el = stageRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [overlay])
+  const onResizeHeight = useCallback((event: PointerEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setOverlayResizing(true)
+    const startH = heightRef.current
+    const originY = event.clientY
+    const onMove = (move: PointerEvent) => {
+      const next = clampOverlayChatHeight(startH + (originY - move.clientY), window.innerHeight)
+      setOverlayChatHeight(next)
+      heightRef.current = next
+    }
+    const onUp = (up: PointerEvent) => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      setOverlayResizing(false)
+      try {
+        localStorage.setItem('cordis.overlay.chatHeight', String(heightRef.current))
+      } catch {
+        /* ignore */
+      }
+      const hit = document.elementFromPoint(up.clientX, up.clientY)
+      if (!hit?.closest('.chat-overlay-panel')) scheduleOverlayAutohide()
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }, [])
+
+  const stage = (
+    <div
+      ref={stageRef}
+      className={
+        overlay
+          ? 'chat-stage flex min-h-0 flex-col overflow-y-auto overscroll-contain px-1 py-1'
+          : 'chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 py-3 pb-44 md:px-8 lg:px-10'
+      }
+    >
+      {renderSlot('stage')}
+    </div>
+  )
+  const dockInner = (
+    <div className="pointer-events-auto w-full space-y-2 bg-transparent">
+      {renderSlot('dock')}
+      {renderSlot('composer')}
+    </div>
+  )
+
+  if (overlay) {
+    return (
+      <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+        <div
+          className="chat-overlay-panel"
+          style={{ ['--overlay-chat-height' as string]: `${overlayChatHeight}px` } as CSSProperties}
+          onMouseEnter={() => {
+            if (hidden) return
+            keepVisible()
+          }}
+          onMouseLeave={hideSoon}
+        >
+          <div className="chat-overlay-thread">
+            <div
+              className="chat-overlay-resize"
+              data-testid="chat-overlay-resize"
+              title="拖动调节聊天高度"
+              onPointerDown={onResizeHeight}
+            />
+            {stage}
+          </div>
+          <div className="chat-composer-dock pointer-events-none">{dockInner}</div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       <div className="absolute inset-0 z-1 flex min-h-0 overflow-hidden">
         <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-          <div className="chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 py-3 pb-44 md:px-8 lg:px-10">
-            {renderSlot('stage')}
-          </div>
-          <div className="chat-composer-dock pointer-events-none absolute inset-x-0 bottom-0 bg-transparent px-6 pb-4 md:px-8 lg:px-10">
-            <div className="pointer-events-auto w-full space-y-2 bg-transparent">
-              {renderSlot('dock')}
-              {renderSlot('composer')}
-            </div>
+          {stage}
+          <div
+            className="chat-composer-dock pointer-events-none absolute inset-x-0 bottom-0 bg-transparent px-6 pb-4 md:px-8 lg:px-10"
+            onMouseEnter={() => {
+              if (hidden) return
+              keepVisible()
+            }}
+            onMouseLeave={hideSoon}
+          >
+            {dockInner}
           </div>
         </div>
       </div>
@@ -252,6 +381,7 @@ function Shell(props: SlotProps) {
     return 320
   })
   const chatOverlay = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
+  const overlayAutohide = useSyncExternalStore(subscribeOverlayAutohide, getOverlayAutohide, () => false)
   const toggleInspector = useCallback(() => {
     setInspectorOpen((prev) => {
       const next = !prev
@@ -298,14 +428,28 @@ function Shell(props: SlotProps) {
     window.addEventListener('biu:inspector-width', onWidth)
     return () => window.removeEventListener('biu:inspector-width', onWidth)
   }, [onInspectorWidthChange])
+  useEffect(() => {
+    const onOpen = () => {
+      setInspectorOpen(true)
+      try {
+        localStorage.setItem('cordis.inspector.open', '1')
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener('biu:inspector-open', onOpen)
+    return () => window.removeEventListener('biu:inspector-open', onOpen)
+  }, [])
   const activeModule = moduleIdFromPath(location.pathname, pluginModules)
   const appRoute = parseAppPath(location.pathname, pluginModules)
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   const agentHref = sessionId ? `/s/${sessionId}` : '/'
   const showChatSidebar = activeModule === 'agent' && !sidebarCollapsed
-  const collapseSidebar = useCallback(() => setSidebarCollapsed(true), [])
-  const expandSidebar = useCallback(() => setSidebarCollapsed(false), [])
+  const onAgentRailClick = useCallback((alreadyActive: boolean) => {
+    if (alreadyActive) setSidebarCollapsed((prev) => !prev)
+    else setSidebarCollapsed(false)
+  }, [])
 
   // 工具检查 /debuginspect：打开右侧轨迹 Tab（主区不再切 Debug 页）
   useEffect(() => {
@@ -357,7 +501,7 @@ function Shell(props: SlotProps) {
   return (
     <div
       className={`app-shell${activeModule === 'agent'
-          ? ` app-shell-agent${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}${inspectorOpen ? ' is-inspector-open' : ''}${chatOverlay ? ' is-chat-overlay' : ''
+          ? ` app-shell-agent${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}${inspectorOpen ? ' is-inspector-open' : ''}${chatOverlay ? ' is-chat-overlay' : ''}${overlayAutohide ? ' is-chat-overlay-autohide' : ''
           }`
           : ' app-shell-module'
         }`}
@@ -373,6 +517,7 @@ function Shell(props: SlotProps) {
         agentHref={agentHref}
         modules={modules}
         onSettings={() => setSettingsOpen(true)}
+        onAgentRailClick={onAgentRailClick}
       />
 
       <ChatSidebar
@@ -380,7 +525,6 @@ function Shell(props: SlotProps) {
         routeSessionId={routeSessionId}
         useSessionView={useSessionView}
         sessionView={sessionView}
-        onCollapse={collapseSidebar}
       />
 
       <DanceStage sessions={danceSessions} on={dancing} shape={danceShape} />
@@ -392,17 +536,6 @@ function Shell(props: SlotProps) {
         >
           <header className="chat-view-header" data-biu-ignore>
             <div className="chat-view-header-left">
-              {sidebarCollapsed ? (
-                <button
-                  type="button"
-                  className="chat-view-header-expand"
-                  title="Expand sidebar"
-                  aria-label="Expand sidebar"
-                  onClick={expandSidebar}
-                >
-                  <ChevronDoubleRightIcon {...chromeIcon} />
-                </button>
-              ) : null}
               {project ? (
                 <div className="chat-view-project" title={project.path ?? project.name}>
                   <FolderGlyph className="chat-view-project-icon" />

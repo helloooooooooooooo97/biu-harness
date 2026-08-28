@@ -1,4 +1,4 @@
-import { test } from 'vitest'
+import { test, vi } from 'vitest'
 import assert from 'node:assert/strict'
 import {
   chatColumnWidth,
@@ -6,6 +6,13 @@ import {
   CHAT_OVERLAY_ENTER,
   getChatOverlay,
   setChatOverlay,
+  getOverlayAutohide,
+  setOverlayAutohide,
+  scheduleOverlayAutohide,
+  setOverlayResizing,
+  clampOverlayChatHeight,
+  OVERLAY_CHAT_HEIGHT_MIN,
+  OVERLAY_AUTOHIDE_DELAY_MS,
 } from './chat-overlay.ts'
 
 test('chat column subtracts rail, sidebar and inspector', () => {
@@ -38,4 +45,49 @@ test('overlay store set/get', () => {
   setChatOverlay(true)
   assert.equal(getChatOverlay(), true)
   setChatOverlay(false)
+})
+
+test('autohide resets when overlay closes', () => {
+  setChatOverlay(true)
+  setOverlayAutohide(true)
+  assert.equal(getOverlayAutohide(), true)
+  setChatOverlay(false)
+  assert.equal(getOverlayAutohide(), false)
+})
+
+test('overlay chat height clamps', () => {
+  assert.equal(clampOverlayChatHeight(20, 800), OVERLAY_CHAT_HEIGHT_MIN)
+  assert.equal(clampOverlayChatHeight(900, 800), Math.round(800 * 0.7))
+})
+
+test('autohide waits 500ms and can be cancelled', () => {
+  vi.useFakeTimers()
+  setChatOverlay(true)
+  setOverlayAutohide(false)
+  scheduleOverlayAutohide()
+  vi.advanceTimersByTime(OVERLAY_AUTOHIDE_DELAY_MS - 1)
+  assert.equal(getOverlayAutohide(), false)
+  vi.advanceTimersByTime(1)
+  assert.equal(getOverlayAutohide(), true)
+  setOverlayAutohide(false)
+  scheduleOverlayAutohide()
+  setOverlayAutohide(false)
+  vi.advanceTimersByTime(OVERLAY_AUTOHIDE_DELAY_MS + 50)
+  assert.equal(getOverlayAutohide(), false)
+  vi.useRealTimers()
+})
+
+test('autohide does not fire while resizing', () => {
+  vi.useFakeTimers()
+  setChatOverlay(true)
+  setOverlayAutohide(false)
+  setOverlayResizing(true)
+  scheduleOverlayAutohide()
+  vi.advanceTimersByTime(OVERLAY_AUTOHIDE_DELAY_MS + 50)
+  assert.equal(getOverlayAutohide(), false)
+  setOverlayResizing(false)
+  scheduleOverlayAutohide()
+  vi.advanceTimersByTime(OVERLAY_AUTOHIDE_DELAY_MS)
+  assert.equal(getOverlayAutohide(), true)
+  vi.useRealTimers()
 })

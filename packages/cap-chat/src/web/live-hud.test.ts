@@ -27,6 +27,34 @@ test('extractLiveHud reads turn, tools and last assistant text', () => {
   assert.equal(hud.lastOutput, '最终结果')
 })
 
+test('extractLiveHud can read a selected older reply', () => {
+  const nodes: ChatNode[] = [
+    { id: 'u1', kind: 'user', text: 'a' },
+    {
+      id: 'r1',
+      kind: 'reply',
+      copyText: 'one',
+      turn: 1,
+      streaming: false,
+      parts: [{ id: 'a1', kind: 'assistant', text: 'first' }],
+    },
+    { id: 'u2', kind: 'user', text: 'b' },
+    {
+      id: 'r2',
+      kind: 'reply',
+      copyText: 'two',
+      turn: 2,
+      streaming: false,
+      parts: [{ id: 'a2', kind: 'assistant', text: 'second' }],
+    },
+  ]
+  const older = extractLiveHud(nodes, 0, 'r1')
+  assert.equal(older.turn, 1)
+  assert.equal(older.lastOutput, 'first')
+  assert.equal(older.replyIndex, 0)
+  assert.equal(older.replyCount, 2)
+})
+
 test('clipHudText collapses whitespace and ellipsizes', () => {
   assert.equal(clipHudText('  a   b  '), 'a b')
   assert.equal(clipHudText('x'.repeat(90)).endsWith('…'), true)

@@ -20,8 +20,10 @@ import { ChatLiveMetrics } from './live-hud.tsx'
 import {
   getChatOverlay,
   inspectorWidthForExpandedChat,
+  requestInspectorOpen,
   requestInspectorWidth,
   setChatOverlay,
+  setOverlayAutohide,
   subscribeChatOverlay,
 } from '@biu/web-app-shell/chat-overlay'
 
@@ -199,6 +201,7 @@ export function ApprovalsRail(props: SlotProps) {
       setChatOverlay(false)
       return
     }
+    requestInspectorOpen()
     setChatOverlay(true)
   }
 
@@ -353,7 +356,11 @@ export function ApprovalsRail(props: SlotProps) {
             <PaintBrushIcon className="size-4 relative z-1" aria-hidden />
           </button>
           {sessionId && sessionIdentity ? (
-            <span className="dock-agent-stack" data-testid="dock-agent-stack">
+            <span
+              className="dock-agent-stack"
+              data-testid="dock-agent-stack"
+              onMouseEnter={() => setOverlayAutohide(false)}
+            >
               <span
                 className="dock-session-mascot"
                 data-testid="dock-session-mascot"

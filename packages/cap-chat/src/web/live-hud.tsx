@@ -1,6 +1,5 @@
-import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
+import { memo, useEffect, useSyncExternalStore, type ReactNode } from 'react'
 import {
-  CircleStackIcon,
   ClockIcon,
   HashtagIcon,
   Square3Stack3DIcon,
@@ -9,7 +8,16 @@ import {
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView } from '@biu/web-session-view'
 import { UsageInline } from './usage-inline.tsx'
-import { clipHudText, extractLiveHud, formatDuration, type LiveHudFlash } from './live-hud.ts'
+import { MarkdownBody } from './markdown.tsx'
+import { splitReplyForDisplay } from './thread.tsx'
+import {
+  extractLiveHud,
+  formatDuration,
+  getHudReplyId,
+  listReplyNodes,
+  setHudReplyId,
+  subscribeHudReplyId,
+} from './live-hud.ts'
 
 function MetaItem({ icon, value, title }: { icon: ReactNode; value: ReactNode; title: string }) {
   return (
@@ -25,35 +33,40 @@ function MetaItem({ icon, value, title }: { icon: ReactNode; value: ReactNode; t
 export function ChatLiveMetrics(props: { useSessionView: ReturnType<typeof bindSessionView> }) {
   const nodes = props.useSessionView((state) => state.nodes)
   const agentStep = props.useSessionView((state) => state.agentStep)
-  const hud = extractLiveHud(nodes, agentStep)
+  const replyId = useSyncExternalStore(subscribeHudReplyId, getHudReplyId, () => null)
+  const hud = extractLiveHud(nodes, agentStep, replyId)
   if (!hud.turn && !hud.step && !hud.toolIndex && !hud.usage) return null
   return (
-    <div className="chat-live-hud-metrics chat-reply-meta" data-testid="chat-live-hud" aria-live="polite">
-      {hud.turn ? (
-        <MetaItem icon={<HashtagIcon className="size-3" />} value={hud.turn} title={`第 ${hud.turn} 轮`} />
-      ) : null}
-      {hud.step ? (
+    <div className="chat-live-hud-metrics" data-testid="chat-live-hud" aria-live="polite">
+      <div className="chat-live-hud-metrics-body chat-reply-meta">
+        {hud.turn ? (
+          <MetaItem icon={<HashtagIcon className="size-3" />} value={hud.turn} title={`第 ${hud.turn} 轮`} />
+        ) : null}
+        {hud.step ? (
+          <MetaItem
+            icon={<Square3Stack3DIcon className="size-3" />}
+            value={hud.step}
+            title={`本回合 ${hud.step} 个 step`}
+          />
+        ) : null}
         <MetaItem
-          icon={<Square3Stack3DIcon className="size-3" />}
-          value={hud.step}
-          title={`本回合 ${hud.step} 个 step`}
+          icon={<WrenchScrewdriverIcon className="size-3" />}
+          value={<span data-testid="chat-live-hud-tool">{hud.toolIndex}</span>}
+          title={`本回合 ${hud.toolIndex} 次工具调用`}
         />
-      ) : null}
-      <MetaItem
-        icon={<WrenchScrewdriverIcon className="size-3" />}
-        value={<span data-testid="chat-live-hud-tool">{hud.toolIndex}</span>}
-        title={`本回合 ${hud.toolIndex} 次工具调用`}
-      />
-      {hud.durationMs != null ? (
-        <MetaItem
-          icon={<ClockIcon className="size-3" />}
-          value={formatDuration(hud.durationMs)}
-          title="本回合耗时"
-        />
-      ) : null}
-      {hud.usage ? (
-        <MetaItem icon={<CircleStackIcon className="size-3" />} value={<UsageInline usage={hud.usage} />} title="Token 用量" />
-      ) : null}
+        {hud.durationMs != null ? (
+          <MetaItem
+            icon={<ClockIcon className="size-3" />}
+            value={formatDuration(hud.durationMs)}
+            title="本回合耗时"
+          />
+        ) : null}
+        {hud.usage ? (
+          <span className="chat-reply-meta-item" title="Token 用量">
+            <UsageInline usage={hud.usage} />
+          </span>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -62,34 +75,33 @@ export const ChatLiveHud = memo(function ChatLiveHud(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const nodes = useSessionView((state) => state.nodes)
   const agentStep = useSessionView((state) => state.agentStep)
-  const hud = extractLiveHud(nodes, agentStep)
-  const [flash, setFlash] = useState<LiveHudFlash | null>(null)
-  const toolKey = hud.lastTool ? `${hud.lastTool.callId}:${hud.lastTool.result ? 'done' : 'call'}` : ''
-  const outputKey = hud.streaming || !hud.lastOutput ? '' : `${hud.turn}:${hud.lastOutput.slice(0, 24)}`
-  const seen = useRef({ tool: '', output: '' })
+  const replyId = useSyncExternalStore(subscribeHudReplyId, getHudReplyId, () => null)
+  const hud = extractLiveHud(nodes, agentStep, replyId)
+  const replies = listReplyNodes(nodes)
+  const selected =
+    (hud.replyId ? replies.find((row) => row.id === hud.replyId) : undefined) ?? replies.at(-1)
 
   useEffect(() => {
-    if (!toolKey || toolKey === seen.current.tool) return
-    seen.current.tool = toolKey
-    const name = hud.lastTool?.name ?? 'tool'
-    const label = hud.lastTool?.result
-      ? `${name} ${hud.lastTool.result.ok ? '完成' : '失败'}`
-      : `调用 ${name}`
-    setFlash({ kind: 'tool', text: clipHudText(label, 72), key: toolKey })
-  }, [toolKey, hud.lastTool])
+    const list = listReplyNodes(nodes)
+    if (replyId && list.some((row) => row.id === replyId)) return
+    if (!list.length) return
+    setHudReplyId(null)
+  }, [nodes, replyId])
 
-  useEffect(() => {
-    if (!outputKey || outputKey === seen.current.output) return
-    seen.current.output = outputKey
-    setFlash({ kind: 'output', text: clipHudText(hud.lastOutput, 220), key: outputKey })
-  }, [outputKey, hud.lastOutput])
+  if (!selected) return null
+  const { finalParts } = splitReplyForDisplay(selected)
+  const text = finalParts
+    .filter((part) => part.kind === 'assistant')
+    .map((part) => part.text)
+    .join('\n\n')
+    .trim()
+  if (!text) return null
 
-  if (!flash) return null
   return (
     <div className="chat-live-hud" data-testid="chat-live-hud-flash-wrap" aria-live="polite">
-      <span className={`chat-live-hud-flash is-${flash.kind}`} data-testid="chat-live-hud-flash">
-        {flash.text}
-      </span>
+      <div className="chat-live-hud-flash is-output" data-testid="chat-live-hud-flash">
+        <MarkdownBody text={text} streaming={Boolean(selected.streaming)} />
+      </div>
     </div>
   )
 })
