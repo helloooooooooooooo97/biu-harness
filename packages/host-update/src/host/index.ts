@@ -1,6 +1,6 @@
 import type { Context } from 'cordis'
 import { findRepoRoot } from '@biu/host-plugin-loader'
-import { behindMain, fetchMain, mergeMain, scheduleRestart } from './git.ts'
+import { behindMain, fetchMain, mergeMain, scheduleRestart, updateSource } from './git.ts'
 
 export const name = 'update'
 export const inject = ['http']
@@ -8,6 +8,8 @@ export const inject = ['http']
 export type UpdateStatus = {
   behind: number
   ready: boolean
+  remote?: string
+  ref?: string
   error?: string
 }
 
@@ -19,7 +21,7 @@ export function apply(ctx: Context) {
   async function refresh() {
     try {
       await fetchMain(root)
-      status = { behind: await behindMain(root), ready: true }
+      status = { behind: await behindMain(root), ready: true, ...updateSource() }
     } catch (error) {
       status = { ...status, ready: true, error: String(error) }
       ctx.logger('update').warn(error)

@@ -50,14 +50,14 @@ export function UsageInline({
         <span className="traj-usage-in">{formatTok(usage.inputTokens)}</span>
         <span
           className="traj-usage-ring is-cache"
-          style={{ '--fill': cacheFill } as CSSProperties}
+          style={{ '--fill': cacheFill, '--ring': 'rgb(87, 197, 119)', '--track': 'rgb(42, 58, 48)' } as CSSProperties}
           aria-hidden
         />
       </span>
       {hist != null ? (
         <span
           className="traj-usage-ring is-hist"
-          style={{ '--fill': hist } as CSSProperties}
+          style={{ '--fill': hist, '--ring': 'rgb(234, 89, 85)', '--track': 'rgb(61, 36, 35)' } as CSSProperties}
           title={`历史占比 ${hist}%`}
           aria-label={`历史占比 ${hist}%`}
         />

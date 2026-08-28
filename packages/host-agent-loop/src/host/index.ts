@@ -23,7 +23,7 @@ export class AgentLoop implements AgentRunner {
   ) {}
 
   async run(claimed: ClaimedInput[]): Promise<AgentTurn> {
-    const extras = [
+    let extras = [
       ...new Set(claimed.flatMap((item) => item.extraTools ?? []).map((name) => name.trim()).filter(Boolean)),
     ]
     const peek = this.ctx.sessions.peek(this.sessionId)

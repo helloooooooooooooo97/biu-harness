@@ -47,7 +47,7 @@
   --dsw-chat-reply-pad-x: 12px;
   --dsw-chat-max-width: 768px;
   --dsw-chat-code-bg: var(--dsw-sidebar);
-  --dsw-chat-hist-fill: #ea5955;
+  --dsw-chat-hist-fill: rgb(234, 89, 85);
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, Consolas, monospace;
@@ -896,7 +896,7 @@ body {
   height: 14px;
   padding: 0 4px;
   border-radius: 999px;
-  background: #ea5955;
+  background: #EA5955;
   color: #fff;
   font-size: 9px;
   font-weight: 700;
@@ -931,7 +931,7 @@ body {
   justify-content: center;
   border: 1px solid var(--dsw-border);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--dsw-bg) 82%, transparent);
+  background: #262626;
   padding: 0;
   color: var(--dsw-sidebar-fg);
   cursor: pointer;
@@ -958,7 +958,9 @@ body {
   left: 0;
   width: 100%;
   transform-origin: bottom;
-  background: var(--dsw-chat-hist-fill);
+  color-scheme: light;
+  opacity: 1;
+  mix-blend-mode: normal;
   transition: height 0.2s ease;
 }
 
@@ -1601,24 +1603,24 @@ body {
   font-weight: 600;
 }
 
-/* 绿色 cache / 红色历史：圆环，数字只在 title 悬浮提示里 */
+/* 绿色 cache / 红色历史：圆环用实色，避免细环抗锯齿混成发灰的红 */
 .traj-usage-ring {
   --fill: 0;
-  --ring: #57c577;
+  --ring: rgb(87, 197, 119);
+  --track: rgb(42, 58, 48);
   flex: none;
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background:
-    radial-gradient(circle closest-side, var(--dsw-bg) 58%, transparent 59%),
-    conic-gradient(
-      var(--ring) calc(var(--fill) * 1%),
-      color-mix(in srgb, var(--ring) 22%, transparent) 0
-    );
+  color-scheme: light;
+  background: conic-gradient(var(--ring) calc(var(--fill) * 1%), var(--track) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent 38%, #000 42%);
+  mask: radial-gradient(farthest-side, transparent 38%, #000 42%);
 }
 
 .traj-usage-ring.is-hist {
-  --ring: var(--dsw-chat-hist-fill);
+  --ring: rgb(234, 89, 85);
+  --track: rgb(61, 36, 35);
 }
 
 .traj-usage-card {
@@ -2736,11 +2738,11 @@ body {
 }
 
 .tool-call-status.is-ok {
-  color: #57c577;
+  color: rgb(87, 197, 119);
 }
 
 .tool-call-status.is-fail {
-  color: #ea5955;
+  color: rgb(234, 89, 85);
 }
 
 .tool-call-status.is-running {

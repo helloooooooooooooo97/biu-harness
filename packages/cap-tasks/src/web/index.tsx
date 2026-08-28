@@ -2426,7 +2426,7 @@ function UsageCapsule({ usage, aggregate }: { usage: SumUsage; aggregate: boolea
         <span className="traj-usage-in">{formatTokens(usage.inputTokens)}</span>
         <span
           className="traj-usage-ring is-cache"
-          style={{ '--fill': pct ?? 0 } as CSSProperties}
+          style={{ '--fill': pct ?? 0, '--ring': 'rgb(87, 197, 119)', '--track': 'rgb(42, 58, 48)' } as CSSProperties}
           aria-hidden
         />
       </span>
