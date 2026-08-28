@@ -6,6 +6,7 @@ import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import { formatPicks, PickChipLabel, usePickState, type PickService } from '@biu/cap-pick/web'
 import { ModelConfigDialog } from './model-config-dialog.tsx'
 import { ImageThumbs } from './image-thumbs.tsx'
+import { collectClipboardImages, collectImageFiles } from './clipboard-images.ts'
 
 /** 按键不驱动受控 value；仅防抖更新发送按钮可用态，避免每个字符打穿 React 渲染。 */
 const INPUT_DEBOUNCE_MS = 120
@@ -53,15 +54,9 @@ function clearDraft(sessionId: string) {
   }
 }
 
-const IMAGE_MIMES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp'])
 const MAX_PENDING_IMAGES = 6
 
 type PendingImage = { id: string; name: string; mime: string; previewUrl: string; file: File }
-
-function collectImageFiles(list: FileList | File[] | null | undefined): File[] {
-  if (!list) return []
-  return [...list].filter((file) => IMAGE_MIMES.has(file.type))
-}
 
 function readFileDataUrl(file: File): Promise<{ name: string; mime: string; url: string }> {
   return new Promise((resolve, reject) => {
@@ -443,11 +438,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   }, [])
 
   function onPaste(event: ClipboardEvent<HTMLTextAreaElement>) {
-    const files = collectImageFiles(event.clipboardData?.files)
-    const fromItems = [...(event.clipboardData?.items ?? [])]
-      .map((item) => (item.kind === 'file' ? item.getAsFile() : null))
-      .filter((file): file is File => Boolean(file))
-    const images = collectImageFiles([...files, ...fromItems])
+    const images = collectClipboardImages(event.clipboardData)
     if (!images.length) return
     addImageFiles(images)
     if (!event.clipboardData?.getData('text/plain')) event.preventDefault()
