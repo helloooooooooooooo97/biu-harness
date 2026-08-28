@@ -1,9 +1,52 @@
-import { type CSSProperties } from 'react'
 import {
   formatTokens,
   formatTrajectoryUsage,
   type TrajectoryUsage,
 } from '@biu/web-session-view'
+
+const CACHE_RING = '#57C577'
+const HIST_RING = '#E85854'
+const CACHE_TRACK = '#2A3A30'
+const HIST_TRACK = '#3D2423'
+const RING_R = 4.5
+const RING_C = 2 * Math.PI * RING_R
+
+function UsageRing({
+  fill,
+  color,
+  track,
+  className,
+}: {
+  fill: number
+  color: string
+  track: string
+  className?: string
+}) {
+  const pct = Math.max(0, Math.min(100, fill))
+  return (
+    <svg
+      className={className ? `traj-usage-ring ${className}` : 'traj-usage-ring'}
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      aria-hidden
+    >
+      <circle cx="6" cy="6" r={RING_R} fill="none" stroke={track} strokeWidth="2.5" />
+      {pct > 0 ? (
+        <circle
+          cx="6"
+          cy="6"
+          r={RING_R}
+          fill="none"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeDasharray={`${(pct / 100) * RING_C} ${RING_C}`}
+          transform="rotate(-90 6 6)"
+        />
+      ) : null}
+    </svg>
+  )
+}
 
 function formatTok(n: number) {
   return formatTokens(n)
@@ -48,19 +91,12 @@ export function UsageInline({
     <span className="traj-usage" title={formatTrajectoryUsage(usage)}>
       <span className="traj-usage-in-pair" title={cacheTitle}>
         <span className="traj-usage-in">{formatTok(usage.inputTokens)}</span>
-        <span
-          className="traj-usage-ring is-cache"
-          style={{ '--fill': cacheFill, '--ring': 'rgb(87, 197, 119)', '--track': 'rgb(42, 58, 48)' } as CSSProperties}
-          aria-hidden
-        />
+        <UsageRing className="is-cache" fill={cacheFill} color={CACHE_RING} track={CACHE_TRACK} />
       </span>
       {hist != null ? (
-        <span
-          className="traj-usage-ring is-hist"
-          style={{ '--fill': hist, '--ring': 'rgb(234, 89, 85)', '--track': 'rgb(61, 36, 35)' } as CSSProperties}
-          title={`历史占比 ${hist}%`}
-          aria-label={`历史占比 ${hist}%`}
-        />
+        <span title={`历史占比 ${hist}%`} aria-label={`历史占比 ${hist}%`}>
+          <UsageRing className="is-hist" fill={hist} color={HIST_RING} track={HIST_TRACK} />
+        </span>
       ) : null}
       <span className="traj-usage-arrow" aria-hidden>
         →

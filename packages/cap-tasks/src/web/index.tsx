@@ -657,7 +657,7 @@ function ActorChip({ actor, empty = '未分配' }: { actor: TaskActor | null | u
       title={actor.sessionId ? `${actor.name} · ${actor.sessionId.slice(0, 8)}` : actor.name}
     >
       {actor.kind === 'agent' && actor.mascot ? (
-        <MascotAvatar shape={actor.mascot.shape} color={actor.mascot.color} eye={actor.mascot.eye} className="size-4" />
+        <MascotAvatar shape={actor.mascot.shape} color={actor.mascot.color} eye={actor.mascot.eye} size={16} />
       ) : (
         <span className="tasks-avatar" style={{ background: color }} aria-hidden>
           {actor.kind === 'agent' ? <CpuChipIcon className="size-[11px]" /> : initial}
@@ -739,7 +739,7 @@ function AssigneePicker({
               }}
             >
               {agent.mascot ? (
-                <MascotAvatar shape={agent.mascot.shape} color={agent.mascot.color} eye={agent.mascot.eye} className="size-4" />
+                <MascotAvatar shape={agent.mascot.shape} color={agent.mascot.color} eye={agent.mascot.eye} size={16} />
               ) : (
                 <span className="tasks-avatar">
                   <CpuChipIcon className="size-[11px]" />
@@ -2090,7 +2090,7 @@ function TasksBoard({
                 ) : null}
                 <div className="tasks-card-meta">
                   {task.assignee && task.assignee.kind === 'agent' && task.assignee.mascot ? (
-                    <MascotAvatar shape={task.assignee.mascot.shape} color={task.assignee.mascot.color} eye={task.assignee.mascot.eye} busy={task.status === 'doing'} className="size-3.5" />
+                    <MascotAvatar shape={task.assignee.mascot.shape} color={task.assignee.mascot.color} eye={task.assignee.mascot.eye} busy={task.status === 'doing'} size={14} />
                   ) : null}
                   <span className="tasks-card-assignee">{task.assignee?.name ?? '未分配'}</span>
                   {task.reports?.length ? <span className="tasks-card-reports">report {task.reports.length}次</span> : null}
@@ -2424,11 +2424,21 @@ function UsageCapsule({ usage, aggregate }: { usage: SumUsage; aggregate: boolea
     >
       <span className="traj-usage-in-pair" title={cacheTitle}>
         <span className="traj-usage-in">{formatTokens(usage.inputTokens)}</span>
-        <span
-          className="traj-usage-ring is-cache"
-          style={{ '--fill': pct ?? 0, '--ring': 'rgb(87, 197, 119)', '--track': 'rgb(42, 58, 48)' } as CSSProperties}
-          aria-hidden
-        />
+        <svg className="traj-usage-ring is-cache" width="12" height="12" viewBox="0 0 12 12" aria-hidden>
+          <circle cx="6" cy="6" r="4.5" fill="none" stroke="#2A3A30" strokeWidth="2.5" />
+          {(pct ?? 0) > 0 ? (
+            <circle
+              cx="6"
+              cy="6"
+              r="4.5"
+              fill="none"
+              stroke="#57C577"
+              strokeWidth="2.5"
+              strokeDasharray={`${((pct ?? 0) / 100) * 2 * Math.PI * 4.5} ${2 * Math.PI * 4.5}`}
+              transform="rotate(-90 6 6)"
+            />
+          ) : null}
+        </svg>
       </span>
       <span className="traj-usage-arrow" aria-hidden>
         →

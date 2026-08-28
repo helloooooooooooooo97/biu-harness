@@ -47,7 +47,7 @@
   --dsw-chat-reply-pad-x: 12px;
   --dsw-chat-max-width: 768px;
   --dsw-chat-code-bg: var(--dsw-sidebar);
-  --dsw-chat-hist-fill: rgb(234, 89, 85);
+  --dsw-chat-hist-fill: #E85854;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, Consolas, monospace;
@@ -674,16 +674,25 @@ body {
 }
 
 .sidebar-chat-count {
-  display: inline-flex;
+  display: inline-grid;
   flex-shrink: 0;
-  align-items: center;
+  place-items: center;
+  width: 24px;
+  height: 24px;
   grid-column: 2;
   justify-self: end;
+  margin: 0;
+  padding: 0;
+  border-radius: 6px;
   color: inherit;
   font: inherit;
+  line-height: 0;
 }
 
 .sidebar-chat-count-num {
+  display: block;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
   opacity: 1;
 }
 
@@ -1603,24 +1612,13 @@ body {
   font-weight: 600;
 }
 
-/* 绿色 cache / 红色历史：圆环用实色，避免细环抗锯齿混成发灰的红 */
+/* 绿色 cache / 红色历史：SVG 描边圆环，不用 mask，取色能落到实色 */
 .traj-usage-ring {
-  --fill: 0;
-  --ring: rgb(87, 197, 119);
-  --track: rgb(42, 58, 48);
+  display: block;
   flex: none;
   width: 12px;
   height: 12px;
-  border-radius: 50%;
-  color-scheme: light;
-  background: conic-gradient(var(--ring) calc(var(--fill) * 1%), var(--track) 0);
-  -webkit-mask: radial-gradient(farthest-side, transparent 38%, #000 42%);
-  mask: radial-gradient(farthest-side, transparent 38%, #000 42%);
-}
-
-.traj-usage-ring.is-hist {
-  --ring: rgb(234, 89, 85);
-  --track: rgb(61, 36, 35);
+  overflow: visible;
 }
 
 .traj-usage-card {
@@ -2738,11 +2736,11 @@ body {
 }
 
 .tool-call-status.is-ok {
-  color: rgb(87, 197, 119);
+  color: #57C577;
 }
 
 .tool-call-status.is-fail {
-  color: rgb(234, 89, 85);
+  color: #E85854;
 }
 
 .tool-call-status.is-running {
