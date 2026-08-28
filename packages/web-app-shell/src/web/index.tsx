@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useState, useSyncExternalStore, type CSSP
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
 import type { SlotProps } from '@biu/web-slots'
-import { bindSnapshot, type Snapshot, type SnapshotService } from '@biu/web-snapshot'
+import { bindSnapshot, type SnapshotService } from '@biu/web-snapshot'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
 import { parseAppPath } from '@biu/web-session-view'
@@ -27,6 +27,7 @@ import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import { chromeIcon } from './chrome-icon.ts'
 import {
+  ArrowDownTrayIcon,
   ChatBubbleLeftIcon,
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
@@ -48,13 +49,11 @@ function ModuleIcon({ module }: { module: AppModule }) {
 function ModuleRail({
   active,
   agentHref,
-  live,
   modules,
   onSettings,
 }: {
   active: string
   agentHref: string
-  live: boolean
   modules: AppModule[]
   onSettings: () => void
 }) {
@@ -81,11 +80,7 @@ function ModuleRail({
         })}
       </div>
       <div className="app-activity-footer">
-        <span
-          className={`app-activity-live${live ? ' is-live' : ''}`}
-          title={live ? 'Live' : 'Connecting'}
-          aria-label={live ? 'Live' : 'Connecting'}
-        />
+        <UpdateButton />
         <button
           type="button"
           className="app-activity-item app-activity-settings"
@@ -97,6 +92,56 @@ function ModuleRail({
         </button>
       </div>
     </nav>
+  )
+}
+
+function UpdateButton() {
+  const [behind, setBehind] = useState(0)
+  const [busy, setBusy] = useState(false)
+  const [hint, setHint] = useState<string | undefined>()
+
+  useEffect(() => {
+    void fetch('/api/update')
+      .then((res) => res.json() as Promise<{ behind?: number }>)
+      .then((data) => setBehind(Math.max(0, Number(data.behind) || 0)))
+      .catch(() => {})
+  }, [])
+
+  const download = useCallback(async () => {
+    if (busy) return
+    setBusy(true)
+    setHint(undefined)
+    try {
+      const res = await fetch('/api/update', { method: 'POST' })
+      const data = (await res.json()) as { error?: string; restarting?: boolean }
+      if (!res.ok) throw new Error(data.error || '更新失败')
+      setBehind(0)
+      setHint('正在重启…')
+    } catch (error) {
+      setBusy(false)
+      setHint(String(error))
+    }
+  }, [busy])
+
+  const label = hint ?? (behind > 0 ? `下载更新 · 落后 ${behind}` : '下载更新')
+  const badge = behind > 99 ? '99+' : String(behind)
+
+  return (
+    <button
+      type="button"
+      className={`app-activity-item app-activity-update${busy ? ' is-busy' : ''}`}
+      title={label}
+      aria-label={label}
+      disabled={busy}
+      onClick={() => void download()}
+    >
+      <ArrowDownTrayIcon {...chromeIcon} />
+      {behind > 0 && !busy ? (
+        <span className="app-activity-badge" aria-hidden>
+          {badge}
+        </span>
+      ) : null}
+    </button>
   )
 }
 
@@ -168,9 +213,6 @@ function Shell(props: SlotProps) {
   const slots = props.slots as SlotsService
   const navigate = useNavigate()
   const location = useLocation()
-  const live = useSnapshot((state: Snapshot) =>
-    state.plugins.some((plugin) => plugin.layer === 'capability' && plugin.enabled),
-  )
   const modules = useAppModules()
   const pluginModules = modules.filter((item) => item.id !== 'agent')
   const sessionId = useSessionView((state) => state.sessionId)
@@ -302,7 +344,6 @@ function Shell(props: SlotProps) {
       <ModuleRail
         active={activeModule}
         agentHref={agentHref}
-        live={live}
         modules={modules}
         onSettings={() => setSettingsOpen(true)}
       />

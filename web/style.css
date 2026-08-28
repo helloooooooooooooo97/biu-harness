@@ -835,23 +835,23 @@ body {
   flex: 1;
   flex-direction: column;
   align-items: stretch;
-  gap: 2px;
-  padding-top: 10px;
+  gap: 0;
+  padding-top: 8px;
 }
 
 .app-activity-footer {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding-bottom: 10px;
+  align-items: stretch;
+  gap: 0;
+  padding-bottom: 8px;
 }
 
 .app-activity-item {
   position: relative;
   display: grid;
   width: 100%;
-  height: 48px;
+  height: 36px;
   place-items: center;
   border: 0;
   background: transparent;
@@ -870,8 +870,8 @@ body {
 
 .app-activity-indicator {
   position: absolute;
-  top: 10px;
-  bottom: 10px;
+  top: 6px;
+  bottom: 6px;
   left: 0;
   width: 2px;
   border-radius: 0 2px 2px 0;
@@ -882,15 +882,27 @@ body {
   background: var(--dsw-business);
 }
 
-.app-activity-live {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--dsw-hover-strong);
+.app-activity-update.is-busy {
+  opacity: 0.55;
+  cursor: wait;
 }
 
-.app-activity-live.is-live {
-  background: var(--dsw-ok);
+.app-activity-badge {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  z-index: 1;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ea5955;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
 }
 
 .sr-only {

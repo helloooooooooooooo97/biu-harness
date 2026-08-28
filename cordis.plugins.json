@@ -1,6 +1,7 @@
 {
   "host": [
     { "id": "http", "package": "@biu/host-http", "togglable": false, "enabled": true },
+    { "id": "update", "package": "@biu/host-update", "togglable": false, "enabled": true },
     { "id": "session-store", "package": "@biu/host-session-store", "togglable": false, "enabled": true },
     { "id": "sessions", "package": "@biu/host-sessions", "togglable": false, "enabled": true },
     { "id": "tools", "package": "@biu/host-tools", "togglable": false, "enabled": true },

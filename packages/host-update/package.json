@@ -1,0 +1,13 @@
+{
+  "name": "@biu/host-update",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "从 origin/main 拉取更新并重启",
+  "exports": {
+    ".": "./src/host/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  }
+}
