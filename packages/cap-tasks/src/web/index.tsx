@@ -2404,16 +2404,15 @@ function eventEndOf(t: Task): number | null {
   return null
 }
 
-/** 消耗胶囊：与 thread/trajectory 的 .traj-usage 对齐——绿色 cache 胶囊 + 可选历史圆环 + in→out。 */
+/** 消耗：与 thread/trajectory 对齐——绿色 cache 圆环 + in→out，数字在悬浮 title。 */
 function UsageCapsule({ usage, aggregate }: { usage: SumUsage; aggregate: boolean }) {
   if (usage.totalTokens <= 0) return <span className="traj-usage-empty">—</span>
   const pct =
     usage.inputTokens && usage.cacheReadTokens ? Math.min(100, Math.round((usage.cacheReadTokens / usage.inputTokens) * 100)) : null
-  const inStyle: CSSProperties | undefined = pct
-    ? {
-        backgroundImage: `linear-gradient(90deg, rgba(34, 140, 90, 0.28) 0%, rgba(34, 140, 90, 0.28) ${pct}%, rgba(15, 17, 21, 0.06) ${pct}%, rgba(15, 17, 21, 0.06) 100%)`,
-      }
-    : undefined
+  const cacheTitle =
+    pct != null
+      ? `input ${formatTokens(usage.inputTokens)} · cache hit ${pct}% (${formatTokens(usage.cacheReadTokens)})`
+      : `input ${formatTokens(usage.inputTokens)}`
   return (
     <span
       className={`traj-usage tasks-usage-capsule${aggregate ? ' is-agg' : ''}`}
@@ -2423,14 +2422,20 @@ function UsageCapsule({ usage, aggregate }: { usage: SumUsage; aggregate: boolea
           : `本任务各回合消耗：in ${formatTokens(usage.inputTokens)} / out ${formatTokens(usage.outputTokens)}${usage.cacheReadTokens ? ` / cache ${formatTokens(usage.cacheReadTokens)}` : ''}`
       }
     >
-      <span className={`traj-usage-in-wrap${pct != null ? ' has-cache' : ''}`} style={inStyle}>
+      <span className="traj-usage-in-pair" title={cacheTitle}>
         <span className="traj-usage-in">{formatTokens(usage.inputTokens)}</span>
-        {pct != null ? <span className="traj-usage-cache-pct">{pct}%</span> : null}
+        <span
+          className="traj-usage-ring is-cache"
+          style={{ '--fill': pct ?? 0 } as CSSProperties}
+          aria-hidden
+        />
       </span>
       <span className="traj-usage-arrow" aria-hidden>
         →
       </span>
-      <span className="traj-usage-out">{formatTokens(usage.outputTokens)}</span>
+      <span className="traj-usage-out" title={`output ${formatTokens(usage.outputTokens)}`}>
+        {formatTokens(usage.outputTokens)}
+      </span>
     </span>
   )
 }

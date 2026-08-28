@@ -20,8 +20,8 @@ function isHistPct(v: unknown): v is number {
 }
 
 /**
- * Input 胶囊只铺绿色 cache hit；历史占比拆成右侧红色圆环（与清空上下文 chip 同色）。
- * histPct 默认取 usage.histPct，也可用 histPct 参数覆盖。
+ * 绿色圆环 = cache hit（旁注 input 数量）；红色圆环 = 历史占比。
+ * cache / 历史的百分比数字放在悬浮 title。histPct 默认取 usage.histPct。
  */
 export function UsageInline({
   usage,
@@ -38,29 +38,26 @@ export function UsageInline({
   const hist = isHistPct(histPct !== undefined ? histPct : usage.histPct)
     ? Math.round((histPct !== undefined ? histPct : usage.histPct!) * 100)
     : null
-
-  const inStyle: CSSProperties | undefined =
-    pct != null
-      ? {
-          backgroundImage: `linear-gradient(90deg, rgba(34, 140, 90, 0.28) 0%, rgba(34, 140, 90, 0.28) ${pct}%, rgba(15, 17, 21, 0.06) ${pct}%, rgba(15, 17, 21, 0.06) 100%)`,
-        }
-      : undefined
-
-  const title =
+  const cacheFill = pct ?? 0
+  const cacheTitle =
     pct != null
       ? `input ${formatTok(usage.inputTokens)} · cache hit ${pct}% (${formatTok(usage.cacheReadTokens!)})`
       : `input ${formatTok(usage.inputTokens)}`
 
   return (
     <span className="traj-usage" title={formatTrajectoryUsage(usage)}>
-      <span className={`traj-usage-in-wrap${pct != null ? ' has-cache' : ''}`} style={inStyle} title={title}>
+      <span className="traj-usage-in-pair" title={cacheTitle}>
         <span className="traj-usage-in">{formatTok(usage.inputTokens)}</span>
-        {pct != null ? <span className="traj-usage-cache-pct">{pct}%</span> : null}
+        <span
+          className="traj-usage-ring is-cache"
+          style={{ '--fill': cacheFill } as CSSProperties}
+          aria-hidden
+        />
       </span>
       {hist != null ? (
         <span
-          className="traj-usage-hist-ring"
-          style={{ '--hist': hist } as CSSProperties}
+          className="traj-usage-ring is-hist"
+          style={{ '--fill': hist } as CSSProperties}
           title={`历史占比 ${hist}%`}
           aria-label={`历史占比 ${hist}%`}
         />
@@ -68,7 +65,7 @@ export function UsageInline({
       <span className="traj-usage-arrow" aria-hidden>
         →
       </span>
-      <span className="traj-usage-out" title="output tokens">
+      <span className="traj-usage-out" title={`output ${formatTok(usage.outputTokens)}`}>
         {formatTok(usage.outputTokens)}
       </span>
     </span>
