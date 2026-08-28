@@ -8,8 +8,8 @@ export function PickToggle({ pick }: { pick: PickService }) {
     <button
       type="button"
       className={`project-chip project-chip-icon-only${picking ? ' is-active' : ''}`}
-      title="选取对象"
       aria-label="选取对象"
+      data-dock-tip="选取对象"
       aria-pressed={picking}
       data-testid="header-pick-toggle"
       data-biu-ignore

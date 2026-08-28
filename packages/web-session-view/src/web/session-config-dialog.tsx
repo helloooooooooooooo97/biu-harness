@@ -5,8 +5,8 @@ import {
   type SessionViewService,
 } from './index.ts'
 
-type ToolSourceId = 'minimal' | 'live' | 'plugin'
-type AgentMode = 'standard' | 'minimal'
+type ToolSourceId = 'minimal' | 'live' | 'plugin' | 'store'
+type AgentMode = 'standard' | 'minimal' | 'create'
 type ChatProvider = 'deepseek' | 'openai'
 
 interface InspectorTool {

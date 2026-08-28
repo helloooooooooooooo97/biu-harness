@@ -96,3 +96,29 @@ test('catalog lists all tools; extraTools temporarily unlocks minimal', async ()
   })
   await assert.rejects(() => ctx.tools.invoke('fs_read'), /not available in minimal mode/)
 })
+
+test('store tools only appear in create mode', async () => {
+  const ctx = new Context()
+  await ctx.plugin(tools)
+  ctx.tools.register({
+    name: 'bash',
+    description: 'bash',
+    parameters: { type: 'object', properties: {} },
+    execute: () => 'bash',
+  })
+  tools.runWithToolOrigin('store', () => {
+    ctx.tools.register({
+      name: 'store_ping',
+      description: 'store ping',
+      parameters: { type: 'object', properties: {} },
+      execute: () => 'pong',
+    })
+  })
+  assert.equal(ctx.tools.originOf('store_ping'), 'store')
+  assert.equal(ctx.tools.names().includes('store_ping'), false)
+  ctx.tools.setMode('create')
+  assert.equal(ctx.tools.names().includes('store_ping'), true)
+  assert.equal(await ctx.tools.invoke('store_ping'), 'pong')
+  ctx.tools.setMode('standard')
+  await assert.rejects(() => ctx.tools.invoke('store_ping'), /not available in standard mode/)
+})

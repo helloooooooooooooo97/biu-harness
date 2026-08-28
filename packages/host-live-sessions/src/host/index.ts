@@ -279,7 +279,7 @@ export function apply(ctx: Context) {
         model: { type: 'string' },
         provider: { type: 'string', enum: ['deepseek', 'openai'] },
         systemPrompt: { type: 'string' },
-        agentMode: { type: 'string', enum: ['standard', 'minimal'] },
+        agentMode: { type: 'string', enum: ['standard', 'minimal', 'create'] },
         extraTools: { type: 'array', items: { type: 'string' } },
       },
     },
@@ -293,7 +293,7 @@ export function apply(ctx: Context) {
           ...(typeof args.model === 'string' ? { model: args.model } : {}),
           ...(args.provider === 'deepseek' || args.provider === 'openai' ? { provider: args.provider } : {}),
           ...(typeof args.systemPrompt === 'string' ? { systemPrompt: args.systemPrompt } : {}),
-          ...(args.agentMode === 'standard' || args.agentMode === 'minimal'
+          ...(args.agentMode === 'standard' || args.agentMode === 'minimal' || args.agentMode === 'create'
             ? { agentMode: args.agentMode }
             : {}),
           ...(Array.isArray(args.extraTools)
@@ -353,7 +353,7 @@ export function apply(ctx: Context) {
         model: { type: 'string' },
         provider: { type: 'string', enum: ['deepseek', 'openai'] },
         systemPrompt: { type: 'string' },
-        agentMode: { type: 'string', enum: ['standard', 'minimal'] },
+        agentMode: { type: 'string', enum: ['standard', 'minimal', 'create'] },
         extraTools: { type: 'array', items: { type: 'string' } },
         pinned: { type: 'boolean', description: 'true=收藏（即侧栏置顶 pinned）；false=取消收藏' },
       },
@@ -368,7 +368,7 @@ export function apply(ctx: Context) {
         ...(typeof args.model === 'string' ? { model: args.model } : {}),
         ...(args.provider === 'deepseek' || args.provider === 'openai' ? { provider: args.provider } : {}),
         ...(typeof args.systemPrompt === 'string' ? { systemPrompt: args.systemPrompt } : {}),
-        ...(args.agentMode === 'standard' || args.agentMode === 'minimal'
+        ...(args.agentMode === 'standard' || args.agentMode === 'minimal' || args.agentMode === 'create'
           ? { agentMode: args.agentMode }
           : {}),
         ...(Array.isArray(args.extraTools)

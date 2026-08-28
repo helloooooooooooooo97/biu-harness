@@ -8,7 +8,7 @@ import {
 } from '@biu/host-live-sessions/usage'
 import { normalizeSessionType, type SessionEvent, type SessionType } from '@biu/type-session'
 
-export type ToolSourceId = 'minimal' | 'live' | 'plugin'
+export type ToolSourceId = 'minimal' | 'live' | 'plugin' | 'store'
 
 export interface InspectorToolRow {
   name: string
@@ -38,13 +38,19 @@ const SOURCE_INFO: InspectorSourceInfo[] = [
   {
     id: 'plugin',
     label: '插件注册',
-    description: '各 seams/插件注册的工具；standard 全开，minimal 需勾选常驻或 slash 临时放开。',
+    description: '内置 seams 工具；标准与创造模式全开，极简需勾选常驻或 slash 临时放开。',
+  },
+  {
+    id: 'store',
+    label: '商店插件',
+    description: '已安装商店插件注册的工具，仅创造模式可调用。',
   },
 ]
 
-export function toolSourceOf(name: string): ToolSourceId {
+export function toolSourceOf(name: string, origin?: 'core' | 'store'): ToolSourceId {
   if ((MINIMAL_TOOL_NAMES as readonly string[]).includes(name)) return 'minimal'
   if ((LIVE_TOOL_NAMES as readonly string[]).includes(name)) return 'live'
+  if (origin === 'store') return 'store'
   return 'plugin'
 }
 
@@ -53,7 +59,10 @@ export function isToolActiveForSession(opts: {
   mode: AgentToolMode
   sessionType: SessionType
   pinnedExtras: readonly string[]
+  origin?: 'core' | 'store'
 }): boolean {
+  if (opts.mode === 'create') return true
+  if (opts.origin === 'store' || toolSourceOf(opts.name, opts.origin) === 'store') return false
   if (opts.mode === 'standard') return true
   if ((MINIMAL_TOOL_NAMES as readonly string[]).includes(opts.name)) return true
   if (opts.sessionType === 'live' && (LIVE_TOOL_NAMES as readonly string[]).includes(opts.name)) {
@@ -63,12 +72,12 @@ export function isToolActiveForSession(opts: {
 }
 
 export function buildInspectorTools(
-  catalog: Array<{ name: string; description: string }>,
+  catalog: Array<{ name: string; description: string; origin?: 'core' | 'store' }>,
   opts: { mode: AgentToolMode; sessionType: SessionType; pinnedExtras: readonly string[] },
 ): InspectorToolRow[] {
   return catalog
     .map((item) => {
-      const source = toolSourceOf(item.name)
+      const source = toolSourceOf(item.name, item.origin)
       return {
         name: item.name,
         description: item.description,
@@ -78,12 +87,13 @@ export function buildInspectorTools(
           mode: opts.mode,
           sessionType: opts.sessionType,
           pinnedExtras: opts.pinnedExtras,
+          origin: item.origin,
         }),
         configurable: opts.mode === 'minimal' && source === 'plugin',
       }
     })
     .sort((a, b) => {
-      const order = { minimal: 0, live: 1, plugin: 2 } as const
+      const order = { minimal: 0, live: 1, plugin: 2, store: 3 } as const
       const diff = order[a.source] - order[b.source]
       return diff !== 0 ? diff : a.name.localeCompare(b.name)
     })
@@ -96,7 +106,9 @@ export function registerChatInspectorRoutes(ctx: Context) {
     if (!record) return route.send(404, { error: 'unknown session' })
     const sessionType = normalizeSessionType(record.type)
     const resolved = ctx.chat.resolveEffective(id)
-    const mode: AgentToolMode = resolved.effective.agentMode === 'minimal' ? 'minimal' : 'standard'
+    const rawMode = resolved.effective.agentMode
+    const mode: AgentToolMode =
+      rawMode === 'minimal' || rawMode === 'create' ? rawMode : 'standard'
     const pinnedExtras = Array.isArray(resolved.effective.extraTools) ? resolved.effective.extraTools : []
     const tools = buildInspectorTools(ctx.tools.catalog(), { mode, sessionType, pinnedExtras })
     const title =

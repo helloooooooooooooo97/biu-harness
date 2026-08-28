@@ -47,6 +47,7 @@
   --dsw-chat-reply-pad-x: 12px;
   --dsw-chat-max-width: 768px;
   --dsw-chat-code-bg: var(--dsw-sidebar);
+  --dsw-chat-hist-fill: rgba(218, 21, 77, 0.778);
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, Consolas, monospace;
@@ -930,6 +931,20 @@ body {
   height: 32px;
 }
 
+.project-chip-hist {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.project-chip-hist-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--dsw-chat-hist-fill);
+}
+
 .project-chip-dashed {
   border-style: dashed;
 }
@@ -967,15 +982,174 @@ body {
   color: var(--dsw-sidebar-fg-active);
 }
 
-.dock-seg {
-  display: flex;
-  flex-shrink: 0;
-  overflow: hidden;
+.dock-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+[data-dock-tip] {
+  position: relative;
+}
+
+[data-dock-tip]::after {
+  content: attr(data-dock-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  z-index: 50;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 4px 8px;
+  border: 1px solid var(--dsw-border);
+  border-radius: 6px;
+  background: var(--dsw-sidebar);
+  color: var(--dsw-label);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  transition: opacity 0.12s ease;
+}
+
+[data-dock-tip]:hover::after,
+[data-dock-tip]:focus-visible::after {
+  opacity: 1;
+}
+
+[data-dock-tip][aria-expanded='true']::after {
+  opacity: 0;
+}
+
+.dock-icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 1px solid var(--dsw-border);
   border-radius: 999px;
   background: color-mix(in srgb, var(--dsw-bg) 82%, transparent);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  color: var(--dsw-sidebar-fg);
+  cursor: pointer;
+  box-shadow: none;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.dock-icon-btn:hover:not(:disabled) {
+  color: var(--dsw-sidebar-fg-active);
+}
+
+.dock-icon-btn.is-active {
+  border-color: var(--dsw-pick-stroke);
+  background: var(--dsw-pick-fill);
+  color: var(--dsw-sidebar-fg-active);
+}
+
+.dock-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.dock-icon-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  display: flex;
+  min-width: 160px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--dsw-border);
+  border-radius: 10px;
+  background: var(--dsw-sidebar);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.dock-icon-wrap.is-end .dock-icon-menu {
+  left: auto;
+  right: 0;
+}
+
+.dock-icon-head {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--dsw-label-3);
+}
+
+.dock-icon-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  border-radius: 7px;
+  padding: 6px 8px;
+  background: transparent;
+  color: var(--dsw-label-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dock-icon-item:hover {
+  background: var(--dsw-hover);
+}
+
+.dock-icon-item.is-active {
+  color: var(--dsw-business);
+  font-weight: 650;
+}
+
+.dock-icon-item-label {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.dock-icon-item-ico {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 6px;
+}
+
+.dock-icon-item-end {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.dock-icon-hint {
+  display: inline-flex;
+  align-items: center;
+  color: var(--dsw-label-3);
+  cursor: help;
+}
+
+.dock-icon-hint:hover {
+  color: var(--dsw-label);
+}
+
+.dock-icon-hint::after {
+  width: 220px;
+  white-space: normal;
+  text-align: left;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.dock-icon-check {
+  flex: none;
+  color: var(--dsw-business);
 }
 
 .dock-approval-hint {

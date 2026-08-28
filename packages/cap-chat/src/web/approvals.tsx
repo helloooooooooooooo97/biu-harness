@@ -1,10 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { PaintBrushIcon } from '@heroicons/react/16/solid'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
+import {
+  BoltIcon,
+  CheckCircleIcon,
+  CommandLineIcon,
+  ExclamationCircleIcon,
+  PaintBrushIcon,
+  PauseIcon,
+  SparklesIcon,
+  Squares2X2Icon,
+} from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type ChatNode, type SessionViewService } from '@biu/web-session-view'
 import { SessionProjectPanel } from './project-panel.tsx'
 
-type AgentMode = 'standard' | 'minimal'
+type AgentMode = 'minimal' | 'standard' | 'create'
+
+function parseAgentMode(value: unknown): AgentMode {
+  return value === 'minimal' || value === 'create' ? value : 'standard'
+}
 
 /** 最新一条回复的历史输入占比（0..1），驱动橡皮擦底色。 */
 function latestHistRatio(nodes: ChatNode[]): number | null {
@@ -15,7 +28,84 @@ function latestHistRatio(nodes: ChatNode[]): number | null {
   return Math.min(1, Math.max(0, hist))
 }
 
-/** Dock 顶栏：左侧文件 + 选取 + 清空上下文 + 标准/极简胶囊，右侧 auto/hold。 */
+function DockIconMenu<T extends string>({
+  label,
+  value,
+  options,
+  disabled,
+  align = 'start',
+  open,
+  wrapRef,
+  onOpenChange,
+  onSelect,
+}: {
+  label: string
+  value: T
+  options: { id: T; label: string; icon: ReactNode; hint?: string }[]
+  disabled?: boolean
+  align?: 'start' | 'end'
+  open: boolean
+  wrapRef: RefObject<HTMLDivElement | null>
+  onOpenChange: (open: boolean) => void
+  onSelect: (id: T) => void
+}) {
+  const current = options.find((item) => item.id === value) ?? options[0]!
+  return (
+    <div className={`dock-icon-wrap${align === 'end' ? ' is-end' : ''}`} ref={wrapRef}>
+      <button
+        type="button"
+        className={`dock-icon-btn${open ? ' is-active' : ''}`}
+        aria-label={`${label}：${current.label}`}
+        data-dock-tip={`${label}：${current.label}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        disabled={disabled}
+        onClick={() => onOpenChange(!open)}
+      >
+        {current.icon}
+      </button>
+      {open ? (
+        <div className="dock-icon-menu" role="menu">
+          <div className="dock-icon-head">{label}</div>
+          {options.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              className={`dock-icon-item${opt.id === value ? ' is-active' : ''}`}
+              role="menuitemradio"
+              aria-checked={opt.id === value}
+              onClick={() => {
+                onSelect(opt.id)
+                onOpenChange(false)
+              }}
+            >
+              <span className="dock-icon-item-label">
+                <span className="dock-icon-item-ico">{opt.icon}</span>
+                {opt.label}
+              </span>
+              <span className="dock-icon-item-end">
+                {opt.id === value ? <CheckCircleIcon aria-hidden className="size-[13px] dock-icon-check" /> : null}
+                {opt.hint ? (
+                  <span
+                    className="dock-icon-hint"
+                    data-dock-tip={opt.hint}
+                    aria-label={opt.hint}
+                    onClick={(event) => event.stopPropagation()}
+                    onPointerDown={(event) => event.stopPropagation()}
+                  >
+                    <ExclamationCircleIcon className="size-3.5" aria-hidden />
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/** Dock 顶栏：左侧文件 + 选取 + 清空上下文 + 模式图标菜单，右侧审批图标菜单。 */
 export function ApprovalsRail(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
@@ -27,13 +117,17 @@ export function ApprovalsRail(props: SlotProps) {
   const [agentMode, setAgentMode] = useState<AgentMode>('standard')
   const [modeBusy, setModeBusy] = useState(false)
   const [clearBusy, setClearBusy] = useState(false)
+  const [agentMenuOpen, setAgentMenuOpen] = useState(false)
+  const [approvalMenuOpen, setApprovalMenuOpen] = useState(false)
+  const agentMenuRef = useRef<HTMLDivElement>(null)
+  const approvalMenuRef = useRef<HTMLDivElement>(null)
 
   const refreshAgentMode = useCallback(async () => {
     try {
       const res = await fetch('/api/chat/config')
       if (!res.ok) return
       const data = (await res.json()) as { agentMode?: string }
-      setAgentMode(data.agentMode === 'minimal' ? 'minimal' : 'standard')
+      setAgentMode(parseAgentMode(data.agentMode))
     } catch {
       /* host 未就绪 */
     }
@@ -42,6 +136,27 @@ export function ApprovalsRail(props: SlotProps) {
   useEffect(() => {
     void refreshAgentMode()
   }, [refreshAgentMode])
+
+  useEffect(() => {
+    if (!agentMenuOpen && !approvalMenuOpen) return
+    const onDown = (event: MouseEvent) => {
+      const node = event.target as Node
+      if (agentMenuRef.current?.contains(node) || approvalMenuRef.current?.contains(node)) return
+      setAgentMenuOpen(false)
+      setApprovalMenuOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setAgentMenuOpen(false)
+      setApprovalMenuOpen(false)
+    }
+    window.addEventListener('mousedown', onDown)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('mousedown', onDown)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [agentMenuOpen, approvalMenuOpen])
 
   // 快捷键：command+e / ctrl+e 触发清空上下文（在输入框中同样生效）
   const clearContextRef = useRef<() => void>(() => {})
@@ -76,7 +191,7 @@ export function ApprovalsRail(props: SlotProps) {
       })
       if (!res.ok) return
       const data = (await res.json()) as { agentMode?: string }
-      setAgentMode(data.agentMode === 'minimal' ? 'minimal' : 'standard')
+      setAgentMode(parseAgentMode(data.agentMode))
     } finally {
       setModeBusy(false)
     }
@@ -137,68 +252,88 @@ export function ApprovalsRail(props: SlotProps) {
         aria-label="Session controls"
       >
         <div className="flex min-w-0 items-center gap-1">
-          <SessionProjectPanel {...props} />
           {props.renderSlot('header-tools')}
           <button
             type="button"
             disabled={!sessionId || clearBusy}
             aria-label="清空上下文"
-            title={
+            className="project-chip project-chip-icon-only relative"
+            data-dock-tip={
               histRatio != null
                 ? `清空上下文 · 历史 ${Math.round(histRatio * 100)}%`
                 : '清空上下文'
             }
-            className="project-chip project-chip-icon-only relative overflow-hidden"
             onClick={() => void clearContext()}
           >
             {histRatio != null && histRatio > 0 ? (
-              <span
-                className="pointer-events-none absolute inset-y-0 left-0 bg-[var(--dsw-danger)]/20"
-                style={{ width: `${Math.round(histRatio * 100)}%` }}
-                aria-hidden
-              />
+              <span className="project-chip-hist" aria-hidden>
+                <span className="project-chip-hist-bar" style={{ width: `${Math.round(histRatio * 100)}%` }} />
+              </span>
             ) : null}
             <PaintBrushIcon className="size-4 relative z-[1]" aria-hidden />
           </button>
-          <span className="sr-only">Agent mode</span>
-          <div className="dock-seg">
-            {([
-              ['standard', '标准'],
-              ['minimal', '极简'],
-            ] as const).map(([mode, label]) => (
-              <button
-                key={mode}
-                type="button"
-                disabled={modeBusy}
-                aria-pressed={agentMode === mode}
-                className={`px-1.5 py-1 ${
-                  agentMode === mode
-                    ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
-                    : 'hover:bg-[var(--dsw-hover)]'
-                }`}
-                onClick={() => void setMode(mode)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
         </div>
-        <div className="dock-seg">
-          <span className="sr-only">Tool approval mode</span>
-          {(['auto', 'hold'] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              className={`px-2.5 py-1 capitalize ${
-                approvalMode === mode
-                  ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
-                  : 'hover:bg-[var(--dsw-hover)]'
-              }`}
-              onClick={() => void sessionView.setApprovalMode(mode)}
-            >
-              {mode}
-            </button>
-          ))}
+        <div className="flex shrink-0 items-center gap-1">
+          <SessionProjectPanel {...props} />
+          <DockIconMenu
+            label="Agent 模式"
+            value={agentMode}
+            disabled={modeBusy}
+            align="end"
+            open={agentMenuOpen}
+            wrapRef={agentMenuRef}
+            onOpenChange={(next) => {
+              setAgentMenuOpen(next)
+              if (next) setApprovalMenuOpen(false)
+            }}
+            onSelect={(mode) => void setMode(mode)}
+            options={[
+              {
+                id: 'minimal',
+                label: '极简',
+                icon: <CommandLineIcon className="size-4" aria-hidden />,
+                hint: '只开放 bash 和文件编辑。上下文更省，适合改一小段、少打扰。',
+              },
+              {
+                id: 'standard',
+                label: '标准',
+                icon: <Squares2X2Icon className="size-4" aria-hidden />,
+                hint: '内置 Agent 工具全开（读文件、任务、MCP 等），不含商店插件。',
+              },
+              {
+                id: 'create',
+                label: '创造',
+                icon: <SparklesIcon className="size-4" aria-hidden />,
+                hint: '在标准之上，允许调用已安装的商店插件工具。',
+              },
+            ]}
+          />
+          <DockIconMenu
+            label="工具审批"
+            value={approvalMode === 'hold' ? 'hold' : 'auto'}
+            align="end"
+            open={approvalMenuOpen}
+            wrapRef={approvalMenuRef}
+            onOpenChange={(next) => {
+              setApprovalMenuOpen(next)
+              if (next) setAgentMenuOpen(false)
+            }}
+            onSelect={(mode) => void sessionView.setApprovalMode(mode)}
+            options={[
+              {
+                id: 'auto',
+                label: 'Auto',
+                icon: <BoltIcon className="size-4" aria-hidden />,
+                hint: '工具直接执行，不弹出确认。适合你信任当前会话、想少打断的时候。',
+              },
+              {
+                id: 'hold',
+                label: 'Hold',
+                icon: <PauseIcon className="size-4" aria-hidden />,
+                hint: '敏感工具先停住等你点允许或拒绝，超时未处理则拒绝。',
+              },
+            ]}
+          />
         </div>
       </div>
     </div>

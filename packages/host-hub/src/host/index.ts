@@ -5,6 +5,7 @@ import { kernelCatalogRows } from './kernel-rows.ts'
 import { resolveCatalog } from './resolve-catalog.ts'
 import type { PageSpec } from '@biu/type-http'
 import { HUB_CHANGE, HUB_CHANNEL_EVENT, HUB_CHANNEL_SNAPSHOT } from '@biu/type-http'
+import { runWithToolOrigin } from '@biu/host-tools'
 
 export { HUB_CHANGE, HUB_CHANNEL_EVENT, HUB_CHANNEL_SNAPSHOT }
 
@@ -137,7 +138,11 @@ export class HubService extends Service {
   private async mount(id: string) {
     const record = this.forks.get(id)
     if (!record || (record.fiber && record.fiber.uid !== null)) return
-    record.fiber = this.ctx.plugin(record.entry.plugin as Plugin, record.entry.config)
+    const mount = () => {
+      record.fiber = this.ctx.plugin(record.entry.plugin as Plugin, record.entry.config)
+    }
+    if (isStorePackage(record.entry.packageName)) runWithToolOrigin('store', mount)
+    else mount()
     await record.fiber
   }
 

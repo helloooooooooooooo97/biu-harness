@@ -8,9 +8,12 @@ export interface ToolSpec {
   execute: (args: Record<string, unknown>, signal: AbortSignal) => unknown | Promise<unknown>
 }
 
+export type ToolOrigin = 'core' | 'store'
+
 export interface ToolCatalogItem {
   name: string
   description: string
+  origin: ToolOrigin
 }
 
 export interface ToolRequest {
@@ -21,8 +24,13 @@ export interface ToolRequest {
 
 export type ToolGuard = (req: ToolRequest) => ToolRequest | Promise<ToolRequest>
 
-/** 对齐 dsh：standard 暴露全部已注册工具；minimal 仅 bash + str_replace_editor。 */
-export type AgentToolMode = 'standard' | 'minimal'
+/** 极简=底座；标准=内置工具；创造=内置 + 商店插件。 */
+export const AGENT_TOOL_MODES = ['minimal', 'standard', 'create'] as const
+export type AgentToolMode = (typeof AGENT_TOOL_MODES)[number]
+
+export function isAgentToolMode(value: unknown): value is AgentToolMode {
+  return value === 'minimal' || value === 'standard' || value === 'create'
+}
 
 export const MINIMAL_TOOL_NAMES = ['bash', 'str_replace_editor'] as const
 
@@ -34,6 +42,13 @@ const toolPolicyStorage = new AsyncLocalStorage<{
   mode: AgentToolMode
   extras: ReadonlySet<string>
 }>()
+
+const toolOriginStorage = new AsyncLocalStorage<ToolOrigin>()
+
+/** 商店插件 apply 期间注册的工具标成 store，仅创造模式可见。 */
+export function runWithToolOrigin<T>(origin: ToolOrigin, fn: () => T): T {
+  return toolOriginStorage.run(origin, fn)
+}
 
 export function runWithExtraTools<T>(names: readonly string[], fn: () => T): T {
   const cleaned = [...new Set(names.map((n) => n.trim()).filter(Boolean))]
@@ -52,6 +67,7 @@ export function runWithToolPolicy<T>(
 
 export class ToolsService extends Service {
   private tools = new Map<string, ToolSpec>()
+  private origins = new Map<string, ToolOrigin>()
   private guards: ToolGuard[] = []
   private mode: AgentToolMode = 'standard'
   /** 极简模式下常驻额外工具（配置面板勾选，跨回合生效）。 */
@@ -65,8 +81,12 @@ export class ToolsService extends Service {
     return this.mode
   }
 
+  originOf(name: string): ToolOrigin {
+    return this.origins.get(name) ?? 'core'
+  }
+
   setMode(mode: AgentToolMode) {
-    if (mode !== 'standard' && mode !== 'minimal') throw new Error(`unknown agent tool mode: ${mode}`)
+    if (!isAgentToolMode(mode)) throw new Error(`unknown agent tool mode: ${mode}`)
     if (this.mode === mode) return
     this.mode = mode
     this.ctx.emit('hub/change')
@@ -105,6 +125,8 @@ export class ToolsService extends Service {
   private visible(name: string) {
     const policy = toolPolicyStorage.getStore()
     const mode = policy?.mode ?? this.mode
+    if (mode === 'create') return true
+    if (this.originOf(name) === 'store') return false
     if (mode === 'standard') return true
     if ((MINIMAL_TOOL_NAMES as readonly string[]).includes(name)) return true
     if ((policy?.extras ?? new Set()).has(name)) return true
@@ -116,9 +138,11 @@ export class ToolsService extends Service {
     return this.ctx.effect(() => {
       if (this.tools.has(spec.name)) throw new Error(`tool already registered: ${spec.name}`)
       this.tools.set(spec.name, spec)
+      this.origins.set(spec.name, toolOriginStorage.getStore() ?? 'core')
       this.ctx.emit('hub/change')
       return () => {
         this.tools.delete(spec.name)
+        this.origins.delete(spec.name)
         this.ctx.emit('hub/change')
       }
     }, `tools.register ${spec.name}`)
@@ -136,7 +160,11 @@ export class ToolsService extends Service {
   /** 全量目录（不受 mode 过滤），供 slash 菜单。 */
   catalog(): ToolCatalogItem[] {
     return [...this.tools.values()]
-      .map((tool) => ({ name: tool.name, description: tool.description }))
+      .map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        origin: this.originOf(tool.name),
+      }))
       .sort((a, b) => a.name.localeCompare(b.name))
   }
 
@@ -159,7 +187,8 @@ export class ToolsService extends Service {
 
   async invoke(name: string, args: Record<string, unknown> = {}, signal: AbortSignal = new AbortController().signal) {
     if (!this.visible(name)) {
-      throw new Error(`tool not available in ${this.mode} mode: ${name}`)
+      const mode = toolPolicyStorage.getStore()?.mode ?? this.mode
+      throw new Error(`tool not available in ${mode} mode: ${name}`)
     }
     let req: ToolRequest = { name, args }
     for (const guard of this.guards) req = await guard(req)

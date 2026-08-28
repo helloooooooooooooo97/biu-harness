@@ -15,8 +15,8 @@ export function SessionProjectPanel(props: SlotProps) {
     return (
       <div
         className="project-chip project-chip-icon-only project-chip-dashed project-chip-muted"
-        title="先打开一个 Session"
         aria-label="先打开一个 Session"
+        data-dock-tip="先打开一个 Session"
       >
         <FolderGlyph />
       </div>
@@ -24,7 +24,6 @@ export function SessionProjectPanel(props: SlotProps) {
   }
 
   const bound = Boolean(project)
-  const label = project?.path ?? '选择本机文件夹并绑定为 Session cwd'
 
   return (
     <div className="project-chip-wrap">
@@ -32,8 +31,8 @@ export function SessionProjectPanel(props: SlotProps) {
         type="button"
         className={`project-chip project-chip-icon-only${bound ? '' : ' project-chip-dashed'}${busy ? ' is-busy' : ''}`}
         disabled={busy}
-        title={label}
-        aria-label={bound ? `已绑定 ${project!.name}` : '绑定项目文件夹'}
+        aria-label={bound ? `项目文件夹：${project!.name}` : '绑定项目文件夹'}
+        data-dock-tip={bound ? `项目文件夹：${project!.name}` : '绑定项目文件夹'}
         onClick={() => void projectView.openFolderForSession(sessionId).catch(() => undefined)}
       >
         <FolderGlyph />
