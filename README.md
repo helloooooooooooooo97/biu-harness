@@ -344,3 +344,4 @@ Code and docs written by biu-harness are under the [MIT License](LICENSE): learn
 **Exception: the Grok Bot.** `public/grok-bot/` — its geometry, animation, and character design — is **not MIT**. It is adapted from a learning extraction of Grok Bot.app and rights belong to xAI and other holders. It may be used for cloning and demos; before redistributing, shipping, or adopting it as a product mascot, assess the trademark/copyright risk yourself or replace it with your own character. This project grants no rights to this part. See [NOTICE.md](NOTICE.md).
 
 The MIT software is provided "as is", without warranty of any kind.
+
