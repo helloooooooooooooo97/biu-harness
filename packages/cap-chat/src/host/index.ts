@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Service, type Context } from 'cordis'
 import type { ChatMessage } from './chat-types.ts'
-import type { AgentToolMode } from '@biu/host-tools'
+import { isAgentToolMode, type AgentToolMode } from '@biu/host-tools'
 import type { LlmConfig } from '@biu/host-llm'
 import { probeLlmConnection } from '@biu/host-llm'
 import { LLM_MODEL_CATALOG, LLM_ENDPOINT_PRESETS, describeProvider, defaultModelFor, CHAT_PROVIDERS, findEndpointPreset, normalizeBaseUrl } from './model-catalog.ts'
@@ -136,7 +136,7 @@ function writePersisted(config: ChatConfig) {
 }
 
 function parseAgentMode(value: unknown, fallback: AgentToolMode): AgentToolMode {
-  return value === 'minimal' || value === 'standard' ? value : fallback
+  return isAgentToolMode(value) ? value : fallback
 }
 
 function parseProvider(value: unknown): ChatProvider | null {
@@ -731,7 +731,7 @@ export class ChatService extends Service {
       const id = next.removeCustomModel.trim()
       this.config.customModels = this.config.customModels.filter((m) => m.id !== id)
     }
-    if (next.agentMode === 'standard' || next.agentMode === 'minimal') this.config.agentMode = next.agentMode
+    if (isAgentToolMode(next.agentMode)) this.config.agentMode = next.agentMode
     if (Array.isArray(next.extraTools)) {
       this.config.extraTools = [...new Set(next.extraTools.map((name) => String(name).trim()).filter(Boolean))]
     }
@@ -933,7 +933,7 @@ export function apply(ctx: Context) {
         model?: string
         provider?: SessionConfig['provider']
         systemPrompt?: string | null
-        agentMode?: 'standard' | 'minimal'
+        agentMode?: AgentToolMode
         extraTools?: string[]
         tags?: string[]
         pinned?: boolean
@@ -946,7 +946,7 @@ export function apply(ctx: Context) {
       if (typeof payload.systemPrompt === 'string' || payload.systemPrompt === null) {
         patch.systemPrompt = payload.systemPrompt as string | null
       }
-      if (payload.agentMode === 'standard' || payload.agentMode === 'minimal') patch.agentMode = payload.agentMode
+      if (isAgentToolMode(payload.agentMode)) patch.agentMode = payload.agentMode
       if (Array.isArray(payload.extraTools)) patch.extraTools = payload.extraTools.map((name) => String(name))
       if (Array.isArray(payload.tags)) patch.tags = payload.tags.map((name) => String(name))
       if (typeof payload.pinned === 'boolean') patch.pinned = payload.pinned

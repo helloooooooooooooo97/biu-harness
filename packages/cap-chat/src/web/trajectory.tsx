@@ -1,10 +1,9 @@
-import { memo, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { memo, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ArrowUpIcon } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import {
   formatTokens,
-  formatTrajectoryUsage,
   sumTrajectoryRowUsage,
   sumUsageParts,
   type DerivedMessage,
@@ -40,39 +39,14 @@ function formatTok(n: number) {
   return formatTokens(n)
 }
 
-function cacheHitPct(usage: TrajectoryUsage): number | null {
-  if (!usage.inputTokens || !usage.cacheReadTokens) return null
-  return Math.min(100, Math.round((usage.cacheReadTokens / usage.inputTokens) * 100))
-}
-
 function UsageCard({ usage, label = 'Token usage' }: { usage: TrajectoryUsage; label?: string }) {
   const total = usage.totalTokens ?? usage.inputTokens + usage.outputTokens
-  const pct = cacheHitPct(usage)
-  const inStyle: CSSProperties | undefined =
-    pct != null
-      ? {
-          backgroundImage: `linear-gradient(90deg, rgba(34, 140, 90, 0.22) 0%, rgba(34, 140, 90, 0.22) ${pct}%, rgba(15, 17, 21, 0.04) ${pct}%, rgba(15, 17, 21, 0.04) 100%)`,
-        }
-      : undefined
   return (
     <section className="traj-usage-card" aria-label={label}>
       <div className="traj-usage-card-title">{label}</div>
-      <div className="traj-usage-grid">
-        <div className="traj-usage-stat traj-usage-stat-in" style={inStyle}>
-          <span>Input{pct != null ? ` · cache ${pct}%` : ''}</span>
-          <strong>{formatTok(usage.inputTokens)}</strong>
-          {usage.cacheReadTokens ? (
-            <em className="traj-usage-stat-sub">cache {formatTok(usage.cacheReadTokens)}</em>
-          ) : null}
-        </div>
-        <div className="traj-usage-stat traj-usage-stat-out">
-          <span>Output</span>
-          <strong>{formatTok(usage.outputTokens)}</strong>
-        </div>
-        <div className="traj-usage-stat">
-          <span>Total</span>
-          <strong>{formatTok(total)}</strong>
-        </div>
+      <div className="traj-usage-card-row">
+        <UsageInline usage={usage} />
+        <span className="traj-usage-total">total {formatTok(total)}</span>
       </div>
     </section>
   )

@@ -44,11 +44,14 @@ export class AgentLoop implements AgentRunner {
         if (!extras.includes(name)) extras.push(name)
       }
     }
-    // 极简是底座；Slash / Live 都是增量放开。live session 回合自动加上调度工具。
+    // 极简是底座；Slash / Live 增量放开。商店插件仅创造模式可见。
     if (normalizeSessionType(peek?.type) === 'live') {
       for (const name of LIVE_TOOL_NAMES) {
         if (!extras.includes(name)) extras.push(name)
       }
+    }
+    if (mode !== 'create') {
+      extras = extras.filter((name) => this.ctx.tools.originOf(name) !== 'store')
     }
     return runWithSession(this.sessionId, () =>
       runWithToolPolicy({ mode, extras }, () => this.runInSession(claimed)),
