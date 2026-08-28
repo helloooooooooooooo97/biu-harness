@@ -44,6 +44,17 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\.pick-overlay-marquee[\s\S]*background:\s*var\(--dsw-pick-fill\)/)
   })
 
+  it('paints the context-clear hist fill as opaque cherry red without blend or color-scheme overrides', () => {
+    const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
+    const approvals = readFileSync(resolve(root, 'packages/cap-chat/src/web/approvals.tsx'), 'utf8')
+    expect(css).toMatch(/--dsw-chat-hist-fill:\s*#EA5955/)
+    expect(css).toMatch(/\.project-chip-hist-bar\s*\{[^}]*background:\s*var\(--dsw-chat-hist-fill\)/s)
+    expect(css).not.toMatch(/\.project-chip-hist-bar\s*\{[^}]*color-scheme:/s)
+    expect(css).not.toMatch(/\.project-chip-hist-bar\s*\{[^}]*mix-blend-mode:/s)
+    expect(approvals).toMatch(/project-chip-hist-bar/)
+    expect(approvals).not.toMatch(/backgroundColor/)
+  })
+
   it('paints inspector trajectory and usage on the same sidebar token as the left rail', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     expect(css).toMatch(/\.traj-root\s*\{[^}]*background:\s*var\(--dsw-sidebar\)/s)
