@@ -18,10 +18,13 @@ export type SessionInspectorProps = {
   renderSlot: (name: string) => ReactNode
 }
 
+function inspectorTabStorageKey(sid: string | null | undefined) {
+  return sid ? `inspector.tab:${sid}` : 'inspector.tab:home'
+}
+
 function inspectorStoredTab(sid: string | null | undefined, allowed: string[]): string | undefined {
-  if (!sid) return undefined
   try {
-    const raw = localStorage.getItem(`inspector.tab:${sid}`)
+    const raw = localStorage.getItem(inspectorTabStorageKey(sid))
     if (raw && allowed.includes(raw)) return raw
   } catch {
     /* ignore */
@@ -66,9 +69,8 @@ export const SessionInspector = memo(function SessionInspector({
   const setTab = useCallback(
     (next: string) => {
       setTabState(next)
-      if (!sessionId) return
       try {
-        localStorage.setItem(`inspector.tab:${sessionId}`, next)
+        localStorage.setItem(inspectorTabStorageKey(sessionId), next)
       } catch {
         /* ignore */
       }
@@ -77,14 +79,20 @@ export const SessionInspector = memo(function SessionInspector({
   )
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
+  const focusTabId = extraTabs.find((item) => item.focusOnCall)?.id
   useEffect(() => {
-    if (focusCallId) {
-      const focus = extraTabs.find((item) => item.focusOnCall)
-      if (focus) setTab(focus.id)
+    if (focusCallId && focusTabId) {
+      setTab(focusTabId)
       return
     }
-    setTabState(inspectorStoredTab(sessionId, allowedTabs) ?? defaultTab)
-  }, [sessionId, focusCallId, allowedTabs.join('|'), defaultTab, setTab, extraTabs])
+    // 无 session 时没有可用的 stored key 旧逻辑会每次 extras 刷新都打回 defaultTab，任务/插件点了等于没点。
+    setTabState((current) => {
+      const stored = inspectorStoredTab(sessionId, allowedTabs)
+      if (stored) return stored
+      if (current && allowedTabs.includes(current)) return current
+      return defaultTab
+    })
+  }, [sessionId, focusCallId, focusTabId, allowedTabs.join('|'), defaultTab, setTab])
 
   useEffect(() => {
     if (!open) return
