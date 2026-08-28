@@ -10,7 +10,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-A pluggable, self-hosted agent harness. 
+A pluggable, self-hosted agent harness.  
 
 </div>
 
