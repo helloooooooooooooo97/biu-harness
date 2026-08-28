@@ -2404,30 +2404,33 @@ function eventEndOf(t: Task): number | null {
   return null
 }
 
-/** 消耗胶囊：与 Live/thread 的 .traj-usage 对齐——绿色缓冲背景(=cache hit 覆盖) + 两侧 in/out 数值 + 分隔箭头。 */
+/** 消耗胶囊：与 thread/trajectory 的 .traj-usage 对齐——绿色 cache 胶囊 + 可选历史圆环 + in→out。 */
 function UsageCapsule({ usage, aggregate }: { usage: SumUsage; aggregate: boolean }) {
-  if (usage.totalTokens <= 0) return <span className="tasks-usage-empty">—</span>
+  if (usage.totalTokens <= 0) return <span className="traj-usage-empty">—</span>
   const pct =
     usage.inputTokens && usage.cacheReadTokens ? Math.min(100, Math.round((usage.cacheReadTokens / usage.inputTokens) * 100)) : null
   const inStyle: CSSProperties | undefined = pct
     ? {
-        backgroundImage: `linear-gradient(90deg, rgba(34,140,90,0.30) 0%, rgba(34,140,90,0.30) ${pct}%, transparent ${pct}%, transparent 100%)`,
+        backgroundImage: `linear-gradient(90deg, rgba(34, 140, 90, 0.28) 0%, rgba(34, 140, 90, 0.28) ${pct}%, rgba(15, 17, 21, 0.06) ${pct}%, rgba(15, 17, 21, 0.06) 100%)`,
       }
     : undefined
   return (
     <span
-      className={`tasks-usage-capsule${aggregate ? ' is-agg' : ''}`}
+      className={`traj-usage tasks-usage-capsule${aggregate ? ' is-agg' : ''}`}
       title={
         aggregate
           ? `子树聚合：in ${formatTokens(usage.inputTokens)} / out ${formatTokens(usage.outputTokens)}`
           : `本任务各回合消耗：in ${formatTokens(usage.inputTokens)} / out ${formatTokens(usage.outputTokens)}${usage.cacheReadTokens ? ` / cache ${formatTokens(usage.cacheReadTokens)}` : ''}`
       }
     >
-      <span className={`tasks-usage-input${pct != null ? ' has-cache' : ''}`} style={inStyle}>
-        {formatTokens(usage.inputTokens)}
+      <span className={`traj-usage-in-wrap${pct != null ? ' has-cache' : ''}`} style={inStyle}>
+        <span className="traj-usage-in">{formatTokens(usage.inputTokens)}</span>
+        {pct != null ? <span className="traj-usage-cache-pct">{pct}%</span> : null}
       </span>
-      <span className="tasks-usage-arrow">→</span>
-      <span className="tasks-usage-output">{formatTokens(usage.outputTokens)}</span>
+      <span className="traj-usage-arrow" aria-hidden>
+        →
+      </span>
+      <span className="traj-usage-out">{formatTokens(usage.outputTokens)}</span>
     </span>
   )
 }
@@ -2690,7 +2693,7 @@ function TasksTable({
                   return usage && usage.totalTokens > 0 ? (
                     <UsageCapsule usage={usage} aggregate={hasChildren.has(task.id)} />
                   ) : (
-                    <span className="tasks-usage-empty">—</span>
+                    <span className="traj-usage-empty">—</span>
                   )
                 })()}
               </td>
@@ -3373,14 +3376,7 @@ function TaskDetailPanel({
               <div className="tasks-exec-stat">
                 <span className="tasks-exec-stat-label"><CircleStackIcon aria-hidden className="size-[11px]" /> 消耗</span>
                 <span className="tasks-exec-stat-value">
-                  <span className="tasks-detail-usage-total-capsule">
-                    <CircleStackIcon aria-hidden className="size-3" />
-                    共 {formatTokens(task.usage.totalTokens)} tokens
-                    <span className="tasks-detail-usage-breakdown">
-                      in {formatTokens(task.usage.inputTokens)} / out {formatTokens(task.usage.outputTokens)}
-                      {task.usage.cacheReadTokens > 0 ? ` / cache ${formatTokens(task.usage.cacheReadTokens)}` : ''}
-                    </span>
-                  </span>
+                  <UsageCapsule usage={task.usage} aggregate={false} />
                 </span>
               </div>
             ) : null}
@@ -3419,10 +3415,7 @@ function TaskDetailPanel({
                         {r.note ? <div className="tasks-report-note">{r.note}</div> : null}
                         {consumed ? (
                           <div className="tasks-report-usage">
-                            消耗 {formatTokens(usage.totalTokens)} tokens
-                            {usage.inputTokens > 0 || usage.outputTokens > 0
-                              ? `（in ${formatTokens(usage.inputTokens)} / out ${formatTokens(usage.outputTokens)}${usage.cacheReadTokens > 0 ? ` / cache ${formatTokens(usage.cacheReadTokens)}` : ''}）`
-                              : ''}
+                            <UsageCapsule usage={usage} aggregate={false} />
                           </div>
                         ) : null}
                       </div>
@@ -3696,33 +3689,7 @@ if (typeof document !== 'undefined') {
 .tasks-status-reports { display:inline-flex; align-items:center; justify-content:center; min-width:14px; height:14px; padding:0 3px; border-radius:999px; background:color-mix(in srgb, var(--dsw-border) 50%, transparent); font-size:9.5px; font-weight:700; color:var(--dsw-label-2); }
 .tasks-col-priority { width:76px; }
 .tasks-col-usage { width:96px; min-width:96px; color:var(--dsw-label-2); font-variant-numeric:tabular-nums; }
-.tasks-usage-empty { color:var(--dsw-label-4); }
-
-/* 消耗胶囊：与 Live/thread 的 .traj-usage 对齐的设计 */
-.tasks-usage-capsule {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  max-width: 100%;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-/* 输入胶囊：绿色缓冲背景(缓存命中覆盖)+左侧内边距留白给 ∑ */
-.tasks-usage-input {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  min-width: 26px;
-  border-radius: 999px;
-  background: var(--dsw-hover);
-  padding: 1px 7px;
-  color: var(--dsw-label-2);
-  font-weight: 600;
-}
-.tasks-usage-input.has-cache { color: var(--dsw-label); }
-.tasks-usage-arrow { color: var(--dsw-label-3); opacity: 0.7; flex: none; }
-.tasks-usage-output { color: var(--dsw-label); font-weight: 600; flex: none; }
+/* 消耗胶囊与 .traj-usage 共用全局样式；此处只保留队列字号覆盖 */
 .tasks-col-actor { width:130px; }
 .tasks-col-time { width:130px; }
 .tasks-col-action { width:56px; }
@@ -3925,7 +3892,7 @@ if (typeof document !== 'undefined') {
 .tasks-queue-assignee { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; color:var(--dsw-label-2); }
 .tasks-queue-meta .tasks-time { font-size:10px; }
 /* 队列视图用量胶囊字号与队列其他 meta 文本统一：10px；胶囊内 input→output 数字同尺寸 */
-.tasks-queue-item-main .tasks-usage-capsule { font-size:10px; }
+.tasks-queue-item-main .traj-usage { font-size:10px; }
 /* ---- Trigger 自动触发 ---- */
 .tasks-status-cell { display:flex; align-items:center; gap:5px; min-width:0; }
 .tasks-trigger-mark { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:9px; font-weight:700; white-space:nowrap; color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 12%, transparent); }

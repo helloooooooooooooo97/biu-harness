@@ -941,8 +941,17 @@ body {
 
 .project-chip-hist-bar {
   position: absolute;
-  inset: 0 auto 0 0;
-  background: var(--dsw-chat-hist-fill);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  transform-origin: bottom;
+  background: linear-gradient(
+    to top,
+    var(--dsw-chat-hist-fill),
+    color-mix(in srgb, var(--dsw-chat-hist-fill) 62%, transparent)
+  );
+  transition: height 0.2s ease;
 }
 
 .project-chip-dashed {
@@ -1601,15 +1610,19 @@ body {
   font-weight: 600;
 }
 
-.traj-usage-hist-pct {
-  color: var(--dsw-danger);
-  font-size: 10px;
-  font-weight: 700;
-}
-
-/* 历史占比红色层与 cache 绿色层都由 .traj-usage-in-wrap 的 backgroundImage 多段渐变合成 */
-.traj-usage-in-wrap.has-hist {
-  color: var(--dsw-label);
+/* 历史占比圆环：描边色与清空上下文 chip 的 --dsw-chat-hist-fill 一致；中心用底色填实，避免箭头透进环心 */
+.traj-usage-hist-ring {
+  --hist: 0;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle closest-side, var(--dsw-bg) 58%, transparent 59%),
+    conic-gradient(
+      var(--dsw-chat-hist-fill) calc(var(--hist) * 1%),
+      color-mix(in srgb, var(--dsw-chat-hist-fill) 22%, transparent) 0
+    );
 }
 
 .traj-usage-card {
@@ -1632,6 +1645,20 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.traj-usage-card-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.traj-usage-total {
+  color: var(--dsw-label-3);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
 
 /* 侧边栏用量面板（Notion 暗色卡片） */
