@@ -196,10 +196,10 @@ const SORT_FIELD_LABEL: Record<TaskViewSortField, string> = {
 }
 
 const VIEW_MODE_ICON: Record<TaskViewMode, ReactNode> = {
-  queue: <ClipboardDocumentCheckIcon aria-hidden className="size-[13px]" />,
-  table: <TableCellsIcon aria-hidden className="size-[13px]" />,
-  board: <ViewColumnsIcon aria-hidden className="size-[13px]" />,
-  graph: <ShareIcon aria-hidden className="size-[13px]" />,
+  queue: <ClipboardDocumentCheckIcon aria-hidden className="size-[14px]" />,
+  table: <TableCellsIcon aria-hidden className="size-[14px]" />,
+  board: <ViewColumnsIcon aria-hidden className="size-[14px]" />,
+  graph: <ShareIcon aria-hidden className="size-[14px]" />,
 }
 
 const PRIORITY_RANK: Record<TaskPriority, number> = { low: 0, med: 1, high: 2 }
@@ -238,9 +238,9 @@ export function sortTasks(tasks: Task[], sort: TaskViewSort): Task[] {
 }
 
 const STATUS_META: Array<{ id: TaskStatus; label: string; icon: ReactNode }> = [
-  { id: 'todo', label: '待办', icon: <MinusCircleIcon aria-hidden className="size-[13px]" /> },
-  { id: 'doing', label: '进行中', icon: <ArrowPathIcon aria-hidden className="size-[13px]" /> },
-  { id: 'done', label: '已完成', icon: <CheckCircleIcon aria-hidden className="size-[13px]" /> },
+  { id: 'todo', label: '待办', icon: <MinusCircleIcon aria-hidden className="size-[14px]" /> },
+  { id: 'doing', label: '进行中', icon: <ArrowPathIcon aria-hidden className="size-[14px]" /> },
+  { id: 'done', label: '已完成', icon: <CheckCircleIcon aria-hidden className="size-[14px]" /> },
 ]
 
 const PRIORITY_LABEL: Record<TaskPriority, string> = {
@@ -253,6 +253,12 @@ const DIFFICULTY_LABEL: Record<TaskDifficulty, string> = {
   low: '低',
   med: '中',
   high: '高',
+}
+
+const LEVEL_NUM: Record<TaskPriority | TaskDifficulty, number> = {
+  low: 1,
+  med: 2,
+  high: 3,
 }
 
 const MASCOT_COLOR: Record<string, string> = {
@@ -510,14 +516,14 @@ function TimeLabel({ ts, empty = '—' }: { ts: number | null | undefined; empty
   if (!ts) {
     return (
       <span className="tasks-time is-empty">
-        <ClockIcon aria-hidden className="size-3" />
+        <ClockIcon aria-hidden className="size-[14px]" />
         {empty}
       </span>
     )
   }
   return (
     <span className="tasks-time" title={new Date(ts).toLocaleString()}>
-      <ClockIcon aria-hidden className="size-3" />
+      <ClockIcon aria-hidden className="size-[14px]" />
       {formatWhen(ts)}
     </span>
   )
@@ -636,11 +642,22 @@ function MascotAvatar({
   )
 }
 
-function ActorChip({ actor, empty = '未分配' }: { actor: TaskActor | null | undefined; empty?: string }) {
+function ActorChip({
+  actor,
+  empty = '未分配',
+  avatar = true,
+}: {
+  actor: TaskActor | null | undefined
+  empty?: string
+  avatar?: boolean
+}) {
   if (!actor) {
+    if (!avatar) {
+      return <span className="tasks-actor is-empty">{empty}</span>
+    }
     return (
       <span className="tasks-actor is-empty">
-        <UserIcon aria-hidden className="size-[13px]" />
+        <UserIcon aria-hidden className="size-[14px]" />
         {empty}
       </span>
     )
@@ -656,15 +673,16 @@ function ActorChip({ actor, empty = '未分配' }: { actor: TaskActor | null | u
       className="tasks-actor"
       title={actor.sessionId ? `${actor.name} · ${actor.sessionId.slice(0, 8)}` : actor.name}
     >
-      {actor.kind === 'agent' && actor.mascot ? (
-        <MascotAvatar shape={actor.mascot.shape} color={actor.mascot.color} eye={actor.mascot.eye} size={16} />
-      ) : (
-        <span className="tasks-avatar" style={{ background: color }} aria-hidden>
-          {actor.kind === 'agent' ? <CpuChipIcon className="size-[11px]" /> : initial}
-        </span>
-      )}
+      {avatar ? (
+        actor.kind === 'agent' && actor.mascot ? (
+          <MascotAvatar shape={actor.mascot.shape} color={actor.mascot.color} eye={actor.mascot.eye} size={16} />
+        ) : (
+          <span className="tasks-avatar" style={{ background: color }} aria-hidden>
+            {initial}
+          </span>
+        )
+      ) : null}
       <span className="tasks-actor-name">{actor.name}</span>
-      {actor.kind === 'agent' ? <span className="tasks-actor-kind">Agent</span> : null}
     </span>
   )
 }
@@ -707,7 +725,7 @@ function AssigneePicker({
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <ActorChip actor={actor} />
+        <ActorChip actor={actor} avatar={false} />
       </button>
       {open ? (
         <div className="tasks-assignee-menu" role="listbox">
@@ -722,7 +740,7 @@ function AssigneePicker({
             }}
           >
             <span className="tasks-avatar tasks-avatar-clear" aria-hidden>
-              <XMarkIcon className="size-[11px]" />
+              <XMarkIcon className="size-[14px]" />
             </span>
             <span className="tasks-actor-name">未分配</span>
           </button>
@@ -742,7 +760,7 @@ function AssigneePicker({
                 <MascotAvatar shape={agent.mascot.shape} color={agent.mascot.color} eye={agent.mascot.eye} size={16} />
               ) : (
                 <span className="tasks-avatar">
-                  <CpuChipIcon className="size-[11px]" />
+                  <CpuChipIcon className="size-[14px]" />
                 </span>
               )}
               <span className="tasks-actor-name">{agent.name}</span>
@@ -750,7 +768,7 @@ function AssigneePicker({
           ))}
           {loading ? (
             <div className="tasks-assignee-loading">
-              <ArrowPathIcon className="size-3 tasks-spin" aria-hidden />
+              <ArrowPathIcon className="size-[14px] tasks-spin" aria-hidden />
               加载 Agent…
             </div>
           ) : null}
@@ -772,14 +790,14 @@ function ReportBadge({ reports }: { reports: TaskReport[] }) {
   if (done) {
     return (
       <span className="tasks-exec is-idle" title={tip}>
-        <CheckCircleIcon aria-hidden className="size-3" />
+        <CheckCircleIcon aria-hidden className="size-[14px]" />
         report {reports.length}次 · 已完成
       </span>
     )
   }
   return (
     <span className="tasks-exec is-running" title={tip}>
-      <ArrowPathIcon className="size-3 tasks-spin" aria-hidden />
+      <ArrowPathIcon className="size-[14px] tasks-spin" aria-hidden />
       report {reports.length}次 · 进行中
     </span>
   )
@@ -957,7 +975,7 @@ function triggerSourceCount(t: Task['trigger'] | undefined): number {
 }
 
 /** trigger 标记：有触发配置(triggerSourceCount>0)即显示小图标与数量角标。已启用用醒目色，未启用用灰。hover 显示 cron 解读与事件列表。 */
-function TriggerMark({ trigger }: { trigger?: Task['trigger'] }) {
+function TriggerMark({ trigger, iconClass = 'size-[14px]' }: { trigger?: Task['trigger']; iconClass?: string }) {
   const count = triggerSourceCount(trigger)
   if (!trigger || count <= 0) return null
   const state = trigger.state ?? 'idle'
@@ -971,7 +989,7 @@ function TriggerMark({ trigger }: { trigger?: Task['trigger'] }) {
   const title = parts.join('｜')
   return (
     <span className={`tasks-trigger-mark ${enabled ? `is-${state}` : 'is-off'}`} title={title} aria-label="自动触发">
-      <ClockIcon aria-hidden className="size-[11px]" />
+      <ClockIcon aria-hidden className={iconClass} />
       <span className="tasks-trigger-mark-state">{enabled ? state : 'off'}</span>
       <span className="tasks-trigger-count">{count}</span>
     </span>
@@ -995,7 +1013,7 @@ function TriggerToggle({ task, onUpdate }: { task: Task; onUpdate: (id: string, 
         void onUpdate(task.id, { trigger: { enabled: !enabled } })
       }}
     >
-      <ClockIcon aria-hidden className="size-3" />
+      <ClockIcon aria-hidden className="size-[14px]" />
       {count > 0 ? <span className="tasks-trigger-count">{count}</span> : null}
     </button>
   )
@@ -1090,14 +1108,14 @@ function ExecBadge({ execution, reports }: { execution?: TaskExecution; reports?
   if (!execution || execution.status === 'unassigned') {
     return (
       <span className="tasks-exec is-muted">
-        <MinusCircleIcon aria-hidden className="size-3" />
+        <MinusCircleIcon aria-hidden className="size-[14px]" />
         未派工
       </span>
     )
   }
   return (
     <span className="tasks-exec is-muted" title="尚无 agent 上报执行进度">
-      <SignalIcon aria-hidden className="size-3" />
+      <SignalIcon aria-hidden className="size-[14px]" />
       未执行
     </span>
   )
@@ -1116,7 +1134,7 @@ function StatusPill({ status, reportCount, blocked, dueAt, now = Date.now() }: {
   if (overdue) {
     return (
       <span className="tasks-status-pill is-overdue" title={blocked ? '已过截止时间（且被前置任务阻塞）' : '已过截止时间'}>
-        <ClockIcon aria-hidden className="size-3" />
+        <ClockIcon aria-hidden className="size-[14px]" />
         <span className="tasks-status-label">已逾期</span>
       </span>
     )
@@ -1125,7 +1143,7 @@ function StatusPill({ status, reportCount, blocked, dueAt, now = Date.now() }: {
   if (blocked) {
     return (
       <span className="tasks-status-pill is-blocked" title="依赖前置未完成，暂时无法开工">
-        <LockIcon aria-hidden className="size-3" />
+        <LockIcon aria-hidden className="size-[14px]" />
         <span className="tasks-status-label">被阻塞</span>
       </span>
     )
@@ -1624,9 +1642,9 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
               aria-expanded={viewMenuOpen}
               onClick={() => setViewMenuOpen((v) => !v)}
             >
-              <Squares2X2Icon aria-hidden className="size-[13px]" />
+              <Squares2X2Icon aria-hidden className="size-[14px]" />
               <span className="tasks-viewdd-name">{activeView?.name ?? '未保存'}</span>
-              <ChevronDownIcon aria-hidden className="size-[13px]" />
+              <ChevronDownIcon aria-hidden className="size-[14px]" />
             </button>
             {viewMenuOpen ? (
               <div className="tasks-viewdd-menu" role="menu">
@@ -1644,21 +1662,21 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
                       onClick={() => { switchView(v.id); setViewMenuOpen(false) }}
                     >
                       <span className="tasks-viewdd-item-name">{v.name}</span>
-                      {v.id === activeViewId ? <CheckCircleIcon aria-hidden className="size-[13px] tasks-viewdd-check" /> : null}
+                      {v.id === activeViewId ? <CheckCircleIcon aria-hidden className="size-[14px] tasks-viewdd-check" /> : null}
                     </button>
                     <span className="tasks-viewdd-item-actions">
                       <button type="button" className="tasks-viewdd-act" title="重命名" onClick={() => openDlg({ kind: 'rename', view: v })}>
-                        <PencilSquareIcon aria-hidden className="size-3" />
+                        <PencilSquareIcon aria-hidden className="size-[14px]" />
                       </button>
                       <button type="button" className="tasks-viewdd-act is-danger" title="删除" onClick={() => openDlg({ kind: 'delete', view: v })}>
-                        <TrashIcon aria-hidden className="size-3" />
+                        <TrashIcon aria-hidden className="size-[14px]" />
                       </button>
                     </span>
                   </div>
                 ))}
                 <div className="tasks-viewdd-foot">
                   <button type="button" className="tasks-viewdd-saveas" onClick={() => { setViewMenuOpen(false); openDlg({ kind: 'saveAs' }) }}>
-                    <PlusIcon aria-hidden className="size-[13px]" />
+                    <PlusIcon aria-hidden className="size-[14px]" />
                     另存为视图
                   </button>
                 </div>
@@ -1669,7 +1687,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
 
           <div className="tasks-toolbar-right">
           <label className="tasks-search-wrap">
-            <MagnifyingGlassIcon aria-hidden className="size-3.5" />
+            <MagnifyingGlassIcon aria-hidden className="size-[14px]" />
             <input
               className="tasks-search"
               value={query}
@@ -1709,7 +1727,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
                       <span className="tasks-mode-item-ico">{VIEW_MODE_ICON[opt.id]}</span>
                       {opt.label}
                     </span>
-                    {mode === opt.id ? <CheckCircleIcon aria-hidden className="size-[13px] tasks-sort-item-icon is-on" /> : null}
+                    {mode === opt.id ? <CheckCircleIcon aria-hidden className="size-[14px] tasks-sort-item-icon is-on" /> : null}
                   </button>
                 ))}
               </div>
@@ -1726,7 +1744,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
               aria-expanded={sortMenuOpen}
               onClick={() => setSortMenuOpen((v) => !v)}
             >
-              <ArrowsUpDownIcon aria-hidden className="size-3.5" />
+              <ArrowsUpDownIcon aria-hidden className="size-[14px]" />
               {sortCustom ? <span className="tasks-sort-dot" aria-hidden /> : null}
             </button>
             {sortMenuOpen ? (
@@ -1744,8 +1762,8 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
                   const isCurrent = sort.field === field
                   const stateIcon = isCurrent
                     ? sort.dir === 'asc'
-                      ? <ArrowUpIcon aria-hidden className="size-[13px]" />
-                      : <ArrowDownIcon aria-hidden className="size-[13px]" />
+                      ? <ArrowUpIcon aria-hidden className="size-[14px]" />
+                      : <ArrowDownIcon aria-hidden className="size-[14px]" />
                     : null
                   return (
                     <button
@@ -1775,7 +1793,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
               aria-expanded={filterOpen}
               onClick={() => setFilterOpen((v) => !v)}
             >
-              <AdjustmentsHorizontalIcon aria-hidden className="size-3.5" />
+              <AdjustmentsHorizontalIcon aria-hidden className="size-[14px]" />
               {filterActive ? <span className="tasks-filter-dot" aria-hidden /> : null}
             </button>
             {filterOpen ? (
@@ -1846,7 +1864,7 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
             title="刷新"
             onClick={refresh}
           >
-            <ArrowPathIcon aria-hidden className="size-3.5" />
+            <ArrowPathIcon aria-hidden className="size-[14px]" />
           </button>
           </div>
         </div>
@@ -1991,11 +2009,11 @@ function isOverdue(t: Task, now = Date.now()): boolean {
 // 队列视图分组键：已逾期 → 进行中 → 待办 → 阻塞 → 已完成
 type QueueKey = 'overdue' | 'doing' | 'todo' | 'blocked' | 'done'
 const QUEUE_GROUPS: { key: QueueKey; label: string; icon: ReactNode }[] = [
-  { key: 'overdue', label: '已逾期', icon: <ClockIcon aria-hidden className="size-[13px]" /> },
-  { key: 'doing', label: '进行中', icon: <ArrowPathIcon aria-hidden className="size-[13px]" /> },
-  { key: 'todo', label: '待办', icon: <MinusCircleIcon aria-hidden className="size-[13px]" /> },
-  { key: 'blocked', label: '阻塞', icon: <LockClosedIcon aria-hidden className="size-[13px]" /> },
-  { key: 'done', label: '已完成', icon: <CheckCircleIcon aria-hidden className="size-[13px]" /> },
+  { key: 'overdue', label: '已逾期', icon: <ClockIcon aria-hidden className="size-[14px]" /> },
+  { key: 'doing', label: '进行中', icon: <ArrowPathIcon aria-hidden className="size-[14px]" /> },
+  { key: 'todo', label: '待办', icon: <MinusCircleIcon aria-hidden className="size-[14px]" /> },
+  { key: 'blocked', label: '阻塞', icon: <LockClosedIcon aria-hidden className="size-[14px]" /> },
+  { key: 'done', label: '已完成', icon: <CheckCircleIcon aria-hidden className="size-[14px]" /> },
 ]
 
 /**
@@ -2024,11 +2042,11 @@ export function buildQueueRows(tasks: Task[]): Task[] {
 
 type BoardKey = 'overdue' | 'todo' | 'blocked' | 'doing' | 'done'
 const BOARD_COLUMNS: { key: BoardKey; label: string; icon: ReactNode }[] = [
-  { key: 'overdue', label: '已逾期', icon: <ClockIcon aria-hidden className="size-[13px]" /> },
-  { key: 'todo', label: '待办', icon: <MinusCircleIcon aria-hidden className="size-[13px]" /> },
-  { key: 'blocked', label: '阻塞', icon: <LockClosedIcon aria-hidden className="size-[13px]" /> },
-  { key: 'doing', label: '进行中', icon: <ArrowPathIcon aria-hidden className="size-[13px]" /> },
-  { key: 'done', label: '完成', icon: <CheckCircleIcon aria-hidden className="size-[13px]" /> },
+  { key: 'overdue', label: '已逾期', icon: <ClockIcon aria-hidden className="size-[14px]" /> },
+  { key: 'todo', label: '待办', icon: <MinusCircleIcon aria-hidden className="size-[14px]" /> },
+  { key: 'blocked', label: '阻塞', icon: <LockClosedIcon aria-hidden className="size-[14px]" /> },
+  { key: 'doing', label: '进行中', icon: <ArrowPathIcon aria-hidden className="size-[14px]" /> },
+  { key: 'done', label: '完成', icon: <CheckCircleIcon aria-hidden className="size-[14px]" /> },
 ]
 
 function TasksBoard({
@@ -2078,9 +2096,9 @@ function TasksBoard({
               >
                 <div className="tasks-card-title">
                   <span className="tasks-card-titletext">{task.title}</span>
-                  <TriggerMark trigger={task.trigger} />
+                  <TriggerMark trigger={task.trigger} iconClass="size-[14px]" />
                   {task.blocked ? (
-                    <span className="tasks-card-blocked" title="被依赖任务阻塞，无法开工"><LockClosedIcon aria-hidden className="size-[11px]" /></span>
+                    <span className="tasks-card-blocked" title="被依赖任务阻塞，无法开工"><LockClosedIcon aria-hidden className="size-[14px]" /></span>
                   ) : null}
                 </div>
                 {task.description ? (
@@ -2093,7 +2111,6 @@ function TasksBoard({
                     <MascotAvatar shape={task.assignee.mascot.shape} color={task.assignee.mascot.color} eye={task.assignee.mascot.eye} busy={task.status === 'doing'} size={14} />
                   ) : null}
                   <span className="tasks-card-assignee">{task.assignee?.name ?? '未分配'}</span>
-                  {task.reports?.length ? <span className="tasks-card-reports">report {task.reports.length}次</span> : null}
                   {task.dueAt ? (
                     <span className={`tasks-card-due${task.dueAt < Date.now() && task.status !== 'done' ? ' is-overdue' : ''}`}>
                       {new Date(task.dueAt).toLocaleDateString()}
@@ -2101,13 +2118,17 @@ function TasksBoard({
                   ) : null}
                 </div>
                 <div className="tasks-card-badges">
+                  <span className="tasks-card-badge is-reports" title={`报告 ${task.reports?.length ?? 0} 次`}>
+                    <ClipboardDocumentListIcon aria-hidden className="size-[14px]" />
+                    {task.reports?.length ?? 0}
+                  </span>
                   <span className={`tasks-card-badge is-p-${task.priority}`} title={`优先级：${PRIORITY_LABEL[task.priority]}`}>
-                    <FlagIcon aria-hidden className="size-2.5" />
-                    {PRIORITY_LABEL[task.priority]}
+                    <FlagIcon aria-hidden className="size-[14px]" />
+                    {LEVEL_NUM[task.priority]}
                   </span>
                   <span className={`tasks-card-badge is-d-${task.difficulty}`} title={`难度：${DIFFICULTY_LABEL[task.difficulty]}`}>
-                    <ChartBarIcon aria-hidden className="size-2.5" />
-                    {DIFFICULTY_LABEL[task.difficulty]}
+                    <ChartBarIcon aria-hidden className="size-[14px]" />
+                    {LEVEL_NUM[task.difficulty]}
                   </span>
                 </div>
                 {(task.project || task.tags?.length) ? (
@@ -2127,10 +2148,10 @@ function TasksBoard({
 }
 
 // ---- DAG 依赖图视图（ReactFlow）----
-const GNODE_W = 176
-const GNODE_H = 64
-const GLAYER_GAP_X = 96
-const GLAYER_GAP_Y = 28
+const GNODE_W = 248
+const GNODE_H = 112
+const GLAYER_GAP_X = 88
+const GLAYER_GAP_Y = 40
 
 function buildGraph(tasks: Task[]): { nodes: RFNode[]; edges: Edge[] } {
   const byId = new Map(tasks.map((t) => [t.id, t]))
@@ -2206,11 +2227,11 @@ function GraphTaskNode({ data }: NodeProps) {
         <span className="tasks-graph-node-meta">
           <span className={`tasks-graph-status is-${blocked ? 'blocked' : task.status}`}>{statusLabel}</span>
           <span className={`tasks-card-badge is-p-${task.priority}`} title={`优先级：${PRIORITY_LABEL[task.priority]}`}>
-            <FlagIcon aria-hidden className="size-2.5" />
+            <FlagIcon aria-hidden className="size-[14px]" />
             {PRIORITY_LABEL[task.priority]}
           </span>
           <span className={`tasks-card-badge is-d-${task.difficulty}`} title={`难度：${DIFFICULTY_LABEL[task.difficulty]}`}>
-            <ChartBarIcon aria-hidden className="size-2.5" />
+            <ChartBarIcon aria-hidden className="size-[14px]" />
             {DIFFICULTY_LABEL[task.difficulty]}
           </span>
         </span>
@@ -2366,14 +2387,14 @@ function TasksQueue({
                         {task.title}
                       </span>
                       <span className={`tasks-queue-pill is-p-${task.priority}`} title={`优先级：${PRIORITY_LABEL[task.priority]}`}>
-                        <FlagIcon aria-hidden className="size-2.5" />
+                        <FlagIcon aria-hidden className="size-[14px]" />
                         {PRIORITY_LABEL[task.priority]}
                       </span>
                       {task.status !== 'done' && task.dueAt && task.dueAt <= Date.now() ? (
-                        <span className="tasks-queue-overdue" title="已过截止时间"><ClockIcon aria-hidden className="size-2.5" />逾期</span>
+                        <span className="tasks-queue-overdue" title="已过截止时间"><ClockIcon aria-hidden className="size-[14px]" />逾期</span>
                       ) : null}
                       {task.blocked ? (
-                        <span className="tasks-queue-lock" title="被依赖任务阻塞"><LockClosedIcon aria-hidden className="size-[11px]" /></span>
+                        <span className="tasks-queue-lock" title="被依赖任务阻塞"><LockClosedIcon aria-hidden className="size-[14px]" /></span>
                       ) : null}
                       <UsageCapsule usage={task.usage ?? ZERO_USAGE} aggregate={false} />
                       <span className="tasks-queue-meta">
@@ -2599,17 +2620,17 @@ function TasksTable({
       <table className="tasks-table">
         <thead>
           <tr>
-            <ThIcon icon={<Squares2X2Icon aria-hidden className="size-3" />}>项目</ThIcon>
-            <ThIcon icon={<Bars3BottomLeftIcon aria-hidden className="size-3" />}>标题</ThIcon>
-            <ThIcon icon={<MinusCircleIcon aria-hidden className="size-3" />}>状态</ThIcon>
-            <ThIcon icon={<FlagIcon aria-hidden className="size-3" />}>优先级</ThIcon>
-            <ThIcon icon={<ChartBarIcon aria-hidden className="size-3" />}>难度</ThIcon>
-            <ThIcon icon={<CircleStackIcon aria-hidden className="size-3" />}>消耗</ThIcon>
-            {!compact ? <ThIcon icon={<UserIcon aria-hidden className="size-3" />}>创建人</ThIcon> : null}
-            {!compact ? <ThIcon icon={<ClockIcon aria-hidden className="size-3" />}>创建时间</ThIcon> : null}
-            <ThIcon icon={<UserIcon aria-hidden className="size-3" />}>实施人</ThIcon>
-            {!compact ? <ThIcon icon={<ClockIcon aria-hidden className="size-3" />}>分配时间</ThIcon> : null}
-            {!compact ? <ThIcon icon={<TagIcon aria-hidden className="size-3" />}>标签</ThIcon> : null}
+            <ThIcon icon={<Squares2X2Icon aria-hidden className="size-[14px]" />}>项目</ThIcon>
+            <ThIcon icon={<Bars3BottomLeftIcon aria-hidden className="size-[14px]" />}>标题</ThIcon>
+            <ThIcon icon={<MinusCircleIcon aria-hidden className="size-[14px]" />}>状态</ThIcon>
+            <ThIcon icon={<FlagIcon aria-hidden className="size-[14px]" />}>优先级</ThIcon>
+            <ThIcon icon={<ChartBarIcon aria-hidden className="size-[14px]" />}>难度</ThIcon>
+            <ThIcon icon={<CircleStackIcon aria-hidden className="size-[14px]" />}>消耗</ThIcon>
+            {!compact ? <ThIcon icon={<UserIcon aria-hidden className="size-[14px]" />}>创建人</ThIcon> : null}
+            {!compact ? <ThIcon icon={<ClockIcon aria-hidden className="size-[14px]" />}>创建时间</ThIcon> : null}
+            <ThIcon icon={<UserIcon aria-hidden className="size-[14px]" />}>实施人</ThIcon>
+            {!compact ? <ThIcon icon={<ClockIcon aria-hidden className="size-[14px]" />}>分配时间</ThIcon> : null}
+            {!compact ? <ThIcon icon={<TagIcon aria-hidden className="size-[14px]" />}>标签</ThIcon> : null}
             <th aria-label="操作" />
           </tr>
         </thead>
@@ -2635,7 +2656,7 @@ function TasksTable({
                       aria-label={collapsed[task.id] ? '展开子任务' : '收起子任务'}
                       onClick={() => setCollapsed((c) => ({ ...c, [task.id]: !c[task.id] }))}
                     >
-                      {collapsed[task.id] ? <ChevronRightIcon aria-hidden className="size-3" /> : <ChevronDownIcon aria-hidden className="size-3" />}
+                      {collapsed[task.id] ? <ChevronRightIcon aria-hidden className="size-[14px]" /> : <ChevronDownIcon aria-hidden className="size-[14px]" />}
                     </button>
                   ) : null}
                   <input
@@ -2656,7 +2677,7 @@ function TasksTable({
                     title="查看详情"
                     onClick={() => onOpenDetail(task.id)}
                   >
-                    <ArrowsPointingOutIcon aria-hidden className="size-3" />
+                    <ArrowsPointingOutIcon aria-hidden className="size-[14px]" />
                   </button>
                 </div>
               </td>
@@ -2672,13 +2693,13 @@ function TasksTable({
                   options={(Object.keys(PRIORITY_LABEL) as TaskPriority[]).map((k) => ({
                     value: k,
                     label: PRIORITY_LABEL[k],
-                    icon: <FlagIcon aria-hidden className="size-3" />,
+                    icon: <FlagIcon aria-hidden className="size-[14px]" />,
                   }))}
                   onSelect={(priority) => void onUpdate(task.id, { priority })}
                   valueClass={`is-p-${task.priority}`}
                   renderValue={(cur) => (
                     <>
-                      <FlagIcon aria-hidden className="size-3" />
+                      <FlagIcon aria-hidden className="size-[14px]" />
                       <span className="tasks-chip-text">{cur?.label ?? task.priority}</span>
                     </>
                   )}
@@ -2690,13 +2711,13 @@ function TasksTable({
                   options={(Object.keys(DIFFICULTY_LABEL) as TaskDifficulty[]).map((k) => ({
                     value: k,
                     label: DIFFICULTY_LABEL[k],
-                    icon: <ChartBarIcon aria-hidden className="size-3" />,
+                    icon: <ChartBarIcon aria-hidden className="size-[14px]" />,
                   }))}
                   onSelect={(difficulty) => void onUpdate(task.id, { difficulty })}
                   valueClass={`is-d-${task.difficulty}`}
                   renderValue={(cur) => (
                     <>
-                      <ChartBarIcon aria-hidden className="size-3" />
+                      <ChartBarIcon aria-hidden className="size-[14px]" />
                       <span className="tasks-chip-text">{cur?.label ?? task.difficulty}</span>
                     </>
                   )}
@@ -2747,7 +2768,7 @@ function TasksTable({
               <td className="tasks-col-action" onClick={(e) => e.stopPropagation()}>
                 <div className="tasks-row-actions">
                   <button type="button" className="tasks-icon-btn is-danger" title="删除" aria-label="删除任务" onClick={() => void onDelete(task.id)}>
-                    <TrashIcon aria-hidden className="size-3.5" />
+                    <TrashIcon aria-hidden className="size-[14px]" />
                   </button>
                 </div>
               </td>
@@ -2866,7 +2887,7 @@ function TaskDetailPanel({
           </button>
         </nav>
         <button type="button" className="tasks-icon-btn" title="关闭 (Esc)" onClick={onClose} aria-label="关闭">
-          <XMarkIcon aria-hidden className="size-3.5" />
+          <XMarkIcon aria-hidden className="size-[14px]" />
         </button>
       </header>
 
@@ -2932,7 +2953,7 @@ function TaskDetailPanel({
                 options={(Object.keys(PRIORITY_LABEL) as TaskPriority[]).map((k) => ({
                   value: k,
                   label: PRIORITY_LABEL[k],
-                  icon: <FlagIcon aria-hidden className="size-3" />,
+                  icon: <FlagIcon aria-hidden className="size-[14px]" />,
                 }))}
                 onSelect={(priority) => void onUpdate(task.id, { priority })}
                 valueClass={`is-p-${task.priority}`}
@@ -2951,7 +2972,7 @@ function TaskDetailPanel({
                 options={(Object.keys(DIFFICULTY_LABEL) as TaskDifficulty[]).map((k) => ({
                   value: k,
                   label: DIFFICULTY_LABEL[k],
-                  icon: <ChartBarIcon aria-hidden className="size-3" />,
+                  icon: <ChartBarIcon aria-hidden className="size-[14px]" />,
                 }))}
                 onSelect={(difficulty) => void onUpdate(task.id, { difficulty })}
                 valueClass={`is-d-${task.difficulty}`}
@@ -3033,7 +3054,7 @@ function TaskDetailPanel({
         <div className="tasks-detail-pane">
 <div className="tasks-field tasks-l-field tasks-automation">
           <div className="tasks-auto-head">
-            <span className="tasks-auto-title"><ClockIcon aria-hidden className="size-[13px]" /> 自动触发</span>
+            <span className="tasks-auto-title"><ClockIcon aria-hidden className="size-[14px]" /> 自动触发</span>
             <label className={`tasks-auto-switch${triggerEnabled ? ' is-on' : ''}`} title={triggerEnabled ? '点击关闭此规则' : '点击开启此规则'}>
               <input
                 type="checkbox"
@@ -3059,21 +3080,21 @@ function TaskDetailPanel({
               </div>
 
               {/* Trigger 区 */}
-              <div className="tasks-auto-sec-head"><CursorArrowRippleIcon aria-hidden className="size-3" /> Trigger · 触发</div>
+              <div className="tasks-auto-sec-head"><CursorArrowRippleIcon aria-hidden className="size-[14px]" /> Trigger · 触发</div>
               <div className="tasks-auto-sec">
                 <div className="tasks-auto-cond-list">
                   {/* 定时 cron 条件 */}
                   {triggerCron ? (
                     <div className="tasks-auto-cond">
                       <div className="tasks-auto-cond-head">
-                        <span className="tasks-auto-cond-type"><CalendarDaysIcon aria-hidden className="size-3" /> 定时</span>
+                        <span className="tasks-auto-cond-type"><CalendarDaysIcon aria-hidden className="size-[14px]" /> 定时</span>
                         <button type="button" className="tasks-auto-cond-del" title="删除定时条件"
                           onClick={() => {
                             setTriggerCron('')
                             setTriggerMode('min')
                             setCronFields(spawnCronFields(''))
                             if (task.trigger?.cron) void onUpdate(task.id, { trigger: { cron: null } })
-                          }}><XMarkIcon aria-hidden className="size-3" /></button>
+                          }}><XMarkIcon aria-hidden className="size-[14px]" /></button>
                       </div>
                       <div className="tasks-auto-cond-body">
                         <div className="tasks-trigger-field">
@@ -3238,12 +3259,12 @@ function TaskDetailPanel({
                   {triggerAt ? (
                     <div className="tasks-auto-cond">
                       <div className="tasks-auto-cond-head">
-                        <span className="tasks-auto-cond-type"><ClockIcon aria-hidden className="size-3" /> 特定时间</span>
+                        <span className="tasks-auto-cond-type"><ClockIcon aria-hidden className="size-[14px]" /> 特定时间</span>
                         <button type="button" className="tasks-auto-cond-del" title="删除特定时间条件"
                           onClick={() => {
                             setTriggerAt('')
                             if (task.trigger?.at) void onUpdate(task.id, { trigger: { at: null } })
-                          }}><XMarkIcon aria-hidden className="size-3" /></button>
+                          }}><XMarkIcon aria-hidden className="size-[14px]" /></button>
                       </div>
                       <div className="tasks-auto-cond-body">
                         <label className="tasks-trigger-field">
@@ -3267,13 +3288,13 @@ function TaskDetailPanel({
                   {triggerOn.map((ev) => (
                     <div key={ev} className="tasks-auto-cond">
                       <div className="tasks-auto-cond-head">
-                        <span className="tasks-auto-cond-type"><BoltIcon aria-hidden className="size-3" /> {ev === 'dep:done' ? '依赖完成' : '回合结束'}</span>
+                        <span className="tasks-auto-cond-type"><BoltIcon aria-hidden className="size-[14px]" /> {ev === 'dep:done' ? '依赖完成' : '回合结束'}</span>
                         <button type="button" className="tasks-auto-cond-del" title="删除该事件条件"
                           onClick={() => {
                             const next = triggerOn.filter((e) => e !== ev)
                             setTriggerOn(next)
                             void onUpdate(task.id, { trigger: { on: next } })
-                          }}><XMarkIcon aria-hidden className="size-3" /></button>
+                          }}><XMarkIcon aria-hidden className="size-[14px]" /></button>
                       </div>
                     </div>
                   ))}
@@ -3290,14 +3311,14 @@ function TaskDetailPanel({
                         setTriggerCron(cronStr)
                         setCondAddOpen(false)
                         if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                      }}><CalendarDaysIcon aria-hidden className="size-3" /> 定时</button>
+                      }}><CalendarDaysIcon aria-hidden className="size-[14px]" /> 定时</button>
                       <button type="button" onClick={() => {
                         const atStr = formatDueInput(Date.now())
                         setTriggerAt(atStr)
                         setCondAddOpen(false)
                         const atMs = atStr.trim() ? new Date(`${atStr}T00:00:00`).getTime() : null
                         if (atMs !== (task.trigger?.at ?? null)) void onUpdate(task.id, { trigger: { at: atMs } })
-                      }}><ClockIcon aria-hidden className="size-3" /> 特定时间</button>
+                      }}><ClockIcon aria-hidden className="size-[14px]" /> 特定时间</button>
                       <button type="button" onClick={() => {
                         const next = triggerOn.includes('dep:done') ? triggerOn : [...triggerOn, 'dep:done']
                         setTriggerOn(next)
@@ -3312,15 +3333,15 @@ function TaskDetailPanel({
                       }}>回合结束</button>
                     </div>
                   ) : (
-                    <button type="button" className="tasks-auto-add-btn" onClick={() => setCondAddOpen(true)}><PlusIcon aria-hidden className="size-3" /> 触发条件</button>
+                    <button type="button" className="tasks-auto-add-btn" onClick={() => setCondAddOpen(true)}><PlusIcon aria-hidden className="size-[14px]" /> 触发条件</button>
                   )}
                 </div>
               </div>
 
               {/* Then 区 */}
-              <div className="tasks-auto-sec-head"><PlayIcon aria-hidden className="size-3" /> Then · 执行</div>
+              <div className="tasks-auto-sec-head"><PlayIcon aria-hidden className="size-[14px]" /> Then · 执行</div>
               <div className="tasks-auto-sec tasks-auto-then">
-                <span className="tasks-auto-then-arrow"><PlayIcon aria-hidden className="size-3" /></span>
+                <span className="tasks-auto-then-arrow"><PlayIcon aria-hidden className="size-[14px]" /></span>
                 <span className="tasks-auto-then-text">自动派工给承担者并开始执行任务</span>
               </div>
 
@@ -3356,7 +3377,7 @@ function TaskDetailPanel({
         <div className="tasks-detail-meta">
           <div className="tasks-exec-stats">
             <div className="tasks-exec-stat">
-              <span className="tasks-exec-stat-label"><UserIcon aria-hidden className="size-[11px]" /> 创建人</span>
+              <span className="tasks-exec-stat-label"><UserIcon aria-hidden className="size-[14px]" /> 创建人</span>
               <span className="tasks-exec-stat-value">
                 <ActorChip actor={task.creator} empty="—" />
                 <TimeLabel ts={task.createdAt} />
@@ -3364,13 +3385,13 @@ function TaskDetailPanel({
             </div>
             {task.assignedAt ? (
               <div className="tasks-exec-stat">
-                <span className="tasks-exec-stat-label"><ClockIcon aria-hidden className="size-[11px]" /> 实施时间</span>
+                <span className="tasks-exec-stat-label"><ClockIcon aria-hidden className="size-[14px]" /> 实施时间</span>
                 <span className="tasks-exec-stat-value"><TimeLabel ts={task.assignedAt} /></span>
               </div>
             ) : null}
             {task.blocked && task.blockedBy?.length ? (
               <div className="tasks-exec-stat">
-                <span className="tasks-exec-stat-label"><LockClosedIcon aria-hidden className="size-[11px]" /> 阻塞</span>
+                <span className="tasks-exec-stat-label"><LockClosedIcon aria-hidden className="size-[14px]" /> 阻塞</span>
                 <span className="tasks-exec-stat-value">
                   <span className="tasks-blocked-head">被 {task.blockedBy.length} 个前置任务阻塞</span>
                   <ul className="tasks-blocked-list">
@@ -3389,7 +3410,7 @@ function TaskDetailPanel({
             ) : null}
             {task.usage && task.usage.totalTokens > 0 ? (
               <div className="tasks-exec-stat">
-                <span className="tasks-exec-stat-label"><CircleStackIcon aria-hidden className="size-[11px]" /> 消耗</span>
+                <span className="tasks-exec-stat-label"><CircleStackIcon aria-hidden className="size-[14px]" /> 消耗</span>
                 <span className="tasks-exec-stat-value">
                   <UsageCapsule usage={task.usage} aggregate={false} />
                 </span>
@@ -3411,12 +3432,12 @@ function TaskDetailPanel({
                   const consumed = !!usage && usage.totalTokens > 0
                   return (
                     <li key={`${r.ts}-${i}`} className={`tasks-report-item is-${r.status}`}>
-                      <span className="tasks-report-node">{r.status === 'done' ? <CheckCircleIcon aria-hidden className="size-[11px]" /> : <ArrowPathIcon aria-hidden className="size-[11px]" />}</span>
+                      <span className="tasks-report-node">{r.status === 'done' ? <CheckCircleIcon aria-hidden className="size-[14px]" /> : <ArrowPathIcon aria-hidden className="size-[14px]" />}</span>
                       <span className="tasks-report-rail" />
                       <div className="tasks-report-content">
                         <div className="tasks-report-head">
                           <span className="tasks-report-status">
-                            {r.status === 'done' ? <CheckCircleIcon aria-hidden className="size-3" /> : <ArrowPathIcon aria-hidden className="size-3" />}
+                            {r.status === 'done' ? <CheckCircleIcon aria-hidden className="size-[14px]" /> : <ArrowPathIcon aria-hidden className="size-[14px]" />}
                             {r.status === 'done' ? '完成' : '进行中'}
                           </span>
                           {r.turn != null ? <span className="tasks-report-turn">T{r.turn}</span> : null}
@@ -3452,7 +3473,7 @@ function TaskDetailPanel({
             if (window.confirm('删除这个任务？')) void onDelete(task.id)
           }}
         >
-          <TrashIcon aria-hidden className="size-[13px]" />
+          <TrashIcon aria-hidden className="size-[14px]" />
           删除任务
         </button>
       </footer>
@@ -3567,9 +3588,10 @@ if (typeof document !== 'undefined') {
 .tasks-toolbar { display:flex; gap:12px; align-items:center; justify-content:space-between; min-width:0; }
 .tasks-toolbar-left { display:flex; align-items:center; gap:6px; flex:none; min-width:0; }
 .tasks-toolbar-right { display:flex; align-items:center; gap:6px; flex:none; margin-left:auto; }
-.tasks-search { min-width:0; border:1px solid var(--dsw-border); border-radius:8px; padding:6px 8px; background:var(--dsw-input); color:var(--dsw-label); font:inherit; font-size:12px; outline:none; }
-.tasks-search-wrap { flex:0 1 180px; display:flex; align-items:center; gap:6px; border:1px solid var(--dsw-border); border-radius:8px; padding:0 8px; background:var(--dsw-input); color:var(--dsw-label-3); min-width:0; }
-.tasks-refresh { display:inline-flex; align-items:center; justify-content:center; flex:none; width:28px; height:26px; border:1px solid var(--dsw-border); border-radius:8px; padding:0; background:var(--dsw-input); color:var(--dsw-label-2); font:inherit; cursor:pointer; }
+.tasks-search { min-width:0; border:0; border-radius:8px; padding:6px 8px; background:transparent; color:var(--dsw-label); font:inherit; font-size:12px; outline:none; }
+.tasks-search-wrap { flex:0 1 180px; display:flex; align-items:center; gap:6px; border:0; border-radius:8px; padding:0 8px; background:transparent; color:var(--dsw-label-3); min-width:0; }
+.tasks-search-wrap:hover, .tasks-search-wrap:focus-within { background:var(--dsw-hover); }
+.tasks-refresh { display:inline-flex; align-items:center; justify-content:center; flex:none; width:28px; height:26px; border:0; border-radius:8px; padding:0; background:transparent; color:var(--dsw-label-2); font:inherit; cursor:pointer; }
 .tasks-refresh:hover { background:var(--dsw-hover); }
 .tasks-refresh.is-active { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 10%, var(--dsw-input)); }
 .tasks-filter-btn-wrap { position:relative; display:inline-flex; flex:none; }
@@ -3589,9 +3611,9 @@ if (typeof document !== 'undefined') {
 
 /* ---- 视图下拉（Notion 数据库左上角风格）---- */
 .tasks-viewdd-wrap { position:relative; display:inline-flex; align-items:center; gap:6px; flex:none; }
-.tasks-viewdd-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--dsw-border); border-radius:8px; padding:5px 9px; background:var(--dsw-input); color:var(--dsw-label); font:inherit; font-size:12px; font-weight:650; cursor:pointer; transition:background .12s ease, border-color .12s ease; }
+.tasks-viewdd-btn { display:inline-flex; align-items:center; gap:6px; border:0; border-radius:8px; padding:5px 9px; background:transparent; color:var(--dsw-label); font:inherit; font-size:12px; font-weight:650; cursor:pointer; }
 .tasks-viewdd-btn:hover { background:var(--dsw-hover); }
-.tasks-viewdd-btn.is-active { border-color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 10%, var(--dsw-input)); }
+.tasks-viewdd-btn.is-active { background:color-mix(in srgb, var(--dsw-business) 10%, transparent); }
 .tasks-viewdd-name { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tasks-viewdd-menu { position:absolute; top:calc(100% + 6px); left:0; z-index:40; min-width:230px; padding:6px; background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:2px; }
 .tasks-viewdd-head { padding:5px 8px 3px; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--dsw-label-3); }
@@ -3631,7 +3653,7 @@ if (typeof document !== 'undefined') {
 
 /* ---- 排序按钮 + 菜单 ---- */
 .tasks-sort-wrap { position:relative; display:inline-flex; flex:none; }
-.tasks-sort-btn { position:relative; display:inline-flex; align-items:center; justify-content:center; width:28px; height:26px; border:1px solid var(--dsw-border); border-radius:8px; padding:0; background:var(--dsw-input); color:var(--dsw-label-2); font:inherit; font-size:11.5px; font-weight:600; cursor:pointer; transition:background .12s ease, border-color .12s ease; }
+.tasks-sort-btn { position:relative; display:inline-flex; align-items:center; justify-content:center; width:28px; height:26px; border:0; border-radius:8px; padding:0; background:transparent; color:var(--dsw-label-2); font:inherit; font-size:11.5px; font-weight:600; cursor:pointer; }
 .tasks-sort-btn:hover { background:var(--dsw-hover); }
 .tasks-sort-btn.is-custom { color:var(--dsw-business); }
 .tasks-sort-btn.is-active { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 10%, var(--dsw-input)); }
@@ -3647,45 +3669,46 @@ if (typeof document !== 'undefined') {
 .tasks-mode-item-ico { display:inline-flex; align-items:center; margin-right:6px; }
 
 /* ---- 看板视图（Notion 风格：极轻边框、无重色、悬浮轻阴影）---- */
-.tasks-board { display:grid; grid-template-columns:repeat(5, minmax(190px, 1fr)); gap:10px; margin-top:10px; align-items:start; min-width:0; width:100%; max-width:100%; overflow-x:auto; }
-.tasks-board.is-compact { gap:8px; }
-.tasks-board-col { display:flex; flex-direction:column; min-width:0; min-height:120px; background:color-mix(in srgb, var(--dsw-muted-fill) 38%, transparent); border-radius:10px; padding:6px; }
-.tasks-board-colhead { display:flex; align-items:center; gap:6px; padding:4px 6px 8px; color:var(--dsw-label-2); font-size:11px; font-weight:600; }
+.tasks-board { display:grid; grid-template-columns:repeat(5, minmax(240px, 1fr)); gap:12px; margin-top:10px; align-items:start; min-width:0; width:100%; max-width:100%; overflow-x:auto; }
+.tasks-board.is-compact { gap:10px; grid-template-columns:repeat(5, minmax(220px, 1fr)); }
+.tasks-board-col { display:flex; flex-direction:column; min-width:0; min-height:148px; background:color-mix(in srgb, var(--dsw-muted-fill) 38%, transparent); border-radius:10px; padding:10px; }
+.tasks-board-colhead { display:flex; align-items:center; gap:6px; padding:4px 6px 10px; color:var(--dsw-label-2); font-size:14px; font-weight:600; }
 .tasks-board-col.is-overdue .tasks-board-colhead { color:var(--dsw-danger); font-weight:700; }
 .tasks-board-col.is-blocked .tasks-board-colhead { color:#9a6700; }
 .tasks-board-col.is-doing .tasks-board-colhead { color:var(--dsw-business); }
 .tasks-board-col.is-done .tasks-board-colhead { color:#2f7d4c; }
-.tasks-board-count { margin-left:auto; color:var(--dsw-label-3); font-size:10px; font-weight:600; background:var(--dsw-muted-fill); border-radius:8px; padding:1px 6px; }
-.tasks-board-list { display:flex; flex-direction:column; gap:6px; }
-.tasks-card { display:flex; flex-direction:column; gap:5px; width:100%; min-width:0; overflow:hidden; text-align:left; border:0; border-radius:7px; padding:8px 9px; background:var(--dsw-surface); color:var(--dsw-label); font:inherit; cursor:pointer; box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 65%, transparent); transition:box-shadow .12s ease, transform .08s ease; }
+.tasks-board-count { margin-left:auto; color:var(--dsw-label-3); font-size:14px; font-weight:600; background:var(--dsw-muted-fill); border-radius:8px; padding:1px 6px; }
+.tasks-board-list { display:flex; flex-direction:column; gap:8px; }
+.tasks-card { display:flex; flex-direction:column; gap:8px; width:100%; min-width:0; overflow:hidden; text-align:left; border:0; border-radius:8px; padding:12px 14px; background:var(--dsw-surface); color:var(--dsw-label); font:inherit; cursor:pointer; box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 65%, transparent); transition:box-shadow .12s ease, transform .08s ease; }
 .tasks-card:hover { box-shadow:0 1px 3px rgba(0,0,0,.08), 0 0 0 1px color-mix(in srgb, var(--dsw-border) 85%, transparent); transform:translateY(-1px); }
 .tasks-card.is-active { background:color-mix(in srgb, var(--dsw-business) 6%, var(--dsw-surface)); }
-.tasks-card-title { display:flex; align-items:flex-start; gap:6px; font-size:12px; font-weight:620; line-height:1.35; }
+.tasks-card-title { display:flex; align-items:flex-start; gap:8px; font-size:14px; font-weight:620; line-height:1.4; }
 .tasks-card-titletext { flex:1; min-width:0; word-break:break-word; }
 .tasks-card-blocked { flex:none; display:inline-flex; position:relative; top:3px; color:#9a6700; }
 /* ---- 优先级 / 难度 徽标（icon + 文字，配色）---- */
-.tasks-card-badge { flex:none; display:inline-flex; align-items:center; gap:2px; border-radius:999px; padding:1px 5px; font-size:9px; font-weight:700; line-height:1.4; white-space:nowrap; }
+.tasks-card-badge { flex:none; display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:3px 8px; font-size:14px; font-weight:700; line-height:1.4; white-space:nowrap; }
 .tasks-card-badge.is-p-high { color:var(--dsw-danger); background:color-mix(in srgb, var(--dsw-danger) 12%, transparent); }
 .tasks-card-badge.is-p-med { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 12%, transparent); }
 .tasks-card-badge.is-p-low { color:var(--dsw-label-3); background:color-mix(in srgb, var(--dsw-label-3) 12%, transparent); }
+.tasks-card-badge.is-reports { color:var(--dsw-label-2); background:color-mix(in srgb, var(--dsw-border) 45%, transparent); }
 /* ---- 难度（高红 / 中橙 / 低绿）---- */
 .tasks-card-badge.is-d-high { color:#d64545; background:color-mix(in srgb, #d64545 12%, transparent); }
 .tasks-card-badge.is-d-med { color:#e07a2f; background:color-mix(in srgb, #e07a2f 12%, transparent); }
 .tasks-card-badge.is-d-low { color:#3d9a5f; background:color-mix(in srgb, #3d9a5f 12%, transparent); }
-.tasks-card-desc { min-width:0; max-width:100%; font-size:11px; color:var(--dsw-label-2); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; word-break:break-word; }
-.tasks-card-meta { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--dsw-label-3); margin-top:2px; }
+.tasks-card-desc { min-width:0; max-width:100%; font-size:14px; color:var(--dsw-label-2); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; word-break:break-word; }
+.tasks-card-meta { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--dsw-label-3); margin-top:2px; }
 .tasks-card-assignee { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tasks-card-reports { margin-left:auto; color:var(--dsw-label-2); }
-.tasks-card-badges { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
-.tasks-card-tags { display:flex; align-items:center; gap:4px; flex-wrap:wrap; padding-top:5px; border-top:1px solid color-mix(in srgb, var(--dsw-border) 60%, transparent); }
+.tasks-card-badges { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.tasks-card-tags { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding-top:8px; border-top:1px solid color-mix(in srgb, var(--dsw-border) 60%, transparent); }
 .tasks-card-due.is-overdue { color:var(--dsw-danger); font-weight:650; }
-.tasks-board-empty { color:var(--dsw-label-3); font-size:11px; padding:14px 6px; text-align:center; }
+.tasks-board-empty { color:var(--dsw-label-3); font-size:14px; padding:14px 6px; text-align:center; }
 
 .tasks-error { border-radius:7px; padding:6px 8px; background:var(--dsw-danger-soft); color:var(--dsw-danger); font-size:11px; }
-.tasks-empty { color:var(--dsw-label-3); font-size:12px; line-height:1.45; padding:28px 16px; text-align:center; }
+.tasks-empty { color:var(--dsw-label-3); font-size:14px; line-height:1.45; padding:28px 16px; text-align:center; }
 .tasks-empty.is-compact { padding:16px 10px; }
 .tasks-table-wrap { min-width:0; width:100%; max-width:100%; overflow:auto; border:1px solid var(--dsw-border); border-radius:10px; background:color-mix(in srgb, var(--dsw-surface) 92%, transparent); }
-.tasks-table { width:max-content; min-width:100%; border-collapse:collapse; table-layout:auto; font-size:11px; white-space:nowrap; }
+.tasks-table { width:max-content; min-width:100%; border-collapse:collapse; table-layout:auto; font-size:14px; white-space:nowrap; }
 .tasks-table th { padding:6px 6px; border-bottom:1px solid var(--dsw-border); color:var(--dsw-label-3); font-weight:600; text-align:left; white-space:nowrap; position:sticky; top:0; background:var(--dsw-surface); z-index:1; }
 .tasks-th { display:inline-flex; align-items:center; gap:4px; }
 .tasks-table td { padding:4px 6px; border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 80%, transparent); vertical-align:middle; }
@@ -3694,17 +3717,17 @@ if (typeof document !== 'undefined') {
 .tasks-table tr.is-active td { background:color-mix(in srgb, var(--dsw-business) 8%, transparent); }
 .tasks-col-title { width:267px; min-width:267px; }
 .tasks-col-status { width:92px; }
-.tasks-status-pill { display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:2px 8px; font-size:10.5px; font-weight:600; }
+.tasks-status-pill { display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:2px 8px; font-size:14px; font-weight:600; }
 .tasks-status-pill.is-todo { color:var(--dsw-label-3); background:color-mix(in srgb, var(--dsw-label-3) 10%, transparent); }
 .tasks-status-pill.is-doing { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 12%, transparent); }
 .tasks-status-pill.is-done { color:#2f7d4c; background:color-mix(in srgb, #2f7d4c 12%, transparent); }
 .tasks-status-pill.is-blocked { color:#9a6700; background:color-mix(in srgb, #9a6700 12%, transparent); }
 .tasks-status-pill.is-overdue { color:var(--dsw-danger); background:color-mix(in srgb, var(--dsw-danger) 12%, transparent); font-weight:700; }
 .tasks-status-label { white-space:nowrap; }
-.tasks-status-reports { display:inline-flex; align-items:center; justify-content:center; min-width:14px; height:14px; padding:0 3px; border-radius:999px; background:color-mix(in srgb, var(--dsw-border) 50%, transparent); font-size:9.5px; font-weight:700; color:var(--dsw-label-2); }
+.tasks-status-reports { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 4px; border-radius:999px; background:color-mix(in srgb, var(--dsw-border) 50%, transparent); font-size:14px; font-weight:700; color:var(--dsw-label-2); }
 .tasks-col-priority { width:76px; }
 .tasks-col-usage { width:96px; min-width:96px; color:var(--dsw-label-2); font-variant-numeric:tabular-nums; }
-/* 消耗胶囊与 .traj-usage 共用全局样式；此处只保留队列字号覆盖 */
+.tasks-table .traj-usage, .tasks-table .traj-usage-empty { font-size:14px; }
 .tasks-col-actor { width:130px; }
 .tasks-col-time { width:130px; }
 .tasks-col-action { width:56px; }
@@ -3718,21 +3741,21 @@ if (typeof document !== 'undefined') {
 .tasks-col-tags { width:130px; }
 .tasks-col-project { width:150px; min-width:150px; }
 .tasks-col-project .tasks-proj-tag { max-width:100%; overflow:hidden; text-overflow:ellipsis; display:inline-block; }
-.tasks-proj-tag { display:inline-block; padding:1px 8px; border-radius:999px; font-size:10px; font-weight:600; color:var(--dsw-label-2); background:color-mix(in srgb, var(--dsw-border) 55%, transparent); white-space:nowrap; margin-right:0; }
-.tasks-proj-empty { color:var(--dsw-label-3); font-size:11px; }
+.tasks-proj-tag { display:inline-block; padding:1px 8px; border-radius:999px; font-size:14px; font-weight:600; color:var(--dsw-label-2); background:color-mix(in srgb, var(--dsw-border) 55%, transparent); white-space:nowrap; margin-right:0; }
+.tasks-proj-empty { color:var(--dsw-label-3); font-size:14px; }
 .tasks-tags { display:inline-flex; flex-wrap:wrap; gap:3px; vertical-align:middle; }
-.tasks-tag { display:inline-flex; align-items:center; padding:1px 8px; border-radius:999px; font-size:10px; font-weight:600; color:var(--tag, #3b6fd9); background:color-mix(in srgb, var(--tag, #3b6fd9) 12%, transparent); white-space:nowrap; max-width:110px; overflow:hidden; text-overflow:ellipsis; }
-.tasks-proj-tag { display:inline-block; padding:1px 8px; border-radius:999px; font-size:10px; font-weight:600; color:var(--dsw-label-2); background:color-mix(in srgb, var(--dsw-border) 55%, transparent); white-space:nowrap; margin-right:4px; }
+.tasks-tag { display:inline-flex; align-items:center; padding:1px 8px; border-radius:999px; font-size:14px; font-weight:600; color:var(--tag, #3b6fd9); background:color-mix(in srgb, var(--tag, #3b6fd9) 12%, transparent); white-space:nowrap; max-width:110px; overflow:hidden; text-overflow:ellipsis; }
+.tasks-proj-tag { display:inline-block; padding:1px 8px; border-radius:999px; font-size:14px; font-weight:600; color:var(--dsw-label-2); background:color-mix(in srgb, var(--dsw-border) 55%, transparent); white-space:nowrap; margin-right:4px; }
 .tasks-tag-editor { display:flex; flex-direction:column; gap:5px; }
 .tasks-col-title .tasks-cell-input { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tasks-cell-input { width:100%; border:0; border-radius:5px; padding:2px 4px; background:transparent; color:var(--dsw-label); font:inherit; outline:none; }
 .tasks-cell-input:focus { background:var(--dsw-hover); }
 .tasks-cellselect { position:relative; display:inline-flex; min-width:0; width:100%; }
-.tasks-cellselect-trigger { display:inline-flex; align-items:center; gap:5px; width:100%; min-width:0; border:0; border-radius:6px; padding:3px 7px; background:transparent; color:var(--dsw-label); font:inherit; font-size:12px; font-weight:600; cursor:pointer; text-align:left; }
+.tasks-cellselect-trigger { display:inline-flex; align-items:center; gap:5px; width:100%; min-width:0; border:0; border-radius:6px; padding:3px 7px; background:transparent; color:var(--dsw-label); font:inherit; font-size:14px; font-weight:600; cursor:pointer; text-align:left; }
 .tasks-cellselect-trigger:hover, .tasks-cellselect-trigger[data-open] { background:var(--dsw-hover); }
 .tasks-chip-text { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .tasks-cellselect-menu { position:absolute; top:calc(100% + 4px); left:0; z-index:40; min-width:110px; padding:3px; background:var(--dsw-sidebar); border:1px solid var(--dsw-border); border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.16); display:flex; flex-direction:column; gap:1px; }
-.tasks-cellselect-option { display:flex; align-items:center; gap:6px; width:100%; border:0; background:transparent; padding:5px 8px; border-radius:5px; font:inherit; font-size:11px; font-weight:600; color:var(--dsw-label); cursor:pointer; text-align:left; white-space:nowrap; }
+.tasks-cellselect-option { display:flex; align-items:center; gap:6px; width:100%; border:0; background:transparent; padding:5px 8px; border-radius:5px; font:inherit; font-size:14px; font-weight:600; color:var(--dsw-label); cursor:pointer; text-align:left; white-space:nowrap; }
 .tasks-cellselect-option:hover { background:var(--dsw-hover); }
 .tasks-cellselect-option.is-selected { background:color-mix(in srgb, var(--dsw-business) 14%, transparent); }
 .tasks-cellselect-trigger.is-todo { color:var(--dsw-label-3); }
@@ -3760,7 +3783,7 @@ if (typeof document !== 'undefined') {
 .tasks-assignee-option .tasks-actor-name { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .tasks-avatar-clear { background:var(--dsw-muted-fill); }
 .tasks-assignee-loading { display:flex; align-items:center; gap:6px; padding:6px; color:var(--dsw-label-3); font-size:11px; }
-.tasks-time { display:inline-flex; align-items:center; gap:3px; color:var(--dsw-label-3); font-size:10px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.tasks-time { display:inline-flex; align-items:center; gap:3px; color:var(--dsw-label-3); font-size:14px; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .tasks-time.is-empty { opacity:.7; }
 .tasks-actor { display:inline-flex; align-items:center; gap:4px; min-width:0; max-width:140px; }
 .tasks-actor.is-empty { color:var(--dsw-label-3); }
@@ -3768,8 +3791,8 @@ if (typeof document !== 'undefined') {
 .tasks-mascot { position:relative; }
 .tasks-mascot-busy { position:absolute; right:-1px; bottom:-1px; width:5px; height:5px; border-radius:50%; background:#35c17a; box-shadow:0 0 0 1.5px #fff; }
 .tasks-actor-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; color:var(--dsw-label-2); }
-.tasks-actor-kind { font-size:9px; color:var(--dsw-label-3); border:1px solid var(--dsw-border); border-radius:3px; padding:0 3px; line-height:1.3; }
-.tasks-exec { display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:10px; font-weight:650; white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+.tasks-actor-kind { font-size:14px; color:var(--dsw-label-3); border:1px solid var(--dsw-border); border-radius:3px; padding:0 3px; line-height:1.3; }
+.tasks-exec { display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:14px; font-weight:650; white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
 .tasks-exec.is-running { background:color-mix(in srgb, var(--dsw-business) 16%, transparent); color:var(--dsw-business); }
 .tasks-exec.is-idle { background:color-mix(in srgb, #3d9a5f 14%, transparent); color:#2f7d4c; }
 .tasks-exec.is-muted { background:var(--dsw-muted-fill); color:var(--dsw-label-3); }
@@ -3821,7 +3844,7 @@ if (typeof document !== 'undefined') {
 .tasks-exec-stat-label { flex:none; width:72px; display:inline-flex; align-items:center; gap:5px; color:var(--dsw-label-3); font-size:10.5px; font-weight:600; padding-top:1px; }
 .tasks-exec-stat-value { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
 .tasks-exec-stat-value .tasks-actor-name { font-size:11px; font-weight:600; color:var(--dsw-label); }
-.tasks-time { display:inline-flex; align-items:center; gap:4px; font-size:10.5px; color:var(--dsw-label-2); }
+.tasks-exec-stat .tasks-detail-main .tasks-time, .tasks-detail-aside .tasks-time, .tasks-exec-stat .tasks-time { display:inline-flex; align-items:center; gap:4px; font-size:14px; color:var(--dsw-label-2); }
 .tasks-detail-usage-total-capsule { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 10px; background:color-mix(in srgb, var(--dsw-business) 12%, transparent); color:var(--dsw-label); font-weight:650; white-space:nowrap; width:fit-content; }
 .tasks-detail-usage-total-capsule svg { color:var(--dsw-business); }
 .tasks-detail-usage-breakdown { color:var(--dsw-label-3); font-weight:500; }
@@ -3862,55 +3885,54 @@ if (typeof document !== 'undefined') {
 .tasks-graph .react-flow__controls { overflow:hidden; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.14); }
 .tasks-graph .react-flow__control-button { background:var(--dsw-surface); color:var(--dsw-label-2); border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 60%, transparent); }
 .tasks-graph-node-wrap { position:relative; width:100%; height:100%; }
-.tasks-graph-node-wrap .react-flow__handle { width:8px; height:8px; border:2px solid var(--dsw-surface); border-radius:50%; background:var(--dsw-border); }
-.tasks-graph-node-wrap .react-flow__handle-left { left:-5px; }
-.tasks-graph-node-wrap .react-flow__handle-right { right:-5px; }
-.tasks-graph-node { display:flex; flex-direction:column; gap:3px; width:100%; height:100%; text-align:left; border:1px solid color-mix(in srgb, var(--dsw-border) 78%, transparent); border-radius:8px; padding:6px 8px; background:var(--dsw-surface); color:var(--dsw-label); font:inherit; cursor:pointer; box-sizing:border-box; box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 60%, transparent); }
+.tasks-graph-node-wrap .react-flow__handle { width:10px; height:10px; border:2px solid var(--dsw-surface); border-radius:50%; background:var(--dsw-border); }
+.tasks-graph-node-wrap .react-flow__handle-left { left:-6px; }
+.tasks-graph-node-wrap .react-flow__handle-right { right:-6px; }
+.tasks-graph-node { display:flex; flex-direction:column; gap:8px; width:100%; height:100%; text-align:left; border:1px solid color-mix(in srgb, var(--dsw-border) 78%, transparent); border-radius:10px; padding:10px 12px; background:var(--dsw-surface); color:var(--dsw-label); font:inherit; cursor:pointer; box-sizing:border-box; box-shadow:0 0 0 1px color-mix(in srgb, var(--dsw-border) 60%, transparent); }
 .tasks-graph-node:hover { border-color:color-mix(in srgb, var(--dsw-business) 55%, transparent); }
 .tasks-graph-node.is-active { outline:2px solid color-mix(in srgb, var(--dsw-business) 65%, transparent); background:color-mix(in srgb, var(--dsw-business) 8%, var(--dsw-surface)); }
 .tasks-graph-node.is-blocked { box-shadow:0 0 0 1px #d9822b; }
-.tasks-graph-node-title { font-size:11px; font-weight:620; line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; word-break:break-word; padding-right:16px; }
-.tasks-graph-node-meta { margin-top:auto; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
-.tasks-graph-status { font-size:9.5px; font-weight:650; color:var(--dsw-label-3); }
+.tasks-graph-node-title { font-size:14px; font-weight:620; line-height:1.4; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; word-break:break-word; padding-right:12px; }
+.tasks-graph-node-meta { margin-top:auto; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.tasks-graph-status { font-size:14px; font-weight:650; color:var(--dsw-label-3); }
 .tasks-graph-status.is-todo { color:var(--dsw-label-3); }
 .tasks-graph-status.is-doing { color:var(--dsw-business); }
 .tasks-graph-status.is-done { color:#2f7d4c; }
 .tasks-graph-status.is-blocked { color:#d9822b; }
-.tasks-graph-node-meta .tasks-card-badge { font-size:8.5px; padding:0 4px; }
+.tasks-graph-node-meta .tasks-card-badge { font-size:14px; padding:3px 8px; }
 
 /* ---- 队列视图（清单风格：只展示叶节点，按状态分组）---- */
 .tasks-queue { display:flex; flex-direction:column; gap:14px; margin-top:10px; overflow:auto; flex:1; min-width:0; width:100%; max-width:100%; min-height:0; padding-bottom:4px; }
 .tasks-queue.is-compact { gap:10px; margin-top:6px; }
 .tasks-queue-group { display:flex; flex-direction:column; gap:6px; }
-.tasks-queue-ghead { display:flex; align-items:center; gap:6px; padding:4px 6px; color:var(--dsw-label-2); font-size:11px; font-weight:650; letter-spacing:.01em; }
+.tasks-queue-ghead { display:flex; align-items:center; gap:6px; padding:4px 6px; color:var(--dsw-label-2); font-size:14px; font-weight:650; letter-spacing:.01em; }
 .tasks-queue-ghead.is-overdue { color:var(--dsw-danger); font-weight:700; }
 .tasks-queue-ghead.is-doing { color:var(--dsw-business); }
 .tasks-queue-ghead.is-blocked { color:#9a6700; }
 .tasks-queue-ghead.is-done { color:#2f7d4c; }
 .tasks-queue-glabel { font-weight:650; }
-.tasks-queue-count { margin-left:auto; color:var(--dsw-label-3); font-size:10px; font-weight:600; background:var(--dsw-muted-fill); border-radius:8px; padding:1px 7px; }
+.tasks-queue-count { margin-left:auto; color:var(--dsw-label-3); font-size:14px; font-weight:600; background:var(--dsw-muted-fill); border-radius:8px; padding:1px 7px; }
 .tasks-queue-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
 .tasks-queue-item { display:flex; min-width:0; border:0; border-radius:0; }
-.tasks-queue-item-main { display:flex; align-items:center; gap:8px; width:100%; min-width:0; box-sizing:border-box; overflow:hidden; text-align:left; border:0; border-top:1px solid color-mix(in srgb, var(--dsw-border) 65%, transparent); border-bottom:1px solid color-mix(in srgb, var(--dsw-border) 65%, transparent); border-radius:0; padding:7px 8px; background:color-mix(in srgb, var(--dsw-surface) 94%, transparent); color:var(--dsw-label); font:inherit; cursor:pointer; box-shadow:none; transition:border-color .12s ease, background .12s ease; }
-.tasks-queue-item-main:hover { background:color-mix(in srgb, var(--dsw-hover) 55%, var(--dsw-surface)); border-top-color:color-mix(in srgb, var(--dsw-border) 90%, transparent); border-bottom-color:color-mix(in srgb, var(--dsw-border) 90%, transparent); }
-.tasks-queue-item.is-active .tasks-queue-item-main { background:color-mix(in srgb, var(--dsw-business) 8%, var(--dsw-surface)); border-top-color:color-mix(in srgb, var(--dsw-business) 50%, transparent); border-bottom-color:color-mix(in srgb, var(--dsw-business) 50%, transparent); }
-.tasks-queue-item-title { flex:1; min-width:0; font-size:11px; font-weight:600; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tasks-queue-item-main { display:flex; align-items:center; gap:8px; width:100%; min-width:0; box-sizing:border-box; overflow:hidden; text-align:left; border:0; border-radius:6px; padding:7px 8px; background:transparent; color:var(--dsw-label); font:inherit; cursor:pointer; box-shadow:none; }
+.tasks-queue-item-main:hover { background:var(--dsw-hover); }
+.tasks-queue-item.is-active .tasks-queue-item-main { background:color-mix(in srgb, var(--dsw-hover) 85%, transparent); }
+.tasks-queue-item-title { flex:1; min-width:0; font-size:14px; font-weight:600; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tasks-queue-chain { color:var(--dsw-label-3); font-weight:500; }
 .tasks-queue-item.is-done .tasks-queue-item-title { text-decoration:line-through; color:var(--dsw-label-3); }
-.tasks-queue-pill { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:9.5px; font-weight:700; white-space:nowrap; }
+.tasks-queue-pill { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:14px; font-weight:700; white-space:nowrap; }
 .tasks-queue-pill.is-p-high { color:var(--dsw-danger); background:color-mix(in srgb, var(--dsw-danger) 12%, transparent); }
 .tasks-queue-pill.is-p-med { color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 12%, transparent); }
 .tasks-queue-pill.is-p-low { color:var(--dsw-label-3); background:color-mix(in srgb, var(--dsw-label-3) 12%, transparent); }
 .tasks-queue-lock { flex:none; display:inline-flex; color:#9a6700; }
-.tasks-queue-overdue { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:9px; font-weight:700; white-space:nowrap; color:var(--dsw-danger); background:color-mix(in srgb, var(--dsw-danger) 12%, transparent); }
-.tasks-queue-meta { flex:none; display:flex; align-items:center; gap:8px; color:var(--dsw-label-3); font-size:10px; min-width:0; overflow:hidden; }
+.tasks-queue-overdue { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:14px; font-weight:700; white-space:nowrap; color:var(--dsw-danger); background:color-mix(in srgb, var(--dsw-danger) 12%, transparent); }
+.tasks-queue-meta { flex:none; display:flex; align-items:center; gap:8px; color:var(--dsw-label-3); font-size:14px; min-width:0; overflow:hidden; }
 .tasks-queue-assignee { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; color:var(--dsw-label-2); }
-.tasks-queue-meta .tasks-time { font-size:10px; }
-/* 队列视图用量胶囊字号与队列其他 meta 文本统一：10px；胶囊内 input→output 数字同尺寸 */
-.tasks-queue-item-main .traj-usage { font-size:10px; }
+.tasks-queue-meta .tasks-time { font-size:14px; }
+.tasks-queue-item-main .traj-usage { font-size:14px; }
 /* ---- Trigger 自动触发 ---- */
 .tasks-status-cell { display:flex; align-items:center; gap:5px; min-width:0; }
-.tasks-trigger-mark { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:9px; font-weight:700; white-space:nowrap; color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 12%, transparent); }
+.tasks-trigger-mark { flex:none; display:inline-flex; align-items:center; gap:3px; border-radius:999px; padding:1px 6px; font-size:14px; font-weight:700; white-space:nowrap; color:var(--dsw-business); background:color-mix(in srgb, var(--dsw-business) 12%, transparent); }
 .tasks-trigger-mark.is-pending { color:#d9822b; background:color-mix(in srgb, #d9822b 14%, transparent); }
 .tasks-trigger-mark.is-delivered { color:#2f7d4c; background:color-mix(in srgb, #2f7d4c 14%, transparent); }
 .tasks-trigger-mark.is-done { color:#3d9a5f; background:color-mix(in srgb, #3d9a5f 12%, transparent); }
