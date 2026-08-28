@@ -88,13 +88,13 @@ function SessionTagBadges({ tags }: { tags?: string[] }) {
       {shown.map((tag) => (
         <span
           key={tag}
-          className="max-w-[72px] truncate rounded-[4px] bg-[var(--dsw-hover-weak,var(--dsw-hover))] px-1 py-px text-[11px] leading-[15px] font-medium"
+          className="max-w-18 truncate rounded-sm bg-(--dsw-hover-weak,var(--dsw-hover)) px-1 py-px text-[11px] leading-3.75 font-medium"
         >
           {tag}
         </span>
       ))}
       {extra > 0 ? (
-        <span className="shrink-0 rounded-[4px] px-0.5 py-px text-[11px] leading-[15px] font-medium opacity-80">
+        <span className="shrink-0 rounded-sm px-0.5 py-px text-[11px] leading-3.75 font-medium opacity-80">
           +{extra}
         </span>
       ) : null}
@@ -299,7 +299,7 @@ export const ChatSidebar = memo(function ChatSidebar({
 
   return (
     <aside
-      className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] ${visible ? 'flex' : 'hidden'
+      className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar) ${visible ? 'flex' : 'hidden'
         }`}
       aria-hidden={!visible}
     >
@@ -315,7 +315,7 @@ export const ChatSidebar = memo(function ChatSidebar({
         </span>
         <button
           type="button"
-          className="grid size-[26px] place-items-center rounded-[6px] text-inherit hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-sidebar-fg-active)]"
+          className="grid size-6.5 place-items-center rounded-md text-inherit hover:bg-(--dsw-hover) hover:text-(--dsw-sidebar-fg-active)"
           title="Collapse sidebar"
           aria-label="Collapse sidebar"
           onClick={onCollapse}
@@ -361,7 +361,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                 <section key={section.kind} className="min-w-0">
                   {/* 板块标题：收藏 / (项目|标签)，可点击整行展开/收缩；层级靠 kind 图标表达；悬浮时右侧露出分组切换 tab */}
                   <div className="sidebar-section-head min-w-0">
-                    <div className="flex min-w-0 min-h-[32px] flex-1 items-center">
+                    <div className="flex min-w-0 min-h-8 flex-1 items-center">
                       <button
                         type="button"
                         className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider"
@@ -430,7 +430,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                 <div
                                   role="button"
                                   tabIndex={0}
-                                  className="flex min-h-[32px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-[6px] text-left text-[14px] font-medium tracking-normal text-inherit outline-none hover:text-[var(--dsw-sidebar-fg-active)] focus-visible:ring-1 focus-visible:ring-[var(--dsw-border)]"
+                                  className="flex min-h-8 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md text-left text-[14px] font-medium tracking-normal text-inherit outline-none hover:text-(--dsw-sidebar-fg-active) focus-visible:ring-1 focus-visible:ring-(--dsw-border)"
                                   title={group.path ?? group.label}
                                   aria-expanded={!collapsed}
                                   onClick={() => toggleProjectGroup(group.key)}
@@ -512,7 +512,7 @@ export const ChatSidebar = memo(function ChatSidebar({
       {pendingDelete && typeof document !== 'undefined'
         ? createPortal(
           <div
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-4"
+            className="fixed inset-0 z-80 flex items-center justify-center bg-black/55 p-4"
             data-testid="chat-session-delete-dialog"
             role="dialog"
             aria-modal="true"
@@ -520,19 +520,19 @@ export const ChatSidebar = memo(function ChatSidebar({
             onClick={() => setPendingDelete(null)}
           >
             <div
-              className="w-[min(100%,320px)] rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] p-4 text-[var(--dsw-label)]"
+              className="w-[min(100%,320px)] rounded-[10px] border border-(--dsw-border) bg-(--dsw-sidebar) p-4 text-(--dsw-label)"
               onClick={(event) => event.stopPropagation()}
             >
               <h2 id="chat-session-delete-title" className="m-0 text-[13px] font-semibold">
                 删除「{pendingDelete.title}」？
               </h2>
-              <p className="mt-1.5 mb-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
+              <p className="mt-1.5 mb-0 text-[11px] leading-[1.45] text-(--dsw-label-3)">
                 删除后无法恢复这份会话。
               </p>
               <div className="mt-3 flex justify-end gap-1.5">
                 <button
                   type="button"
-                  className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] text-[var(--dsw-label)] hover:bg-[#353535]"
+                  className="rounded-md border-0 bg-(--dsw-hover) px-2.5 py-1 text-[11px] text-(--dsw-label) hover:bg-[#353535]"
                   data-testid="chat-session-delete-cancel"
                   onClick={() => setPendingDelete(null)}
                 >
@@ -540,7 +540,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                 </button>
                 <button
                   type="button"
-                  className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] font-medium text-[var(--dsw-label)] hover:bg-[#353535]"
+                  className="rounded-md border-0 bg-(--dsw-hover) px-2.5 py-1 text-[11px] font-medium text-(--dsw-label) hover:bg-[#353535]"
                   data-testid="chat-session-delete-confirm"
                   onClick={confirmDeleteChat}
                 >

@@ -127,7 +127,7 @@ export const SessionInspector = memo(function SessionInspector({
 
   return (
     <aside
-      className="relative flex min-h-0 min-w-0 flex-col border-l border-[var(--dsw-border)] bg-[var(--dsw-bg)] text-[var(--dsw-label)]"
+      className="relative flex min-h-0 min-w-0 flex-col border-l border-(--dsw-border) bg-(--dsw-bg) text-(--dsw-label)"
       data-testid="session-inspector"
       aria-label="会话检查器"
     >

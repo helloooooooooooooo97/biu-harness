@@ -102,7 +102,7 @@ function PluginStorePage(props: SlotProps) {
 
   const pending = items.find((item) => item.id === pendingUninstall) ?? null
   const iconBtn =
-    'inline-grid size-6 shrink-0 cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent p-0 leading-none text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] disabled:opacity-40'
+    'inline-grid size-6 shrink-0 cursor-pointer place-items-center rounded-md border-0 bg-transparent p-0 leading-none text-(--dsw-label-3) hover:bg-(--dsw-hover) hover:text-(--dsw-label) disabled:opacity-40'
   const actionIcon = { className: 'block size-4', width: 16, height: 16 } as const
 
   return (
@@ -112,19 +112,19 @@ function PluginStorePage(props: SlotProps) {
     >
       {compact ? null : (
         <header className="mb-3 flex items-baseline gap-2">
-          <h1 className="m-0 text-[13px] font-semibold tracking-tight text-[var(--dsw-label)]">插件</h1>
-          <span className="text-[11px] tabular-nums text-[var(--dsw-label-3)]">{items.length}</span>
+          <h1 className="m-0 text-[13px] font-semibold tracking-tight text-(--dsw-label)">插件</h1>
+          <span className="text-[11px] tabular-nums text-(--dsw-label-3)">{items.length}</span>
         </header>
       )}
 
       {error ? (
-        <p className="mb-3 text-[11px] leading-[1.45] text-[var(--dsw-danger)]" data-testid="plugin-store-error">
+        <p className="mb-3 text-[11px] leading-[1.45] text-(--dsw-danger)" data-testid="plugin-store-error">
           {error}
         </p>
       ) : null}
 
       {items.length === 0 && !error ? (
-        <p className="m-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]" data-testid="plugin-store-empty">
+        <p className="m-0 text-[11px] leading-[1.45] text-(--dsw-label-3)" data-testid="plugin-store-empty">
           没有插件
         </p>
       ) : (
@@ -132,7 +132,7 @@ function PluginStorePage(props: SlotProps) {
         {items.map((item) => (
           <li
             key={item.id}
-            className="flex items-center justify-between gap-2 rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-2.5 py-2"
+            className="flex items-center justify-between gap-2 rounded-lg border border-(--dsw-border) bg-(--dsw-surface) px-2.5 py-2"
             data-testid={`plugin-store-card-${item.id}`}
             data-biu-kind="plugin"
             data-biu-id={item.id}
@@ -140,22 +140,22 @@ function PluginStorePage(props: SlotProps) {
           >
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-1.5">
-                <span className="min-w-0 truncate text-[12px] font-medium leading-[1.3] text-[var(--dsw-label)]">
+                <span className="min-w-0 truncate text-[12px] font-medium leading-[1.3] text-(--dsw-label)">
                   {item.name}
                 </span>
-                <span className="shrink-0 font-mono text-[10px] leading-[1.3] text-[var(--dsw-label-3)]">{item.id}</span>
+                <span className="shrink-0 font-mono text-[10px] leading-[1.3] text-(--dsw-label-3)">{item.id}</span>
                 {item.enabled ? (
-                  <span className="shrink-0 rounded-[4px] bg-[var(--dsw-ok)]/12 px-1 py-px text-[9px] font-semibold tracking-wide text-[var(--dsw-ok)]">
+                  <span className="shrink-0 rounded-sm bg-(--dsw-ok)/12 px-1 py-px text-[9px] font-semibold tracking-wide text-(--dsw-ok)">
                     {item.running ? '运行中' : '已打开'}
                   </span>
                 ) : (
-                  <span className="shrink-0 rounded-[4px] bg-[var(--dsw-hover)] px-1 py-px text-[9px] font-medium text-[var(--dsw-label-3)]">
+                  <span className="shrink-0 rounded-sm bg-(--dsw-hover) px-1 py-px text-[9px] font-medium text-(--dsw-label-3)">
                     已关闭
                   </span>
                 )}
               </div>
               {item.blurb ? (
-                <p className="mt-0.5 mb-0 line-clamp-2 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
+                <p className="mt-0.5 mb-0 line-clamp-2 text-[11px] leading-[1.45] text-(--dsw-label-3)">
                   {item.blurb}
                 </p>
               ) : null}
@@ -190,7 +190,7 @@ function PluginStorePage(props: SlotProps) {
               )}
               <button
                 type="button"
-                className={`${iconBtn} hover:text-[var(--dsw-danger)]`}
+                className={`${iconBtn} hover:text-(--dsw-danger)`}
                 data-testid={`plugin-store-uninstall-${item.id}`}
                 title="卸载"
                 aria-label={`卸载 ${item.name}`}
@@ -208,7 +208,7 @@ function PluginStorePage(props: SlotProps) {
       {pending && typeof document !== 'undefined'
         ? createPortal(
             <div
-              className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-4"
+              className="fixed inset-0 z-80 flex items-center justify-center bg-black/55 p-4"
               data-testid="plugin-store-uninstall-dialog"
               role="dialog"
               aria-modal="true"
@@ -219,19 +219,19 @@ function PluginStorePage(props: SlotProps) {
               }}
             >
               <div
-                className="w-[min(100%,320px)] rounded-[10px] border border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] p-4 text-[var(--dsw-label)]"
+                className="w-[min(100%,320px)] rounded-[10px] border border-(--dsw-border) bg-(--dsw-sidebar) p-4 text-(--dsw-label)"
                 onClick={(event) => event.stopPropagation()}
               >
                 <h2 id="plugin-store-uninstall-title" className="m-0 text-[13px] font-semibold">
                   卸载「{pending.name}」？
                 </h2>
-                <p className="mt-1.5 mb-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
+                <p className="mt-1.5 mb-0 text-[11px] leading-[1.45] text-(--dsw-label-3)">
                   卸载后会永久删除这份插件代码，货架上也会消失。若只是暂时不用，请点关闭。
                 </p>
                 <div className="mt-3 flex justify-end gap-1.5">
                   <button
                     type="button"
-                    className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] text-[var(--dsw-label)] hover:bg-[#353535]"
+                    className="rounded-md border-0 bg-(--dsw-hover) px-2.5 py-1 text-[11px] text-(--dsw-label) hover:bg-[#353535]"
                     data-testid="plugin-store-uninstall-cancel"
                     disabled={busy === `rm:${pending.id}`}
                     onClick={() => setPendingUninstall(null)}
@@ -240,7 +240,7 @@ function PluginStorePage(props: SlotProps) {
                   </button>
                   <button
                     type="button"
-                    className="rounded-[6px] border-0 bg-[var(--dsw-hover)] px-2.5 py-1 text-[11px] font-medium text-[var(--dsw-label)] hover:bg-[#353535]"
+                    className="rounded-md border-0 bg-(--dsw-hover) px-2.5 py-1 text-[11px] font-medium text-(--dsw-label) hover:bg-[#353535]"
                     data-testid="plugin-store-uninstall-confirm"
                     data-biu-action="uninstall"
                     disabled={busy === `rm:${pending.id}`}
@@ -495,7 +495,7 @@ function PluginAppWindow({
   return (
     <section
       ref={boxRef}
-      className="group/win pointer-events-auto fixed flex min-h-0 min-w-0 flex-col overflow-hidden bg-transparent text-[var(--dsw-label)]"
+      className="group/win pointer-events-auto fixed flex min-h-0 min-w-0 flex-col overflow-hidden bg-transparent text-(--dsw-label)"
       style={style}
       data-testid={`plugin-app-window-${extraId}`}
       data-plugin-id={pluginId}
@@ -508,10 +508,10 @@ function PluginAppWindow({
         }`}
         onPointerDown={startDrag}
       >
-        <div className="group/traffic flex items-center gap-[7px]">
+        <div className="group/traffic flex items-center gap-1.75">
           <button
             type="button"
-            className="relative size-[12px] cursor-pointer rounded-full border-0 bg-[#ff5f57] p-0 shadow-[inset_0_0_0_.5px_rgba(0,0,0,.28)]"
+            className="relative size-3 cursor-pointer rounded-full border-0 bg-[#ff5f57] p-0 shadow-[inset_0_0_0_.5px_rgba(0,0,0,.28)]"
             title="关闭"
             aria-label={`关闭 ${title}`}
             onClick={onClose}
@@ -522,7 +522,7 @@ function PluginAppWindow({
           </button>
           <button
             type="button"
-            className="relative size-[12px] cursor-pointer rounded-full border-0 bg-[#febc2e] p-0 shadow-[inset_0_0_0_.5px_rgba(0,0,0,.28)]"
+            className="relative size-3 cursor-pointer rounded-full border-0 bg-[#febc2e] p-0 shadow-[inset_0_0_0_.5px_rgba(0,0,0,.28)]"
             title="最小化"
             aria-label={`最小化 ${title}`}
             onClick={onMinimize}
@@ -533,7 +533,7 @@ function PluginAppWindow({
           </button>
           <button
             type="button"
-            className="relative size-[12px] cursor-pointer rounded-full border-0 bg-[#28c840] p-0 shadow-[inset_0_0_0_.5px_rgba(0,0,0,.28)]"
+            className="relative size-3 cursor-pointer rounded-full border-0 bg-[#28c840] p-0 shadow-[inset_0_0_0_.5px_rgba(0,0,0,.28)]"
             title={fullscreen ? '还原' : '全屏'}
             aria-label={fullscreen ? `还原 ${title}` : `全屏 ${title}`}
             onClick={onToggleFullscreen}
@@ -546,7 +546,7 @@ function PluginAppWindow({
         <div className="min-w-0 flex-1 truncate text-center text-[12px] font-medium tracking-tight text-white/70">
           {title}
         </div>
-        <span className="w-[52px] shrink-0" aria-hidden />
+        <span className="w-13 shrink-0" aria-hidden />
       </header>
       <div ref={bodyRef} className="min-h-0 min-w-0 flex-1 overflow-auto bg-transparent">
         {children}
@@ -645,7 +645,7 @@ function PluginStoreExtrasLayer(props: SlotProps) {
               <button
                 key={entry.id}
                 type="button"
-                className="rounded-[8px] border border-white/10 bg-[#3a3a3c] px-3 py-1.5 text-[11px] font-medium text-white/85 shadow-[0_8px_24px_rgba(0,0,0,.35)]"
+                className="rounded-lg border border-white/10 bg-[#3a3a3c] px-3 py-1.5 text-[11px] font-medium text-white/85 shadow-[0_8px_24px_rgba(0,0,0,.35)]"
                 title={`还原 ${title}`}
                 onClick={() =>
                   setMinimized((cur) => {

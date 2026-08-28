@@ -22,17 +22,17 @@ function PluginTree(props: SlotProps) {
         if (!rows.length) return null
         return (
           <section key={section.layer}>
-            <h2 className="m-0 mb-2 text-xs font-medium tracking-wide text-[var(--dsw-label-3)]">{section.title}</h2>
+            <h2 className="m-0 mb-2 text-xs font-medium tracking-wide text-(--dsw-label-3)">{section.title}</h2>
             <ul className="m-0 list-none space-y-2 p-0">
               {rows.map((plugin) => (
                 <li
-                  className="rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-3 py-3"
+                  className="rounded-xl border border-(--dsw-border) bg-(--dsw-surface) px-3 py-3"
                   key={`${plugin.layer}:${plugin.id}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="m-0 text-sm font-medium">{plugin.name}</h3>
-                      <div className="mt-0.5 text-xs text-[var(--dsw-label-3)]">
+                      <div className="mt-0.5 text-xs text-(--dsw-label-3)">
                         {plugin.id} · {plugin.state}
                         {!plugin.togglable ? ' · 不可卸载' : ''}
                       </div>
@@ -45,7 +45,7 @@ function PluginTree(props: SlotProps) {
                       onClick={() => void setEnabled(plugin.id, !plugin.enabled)}
                     />
                   </div>
-                  <p className="mt-2 mb-0 text-sm leading-5 text-[var(--dsw-label-3)]">{plugin.blurb}</p>
+                  <p className="mt-2 mb-0 text-sm leading-5 text-(--dsw-label-3)">{plugin.blurb}</p>
                 </li>
               ))}
             </ul>

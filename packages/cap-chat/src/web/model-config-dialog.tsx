@@ -7,7 +7,7 @@ export function ModelConfigDialog(props: { open: boolean; onClose: () => void })
   if (!props.open) return null
   return (
     <div
-      className="fixed inset-0 z-30 flex items-center justify-center bg-[var(--dsw-overlay)] p-4"
+      className="fixed inset-0 z-30 flex items-center justify-center bg-(--dsw-overlay) p-4"
       data-testid="model-config-dialog"
       onClick={props.onClose}
     >

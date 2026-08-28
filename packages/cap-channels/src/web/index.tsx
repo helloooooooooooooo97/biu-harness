@@ -363,7 +363,7 @@ function ChannelModulePage(_props: ChannelModulePageProps) {
                 <div ref={bottomRef} />
               </div>
               <form className="channels-composer" onSubmit={onSend}>
-                <ChatBubbleLeftIcon className="size-4 shrink-0 text-[var(--dsw-label-3)]" />
+                <ChatBubbleLeftIcon className="size-4 shrink-0 text-(--dsw-label-3)" />
                 <input
                   className="channels-input"
                   placeholder="发消息到频道…"

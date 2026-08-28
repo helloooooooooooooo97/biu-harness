@@ -28,14 +28,14 @@ export function ChatConfigBanner(_props: SlotProps) {
 
   return (
     <div
-      className="w-full border border-[var(--dsw-border)] bg-[var(--dsw-input)] px-4 py-2 text-xs text-[var(--dsw-label-2)]"
+      className="w-full border border-(--dsw-border) bg-(--dsw-input) px-4 py-2 text-xs text-(--dsw-label-2)"
       style={{ borderRadius: 'var(--dsw-radius-bubble)' }}
       role="status"
     >
       尚未配置 API Key：消息会本地回声，不会调用模型。点击输入框旁的{' '}
       <button
         type="button"
-        className="font-medium text-[var(--dsw-business)] underline-offset-2 hover:underline"
+        className="font-medium text-(--dsw-business) underline-offset-2 hover:underline"
         onClick={() => window.dispatchEvent(new CustomEvent('biu:open-model-config'))}
       >
         ＋ 配置模型

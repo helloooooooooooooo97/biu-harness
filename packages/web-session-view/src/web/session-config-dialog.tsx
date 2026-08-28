@@ -48,7 +48,7 @@ interface InspectorPayload {
 }
 
 const fieldClass =
-  'rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-2 py-1.5 text-[12px] text-[var(--dsw-label)] outline-none'
+  'rounded-lg border border-(--dsw-border) bg-(--dsw-surface) px-2 py-1.5 text-[12px] text-(--dsw-label) outline-none'
 
 export type SessionConfigDialogProps = {
   open: boolean
@@ -141,21 +141,21 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
 
   return (
     <div
-      className="fixed inset-0 z-20 flex items-center justify-center bg-[var(--dsw-overlay)]"
+      className="fixed inset-0 z-20 flex items-center justify-center bg-(--dsw-overlay)"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label="会话配置"
     >
       <div
-        className="flex max-h-[min(720px,calc(100vh-48px))] w-[min(560px,calc(100vw-48px))] flex-col overflow-hidden rounded-[24px] bg-[var(--dsw-surface)] shadow-2xl"
+        className="flex max-h-[min(720px,calc(100vh-48px))] w-[min(560px,calc(100vw-48px))] flex-col overflow-hidden rounded-3xl bg-(--dsw-surface) shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-[var(--dsw-border)] px-5 py-3">
-          <h2 className="text-sm font-medium text-[var(--dsw-label)]">配置</h2>
+        <div className="flex items-center justify-between border-b border-(--dsw-border) px-5 py-3">
+          <h2 className="text-sm font-medium text-(--dsw-label)">配置</h2>
           <button
             type="button"
-            className="rounded-full px-2 py-1 text-sm text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)]"
+            className="rounded-full px-2 py-1 text-sm text-(--dsw-label-3) hover:bg-(--dsw-hover)"
             onClick={onClose}
           >
             Close
@@ -163,19 +163,19 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           {error ? (
-            <div className="mb-2 rounded-[8px] bg-[color-mix(in_srgb,#c44_16%,transparent)] p-2 text-[11px] text-[#f08888]">
+            <div className="mb-2 rounded-lg bg-(color-mix(in_srgb,#c44_16%,transparent)) p-2 text-[11px] text-[#f08888]">
               {error}
             </div>
           ) : null}
           {!sessionId ? (
-            <div className="text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">打开会话后可编辑配置。</div>
+            <div className="text-[11px] leading-[1.45] text-(--dsw-label-3)">打开会话后可编辑配置。</div>
           ) : (
             <div className="flex flex-col gap-2.5">
-              <p className="m-0 text-[11px] leading-[1.45] text-[var(--dsw-label-3)]">
+              <p className="m-0 text-[11px] leading-[1.45] text-(--dsw-label-3)">
                 名称、提示词和工具只作用于当前 session；未改的字段沿用全局默认。
               </p>
 
-              <label className="flex flex-col gap-1 text-[11px] text-[var(--dsw-label-3)]">
+              <label className="flex flex-col gap-1 text-[11px] text-(--dsw-label-3)">
                 <span>名称</span>
                 <input
                   className={fieldClass}
@@ -202,14 +202,14 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
                 />
               </label>
 
-              <label className="flex flex-col gap-1 text-[11px] text-[var(--dsw-label-3)]">
+              <label className="flex flex-col gap-1 text-[11px] text-(--dsw-label-3)">
                 <span>标签 · 侧栏可按标签分组</span>
                 <div className="flex flex-wrap gap-1">
                   {(data?.config?.tags ?? []).map((tag) => (
                     <button
                       key={tag}
                       type="button"
-                      className="rounded-full border border-[var(--dsw-border)] px-2 py-0.5 text-[11px] text-[var(--dsw-label-2)] hover:border-[var(--dsw-danger)] hover:text-[var(--dsw-danger)]"
+                      className="rounded-full border border-(--dsw-border) px-2 py-0.5 text-[11px] text-(--dsw-label-2) hover:border-(--dsw-danger) hover:text-(--dsw-danger)"
                       title="移除标签"
                       disabled={busy}
                       onClick={() => {
@@ -239,7 +239,7 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
                 />
               </label>
 
-              <label className="flex flex-col gap-1 text-[11px] text-[var(--dsw-label-3)]">
+              <label className="flex flex-col gap-1 text-[11px] text-(--dsw-label-3)">
                 <span>系统提示词</span>
                 <textarea
                   className={`${fieldClass} min-h-[88px] resize-y font-mono text-[11px] leading-[1.45]`}
@@ -264,9 +264,9 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
 
               <div className="flex flex-col gap-px">
                 {sources.map((source) => (
-                  <div key={source.id} className="rounded-[8px] px-2 py-1.5 hover:bg-[var(--dsw-hover)]">
-                    <div className="text-[11px] font-semibold text-[var(--dsw-label-2)]">{source.label}</div>
-                    <div className="mt-0.5 text-[11px] leading-[1.4] text-[var(--dsw-label-3)]">
+                  <div key={source.id} className="rounded-lg px-2 py-1.5 hover:bg-(--dsw-hover)">
+                    <div className="text-[11px] font-semibold text-(--dsw-label-2)">{source.label}</div>
+                    <div className="mt-0.5 text-[11px] leading-[1.4] text-(--dsw-label-3)">
                       {source.description}
                     </div>
                   </div>
@@ -277,8 +277,8 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
                 {tools.map((tool) => (
                   <li
                     key={tool.name}
-                    className={`relative box-border flex h-[30px] min-h-[30px] w-full items-center gap-2 rounded-[8px] border-0 px-2 py-[5px] text-[12px] font-medium leading-[1.2] transition-none hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)] ${
-                      tool.active ? 'text-[var(--dsw-label)]' : 'text-[var(--dsw-label-2)]'
+                    className={`relative box-border flex h-[30px] min-h-[30px] w-full items-center gap-2 rounded-lg border-0 px-2 py-[5px] text-[12px] font-medium leading-[1.2] transition-none hover:bg-(--dsw-hover) hover:text-(--dsw-label) ${
+                      tool.active ? 'text-(--dsw-label)' : 'text-(--dsw-label-2)'
                     }`}
                     data-tool={tool.name}
                     title={tool.description || tool.name}
@@ -286,7 +286,7 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
                     {tool.configurable ? (
                       <input
                         type="checkbox"
-                        className="m-0 size-3.5 shrink-0 accent-[var(--dsw-business)]"
+                        className="m-0 size-3.5 shrink-0 accent-(--dsw-business)"
                         checked={(effective?.extraTools ?? data?.extraTools ?? []).includes(tool.name)}
                         disabled={busy}
                         aria-label={`启用 ${tool.name}`}
@@ -295,7 +295,7 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
                     ) : (
                       <span
                         className={`grid size-4 shrink-0 place-items-center ${
-                          tool.active ? 'text-[var(--dsw-label)]' : 'text-[var(--dsw-label-3)]'
+                          tool.active ? 'text-(--dsw-label)' : 'text-(--dsw-label-3)'
                         }`}
                         aria-hidden
                       >
@@ -303,12 +303,12 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
                       </span>
                     )}
                     <span className="min-w-0 flex-1 truncate font-mono text-[11px] font-medium">{tool.name}</span>
-                    <span className="shrink-0 text-[10px] font-medium lowercase text-[var(--dsw-label-3)]">
+                    <span className="shrink-0 text-[10px] font-medium lowercase text-(--dsw-label-3)">
                       {tool.source}
                     </span>
                     <span
                       className={`ml-auto shrink-0 text-[10px] font-semibold ${
-                        tool.active ? 'text-[var(--dsw-ok,#34d399)]' : 'text-[var(--dsw-label-3)]'
+                        tool.active ? 'text-(--dsw-ok,#34d399)' : 'text-(--dsw-label-3)'
                       }`}
                     >
                       {tool.active ? '可用' : '未开'}

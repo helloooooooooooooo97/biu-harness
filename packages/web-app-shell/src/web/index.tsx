@@ -104,7 +104,7 @@ function UpdateButton() {
     void fetch('/api/update')
       .then((res) => res.json() as Promise<{ behind?: number }>)
       .then((data) => setBehind(Math.max(0, Number(data.behind) || 0)))
-      .catch(() => {})
+      .catch(() => { })
   }, [])
 
   const download = useCallback(async () => {
@@ -153,7 +153,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
 }) {
   return (
     <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-      <div className="absolute inset-0 z-[1] flex min-h-0 overflow-hidden">
+      <div className="absolute inset-0 z-1 flex min-h-0 overflow-hidden">
         <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
           <div className="chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 py-3 pb-44 md:px-8 lg:px-10">
             {renderSlot('stage')}
@@ -328,13 +328,11 @@ function Shell(props: SlotProps) {
 
   return (
     <div
-      className={`app-shell${
-        activeModule === 'agent'
-          ? ` app-shell-agent${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}${
-              inspectorOpen ? ' is-inspector-open' : ''
-            }`
+      className={`app-shell${activeModule === 'agent'
+          ? ` app-shell-agent${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}${inspectorOpen ? ' is-inspector-open' : ''
+          }`
           : ' app-shell-module'
-      }`}
+        }`}
       style={
         inspectorOpen
           ? ({ ['--inspector-width' as string]: `${inspectorWidth}px` } as CSSProperties)
@@ -441,20 +439,20 @@ function Shell(props: SlotProps) {
       />
 
       <div
-        className={`fixed inset-0 z-20 flex items-center justify-center bg-[var(--dsw-overlay)] ${settingsOpen ? '' : 'hidden'}`}
+        className={`fixed inset-0 z-20 flex items-center justify-center bg-(--dsw-overlay) ${settingsOpen ? '' : 'hidden'}`}
         onClick={() => setSettingsOpen(false)}
       >
         <div
-          className="flex h-[min(800px,calc(100vh-48px))] w-[min(800px,calc(100vw-48px))] overflow-hidden rounded-[24px] bg-[var(--dsw-surface)] shadow-2xl"
+          className="flex h-[min(800px,calc(100vh-48px))] w-[min(800px,calc(100vw-48px))] overflow-hidden rounded-3xl bg-(--dsw-surface) shadow-2xl"
           role="dialog"
           aria-modal="true"
           onClick={(event) => event.stopPropagation()}
         >
-          <nav className="w-48 shrink-0 border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)] p-4">
-            <div className="mb-4 flex items-center gap-2 text-[var(--dsw-label)]">
+          <nav className="w-48 shrink-0 border-r border-(--dsw-border) bg-(--dsw-sidebar) p-4">
+            <div className="mb-4 flex items-center gap-2 text-(--dsw-label)">
               <span className="text-sm font-semibold">Settings</span>
             </div>
-            <ul className="space-y-1 text-sm text-[var(--dsw-label-2)]">
+            <ul className="space-y-1 text-sm text-(--dsw-label-2)">
               {[
                 { key: 'plugins', label: 'Plugins' },
                 { key: 'routes', label: 'Routes' },
@@ -463,11 +461,10 @@ function Shell(props: SlotProps) {
                 <li key={item.key}>
                   <button
                     type="button"
-                    className={`w-full rounded-[8px] px-3 py-2 text-left transition-colors ${
-                      settingsTab === item.key
-                        ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
-                        : 'hover:bg-[var(--dsw-hover)]'
-                    }`}
+                    className={`w-full rounded-lg px-3 py-2 text-left transition-colors ${settingsTab === item.key
+                        ? 'bg-(--dsw-business-soft) text-(--dsw-business)'
+                        : 'hover:bg-(--dsw-hover)'
+                      }`}
                     onClick={() => setSettingsTab(item.key)}
                   >
                     {item.label}
@@ -477,11 +474,11 @@ function Shell(props: SlotProps) {
             </ul>
           </nav>
           <div className="flex min-w-0 flex-1 flex-col">
-            <div className="flex items-center justify-between border-b border-[var(--dsw-border)] px-5 py-3">
+            <div className="flex items-center justify-between border-b border-(--dsw-border) px-5 py-3">
               <h2 className="text-sm font-medium">{settingsTab}</h2>
               <button
                 type="button"
-                className="rounded-full px-2 py-1 text-sm text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)]"
+                className="rounded-full px-2 py-1 text-sm text-(--dsw-label-3) hover:bg-(--dsw-hover)"
                 onClick={() => setSettingsOpen(false)}
               >
                 Close

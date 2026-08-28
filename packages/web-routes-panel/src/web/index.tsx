@@ -27,19 +27,19 @@ function RoutesPanel(props: SlotProps) {
   const routes = useSnapshot((state: Snapshot) => state.routes)
   if (!routes.length) {
     return (
-      <div className="rounded-[10px] border border-[var(--dsw-border)] px-4 py-8 text-center text-xs text-[var(--dsw-label-3)]">
+      <div className="rounded-[10px] border border-(--dsw-border) px-4 py-8 text-center text-xs text-(--dsw-label-3)">
         暂无已注册的路由
       </div>
     )
   }
   return (
-    <div className="overflow-hidden rounded-[10px] border border-[var(--dsw-border)]">
+    <div className="overflow-hidden rounded-[10px] border border-(--dsw-border)">
       {routes.map((route, index) => {
         const style = styleFor(route.method)
         return (
           <div
             key={`${route.method}:${route.pattern}`}
-            className="flex items-center gap-3 bg-[var(--dsw-surface)] px-3.5 py-2.5 transition-colors hover:bg-[var(--dsw-hover)]"
+            className="flex items-center gap-3 bg-(--dsw-surface) px-3.5 py-2.5 transition-colors hover:bg-(--dsw-hover)"
             style={index > 0 ? { borderTop: '1px solid var(--dsw-border)' } : undefined}
           >
             <span
@@ -48,7 +48,7 @@ function RoutesPanel(props: SlotProps) {
             >
               {route.method}
             </span>
-            <span className="truncate font-mono text-[12px] text-[var(--dsw-label)]">{route.pattern}</span>
+            <span className="truncate font-mono text-[12px] text-(--dsw-label)">{route.pattern}</span>
           </div>
         )
       })}

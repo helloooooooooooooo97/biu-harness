@@ -84,7 +84,7 @@ function DockIconMenu<T extends string>({
                 {opt.label}
               </span>
               <span className="dock-icon-item-end">
-                {opt.id === value ? <CheckCircleIcon aria-hidden className="size-[13px] dock-icon-check" /> : null}
+                {opt.id === value ? <CheckCircleIcon aria-hidden className="size-3.25 dock-icon-check" /> : null}
                 {opt.hint ? (
                   <span
                     className="dock-icon-hint"
@@ -221,13 +221,13 @@ export function ApprovalsRail(props: SlotProps) {
           {approvals.map((item) => (
             <div key={item.id} className="dock-approval-card">
               <div className="mb-1 font-medium">Approval · {item.name}</div>
-              <pre className="mb-2 max-h-20 overflow-auto whitespace-pre-wrap text-[var(--dsw-label-2)]">
+              <pre className="mb-2 max-h-20 overflow-auto whitespace-pre-wrap text-(--dsw-label-2)">
                 {JSON.stringify(item.args, null, 2)}
               </pre>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="rounded-full px-3 py-1 text-[length:var(--dsw-chat-ui-font-size)] text-[var(--dsw-bg)]"
+                  className="rounded-full px-3 py-1 text-(length:--dsw-chat-ui-font-size) text-(--dsw-bg)"
                   style={{ background: 'var(--dsw-business)' }}
                   onClick={() => void sessionView.decideApproval(item.id, true)}
                 >
@@ -235,7 +235,7 @@ export function ApprovalsRail(props: SlotProps) {
                 </button>
                 <button
                   type="button"
-                  className="rounded-full border border-[var(--dsw-border)] px-3 py-1 text-[length:var(--dsw-chat-ui-font-size)]"
+                  className="rounded-full border border-(--dsw-border) px-3 py-1 text-(length:--dsw-chat-ui-font-size)"
                   onClick={() => void sessionView.decideApproval(item.id, false)}
                 >
                   Deny
@@ -247,7 +247,7 @@ export function ApprovalsRail(props: SlotProps) {
       ) : null}
 
       <div
-        className="flex items-center justify-between gap-2 bg-transparent px-1 text-[length:var(--dsw-chat-ui-font-size)] text-[var(--dsw-label-3)]"
+        className="flex items-center justify-between gap-2 bg-transparent px-1 text-(length:--dsw-chat-ui-font-size) text-(--dsw-label-3)"
         role="toolbar"
         aria-label="Session controls"
       >
@@ -270,7 +270,7 @@ export function ApprovalsRail(props: SlotProps) {
                 <span className="project-chip-hist-bar" style={{ height: `${Math.round(histRatio * 100)}%` }} />
               </span>
             ) : null}
-            <PaintBrushIcon className="size-4 relative z-[1]" aria-hidden />
+            <PaintBrushIcon className="size-4 relative z-1" aria-hidden />
           </button>
         </div>
         <div className="flex shrink-0 items-center gap-1">

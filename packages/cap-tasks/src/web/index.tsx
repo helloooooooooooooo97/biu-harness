@@ -1115,7 +1115,7 @@ function TagMultiSelect({
           <span key={t} className="tasks-tag" style={{ '--tag': tagColor(t) } as CSSProperties}>
             {t}
             <button type="button" className="tasks-tag-x" title="移除" aria-label={`移除 ${t}`} onClick={(e) => { e.stopPropagation(); remove(t) }}>
-              <XMarkIcon aria-hidden className="size-[12px]" />
+              <XMarkIcon aria-hidden className="size-3" />
             </button>
           </span>
         ))}
@@ -1383,26 +1383,26 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
 
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      try {
-        const list = await fetchTaskViews()
-        if (cancelled) return
-        setViews(list)
-        let savedId: string | null = null
+      ; (async () => {
         try {
-          savedId = window.localStorage.getItem('tasks.activeViewId')
+          const list = await fetchTaskViews()
+          if (cancelled) return
+          setViews(list)
+          let savedId: string | null = null
+          try {
+            savedId = window.localStorage.getItem('tasks.activeViewId')
+          } catch {
+            /* ignore */
+          }
+          const target = (savedId ? list.find((v) => v.id === savedId) : undefined) ?? list[0] ?? null
+          setActiveViewId(target?.id ?? null)
+          if (target) setConfig(target.config)
         } catch {
-          /* ignore */
+          /* 服务不可用：留在默认配置 */
+        } finally {
+          if (!cancelled) setHydrated(true)
         }
-        const target = (savedId ? list.find((v) => v.id === savedId) : undefined) ?? list[0] ?? null
-        setActiveViewId(target?.id ?? null)
-        if (target) setConfig(target.config)
-      } catch {
-        /* 服务不可用：留在默认配置 */
-      } finally {
-        if (!cancelled) setHydrated(true)
-      }
-    })()
+      })()
     return () => {
       cancelled = true
     }
@@ -1730,240 +1730,240 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
       <div className="tasks-main">
         <div className="tasks-toolbar">
           <div className="tasks-toolbar-left">
-          {/* 视图下拉（Notion 数据库左上角风格） */}
-          <div className="tasks-viewdd-wrap" ref={viewMenuRef}>
-            <button
-              type="button"
-              className={`tasks-viewdd-btn${viewMenuOpen ? ' is-active' : ''}`}
-              aria-label="切换视图"
-              aria-haspopup="menu"
-              aria-expanded={viewMenuOpen}
-              onClick={() => setViewMenuOpen((v) => !v)}
-            >
-              <Squares2X2Icon aria-hidden className="size-[14px]" />
-              <span className="tasks-viewdd-name">{activeView?.name ?? '未保存'}</span>
-              <ChevronDownIcon aria-hidden className="size-[14px]" />
-            </button>
-            {viewMenuOpen ? (
-              <div className="tasks-viewdd-menu" role="menu">
-                <div className="tasks-viewdd-head">视图</div>
-                {views.length === 0 ? (
-                  <div className="tasks-viewdd-empty">还没有已保存的视图</div>
-                ) : null}
-                {views.map((v) => (
-                  <div key={v.id} className={`tasks-viewdd-item${v.id === activeViewId ? ' is-active' : ''}`}>
-                    <button
-                      type="button"
-                      className="tasks-viewdd-item-main"
-                      role="menuitemradio"
-                      aria-checked={v.id === activeViewId}
-                      onClick={() => { switchView(v.id); setViewMenuOpen(false) }}
-                    >
-                      <span className="tasks-viewdd-item-name">{v.name}</span>
-                      {v.id === activeViewId ? <CheckCircleIcon aria-hidden className="size-[14px] tasks-viewdd-check" /> : null}
+            {/* 视图下拉（Notion 数据库左上角风格） */}
+            <div className="tasks-viewdd-wrap" ref={viewMenuRef}>
+              <button
+                type="button"
+                className={`tasks-viewdd-btn${viewMenuOpen ? ' is-active' : ''}`}
+                aria-label="切换视图"
+                aria-haspopup="menu"
+                aria-expanded={viewMenuOpen}
+                onClick={() => setViewMenuOpen((v) => !v)}
+              >
+                <Squares2X2Icon aria-hidden className="size-[14px]" />
+                <span className="tasks-viewdd-name">{activeView?.name ?? '未保存'}</span>
+                <ChevronDownIcon aria-hidden className="size-[14px]" />
+              </button>
+              {viewMenuOpen ? (
+                <div className="tasks-viewdd-menu" role="menu">
+                  <div className="tasks-viewdd-head">视图</div>
+                  {views.length === 0 ? (
+                    <div className="tasks-viewdd-empty">还没有已保存的视图</div>
+                  ) : null}
+                  {views.map((v) => (
+                    <div key={v.id} className={`tasks-viewdd-item${v.id === activeViewId ? ' is-active' : ''}`}>
+                      <button
+                        type="button"
+                        className="tasks-viewdd-item-main"
+                        role="menuitemradio"
+                        aria-checked={v.id === activeViewId}
+                        onClick={() => { switchView(v.id); setViewMenuOpen(false) }}
+                      >
+                        <span className="tasks-viewdd-item-name">{v.name}</span>
+                        {v.id === activeViewId ? <CheckCircleIcon aria-hidden className="size-[14px] tasks-viewdd-check" /> : null}
+                      </button>
+                      <span className="tasks-viewdd-item-actions">
+                        <button type="button" className="tasks-viewdd-act" title="重命名" onClick={() => openDlg({ kind: 'rename', view: v })}>
+                          <PencilSquareIcon aria-hidden className="size-[14px]" />
+                        </button>
+                        <button type="button" className="tasks-viewdd-act is-danger" title="删除" onClick={() => openDlg({ kind: 'delete', view: v })}>
+                          <TrashIcon aria-hidden className="size-[14px]" />
+                        </button>
+                      </span>
+                    </div>
+                  ))}
+                  <div className="tasks-viewdd-foot">
+                    <button type="button" className="tasks-viewdd-saveas" onClick={() => { setViewMenuOpen(false); openDlg({ kind: 'saveAs' }) }}>
+                      <PlusIcon aria-hidden className="size-[14px]" />
+                      另存为视图
                     </button>
-                    <span className="tasks-viewdd-item-actions">
-                      <button type="button" className="tasks-viewdd-act" title="重命名" onClick={() => openDlg({ kind: 'rename', view: v })}>
-                        <PencilSquareIcon aria-hidden className="size-[14px]" />
-                      </button>
-                      <button type="button" className="tasks-viewdd-act is-danger" title="删除" onClick={() => openDlg({ kind: 'delete', view: v })}>
-                        <TrashIcon aria-hidden className="size-[14px]" />
-                      </button>
-                    </span>
                   </div>
-                ))}
-                <div className="tasks-viewdd-foot">
-                  <button type="button" className="tasks-viewdd-saveas" onClick={() => { setViewMenuOpen(false); openDlg({ kind: 'saveAs' }) }}>
-                    <PlusIcon aria-hidden className="size-[14px]" />
-                    另存为视图
-                  </button>
                 </div>
-              </div>
-            ) : null}
-          </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="tasks-toolbar-right">
-          <label className="tasks-search-wrap">
-            <MagnifyingGlassIcon aria-hidden className="size-[14px]" />
-            <input
-              className="tasks-search"
-              value={query}
-              placeholder="搜索标题 / 人 / 描述"
-              aria-label="搜索任务"
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
-          <div className="tasks-sort-wrap" ref={modeMenuRef}>
-            <button
-              type="button"
-              className={`tasks-sort-btn${modeMenuOpen ? ' is-active' : ''}`}
-              aria-label="查看模式"
-              title={`模式：${VIEW_MODE_OPTIONS.find((opt) => opt.id === mode)?.label ?? mode}`}
-              aria-haspopup="menu"
-              aria-expanded={modeMenuOpen}
-              onClick={() => setModeMenuOpen((v) => !v)}
-            >
-              {VIEW_MODE_ICON[mode]}
-            </button>
-            {modeMenuOpen ? (
-              <div className="tasks-sort-menu" role="menu">
-                <div className="tasks-sort-head">查看模式</div>
-                {VIEW_MODE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    className={`tasks-sort-item${mode === opt.id ? ' is-active' : ''}`}
-                    role="menuitemradio"
-                    aria-checked={mode === opt.id}
-                    onClick={() => {
-                      setDisplayMode(opt.id)
-                      setModeMenuOpen(false)
-                    }}
-                  >
-                    <span className="tasks-sort-item-label">
-                      <span className="tasks-mode-item-ico">{VIEW_MODE_ICON[opt.id]}</span>
-                      {opt.label}
-                    </span>
-                    {mode === opt.id ? <CheckCircleIcon aria-hidden className="size-[14px] tasks-sort-item-icon is-on" /> : null}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          {/* 排序按钮（仅图标：字段+升降序在菜单内，位于筛选按钮左侧） */}
-          <div className="tasks-sort-wrap" ref={sortMenuRef}>
-            <button
-              type="button"
-              className={`tasks-sort-btn${sortMenuOpen ? ' is-active' : ''}${sortCustom ? ' is-custom' : ''}`}
-              aria-label="排序"
-              title={`排序：${SORT_FIELD_LABEL[sort.field]}${sort.dir === 'asc' ? ' ↑' : ' ↓'}`}
-              aria-haspopup="menu"
-              aria-expanded={sortMenuOpen}
-              onClick={() => setSortMenuOpen((v) => !v)}
-            >
-              <ArrowsUpDownIcon aria-hidden className="size-[14px]" />
-              {sortCustom ? <span className="tasks-sort-dot" aria-hidden /> : null}
-            </button>
-            {sortMenuOpen ? (
-              <div className="tasks-sort-menu" role="menu">
-                <div className="tasks-sort-head">排序依据</div>
-                {(
-                  [
-                    ['status', '状态'],
-                    ['priority', '优先级'],
-                    ['due', '截止时间'],
-                    ['updated', '最近更新'],
-                    ['created', '创建时间'],
-                  ] as const
-                ).map(([field, label]) => {
-                  const isCurrent = sort.field === field
-                  const stateIcon = isCurrent
-                    ? sort.dir === 'asc'
-                      ? <ArrowUpIcon aria-hidden className="size-[14px]" />
-                      : <ArrowDownIcon aria-hidden className="size-[14px]" />
-                    : null
-                  return (
+            <label className="tasks-search-wrap">
+              <MagnifyingGlassIcon aria-hidden className="size-[14px]" />
+              <input
+                className="tasks-search"
+                value={query}
+                placeholder="搜索标题 / 人 / 描述"
+                aria-label="搜索任务"
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
+            <div className="tasks-sort-wrap" ref={modeMenuRef}>
+              <button
+                type="button"
+                className={`tasks-sort-btn${modeMenuOpen ? ' is-active' : ''}`}
+                aria-label="查看模式"
+                title={`模式：${VIEW_MODE_OPTIONS.find((opt) => opt.id === mode)?.label ?? mode}`}
+                aria-haspopup="menu"
+                aria-expanded={modeMenuOpen}
+                onClick={() => setModeMenuOpen((v) => !v)}
+              >
+                {VIEW_MODE_ICON[mode]}
+              </button>
+              {modeMenuOpen ? (
+                <div className="tasks-sort-menu" role="menu">
+                  <div className="tasks-sort-head">查看模式</div>
+                  {VIEW_MODE_OPTIONS.map((opt) => (
                     <button
-                      key={field}
+                      key={opt.id}
                       type="button"
-                      className={`tasks-sort-item${isCurrent ? ' is-active' : ''}`}
+                      className={`tasks-sort-item${mode === opt.id ? ' is-active' : ''}`}
                       role="menuitemradio"
-                      aria-checked={isCurrent}
-                      title={isCurrent ? (sort.dir === 'asc' ? '当前升序，点击切为降序' : '当前降序，点击还原默认') : `按「${label}」升序排序`}
-                      onClick={() => cycleSort(field)}
+                      aria-checked={mode === opt.id}
+                      onClick={() => {
+                        setDisplayMode(opt.id)
+                        setModeMenuOpen(false)
+                      }}
                     >
-                      <span className="tasks-sort-item-label">{label}</span>
-                      <span className={`tasks-sort-item-icon${isCurrent ? ' is-on' : ''}`}>{stateIcon}</span>
+                      <span className="tasks-sort-item-label">
+                        <span className="tasks-mode-item-ico">{VIEW_MODE_ICON[opt.id]}</span>
+                        {opt.label}
+                      </span>
+                      {mode === opt.id ? <CheckCircleIcon aria-hidden className="size-[14px] tasks-sort-item-icon is-on" /> : null}
                     </button>
-                  )
-                })}
-              </div>
-            ) : null}
-          </div>
-          <div className="tasks-filter-btn-wrap" ref={filterRef}>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            {/* 排序按钮（仅图标：字段+升降序在菜单内，位于筛选按钮左侧） */}
+            <div className="tasks-sort-wrap" ref={sortMenuRef}>
+              <button
+                type="button"
+                className={`tasks-sort-btn${sortMenuOpen ? ' is-active' : ''}${sortCustom ? ' is-custom' : ''}`}
+                aria-label="排序"
+                title={`排序：${SORT_FIELD_LABEL[sort.field]}${sort.dir === 'asc' ? ' ↑' : ' ↓'}`}
+                aria-haspopup="menu"
+                aria-expanded={sortMenuOpen}
+                onClick={() => setSortMenuOpen((v) => !v)}
+              >
+                <ArrowsUpDownIcon aria-hidden className="size-[14px]" />
+                {sortCustom ? <span className="tasks-sort-dot" aria-hidden /> : null}
+              </button>
+              {sortMenuOpen ? (
+                <div className="tasks-sort-menu" role="menu">
+                  <div className="tasks-sort-head">排序依据</div>
+                  {(
+                    [
+                      ['status', '状态'],
+                      ['priority', '优先级'],
+                      ['due', '截止时间'],
+                      ['updated', '最近更新'],
+                      ['created', '创建时间'],
+                    ] as const
+                  ).map(([field, label]) => {
+                    const isCurrent = sort.field === field
+                    const stateIcon = isCurrent
+                      ? sort.dir === 'asc'
+                        ? <ArrowUpIcon aria-hidden className="size-[14px]" />
+                        : <ArrowDownIcon aria-hidden className="size-[14px]" />
+                      : null
+                    return (
+                      <button
+                        key={field}
+                        type="button"
+                        className={`tasks-sort-item${isCurrent ? ' is-active' : ''}`}
+                        role="menuitemradio"
+                        aria-checked={isCurrent}
+                        title={isCurrent ? (sort.dir === 'asc' ? '当前升序，点击切为降序' : '当前降序，点击还原默认') : `按「${label}」升序排序`}
+                        onClick={() => cycleSort(field)}
+                      >
+                        <span className="tasks-sort-item-label">{label}</span>
+                        <span className={`tasks-sort-item-icon${isCurrent ? ' is-on' : ''}`}>{stateIcon}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
+            </div>
+            <div className="tasks-filter-btn-wrap" ref={filterRef}>
+              <button
+                type="button"
+                className={`tasks-refresh tasks-rbar-btn${filterOpen ? ' is-active' : ''}${filterActive ? ' is-active' : ''}`}
+                aria-label="筛选任务"
+                title="筛选"
+                aria-haspopup="menu"
+                aria-expanded={filterOpen}
+                onClick={() => setFilterOpen((v) => !v)}
+              >
+                <AdjustmentsHorizontalIcon aria-hidden className="size-[14px]" />
+                {filterActive ? <span className="tasks-filter-dot" aria-hidden /> : null}
+              </button>
+              {filterOpen ? (
+                <div className="tasks-filter-menu" role="menu">
+                  <label className="tasks-filter-menu-label">
+                    <span>按项目</span>
+                    <select
+                      className="tasks-filter"
+                      aria-label="按项目筛选"
+                      value={projectFilter}
+                      onChange={(e) => patchFilter({ project: e.target.value })}
+                    >
+                      <option value="">全部项目</option>
+                      {allProjects.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="tasks-filter-menu-label">
+                    <span>按标签</span>
+                    <select
+                      className="tasks-filter"
+                      aria-label="按标签筛选"
+                      value={tagFilter[0] ?? ''}
+                      onChange={(e) => patchFilter({ tags: e.target.value ? [e.target.value] : [] })}
+                    >
+                      <option value="">全部标签</option>
+                      {allTags.map((t) => (
+                        <option key={t} value={t}>
+                          #{t}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="tasks-filter-menu-label">
+                    <span>按时间</span>
+                    <select
+                      className="tasks-filter"
+                      aria-label="按时间筛选"
+                      value={timeFilter}
+                      onChange={(e) => patchFilter({ time: e.target.value })}
+                    >
+                      <option value="">全部时间</option>
+                      <option value="1h">最近 1 小时</option>
+                      <option value="24h">最近 1 天</option>
+                      <option value="7d">最近 7 天</option>
+                      <option value="30d">最近 30 天</option>
+                    </select>
+                  </label>
+                  {filterActive ? (
+                    <button
+                      type="button"
+                      className="tasks-filter-clear"
+                      onClick={() => patchFilter({ project: '', tags: [], time: '' })}
+                    >
+                      清除筛选
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
             <button
               type="button"
-              className={`tasks-refresh tasks-rbar-btn${filterOpen ? ' is-active' : ''}${filterActive ? ' is-active' : ''}`}
-              aria-label="筛选任务"
-              title="筛选"
-              aria-haspopup="menu"
-              aria-expanded={filterOpen}
-              onClick={() => setFilterOpen((v) => !v)}
+              className="tasks-refresh"
+              aria-label="刷新任务"
+              title="刷新"
+              onClick={refresh}
             >
-              <AdjustmentsHorizontalIcon aria-hidden className="size-[14px]" />
-              {filterActive ? <span className="tasks-filter-dot" aria-hidden /> : null}
+              <ArrowPathIcon aria-hidden className="size-[14px]" />
             </button>
-            {filterOpen ? (
-              <div className="tasks-filter-menu" role="menu">
-                <label className="tasks-filter-menu-label">
-                  <span>按项目</span>
-                  <select
-                    className="tasks-filter"
-                    aria-label="按项目筛选"
-                    value={projectFilter}
-                    onChange={(e) => patchFilter({ project: e.target.value })}
-                  >
-                    <option value="">全部项目</option>
-                    {allProjects.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="tasks-filter-menu-label">
-                  <span>按标签</span>
-                  <select
-                    className="tasks-filter"
-                    aria-label="按标签筛选"
-                    value={tagFilter[0] ?? ''}
-                    onChange={(e) => patchFilter({ tags: e.target.value ? [e.target.value] : [] })}
-                  >
-                    <option value="">全部标签</option>
-                    {allTags.map((t) => (
-                      <option key={t} value={t}>
-                        #{t}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="tasks-filter-menu-label">
-                  <span>按时间</span>
-                  <select
-                    className="tasks-filter"
-                    aria-label="按时间筛选"
-                    value={timeFilter}
-                    onChange={(e) => patchFilter({ time: e.target.value })}
-                  >
-                    <option value="">全部时间</option>
-                    <option value="1h">最近 1 小时</option>
-                    <option value="24h">最近 1 天</option>
-                    <option value="7d">最近 7 天</option>
-                    <option value="30d">最近 30 天</option>
-                  </select>
-                </label>
-                {filterActive ? (
-                  <button
-                    type="button"
-                    className="tasks-filter-clear"
-                    onClick={() => patchFilter({ project: '', tags: [], time: '' })}
-                  >
-                    清除筛选
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            className="tasks-refresh"
-            aria-label="刷新任务"
-            title="刷新"
-            onClick={refresh}
-          >
-            <ArrowPathIcon aria-hidden className="size-[14px]" />
-          </button>
           </div>
         </div>
 
@@ -2012,17 +2012,17 @@ function TasksWorkspace({ compact = false, tasksView }: { compact?: boolean; tas
           onClick={() => setDetailId(null)}
           onKeyDown={undefined}
         >
-        <TaskDetailPanel
-          task={detailTask}
-          onClose={() => setDetailId(null)}
-          onPrev={detailNav.prev ? () => setDetailId(detailNav.prev) : undefined}
-          onNext={detailNav.next ? () => setDetailId(detailNav.next) : undefined}
-          onUpdate={onUpdate}
-          onDelete={onDelete}
-          agents={agents}
-          agentsLoading={agentsLoading}
-          allTasks={tasks}
-        />
+          <TaskDetailPanel
+            task={detailTask}
+            onClose={() => setDetailId(null)}
+            onPrev={detailNav.prev ? () => setDetailId(detailNav.prev) : undefined}
+            onNext={detailNav.next ? () => setDetailId(detailNav.next) : undefined}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            agents={agents}
+            agentsLoading={agentsLoading}
+            allTasks={tasks}
+          />
         </div>
       ) : null}
 
@@ -2169,7 +2169,7 @@ function TasksBoard({
     for (const t of tasks) {
       // 逾期优先；阻塞是待办的派生：todo + blocked → 阻塞列
       const key = isOverdue(t) ? 'overdue' : t.blocked ? 'blocked' : t.status
-      ;(map[key] ??= []).push(t)
+        ; (map[key] ??= []).push(t)
     }
     return map
   }, [tasks])
@@ -2272,7 +2272,7 @@ function buildGraph(tasks: Task[]): { nodes: RFNode[]; edges: Edge[] } {
   const layerGroups: Task[][] = []
   for (const t of tasks) {
     const layer = visit(t.id, new Set())
-    ;(layerGroups[layer] ??= []).push(t)
+      ; (layerGroups[layer] ??= []).push(t)
   }
   for (const g of layerGroups) {
     if (g) {
@@ -2444,7 +2444,7 @@ function TasksQueue({
     for (const t of tasks) {
       if (childSet.has(t.id)) continue // 有子任务 → 父节点，不展示
       const k = colOf(t)
-      ;(map[k] ??= []).push(t)
+        ; (map[k] ??= []).push(t)
     }
     // 组内保持传入顺序（tasks 已是按视图排序后的 sortedTasks），仅按状态分组。
     return map
@@ -2649,11 +2649,11 @@ function TasksTable({
           key,
           stats
             ? {
-                inputTokens: stats.inputTokens,
-                outputTokens: stats.outputTokens,
-                cacheReadTokens: stats.cacheReadTokens,
-                totalTokens: stats.totalTokens,
-              }
+              inputTokens: stats.inputTokens,
+              outputTokens: stats.outputTokens,
+              cacheReadTokens: stats.cacheReadTokens,
+              totalTokens: stats.totalTokens,
+            }
             : ZERO_USAGE,
         ] as const
       }),
@@ -3028,119 +3028,119 @@ function TaskDetailPanel({
               }}
             />
             <aside className="tasks-detail-aside">
-            <div className="tasks-prop">
-              <span>
-                <HashtagIcon aria-hidden className="size-[14px]" />
-                ID
-              </span>
-              <span className="tasks-detail-id" title={task.id}>{task.id}</span>
-            </div>
-            <label className="tasks-prop">
-              <span>
-                <StatusIcon status={task.status} />
-                状态
-              </span>
-              <CellSelect<TaskStatus>
-                value={task.status}
-                options={STATUS_META.map((m) => ({ value: m.id, label: m.label, icon: m.icon }))}
-                onSelect={(status) => void onUpdate(task.id, { status })}
-                valueClass={`is-${task.status}`}
-                renderValue={(cur) => <span className="tasks-chip-text">{cur?.label ?? task.status}</span>}
-              />
-            </label>
-            <label className="tasks-prop">
-              <span>
-                <FlagIcon aria-hidden className="size-[14px]" />
-                优先级
-              </span>
-              <CellSelect<TaskPriority>
-                value={task.priority}
-                options={(Object.keys(PRIORITY_LABEL) as TaskPriority[]).map((k) => ({
-                  value: k,
-                  label: PRIORITY_LABEL[k],
-                  icon: <FlagIcon aria-hidden className="size-[14px]" />,
-                }))}
-                onSelect={(priority) => void onUpdate(task.id, { priority })}
-                valueClass={`is-p-${task.priority}`}
-                renderValue={(cur) => <span className="tasks-chip-text">{cur?.label ?? task.priority}</span>}
-              />
-            </label>
-            <label className="tasks-prop">
-              <span>
-                <ChartBarIcon aria-hidden className="size-[14px]" />
-                难度
-              </span>
-              <CellSelect<TaskDifficulty>
-                value={task.difficulty}
-                options={(Object.keys(DIFFICULTY_LABEL) as TaskDifficulty[]).map((k) => ({
-                  value: k,
-                  label: DIFFICULTY_LABEL[k],
-                  icon: <ChartBarIcon aria-hidden className="size-[14px]" />,
-                }))}
-                onSelect={(difficulty) => void onUpdate(task.id, { difficulty })}
-                valueClass={`is-d-${task.difficulty}`}
-                renderValue={(cur) => <span className="tasks-chip-text">{cur?.label ?? task.difficulty}</span>}
-              />
-            </label>
-            <label className="tasks-prop">
-              <span>
-                <UserIcon aria-hidden className="size-[14px]" />
-                分配
-              </span>
-              <AssigneePicker
-                actor={task.assignee}
-                agents={agents}
-                loading={agentsLoading}
-                onPick={(sessionId) => void onUpdate(task.id, { assigneeSessionId: sessionId })}
-                onClear={() => void onUpdate(task.id, { assignee: null })}
-              />
-            </label>
-            <label className="tasks-prop">
-              <span>
-                <CalendarDaysIcon aria-hidden className="size-[14px]" />
-                截止
-              </span>
-              <input
-                className="tasks-field-input"
-                type="date"
-                value={due}
-                onChange={(event) => setDue(event.target.value)}
-                onBlur={() => {
-                  const next = due.trim() ? new Date(`${due}T00:00:00`).getTime() : null
-                  const prev = task.dueAt
-                  if (next !== prev) void onUpdate(task.id, { dueAt: next })
-                }}
-              />
-            </label>
-            <label className="tasks-prop">
-              <span>
-                <FolderIcon aria-hidden className="size-[14px]" />
-                项目
-              </span>
-              <input
-                className="tasks-field-input"
-                value={project}
-                placeholder="可选"
-                onChange={(event) => setProject(event.target.value)}
-                onBlur={() => {
-                  if (project !== (task.project ?? '')) void onUpdate(task.id, { project: project.trim() || null })
-                }}
-              />
-            </label>
-            <div className="tasks-prop">
-              <span>
-                <TagIcon aria-hidden className="size-[14px]" />
-                标签
-              </span>
-              <TagMultiSelect
-                tags={tags}
-                options={[...new Set(allTasks.flatMap((t) => t.tags ?? []))]}
-                onChange={(next) => {
-                  setTags(next)
-                  void onUpdate(task.id, { tags: next })
-                }}
-              />
-            </div>
+              <div className="tasks-prop">
+                <span>
+                  <HashtagIcon aria-hidden className="size-[14px]" />
+                  ID
+                </span>
+                <span className="tasks-detail-id" title={task.id}>{task.id}</span>
+              </div>
+              <label className="tasks-prop">
+                <span>
+                  <StatusIcon status={task.status} />
+                  状态
+                </span>
+                <CellSelect<TaskStatus>
+                  value={task.status}
+                  options={STATUS_META.map((m) => ({ value: m.id, label: m.label, icon: m.icon }))}
+                  onSelect={(status) => void onUpdate(task.id, { status })}
+                  valueClass={`is-${task.status}`}
+                  renderValue={(cur) => <span className="tasks-chip-text">{cur?.label ?? task.status}</span>}
+                />
+              </label>
+              <label className="tasks-prop">
+                <span>
+                  <FlagIcon aria-hidden className="size-[14px]" />
+                  优先级
+                </span>
+                <CellSelect<TaskPriority>
+                  value={task.priority}
+                  options={(Object.keys(PRIORITY_LABEL) as TaskPriority[]).map((k) => ({
+                    value: k,
+                    label: PRIORITY_LABEL[k],
+                    icon: <FlagIcon aria-hidden className="size-[14px]" />,
+                  }))}
+                  onSelect={(priority) => void onUpdate(task.id, { priority })}
+                  valueClass={`is-p-${task.priority}`}
+                  renderValue={(cur) => <span className="tasks-chip-text">{cur?.label ?? task.priority}</span>}
+                />
+              </label>
+              <label className="tasks-prop">
+                <span>
+                  <ChartBarIcon aria-hidden className="size-[14px]" />
+                  难度
+                </span>
+                <CellSelect<TaskDifficulty>
+                  value={task.difficulty}
+                  options={(Object.keys(DIFFICULTY_LABEL) as TaskDifficulty[]).map((k) => ({
+                    value: k,
+                    label: DIFFICULTY_LABEL[k],
+                    icon: <ChartBarIcon aria-hidden className="size-[14px]" />,
+                  }))}
+                  onSelect={(difficulty) => void onUpdate(task.id, { difficulty })}
+                  valueClass={`is-d-${task.difficulty}`}
+                  renderValue={(cur) => <span className="tasks-chip-text">{cur?.label ?? task.difficulty}</span>}
+                />
+              </label>
+              <label className="tasks-prop">
+                <span>
+                  <UserIcon aria-hidden className="size-[14px]" />
+                  分配
+                </span>
+                <AssigneePicker
+                  actor={task.assignee}
+                  agents={agents}
+                  loading={agentsLoading}
+                  onPick={(sessionId) => void onUpdate(task.id, { assigneeSessionId: sessionId })}
+                  onClear={() => void onUpdate(task.id, { assignee: null })}
+                />
+              </label>
+              <label className="tasks-prop">
+                <span>
+                  <CalendarDaysIcon aria-hidden className="size-[14px]" />
+                  截止
+                </span>
+                <input
+                  className="tasks-field-input"
+                  type="date"
+                  value={due}
+                  onChange={(event) => setDue(event.target.value)}
+                  onBlur={() => {
+                    const next = due.trim() ? new Date(`${due}T00:00:00`).getTime() : null
+                    const prev = task.dueAt
+                    if (next !== prev) void onUpdate(task.id, { dueAt: next })
+                  }}
+                />
+              </label>
+              <label className="tasks-prop">
+                <span>
+                  <FolderIcon aria-hidden className="size-[14px]" />
+                  项目
+                </span>
+                <input
+                  className="tasks-field-input"
+                  value={project}
+                  placeholder="可选"
+                  onChange={(event) => setProject(event.target.value)}
+                  onBlur={() => {
+                    if (project !== (task.project ?? '')) void onUpdate(task.id, { project: project.trim() || null })
+                  }}
+                />
+              </label>
+              <div className="tasks-prop">
+                <span>
+                  <TagIcon aria-hidden className="size-[14px]" />
+                  标签
+                </span>
+                <TagMultiSelect
+                  tags={tags}
+                  options={[...new Set(allTasks.flatMap((t) => t.tags ?? []))]}
+                  onChange={(next) => {
+                    setTags(next)
+                    void onUpdate(task.id, { tags: next })
+                  }}
+                />
+              </div>
             </aside>
             <textarea
               className="tasks-detail-doc"
@@ -3156,407 +3156,407 @@ function TaskDetailPanel({
         </div>
       ) : pane === 'auto' ? (
         <div className="tasks-detail-pane">
-<div className="tasks-field tasks-l-field tasks-automation">
-          <div className="tasks-auto-head">
-            <span className="tasks-auto-title"><ClockIcon aria-hidden className="size-[14px]" /> 自动触发</span>
-            <label className={`tasks-auto-switch${triggerEnabled ? ' is-on' : ''}`} title={triggerEnabled ? '点击关闭此规则' : '点击开启此规则'}>
-              <input
-                type="checkbox"
-                checked={triggerEnabled}
-                onChange={(event) => {
-                  const next = event.target.checked
-                  setTriggerEnabled(next)
-                  void onUpdate(task.id, { trigger: { enabled: next } })
-                }}
-              />
-              <span className="tasks-auto-switch-track"><span className="tasks-auto-switch-knob" /></span>
-            </label>
-          </div>
-          {(() => {
-            const hasAuto = !!(task.trigger?.cron || task.trigger?.at || task.trigger?.on?.length)
-            const showConfig = triggerEnabled || hasAuto
-            return showConfig ? (
-            <>
-              {/* 一句话规则摘要 */}
-              <div className="tasks-auto-summary">
-                <span className="tasks-auto-summary-dot" />
-                <span>{triggerSummary(triggerCron, task.trigger?.at, triggerOn)}</span>
-              </div>
+          <div className="tasks-field tasks-l-field tasks-automation">
+            <div className="tasks-auto-head">
+              <span className="tasks-auto-title"><ClockIcon aria-hidden className="size-[14px]" /> 自动触发</span>
+              <label className={`tasks-auto-switch${triggerEnabled ? ' is-on' : ''}`} title={triggerEnabled ? '点击关闭此规则' : '点击开启此规则'}>
+                <input
+                  type="checkbox"
+                  checked={triggerEnabled}
+                  onChange={(event) => {
+                    const next = event.target.checked
+                    setTriggerEnabled(next)
+                    void onUpdate(task.id, { trigger: { enabled: next } })
+                  }}
+                />
+                <span className="tasks-auto-switch-track"><span className="tasks-auto-switch-knob" /></span>
+              </label>
+            </div>
+            {(() => {
+              const hasAuto = !!(task.trigger?.cron || task.trigger?.at || task.trigger?.on?.length)
+              const showConfig = triggerEnabled || hasAuto
+              return showConfig ? (
+                <>
+                  {/* 一句话规则摘要 */}
+                  <div className="tasks-auto-summary">
+                    <span className="tasks-auto-summary-dot" />
+                    <span>{triggerSummary(triggerCron, task.trigger?.at, triggerOn)}</span>
+                  </div>
 
-              {/* Trigger 区 */}
-              <div className="tasks-auto-sec-head"><CursorArrowRippleIcon aria-hidden className="size-[14px]" /> Trigger · 触发</div>
-              <div className="tasks-auto-sec">
-                <div className="tasks-auto-cond-list">
-                  {/* 定时 cron 条件 */}
-                  {triggerCron ? (
-                    <div className="tasks-auto-cond">
-                      <div className="tasks-auto-cond-head">
-                        <span className="tasks-auto-cond-type"><CalendarDaysIcon aria-hidden className="size-[14px]" /> 定时</span>
-                        <button type="button" className="tasks-auto-cond-del" title="删除定时条件"
-                          onClick={() => {
-                            setTriggerCron('')
-                            setTriggerMode('min')
-                            setCronFields(spawnCronFields(''))
-                            if (task.trigger?.cron) void onUpdate(task.id, { trigger: { cron: null } })
-                          }}><XMarkIcon aria-hidden className="size-[14px]" /></button>
-                      </div>
-                      <div className="tasks-auto-cond-body">
-                        <div className="tasks-trigger-field">
-                          <span>频率</span>
-                          <div className="tasks-auto-seg tasks-auto-preset">
-                            {(
-                              [
-                                ['sec', '每N秒'], ['min', '每N分钟'], ['hour', '每小时'],
-                                ['day', '每天'], ['week', '每周'], ['custom', '自定义'],
-                              ] as const
-                            ).map(([m, label]) => (
-                              <button key={m} type="button" className={triggerMode === m ? 'is-active' : ''} onClick={() => {
-                                setTriggerMode(m)
-                                const cronStr = presetCron(m, cronFields, '5', '10', '0', '1')
-                                const cron = cronStr || null
-                                setTriggerCron(cronStr)
-                                setCronFields(spawnCronFields(cronStr))
-                                if (cron !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron } })
-                              }}>{label}</button>
-                            ))}
+                  {/* Trigger 区 */}
+                  <div className="tasks-auto-sec-head"><CursorArrowRippleIcon aria-hidden className="size-[14px]" /> Trigger · 触发</div>
+                  <div className="tasks-auto-sec">
+                    <div className="tasks-auto-cond-list">
+                      {/* 定时 cron 条件 */}
+                      {triggerCron ? (
+                        <div className="tasks-auto-cond">
+                          <div className="tasks-auto-cond-head">
+                            <span className="tasks-auto-cond-type"><CalendarDaysIcon aria-hidden className="size-[14px]" /> 定时</span>
+                            <button type="button" className="tasks-auto-cond-del" title="删除定时条件"
+                              onClick={() => {
+                                setTriggerCron('')
+                                setTriggerMode('min')
+                                setCronFields(spawnCronFields(''))
+                                if (task.trigger?.cron) void onUpdate(task.id, { trigger: { cron: null } })
+                              }}><XMarkIcon aria-hidden className="size-[14px]" /></button>
                           </div>
-                        </div>
-                        {triggerMode === 'sec' ? (
-                          <label className="tasks-trigger-field">
-                            <span>间隔（秒）</span>
-                            <input
-                              className="tasks-field-input tasks-cron-num"
-                              type="number"
-                              min={1}
-                              defaultValue={inferN(triggerCron, 5)}
-                              onChange={(event) => {
-                                const n = event.target.value || '5'
-                                const cronStr = `*/${n} * * * * *`
-                                setTriggerCron(cronStr)
-                                setCronFields(spawnCronFields(cronStr))
-                                if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                              }}
-                            />
-                          </label>
-                        ) : triggerMode === 'min' ? (
-                          <label className="tasks-trigger-field">
-                            <span>间隔（分钟）</span>
-                            <input
-                              className="tasks-field-input tasks-cron-num"
-                              type="number"
-                              min={1}
-                              defaultValue={inferN(triggerCron, 5)}
-                              onChange={(event) => {
-                                const n = event.target.value || '5'
-                                const cronStr = `*/${n} * * * *`
-                                setTriggerCron(cronStr)
-                                if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                              }}
-                            />
-                          </label>
-                        ) : triggerMode === 'hour' ? (
-                          <label className="tasks-trigger-field">
-                            <span>每 N 小时</span>
-                            <input
-                              className="tasks-field-input tasks-cron-num"
-                              type="number"
-                              min={1}
-                              defaultValue={inferN(triggerCron, 1)}
-                              onChange={(event) => {
-                                const n = event.target.value || '1'
-                                const cronStr = `0 */${n} * * *`
-                                setTriggerCron(cronStr)
-                                if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                              }}
-                            />
-                          </label>
-                        ) : triggerMode === 'day' ? (
-                          <div className="tasks-trigger-field">
-                            <span>每天时间</span>
-                            <div className="tasks-trigger-time">
-                              <input
-                                className="tasks-field-input tasks-cron-num"
-                                type="number"
-                                min={0} max={23}
-                                defaultValue={inferH(triggerCron, 10)}
-                                onChange={(event) => {
-                                  const n = event.target.value || '0'
-                                  const cronStr = `${inferM(triggerCron)} ${n} * * *`
-                                  setTriggerCron(cronStr)
-                                  if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                                }}
-                              />
-                              <span className="tasks-trigger-time-sep">:</span>
-                              <input
-                                className="tasks-field-input tasks-cron-num"
-                                type="number"
-                                min={0} max={59}
-                                defaultValue={inferM(triggerCron, 0)}
-                                onChange={(event) => {
-                                  const n = event.target.value || '0'
-                                  const cronStr = `${n} ${inferH(triggerCron)} * * *`
-                                  setTriggerCron(cronStr)
-                                  if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                                }}
-                              />
+                          <div className="tasks-auto-cond-body">
+                            <div className="tasks-trigger-field">
+                              <span>频率</span>
+                              <div className="tasks-auto-seg tasks-auto-preset">
+                                {(
+                                  [
+                                    ['sec', '每N秒'], ['min', '每N分钟'], ['hour', '每小时'],
+                                    ['day', '每天'], ['week', '每周'], ['custom', '自定义'],
+                                  ] as const
+                                ).map(([m, label]) => (
+                                  <button key={m} type="button" className={triggerMode === m ? 'is-active' : ''} onClick={() => {
+                                    setTriggerMode(m)
+                                    const cronStr = presetCron(m, cronFields, '5', '10', '0', '1')
+                                    const cron = cronStr || null
+                                    setTriggerCron(cronStr)
+                                    setCronFields(spawnCronFields(cronStr))
+                                    if (cron !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron } })
+                                  }}>{label}</button>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ) : triggerMode === 'week' ? (
-                          <label className="tasks-trigger-field">
-                            <span>星期几</span>
-                            <select
-                              className="tasks-trigger-mode tasks-cron-week"
-                              value={inferW(triggerCron, '1')}
-                              onChange={(event) => {
-                                const w = event.target.value
-                                const cronStr = `0 0 * * ${w}`
-                                setTriggerCron(cronStr)
-                                if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                              }}
-                            >
-                              {['日', '一', '二', '三', '四', '五', '六'].map((w, i) => (
-                                <option key={i} value={String(i)}>周{w}</option>
-                              ))}
-                            </select>
-                          </label>
-                        ) : (
-                          <div className="tasks-trigger-field">
-                            <span>高级 cron（秒 分 时 日 月 周）</span>
-                            <div className="tasks-trigger-cronfield">
-                              {(
-                                [
-                                  ['s', cronFields.s, '秒'], ['m', cronFields.m, '分'], ['h', cronFields.h, '时'],
-                                  ['d', cronFields.d, '日'], ['mo', cronFields.mo, '月'], ['w', cronFields.w, '周'],
-                                ] as const
-                              ).map(([key, val, label]) => (
-                                <label key={key} className={`tasks-cron-field${val && !cronFieldValid(val) ? ' is-invalid' : ''}`} title={val && !cronFieldValid(val) ? `「${val}」非法：仅支持 *、*/N、N、N-M` : `${label}字段`}>
-                                  <span>{label}</span>
+                            {triggerMode === 'sec' ? (
+                              <label className="tasks-trigger-field">
+                                <span>间隔（秒）</span>
+                                <input
+                                  className="tasks-field-input tasks-cron-num"
+                                  type="number"
+                                  min={1}
+                                  defaultValue={inferN(triggerCron, 5)}
+                                  onChange={(event) => {
+                                    const n = event.target.value || '5'
+                                    const cronStr = `*/${n} * * * * *`
+                                    setTriggerCron(cronStr)
+                                    setCronFields(spawnCronFields(cronStr))
+                                    if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                                  }}
+                                />
+                              </label>
+                            ) : triggerMode === 'min' ? (
+                              <label className="tasks-trigger-field">
+                                <span>间隔（分钟）</span>
+                                <input
+                                  className="tasks-field-input tasks-cron-num"
+                                  type="number"
+                                  min={1}
+                                  defaultValue={inferN(triggerCron, 5)}
+                                  onChange={(event) => {
+                                    const n = event.target.value || '5'
+                                    const cronStr = `*/${n} * * * *`
+                                    setTriggerCron(cronStr)
+                                    if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                                  }}
+                                />
+                              </label>
+                            ) : triggerMode === 'hour' ? (
+                              <label className="tasks-trigger-field">
+                                <span>每 N 小时</span>
+                                <input
+                                  className="tasks-field-input tasks-cron-num"
+                                  type="number"
+                                  min={1}
+                                  defaultValue={inferN(triggerCron, 1)}
+                                  onChange={(event) => {
+                                    const n = event.target.value || '1'
+                                    const cronStr = `0 */${n} * * *`
+                                    setTriggerCron(cronStr)
+                                    if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                                  }}
+                                />
+                              </label>
+                            ) : triggerMode === 'day' ? (
+                              <div className="tasks-trigger-field">
+                                <span>每天时间</span>
+                                <div className="tasks-trigger-time">
                                   <input
-                                    className="tasks-field-input"
-                                    value={val}
-                                    placeholder="*"
+                                    className="tasks-field-input tasks-cron-num"
+                                    type="number"
+                                    min={0} max={23}
+                                    defaultValue={inferH(triggerCron, 10)}
                                     onChange={(event) => {
-                                      const nextVal = event.target.value
-                                      const next = { ...cronFields, [key]: nextVal }
-                                      setCronFields(next)
-                                      const cronStr = composeCron(next.s, next.m, next.h, next.d, next.mo, next.w)
-                                      const invalid = Object.values(next).some((f) => f && !cronFieldValid(f))
-                                      setTriggerCron(invalid ? '' : (cronStr ?? ''))
-                                      if (!invalid && cronStr && cronStr !== (task.trigger?.cron ?? null)) {
-                                        void onUpdate(task.id, { trigger: { cron: cronStr } })
-                                      }
+                                      const n = event.target.value || '0'
+                                      const cronStr = `${inferM(triggerCron)} ${n} * * *`
+                                      setTriggerCron(cronStr)
+                                      if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
                                     }}
                                   />
-                                </label>
-                              ))}
+                                  <span className="tasks-trigger-time-sep">:</span>
+                                  <input
+                                    className="tasks-field-input tasks-cron-num"
+                                    type="number"
+                                    min={0} max={59}
+                                    defaultValue={inferM(triggerCron, 0)}
+                                    onChange={(event) => {
+                                      const n = event.target.value || '0'
+                                      const cronStr = `${n} ${inferH(triggerCron)} * * *`
+                                      setTriggerCron(cronStr)
+                                      if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ) : triggerMode === 'week' ? (
+                              <label className="tasks-trigger-field">
+                                <span>星期几</span>
+                                <select
+                                  className="tasks-trigger-mode tasks-cron-week"
+                                  value={inferW(triggerCron, '1')}
+                                  onChange={(event) => {
+                                    const w = event.target.value
+                                    const cronStr = `0 0 * * ${w}`
+                                    setTriggerCron(cronStr)
+                                    if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                                  }}
+                                >
+                                  {['日', '一', '二', '三', '四', '五', '六'].map((w, i) => (
+                                    <option key={i} value={String(i)}>周{w}</option>
+                                  ))}
+                                </select>
+                              </label>
+                            ) : (
+                              <div className="tasks-trigger-field">
+                                <span>高级 cron（秒 分 时 日 月 周）</span>
+                                <div className="tasks-trigger-cronfield">
+                                  {(
+                                    [
+                                      ['s', cronFields.s, '秒'], ['m', cronFields.m, '分'], ['h', cronFields.h, '时'],
+                                      ['d', cronFields.d, '日'], ['mo', cronFields.mo, '月'], ['w', cronFields.w, '周'],
+                                    ] as const
+                                  ).map(([key, val, label]) => (
+                                    <label key={key} className={`tasks-cron-field${val && !cronFieldValid(val) ? ' is-invalid' : ''}`} title={val && !cronFieldValid(val) ? `「${val}」非法：仅支持 *、*/N、N、N-M` : `${label}字段`}>
+                                      <span>{label}</span>
+                                      <input
+                                        className="tasks-field-input"
+                                        value={val}
+                                        placeholder="*"
+                                        onChange={(event) => {
+                                          const nextVal = event.target.value
+                                          const next = { ...cronFields, [key]: nextVal }
+                                          setCronFields(next)
+                                          const cronStr = composeCron(next.s, next.m, next.h, next.d, next.mo, next.w)
+                                          const invalid = Object.values(next).some((f) => f && !cronFieldValid(f))
+                                          setTriggerCron(invalid ? '' : (cronStr ?? ''))
+                                          if (!invalid && cronStr && cronStr !== (task.trigger?.cron ?? null)) {
+                                            void onUpdate(task.id, { trigger: { cron: cronStr } })
+                                          }
+                                        }}
+                                      />
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            <div className={`tasks-trigger-field${triggerMode === 'custom' ? ' tasks-trigger-preview-wrap' : ''}`}>
+                              <span>解读</span>
+                              <span className="tasks-trigger-preview">{cronPreview(triggerCron)}</span>
                             </div>
                           </div>
-                        )}
-                        <div className={`tasks-trigger-field${triggerMode === 'custom' ? ' tasks-trigger-preview-wrap' : ''}`}>
-                          <span>解读</span>
-                          <span className="tasks-trigger-preview">{cronPreview(triggerCron)}</span>
                         </div>
-                      </div>
+                      ) : null}
+                      {/* 特定时间 at 条件 */}
+                      {triggerAt ? (
+                        <div className="tasks-auto-cond">
+                          <div className="tasks-auto-cond-head">
+                            <span className="tasks-auto-cond-type"><ClockIcon aria-hidden className="size-[14px]" /> 特定时间</span>
+                            <button type="button" className="tasks-auto-cond-del" title="删除特定时间条件"
+                              onClick={() => {
+                                setTriggerAt('')
+                                if (task.trigger?.at) void onUpdate(task.id, { trigger: { at: null } })
+                              }}><XMarkIcon aria-hidden className="size-[14px]" /></button>
+                          </div>
+                          <div className="tasks-auto-cond-body">
+                            <label className="tasks-trigger-field">
+                              <span>日期</span>
+                              <input
+                                className="tasks-field-input"
+                                type="date"
+                                value={triggerAt}
+                                onChange={(event) => setTriggerAt(event.target.value)}
+                                onBlur={() => {
+                                  const at = triggerAt.trim() ? new Date(`${triggerAt}T00:00:00`).getTime() : null
+                                  const prev = task.trigger?.at ?? null
+                                  if (at !== prev) void onUpdate(task.id, { trigger: { at } })
+                                }}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ) : null}
+                      {/* on 事件条件（每事件一行） */}
+                      {triggerOn.map((ev) => (
+                        <div key={ev} className="tasks-auto-cond">
+                          <div className="tasks-auto-cond-head">
+                            <span className="tasks-auto-cond-type"><BoltIcon aria-hidden className="size-[14px]" /> {ev === 'dep:done' ? '依赖完成' : '回合结束'}</span>
+                            <button type="button" className="tasks-auto-cond-del" title="删除该事件条件"
+                              onClick={() => {
+                                const next = triggerOn.filter((e) => e !== ev)
+                                setTriggerOn(next)
+                                void onUpdate(task.id, { trigger: { on: next } })
+                              }}><XMarkIcon aria-hidden className="size-[14px]" /></button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ) : null}
-                  {/* 特定时间 at 条件 */}
-                  {triggerAt ? (
-                    <div className="tasks-auto-cond">
-                      <div className="tasks-auto-cond-head">
-                        <span className="tasks-auto-cond-type"><ClockIcon aria-hidden className="size-[14px]" /> 特定时间</span>
-                        <button type="button" className="tasks-auto-cond-del" title="删除特定时间条件"
-                          onClick={() => {
-                            setTriggerAt('')
-                            if (task.trigger?.at) void onUpdate(task.id, { trigger: { at: null } })
-                          }}><XMarkIcon aria-hidden className="size-[14px]" /></button>
-                      </div>
-                      <div className="tasks-auto-cond-body">
-                        <label className="tasks-trigger-field">
-                          <span>日期</span>
-                          <input
-                            className="tasks-field-input"
-                            type="date"
-                            value={triggerAt}
-                            onChange={(event) => setTriggerAt(event.target.value)}
-                            onBlur={() => {
-                              const at = triggerAt.trim() ? new Date(`${triggerAt}T00:00:00`).getTime() : null
-                              const prev = task.trigger?.at ?? null
-                              if (at !== prev) void onUpdate(task.id, { trigger: { at } })
-                            }}
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  ) : null}
-                  {/* on 事件条件（每事件一行） */}
-                  {triggerOn.map((ev) => (
-                    <div key={ev} className="tasks-auto-cond">
-                      <div className="tasks-auto-cond-head">
-                        <span className="tasks-auto-cond-type"><BoltIcon aria-hidden className="size-[14px]" /> {ev === 'dep:done' ? '依赖完成' : '回合结束'}</span>
-                        <button type="button" className="tasks-auto-cond-del" title="删除该事件条件"
-                          onClick={() => {
-                            const next = triggerOn.filter((e) => e !== ev)
+
+                    {/* 添加触发条件 */}
+                    <div className="tasks-auto-add">
+                      {condAddOpen ? (
+                        <div className="tasks-auto-seg">
+                          <button type="button" onClick={() => {
+                            const cronStr = '*/5 * * * * *'
+                            setTriggerMode('sec')
+                            setCronFields(spawnCronFields(cronStr))
+                            setTriggerCron(cronStr)
+                            setCondAddOpen(false)
+                            if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
+                          }}><CalendarDaysIcon aria-hidden className="size-[14px]" /> 定时</button>
+                          <button type="button" onClick={() => {
+                            const atStr = formatDueInput(Date.now())
+                            setTriggerAt(atStr)
+                            setCondAddOpen(false)
+                            const atMs = atStr.trim() ? new Date(`${atStr}T00:00:00`).getTime() : null
+                            if (atMs !== (task.trigger?.at ?? null)) void onUpdate(task.id, { trigger: { at: atMs } })
+                          }}><ClockIcon aria-hidden className="size-[14px]" /> 特定时间</button>
+                          <button type="button" onClick={() => {
+                            const next = triggerOn.includes('dep:done') ? triggerOn : [...triggerOn, 'dep:done']
                             setTriggerOn(next)
+                            setCondAddOpen(false)
                             void onUpdate(task.id, { trigger: { on: next } })
-                          }}><XMarkIcon aria-hidden className="size-[14px]" /></button>
-                      </div>
+                          }}>依赖完成</button>
+                          <button type="button" onClick={() => {
+                            const next = triggerOn.includes('turn:end') ? triggerOn : [...triggerOn, 'turn:end']
+                            setTriggerOn(next)
+                            setCondAddOpen(false)
+                            void onUpdate(task.id, { trigger: { on: next } })
+                          }}>回合结束</button>
+                        </div>
+                      ) : (
+                        <button type="button" className="tasks-auto-add-btn" onClick={() => setCondAddOpen(true)}><PlusIcon aria-hidden className="size-[14px]" /> 触发条件</button>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  </div>
 
-                {/* 添加触发条件 */}
-                <div className="tasks-auto-add">
-                  {condAddOpen ? (
-                    <div className="tasks-auto-seg">
-                      <button type="button" onClick={() => {
-                        const cronStr = '*/5 * * * * *'
-                        setTriggerMode('sec')
-                        setCronFields(spawnCronFields(cronStr))
-                        setTriggerCron(cronStr)
-                        setCondAddOpen(false)
-                        if (cronStr !== (task.trigger?.cron ?? null)) void onUpdate(task.id, { trigger: { cron: cronStr } })
-                      }}><CalendarDaysIcon aria-hidden className="size-[14px]" /> 定时</button>
-                      <button type="button" onClick={() => {
-                        const atStr = formatDueInput(Date.now())
-                        setTriggerAt(atStr)
-                        setCondAddOpen(false)
-                        const atMs = atStr.trim() ? new Date(`${atStr}T00:00:00`).getTime() : null
-                        if (atMs !== (task.trigger?.at ?? null)) void onUpdate(task.id, { trigger: { at: atMs } })
-                      }}><ClockIcon aria-hidden className="size-[14px]" /> 特定时间</button>
-                      <button type="button" onClick={() => {
-                        const next = triggerOn.includes('dep:done') ? triggerOn : [...triggerOn, 'dep:done']
-                        setTriggerOn(next)
-                        setCondAddOpen(false)
-                        void onUpdate(task.id, { trigger: { on: next } })
-                      }}>依赖完成</button>
-                      <button type="button" onClick={() => {
-                        const next = triggerOn.includes('turn:end') ? triggerOn : [...triggerOn, 'turn:end']
-                        setTriggerOn(next)
-                        setCondAddOpen(false)
-                        void onUpdate(task.id, { trigger: { on: next } })
-                      }}>回合结束</button>
+                  {/* Then 区 */}
+                  <div className="tasks-auto-sec-head"><PlayIcon aria-hidden className="size-[14px]" /> Then · 执行</div>
+                  <div className="tasks-auto-sec tasks-auto-then">
+                    <span className="tasks-auto-then-arrow"><PlayIcon aria-hidden className="size-[14px]" /></span>
+                    <span className="tasks-auto-then-text">自动派工给承担者并开始执行任务</span>
+                  </div>
+
+                  {/* 调度状态 */}
+                  <div className="tasks-trigger-status">
+                    <span className={`tasks-trigger-state-pill is-${task.trigger?.state ?? 'idle'}`}>
+                      <span className="tasks-trigger-state-dot" />
+                      {task.trigger?.state ?? 'idle'}
+                    </span>
+                    <div className="tasks-trigger-times">
+                      {task.nextTriggerAt ? (
+                        <span className="tasks-trigger-next">
+                          <span className="tasks-trigger-tk">下次触发</span>
+                          <span className="tasks-trigger-tv">{timeUntilLabel(task.nextTriggerAt)}</span>
+                          <span className="tasks-trigger-ts">{new Date(task.nextTriggerAt).toLocaleString()}</span>
+                        </span>
+                      ) : null}
+                      {task.trigger?.lastRun ? (
+                        <span className="tasks-trigger-last">
+                          <span className="tasks-trigger-tk">上次触发</span>
+                          <span className="tasks-trigger-tv">{formatWhen(task.trigger.lastRun)}</span>
+                        </span>
+                      ) : null}
                     </div>
-                  ) : (
-                    <button type="button" className="tasks-auto-add-btn" onClick={() => setCondAddOpen(true)}><PlusIcon aria-hidden className="size-[14px]" /> 触发条件</button>
-                  )}
-                </div>
-              </div>
-
-              {/* Then 区 */}
-              <div className="tasks-auto-sec-head"><PlayIcon aria-hidden className="size-[14px]" /> Then · 执行</div>
-              <div className="tasks-auto-sec tasks-auto-then">
-                <span className="tasks-auto-then-arrow"><PlayIcon aria-hidden className="size-[14px]" /></span>
-                <span className="tasks-auto-then-text">自动派工给承担者并开始执行任务</span>
-              </div>
-
-              {/* 调度状态 */}
-              <div className="tasks-trigger-status">
-                <span className={`tasks-trigger-state-pill is-${task.trigger?.state ?? 'idle'}`}>
-                  <span className="tasks-trigger-state-dot" />
-                  {task.trigger?.state ?? 'idle'}
-                </span>
-                <div className="tasks-trigger-times">
-                  {task.nextTriggerAt ? (
-                    <span className="tasks-trigger-next">
-                      <span className="tasks-trigger-tk">下次触发</span>
-                      <span className="tasks-trigger-tv">{timeUntilLabel(task.nextTriggerAt)}</span>
-                      <span className="tasks-trigger-ts">{new Date(task.nextTriggerAt).toLocaleString()}</span>
-                    </span>
-                  ) : null}
-                  {task.trigger?.lastRun ? (
-                    <span className="tasks-trigger-last">
-                      <span className="tasks-trigger-tk">上次触发</span>
-                      <span className="tasks-trigger-tv">{formatWhen(task.trigger.lastRun)}</span>
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            </>
-            ) : null
-          })()}
-        </div>
+                  </div>
+                </>
+              ) : null
+            })()}
+          </div>
         </div>
       ) : (
         <div className="tasks-detail-pane">
-        <div className="tasks-detail-meta">
-          <div className="tasks-exec-stats">
-            <div className="tasks-exec-stat">
-              <span className="tasks-exec-stat-label"><UserIcon aria-hidden className="size-[14px]" /> 创建人</span>
-              <span className="tasks-exec-stat-value">
-                <ActorChip actor={task.creator} empty="—" />
-              </span>
+          <div className="tasks-detail-meta">
+            <div className="tasks-exec-stats">
+              <div className="tasks-exec-stat">
+                <span className="tasks-exec-stat-label"><UserIcon aria-hidden className="size-[14px]" /> 创建人</span>
+                <span className="tasks-exec-stat-value">
+                  <ActorChip actor={task.creator} empty="—" />
+                </span>
+              </div>
+              {task.createdAt ? (
+                <div className="tasks-exec-stat">
+                  <span className="tasks-exec-stat-label"><ClockIcon aria-hidden className="size-[14px]" /> 创建时间</span>
+                  <span className="tasks-exec-stat-value"><TimeLabel ts={task.createdAt} /></span>
+                </div>
+              ) : null}
+              {task.assignedAt ? (
+                <div className="tasks-exec-stat">
+                  <span className="tasks-exec-stat-label"><ClockIcon aria-hidden className="size-[14px]" /> 实施时间</span>
+                  <span className="tasks-exec-stat-value"><TimeLabel ts={task.assignedAt} /></span>
+                </div>
+              ) : null}
+              {task.blocked && task.blockedBy?.length ? (
+                <div className="tasks-exec-stat">
+                  <span className="tasks-exec-stat-label"><LockClosedIcon aria-hidden className="size-[14px]" /> 阻塞</span>
+                  <span className="tasks-exec-stat-value">
+                    <span className="tasks-blocked-head">被 {task.blockedBy.length} 个前置任务阻塞</span>
+                    <ul className="tasks-blocked-list">
+                      {task.blockedBy.map((id) => {
+                        const src = allTasks.find((t) => t.id === id)
+                        return (
+                          <li key={id} className="tasks-blocked-item">
+                            <span className="tasks-blocked-dot" aria-hidden />
+                            {src?.title ?? id.slice(0, 10)}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </span>
+                </div>
+              ) : null}
+              {task.usage && task.usage.totalTokens > 0 ? (
+                <div className="tasks-exec-stat">
+                  <span className="tasks-exec-stat-label"><CircleStackIcon aria-hidden className="size-[14px]" /> 消耗</span>
+                  <span className="tasks-exec-stat-value">
+                    <UsageCapsule usage={task.usage} aggregate={false} />
+                  </span>
+                </div>
+              ) : null}
             </div>
-            {task.createdAt ? (
-              <div className="tasks-exec-stat">
-                <span className="tasks-exec-stat-label"><ClockIcon aria-hidden className="size-[14px]" /> 创建时间</span>
-                <span className="tasks-exec-stat-value"><TimeLabel ts={task.createdAt} /></span>
-              </div>
-            ) : null}
-            {task.assignedAt ? (
-              <div className="tasks-exec-stat">
-                <span className="tasks-exec-stat-label"><ClockIcon aria-hidden className="size-[14px]" /> 实施时间</span>
-                <span className="tasks-exec-stat-value"><TimeLabel ts={task.assignedAt} /></span>
-              </div>
-            ) : null}
-            {task.blocked && task.blockedBy?.length ? (
-              <div className="tasks-exec-stat">
-                <span className="tasks-exec-stat-label"><LockClosedIcon aria-hidden className="size-[14px]" /> 阻塞</span>
-                <span className="tasks-exec-stat-value">
-                  <span className="tasks-blocked-head">被 {task.blockedBy.length} 个前置任务阻塞</span>
-                  <ul className="tasks-blocked-list">
-                    {task.blockedBy.map((id) => {
-                      const src = allTasks.find((t) => t.id === id)
-                      return (
-                        <li key={id} className="tasks-blocked-item">
-                          <span className="tasks-blocked-dot" aria-hidden />
-                          {src?.title ?? id.slice(0, 10)}
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </span>
-              </div>
-            ) : null}
-            {task.usage && task.usage.totalTokens > 0 ? (
-              <div className="tasks-exec-stat">
-                <span className="tasks-exec-stat-label"><CircleStackIcon aria-hidden className="size-[14px]" /> 消耗</span>
-                <span className="tasks-exec-stat-value">
-                  <UsageCapsule usage={task.usage} aggregate={false} />
-                </span>
-              </div>
+            {task.reports?.length ? (
+              <>
+                <div className="tasks-exec-timeline-head">执行报告</div>
+                <ul className="tasks-report-timeline">
+                  {[...task.reports].reverse().map((r, i) => {
+                    // 优先读该 report 固化的持久 usage（删 session 不丢）；缺失则 fallback 实时 turn-stats。
+                    const persistUsage = r.usage ?? null
+                    const realtimeStat =
+                      !persistUsage && r.sessionId && r.turn != null
+                        ? turnStats[`${r.sessionId}:${r.turn}`] ?? null
+                        : null
+                    const usage = persistUsage ?? (realtimeStat && realtimeStat.totalTokens > 0 ? realtimeStat : null)
+                    const consumed = !!usage && usage.totalTokens > 0
+                    return (
+                      <li key={`${r.ts}-${i}`} className={`tasks-report-item is-${r.status}`}>
+                        <span className="tasks-report-node">{r.status === 'done' ? <CheckCircleIcon aria-hidden className="size-[14px]" /> : <ArrowPathIcon aria-hidden className="size-[14px]" />}</span>
+                        <span className="tasks-report-rail" />
+                        <div className="tasks-report-content">
+                          {r.note ? <div className="tasks-report-note">{r.note}</div> : null}
+                          <div className="tasks-report-usage">
+                            <span className="tasks-report-time">{formatWhen(r.ts)}</span>
+                            {consumed ? <UsageCapsule usage={usage} aggregate={false} /> : null}
+                          </div>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
             ) : null}
           </div>
-          {task.reports?.length ? (
-            <>
-              <div className="tasks-exec-timeline-head">执行报告</div>
-              <ul className="tasks-report-timeline">
-                {[...task.reports].reverse().map((r, i) => {
-                  // 优先读该 report 固化的持久 usage（删 session 不丢）；缺失则 fallback 实时 turn-stats。
-                  const persistUsage = r.usage ?? null
-                  const realtimeStat =
-                    !persistUsage && r.sessionId && r.turn != null
-                      ? turnStats[`${r.sessionId}:${r.turn}`] ?? null
-                      : null
-                  const usage = persistUsage ?? (realtimeStat && realtimeStat.totalTokens > 0 ? realtimeStat : null)
-                  const consumed = !!usage && usage.totalTokens > 0
-                  return (
-                    <li key={`${r.ts}-${i}`} className={`tasks-report-item is-${r.status}`}>
-                      <span className="tasks-report-node">{r.status === 'done' ? <CheckCircleIcon aria-hidden className="size-[14px]" /> : <ArrowPathIcon aria-hidden className="size-[14px]" />}</span>
-                      <span className="tasks-report-rail" />
-                      <div className="tasks-report-content">
-                        {r.note ? <div className="tasks-report-note">{r.note}</div> : null}
-                        <div className="tasks-report-usage">
-                          <span className="tasks-report-time">{formatWhen(r.ts)}</span>
-                          {consumed ? <UsageCapsule usage={usage} aggregate={false} /> : null}
-                        </div>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            </>
-          ) : null}
-        </div>
         </div>
       )}
 
@@ -3591,9 +3591,9 @@ function ClockBadge(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
   const iso = useSnapshot((state: Snapshot) => state.clockIso)
   return (
-    <article className="space-y-1 rounded-[12px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] px-3 py-3">
+    <article className="space-y-1 rounded-xl border border-(--dsw-border) bg-(--dsw-surface) px-3 py-3">
       <h2 className="text-sm font-medium">Heartbeat</h2>
-      <time className="font-mono text-sm tracking-wide text-[var(--dsw-label-3)]" dateTime={iso}>
+      <time className="font-mono text-sm tracking-wide text-(--dsw-label-3)" dateTime={iso}>
         {formatClock(iso)}
       </time>
     </article>

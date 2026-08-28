@@ -68,9 +68,9 @@ function isOfficial(id: string): id is OfficialId {
 }
 
 const inputCls = [
-  'w-full rounded-[8px] px-2.5 py-[7px] text-[13px] text-[var(--dsw-label)]',
-  'border border-[var(--dsw-border)] bg-[var(--dsw-input)] outline-none',
-  'placeholder:text-[var(--dsw-label-3)] focus:border-[var(--dsw-business)]',
+  'w-full rounded-lg px-2.5 py-[7px] text-[13px] text-(--dsw-label)',
+  'border border-(--dsw-border) bg-(--dsw-input) outline-none',
+  'placeholder:text-(--dsw-label-3) focus:border-(--dsw-business)',
 ].join(' ')
 
 export function ChatConfig(props?: { onClose?: () => void }) {
@@ -537,8 +537,8 @@ export function ChatConfig(props?: { onClose?: () => void }) {
         key={ep.id}
         className={`group flex w-full items-center gap-0.5 pr-1 ${
           activeRow
-            ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
-            : 'text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]'
+            ? 'bg-(--dsw-business-soft) text-(--dsw-business)'
+            : 'text-(--dsw-label) hover:bg-(--dsw-hover)'
         }`}
       >
         <button
@@ -548,7 +548,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
         >
           <span
             className={`size-1.5 shrink-0 rounded-full ${
-              ok ? 'bg-[var(--dsw-ok)]' : 'bg-[var(--dsw-label-3)] opacity-35'
+              ok ? 'bg-(--dsw-ok)' : 'bg-(--dsw-label-3) opacity-35'
             }`}
           />
           <span className="min-w-0 flex-1 truncate font-medium">{ep.label}</span>
@@ -560,7 +560,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
         {removable ? (
           <button
             type="button"
-            className={`grid size-7 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] transition-opacity hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-danger,#b42318)] ${
+            className={`grid size-7 shrink-0 place-items-center rounded-md text-(--dsw-label-3) transition-opacity hover:bg-(--dsw-hover) hover:text-(--dsw-danger,#b42318) ${
               activeRow ? 'opacity-100' : 'opacity-50 group-hover:opacity-100 focus:opacity-100'
             }`}
             title="删除连接"
@@ -583,8 +583,8 @@ export function ChatConfig(props?: { onClose?: () => void }) {
     <div
       className={
         asDialog
-          ? 'flex h-[min(640px,calc(100vh-48px))] w-[min(720px,calc(100vw-32px))] flex-col overflow-hidden rounded-[16px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] shadow-2xl'
-          : 'flex h-full min-h-[460px] flex-col overflow-hidden rounded-[12px] border border-[var(--dsw-border)]'
+          ? 'flex h-[min(640px,calc(100vh-48px))] w-[min(720px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border border-(--dsw-border) bg-(--dsw-surface) shadow-2xl'
+          : 'flex h-full min-h-[460px] flex-col overflow-hidden rounded-xl border border-(--dsw-border)'
       }
       data-testid="assistant-config"
       role={asDialog ? 'dialog' : undefined}
@@ -592,34 +592,34 @@ export function ChatConfig(props?: { onClose?: () => void }) {
       aria-label={asDialog ? '模型配置' : undefined}
       onClick={asDialog ? (e) => e.stopPropagation() : undefined}
     >
-      <div className="flex shrink-0 items-center justify-between border-b border-[var(--dsw-border)] px-4 py-3">
-        <h2 className="text-[14px] font-semibold text-[var(--dsw-label)]">模型配置</h2>
+      <div className="flex shrink-0 items-center justify-between border-b border-(--dsw-border) px-4 py-3">
+        <h2 className="text-[14px] font-semibold text-(--dsw-label)">模型配置</h2>
         {asDialog ? (
           <button
             type="button"
-            className="grid size-8 place-items-center rounded-[8px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]"
+            className="grid size-8 place-items-center rounded-lg text-(--dsw-label-3) hover:bg-(--dsw-hover) hover:text-(--dsw-label)"
             aria-label="关闭"
             onClick={props?.onClose}
           >
             <XMarkIcon className="size-4" />
           </button>
         ) : (
-          <span className="text-[11px] text-[var(--dsw-label-3)]">官方 Key / 第三方 URL</span>
+          <span className="text-[11px] text-(--dsw-label-3)">官方 Key / 第三方 URL</span>
         )}
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* 左：Provider 列表 */}
-        <aside className="flex w-[200px] shrink-0 flex-col border-r border-[var(--dsw-border)] bg-[var(--dsw-sidebar)]">
+        <aside className="flex w-[200px] shrink-0 flex-col border-r border-(--dsw-border) bg-(--dsw-sidebar)">
           <div className="min-h-0 flex-1 overflow-y-auto py-1">
-            <div className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
+            <div className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wide text-(--dsw-label-3) uppercase">
               官方
             </div>
             {officialList.map((ep) => providerRow(ep, { removable: false }))}
 
             {connectedThird.length > 0 ? (
               <>
-                <div className="px-3 pt-3 pb-1 text-[10px] font-semibold tracking-wide text-[var(--dsw-label-3)] uppercase">
+                <div className="px-3 pt-3 pb-1 text-[10px] font-semibold tracking-wide text-(--dsw-label-3) uppercase">
                   第三方
                 </div>
                 {connectedThird.map((ep) => providerRow(ep, { removable: true }))}
@@ -627,13 +627,13 @@ export function ChatConfig(props?: { onClose?: () => void }) {
             ) : null}
           </div>
 
-          <div className="border-t border-[var(--dsw-border)] p-2">
+          <div className="border-t border-(--dsw-border) p-2">
             <button
               type="button"
-              className={`flex w-full items-center justify-center gap-1 rounded-[8px] px-2.5 py-[7px] text-[12px] font-medium transition-colors ${
+              className={`flex w-full items-center justify-center gap-1 rounded-lg px-2.5 py-[7px] text-[12px] font-medium transition-colors ${
                 adding
-                  ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
-                  : 'text-[var(--dsw-label-2)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label)]'
+                  ? 'bg-(--dsw-business-soft) text-(--dsw-business)'
+                  : 'text-(--dsw-label-2) hover:bg-(--dsw-hover) hover:text-(--dsw-label)'
               }`}
               onClick={() => {
                 setAdding(true)
@@ -654,21 +654,21 @@ export function ChatConfig(props?: { onClose?: () => void }) {
         <div className="flex min-w-0 flex-1 flex-col">
           {adding ? (
             <>
-              <div className="border-b border-[var(--dsw-border)] px-4 py-3">
-                <h3 className="text-[14px] font-semibold text-[var(--dsw-label)]">添加连接</h3>
-                <p className="mt-0.5 text-[11px] text-[var(--dsw-label-3)]">
+              <div className="border-b border-(--dsw-border) px-4 py-3">
+                <h3 className="text-[14px] font-semibold text-(--dsw-label)">添加连接</h3>
+                <p className="mt-0.5 text-[11px] text-(--dsw-label-3)">
                   搜索预设，或输入名称创建自定义连接
                 </p>
               </div>
               <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
                 {/* Notion 风格属性行：连接选择 */}
-                <div className="flex items-start gap-3 rounded-[6px] px-2 py-2 hover:bg-[var(--dsw-hover)]">
-                  <div className="w-[72px] shrink-0 pt-[7px] text-[12px] text-[var(--dsw-label-3)]">连接</div>
+                <div className="flex items-start gap-3 rounded-md px-2 py-2 hover:bg-(--dsw-hover)">
+                  <div className="w-18 shrink-0 pt-[7px] text-[12px] text-(--dsw-label-3)">连接</div>
                   <div className="relative min-w-0 flex-1" ref={pickerRef}>
                     {!pickerOpen && (selectedPreset || newLabel.trim()) ? (
                       <button
                         type="button"
-                        className="flex w-full items-center gap-2 rounded-[6px] border border-transparent px-2 py-[6px] text-left transition-colors hover:border-[var(--dsw-border)] hover:bg-[var(--dsw-muted-fill)]"
+                        className="flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-[6px] text-left transition-colors hover:border-(--dsw-border) hover:bg-(--dsw-muted-fill)"
                         onClick={() => {
                           setPickerOpen(true)
                           setPickerQuery(selectedPreset?.label || newLabel || '')
@@ -678,18 +678,18 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                           })
                         }}
                       >
-                        <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--dsw-label)]">
+                        <span className="min-w-0 flex-1 truncate text-[13px] text-(--dsw-label)">
                           {selectedPreset ? selectedPreset.label : newLabel.trim()}
                         </span>
                         {!selectedPreset ? (
-                          <span className="shrink-0 rounded-[4px] bg-[var(--dsw-muted-fill)] px-1.5 py-0.5 text-[10px] text-[var(--dsw-label-3)]">
+                          <span className="shrink-0 rounded-sm bg-(--dsw-muted-fill) px-1.5 py-0.5 text-[10px] text-(--dsw-label-3)">
                             自定义
                           </span>
                         ) : null}
                         <span
                           role="button"
                           tabIndex={0}
-                          className="grid size-5 shrink-0 place-items-center rounded-[4px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover-strong)] hover:text-[var(--dsw-label)]"
+                          className="grid size-5 shrink-0 place-items-center rounded-sm text-(--dsw-label-3) hover:bg-(--dsw-hover-strong) hover:text-(--dsw-label)"
                           aria-label="清除"
                           onClick={(e) => {
                             e.stopPropagation()
@@ -708,16 +708,16 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                       </button>
                     ) : (
                       <div
-                        className={`flex items-center gap-1.5 rounded-[6px] border px-2 py-[5px] transition-colors ${
+                        className={`flex items-center gap-1.5 rounded-md border px-2 py-[5px] transition-colors ${
                           pickerOpen
-                            ? 'border-[var(--dsw-label-3)] bg-[var(--dsw-input)] shadow-[0_0_0_1px_var(--dsw-border)]'
-                            : 'border-[var(--dsw-border)] bg-[var(--dsw-input)] hover:border-[var(--dsw-label-3)]'
+                            ? 'border-(--dsw-label-3) bg-(--dsw-input) shadow-[0_0_0_1px_var(--dsw-border)]'
+                            : 'border-(--dsw-border) bg-(--dsw-input) hover:border-(--dsw-label-3)'
                         }`}
                       >
-                        <MagnifyingGlassIcon className="size-3.5 shrink-0 text-[var(--dsw-label-3)]" />
+                        <MagnifyingGlassIcon className="size-3.5 shrink-0 text-(--dsw-label-3)" />
                         <input
                           ref={pickerInputRef}
-                          className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--dsw-label)] outline-none placeholder:text-[var(--dsw-label-3)]"
+                          className="min-w-0 flex-1 bg-transparent text-[13px] text-(--dsw-label) outline-none placeholder:text-(--dsw-label-3)"
                           placeholder="搜索或创建连接…"
                           value={pickerQuery}
                           onChange={(e) => {
@@ -740,7 +740,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                           aria-controls="connection-picker-menu"
                         />
                         <ChevronDownIcon
-                          className={`size-3.5 shrink-0 text-[var(--dsw-label-3)] transition-transform ${
+                          className={`size-3.5 shrink-0 text-(--dsw-label-3) transition-transform ${
                             pickerOpen ? 'rotate-180' : ''
                           }`}
                         />
@@ -751,12 +751,12 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                       <div
                         id="connection-picker-menu"
                         role="listbox"
-                        className="absolute z-20 mt-1 max-h-[280px] w-full overflow-y-auto rounded-[8px] border border-[var(--dsw-border)] bg-[var(--dsw-surface)] py-1 shadow-[var(--dsw-shadow-lv2)]"
+                        className="absolute z-20 mt-1 max-h-[280px] w-full overflow-y-auto rounded-lg border border-(--dsw-border) bg-(--dsw-surface) py-1 shadow-(--dsw-shadow-lv2)"
                       >
                         {presetGroups.length ? (
                           presetGroups.map((group) => (
                             <div key={group.id} className="py-1">
-                              <div className="px-2.5 py-1 text-[10px] font-medium tracking-wide text-[var(--dsw-label-3)]">
+                              <div className="px-2.5 py-1 text-[10px] font-medium tracking-wide text-(--dsw-label-3)">
                                 {group.label}
                               </div>
                               {group.items.map((ep) => {
@@ -769,21 +769,21 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                                     aria-selected={active}
                                     className={`flex w-full items-center gap-2 px-2.5 py-[7px] text-left transition-colors ${
                                       active
-                                        ? 'bg-[var(--dsw-hover-strong)]'
-                                        : 'hover:bg-[var(--dsw-hover)]'
+                                        ? 'bg-(--dsw-hover-strong)'
+                                        : 'hover:bg-(--dsw-hover)'
                                     }`}
                                     onClick={() => pickPreset(ep)}
                                   >
                                     <span className="min-w-0 flex-1">
-                                      <span className="block truncate text-[13px] text-[var(--dsw-label)]">
+                                      <span className="block truncate text-[13px] text-(--dsw-label)">
                                         {ep.label}
                                       </span>
-                                      <span className="block truncate font-mono text-[10px] text-[var(--dsw-label-3)]">
+                                      <span className="block truncate font-mono text-[10px] text-(--dsw-label-3)">
                                         {ep.note || ep.defaultBaseUrl || ep.baseUrl}
                                       </span>
                                     </span>
                                     {active ? (
-                                      <CheckIcon className="size-3.5 shrink-0 text-[var(--dsw-label)]" />
+                                      <CheckIcon className="size-3.5 shrink-0 text-(--dsw-label)" />
                                     ) : null}
                                   </button>
                                 )
@@ -791,7 +791,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                             </div>
                           ))
                         ) : !canCreateFromQuery ? (
-                          <div className="px-3 py-4 text-center text-[12px] text-[var(--dsw-label-3)]">
+                          <div className="px-3 py-4 text-center text-[12px] text-(--dsw-label-3)">
                             没有匹配的预设
                           </div>
                         ) : null}
@@ -799,18 +799,18 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                         {canCreateFromQuery ? (
                           <>
                             {presetGroups.length ? (
-                              <div className="mx-2 my-1 border-t border-[var(--dsw-border)]" />
+                              <div className="mx-2 my-1 border-t border-(--dsw-border)" />
                             ) : null}
                             <button
                               type="button"
                               role="option"
-                              className="flex w-full items-center gap-2 px-2.5 py-[8px] text-left hover:bg-[var(--dsw-hover)]"
+                              className="flex w-full items-center gap-2 px-2.5 py-[8px] text-left hover:bg-(--dsw-hover)"
                               onClick={() => createCustom(pickerQuery)}
                             >
-                              <span className="grid size-5 shrink-0 place-items-center rounded-[4px] bg-[var(--dsw-muted-fill)] text-[var(--dsw-label-2)]">
+                              <span className="grid size-5 shrink-0 place-items-center rounded-sm bg-(--dsw-muted-fill) text-(--dsw-label-2)">
                                 <PlusIcon className="size-3" />
                               </span>
-                              <span className="min-w-0 text-[13px] text-[var(--dsw-label)]">
+                              <span className="min-w-0 text-[13px] text-(--dsw-label)">
                                 创建「
                                 <span className="font-medium">{pickerQuery.trim()}</span>
                                 」
@@ -821,10 +821,10 @@ export function ChatConfig(props?: { onClose?: () => void }) {
 
                         {!pickerQuery.trim() && presets.length > 0 ? (
                           <>
-                            <div className="mx-2 my-1 border-t border-[var(--dsw-border)]" />
+                            <div className="mx-2 my-1 border-t border-(--dsw-border)" />
                             <button
                               type="button"
-                              className="flex w-full items-center gap-2 px-2.5 py-[8px] text-left hover:bg-[var(--dsw-hover)]"
+                              className="flex w-full items-center gap-2 px-2.5 py-[8px] text-left hover:bg-(--dsw-hover)"
                               onClick={() => {
                                 setPickerOpen(false)
                                 setPresetId('')
@@ -832,10 +832,10 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                                 setNewUrl('')
                               }}
                             >
-                              <span className="grid size-5 shrink-0 place-items-center rounded-[4px] bg-[var(--dsw-muted-fill)] text-[var(--dsw-label-2)]">
+                              <span className="grid size-5 shrink-0 place-items-center rounded-sm bg-(--dsw-muted-fill) text-(--dsw-label-2)">
                                 <PlusIcon className="size-3" />
                               </span>
-                              <span className="text-[13px] text-[var(--dsw-label-2)]">自定义 Base URL…</span>
+                              <span className="text-[13px] text-(--dsw-label-2)">自定义 Base URL…</span>
                             </button>
                           </>
                         ) : null}
@@ -845,10 +845,10 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                 </div>
 
                 {!selectedPreset ? (
-                  <div className="flex items-center gap-3 rounded-[6px] px-2 py-2 hover:bg-[var(--dsw-hover)]">
-                    <div className="w-[72px] shrink-0 text-[12px] text-[var(--dsw-label-3)]">名称</div>
+                  <div className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-(--dsw-hover)">
+                    <div className="w-18 shrink-0 text-[12px] text-(--dsw-label-3)">名称</div>
                     <input
-                      className="min-w-0 flex-1 rounded-[6px] border border-transparent bg-transparent px-2 py-[6px] text-[13px] text-[var(--dsw-label)] outline-none placeholder:text-[var(--dsw-label-3)] hover:border-[var(--dsw-border)] focus:border-[var(--dsw-label-3)] focus:bg-[var(--dsw-input)]"
+                      className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-[6px] text-[13px] text-(--dsw-label) outline-none placeholder:text-(--dsw-label-3) hover:border-(--dsw-border) focus:border-(--dsw-label-3) focus:bg-(--dsw-input)"
                       placeholder="My OneAPI"
                       value={newLabel}
                       onChange={(e) => setNewLabel(e.target.value)}
@@ -857,8 +857,8 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                 ) : null}
 
                 {!selectedPreset ? (
-                  <div className="flex items-center gap-3 rounded-[6px] px-2 py-2 hover:bg-[var(--dsw-hover)]">
-                    <div className="w-[72px] shrink-0 text-[12px] text-[var(--dsw-label-3)]">协议</div>
+                  <div className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-(--dsw-hover)">
+                    <div className="w-18 shrink-0 text-[12px] text-(--dsw-label-3)">协议</div>
                     <div className="flex gap-1">
                       {(
                         [
@@ -869,10 +869,10 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                         <button
                           key={opt.id}
                           type="button"
-                          className={`rounded-[6px] px-2.5 py-[5px] text-[12px] transition-colors ${
+                          className={`rounded-md px-2.5 py-[5px] text-[12px] transition-colors ${
                             newProtocol === opt.id
-                              ? 'bg-[var(--dsw-hover-strong)] text-[var(--dsw-label)]'
-                              : 'text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-label-2)]'
+                              ? 'bg-(--dsw-hover-strong) text-(--dsw-label)'
+                              : 'text-(--dsw-label-3) hover:bg-(--dsw-hover) hover:text-(--dsw-label-2)'
                           }`}
                           onClick={() => setNewProtocol(opt.id)}
                         >
@@ -883,20 +883,20 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                   </div>
                 ) : null}
 
-                <div className="flex items-center gap-3 rounded-[6px] px-2 py-2 hover:bg-[var(--dsw-hover)]">
-                  <div className="w-[72px] shrink-0 text-[12px] text-[var(--dsw-label-3)]">Base URL</div>
+                <div className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-(--dsw-hover)">
+                  <div className="w-18 shrink-0 text-[12px] text-(--dsw-label-3)">Base URL</div>
                   <input
-                    className="min-w-0 flex-1 rounded-[6px] border border-transparent bg-transparent px-2 py-[6px] font-mono text-[12px] text-[var(--dsw-label)] outline-none placeholder:font-sans placeholder:text-[var(--dsw-label-3)] hover:border-[var(--dsw-border)] focus:border-[var(--dsw-label-3)] focus:bg-[var(--dsw-input)]"
+                    className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-[6px] font-mono text-[12px] text-(--dsw-label) outline-none placeholder:font-sans placeholder:text-(--dsw-label-3) hover:border-(--dsw-border) focus:border-(--dsw-label-3) focus:bg-(--dsw-input)"
                     placeholder="https://api.example.com/v1"
                     value={newUrl}
                     onChange={(e) => setNewUrl(e.target.value)}
                   />
                 </div>
 
-                <div className="flex items-center gap-3 rounded-[6px] px-2 py-2 hover:bg-[var(--dsw-hover)]">
-                  <div className="w-[72px] shrink-0 text-[12px] text-[var(--dsw-label-3)]">API Key</div>
+                <div className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-(--dsw-hover)">
+                  <div className="w-18 shrink-0 text-[12px] text-(--dsw-label-3)">API Key</div>
                   <input
-                    className="min-w-0 flex-1 rounded-[6px] border border-transparent bg-transparent px-2 py-[6px] text-[13px] text-[var(--dsw-label)] outline-none placeholder:text-[var(--dsw-label-3)] hover:border-[var(--dsw-border)] focus:border-[var(--dsw-label-3)] focus:bg-[var(--dsw-input)]"
+                    className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-[6px] text-[13px] text-(--dsw-label) outline-none placeholder:text-(--dsw-label-3) hover:border-(--dsw-border) focus:border-(--dsw-label-3) focus:bg-(--dsw-input)"
                     type="password"
                     autoComplete="off"
                     placeholder="sk-…（可选，稍后可补）"
@@ -905,13 +905,13 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                   />
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-2 border-t border-[var(--dsw-border)] px-4 py-2.5">
+              <div className="flex items-center justify-end gap-2 border-t border-(--dsw-border) px-4 py-2.5">
                 {error ? (
-                  <span className="mr-auto text-[11px] text-[var(--dsw-danger,#b42318)]">{error}</span>
+                  <span className="mr-auto text-[11px] text-(--dsw-danger,#b42318)">{error}</span>
                 ) : null}
                 <button
                   type="button"
-                  className="rounded-[6px] px-3 py-[6px] text-[12px] text-[var(--dsw-label-2)] hover:bg-[var(--dsw-hover)]"
+                  className="rounded-md px-3 py-[6px] text-[12px] text-(--dsw-label-2) hover:bg-(--dsw-hover)"
                   onClick={() => {
                     setAdding(false)
                     resetAddForm()
@@ -921,7 +921,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                 </button>
                 <button
                   type="button"
-                  className="rounded-[6px] px-3.5 py-[7px] text-[13px] font-medium text-[var(--dsw-bg)]"
+                  className="rounded-md px-3.5 py-[7px] text-[13px] font-medium text-(--dsw-bg)"
                   style={{ background: 'var(--dsw-business)' }}
                   onClick={() => void onAddConnection()}
                 >
@@ -931,27 +931,27 @@ export function ChatConfig(props?: { onClose?: () => void }) {
             </>
           ) : active ? (
             <>
-              <div className="flex items-start justify-between gap-3 border-b border-[var(--dsw-border)] px-4 py-3">
+              <div className="flex items-start justify-between gap-3 border-b border-(--dsw-border) px-4 py-3">
                 <div className="min-w-0">
-                  <h3 className="truncate text-[14px] font-semibold text-[var(--dsw-label)]">
+                  <h3 className="truncate text-[14px] font-semibold text-(--dsw-label)">
                     {isOfficial(active.id) ? OFFICIAL_META[active.id].label : active.label}
                   </h3>
-                  <p className="mt-0.5 truncate text-[11px] text-[var(--dsw-label-3)]">
+                  <p className="mt-0.5 truncate text-[11px] text-(--dsw-label-3)">
                     {active.note || active.baseUrl}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span
-                    className={`rounded-[6px] px-2 py-0.5 text-[10px] font-medium ${
+                    className={`rounded-md px-2 py-0.5 text-[10px] font-medium ${
                       configured
-                        ? 'bg-[color-mix(in_srgb,var(--dsw-ok)_16%,transparent)] text-[var(--dsw-ok)]'
-                        : 'bg-[var(--dsw-hover)] text-[var(--dsw-label-3)]'
+                        ? 'bg-(color-mix(in_srgb,var(--dsw-ok)_16%,transparent)) text-(--dsw-ok)'
+                        : 'bg-(--dsw-hover) text-(--dsw-label-3)'
                     }`}
                   >
                     {configured ? '已配置' : '未配置'}
                   </span>
                   {isDefaultProvider ? (
-                    <span className="rounded-[6px] bg-[var(--dsw-business-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--dsw-business)]">
+                    <span className="rounded-md bg-(--dsw-business-soft) px-2 py-0.5 text-[10px] font-medium text-(--dsw-business)">
                       当前默认
                     </span>
                   ) : null}
@@ -960,11 +960,11 @@ export function ChatConfig(props?: { onClose?: () => void }) {
 
               <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3">
                 <label className="flex flex-col gap-1.5">
-                  <span className="flex items-center justify-between text-[11px] font-semibold text-[var(--dsw-label-3)]">
+                  <span className="flex items-center justify-between text-[11px] font-semibold text-(--dsw-label-3)">
                     <span>API Key</span>
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1 rounded-[6px] px-1.5 py-0.5 text-[11px] font-medium text-[var(--dsw-label-2)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-business)] disabled:opacity-50"
+                      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-(--dsw-label-2) hover:bg-(--dsw-hover) hover:text-(--dsw-business) disabled:opacity-50"
                       title="测试连接"
                       aria-label="测试连接"
                       data-testid="test-connection"
@@ -995,13 +995,13 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                     onChange={(e) => setKeyDraft(e.target.value)}
                   />
                   {testHint ? (
-                    <span className="text-[11px] text-[var(--dsw-ok)]">{testHint}</span>
+                    <span className="text-[11px] text-(--dsw-ok)">{testHint}</span>
                   ) : null}
                 </label>
 
                 {!isOfficial(active.id) ? (
                   <label className="flex flex-col gap-1.5">
-                    <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">Base URL</span>
+                    <span className="text-[11px] font-semibold text-(--dsw-label-3)">Base URL</span>
                     <input
                       className={inputCls}
                       type="url"
@@ -1012,22 +1012,22 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                     />
                   </label>
                 ) : (
-                  <p className="text-[11px] text-[var(--dsw-label-3)]">
+                  <p className="text-[11px] text-(--dsw-label-3)">
                     官方地址：<span className="font-mono text-[10px]">{active.defaultBaseUrl}</span>
                   </p>
                 )}
 
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-[var(--dsw-label-3)]">
+                    <span className="text-[11px] font-semibold text-(--dsw-label-3)">
                       模型
                       <span className="ml-1 font-normal">· {activeModels.length}</span>
                     </span>
-                    <span className="text-[10px] text-[var(--dsw-label-3)]">点击设为默认</span>
+                    <span className="text-[10px] text-(--dsw-label-3)">点击设为默认</span>
                   </div>
 
                   {activeModels.length ? (
-                    <ul className="flex max-h-[220px] flex-col gap-0.5 overflow-y-auto rounded-[8px] border border-[var(--dsw-border)] p-1">
+                    <ul className="flex max-h-[220px] flex-col gap-0.5 overflow-y-auto rounded-lg border border-(--dsw-border) p-1">
                       {activeModels.map((m) => {
                         const selected = isDefaultProvider && m.model === defaultModel
                         return (
@@ -1035,10 +1035,10 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                             <button
                               type="button"
                               data-testid={selected ? 'model-active' : undefined}
-                              className={`flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left transition-colors ${
+                              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors ${
                                 selected
-                                  ? 'bg-[var(--dsw-business-soft)] text-[var(--dsw-business)]'
-                                  : 'text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]'
+                                  ? 'bg-(--dsw-business-soft) text-(--dsw-business)'
+                                  : 'text-(--dsw-label) hover:bg-(--dsw-hover)'
                               }`}
                               onClick={() => void pickDefaultModel(m)}
                             >
@@ -1053,7 +1053,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                                 <span
                                   role="button"
                                   tabIndex={0}
-                                  className="grid size-6 shrink-0 place-items-center rounded-[6px] text-[var(--dsw-label-3)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-danger,#b42318)]"
+                                  className="grid size-6 shrink-0 place-items-center rounded-md text-(--dsw-label-3) hover:bg-(--dsw-hover) hover:text-(--dsw-danger,#b42318)"
                                   title="删除模型"
                                   aria-label={`删除 ${m.label}`}
                                   onClick={(e) => {
@@ -1079,7 +1079,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                       })}
                     </ul>
                   ) : (
-                    <p className="text-[11px] text-[var(--dsw-label-3)]">暂无模型，在下方添加 model id</p>
+                    <p className="text-[11px] text-(--dsw-label-3)">暂无模型，在下方添加 model id</p>
                   )}
 
                   <div className="flex gap-2">
@@ -1097,7 +1097,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                     />
                     <button
                       type="button"
-                      className="inline-flex shrink-0 items-center gap-1 rounded-[8px] border border-[var(--dsw-border)] px-2.5 py-[6px] text-[12px] text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-(--dsw-border) px-2.5 py-[6px] text-[12px] text-(--dsw-label) hover:bg-(--dsw-hover)"
                       onClick={() => void onAddModel()}
                     >
                       <PlusIcon className="size-3.5" />
@@ -1109,7 +1109,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                 {canRemoveConnection(active) ? (
                   <button
                     type="button"
-                    className="inline-flex self-start items-center gap-1 text-[11px] text-[var(--dsw-danger,#b42318)] hover:underline"
+                    className="inline-flex self-start items-center gap-1 text-[11px] text-(--dsw-danger,#b42318) hover:underline"
                     onClick={() => void onRemoveConnection(active.id)}
                   >
                     <TrashIcon className="size-3" />
@@ -1118,15 +1118,15 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                 ) : null}
               </div>
 
-              <div className="flex items-center justify-end gap-2 border-t border-[var(--dsw-border)] px-4 py-2.5">
-                {status ? <span className="mr-auto text-[11px] text-[var(--dsw-ok)]">{status}</span> : null}
+              <div className="flex items-center justify-end gap-2 border-t border-(--dsw-border) px-4 py-2.5">
+                {status ? <span className="mr-auto text-[11px] text-(--dsw-ok)">{status}</span> : null}
                 {error ? (
-                  <span className="mr-auto text-[11px] text-[var(--dsw-danger,#b42318)]">{error}</span>
+                  <span className="mr-auto text-[11px] text-(--dsw-danger,#b42318)">{error}</span>
                 ) : null}
                 {!isDefaultProvider ? (
                   <button
                     type="button"
-                    className="rounded-[8px] border border-[var(--dsw-border)] px-3 py-[6px] text-[12px] text-[var(--dsw-label)] hover:bg-[var(--dsw-hover)]"
+                    className="rounded-lg border border-(--dsw-border) px-3 py-[6px] text-[12px] text-(--dsw-label) hover:bg-(--dsw-hover)"
                     disabled={saving}
                     onClick={() => void saveCurrent({ makeDefault: true })}
                   >
@@ -1135,7 +1135,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                 ) : null}
                 <button
                   type="button"
-                  className="rounded-[8px] px-3.5 py-[7px] text-[13px] font-medium text-[var(--dsw-bg)] transition-opacity hover:opacity-90 disabled:opacity-50"
+                  className="rounded-lg px-3.5 py-[7px] text-[13px] font-medium text-(--dsw-bg) transition-opacity hover:opacity-90 disabled:opacity-50"
                   style={{ background: 'var(--dsw-business)' }}
                   disabled={saving}
                   onClick={() => void saveCurrent()}
@@ -1145,7 +1145,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
               </div>
             </>
           ) : (
-            <div className="grid flex-1 place-items-center text-[12px] text-[var(--dsw-label-3)]">
+            <div className="grid flex-1 place-items-center text-[12px] text-(--dsw-label-3)">
               从左侧选择 Provider
             </div>
           )}

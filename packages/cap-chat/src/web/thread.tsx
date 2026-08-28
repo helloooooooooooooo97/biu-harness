@@ -175,7 +175,7 @@ function renderReplyPartList({
             '…'
           ) : null}
           {partStreaming ? (
-            <span className="ml-1 inline-block animate-pulse text-[var(--dsw-label-3)]">▍</span>
+            <span className="ml-1 inline-block animate-pulse text-(--dsw-label-3)">▍</span>
           ) : null}
         </div>,
       )
@@ -403,7 +403,7 @@ function UserTurnBar({
 
   return (
     <div
-      className="box-border flex h-[30px] min-h-[30px] w-full items-center justify-between gap-3 border-0 border-t border-[var(--dsw-bubble)] bg-transparent px-[var(--dsw-chat-pad-x)] text-[length:var(--dsw-chat-ui-font-size)] leading-none text-[var(--dsw-sidebar-fg)]"
+      className="box-border flex h-[30px] min-h-[30px] w-full items-center justify-between gap-3 border-0 border-t border-(--dsw-bubble) bg-transparent px-(--dsw-chat-pad-x) text-(length:--dsw-chat-ui-font-size) leading-none text-(--dsw-sidebar-fg)"
       aria-label="回合摘要"
       data-testid="user-turn-bar"
     >
@@ -411,7 +411,7 @@ function UserTurnBar({
         {hasDetails && reply ? (
           <button
             type="button"
-            className={`inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-[6px] border border-transparent bg-transparent py-0.5 pr-2 pl-1 text-[length:var(--dsw-chat-ui-font-size)] leading-none text-[var(--dsw-sidebar-fg)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-sidebar-fg-active)]${detailsOpen ? ' bg-[var(--dsw-hover)] text-[var(--dsw-sidebar-fg-active)]' : ''}`}
+            className={`inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md border border-transparent bg-transparent py-0.5 pr-2 pl-1 text-(length:--dsw-chat-ui-font-size) leading-none text-(--dsw-sidebar-fg) hover:bg-(--dsw-hover) hover:text-(--dsw-sidebar-fg-active)${detailsOpen ? ' bg-(--dsw-hover) text-(--dsw-sidebar-fg-active)' : ''}`}
             aria-expanded={detailsOpen}
             aria-controls={`reply-details-${reply.id}`}
             data-testid="details-toggle"
@@ -455,7 +455,7 @@ function UserTurnBar({
         {canExpand && onToggleExpand ? (
           <button
             type="button"
-            className="inline-grid size-[22px] cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--dsw-sidebar-fg)] hover:bg-[var(--dsw-hover)] hover:text-[var(--dsw-sidebar-fg-active)]"
+            className="inline-grid size-[22px] cursor-pointer place-items-center rounded-md border-0 bg-transparent p-0 text-(--dsw-sidebar-fg) hover:bg-(--dsw-hover) hover:text-(--dsw-sidebar-fg-active)"
             aria-expanded={Boolean(expanded)}
             aria-label={expanded ? '收起请求全文' : '展开请求全文'}
             data-testid="user-expand-toggle"
@@ -467,7 +467,7 @@ function UserTurnBar({
         <UserSenderAvatar sender={user.sender} sessions={sessions} />
         {sentLabel ? (
           <span
-            className="inline-flex shrink-0 items-center gap-1 text-[length:var(--dsw-chat-ui-font-size)] leading-none text-[var(--dsw-sidebar-fg)] tabular-nums"
+            className="inline-flex shrink-0 items-center gap-1 text-(length:--dsw-chat-ui-font-size) leading-none text-(--dsw-sidebar-fg) tabular-nums"
             title="发送时间"
             data-testid="user-sent-at"
           >
@@ -492,7 +492,7 @@ function UserSenderAvatar({
     const identity = resolveSessionMascot(sender.sessionId, hit?.mascot)
     return (
       <span
-        className="grid size-[18px] shrink-0 place-items-center text-[var(--dsw-label-3)]"
+        className="grid size-[18px] shrink-0 place-items-center text-(--dsw-label-3)"
         title={hit?.title || 'Live session'}
         data-testid="user-sender-mascot"
       >
@@ -502,7 +502,7 @@ function UserSenderAvatar({
   }
   return (
     <span
-      className="grid size-[18px] shrink-0 place-items-center rounded-[5px] bg-[color-mix(in_srgb,var(--dsw-label-3)_14%,transparent)] text-[var(--dsw-label-3)]"
+      className="grid size-[18px] shrink-0 place-items-center rounded-[5px] bg-(color-mix(in_srgb,var(--dsw-label-3)_14%,transparent)) text-(--dsw-label-3)"
       title="你"
       data-testid="user-sender-human"
       aria-hidden
@@ -578,14 +578,14 @@ function NodeView({
         className="chat-user-card"
         {...pickDomAttrs('message', node.id, pickPreview(picked.rest || node.text) || 'user')}
       >
-        <div className="chat-user-card-body text-[var(--dsw-label)]">
+        <div className="chat-user-card-body text-(--dsw-label)">
           <div
-            className={`w-full max-w-full border-0 bg-transparent p-0 text-[var(--dsw-label)] outline-none${canExpand && !expanded ? ' max-h-[80px] overflow-hidden' : ''}${expanded ? ' max-h-none overflow-visible' : ''}`}
+            className={`w-full max-w-full border-0 bg-transparent p-0 text-(--dsw-label) outline-none${canExpand && !expanded ? ' max-h-[80px] overflow-hidden' : ''}${expanded ? ' max-h-none overflow-visible' : ''}`}
             data-testid="user-bubble"
             {...pickDomAttrs('message', node.id, pickPreview(picked.rest || node.text) || 'user')}
           >
             {node.kindTag === 'inject' ? (
-              <div className="mb-1 text-[length:var(--dsw-chat-ui-font-size)] text-[var(--dsw-label-3)]">inject</div>
+              <div className="mb-1 text-(length:--dsw-chat-ui-font-size) text-(--dsw-label-3)">inject</div>
             ) : null}
             <UserBubbleEditor text={node.text} />
           </div>
@@ -633,7 +633,7 @@ function NodeView({
     )
   }
 
-  return <div className="self-center text-xs text-[var(--dsw-label-3)]">{node.text}</div>
+  return <div className="self-center text-xs text-(--dsw-label-3)">{node.text}</div>
 }
 
 const NodeViewMemo = memo(NodeView)
@@ -684,7 +684,7 @@ export const ChatNodeList = memo(function ChatNodeList({
                 replyNode?.turn != null ? dispatchedTasksByTurn[String(replyNode.turn)] : undefined
               const stickyUser =
                 node.kind === 'user'
-                  ? 'sticky top-0 z-[1] bg-[var(--dsw-bg)]'
+                  ? 'sticky top-0 z-1 bg-(--dsw-bg)'
                   : ''
               const skipPaint =
                 node.kind === 'reply' || node.kind === 'turn'
@@ -759,8 +759,8 @@ function StatusRow({
 }) {
   if (agentStatus !== 'running') return null
   return (
-    <div className="mb-4 flex items-center gap-2 text-xs text-[var(--dsw-label-3)]">
-      <span className="inline-block size-1.5 animate-pulse rounded-full bg-[var(--dsw-ok)]" />
+    <div className="mb-4 flex items-center gap-2 text-xs text-(--dsw-label-3)">
+      <span className="inline-block size-1.5 animate-pulse rounded-full bg-(--dsw-ok)" />
       Running{agentStep != null ? ` · step ${agentStep + 1}` : ''}
     </div>
   )
@@ -887,7 +887,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     >
       <StatusRow agentStatus={agentStatus} agentStep={agentStep} />
       {loadingOlder ? (
-        <div className="mb-3 text-center text-[length:var(--dsw-chat-ui-font-size)] text-[var(--dsw-label-3)]">加载更早消息…</div>
+        <div className="mb-3 text-center text-(length:--dsw-chat-ui-font-size) text-(--dsw-label-3)">加载更早消息…</div>
       ) : null}
       <ChatNodeList
         nodes={nodes}
@@ -897,7 +897,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
         dispatchedTasksByTurn={dispatchedTasksByTurn}
       />
       {error ? (
-        <div className="mt-4 rounded-[12px] bg-[var(--dsw-danger-soft)] px-3 py-2 text-sm text-[var(--dsw-danger)]">{error}</div>
+        <div className="mt-4 rounded-xl bg-(--dsw-danger-soft) px-3 py-2 text-sm text-(--dsw-danger)">{error}</div>
       ) : null}
     </div>
   )
