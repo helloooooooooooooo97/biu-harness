@@ -47,7 +47,7 @@
   --dsw-chat-reply-pad-x: 12px;
   --dsw-chat-max-width: 768px;
   --dsw-chat-code-bg: var(--dsw-sidebar);
-  --dsw-chat-hist-fill: #E85854;
+  --dsw-chat-hist-fill: #EA5955;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, Consolas, monospace;
@@ -967,9 +967,7 @@ body {
   left: 0;
   width: 100%;
   transform-origin: bottom;
-  color-scheme: light;
-  opacity: 1;
-  mix-blend-mode: normal;
+  background: var(--dsw-chat-hist-fill);
   transition: height 0.2s ease;
 }
 
