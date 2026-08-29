@@ -8,7 +8,9 @@ import {
   ArrowsUpDownIcon,
   AdjustmentsHorizontalIcon,
   Bars3BottomLeftIcon,
+  BoltIcon,
   CalendarDaysIcon,
+  ChatBubbleLeftRightIcon,
   CheckCircleIcon,
   CheckIcon,
   ChevronDownIcon,
@@ -81,6 +83,14 @@ function actionIcon(id: string) {
   if (id === 'edit' || id === 'rename') return <PencilSquareIcon aria-hidden className={cls} />
   if (id === 'refresh') return <ArrowPathIcon aria-hidden className={cls} />
   return null
+}
+
+function DetailPaneGlyph({ id }: { id: string }) {
+  const cls = 'size-4'
+  if (id === 'overview') return <DocumentTextIcon aria-hidden className={cls} />
+  if (id === 'script') return <BoltIcon aria-hidden className={cls} />
+  if (id === 'reports') return <ChatBubbleLeftRightIcon aria-hidden className={cls} />
+  return <RectangleStackIcon aria-hidden className={cls} />
 }
 
 function ModeGlyph({ id }: { id: ViewMode }) {
@@ -1415,7 +1425,7 @@ export function CollectionBrowser({
           }}
         />
       ) : null}
-      <div className="tasks-main fsdb-main">
+      <div className={`tasks-main fsdb-main${selected ? ' hidden' : ''}`} aria-hidden={Boolean(selected)}>
         {!viewsOpen ? (
           <div className="fsdb-collection-head is-inline">
             <div className="fsdb-collection-name">{title}</div>
@@ -1918,71 +1928,11 @@ export function CollectionBrowser({
         </div>
       </div>
       {selected && schema ? (
-        <div className="fsdb-modal-backdrop" onClick={() => setDetailId(null)}>
-          <div
-            className="fsdb-detail-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="记录详情"
-            onClick={(event) => event.stopPropagation()}
-          >
+        <div className="fsdb-detail-stage">
+          <div className="fsdb-detail-screen" role="main" aria-label="记录详情">
             <header className="fsdb-detail-head">
-              <div className="fsdb-detail-pager">
-                <button
-                  type="button"
-                  className="tasks-icon-btn"
-                  title="上一条"
-                  aria-label="上一条"
-                  disabled={visible.length < 2}
-                  onClick={() => {
-                    const ids = visible.map((item) => item.id)
-                    const idx = ids.indexOf(selected.id)
-                    if (idx < 0) return
-                    setDetailId(ids[(idx - 1 + ids.length) % ids.length]!)
-                  }}
-                >
-                  <ChevronLeftIcon aria-hidden className="size-[14px]" />
-                </button>
-                <button
-                  type="button"
-                  className="tasks-icon-btn"
-                  title="下一条"
-                  aria-label="下一条"
-                  disabled={visible.length < 2}
-                  onClick={() => {
-                    const ids = visible.map((item) => item.id)
-                    const idx = ids.indexOf(selected.id)
-                    if (idx < 0) return
-                    setDetailId(ids[(idx + 1) % ids.length]!)
-                  }}
-                >
-                  <ChevronRightIcon aria-hidden className="size-[14px]" />
-                </button>
-              </div>
-              <nav className="fsdb-detail-tabs" aria-label="详情分区">
-                <button type="button" className={detailTab === 'overview' ? 'is-active' : ''} onClick={() => setDetailTab('overview')}>
-                  概况
-                </button>
-                {(chrome?.panes ?? []).map((pane) => {
-                  const badge = pane.badge?.(selected)
-                  return (
-                    <button
-                      key={pane.id}
-                      type="button"
-                      className={detailTab === pane.id ? 'is-active' : ''}
-                      onClick={() => setDetailTab(pane.id)}
-                    >
-                      {pane.label}
-                      {badge != null && badge !== '' ? <span className="fsdb-detail-tab-count">{badge}</span> : null}
-                    </button>
-                  )
-                })}
-              </nav>
               <div className="fsdb-detail-head-actions">
                 <RecordActions row={selected} place="detail" />
-                <button type="button" className="tasks-icon-btn" title="关闭 (Esc)" aria-label="关闭" onClick={() => setDetailId(null)}>
-                  <XMarkIcon aria-hidden className="size-[14px]" />
-                </button>
               </div>
             </header>
             {detailTab !== 'overview' && chrome?.panes?.some((pane) => pane.id === detailTab) ? (
@@ -2098,6 +2048,84 @@ export function CollectionBrowser({
             </div>
             )}
           </div>
+          <nav className="app-activity-bar fsdb-detail-rail" aria-label="详情导航">
+            <div className="app-activity-list">
+              <button
+                type="button"
+                className={`app-activity-item${detailTab === 'overview' ? ' is-active' : ''}`}
+                title="概况"
+                aria-label="概况"
+                aria-current={detailTab === 'overview' ? 'page' : undefined}
+                onClick={() => setDetailTab('overview')}
+              >
+                <span className="app-activity-indicator" aria-hidden />
+                <DetailPaneGlyph id="overview" />
+              </button>
+              {(chrome?.panes ?? []).map((pane) => {
+                const badge = pane.badge?.(selected)
+                return (
+                  <button
+                    key={pane.id}
+                    type="button"
+                    className={`app-activity-item${detailTab === pane.id ? ' is-active' : ''}`}
+                    title={pane.label}
+                    aria-label={pane.label}
+                    aria-current={detailTab === pane.id ? 'page' : undefined}
+                    onClick={() => setDetailTab(pane.id)}
+                  >
+                    <span className="app-activity-indicator" aria-hidden />
+                    <DetailPaneGlyph id={pane.id} />
+                    {badge != null && badge !== '' ? (
+                      <span className="app-activity-badge" aria-hidden>
+                        {badge}
+                      </span>
+                    ) : null}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="app-activity-footer">
+              <button
+                type="button"
+                className="app-activity-item"
+                title="上一条"
+                aria-label="上一条"
+                disabled={visible.length < 2}
+                onClick={() => {
+                  const ids = visible.map((item) => item.id)
+                  const idx = ids.indexOf(selected.id)
+                  if (idx < 0) return
+                  setDetailId(ids[(idx - 1 + ids.length) % ids.length]!)
+                }}
+              >
+                <ChevronLeftIcon aria-hidden className="size-4" />
+              </button>
+              <button
+                type="button"
+                className="app-activity-item"
+                title="下一条"
+                aria-label="下一条"
+                disabled={visible.length < 2}
+                onClick={() => {
+                  const ids = visible.map((item) => item.id)
+                  const idx = ids.indexOf(selected.id)
+                  if (idx < 0) return
+                  setDetailId(ids[(idx + 1) % ids.length]!)
+                }}
+              >
+                <ChevronRightIcon aria-hidden className="size-4" />
+              </button>
+              <button
+                type="button"
+                className="app-activity-item"
+                title="关闭 (Esc)"
+                aria-label="关闭"
+                onClick={() => setDetailId(null)}
+              >
+                <XMarkIcon aria-hidden className="size-4" />
+              </button>
+            </div>
+          </nav>
         </div>
       ) : null}
       {dlg?.kind === 'rename' ? (
@@ -2296,9 +2324,13 @@ if (typeof document !== 'undefined') {
 .fsdb-boolbox.is-locked{cursor:default;opacity:.9}
 .fsdb-boolbox.is-locked.is-on{background:var(--dsw-pick,#2383e2);border-color:transparent;color:var(--dsw-bg)}
 .fsdb-boolbtn:hover .fsdb-boolbox:not(.is-on){border-color:var(--dsw-label-2)}
-.fsdb-modal-backdrop{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:28px}
-.fsdb-detail-modal{width:min(880px,94vw);height:min(720px,88vh);display:flex;flex-direction:column;min-height:0;border-radius:10px;border:1px solid var(--dsw-border);background:var(--dsw-sidebar);box-shadow:var(--dsw-shadow-lv2);overflow:hidden}
-.fsdb-detail-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:8px 10px 8px 12px}
+.fsdb-detail-stage{display:flex;min-width:0;min-height:0;flex:1;flex-direction:row;overflow:hidden;background:var(--dsw-bg)}
+.fsdb-detail-screen{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
+.fsdb-detail-screen .fsdb-detail-split,.fsdb-detail-screen > :not(header){flex:1;min-height:0;overflow:auto}
+.fsdb-detail-rail{height:100%;flex:none;border-right:0;border-left:1px solid var(--dsw-border)}
+.fsdb-detail-rail .app-activity-indicator{left:auto;right:0;border-radius:2px 0 0 2px}
+.fsdb-detail-rail .app-activity-item:disabled{opacity:.35;cursor:default}
+.fsdb-detail-head{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 10px 8px 12px}
 .fsdb-detail-pager{display:inline-flex;align-items:center;gap:1px;justify-self:start}
 .fsdb-detail-pager .tasks-icon-btn:disabled{opacity:.35;cursor:default}
 .fsdb-detail-tabs{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:8px;background:var(--dsw-muted-fill);justify-self:center}
