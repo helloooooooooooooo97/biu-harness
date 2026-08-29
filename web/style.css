@@ -431,15 +431,15 @@ body {
   overflow: visible;
 }
 
-.app-shell-agent.is-chat-overlay .chat-overlay-panel {
+.chat-overlay-panel {
   position: fixed;
-  left: calc(var(--rail-w) + 280px);
+  left: var(--rail-w);
   right: 0;
   bottom: 20px;
-  z-index: 40;
+  z-index: 80;
   display: flex;
   flex-direction: column;
-  width: min(var(--dsw-chat-width), calc(100vw - var(--rail-w) - 280px - 40px));
+  width: min(var(--dsw-chat-width), calc(100vw - var(--rail-w) - 40px));
   margin-inline: auto;
   padding: 0 12px 12px;
   border-radius: 14px;
@@ -449,17 +449,17 @@ body {
   transition: left .16s ease, width .16s ease;
 }
 
-.app-shell-agent.is-sidebar-collapsed.is-chat-overlay .chat-overlay-panel {
-  left: var(--rail-w);
-  width: min(var(--dsw-chat-width), calc(100vw - var(--rail-w) - 40px));
+.chat-overlay-panel[data-with-sidebar="1"] {
+  left: calc(var(--rail-w) + 280px);
+  width: min(var(--dsw-chat-width), calc(100vw - var(--rail-w) - 280px - 40px));
 }
 
-.app-shell-agent.is-chat-overlay .chat-overlay-thread {
+.chat-overlay-thread {
   position: relative;
   flex: none;
 }
 
-.app-shell-agent.is-chat-overlay .chat-overlay-resize {
+.chat-overlay-resize {
   position: absolute;
   top: 0;
   left: 50%;
@@ -471,7 +471,7 @@ body {
   touch-action: none;
 }
 
-.app-shell-agent.is-chat-overlay .chat-overlay-resize::after {
+.chat-overlay-resize::after {
   content: '';
   display: block;
   width: 36px;
@@ -481,11 +481,11 @@ body {
   background: var(--dsw-border);
 }
 
-.app-shell-agent.is-chat-overlay .chat-overlay-panel .chat-view-header {
+.chat-overlay-panel .chat-view-header {
   padding-inline: 4px;
 }
 
-.app-shell-agent.is-chat-overlay .chat-stage {
+.chat-overlay-panel .chat-stage {
   visibility: visible;
   flex: none;
   height: var(--overlay-chat-height, 200px);
@@ -493,11 +493,11 @@ body {
   overflow-y: auto;
 }
 
-.app-shell-agent.is-chat-overlay .chat-stage .sticky {
+.chat-overlay-panel .chat-stage .sticky {
   position: static;
 }
 
-.app-shell-agent.is-chat-overlay .chat-overlay-panel .chat-composer-dock {
+.chat-overlay-panel .chat-composer-dock {
   position: relative;
   inset: auto;
   width: 100%;
@@ -508,7 +508,7 @@ body {
   box-shadow: none;
 }
 
-.app-shell-agent.is-chat-overlay-autohide .chat-overlay-panel {
+.chat-overlay-panel.is-autohide {
   bottom: 10px;
   padding: 0;
   background: transparent;
@@ -516,42 +516,42 @@ body {
   pointer-events: none !important;
 }
 
-.app-shell-agent.is-chat-overlay-autohide .chat-overlay-resize,
-.app-shell-agent.is-chat-overlay-autohide .chat-overlay-thread,
-.app-shell-agent.is-chat-overlay-autohide .chat-view-header,
-.app-shell-agent.is-chat-overlay-autohide .chat-stage {
+.chat-overlay-panel.is-autohide .chat-overlay-resize,
+.chat-overlay-panel.is-autohide .chat-overlay-thread,
+.chat-overlay-panel.is-autohide .chat-view-header,
+.chat-overlay-panel.is-autohide .chat-stage {
   display: none !important;
 }
 
-.app-shell-agent.is-chat-overlay-autohide .chat-composer-dock {
+.chat-overlay-panel.is-autohide .chat-composer-dock {
   pointer-events: none !important;
 }
 
-.app-shell-agent.is-chat-overlay-autohide .chat-composer-dock > * {
+.chat-overlay-panel.is-autohide .chat-composer-dock > * {
   pointer-events: none !important;
 }
 
-.app-shell-agent.is-chat-overlay-autohide .composer-pill,
-.app-shell-agent.is-chat-overlay-autohide .chat-live-hud,
-.app-shell-agent.is-chat-overlay-autohide .chat-live-hud-metrics,
-.app-shell-agent.is-chat-overlay-autohide .dock-approval-hint,
-.app-shell-agent.is-chat-overlay-autohide .chat-dock-toolbar-end,
-.app-shell-agent.is-chat-overlay-autohide .chat-dock-toolbar-start > :not(.dock-agent-stack) {
+.chat-overlay-panel.is-autohide .composer-pill,
+.chat-overlay-panel.is-autohide .chat-live-hud,
+.chat-overlay-panel.is-autohide .chat-live-hud-metrics,
+.chat-overlay-panel.is-autohide .dock-approval-hint,
+.chat-overlay-panel.is-autohide .chat-dock-toolbar-end,
+.chat-overlay-panel.is-autohide .chat-dock-toolbar-start > :not(.dock-agent-stack) {
   display: none !important;
 }
 
-.app-shell-agent.is-chat-overlay-autohide .chat-dock-toolbar,
-.app-shell-agent.is-chat-overlay-autohide .chat-dock-toolbar-start {
+.chat-overlay-panel.is-autohide .chat-dock-toolbar,
+.chat-overlay-panel.is-autohide .chat-dock-toolbar-start {
   justify-content: center;
   width: 100%;
 }
 
-.app-shell-agent.is-chat-overlay-autohide .dock-agent-stack,
-.app-shell-agent.is-chat-overlay-autohide .dock-agent-stack * {
+.chat-overlay-panel.is-autohide .dock-agent-stack,
+.chat-overlay-panel.is-autohide .dock-agent-stack * {
   pointer-events: auto !important;
 }
 
-.app-shell-agent.is-chat-overlay .chat-composer-dock > * {
+.chat-overlay-panel .chat-composer-dock > * {
   width: 100%;
   max-width: none;
 }
@@ -578,7 +578,7 @@ body {
   pointer-events: none;
 }
 
-.app-shell-agent.is-chat-overlay .chat-live-hud-metrics {
+.chat-overlay-panel .chat-live-hud-metrics {
   display: flex;
   max-width: min(100%, 28rem);
   align-items: center;
@@ -597,21 +597,21 @@ body {
   gap: 8px;
 }
 
-.app-shell-agent.is-chat-overlay .chat-live-hud-metrics .chat-reply-meta-icon svg {
+.chat-overlay-panel .chat-live-hud-metrics .chat-reply-meta-icon svg {
   width: 12px;
   height: 12px;
 }
 
-.app-shell-agent.is-chat-overlay .chat-live-hud-metrics .traj-usage-ring {
+.chat-overlay-panel .chat-live-hud-metrics .traj-usage-ring {
   width: 12px;
   height: 12px;
 }
 
-.app-shell-agent.is-chat-overlay .chat-live-hud-metrics .traj-usage {
+.chat-overlay-panel .chat-live-hud-metrics .traj-usage {
   font-size: 11px;
 }
 
-.app-shell-agent.is-chat-overlay .chat-live-hud-metrics .traj-usage-arrow {
+.chat-overlay-panel .chat-live-hud-metrics .traj-usage-arrow {
   color: var(--dsw-sidebar-fg);
   opacity: 1;
 }
@@ -620,7 +620,7 @@ body {
   display: none;
 }
 
-.app-shell-agent.is-chat-overlay .chat-live-hud {
+.chat-overlay-panel .chat-live-hud {
   display: none !important;
 }
 
