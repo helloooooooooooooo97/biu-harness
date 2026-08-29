@@ -143,6 +143,7 @@ function parseState(raw: unknown): StoreState {
 
 export class PluginStoreService extends Service {
   private state: StoreState = emptyState()
+  private listCache: StoreListing[] | null = null
 
   constructor(
     ctx: Context,
@@ -173,8 +174,13 @@ export class PluginStoreService extends Service {
   }
 
   private writeState() {
+    this.invalidateList()
     mkdirSync(dirname(this.statePath), { recursive: true })
     writeFileSync(this.statePath, `${JSON.stringify(this.state, null, 2)}\n`)
+  }
+
+  private invalidateList() {
+    this.listCache = null
   }
 
   private isEnabled(id: string) {
@@ -211,6 +217,7 @@ export class PluginStoreService extends Service {
     const hostJs = String(input.hostJs ?? '').trim()
     const webSrc = input.webJs != null ? String(input.webJs).trim() : ''
     if (!hostJs && !webSrc) throw new Error('plugin_create needs hostJs and/or webJs')
+    this.invalidateList()
     const dest = this.pluginPath(id)
     mkdirSync(dest, { recursive: true })
     const existing = existsSync(join(dest, 'manifest.json')) ? await readManifest(dest).catch(() => undefined) : undefined
@@ -251,6 +258,7 @@ export class PluginStoreService extends Service {
     const hostEntry = findEntry(sandbox, HOST_ENTRIES)
     const webEntry = findEntry(sandbox, WEB_ENTRIES)
     if (!hostEntry && !webEntry) throw new Error('sandbox needs host.ts/js or web.tsx/ts/js')
+    this.invalidateList()
     const dest = this.pluginPath(manifest.id)
     mkdirSync(dest, { recursive: true })
     await writeFile(join(dest, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
@@ -263,6 +271,7 @@ export class PluginStoreService extends Service {
   }
 
   async list(): Promise<StoreListing[]> {
+    if (this.listCache) return this.listCache
     const names = existsSync(this.pluginDir) ? await readdir(this.pluginDir) : []
     const running = new Set(
       this.hub()
@@ -290,6 +299,7 @@ export class PluginStoreService extends Service {
         hasWeb: stats.hasWeb,
       })
     }
+    this.listCache = items
     return items
   }
 
@@ -318,6 +328,7 @@ export class PluginStoreService extends Service {
     this.setEnabled(id, false)
     const hit = await this.findPluginDir(id)
     if (hit) await rm(hit, { recursive: true, force: true })
+    this.invalidateList()
     const lastRunAt = { ...this.state.lastRunAt }
     delete lastRunAt[id]
     this.state = { ...this.state, lastRunAt }

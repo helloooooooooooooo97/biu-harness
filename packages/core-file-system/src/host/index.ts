@@ -250,6 +250,8 @@ export function clampPage(limit?: number, offset?: number) {
 export class DatabaseService extends Service implements Database {
   private collections = new Map<string, CollectionSpec>()
 
+  private bumpQueued = false
+
   constructor(ctx: Context) {
     super(ctx, 'database')
   }
@@ -290,8 +292,13 @@ export class DatabaseService extends Service implements Database {
 
   private bump() {
     this.ctx.emit('database/change')
-    const http = this.ctx.get('http') as { broadcast?: (type: string, payload: unknown) => void } | undefined
-    http?.broadcast?.(DATABASE_CHANNEL, { ts: Date.now() })
+    if (this.bumpQueued) return
+    this.bumpQueued = true
+    queueMicrotask(() => {
+      this.bumpQueued = false
+      const http = this.ctx.get('http') as { broadcast?: (type: string, payload: unknown) => void } | undefined
+      http?.broadcast?.(DATABASE_CHANNEL, { ts: Date.now() })
+    })
   }
 
   async stat(path: string) {

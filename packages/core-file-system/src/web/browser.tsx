@@ -284,7 +284,7 @@ function ImageThumb({ src }: { src: string }) {
           setOpen(true)
         }}
       >
-        <img className="fsdb-thumb" src={src} alt="" />
+        <img className="fsdb-thumb" src={src} alt="" loading="lazy" decoding="async" />
       </button>
       {open
         ? createPortal(
@@ -298,7 +298,7 @@ function ImageThumb({ src }: { src: string }) {
                 if (event.target === event.currentTarget) setOpen(false)
               }}
             >
-              <img src={src} alt="" onClick={(event) => event.stopPropagation()} />
+              <img src={src} alt="" decoding="async" onClick={(event) => event.stopPropagation()} />
             </div>,
             document.body,
           )
@@ -332,7 +332,7 @@ function FilePreview({ value, compact = false }: { value: unknown; compact?: boo
   const src = asImageSrc(value)
   if (src) {
     if (compact) return <ImageThumb src={src} />
-    return <img className="fsdb-fileview-img" src={src} alt="" />
+    return <img className="fsdb-fileview-img" src={src} alt="" loading="lazy" decoding="async" />
   }
   const file = asAttachment(value)
   if (file) {
@@ -626,8 +626,10 @@ export function CollectionBrowser({
         dir: sortDir,
         filter: JSON.stringify(filters),
       })
-      const nextStat = await readJson<StatResult>(`/api/db/stat?path=${encodeURIComponent(collectionPath)}`)
-      const listed = await readJson<ListResult>(`/api/db/list?${params}`)
+      const [nextStat, listed] = await Promise.all([
+        readJson<StatResult>(`/api/db/stat?path=${encodeURIComponent(collectionPath)}`),
+        readJson<ListResult>(`/api/db/list?${params}`),
+      ])
       if (gen !== reloadGen.current) return true
       setStat((prev) => (prev?.schema && JSON.stringify(prev.schema) === JSON.stringify(nextStat.schema) ? prev : nextStat))
       setItems((prev) => (recordsFingerprint(prev) === recordsFingerprint(listed.items) ? prev : listed.items))
@@ -695,7 +697,6 @@ export function CollectionBrowser({
       setQuery('')
       setFilters({})
     }
-    void reloadRef.current()
     let debounce = 0
     const onChange = () => {
       window.clearTimeout(debounce)
