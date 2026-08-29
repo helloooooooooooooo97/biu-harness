@@ -1,5 +1,7 @@
 import { memo, useId, useState } from 'react'
 import {
+  BoltIcon,
+  ChatBubbleLeftRightIcon,
   ChevronRightIcon,
   ClipboardDocumentListIcon,
   PencilSquareIcon,
@@ -14,10 +16,11 @@ import type { CollectionInfo } from '@biu/type-file-system'
 import type { SavedView } from './saved-view.ts'
 import {
   activeViewStorageKey,
-  loadStarredTables,
+  isViewStarred,
+  loadStarredViews,
   loadViews,
-  persistStarredTables,
-  toggleStarredTable,
+  persistStarredViews,
+  toggleStarredView,
 } from './view-storage.ts'
 
 const SIDEBAR_BRAND_GRADIENT =
@@ -47,6 +50,8 @@ function TableGlyph({ icon }: { icon?: string }) {
   const name = (icon ?? '').trim().toLowerCase()
   if (name === 'puzzle-piece' || name === 'puzzle') return <PuzzlePieceIcon aria-hidden className={cls} />
   if (name === 'clipboard-document-list' || name === 'clipboard') return <ClipboardDocumentListIcon aria-hidden className={cls} />
+  if (name === 'chat-bubble' || name === 'chat-bubble-left-right') return <ChatBubbleLeftRightIcon aria-hidden className={cls} />
+  if (name === 'bolt') return <BoltIcon aria-hidden className={cls} />
   return <TableCellsIcon aria-hidden className={cls} />
 }
 
@@ -77,7 +82,7 @@ export const DataSidebar = memo(function DataSidebar({
 }) {
   const listedTables = tables.length ? tables : [{ path: collectionPath, label: title, view: { title } } as CollectionInfo]
   const [openTables, setOpenTables] = useState<Record<string, boolean>>(() => ({ [collectionPath]: true }))
-  const [starredTables, setStarredTables] = useState(loadStarredTables)
+  const [starredViews, setStarredViews] = useState(loadStarredViews)
   const [favOpen, setFavOpen] = useState(() => {
     try {
       return localStorage.getItem('fsdb.favOpen') !== '0'
@@ -85,12 +90,22 @@ export const DataSidebar = memo(function DataSidebar({
       return true
     }
   })
-  const starredRows = listedTables.filter((table) => starredTables.includes(table.path))
 
-  function toggleStar(path: string) {
-    setStarredTables((prev) => {
-      const next = toggleStarredTable(prev, path)
-      persistStarredTables(next)
+  function viewsFor(path: string) {
+    return path === collectionPath ? views : loadViews(path)
+  }
+
+  const starredRows = starredViews.flatMap((item) => {
+    const table = listedTables.find((row) => row.path === item.path)
+    const view = viewsFor(item.path).find((row) => row.id === item.viewId)
+    if (!table || !view) return []
+    return [{ table, view }]
+  })
+
+  function toggleStar(path: string, viewId: string) {
+    setStarredViews((prev) => {
+      const next = toggleStarredView(prev, path, viewId)
+      persistStarredViews(next)
       return next
     })
   }
@@ -98,6 +113,21 @@ export const DataSidebar = memo(function DataSidebar({
   function openTable(path: string) {
     setOpenTables((prev) => ({ ...prev, [path]: true }))
     onOpenTable?.(path)
+  }
+
+  function openView(path: string, viewId: string) {
+    try {
+      localStorage.setItem(activeViewStorageKey(path), viewId)
+    } catch {
+      /* ignore */
+    }
+    const listed = viewsFor(path)
+    const view = listed.find((item) => item.id === viewId)
+    if (path === collectionPath && view) {
+      onApplyView(view)
+      return
+    }
+    openTable(path)
   }
 
   return (
@@ -160,30 +190,32 @@ export const DataSidebar = memo(function DataSidebar({
               </div>
               {favOpen ? (
                 <div className="sidebar-session-list mb-2">
-                  {starredRows.map((table) => {
-                    const name = table.view?.title ?? table.label
+                  {starredRows.map(({ table, view }) => {
+                    const tableName = table.view?.title ?? table.label
+                    const active = table.path === collectionPath && view.id === activeViewId
                     return (
                       <div
-                        key={`star:${table.path}`}
-                        className={`chat-session-row group${table.path === collectionPath ? ' is-active' : ''} is-pinned`}
+                        key={`star:${table.path}:${view.id}`}
+                        className={`chat-session-row group${active ? ' is-active' : ''} is-pinned`}
                       >
                         <button
                           type="button"
                           className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
-                          onClick={() => openTable(table.path)}
+                          onClick={() => openView(table.path, view.id)}
                         >
                           <span className="grid size-6 shrink-0 place-items-center">
                             <TableGlyph icon={table.view?.icon} />
                           </span>
-                          <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
+                          <span className="min-w-0 flex-1 truncate font-medium">{view.name}</span>
+                          <span className="shrink-0 text-[11px] opacity-70">{tableName}</span>
                         </button>
                         <button
                           type="button"
                           className="chat-session-row-star is-on"
                           aria-pressed
-                          aria-label={`取消收藏 ${name}`}
+                          aria-label={`取消收藏 ${view.name}`}
                           title="取消收藏"
-                          onClick={() => toggleStar(table.path)}
+                          onClick={() => toggleStar(table.path, view.id)}
                         >
                           <StarIcon className="size-4 text-[#f5b700]" />
                         </button>
@@ -204,11 +236,10 @@ export const DataSidebar = memo(function DataSidebar({
             {listedTables.map((table) => {
               const name = table.view?.title ?? table.label
               const open = openTables[table.path] ?? table.path === collectionPath
-              const listed = table.path === collectionPath ? views : loadViews(table.path)
-              const starred = starredTables.includes(table.path)
+              const listed = viewsFor(table.path)
               return (
                 <div key={table.path}>
-                  <div className={`chat-session-row group${table.path === collectionPath ? ' is-active' : ''}${starred ? ' is-pinned' : ''}`}>
+                  <div className={`chat-session-row group${table.path === collectionPath ? ' is-active' : ''}`}>
                     <button
                       type="button"
                       className="fsdb-nav-chevron"
@@ -231,40 +262,31 @@ export const DataSidebar = memo(function DataSidebar({
                     <span className="sidebar-chat-count" title="视图数量">
                       <span className="sidebar-chat-count-num">{listed.length}</span>
                     </span>
-                    <button
-                      type="button"
-                      className={`chat-session-row-star${starred ? ' is-on' : ''}`}
-                      aria-pressed={starred}
-                      aria-label={starred ? `取消收藏 ${name}` : `收藏 ${name}`}
-                      title={starred ? '取消收藏' : '收藏'}
-                      onClick={() => toggleStar(table.path)}
-                    >
-                      <StarIcon className={`size-4${starred ? ' text-[#f5b700]' : ''}`} />
-                    </button>
                   </div>
-                  {open
-                    ? listed.map((view) => (
+                    {open
+                      ? listed.map((view) => {
+                          const starred = isViewStarred(starredViews, table.path, view.id)
+                          return (
                         <div
                           key={view.id}
-                          className={`chat-session-row group${table.path === collectionPath && view.id === activeViewId ? ' is-active' : ''}`}
+                          className={`chat-session-row group${table.path === collectionPath && view.id === activeViewId ? ' is-active' : ''}${starred ? ' is-pinned' : ''}`}
                         >
                           <button
                             type="button"
                             className="flex min-w-0 flex-1 items-center gap-1.5 py-1 pl-7 text-left text-[14px] leading-5"
-                            onClick={() => {
-                              if (table.path !== collectionPath) {
-                                try {
-                                  localStorage.setItem(activeViewStorageKey(table.path), view.id)
-                                } catch {
-                                  /* ignore */
-                                }
-                                openTable(table.path)
-                                return
-                              }
-                              onApplyView(view)
-                            }}
+                            onClick={() => openView(table.path, view.id)}
                           >
                             <span className="min-w-0 flex-1 truncate font-medium">{view.name}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`chat-session-row-star${starred ? ' is-on' : ''}`}
+                            aria-pressed={starred}
+                            aria-label={starred ? `取消收藏 ${view.name}` : `收藏 ${view.name}`}
+                            title={starred ? '取消收藏' : '收藏'}
+                            onClick={() => toggleStar(table.path, view.id)}
+                          >
+                            <StarIcon className={`size-4${starred ? ' text-[#f5b700]' : ''}`} />
                           </button>
                           {table.path === collectionPath ? (
                             <>
@@ -289,8 +311,9 @@ export const DataSidebar = memo(function DataSidebar({
                             </>
                           ) : null}
                         </div>
-                      ))
-                    : null}
+                          )
+                        })
+                      : null}
                 </div>
               )
             })}
