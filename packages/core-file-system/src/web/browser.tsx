@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   ArrowDownIcon,
@@ -623,11 +623,9 @@ export function CollectionBrowser({
     noticeTimer.current = window.setTimeout(() => setNotice(''), 1800)
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setHydrated(false)
     hydratePath.current = ''
-    setStat(null)
-    setItems([])
     setCollapsed({})
     hydratedDetail.current = ''
     const stored = viewForPath(collectionPath)
@@ -650,6 +648,9 @@ export function CollectionBrowser({
       setQuery('')
       setFilters({})
     }
+  }, [collectionPath])
+
+  useEffect(() => {
     let debounce = 0
     const onChange = () => {
       if (detailIdRef.current) return
@@ -823,24 +824,42 @@ export function CollectionBrowser({
 
   function applyView(view: SavedView) {
     const next = normalizeSavedView(view)
+    const nextColumns = pinLabelColumn(
+      schema,
+      next.columns.length ? next.columns.filter((key) => allColumnKeys.includes(key)) : schemaDefaultKeys,
+    )
+    const nextQuery = next.query ?? ''
+    const nextPageSize = normalizePageSize(next.pageSize)
+    const nextGroup = next.groupBy ?? ''
+    if (
+      next.id === activeViewId &&
+      mode === next.mode &&
+      sortField === next.sortField &&
+      sortDir === next.sortDir &&
+      groupBy === nextGroup &&
+      showTree === (next.tree !== false) &&
+      wrapCells === !!next.wrap &&
+      truncateCells === (next.truncate !== false) &&
+      query === nextQuery &&
+      pageSize === nextPageSize &&
+      JSON.stringify(filters) === JSON.stringify(next.filters) &&
+      JSON.stringify(columnKeys) === JSON.stringify(nextColumns)
+    ) {
+      return
+    }
     rememberActiveView(next.id)
     setMode(next.mode)
     setSortField(next.sortField)
     setSortDir(next.sortDir)
     setFilters(next.filters)
-    setColumnKeys(
-      pinLabelColumn(
-        schema,
-        next.columns.length ? next.columns.filter((key) => allColumnKeys.includes(key)) : schemaDefaultKeys,
-      ),
-    )
-    setGroupBy(next.groupBy ?? '')
+    setColumnKeys(nextColumns)
+    setGroupBy(nextGroup)
     setShowTree(next.tree !== false)
     setWrapCells(!!next.wrap)
     setTruncateCells(next.truncate !== false)
-    setQuery(next.query ?? '')
-    setFetchQuery(next.query ?? '')
-    setPageSize(normalizePageSize(next.pageSize))
+    setQuery(nextQuery)
+    setFetchQuery(nextQuery)
+    setPageSize(nextPageSize)
     setPage(0)
     setViewMenuOpen(false)
   }
@@ -2081,6 +2100,7 @@ if (typeof document !== 'undefined') {
 .fsdb-nav-chevron{flex:none;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
 .fsdb-nav-chevron:hover{background:var(--dsw-hover);color:var(--dsw-label)}
 .fsdb-collection-head{flex:none;padding:4px 16px 10px;min-width:0}
+.fsdb-views .chat-session-row-main{border:0;background:transparent;color:inherit;cursor:pointer}
 .fsdb-collection-head.is-inline{padding:0 0 2px}
 .fsdb-collection-name{font-size:14px;font-weight:650;color:var(--dsw-label);line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-collection-head .fsdb-footnote{margin:4px 0 0;font-size:14px;font-weight:400;line-height:1.45;color:var(--dsw-label-3);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
