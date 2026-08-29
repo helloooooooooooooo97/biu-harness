@@ -61,13 +61,6 @@ import {
 } from './fields'
 import { AppDialog, CellSelect, CheckRow, LocalText, TokenMultiSelect } from './controls.tsx'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
-import {
-  defaultViewStub,
-  loadActiveViewId,
-  loadViews,
-  persistViews as writeViews,
-  rememberActiveView as storeActiveView,
-} from './view-store.ts'
 
 type ListResult = { items: Array<DbRecord & { path?: string }>; total?: number; offset?: number; limit?: number }
 type StatResult = { schema?: CollectionSchema }
@@ -90,10 +83,10 @@ function ModeGlyph({ id }: { id: ViewMode }) {
   return <ViewColumnsIcon aria-hidden className={cls} />
 }
 
-export const SIDEBAR_BRAND_GRADIENT =
+const SIDEBAR_BRAND_GRADIENT =
   'linear-gradient(105deg, color-mix(in srgb, #0066B0 42%, var(--dsw-hover)), color-mix(in srgb, #5B3E90 40%, var(--dsw-hover)) 52%, color-mix(in srgb, #E22726 42%, var(--dsw-hover)))'
 
-export function SidebarBrandMascot({ className }: { className?: string }) {
+function SidebarBrandMascot({ className }: { className?: string }) {
   const uid = useId().replace(/:/g, '')
   return (
     <svg className={className} viewBox="-15 -15 259 259" width={30} height={30} fill="none" aria-hidden>
@@ -161,10 +154,38 @@ function draftFromRecord(schema: CollectionSchema, row: DbRecord, bodyKey: strin
   return next
 }
 
+function viewsKey(collectionPath: string) {
+  return `fsdb.views:${collectionPath}`
+}
+
+function activeViewStorageKey(collectionPath: string) {
+  return `fsdb.activeView:${collectionPath}`
+}
+
+function loadActiveViewId(collectionPath: string, listed: SavedView[]) {
+  try {
+    const id = localStorage.getItem(activeViewStorageKey(collectionPath))
+    if (id && listed.some((view) => view.id === id)) return id
+  } catch {
+    /* ignore */
+  }
+  return listed[0]?.id ?? null
+}
+
 function viewForPath(collectionPath: string): SavedView | null {
   const listed = loadViews(collectionPath)
   const view = listed.find((item) => item.id === loadActiveViewId(collectionPath, listed)) ?? listed[0]
   return view ? normalizeSavedView(view) : null
+}
+
+function loadViews(collectionPath: string): SavedView[] {
+  try {
+    const raw = localStorage.getItem(viewsKey(collectionPath))
+    const parsed = raw ? (JSON.parse(raw) as SavedView[]) : []
+    return parsed.map((view) => normalizeSavedView(view))
+  } catch {
+    return []
+  }
 }
 
 function isListColumn(key: string) {
@@ -459,14 +480,12 @@ export function CollectionBrowser({
   title,
   blurb,
   chrome,
-  hideViewsSidebar = false,
 }: {
   moduleId?: string
   collectionPath: string
   title: string
   blurb: string
   chrome?: CollectionChrome
-  hideViewsSidebar?: boolean
 }) {
   const [stat, setStat] = useState<StatResult | null>(null)
   const [items, setItems] = useState<Array<DbRecord & { path?: string }>>([])
@@ -490,7 +509,6 @@ export function CollectionBrowser({
   const [activeViewId, setActiveViewId] = useState<string | null>(initialView?.id ?? null)
   const [hydrated, setHydrated] = useState(false)
   const [viewsOpen, setViewsOpen] = useState(() => {
-    if (hideViewsSidebar) return false
     try {
       return localStorage.getItem(`fsdb.viewsOpen:${moduleId || collectionPath}`) !== '0'
     } catch {
@@ -537,7 +555,6 @@ export function CollectionBrowser({
   const searchExpanded = searchOpen || query.length > 0
 
   useEffect(() => {
-    if (hideViewsSidebar) return
     function onToggle(event: Event) {
       const id = (event as CustomEvent<{ id?: string }>).detail?.id
       if (!id || (moduleId && id !== moduleId)) return
@@ -553,7 +570,7 @@ export function CollectionBrowser({
     }
     window.addEventListener('biu:toggle-module-sidebar', onToggle)
     return () => window.removeEventListener('biu:toggle-module-sidebar', onToggle)
-  }, [collectionPath, hideViewsSidebar, moduleId])
+  }, [collectionPath, moduleId])
 
   useEffect(() => {
     function onPointer(event: MouseEvent) {
@@ -841,12 +858,16 @@ export function CollectionBrowser({
   function persistViews(next: SavedView[]) {
     viewsRef.current = next
     setViews(next)
-    writeViews(collectionPath, next)
+    localStorage.setItem(viewsKey(collectionPath), JSON.stringify(next))
   }
 
   function rememberActiveView(id: string) {
     setActiveViewId(id)
-    storeActiveView(collectionPath, id)
+    try {
+      localStorage.setItem(activeViewStorageKey(collectionPath), id)
+    } catch {
+      /* ignore */
+    }
   }
 
   function applyView(view: SavedView) {
@@ -1316,11 +1337,20 @@ export function CollectionBrowser({
     let next = loadViews(collectionPath)
     if (!next.length) {
       next = [
-        {
-          ...defaultViewStub(`${Date.now()}`),
+        normalizeSavedView({
+          id: `${Date.now()}`,
+          name: '默认视图',
+          mode: 'table',
           sortField: schemaDefaultKeys[0] ?? 'id',
+          sortDir: 'asc',
+          filters: {},
           columns: [...schemaDefaultKeys],
-        },
+          groupBy: '',
+          tree: true,
+          wrap: false,
+          truncate: true,
+          query: '',
+        }),
       ]
     }
     persistViews(next)
@@ -1370,7 +1400,7 @@ export function CollectionBrowser({
   ])
 
   return (
-    <div className={hideViewsSidebar ? 'contents' : 'fsdb-page tasks-root'}>
+    <div className="fsdb-page tasks-root">
       {viewsOpen ? (
       <aside
         className="app-side-bar fsdb-views flex min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)"
@@ -2172,10 +2202,6 @@ if (typeof document !== 'undefined') {
   style.textContent = `
 .fsdb-page{display:flex;min-width:0;min-height:0;flex:1;flex-direction:row;overflow:hidden;background:var(--dsw-bg);color:var(--dsw-label);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,sans-serif,"Apple Color Emoji","Segoe UI Emoji";font-size:14px;letter-spacing:-.011em}
 .fsdb-views{display:flex;width:280px;flex:none;flex-direction:column;min-height:0;overflow:hidden}
-.fsdb-nav-group{min-width:0}
-.fsdb-nav-chevron{flex:none;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
-.fsdb-nav-chevron:hover{background:var(--dsw-hover);color:var(--dsw-label)}
-.fsdb-nav-view{margin-left:0}
 .fsdb-collection-head{flex:none;padding:4px 16px 10px;min-width:0}
 .fsdb-collection-head.is-inline{padding:0 0 2px}
 .fsdb-collection-name{font-size:14px;font-weight:650;color:var(--dsw-label);line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

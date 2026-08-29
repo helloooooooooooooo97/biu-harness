@@ -1,11 +1,16 @@
 import { useSyncExternalStore, type ComponentType } from 'react'
 import type { Context } from 'cordis'
-import { CircleStackIcon } from '@heroicons/react/16/solid'
+import {
+  ClipboardDocumentListIcon,
+  FolderIcon,
+  PuzzlePieceIcon,
+  TableCellsIcon,
+} from '@heroicons/react/16/solid'
+import type { SlotProps } from '@biu/type-slots'
 import { DATABASE_CHANNEL, type CollectionInfo, type CollectionView } from '@biu/type-file-system'
-import type { DatabaseUi } from '@biu/type-file-system/ui'
+import type { CollectionChrome, DatabaseUi } from '@biu/type-file-system/ui'
+import { CollectionBrowser } from './browser.tsx'
 import { DatabaseUiService } from './database-ui.ts'
-import { DatabaseHubPage } from './hub.tsx'
-import { DATABASE_MODULE_ID, DATABASE_MODULE_PATH, navCollections, normalizeNavPath, setLiveNavCollections } from './hub-nav.ts'
 import { bootLoadCollections, collectionNavKey } from './nav-boot.ts'
 
 type SlotsService = {
@@ -24,7 +29,6 @@ type AppModulesService = {
     id: string
     label: string
     path: string
-    aliases?: string[]
     description?: string
     order?: number
     Icon?: ComponentType<{ className?: string }>
@@ -38,6 +42,27 @@ type SnapshotService = {
   subscribe?: (fn: () => void) => () => void
 }
 
+const ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  'clipboard-document-list': ClipboardDocumentListIcon,
+  clipboard: ClipboardDocumentListIcon,
+  'puzzle-piece': PuzzlePieceIcon,
+  puzzle: PuzzlePieceIcon,
+  'table-cells': TableCellsIcon,
+  folder: FolderIcon,
+}
+
+function resolveIcon(name?: string) {
+  if (!name) return TableCellsIcon
+  return ICONS[name] ?? ICONS[name.trim().toLowerCase()] ?? TableCellsIcon
+}
+
+function normalizeNavPath(path: string) {
+  const raw = String(path || '/').trim() || '/'
+  const withSlash = raw.startsWith('/') ? raw : `/${raw}`
+  if (withSlash === '/') return '/'
+  return withSlash.replace(/\/+$/, '') || '/'
+}
+
 export function navConflict(view: CollectionView, title: string, modules: AppModule[], selfId: string): string | null {
   const route = normalizeNavPath(view.route)
   const pathHit = modules.find((item) => item.id !== selfId && normalizeNavPath(item.path) === route)
@@ -47,14 +72,25 @@ export function navConflict(view: CollectionView, title: string, modules: AppMod
   return null
 }
 
-function hubConflict(routes: string[], modules: AppModule[], selfId: string): string | null {
-  for (const route of routes) {
-    const pathHit = modules.find((item) => item.id !== selfId && normalizeNavPath(item.path) === route)
-    if (pathHit) return `路由重复：${route} 已被「${pathHit.label}」占用`
-  }
-  const nameHit = modules.find((item) => item.id !== selfId && item.label === '数据')
-  if (nameHit) return `名称重复：最左导航已有「数据」`
-  return null
+const EMPTY_CHROME: CollectionChrome = {}
+
+function CollectionPage(props: SlotProps) {
+  const path = String(props.collectionPath ?? '')
+  const ui = props.databaseUi as DatabaseUi | undefined
+  const chrome = useSyncExternalStore(
+    (fn) => (ui ? ui.subscribe(fn) : () => undefined),
+    () => ui?.chrome(path) ?? EMPTY_CHROME,
+    () => ui?.chrome(path) ?? EMPTY_CHROME,
+  )
+  return (
+    <CollectionBrowser
+      moduleId={String(props.moduleId ?? '')}
+      collectionPath={path}
+      title={String(props.title ?? '')}
+      blurb={String(props.blurb ?? '')}
+      chrome={chrome}
+    />
+  )
 }
 
 async function loadCollections(): Promise<CollectionInfo[]> {
@@ -102,66 +138,60 @@ export function apply(ctx: Context) {
   const slots = ctx.get('slots') as SlotsService
   const appModules = ctx.get('appModules') as AppModulesService
   const mounted = new Map<string, () => void>()
-  let mountedAlias = ''
 
   slots.place('root-overlays', RegisterErrorBanner, { key: 'fsdb-nav-errors', order: 80 })
   let stopped = false
   let readyTimer = 0
   const runSync = async (rows: CollectionInfo[]) => {
-    const views = navCollections(rows)
-    setLiveNavCollections(views)
-    const live = views.length ? new Set([DATABASE_MODULE_ID]) : new Set<string>()
+    const views = rows.filter((row) => row.view?.moduleId && row.view.route)
+    const live = new Set(views.map((row) => row.view!.moduleId))
     for (const [id, dispose] of mounted) {
       if (live.has(id)) continue
       dispose()
       mounted.delete(id)
     }
     const errors: string[] = []
-    if (!views.length) {
-      setNavErrors(errors)
-      return
-    }
-    const aliases = views.map((row) => normalizeNavPath(row.view!.route)).filter((route) => route !== DATABASE_MODULE_PATH)
-    const aliasKey = aliases.slice().sort().join(',')
-    if (mounted.has(DATABASE_MODULE_ID) && mountedAlias !== aliasKey) {
-      mounted.get(DATABASE_MODULE_ID)!()
-      mounted.delete(DATABASE_MODULE_ID)
-    }
     const occupied = appModules.list()
-    const conflict = hubConflict([DATABASE_MODULE_PATH, ...aliases], occupied, DATABASE_MODULE_ID)
-    if (conflict) {
-      errors.push(conflict)
-      setNavErrors(errors)
-      return
-    }
-    if (!mounted.has(DATABASE_MODULE_ID)) {
-      mountedAlias = aliasKey
+    for (const row of views) {
+      const view = row.view!
+      const title = view.title ?? row.label
+      const conflict = navConflict(view, title, occupied, view.moduleId)
+      if (conflict) {
+        errors.push(`「${title}」${conflict}`)
+        continue
+      }
+      if (mounted.has(view.moduleId)) continue
+      if (!resolveIcon(view.icon) || (view.icon && !ICONS[view.icon] && !ICONS[view.icon.trim().toLowerCase()])) {
+        if (view.icon) errors.push(`「${title}」未知图标：${view.icon}，已改用默认图标`)
+      }
+      const blurb = view.blurb ?? ''
+      const order = view.order ?? 50
       try {
-        const order = Math.min(...views.map((row) => row.view?.order ?? 50))
         const mod = appModules.register({
-          id: DATABASE_MODULE_ID,
-          label: '数据',
-          path: DATABASE_MODULE_PATH,
-          aliases,
-          description: '任务、页面和插件的数据表',
+          id: view.moduleId,
+          label: title,
+          path: view.route,
+          description: blurb,
           order,
-          Icon: CircleStackIcon,
+          Icon: resolveIcon(view.icon),
         })
-        const slot = slots.place('app-modules', DatabaseHubPage, {
-          key: 'fsdb-database',
+        const slot = slots.place('app-modules', CollectionPage, {
+          key: `fsdb-${view.moduleId}`,
           order,
           props: () => ({
-            moduleId: DATABASE_MODULE_ID,
-            collections: views,
+            moduleId: view.moduleId,
+            collectionPath: row.path,
+            title,
+            blurb,
             databaseUi: ctx.get('databaseUi') as DatabaseUi,
           }),
         })
-        mounted.set(DATABASE_MODULE_ID, () => {
+        mounted.set(view.moduleId, () => {
           void mod.dispose?.()
           void slot.dispose?.()
         })
       } catch (err) {
-        errors.push(`无法挂到导航：${String(err)}`)
+        errors.push(`「${title}」无法挂到导航：${String(err)}`)
       }
     }
     setNavErrors(errors)
