@@ -1060,7 +1060,7 @@ body {
   top: 0;
   bottom: 0;
   z-index: 60;
-  width: 12px;
+  width: 20px;
   background: transparent;
 }
 
@@ -1194,6 +1194,10 @@ body {
 
 .app-activity-item.is-active {
   color: var(--dsw-label);
+}
+
+.app-activity-pin.is-active {
+  color: var(--dsw-sidebar-fg-active);
 }
 
 .app-activity-indicator {

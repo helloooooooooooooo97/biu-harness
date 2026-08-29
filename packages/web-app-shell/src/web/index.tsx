@@ -72,12 +72,16 @@ function ModuleRail({
   active,
   agentHref,
   modules,
+  pinned,
+  onTogglePin,
   onSettings,
   onAgentRailClick,
 }: {
   active: string
   agentHref: string
   modules: AppModule[]
+  pinned: boolean
+  onTogglePin: () => void
   onSettings: () => void
   onAgentRailClick: (alreadyActive: boolean) => void
 }) {
@@ -101,7 +105,12 @@ function ModuleRail({
                       if (isActive) event.preventDefault()
                       onAgentRailClick(isActive)
                     }
-                  : undefined
+                  : isActive
+                    ? (event) => {
+                        event.preventDefault()
+                        window.dispatchEvent(new CustomEvent('biu:toggle-module-sidebar', { detail: { id: module.id } }))
+                      }
+                    : undefined
               }
             >
               <span className="app-activity-indicator" aria-hidden />
@@ -112,6 +121,16 @@ function ModuleRail({
         })}
       </div>
       <div className="app-activity-footer">
+        <button
+          type="button"
+          className={`app-activity-item app-activity-pin${pinned ? ' is-active' : ''}`}
+          title={pinned ? '取消固定导航' : '固定导航'}
+          aria-label={pinned ? '取消固定导航' : '固定导航'}
+          aria-pressed={pinned}
+          onClick={onTogglePin}
+        >
+          <MapPinIcon {...chromeIcon} />
+        </button>
         <UpdateButton />
         <button
           type="button"
@@ -379,12 +398,32 @@ function Shell(props: SlotProps) {
   const [configOpen, setConfigOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [railOpen, setRailOpen] = useState(false)
+  const [railPinned, setRailPinned] = useState(() => {
+    try {
+      return localStorage.getItem('cordis.rail.pinned') === '1'
+    } catch {
+      return false
+    }
+  })
   const railClusterRef = useRef<HTMLDivElement>(null)
   const openRail = useCallback(() => setRailOpen(true), [])
   const closeRail = useCallback((event: { relatedTarget: EventTarget | null }) => {
+    if (railPinned) return
     const next = event.relatedTarget
     if (next instanceof Node && railClusterRef.current?.contains(next)) return
     setRailOpen(false)
+  }, [railPinned])
+  const toggleRailPin = useCallback(() => {
+    setRailPinned((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem('cordis.rail.pinned', next ? '1' : '0')
+      } catch {
+        /* ignore */
+      }
+      if (next) setRailOpen(true)
+      return next
+    })
   }, [])
   const [inspectorOpen, setInspectorOpen] = useState(() => {
     try {
@@ -597,7 +636,7 @@ function Shell(props: SlotProps) {
           ? ` app-shell-agent${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}${inspectorOpen ? ' is-inspector-open' : ''}${chatOverlay ? ' is-chat-overlay' : ''}${overlayAutohide ? ' is-chat-overlay-autohide' : ''
           }`
           : ' app-shell-module'
-        }${railOpen ? ' is-rail-open' : ''}`}
+        }${railOpen || railPinned ? ' is-rail-open' : ''}`}
       data-testid={chatOverlay ? 'chat-overlay' : undefined}
       style={
         inspectorOpen
@@ -623,6 +662,8 @@ function Shell(props: SlotProps) {
             active={activeModule}
             agentHref={agentHref}
             modules={modules}
+            pinned={railPinned}
+            onTogglePin={toggleRailPin}
             onSettings={() => setSettingsOpen(true)}
             onAgentRailClick={onAgentRailClick}
           />
