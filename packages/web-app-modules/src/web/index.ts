@@ -11,6 +11,8 @@ export type AppModule = {
   id: string
   label: string
   path: string
+  /** 额外路径也点亮同一颗图标（例如 File System 各表的旧路由）。 */
+  aliases?: string[]
   description?: string
   order?: number
   Icon?: ComponentType<{ className?: string }>
@@ -26,12 +28,19 @@ const AGENT: AppModule = {
 
 export const BUILTIN_MODULES: AppModule[] = [AGENT]
 
+function moduleBases(item: AppModule) {
+  return [item.path, ...(item.aliases ?? [])].map((entry) => normalizePath(entry)).filter((entry) => entry !== '/')
+}
+
 export function matchRegisteredModule(pathname: string, plugins: AppModule[]) {
   const path = normalizePath(pathname)
-  return plugins.find((item) => {
-    const base = normalizePath(item.path)
-    return path === base || path.startsWith(`${base}/`)
-  })
+  const hits = plugins.flatMap((item) =>
+    moduleBases(item)
+      .filter((base) => path === base || path.startsWith(`${base}/`))
+      .map((base) => ({ item, base })),
+  )
+  hits.sort((a, b) => b.base.length - a.base.length)
+  return hits[0]?.item
 }
 
 export class AppModulesService extends Service {
