@@ -1,11 +1,6 @@
-import { useSyncExternalStore, type ComponentType } from 'react'
+import { useEffect, useState, useSyncExternalStore, type ComponentType } from 'react'
 import type { Context } from 'cordis'
-import {
-  ClipboardDocumentListIcon,
-  FolderIcon,
-  PuzzlePieceIcon,
-  TableCellsIcon,
-} from '@heroicons/react/16/solid'
+import { CircleStackIcon } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/type-slots'
 import { DATABASE_CHANNEL, type CollectionInfo, type CollectionView } from '@biu/type-file-system'
 import type { CollectionChrome, DatabaseUi } from '@biu/type-file-system/ui'
@@ -42,19 +37,8 @@ type SnapshotService = {
   subscribe?: (fn: () => void) => () => void
 }
 
-const ICONS: Record<string, ComponentType<{ className?: string }>> = {
-  'clipboard-document-list': ClipboardDocumentListIcon,
-  clipboard: ClipboardDocumentListIcon,
-  'puzzle-piece': PuzzlePieceIcon,
-  puzzle: PuzzlePieceIcon,
-  'table-cells': TableCellsIcon,
-  folder: FolderIcon,
-}
-
-function resolveIcon(name?: string) {
-  if (!name) return TableCellsIcon
-  return ICONS[name] ?? ICONS[name.trim().toLowerCase()] ?? TableCellsIcon
-}
+const DATA_MODULE_ID = 'database'
+const DATA_MODULE_PATH = '/database'
 
 function normalizeNavPath(path: string) {
   const raw = String(path || '/').trim() || '/'
@@ -75,20 +59,32 @@ export function navConflict(view: CollectionView, title: string, modules: AppMod
 const EMPTY_CHROME: CollectionChrome = {}
 
 function CollectionPage(props: SlotProps) {
-  const path = String(props.collectionPath ?? '')
+  const tables = (props.tables as CollectionInfo[] | undefined) ?? []
+  const [path, setPath] = useState(() => tables[0]?.path ?? '')
+  useEffect(() => {
+    if (!tables.length) return
+    if (tables.some((row) => row.path === path)) return
+    setPath(tables[0]!.path)
+  }, [path, tables])
+  const row = tables.find((item) => item.path === path) ?? tables[0]
+  const currentPath = row?.path ?? ''
   const ui = props.databaseUi as DatabaseUi | undefined
   const chrome = useSyncExternalStore(
     (fn) => (ui ? ui.subscribe(fn) : () => undefined),
-    () => ui?.chrome(path) ?? EMPTY_CHROME,
-    () => ui?.chrome(path) ?? EMPTY_CHROME,
+    () => ui?.chrome(currentPath) ?? EMPTY_CHROME,
+    () => ui?.chrome(currentPath) ?? EMPTY_CHROME,
   )
+  if (!row) return null
   return (
     <CollectionBrowser
-      moduleId={String(props.moduleId ?? '')}
-      collectionPath={path}
-      title={String(props.title ?? '')}
-      blurb={String(props.blurb ?? '')}
+      key={row.path}
+      moduleId={DATA_MODULE_ID}
+      collectionPath={row.path}
+      title={row.view?.title ?? row.label}
+      blurb={row.view?.blurb ?? ''}
       chrome={chrome}
+      tables={tables}
+      onOpenTable={setPath}
     />
   )
 }
@@ -138,60 +134,67 @@ export function apply(ctx: Context) {
   const slots = ctx.get('slots') as SlotsService
   const appModules = ctx.get('appModules') as AppModulesService
   const mounted = new Map<string, () => void>()
+  let liveTables: CollectionInfo[] = []
 
   slots.place('root-overlays', RegisterErrorBanner, { key: 'fsdb-nav-errors', order: 80 })
   let stopped = false
   let readyTimer = 0
   const runSync = async (rows: CollectionInfo[]) => {
-    const views = rows.filter((row) => row.view?.moduleId && row.view.route)
-    const live = new Set(views.map((row) => row.view!.moduleId))
+    const views = rows
+      .filter((row) => row.view?.moduleId && row.view.route)
+      .slice()
+      .sort((a, b) => (a.view?.order ?? 50) - (b.view?.order ?? 50) || a.path.localeCompare(b.path))
+    liveTables = views
+    const live = views.length ? new Set([DATA_MODULE_ID]) : new Set<string>()
     for (const [id, dispose] of mounted) {
       if (live.has(id)) continue
       dispose()
       mounted.delete(id)
     }
     const errors: string[] = []
+    if (!views.length) {
+      setNavErrors(errors)
+      return
+    }
     const occupied = appModules.list()
-    for (const row of views) {
-      const view = row.view!
-      const title = view.title ?? row.label
-      const conflict = navConflict(view, title, occupied, view.moduleId)
-      if (conflict) {
-        errors.push(`「${title}」${conflict}`)
-        continue
-      }
-      if (mounted.has(view.moduleId)) continue
-      if (!resolveIcon(view.icon) || (view.icon && !ICONS[view.icon] && !ICONS[view.icon.trim().toLowerCase()])) {
-        if (view.icon) errors.push(`「${title}」未知图标：${view.icon}，已改用默认图标`)
-      }
-      const blurb = view.blurb ?? ''
-      const order = view.order ?? 50
+    const pathHit = occupied.find((item) => item.id !== DATA_MODULE_ID && normalizeNavPath(item.path) === DATA_MODULE_PATH)
+    if (pathHit) {
+      errors.push(`路由重复：${DATA_MODULE_PATH} 已被「${pathHit.label}」占用`)
+      setNavErrors(errors)
+      return
+    }
+    const nameHit = occupied.find((item) => item.id !== DATA_MODULE_ID && item.label === '数据')
+    if (nameHit) {
+      errors.push(`名称重复：最左导航已有「数据」`)
+      setNavErrors(errors)
+      return
+    }
+    if (!mounted.has(DATA_MODULE_ID)) {
       try {
+        const order = Math.min(...views.map((row) => row.view?.order ?? 50))
         const mod = appModules.register({
-          id: view.moduleId,
-          label: title,
-          path: view.route,
-          description: blurb,
+          id: DATA_MODULE_ID,
+          label: '数据',
+          path: DATA_MODULE_PATH,
+          description: '任务、页面和插件',
           order,
-          Icon: resolveIcon(view.icon),
+          Icon: CircleStackIcon,
         })
         const slot = slots.place('app-modules', CollectionPage, {
-          key: `fsdb-${view.moduleId}`,
+          key: 'fsdb-database',
           order,
           props: () => ({
-            moduleId: view.moduleId,
-            collectionPath: row.path,
-            title,
-            blurb,
+            moduleId: DATA_MODULE_ID,
+            tables: liveTables,
             databaseUi: ctx.get('databaseUi') as DatabaseUi,
           }),
         })
-        mounted.set(view.moduleId, () => {
+        mounted.set(DATA_MODULE_ID, () => {
           void mod.dispose?.()
           void slot.dispose?.()
         })
       } catch (err) {
-        errors.push(`「${title}」无法挂到导航：${String(err)}`)
+        errors.push(`无法挂到导航：${String(err)}`)
       }
     }
     setNavErrors(errors)

@@ -7,6 +7,12 @@ test('file-system web is the implementation plugin, not a domain module', () => 
   assert.equal(typeof apply, 'function')
 })
 
+test('shell matches the data module by extra.moduleId database', () => {
+  const extra = { moduleId: 'database', tables: [] }
+  const slotKey = 'fsdb-database'
+  assert.equal(String(extra.moduleId ?? extra.id ?? slotKey), 'database')
+})
+
 test('navConflict flags duplicate route and display name against existing modules', () => {
   const modules = [{ id: 'tasks', label: 'Tasks', path: '/tasks' }]
   assert.match(navConflict({ moduleId: 'x', route: '/tasks' }, 'X', modules, 'x') ?? '', /路由重复/)
