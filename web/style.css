@@ -932,50 +932,32 @@ body {
   max-height: 256px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 2px 0 6px 20px;
 }
 
-.fsdb-views .sidebar-session-list {
-  padding-left: 20px;
+.fsdb-view-preview .chat-session-row > .chat-session-row-main {
+  padding-left: 11px;
 }
 
-.fsdb-views .sidebar-session-list .chat-session-row > .chat-session-row-main {
-  padding-left: 0;
-}
-
-.fsdb-view-preview-row {
-  display: flex;
-  width: 100%;
-  min-height: 32px;
-  align-items: center;
-  padding: 4px 8px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--dsw-sidebar-fg);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.25rem;
-  text-align: left;
-  cursor: pointer;
-}
-
-.fsdb-view-preview-row:hover {
-  background: var(--dsw-hover);
-  color: var(--dsw-sidebar-fg-active);
+.sidebar-session-list .fsdb-view-preview .chat-session-row > .chat-session-row-main {
+  padding-left: 22px;
 }
 
 .fsdb-view-preview-hint,
 .fsdb-view-preview-more {
   display: block;
   width: 100%;
-  padding: 4px 8px;
+  padding: 4px 8px 4px 19px;
   border: 0;
   background: transparent;
   color: var(--dsw-label-3);
   font-size: 14px;
   line-height: 1.25rem;
   text-align: left;
+}
+
+.sidebar-session-list .fsdb-view-preview-hint,
+.sidebar-session-list .fsdb-view-preview-more {
+  padding-left: 30px;
 }
 
 .fsdb-view-preview-more {

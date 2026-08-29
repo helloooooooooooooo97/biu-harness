@@ -167,16 +167,16 @@ function ViewRecordPreview({
   return (
     <div className="fsdb-view-preview" role="list">
       {state.items.map((row) => (
-        <button
-          key={row.id}
-          type="button"
-          role="listitem"
-          className="fsdb-view-preview-row"
-          title={recordPreviewLabel(row)}
-          onClick={() => onOpenRecord?.(row.id)}
-        >
-          <span className="min-w-0 flex-1 truncate">{recordPreviewLabel(row)}</span>
-        </button>
+        <div key={row.id} className="chat-session-row" role="listitem">
+          <button
+            type="button"
+            className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
+            title={recordPreviewLabel(row)}
+            onClick={() => onOpenRecord?.(row.id)}
+          >
+            <span className="min-w-0 flex-1 truncate font-medium">{recordPreviewLabel(row)}</span>
+          </button>
+        </div>
       ))}
       {state.loading && !state.items.length ? (
         <div className="fsdb-view-preview-hint">加载中…</div>
@@ -393,32 +393,36 @@ export const DataSidebar = memo(function DataSidebar({
                     return (
                       <div key={previewKey} className="min-w-0">
                         <div className={`chat-session-row group${active ? ' is-active' : ''} is-pinned`}>
-                          <button
-                            type="button"
-                            className="sidebar-rail-icon sidebar-group-fold"
-                            title={expanded ? '收起记录' : '展开记录'}
-                            aria-expanded={expanded}
-                            onClick={() => toggleViewPreview(previewKey)}
-                          >
-                            <span className="sidebar-group-fold-face">
-                              <ViewModeGlyph mode={view.mode} />
-                            </span>
-                            <span className="sidebar-group-fold-chevron">
-                              {expanded ? (
-                                <ChevronDownIcon className="size-4 shrink-0 opacity-80" />
-                              ) : (
-                                <ChevronRightIcon className="size-4 shrink-0 opacity-80" />
-                              )}
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
-                            onClick={() => openView(table.path, view.id)}
-                          >
-                            <span className="min-w-0 flex-1 truncate font-medium">{view.name}</span>
+                          <div className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5">
+                            <button
+                              type="button"
+                              className="grid size-6 shrink-0 place-items-center border-0 bg-transparent p-0 text-inherit"
+                              title={expanded ? '收起记录' : '展开记录'}
+                              aria-expanded={expanded}
+                              onClick={() => toggleViewPreview(previewKey)}
+                            >
+                              <span className="sidebar-rail-icon sidebar-group-fold">
+                                <span className="sidebar-group-fold-face">
+                                  <ViewModeGlyph mode={view.mode} />
+                                </span>
+                                <span className="sidebar-group-fold-chevron">
+                                  {expanded ? (
+                                    <ChevronDownIcon className="size-4 shrink-0 opacity-80" />
+                                  ) : (
+                                    <ChevronRightIcon className="size-4 shrink-0 opacity-80" />
+                                  )}
+                                </span>
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit"
+                              onClick={() => openView(table.path, view.id)}
+                            >
+                              {view.name}
+                            </button>
                             <span className="shrink-0 text-[14px] leading-5 opacity-70">{tableName}</span>
-                          </button>
+                          </div>
                           <ChatCount count={getPreviewTotal(viewTotalKey(table.path, view))} />
                           <button
                             type="button"
@@ -516,31 +520,35 @@ export const DataSidebar = memo(function DataSidebar({
                               <div
                                 className={`chat-session-row group${active ? ' is-active' : ''}${starred ? ' is-pinned' : ''}`}
                               >
-                                <button
-                                  type="button"
-                                  className="sidebar-rail-icon sidebar-group-fold"
-                                  title={expanded ? '收起记录' : '展开记录'}
-                                  aria-expanded={expanded}
-                                  onClick={() => toggleViewPreview(previewKey)}
-                                >
-                                  <span className="sidebar-group-fold-face">
-                                    <ViewModeGlyph mode={view.mode} />
-                                  </span>
-                                  <span className="sidebar-group-fold-chevron">
-                                    {expanded ? (
-                                      <ChevronDownIcon className="size-4 shrink-0 opacity-80" />
-                                    ) : (
-                                      <ChevronRightIcon className="size-4 shrink-0 opacity-80" />
-                                    )}
-                                  </span>
-                                </button>
-                                <button
-                                  type="button"
-                                  className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
-                                  onClick={() => openView(table.path, view.id)}
-                                >
-                                  <span className="min-w-0 flex-1 truncate font-medium">{view.name}</span>
-                                </button>
+                                <div className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5">
+                                  <button
+                                    type="button"
+                                    className="grid size-6 shrink-0 place-items-center border-0 bg-transparent p-0 text-inherit"
+                                    title={expanded ? '收起记录' : '展开记录'}
+                                    aria-expanded={expanded}
+                                    onClick={() => toggleViewPreview(previewKey)}
+                                  >
+                                    <span className="sidebar-rail-icon sidebar-group-fold">
+                                      <span className="sidebar-group-fold-face">
+                                        <ViewModeGlyph mode={view.mode} />
+                                      </span>
+                                      <span className="sidebar-group-fold-chevron">
+                                        {expanded ? (
+                                          <ChevronDownIcon className="size-4 shrink-0 opacity-80" />
+                                        ) : (
+                                          <ChevronRightIcon className="size-4 shrink-0 opacity-80" />
+                                        )}
+                                      </span>
+                                    </span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit"
+                                    onClick={() => openView(table.path, view.id)}
+                                  >
+                                    {view.name}
+                                  </button>
+                                </div>
                                 <ChatCount count={getPreviewTotal(viewTotalKey(table.path, view))} />
                                 {table.path === collectionPath ? (
                                   <>
