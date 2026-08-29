@@ -151,6 +151,7 @@ export function apply(ctx: Context) {
           key: 'fsdb-database',
           order,
           props: () => ({
+            moduleId: DATABASE_MODULE_ID,
             collections: views,
             databaseUi: ctx.get('databaseUi') as DatabaseUi,
           }),
