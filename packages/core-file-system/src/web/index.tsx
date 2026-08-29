@@ -11,7 +11,7 @@ import { DATABASE_CHANNEL, type CollectionInfo, type CollectionView } from '@biu
 import type { CollectionChrome, DatabaseUi } from '@biu/type-file-system/ui'
 import { CollectionBrowser } from './browser.tsx'
 import { DatabaseUiService } from './database-ui.ts'
-import { bootLoadCollections } from './nav-boot.ts'
+import { bootLoadCollections, collectionNavKey } from './nav-boot.ts'
 
 type SlotsService = {
   place: (slot: string, view: unknown, opts: { key: string; order?: number; props?: () => Record<string, unknown> }) => { dispose?: () => unknown }
@@ -33,10 +33,13 @@ type AppModulesService = {
     order?: number
     Icon?: ComponentType<{ className?: string }>
   }) => { dispose?: () => unknown }
+  markNavReady?: () => void
 }
 
 type SnapshotService = {
   onMessage: (type: string, handler: (payload: unknown) => void) => () => void
+  get?: () => { collections?: CollectionInfo[] }
+  subscribe?: (fn: () => void) => () => void
 }
 
 const ICONS: Record<string, ComponentType<{ className?: string }>> = {
@@ -138,6 +141,7 @@ export function apply(ctx: Context) {
 
   slots.place('root-overlays', RegisterErrorBanner, { key: 'fsdb-nav-errors', order: 80 })
   let stopped = false
+  let readyTimer = 0
   const runSync = async (rows: CollectionInfo[]) => {
     const views = rows.filter((row) => row.view?.moduleId && row.view.route)
     const live = new Set(views.map((row) => row.view!.moduleId))
@@ -193,24 +197,40 @@ export function apply(ctx: Context) {
     setNavErrors(errors)
   }
 
-  const sync = async () => {
-    let rows: CollectionInfo[] = []
-    try {
-      rows = await loadCollections()
-    } catch {
-      return
+  const sync = async (rows?: CollectionInfo[]) => {
+    let next = rows
+    if (!next) {
+      try {
+        next = await loadCollections()
+      } catch {
+        return
+      }
     }
-    await runSync(rows)
+    await runSync(next)
+    if (!collectionNavKey(next)) return
+    window.clearTimeout(readyTimer)
+    readyTimer = window.setTimeout(() => appModules.markNavReady?.(), 80)
   }
 
   ctx.effect(() => () => {
     stopped = true
+    window.clearTimeout(readyTimer)
     for (const dispose of mounted.values()) dispose()
     mounted.clear()
     setNavErrors([])
   })
   ctx.inject(['snapshot'], (inner) => {
     const snapshot = inner.get('snapshot') as SnapshotService
+    let lastKey = ''
+    const fromSnap = () => {
+      const rows = snapshot.get?.().collections ?? []
+      const key = collectionNavKey(rows)
+      if (!key || key === lastKey) return
+      lastKey = key
+      void sync(rows)
+    }
+    fromSnap()
+    const offSnap = snapshot.subscribe?.(fromSnap)
     let debounce = 0
     const off = snapshot.onMessage(DATABASE_CHANNEL, () => {
       window.dispatchEvent(new Event('fsdb:change'))
@@ -219,11 +239,19 @@ export function apply(ctx: Context) {
     })
     return () => {
       window.clearTimeout(debounce)
+      offSnap?.()
       off()
     }
   })
-  void bootLoadCollections(loadCollections, { stopped: () => stopped }).then((rows) => {
-    if (!stopped) return runSync(rows)
+  void bootLoadCollections(loadCollections, {
+    stopped: () => stopped,
+    onUpdate: (rows) => {
+      if (stopped || !collectionNavKey(rows)) return
+      void sync(rows)
+    },
+  }).then((rows) => {
+    if (stopped) return
+    return sync(rows)
   })
 }
 

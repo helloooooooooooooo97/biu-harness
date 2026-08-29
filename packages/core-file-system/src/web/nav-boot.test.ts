@@ -21,13 +21,16 @@ test('bootLoadCollections retries empty/failed loads until the nav set is stable
     if (calls.length === 3) return [row('plugins')]
     return [row('plugins'), row('page')]
   }
+  const updates: string[] = []
   const listed = await bootLoadCollections(load, {
     attempts: 8,
     delayMs: 5,
     wait: async (ms) => {
       waits.push(ms)
     },
+    onUpdate: (rows) => updates.push(rows.map((item) => item.id).join(',')),
   })
+  assert.ok(updates.includes('plugins,page'))
   assert.deepEqual(
     listed.map((item) => item.id),
     ['plugins', 'page'],

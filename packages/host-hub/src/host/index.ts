@@ -89,10 +89,11 @@ export class HubService extends Service {
       routes: this.ctx.http.listRoutes(),
       events: this.events,
       tools: this.ctx.tools.names(),
+      collections: listSnapshotCollections(this.ctx),
       services: [
         'http', 'hub', 'tools', 'llm', 'agentLoop', 'agents', 'approvals',
         'sessionStore', 'sessions', 'systemPrompt', 'fs', 'subprocess', 'sandbox',
-        'shell', 'jobs', 'mcp', 'terminals', 'lsp', 'subagents', 'chat',
+        'shell', 'jobs', 'mcp', 'terminals', 'lsp', 'subagents', 'chat', 'database',
       ].filter((name) => Boolean(this.ctx.get(name))),
     }
   }
@@ -169,6 +170,20 @@ export function skipHubEvent(name: string, args?: unknown[]) {
     if (payload?.event?.type === 'assistant/chunk') return true
   }
   return false
+}
+
+function listSnapshotCollections(ctx: Context) {
+  const db = ctx.get('database') as
+    | { collectionsList?: () => Array<{ id: string; path: string; label?: string; view?: unknown }> }
+    | undefined
+  if (!db?.collectionsList) return []
+  return db.collectionsList().map((item) => ({
+    id: item.id,
+    path: item.path,
+    kind: 'collection' as const,
+    label: item.label ?? item.id,
+    view: item.view ?? null,
+  }))
 }
 
 function isStorePackage(packageName?: string) {

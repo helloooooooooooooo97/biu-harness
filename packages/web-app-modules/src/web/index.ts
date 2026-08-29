@@ -38,6 +38,7 @@ export class AppModulesService extends Service {
   private extras = new Map<string, AppModule>()
   private listeners = new Set<() => void>()
   private seq = 0
+  private navReady = false
 
   constructor(ctx: Context) {
     super(ctx, 'appModules')
@@ -58,6 +59,17 @@ export class AppModulesService extends Service {
 
   list(): AppModule[] {
     return [AGENT, ...this.plugins()]
+  }
+
+  isNavReady() {
+    return this.navReady
+  }
+
+  /** 左侧栏等齐：File System 表入口和其它模块一起亮。 */
+  markNavReady() {
+    if (this.navReady) return
+    this.navReady = true
+    this.bump()
   }
 
   register(mod: AppModule) {
@@ -87,6 +99,13 @@ export function bindAppModules(source: AppModulesService) {
   }
 }
 
+export function bindAppModulesNavReady(source: AppModulesService) {
+  return function useAppModulesNavReady(): boolean {
+    useSyncExternalStore(source.subscribe, source.version, source.version)
+    return source.isNavReady()
+  }
+}
+
 export function moduleById(id: string, modules: AppModule[] = BUILTIN_MODULES): AppModule {
   return modules.find((item) => item.id === id) ?? AGENT
 }
@@ -106,5 +125,9 @@ export const name = 'appModules'
 export const inject = [] as const
 
 export function apply(ctx: Context) {
-  new AppModulesService(ctx)
+  const svc = new AppModulesService(ctx)
+  ctx.effect(() => {
+    const timer = setTimeout(() => svc.markNavReady(), 2500)
+    return () => clearTimeout(timer)
+  }, 'appModules.navReady.timeout')
 }

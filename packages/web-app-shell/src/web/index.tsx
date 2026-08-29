@@ -32,6 +32,7 @@ import {
 } from '@biu/web-mascot'
 import {
   bindAppModules,
+  bindAppModulesNavReady,
   moduleIdFromPath,
   type AppModule,
   type AppModulesService,
@@ -369,6 +370,7 @@ function Shell(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const useAppModules = props.useAppModules as ReturnType<typeof bindAppModules>
+  const useAppModulesNavReady = props.useAppModulesNavReady as ReturnType<typeof bindAppModulesNavReady> | undefined
   const appModules = props.appModules as AppModulesService
   const sessionView = props.sessionView as SessionViewService
   const projectView = props.projectView as ProjectViewService
@@ -376,7 +378,9 @@ function Shell(props: SlotProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const modules = useAppModules()
+  const navReady = useAppModulesNavReady ? useAppModulesNavReady() : true
   const pluginModules = modules.filter((item) => item.id !== 'agent')
+  const railModules = navReady ? modules : []
   const sessionId = useSessionView((state) => state.sessionId)
   const danceSessions = useSessionView((state) => state.sessions)
   const dancing = useSyncExternalStore(
@@ -660,7 +664,7 @@ function Shell(props: SlotProps) {
           <ModuleRail
             active={activeModule}
             agentHref={agentHref}
-            modules={modules}
+            modules={railModules}
             pinned={railPinned}
             onTogglePin={toggleRailPin}
             onSettings={() => setSettingsOpen(true)}
@@ -782,6 +786,7 @@ export function apply(ctx: Context) {
     useSnapshot: bindSnapshot(ctx.snapshot as SnapshotService),
     useSessionView: bindSessionView(ctx.sessionView as SessionViewService),
     useAppModules: bindAppModules(ctx.appModules as AppModulesService),
+    useAppModulesNavReady: bindAppModulesNavReady(ctx.appModules as AppModulesService),
     sessionView: ctx.sessionView as SessionViewService,
     projectView: ctx.projectView as ProjectViewService,
     useProjectView: bindProjectView(ctx.projectView as ProjectViewService),

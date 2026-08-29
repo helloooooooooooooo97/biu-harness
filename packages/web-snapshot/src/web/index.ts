@@ -27,6 +27,14 @@ export interface Snapshot {
   clockIso?: string
   lastSessionId?: string
   lastSessionEvent?: string
+  /** File System 已登记表，启动时随 snapshot 一起到，导航不必再等一轮 /api/db/stat。 */
+  collections?: Array<{
+    id: string
+    path: string
+    kind?: string
+    label: string
+    view?: { moduleId?: string; route?: string; title?: string; blurb?: string; order?: number; icon?: string } | null
+  }>
 }
 
 const empty: Snapshot = { seq: 0, plugins: [], pages: [], routes: [], events: [], services: [] }

@@ -45,11 +45,13 @@ export function apply(ctx: Context) {
     running = true
     try {
       const rows = ctx.snapshot.get().plugins
-      const enabledRows = rows.filter((plugin) => {
-        if (!plugin.web) return false
-        if (plugin.enabled) return true
-        return plugin.state === 'pending' || plugin.state === 'loading' || plugin.state === 'active'
-      })
+      const enabledRows = rows
+        .filter((plugin) => {
+          if (!plugin.web) return false
+          if (plugin.enabled) return true
+          return plugin.state === 'pending' || plugin.state === 'loading' || plugin.state === 'active'
+        })
+        .sort((a, b) => Number(b.id === 'core-file-system') - Number(a.id === 'core-file-system'))
       const enabledIds = new Set(enabledRows.map((plugin) => plugin.id))
 
       for (const row of enabledRows) {
@@ -69,6 +71,16 @@ export function apply(ctx: Context) {
         if (enabledIds.has(id)) continue
         await fiber.dispose()
         forks.delete(id)
+      }
+      const fsUi = rows.some(
+        (plugin) =>
+          plugin.id === 'core-file-system' &&
+          plugin.web &&
+          (plugin.enabled || plugin.state === 'pending' || plugin.state === 'loading' || plugin.state === 'active'),
+      )
+      if (!fsUi) {
+        const appModules = ctx.get('appModules') as { markNavReady?: () => void } | undefined
+        appModules?.markNavReady?.()
       }
     } finally {
       running = false
