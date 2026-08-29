@@ -378,6 +378,14 @@ function Shell(props: SlotProps) {
   const [settingsTab, setSettingsTab] = useState<string>('plugins')
   const [configOpen, setConfigOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [railOpen, setRailOpen] = useState(false)
+  const railClusterRef = useRef<HTMLDivElement>(null)
+  const openRail = useCallback(() => setRailOpen(true), [])
+  const closeRail = useCallback((event: { relatedTarget: EventTarget | null }) => {
+    const next = event.relatedTarget
+    if (next instanceof Node && railClusterRef.current?.contains(next)) return
+    setRailOpen(false)
+  }, [])
   const [inspectorOpen, setInspectorOpen] = useState(() => {
     try {
       return localStorage.getItem('cordis.inspector.open') === '1'
@@ -589,7 +597,7 @@ function Shell(props: SlotProps) {
           ? ` app-shell-agent${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}${inspectorOpen ? ' is-inspector-open' : ''}${chatOverlay ? ' is-chat-overlay' : ''}${overlayAutohide ? ' is-chat-overlay-autohide' : ''
           }`
           : ' app-shell-module'
-        }`}
+        }${railOpen ? ' is-rail-open' : ''}`}
       data-testid={chatOverlay ? 'chat-overlay' : undefined}
       style={
         inspectorOpen
@@ -597,13 +605,29 @@ function Shell(props: SlotProps) {
           : undefined
       }
     >
-      <ModuleRail
-        active={activeModule}
-        agentHref={agentHref}
-        modules={modules}
-        onSettings={() => setSettingsOpen(true)}
-        onAgentRailClick={onAgentRailClick}
-      />
+      <div className="app-rail-cluster" ref={railClusterRef}>
+        <div
+          className="app-rail-hotzone"
+          aria-hidden
+          onMouseEnter={openRail}
+          onMouseLeave={closeRail}
+        />
+        <div
+          className="app-rail-hover"
+          onMouseEnter={openRail}
+          onMouseLeave={closeRail}
+          onFocusCapture={openRail}
+          onBlurCapture={(event) => closeRail(event)}
+        >
+          <ModuleRail
+            active={activeModule}
+            agentHref={agentHref}
+            modules={modules}
+            onSettings={() => setSettingsOpen(true)}
+            onAgentRailClick={onAgentRailClick}
+          />
+        </div>
+      </div>
 
       <ChatSidebar
         visible={showChatSidebar}

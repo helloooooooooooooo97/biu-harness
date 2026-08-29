@@ -1,6 +1,6 @@
 /** 聊天列窄于此时自动弹出覆盖对话框（px）。不自动收回。 */
 export const CHAT_OVERLAY_ENTER = 420
-const RAIL = 48
+const RAIL = 0
 const SIDEBAR = 280
 
 export function chatColumnWidth(opts: {

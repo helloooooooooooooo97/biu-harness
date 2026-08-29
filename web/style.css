@@ -197,6 +197,12 @@ body {
   }
 }
 
+@property --rail-w {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
 /* App shell — VS Code-like activity bar + optional side bar */
 .app-shell {
   display: grid;
@@ -204,6 +210,12 @@ body {
   overflow: hidden;
   background: var(--dsw-bg);
   color: var(--dsw-label);
+  --rail-w: 0px;
+  transition: --rail-w .16s ease;
+}
+
+.app-shell.is-rail-open {
+  --rail-w: 48px;
 }
 
 .chat-view-header {
@@ -366,27 +378,27 @@ body {
 }
 
 .app-shell-agent {
-  grid-template-columns: 48px 280px minmax(0, 1fr);
+  grid-template-columns: var(--rail-w) 280px minmax(0, 1fr);
 }
 
 .app-shell-agent.is-sidebar-collapsed {
-  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
 }
 
 .app-shell-agent.is-inspector-open {
-  grid-template-columns: 48px 280px minmax(0, 1fr) var(--inspector-width, 320px);
+  grid-template-columns: var(--rail-w) 280px minmax(0, 1fr) var(--inspector-width, 320px);
 }
 
 .app-shell-agent.is-sidebar-collapsed.is-inspector-open {
-  grid-template-columns: 48px minmax(0, 1fr) var(--inspector-width, 320px);
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--inspector-width, 320px);
 }
 
 .app-shell-agent.is-inspector-open.is-chat-overlay {
-  grid-template-columns: 48px 280px 0 minmax(0, 1fr);
+  grid-template-columns: var(--rail-w) 280px 0 minmax(0, 1fr);
 }
 
 .app-shell-agent.is-sidebar-collapsed.is-inspector-open.is-chat-overlay {
-  grid-template-columns: 48px 0 minmax(0, 1fr);
+  grid-template-columns: var(--rail-w) 0 minmax(0, 1fr);
 }
 
 .session-inspector {
@@ -421,24 +433,25 @@ body {
 
 .app-shell-agent.is-chat-overlay .chat-overlay-panel {
   position: fixed;
-  left: calc(48px + 280px);
+  left: calc(var(--rail-w) + 280px);
   right: 0;
   bottom: 20px;
   z-index: 40;
   display: flex;
   flex-direction: column;
-  width: min(var(--dsw-chat-width), calc(100vw - 48px - 280px - 40px));
+  width: min(var(--dsw-chat-width), calc(100vw - var(--rail-w) - 280px - 40px));
   margin-inline: auto;
   padding: 0 12px 12px;
   border-radius: 14px;
   background: color-mix(in srgb, var(--dsw-surface) 92%, transparent);
   box-shadow: var(--dsw-shadow-lv2);
   pointer-events: auto;
+  transition: left .16s ease, width .16s ease;
 }
 
 .app-shell-agent.is-sidebar-collapsed.is-chat-overlay .chat-overlay-panel {
-  left: 48px;
-  width: min(var(--dsw-chat-width), calc(100vw - 48px - 40px));
+  left: var(--rail-w);
+  width: min(var(--dsw-chat-width), calc(100vw - var(--rail-w) - 40px));
 }
 
 .app-shell-agent.is-chat-overlay .chat-overlay-thread {
@@ -658,7 +671,7 @@ body {
 }
 
 .app-shell-module {
-  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
 }
 
 /* 侧栏独立合成层：右侧 Markdown 重绘时少拖累左侧 :hover */
@@ -1033,13 +1046,43 @@ body {
   color: var(--dsw-sidebar-fg-active);
 }
 
+.app-rail-cluster {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  align-self: stretch;
+}
+
+.app-rail-hotzone {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 60;
+  width: 12px;
+  background: transparent;
+}
+
+.app-rail-hover {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .app-activity-bar {
   display: flex;
+  width: 48px;
+  height: 100vh;
   min-height: 0;
   flex-direction: column;
   align-items: stretch;
-  border-right: 1px solid var(--dsw-border);
   background: var(--dsw-sidebar);
+  border-right: 1px solid var(--dsw-border);
 }
 
 .app-activity-brand {

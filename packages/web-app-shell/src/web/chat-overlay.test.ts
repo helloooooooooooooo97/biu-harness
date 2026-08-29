@@ -18,7 +18,7 @@ import {
 test('chat column subtracts rail, sidebar and inspector', () => {
   assert.equal(
     chatColumnWidth({ viewportWidth: 1440, inspectorOpen: true, inspectorWidth: 800, sidebarCollapsed: false }),
-    1440 - 48 - 280 - 800,
+    1440 - 280 - 800,
   )
 })
 
@@ -28,7 +28,7 @@ test('expanding chat clamps inspector so the column is at least ENTER', () => {
     inspectorWidth: 900,
     sidebarCollapsed: false,
   })
-  assert.equal(next, 1440 - 48 - 280 - CHAT_OVERLAY_ENTER)
+  assert.equal(next, 1440 - 280 - CHAT_OVERLAY_ENTER)
   assert.ok(
     chatColumnWidth({
       viewportWidth: 1440,
