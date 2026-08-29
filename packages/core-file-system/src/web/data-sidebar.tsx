@@ -6,15 +6,19 @@ import {
   ChevronRightIcon,
   ClipboardDocumentListIcon,
   EyeIcon,
+  ListBulletIcon,
   PencilSquareIcon,
   PlusIcon,
   PuzzlePieceIcon,
   Square2StackIcon,
+  Squares2X2Icon,
   StarIcon,
   TableCellsIcon,
   TrashIcon,
+  ViewColumnsIcon,
 } from '@heroicons/react/16/solid'
 import type { CollectionInfo } from '@biu/type-file-system'
+import type { ViewMode } from './fields.ts'
 import type { SavedView } from './saved-view.ts'
 import {
   activeViewStorageKey,
@@ -66,6 +70,14 @@ function TableGlyph({ icon }: { icon?: string }) {
   if (name === 'bolt') return <BoltIcon aria-hidden className={cls} />
   if (name === 'eye') return <EyeIcon aria-hidden className={cls} />
   return <TableCellsIcon aria-hidden className={cls} />
+}
+
+function ViewModeGlyph({ mode }: { mode: ViewMode }) {
+  const cls = 'size-4'
+  if (mode === 'queue') return <ListBulletIcon aria-hidden className={cls} />
+  if (mode === 'table') return <TableCellsIcon aria-hidden className={cls} />
+  if (mode === 'cards') return <Squares2X2Icon aria-hidden className={cls} />
+  return <ViewColumnsIcon aria-hidden className={cls} />
 }
 
 function ChatCount({ count }: { count: number }) {
@@ -220,7 +232,7 @@ export const DataSidebar = memo(function DataSidebar({
                           onClick={() => openView(table.path, view.id)}
                         >
                           <span className="grid size-6 shrink-0 place-items-center">
-                            <TableGlyph icon={table.view?.icon} />
+                            <ViewModeGlyph mode={view.mode} />
                           </span>
                           <span className="min-w-0 flex-1 truncate font-medium">{view.name}</span>
                           <span className="shrink-0 text-[11px] leading-3.75 opacity-70">{tableName}</span>
@@ -313,6 +325,9 @@ export const DataSidebar = memo(function DataSidebar({
                                 className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
                                 onClick={() => openView(table.path, view.id)}
                               >
+                                <span className="grid size-6 shrink-0 place-items-center">
+                                  <ViewModeGlyph mode={view.mode} />
+                                </span>
                                 <span className="min-w-0 flex-1 truncate font-medium">{view.name}</span>
                               </button>
                               {table.path === collectionPath ? (
