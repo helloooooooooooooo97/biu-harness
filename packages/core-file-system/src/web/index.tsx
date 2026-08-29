@@ -77,7 +77,6 @@ function CollectionPage(props: SlotProps) {
   if (!row) return null
   return (
     <CollectionBrowser
-      key={row.path}
       moduleId={DATA_MODULE_ID}
       collectionPath={row.path}
       title={row.view?.title ?? row.label}
