@@ -15,6 +15,7 @@ import {
 import { SidebarMascot, resolveSessionMascot } from '@biu/web-mascot'
 import type { DbRecord } from '@biu/type-file-system'
 import type { CollectionChrome, FsCellProps } from '@biu/type-file-system/ui'
+import { ReportsPane, ScriptPane } from './detail-panes.tsx'
 
 const STATUS_LABEL: Record<string, string> = {
   todo: '待办',
@@ -602,4 +603,23 @@ export const tasksChrome: CollectionChrome = {
     creator: CreatorCell,
     assignee: AssigneeCell,
   },
+  panes: [
+    {
+      id: 'script',
+      label: '脚本',
+      badge: (record) => {
+        const trigger = record.trigger as { cron?: string; at?: number; on?: string[]; enabled?: boolean } | undefined
+        if (!trigger) return undefined
+        const n = (trigger.cron ? 1 : 0) + (trigger.at ? 1 : 0) + (trigger.on?.length ?? 0)
+        return n || undefined
+      },
+      Pane: ScriptPane,
+    },
+    {
+      id: 'reports',
+      label: '进度汇报',
+      badge: (record) => (Array.isArray(record.reports) && record.reports.length ? record.reports.length : undefined),
+      Pane: ReportsPane,
+    },
+  ],
 }

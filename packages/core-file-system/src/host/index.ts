@@ -15,6 +15,7 @@ import {
   type FieldSpec,
   type ListPage,
 } from '@biu/type-file-system'
+import { SavedViewsStore, viewsCollection, type StoredView } from './saved-views.ts'
 
 function publicAction(action: CollectionAction): CollectionActionInfo {
   const { run: _run, ...info } = action
@@ -475,6 +476,14 @@ export const inject = ['tools', 'http']
 
 export function apply(ctx: Context) {
   const db = new DatabaseService(ctx)
+  const savedViews = new SavedViewsStore()
+  db.register(viewsCollection(savedViews, () => db.collectionsList().map((item) => ({
+    id: item.id,
+    path: item.path,
+    kind: 'collection' as const,
+    label: item.label ?? item.id,
+    view: item.view ?? null,
+  }))))
   ctx.tools.register({
     name: 'db_list',
     description: '列出 File System 路径：/ 为已登记表，/<表> 为该表记录（不含 content 正文）。默认每页 50 条，最多 200。',
@@ -596,6 +605,16 @@ export function apply(ctx: Context) {
     try {
       const body = (await route.json()) as { path?: string; content?: unknown }
       route.send(200, await db.write(String(body?.path ?? ''), body?.content))
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
+  })
+  ctx.http.route('POST', '/api/db/saved-views', async (route) => {
+    try {
+      const body = (await route.json()) as { path?: string; views?: StoredView[] }
+      savedViews.replace(String(body?.path ?? ''), Array.isArray(body?.views) ? body.views : [])
+      ctx.emit('database/change')
+      route.send(200, { ok: true })
     } catch (error) {
       route.send(400, { error: String(error) })
     }

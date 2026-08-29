@@ -18,6 +18,17 @@ export type FsActionProps = {
   run: () => void
 }
 
+export type FsDetailPaneProps = {
+  record: DbRecord
+}
+
+export type FsDetailPane = {
+  id: string
+  label: string
+  badge?: (record: DbRecord) => number | string | undefined
+  Pane: ComponentType<FsDetailPaneProps>
+}
+
 export type CollectionChrome = {
   cells?: Partial<Record<string, ComponentType<FsCellProps>>>
   Action?: ComponentType<FsActionProps>
@@ -25,6 +36,8 @@ export type CollectionChrome = {
   Title?: ComponentType<{ record: DbRecord; label: string }>
   /** 正文。不传则把 content 当文件默认渲染。结构由登记方自己解析。 */
   Content?: ComponentType<FsContentProps>
+  /** 详情弹窗额外分区（概况之外）。旧任务详情的脚本/进度汇报走这里。 */
+  panes?: FsDetailPane[]
 }
 
 export type FsContentProps = {
@@ -47,4 +60,3 @@ declare module 'cordis' {
     databaseUi: DatabaseUi
   }
 }
-

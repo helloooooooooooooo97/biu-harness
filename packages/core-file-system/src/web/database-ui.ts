@@ -13,13 +13,15 @@ function mergeChrome(layers: CollectionChrome[]): CollectionChrome {
   let Action: CollectionChrome['Action']
   let Title: CollectionChrome['Title']
   let Content: CollectionChrome['Content']
+  const panes: NonNullable<CollectionChrome['panes']> = []
   for (const layer of layers) {
     Object.assign(cells, layer.cells)
     if (layer.Action) Action = layer.Action
     if (layer.Title) Title = layer.Title
     if (layer.Content) Content = layer.Content
+    if (layer.panes?.length) panes.push(...layer.panes)
   }
-  return { cells, Action, Title, Content }
+  return { cells, Action, Title, Content, panes: panes.length ? panes : undefined }
 }
 
 export class DatabaseUiService extends Service implements DatabaseUi {
