@@ -30,6 +30,60 @@ export function nextPreviewLimit(loaded: number, total: number) {
   return Math.min(SIDEBAR_PREVIEW_PAGE, SIDEBAR_PREVIEW_MAX - loaded, total - loaded)
 }
 
+export const TABLE_TOTAL_VIEW = {
+  id: '__table__',
+  sortField: 'id',
+  sortDir: 'asc' as const,
+  filters: {} as Record<string, string>,
+  query: '',
+}
+
+const totalCache = new Map<string, number>()
+const totalListeners = new Set<() => void>()
+let totalsVersion = 0
+
+export function rememberPreviewTotal(key: string, total: number) {
+  if (totalCache.get(key) === total) return
+  totalCache.set(key, total)
+  totalsVersion += 1
+  for (const fn of totalListeners) fn()
+}
+
+export function getPreviewTotalsVersion() {
+  return totalsVersion
+}
+
+export function getPreviewTotal(key: string) {
+  return totalCache.get(key)
+}
+
+export function subscribePreviewTotals(fn: () => void) {
+  totalListeners.add(fn)
+  return () => {
+    totalListeners.delete(fn)
+  }
+}
+
+export function viewTotalKey(path: string, view: Pick<SavedView, 'id' | 'sortField' | 'sortDir' | 'filters' | 'query'>) {
+  return previewCacheKey(path, view)
+}
+
+export function tableTotalKey(path: string) {
+  return previewCacheKey(path, TABLE_TOTAL_VIEW)
+}
+
+export async function fetchViewTotal(
+  path: string,
+  view: Pick<SavedView, 'id' | 'sortField' | 'sortDir' | 'filters' | 'query'>,
+) {
+  const key = viewTotalKey(path, view)
+  const cached = totalCache.get(key)
+  if (cached != null) return cached
+  const page = await fetchViewPreview(path, view, 0, 1)
+  rememberPreviewTotal(key, page.total)
+  return page.total
+}
+
 export async function fetchViewPreview(
   path: string,
   view: Pick<SavedView, 'sortField' | 'sortDir' | 'filters' | 'query'>,

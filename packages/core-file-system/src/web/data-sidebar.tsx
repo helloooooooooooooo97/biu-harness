@@ -1,4 +1,4 @@
-import { memo, useEffect, useId, useState } from 'react'
+import { memo, useEffect, useId, useMemo, useState, useSyncExternalStore } from 'react'
 import {
   BoltIcon,
   ChatBubbleLeftRightIcon,
@@ -22,10 +22,18 @@ import type { ViewMode } from './fields.ts'
 import type { SavedView } from './saved-view.ts'
 import {
   fetchViewPreview,
+  fetchViewTotal,
+  getPreviewTotal,
+  getPreviewTotalsVersion,
   nextPreviewLimit,
   previewCacheKey,
   recordPreviewLabel,
+  rememberPreviewTotal,
   SIDEBAR_PREVIEW_MAX,
+  subscribePreviewTotals,
+  TABLE_TOTAL_VIEW,
+  tableTotalKey,
+  viewTotalKey,
 } from './sidebar-preview.ts'
 import {
   activeViewStorageKey,
@@ -124,6 +132,7 @@ function ViewRecordPreview({
       (page) => {
         if (cancelled) return
         previewCache.set(key, { items: page.items, total: page.total })
+        rememberPreviewTotal(key, page.total)
         setState({ items: page.items, total: page.total, loading: false, error: '' })
       },
       (err: unknown) => {
@@ -145,6 +154,7 @@ function ViewRecordPreview({
       const items = [...state.items, ...page.items]
       const total = page.total
       previewCache.set(key, { items, total })
+      rememberPreviewTotal(key, total)
       setState({ items, total, loading: false, error: '' })
     } catch (err) {
       setState((prev) => ({ ...prev, loading: false, error: String(err) }))
@@ -185,12 +195,17 @@ function ViewRecordPreview({
   )
 }
 
-function ChatCount({ count }: { count: number }) {
+function ChatCount({ count }: { count: number | undefined }) {
+  if (count == null) return null
   return (
-    <span className="sidebar-chat-count">
+    <span className="sidebar-chat-count" title={`${count} 条`}>
       <span className="sidebar-chat-count-num">{count}</span>
     </span>
   )
+}
+
+function usePreviewTotalsVersion() {
+  return useSyncExternalStore(subscribePreviewTotals, getPreviewTotalsVersion, () => 0)
 }
 
 export const DataSidebar = memo(function DataSidebar({
@@ -220,7 +235,10 @@ export const DataSidebar = memo(function DataSidebar({
   onCopyView: () => void
   onOpenRecord?: (path: string, view: SavedView, recordId: string) => void
 }) {
-  const listedTables = tables.length ? tables : [{ path: collectionPath, label: title, view: { title } } as CollectionInfo]
+  const listedTables = useMemo(
+    () => (tables.length ? tables : [{ path: collectionPath, label: title, view: { title } } as CollectionInfo]),
+    [collectionPath, tables, title],
+  )
   const [openTables, setOpenTables] = useState<Record<string, boolean>>(() => ({ [collectionPath]: true }))
   const [starredViews, setStarredViews] = useState(loadStarredViews)
   const [favOpen, setFavOpen] = useState(() => {
@@ -232,6 +250,7 @@ export const DataSidebar = memo(function DataSidebar({
   })
   const [dataOpen, setDataOpen] = useState(true)
   const [expandedViewKey, setExpandedViewKey] = useState<string | null>(null)
+  usePreviewTotalsVersion()
 
   function viewsFor(path: string) {
     return path === collectionPath ? views : loadViews(path)
@@ -243,6 +262,37 @@ export const DataSidebar = memo(function DataSidebar({
     if (!table || !view) return []
     return [{ table, view }]
   })
+
+  const countJobs = useMemo(() => {
+    const jobs: Array<{ path: string; view: typeof TABLE_TOTAL_VIEW | SavedView }> = []
+    if (favOpen) {
+      for (const { table, view } of starredRows) jobs.push({ path: table.path, view })
+    }
+    if (dataOpen) {
+      for (const table of listedTables) {
+        jobs.push({ path: table.path, view: TABLE_TOTAL_VIEW })
+        if (openTables[table.path]) {
+          for (const view of viewsFor(table.path)) jobs.push({ path: table.path, view })
+        }
+      }
+    }
+    return jobs
+  }, [dataOpen, favOpen, listedTables, openTables, starredRows, views, collectionPath])
+
+  const countJobKey = countJobs.map((job) => viewTotalKey(job.path, job.view)).join('|')
+  useEffect(() => {
+    let cancelled = false
+    void Promise.all(
+      countJobs.map((job) =>
+        fetchViewTotal(job.path, job.view).catch(() => {
+          if (cancelled) return
+        }),
+      ),
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [countJobKey, countJobs])
 
   function toggleStar(path: string, viewId: string) {
     setStarredViews((prev) => {
@@ -367,8 +417,9 @@ export const DataSidebar = memo(function DataSidebar({
                             onClick={() => openView(table.path, view.id)}
                           >
                             <span className="min-w-0 flex-1 truncate font-medium">{view.name}</span>
-                            <span className="shrink-0 text-[11px] leading-3.75 opacity-70">{tableName}</span>
+                            <span className="shrink-0 text-[14px] leading-5 opacity-70">{tableName}</span>
                           </button>
+                          <ChatCount count={getPreviewTotal(viewTotalKey(table.path, view))} />
                           <button
                             type="button"
                             className="chat-session-row-star is-on"
@@ -406,7 +457,11 @@ export const DataSidebar = memo(function DataSidebar({
                   <span className="min-w-0 flex-1 truncate tracking-normal">数据</span>
                 </button>
               </div>
-              <ChatCount count={listedTables.length} />
+              <ChatCount
+                count={listedTables.every((table) => getPreviewTotal(tableTotalKey(table.path)) != null)
+                  ? listedTables.reduce((sum, table) => sum + (getPreviewTotal(tableTotalKey(table.path)) ?? 0), 0)
+                  : undefined}
+              />
             </div>
             {dataOpen ? (
               <div className="min-w-0 space-y-1.5 pt-0.5">
@@ -448,7 +503,7 @@ export const DataSidebar = memo(function DataSidebar({
                           </span>
                           <span className="min-w-0 flex-1 truncate">{name}</span>
                         </div>
-                        <ChatCount count={listed.length} />
+                        <ChatCount count={getPreviewTotal(tableTotalKey(table.path))} />
                       </div>
                       <div className={`sidebar-session-list min-w-0 ${open ? '' : 'hidden'}`} aria-hidden={!open}>
                         {listed.map((view) => {
@@ -486,6 +541,7 @@ export const DataSidebar = memo(function DataSidebar({
                                 >
                                   <span className="min-w-0 flex-1 truncate font-medium">{view.name}</span>
                                 </button>
+                                <ChatCount count={getPreviewTotal(viewTotalKey(table.path, view))} />
                                 {table.path === collectionPath ? (
                                   <>
                                     <button

@@ -1,6 +1,15 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { nextPreviewLimit, previewCacheKey, recordPreviewLabel, SIDEBAR_PREVIEW_PAGE } from './sidebar-preview.ts'
+import {
+  getPreviewTotal,
+  nextPreviewLimit,
+  previewCacheKey,
+  recordPreviewLabel,
+  rememberPreviewTotal,
+  SIDEBAR_PREVIEW_PAGE,
+  tableTotalKey,
+  viewTotalKey,
+} from './sidebar-preview.ts'
 
 test('record preview prefers label field then title', () => {
   assert.equal(recordPreviewLabel({ id: '1', title: '封面' }, 'title'), '封面')
@@ -12,6 +21,13 @@ test('preview cache includes view query and filters', () => {
   const a = previewCacheKey('/tasks', { id: 'v1', sortField: 'id', sortDir: 'asc', filters: {}, query: '' })
   const b = previewCacheKey('/tasks', { id: 'v1', sortField: 'id', sortDir: 'asc', filters: { status: 'open' }, query: '' })
   assert.notEqual(a, b)
+})
+
+test('table total key is not a saved view key', () => {
+  const view = { id: 'v1', sortField: 'id', sortDir: 'asc' as const, filters: {}, query: '' }
+  assert.notEqual(tableTotalKey('/tasks'), viewTotalKey('/tasks', view))
+  rememberPreviewTotal(viewTotalKey('/tasks', view), 12)
+  assert.equal(getPreviewTotal(viewTotalKey('/tasks', view)), 12)
 })
 
 test('preview pages stay small and stop at max', () => {
