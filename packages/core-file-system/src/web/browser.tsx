@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import {
   ArrowDownIcon,
@@ -8,9 +8,7 @@ import {
   ArrowsUpDownIcon,
   AdjustmentsHorizontalIcon,
   Bars3BottomLeftIcon,
-  BoltIcon,
   CalendarDaysIcon,
-  ChatBubbleLeftRightIcon,
   CheckCircleIcon,
   CheckIcon,
   ChevronDownIcon,
@@ -34,6 +32,7 @@ import {
   RectangleStackIcon,
   Square2StackIcon,
   Squares2X2Icon,
+  StarIcon,
   StopIcon,
   TableCellsIcon,
   TrashIcon,
@@ -66,9 +65,15 @@ import { DataSidebar } from './data-sidebar.tsx'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
 import {
   activeViewStorageKey,
+  getStarredViews,
+  getStarredViewsVersion,
+  isViewStarred,
   loadActiveViewId,
   loadViews,
+  persistStarredViews,
   pushSavedViews,
+  subscribeStarredViews,
+  toggleStarredView,
   viewsKey,
 } from './view-storage.ts'
 
@@ -83,14 +88,6 @@ function actionIcon(id: string) {
   if (id === 'edit' || id === 'rename') return <PencilSquareIcon aria-hidden className={cls} />
   if (id === 'refresh') return <ArrowPathIcon aria-hidden className={cls} />
   return null
-}
-
-function DetailPaneGlyph({ id }: { id: string }) {
-  const cls = 'size-4'
-  if (id === 'overview') return <DocumentTextIcon aria-hidden className={cls} />
-  if (id === 'script') return <BoltIcon aria-hidden className={cls} />
-  if (id === 'reports') return <ChatBubbleLeftRightIcon aria-hidden className={cls} />
-  return <RectangleStackIcon aria-hidden className={cls} />
 }
 
 function ModeGlyph({ id }: { id: ViewMode }) {
@@ -646,6 +643,7 @@ export function CollectionBrowser({
     hydratePath.current = ''
     setCollapsed({})
     hydratedDetail.current = ''
+    setDetailId(null)
     const stored = viewForPath(collectionPath)
     if (stored) {
       setViews(loadViews(collectionPath))
@@ -770,6 +768,8 @@ export function CollectionBrowser({
   const selected = visible.find((item) => item.id === detailId) ?? items.find((item) => item.id === detailId) ?? null
   const filterActive = Object.values(filters).some(Boolean)
   const activeView = views.find((view) => view.id === activeViewId)
+  useSyncExternalStore(subscribeStarredViews, getStarredViewsVersion, () => 0)
+  const viewStarred = Boolean(activeViewId && isViewStarred(getStarredViews(), collectionPath, activeViewId))
 
   useEffect(() => {
     hydratedDetail.current = ''
@@ -1410,7 +1410,10 @@ export function CollectionBrowser({
           views={views}
           activeViewId={activeViewId}
           onOpenTable={onOpenTable}
-          onApplyView={applyView}
+          onApplyView={(view) => {
+            applyView(view)
+            setDetailId(null)
+          }}
           onRenameView={renameView}
           onDeleteView={deleteView}
           onAddView={addEmptyView}
@@ -1425,7 +1428,68 @@ export function CollectionBrowser({
           }}
         />
       ) : null}
-      <div className={`tasks-main fsdb-main${selected ? ' hidden' : ''}`} aria-hidden={Boolean(selected)}>
+      <div className="fsdb-right">
+        <header className="chat-view-header" data-biu-ignore>
+          <div className="chat-view-header-left">
+            {selected ? (
+              <span className="min-w-0 truncate text-[13px] font-semibold">{labelOf(selected)}</span>
+            ) : (
+              <span className="min-w-0 truncate text-[13px] font-semibold">{activeView?.name ?? title}</span>
+            )}
+          </div>
+          {selected ? (
+            <nav className="inspector-tabs" aria-label="详情分区">
+              <button
+                type="button"
+                className={`inspector-tab${detailTab === 'overview' ? ' is-active' : ''}`}
+                onClick={() => setDetailTab('overview')}
+              >
+                概况
+              </button>
+              {(chrome?.panes ?? []).map((pane) => {
+                const badge = pane.badge?.(selected)
+                return (
+                  <button
+                    key={pane.id}
+                    type="button"
+                    className={`inspector-tab${detailTab === pane.id ? ' is-active' : ''}`}
+                    onClick={() => setDetailTab(pane.id)}
+                  >
+                    {pane.label}
+                    {badge != null && badge !== '' ? <span className="fsdb-detail-tab-count">{badge}</span> : null}
+                  </button>
+                )
+              })}
+            </nav>
+          ) : null}
+          <div className="chat-view-header-right">
+            {selected ? <RecordActions row={selected} place="detail" /> : null}
+            {activeViewId ? (
+              <button
+                type="button"
+                className={`chat-view-header-expand${viewStarred ? ' is-active' : ''}`}
+                title={viewStarred ? '取消收藏视图' : '收藏视图'}
+                aria-label={viewStarred ? '取消收藏视图' : '收藏视图'}
+                aria-pressed={viewStarred}
+                onClick={() => persistStarredViews(toggleStarredView(getStarredViews(), collectionPath, activeViewId))}
+              >
+                <StarIcon aria-hidden className={`size-4${viewStarred ? ' text-[#f5b700]' : ''}`} />
+              </button>
+            ) : null}
+            {selected ? (
+              <button
+                type="button"
+                className="chat-view-header-expand"
+                title="关闭 (Esc)"
+                aria-label="关闭"
+                onClick={() => setDetailId(null)}
+              >
+                <XMarkIcon aria-hidden className="size-4" />
+              </button>
+            ) : null}
+          </div>
+        </header>
+        <div className={`tasks-main fsdb-main${selected ? ' hidden' : ''}`} aria-hidden={Boolean(selected)}>
         {!viewsOpen ? (
           <div className="fsdb-collection-head is-inline">
             <div className="fsdb-collection-name">{title}</div>
@@ -1930,11 +1994,6 @@ export function CollectionBrowser({
       {selected && schema ? (
         <div className="fsdb-detail-stage">
           <div className="fsdb-detail-screen" role="main" aria-label="记录详情">
-            <header className="fsdb-detail-head">
-              <div className="fsdb-detail-head-actions">
-                <RecordActions row={selected} place="detail" />
-              </div>
-            </header>
             {detailTab !== 'overview' && chrome?.panes?.some((pane) => pane.id === detailTab) ? (
               (() => {
                 const pane = chrome.panes.find((item) => item.id === detailTab)
@@ -2048,86 +2107,9 @@ export function CollectionBrowser({
             </div>
             )}
           </div>
-          <nav className="app-activity-bar fsdb-detail-rail" aria-label="详情导航">
-            <div className="app-activity-list">
-              <button
-                type="button"
-                className={`app-activity-item${detailTab === 'overview' ? ' is-active' : ''}`}
-                title="概况"
-                aria-label="概况"
-                aria-current={detailTab === 'overview' ? 'page' : undefined}
-                onClick={() => setDetailTab('overview')}
-              >
-                <span className="app-activity-indicator" aria-hidden />
-                <DetailPaneGlyph id="overview" />
-              </button>
-              {(chrome?.panes ?? []).map((pane) => {
-                const badge = pane.badge?.(selected)
-                return (
-                  <button
-                    key={pane.id}
-                    type="button"
-                    className={`app-activity-item${detailTab === pane.id ? ' is-active' : ''}`}
-                    title={pane.label}
-                    aria-label={pane.label}
-                    aria-current={detailTab === pane.id ? 'page' : undefined}
-                    onClick={() => setDetailTab(pane.id)}
-                  >
-                    <span className="app-activity-indicator" aria-hidden />
-                    <DetailPaneGlyph id={pane.id} />
-                    {badge != null && badge !== '' ? (
-                      <span className="app-activity-badge" aria-hidden>
-                        {badge}
-                      </span>
-                    ) : null}
-                  </button>
-                )
-              })}
-            </div>
-            <div className="app-activity-footer">
-              <button
-                type="button"
-                className="app-activity-item"
-                title="上一条"
-                aria-label="上一条"
-                disabled={visible.length < 2}
-                onClick={() => {
-                  const ids = visible.map((item) => item.id)
-                  const idx = ids.indexOf(selected.id)
-                  if (idx < 0) return
-                  setDetailId(ids[(idx - 1 + ids.length) % ids.length]!)
-                }}
-              >
-                <ChevronLeftIcon aria-hidden className="size-4" />
-              </button>
-              <button
-                type="button"
-                className="app-activity-item"
-                title="下一条"
-                aria-label="下一条"
-                disabled={visible.length < 2}
-                onClick={() => {
-                  const ids = visible.map((item) => item.id)
-                  const idx = ids.indexOf(selected.id)
-                  if (idx < 0) return
-                  setDetailId(ids[(idx + 1) % ids.length]!)
-                }}
-              >
-                <ChevronRightIcon aria-hidden className="size-4" />
-              </button>
-              <button
-                type="button"
-                className="app-activity-item"
-                title="关闭 (Esc)"
-                aria-label="关闭"
-                onClick={() => setDetailId(null)}
-              >
-                <XMarkIcon aria-hidden className="size-4" />
-              </button>
-            </div>
-          </nav>
         </div>
       ) : null}
+      </div>
       {dlg?.kind === 'rename' ? (
         <AppDialog
           key={dlg.view.id}
@@ -2174,6 +2156,8 @@ if (typeof document !== 'undefined') {
   style.id = id
   style.textContent = `
 .fsdb-page{display:flex;min-width:0;min-height:0;flex:1;flex-direction:row;overflow:hidden;background:var(--dsw-bg);color:var(--dsw-label);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,sans-serif,"Apple Color Emoji","Segoe UI Emoji";font-size:14px;letter-spacing:-.011em}
+.fsdb-right{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
+.fsdb-right .chat-view-header{flex:none}
 .fsdb-views{display:flex;width:280px;flex:none;flex-direction:column;min-height:0;overflow:hidden}
 .fsdb-nav-chevron{flex:none;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
 .fsdb-nav-chevron:hover{background:var(--dsw-hover);color:var(--dsw-label)}

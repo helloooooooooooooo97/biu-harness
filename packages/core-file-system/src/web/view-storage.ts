@@ -49,8 +49,30 @@ export function loadStarredViews(): StarredView[] {
   }
 }
 
+let starredViews = loadStarredViews()
+let starredVersion = 0
+const starredListeners = new Set<() => void>()
+
+export function getStarredViews() {
+  return starredViews
+}
+
+export function subscribeStarredViews(fn: () => void) {
+  starredListeners.add(fn)
+  return () => {
+    starredListeners.delete(fn)
+  }
+}
+
+export function getStarredViewsVersion() {
+  return starredVersion
+}
+
 export function persistStarredViews(items: StarredView[]) {
+  starredViews = items
+  starredVersion += 1
   localStorage.setItem(STARRED_VIEWS_KEY, JSON.stringify(items))
+  for (const fn of starredListeners) fn()
 }
 
 export function pushSavedViews(collectionPath: string, views: SavedView[]) {

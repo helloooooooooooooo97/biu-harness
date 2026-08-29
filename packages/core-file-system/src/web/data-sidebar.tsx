@@ -38,10 +38,12 @@ import {
 } from './sidebar-preview.ts'
 import {
   activeViewStorageKey,
+  getStarredViews,
+  getStarredViewsVersion,
   isViewStarred,
-  loadStarredViews,
   loadViews,
   persistStarredViews,
+  subscribeStarredViews,
   toggleStarredView,
 } from './view-storage.ts'
 
@@ -321,7 +323,8 @@ export const DataSidebar = memo(function DataSidebar({
     [collectionPath, tables, title],
   )
   const [openTables, setOpenTables] = useState<Record<string, boolean>>(() => ({ [collectionPath]: true }))
-  const [starredViews, setStarredViews] = useState(loadStarredViews)
+  useSyncExternalStore(subscribeStarredViews, getStarredViewsVersion, () => 0)
+  const starredViews = getStarredViews()
   const [favOpen, setFavOpen] = useState(() => {
     try {
       return localStorage.getItem('fsdb.favOpen') !== '0'
@@ -375,11 +378,7 @@ export const DataSidebar = memo(function DataSidebar({
   }, [countJobKey, countJobs])
 
   function toggleStar(path: string, viewId: string) {
-    setStarredViews((prev) => {
-      const next = toggleStarredView(prev, path, viewId)
-      persistStarredViews(next)
-      return next
-    })
+    persistStarredViews(toggleStarredView(getStarredViews(), path, viewId))
   }
 
   function openView(path: string, viewId: string) {
