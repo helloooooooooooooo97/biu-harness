@@ -40,7 +40,7 @@ test('page plugin registers every field type on /pages without a web module', as
   for (const type of FIELD_TYPES) assert.equal(types.has(type), true, type)
   const listed = await registered[0]!.list()
   assert.equal(listed.length, page.ROW_COUNT)
-  assert.equal(listed[0]?.cover, 'https://picsum.photos/seed/p000/320/180')
+  assert.equal(String(listed[0]?.cover).startsWith('data:image/svg+xml'), true)
   const written = await registered[0]!.write!('p000', { enabled: false })
   assert.equal(written.enabled, false)
   assert.equal(written.score, listed[0]?.score)

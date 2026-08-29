@@ -349,13 +349,12 @@ function PluginModuleStage({
       {sorted.map((entry) => {
         const extra = entry.props?.() ?? {}
         const moduleId = String(extra.moduleId ?? extra.id ?? entry.id)
-        const show = moduleId === activeId
+        if (moduleId !== activeId) return null
         const Component = entry.Component
         return (
           <div
             key={entry.id}
-            className={show ? 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden' : 'hidden'}
-            aria-hidden={!show}
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             data-testid={`${moduleId}-module`}
           >
             <Component {...extra} renderSlot={renderSlot} />

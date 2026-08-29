@@ -11,6 +11,7 @@ import { DATABASE_CHANNEL, type CollectionInfo, type CollectionView } from '@biu
 import type { CollectionChrome, DatabaseUi } from '@biu/type-file-system/ui'
 import { CollectionBrowser } from './browser.tsx'
 import { DatabaseUiService } from './database-ui.ts'
+import { bootLoadCollections } from './nav-boot.ts'
 
 type SlotsService = {
   place: (slot: string, view: unknown, opts: { key: string; order?: number; props?: () => Record<string, unknown> }) => { dispose?: () => unknown }
@@ -135,13 +136,9 @@ export function apply(ctx: Context) {
   const appModules = ctx.get('appModules') as AppModulesService
   const mounted = new Map<string, () => void>()
 
-  const sync = async () => {
-    let rows: CollectionInfo[] = []
-    try {
-      rows = await loadCollections()
-    } catch {
-      return
-    }
+  slots.place('root-overlays', RegisterErrorBanner, { key: 'fsdb-nav-errors', order: 80 })
+  let stopped = false
+  const runSync = async (rows: CollectionInfo[]) => {
     const views = rows.filter((row) => row.view?.moduleId && row.view.route)
     const live = new Set(views.map((row) => row.view!.moduleId))
     for (const [id, dispose] of mounted) {
@@ -196,20 +193,37 @@ export function apply(ctx: Context) {
     setNavErrors(errors)
   }
 
-  slots.place('root-overlays', RegisterErrorBanner, { key: 'fsdb-nav-errors', order: 80 })
-  void sync()
+  const sync = async () => {
+    let rows: CollectionInfo[] = []
+    try {
+      rows = await loadCollections()
+    } catch {
+      return
+    }
+    await runSync(rows)
+  }
+
   ctx.effect(() => () => {
+    stopped = true
     for (const dispose of mounted.values()) dispose()
     mounted.clear()
     setNavErrors([])
   })
   ctx.inject(['snapshot'], (inner) => {
     const snapshot = inner.get('snapshot') as SnapshotService
+    let debounce = 0
     const off = snapshot.onMessage(DATABASE_CHANNEL, () => {
       window.dispatchEvent(new Event('fsdb:change'))
-      void sync()
+      window.clearTimeout(debounce)
+      debounce = window.setTimeout(() => void sync(), 40)
     })
-    return off
+    return () => {
+      window.clearTimeout(debounce)
+      off()
+    }
+  })
+  void bootLoadCollections(loadCollections, { stopped: () => stopped }).then((rows) => {
+    if (!stopped) return runSync(rows)
   })
 }
 

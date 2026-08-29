@@ -52,7 +52,9 @@ export function flattenTree(rows: DbRecord[], parentKey: string, collapsed: Reco
     const raw = String(row[parentKey] ?? '')
     const parent = raw && raw !== row.id && ids.has(raw) ? raw : ''
     if (parent) hasKids.add(parent)
-    children.set(parent, [...(children.get(parent) ?? []), row])
+    const bucket = children.get(parent)
+    if (bucket) bucket.push(row)
+    else children.set(parent, [row])
   }
   const out: TreeRow[] = []
   const seen = new Set<string>()
