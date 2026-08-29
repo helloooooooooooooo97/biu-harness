@@ -34,6 +34,7 @@ import {
   Square2StackIcon,
   Squares2X2Icon,
   StopIcon,
+  StarIcon,
   TableCellsIcon,
   TrashIcon,
   ViewColumnsIcon,
@@ -196,6 +197,22 @@ function loadViews(collectionPath: string): SavedView[] {
   } catch {
     return []
   }
+}
+
+const STARRED_TABLES_KEY = 'fsdb.starredTables'
+
+function loadStarredTables(): string[] {
+  try {
+    const raw = localStorage.getItem(STARRED_TABLES_KEY)
+    const parsed = raw ? (JSON.parse(raw) as unknown) : []
+    return Array.isArray(parsed) ? parsed.map((item) => String(item)).filter(Boolean) : []
+  } catch {
+    return []
+  }
+}
+
+function persistStarredTables(paths: string[]) {
+  localStorage.setItem(STARRED_TABLES_KEY, JSON.stringify(paths))
 }
 
 function isListColumn(key: string) {
@@ -530,6 +547,14 @@ export function CollectionBrowser({
     }
   })
   const [openTables, setOpenTables] = useState<Record<string, boolean>>(() => ({ [collectionPath]: true }))
+  const [starredTables, setStarredTables] = useState<string[]>(() => loadStarredTables())
+  const [favOpen, setFavOpen] = useState(() => {
+    try {
+      return localStorage.getItem('fsdb.favOpen') !== '0'
+    } catch {
+      return true
+    }
+  })
   const [viewMenuOpen, setViewMenuOpen] = useState(false)
   const [modeMenuOpen, setModeMenuOpen] = useState(false)
   const [sortMenuOpen, setSortMenuOpen] = useState(false)
@@ -1342,6 +1367,22 @@ export function CollectionBrowser({
 
   viewsRef.current = views
 
+  const listedTables = tables.length ? tables : [{ path: collectionPath, label: title, view: { title } } as CollectionInfo]
+  const starredRows = listedTables.filter((table) => starredTables.includes(table.path))
+
+  function toggleStar(path: string) {
+    setStarredTables((prev) => {
+      const next = prev.includes(path) ? prev.filter((item) => item !== path) : [...prev, path]
+      persistStarredTables(next)
+      return next
+    })
+  }
+
+  function openTable(path: string) {
+    setOpenTables((prev) => ({ ...prev, [path]: true }))
+    onOpenTable?.(path)
+  }
+
   useEffect(() => {
     if (!schema || !collectionPath) {
       hydratePath.current = ''
@@ -1451,14 +1492,80 @@ export function CollectionBrowser({
             </button>
           </div>
           <section className="mt-2 min-w-0">
+            {starredRows.length ? (
+              <>
+                <div className="sidebar-section-head min-w-0">
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                    aria-expanded={favOpen}
+                    onClick={() => {
+                      const next = !favOpen
+                      setFavOpen(next)
+                      try {
+                        localStorage.setItem('fsdb.favOpen', next ? '1' : '0')
+                      } catch {
+                        /* ignore */
+                      }
+                    }}
+                  >
+                    <span className="min-w-0 flex-1 truncate text-[14px] font-bold tracking-normal">收藏</span>
+                  </button>
+                  <span className="sidebar-chat-count">
+                    <span className="sidebar-chat-count-num">{starredRows.length}</span>
+                  </span>
+                </div>
+                {favOpen ? (
+                  <div className="sidebar-session-list mb-2">
+                    {starredRows.map((table) => {
+                      const name = table.view?.title ?? table.label
+                      return (
+                        <div
+                          key={`star:${table.path}`}
+                          className={`chat-session-row group${table.path === collectionPath ? ' is-active' : ''} is-pinned`}
+                        >
+                          <button
+                            type="button"
+                            className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
+                            onClick={() => openTable(table.path)}
+                          >
+                            <span className="grid size-6 shrink-0 place-items-center">
+                              <TableGlyph icon={table.view?.icon} />
+                            </span>
+                            <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="chat-session-row-star is-on"
+                            aria-pressed
+                            aria-label={`取消收藏 ${name}`}
+                            title="取消收藏"
+                            onClick={() => toggleStar(table.path)}
+                          >
+                            <StarIcon className="size-4 text-[#f5b700]" />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+            <div className="sidebar-section-head min-w-0">
+              <span className="min-w-0 flex-1 truncate text-[14px] font-bold tracking-normal">数据</span>
+              <span className="sidebar-chat-count">
+                <span className="sidebar-chat-count-num">{listedTables.length}</span>
+              </span>
+            </div>
             <div className="sidebar-session-list">
-              {(tables.length ? tables : [{ path: collectionPath, label: title, view: { title } } as CollectionInfo]).map((table) => {
+              {listedTables.map((table) => {
                 const name = table.view?.title ?? table.label
                 const open = openTables[table.path] ?? table.path === collectionPath
                 const listed = table.path === collectionPath ? views : loadViews(table.path)
+                const starred = starredTables.includes(table.path)
                 return (
                   <div key={table.path}>
-                    <div className={`chat-session-row${table.path === collectionPath ? ' is-active' : ''}`}>
+                    <div className={`chat-session-row group${table.path === collectionPath ? ' is-active' : ''}${starred ? ' is-pinned' : ''}`}>
                       <button
                         type="button"
                         className="fsdb-nav-chevron"
@@ -1471,10 +1578,7 @@ export function CollectionBrowser({
                       <button
                         type="button"
                         className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
-                        onClick={() => {
-                          setOpenTables((prev) => ({ ...prev, [table.path]: true }))
-                          onOpenTable?.(table.path)
-                        }}
+                        onClick={() => openTable(table.path)}
                       >
                         <span className="grid size-6 shrink-0 place-items-center">
                           <TableGlyph icon={table.view?.icon} />
@@ -1484,6 +1588,16 @@ export function CollectionBrowser({
                       <span className="sidebar-chat-count" title="视图数量">
                         <span className="sidebar-chat-count-num">{listed.length}</span>
                       </span>
+                      <button
+                        type="button"
+                        className={`chat-session-row-star${starred ? ' is-on' : ''}`}
+                        aria-pressed={starred}
+                        aria-label={starred ? `取消收藏 ${name}` : `收藏 ${name}`}
+                        title={starred ? '取消收藏' : '收藏'}
+                        onClick={() => toggleStar(table.path)}
+                      >
+                        <StarIcon className={`size-4${starred ? ' text-[#f5b700]' : ''}`} />
+                      </button>
                     </div>
                     {open
                       ? listed.map((view) => (
@@ -1501,7 +1615,7 @@ export function CollectionBrowser({
                                   } catch {
                                     /* ignore */
                                   }
-                                  onOpenTable?.(table.path)
+                                  openTable(table.path)
                                   return
                                 }
                                 applyView(view)
