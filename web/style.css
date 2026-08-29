@@ -923,7 +923,8 @@ body {
   padding-left: 0;
 }
 
-.sidebar-session-list .chat-session-row>a {
+.sidebar-session-list .chat-session-row>a,
+.sidebar-session-list .chat-session-row>.chat-session-row-main {
   padding-left: 11px;
 }
 

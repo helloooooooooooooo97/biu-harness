@@ -2,6 +2,7 @@ import { memo, useId, useState } from 'react'
 import {
   BoltIcon,
   ChatBubbleLeftRightIcon,
+  ChevronDownIcon,
   ChevronRightIcon,
   ClipboardDocumentListIcon,
   PencilSquareIcon,
@@ -41,6 +42,16 @@ function SidebarBrandMascot({ className }: { className?: string }) {
         d="M0.27 170.27C0.27 94.06 51.31 32.27 114.27 32.27C177.23 32.27 228.27 94.06 228.27 170.27L228.27 170.27C228.27 196.27 228.27 196.27 202.27 196.27L26.27 196.27C0.27 196.27 0.27 196.27 0.27 170.27Z"
         fill={`url(#${uid})`}
       />
+      <g transform="translate(114.2705 118.2705) scale(1.003 0.68) translate(-114.2705 -114.2705)">
+        <path
+          d="M39.78 104.3L42.64 105.01L45.03 106.74L46.73 109.15L47.75 111.93L48.35 114.83L48.81 117.76L49.31 120.68L49.87 123.6L50.48 126.5L51.15 129.39L51.86 132.27L52.63 135.13L53.44 137.98L54.3 140.82L55.19 143.65L56.13 146.46L57.1 149.26L58.1 152.05L58.86 154.92L58.96 157.87L58.18 160.72L56.43 163.09L53.84 164.48L50.9 164.62L48.08 163.75L45.58 162.16L43.51 160.05L41.89 157.57L40.67 154.87L39.67 152.08L38.73 149.26L37.81 146.44L36.94 143.61L36.11 140.76L35.34 137.9L34.61 135.03L33.92 132.14L33.28 129.24L32.7 126.34L32.16 123.42L31.67 120.5L31.23 117.57L31.14 114.61L31.65 111.69L32.74 108.94L34.47 106.54L36.89 104.86Z"
+          fill="#fff"
+        />
+        <path
+          d="M108.97 125.73L111.9 126.2L114.63 127.37L117 129.16L118.84 131.49L119.99 134.23L120.32 137.18L119.85 140.11L118.59 142.8L116.78 145.16L114.84 147.42L112.89 149.67L110.93 151.92L108.97 154.16L107.01 156.39L105.03 158.62L103.05 160.85L101.07 163.06L99.07 165.28L97.09 167.5L95.09 169.71L93.05 171.88L90.69 173.67L87.89 174.66L84.93 174.81L82.02 174.22L79.31 173L76.92 171.24L74.99 168.98L73.7 166.3L73.26 163.37L73.74 160.45L75.2 157.86L77.17 155.63L79.18 153.43L81.18 151.23L83.17 149.02L85.16 146.8L87.14 144.58L89.11 142.35L91.08 140.11L93.04 137.87L95 135.63L96.95 133.38L98.89 131.12L100.87 128.89L103.25 127.12L106.02 126.04Z"
+          fill="#fff"
+        />
+      </g>
     </svg>
   )
 }
@@ -53,6 +64,14 @@ function TableGlyph({ icon }: { icon?: string }) {
   if (name === 'chat-bubble' || name === 'chat-bubble-left-right') return <ChatBubbleLeftRightIcon aria-hidden className={cls} />
   if (name === 'bolt') return <BoltIcon aria-hidden className={cls} />
   return <TableCellsIcon aria-hidden className={cls} />
+}
+
+function ChatCount({ count }: { count: number }) {
+  return (
+    <span className="sidebar-chat-count">
+      <span className="sidebar-chat-count-num">{count}</span>
+    </span>
+  )
 }
 
 export const DataSidebar = memo(function DataSidebar({
@@ -90,6 +109,7 @@ export const DataSidebar = memo(function DataSidebar({
       return true
     }
   })
+  const [dataOpen, setDataOpen] = useState(true)
 
   function viewsFor(path: string) {
     return path === collectionPath ? views : loadViews(path)
@@ -110,24 +130,20 @@ export const DataSidebar = memo(function DataSidebar({
     })
   }
 
-  function openTable(path: string) {
-    setOpenTables((prev) => ({ ...prev, [path]: true }))
-    onOpenTable?.(path)
-  }
-
   function openView(path: string, viewId: string) {
     try {
       localStorage.setItem(activeViewStorageKey(path), viewId)
     } catch {
       /* ignore */
     }
+    setOpenTables((prev) => ({ ...prev, [path]: true }))
     const listed = viewsFor(path)
     const view = listed.find((item) => item.id === viewId)
-    if (path === collectionPath && view) {
-      onApplyView(view)
+    if (path !== collectionPath) {
+      onOpenTable?.(path)
       return
     }
-    openTable(path)
+    if (view) onApplyView(view)
   }
 
   return (
@@ -146,9 +162,6 @@ export const DataSidebar = memo(function DataSidebar({
           </span>
         </span>
       </div>
-      <div className="fsdb-collection-head">
-        <div className="fsdb-collection-name">数据</div>
-      </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
         <div className="app-side-actions" role="navigation" aria-label="视图操作">
           <button type="button" className="app-side-actions-item" title="添加视图" onClick={onAddView}>
@@ -164,32 +177,33 @@ export const DataSidebar = memo(function DataSidebar({
             <span className="app-side-actions-label">拷贝视图</span>
           </button>
         </div>
-        <section className="mt-2 min-w-0">
+
+        <div className="mt-2 space-y-1.5">
           {starredRows.length ? (
-            <>
+            <section className="min-w-0">
               <div className="sidebar-section-head min-w-0">
-                <button
-                  type="button"
-                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                  aria-expanded={favOpen}
-                  onClick={() => {
-                    const next = !favOpen
-                    setFavOpen(next)
-                    try {
-                      localStorage.setItem('fsdb.favOpen', next ? '1' : '0')
-                    } catch {
-                      /* ignore */
-                    }
-                  }}
-                >
-                  <span className="min-w-0 flex-1 truncate text-[14px] font-bold tracking-normal">收藏</span>
-                </button>
-                <span className="sidebar-chat-count">
-                  <span className="sidebar-chat-count-num">{starredRows.length}</span>
-                </span>
+                <div className="flex min-h-8 min-w-0 flex-1 items-center">
+                  <button
+                    type="button"
+                    className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider"
+                    aria-expanded={favOpen}
+                    onClick={() => {
+                      const next = !favOpen
+                      setFavOpen(next)
+                      try {
+                        localStorage.setItem('fsdb.favOpen', next ? '1' : '0')
+                      } catch {
+                        /* ignore */
+                      }
+                    }}
+                  >
+                    <span className="min-w-0 flex-1 truncate tracking-normal">收藏</span>
+                  </button>
+                </div>
+                <ChatCount count={starredRows.length} />
               </div>
               {favOpen ? (
-                <div className="sidebar-session-list mb-2">
+                <div className="min-w-0 space-y-1.5 pt-0.5">
                   {starredRows.map(({ table, view }) => {
                     const tableName = table.view?.title ?? table.label
                     const active = table.path === collectionPath && view.id === activeViewId
@@ -200,14 +214,14 @@ export const DataSidebar = memo(function DataSidebar({
                       >
                         <button
                           type="button"
-                          className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
+                          className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
                           onClick={() => openView(table.path, view.id)}
                         >
                           <span className="grid size-6 shrink-0 place-items-center">
                             <TableGlyph icon={table.view?.icon} />
                           </span>
                           <span className="min-w-0 flex-1 truncate font-medium">{view.name}</span>
-                          <span className="shrink-0 text-[11px] opacity-70">{tableName}</span>
+                          <span className="shrink-0 text-[11px] leading-3.75 opacity-70">{tableName}</span>
                         </button>
                         <button
                           type="button"
@@ -217,108 +231,131 @@ export const DataSidebar = memo(function DataSidebar({
                           title="取消收藏"
                           onClick={() => toggleStar(table.path, view.id)}
                         >
-                          <StarIcon className="size-4 text-[#f5b700]" />
+                          <StarIcon className="size-4 shrink-0 text-[#f5b700]" />
                         </button>
                       </div>
                     )
                   })}
                 </div>
               ) : null}
-            </>
+            </section>
           ) : null}
-          <div className="sidebar-section-head min-w-0">
-            <span className="min-w-0 flex-1 truncate text-[14px] font-bold tracking-normal">数据</span>
-            <span className="sidebar-chat-count">
-              <span className="sidebar-chat-count-num">{listedTables.length}</span>
-            </span>
-          </div>
-          <div className="sidebar-session-list">
-            {listedTables.map((table) => {
-              const name = table.view?.title ?? table.label
-              const open = openTables[table.path] ?? table.path === collectionPath
-              const listed = viewsFor(table.path)
-              return (
-                <div key={table.path}>
-                  <div className={`chat-session-row group${table.path === collectionPath ? ' is-active' : ''}`}>
-                    <button
-                      type="button"
-                      className="fsdb-nav-chevron"
-                      aria-expanded={open}
-                      aria-label={open ? `折叠 ${name}` : `展开 ${name}`}
-                      onClick={() => setOpenTables((prev) => ({ ...prev, [table.path]: !open }))}
-                    >
-                      <ChevronRightIcon className={`size-4${open ? ' rotate-90' : ''}`} />
-                    </button>
-                    <button
-                      type="button"
-                      className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
-                      onClick={() => openTable(table.path)}
-                    >
-                      <span className="grid size-6 shrink-0 place-items-center">
-                        <TableGlyph icon={table.view?.icon} />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
-                    </button>
-                    <span className="sidebar-chat-count" title="视图数量">
-                      <span className="sidebar-chat-count-num">{listed.length}</span>
-                    </span>
-                  </div>
-                    {open
-                      ? listed.map((view) => {
-                          const starred = isViewStarred(starredViews, table.path, view.id)
-                          return (
+
+          <section className="min-w-0">
+            <div className="sidebar-section-head min-w-0">
+              <div className="flex min-h-8 min-w-0 flex-1 items-center">
+                <button
+                  type="button"
+                  className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider"
+                  aria-expanded={dataOpen}
+                  onClick={() => setDataOpen((prev) => !prev)}
+                >
+                  <span className="min-w-0 flex-1 truncate tracking-normal">数据</span>
+                </button>
+              </div>
+              <ChatCount count={listedTables.length} />
+            </div>
+            {dataOpen ? (
+              <div className="min-w-0 space-y-1.5 pt-0.5">
+                {listedTables.map((table) => {
+                  const name = table.view?.title ?? table.label
+                  const open = openTables[table.path] ?? false
+                  const listed = viewsFor(table.path)
+                  return (
+                    <div key={table.path} className="min-w-0">
+                      <div className="sidebar-group-head mb-0.5">
                         <div
-                          key={view.id}
-                          className={`chat-session-row group${table.path === collectionPath && view.id === activeViewId ? ' is-active' : ''}${starred ? ' is-pinned' : ''}`}
+                          role="button"
+                          tabIndex={0}
+                          className="flex min-h-8 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md text-left text-[14px] font-medium tracking-normal text-inherit outline-none hover:text-(--dsw-sidebar-fg-active) focus-visible:ring-1 focus-visible:ring-(--dsw-border)"
+                          title={name}
+                          aria-expanded={open}
+                          onClick={() => {
+                            setOpenTables((prev) => ({ ...prev, [table.path]: !open }))
+                            if (!listed.length) onOpenTable?.(table.path)
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              setOpenTables((prev) => ({ ...prev, [table.path]: !open }))
+                            }
+                          }}
                         >
-                          <button
-                            type="button"
-                            className="flex min-w-0 flex-1 items-center gap-1.5 py-1 pl-7 text-left text-[14px] leading-5"
-                            onClick={() => openView(table.path, view.id)}
-                          >
-                            <span className="min-w-0 flex-1 truncate font-medium">{view.name}</span>
-                          </button>
-                          <button
-                            type="button"
-                            className={`chat-session-row-star${starred ? ' is-on' : ''}`}
-                            aria-pressed={starred}
-                            aria-label={starred ? `取消收藏 ${view.name}` : `收藏 ${view.name}`}
-                            title={starred ? '取消收藏' : '收藏'}
-                            onClick={() => toggleStar(table.path, view.id)}
-                          >
-                            <StarIcon className={`size-4${starred ? ' text-[#f5b700]' : ''}`} />
-                          </button>
-                          {table.path === collectionPath ? (
-                            <>
-                              <button
-                                type="button"
-                                className="chat-session-row-delete"
-                                title="重命名"
-                                aria-label={`重命名 ${view.name}`}
-                                onClick={() => onRenameView(view)}
-                              >
-                                <PencilSquareIcon className="size-4 shrink-0" />
-                              </button>
-                              <button
-                                type="button"
-                                className="chat-session-row-delete"
-                                title="删除"
-                                aria-label={`删除 ${view.name}`}
-                                onClick={() => onDeleteView(view)}
-                              >
-                                <TrashIcon className="size-4 shrink-0" />
-                              </button>
-                            </>
-                          ) : null}
+                          <span className="sidebar-rail-icon sidebar-group-fold" aria-hidden>
+                            <span className="sidebar-group-fold-face">
+                              <TableGlyph icon={table.view?.icon} />
+                            </span>
+                            <span className="sidebar-group-fold-chevron">
+                              {open ? (
+                                <ChevronDownIcon className="size-4 shrink-0 opacity-80" />
+                              ) : (
+                                <ChevronRightIcon className="size-4 shrink-0 opacity-80" />
+                              )}
+                            </span>
+                          </span>
+                          <span className="min-w-0 flex-1 truncate">{name}</span>
                         </div>
+                        <ChatCount count={listed.length} />
+                      </div>
+                      <div className={`sidebar-session-list min-w-0 ${open ? '' : 'hidden'}`} aria-hidden={!open}>
+                        {listed.map((view) => {
+                          const starred = isViewStarred(starredViews, table.path, view.id)
+                          const active = table.path === collectionPath && view.id === activeViewId
+                          return (
+                            <div
+                              key={view.id}
+                              className={`chat-session-row group${active ? ' is-active' : ''}${starred ? ' is-pinned' : ''}`}
+                            >
+                              <button
+                                type="button"
+                                className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
+                                onClick={() => openView(table.path, view.id)}
+                              >
+                                <span className="min-w-0 flex-1 truncate font-medium">{view.name}</span>
+                              </button>
+                              {table.path === collectionPath ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="chat-session-row-delete"
+                                    title="重命名"
+                                    aria-label={`重命名 ${view.name}`}
+                                    onClick={() => onRenameView(view)}
+                                  >
+                                    <PencilSquareIcon className="size-4 shrink-0" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="chat-session-row-delete"
+                                    title="删除"
+                                    aria-label={`删除 ${view.name}`}
+                                    onClick={() => onDeleteView(view)}
+                                  >
+                                    <TrashIcon className="size-4 shrink-0" />
+                                  </button>
+                                </>
+                              ) : null}
+                              <button
+                                type="button"
+                                className={`chat-session-row-star${starred ? ' is-on' : ''}`}
+                                aria-pressed={starred}
+                                aria-label={starred ? `取消收藏 ${view.name}` : `收藏 ${view.name}`}
+                                title={starred ? '取消收藏' : '收藏'}
+                                onClick={() => toggleStar(table.path, view.id)}
+                              >
+                                <StarIcon className={`size-4 shrink-0${starred ? ' text-[#f5b700]' : ''}`} />
+                              </button>
+                            </div>
                           )
-                        })
-                      : null}
-                </div>
-              )
-            })}
-          </div>
-        </section>
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : null}
+          </section>
+        </div>
       </div>
     </aside>
   )
