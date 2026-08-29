@@ -430,6 +430,9 @@ export function CollectionBrowser({
   chrome,
   tables = [],
   onOpenTable,
+  focusRecordId = null,
+  onFocusRecordConsumed,
+  onRequestRecord,
 }: {
   moduleId?: string
   collectionPath: string
@@ -438,6 +441,9 @@ export function CollectionBrowser({
   chrome?: CollectionChrome
   tables?: CollectionInfo[]
   onOpenTable?: (path: string) => void
+  focusRecordId?: string | null
+  onFocusRecordConsumed?: () => void
+  onRequestRecord?: (recordId: string) => void
 }) {
   const [stat, setStat] = useState<StatResult | null>(null)
   const [items, setItems] = useState<Array<DbRecord & { path?: string }>>([])
@@ -803,6 +809,12 @@ export function CollectionBrowser({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [detailId])
+
+  useEffect(() => {
+    if (!focusRecordId) return
+    setDetailId(focusRecordId)
+    onFocusRecordConsumed?.()
+  }, [focusRecordId, onFocusRecordConsumed])
 
   useEffect(() => {
     setDetailTab('overview')
@@ -1393,6 +1405,14 @@ export function CollectionBrowser({
           onDeleteView={deleteView}
           onAddView={addEmptyView}
           onCopyView={copyView}
+          onOpenRecord={(path, view, recordId) => {
+            if (path === collectionPath) {
+              applyView(view)
+              setDetailId(recordId)
+              return
+            }
+            onRequestRecord?.(recordId)
+          }}
         />
       ) : null}
       <div className="tasks-main fsdb-main">

@@ -65,6 +65,7 @@ const EMPTY_CHROME: CollectionChrome = {}
 function CollectionPage(props: SlotProps) {
   const tables = (props.tables as CollectionInfo[] | undefined) ?? []
   const [path, setPath] = useState(() => tables[0]?.path ?? '')
+  const [focusRecordId, setFocusRecordId] = useState<string | null>(null)
   useEffect(() => {
     if (!tables.length) return
     if (tables.some((row) => row.path === path)) return
@@ -91,6 +92,9 @@ function CollectionPage(props: SlotProps) {
       chrome={chrome}
       tables={tables}
       onOpenTable={setPath}
+      focusRecordId={focusRecordId}
+      onFocusRecordConsumed={() => setFocusRecordId(null)}
+      onRequestRecord={setFocusRecordId}
     />
   )
 }

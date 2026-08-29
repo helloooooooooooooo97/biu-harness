@@ -918,6 +918,64 @@ body {
   display: grid;
 }
 
+.chat-session-row:hover .sidebar-group-fold-face,
+.chat-session-row:focus-within .sidebar-group-fold-face {
+  display: none;
+}
+
+.chat-session-row:hover .sidebar-group-fold-chevron,
+.chat-session-row:focus-within .sidebar-group-fold-chevron {
+  display: grid;
+}
+
+.fsdb-view-preview {
+  max-height: 256px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 0 6px 22px;
+}
+
+.fsdb-view-preview-row {
+  display: flex;
+  width: 100%;
+  min-height: 28px;
+  align-items: center;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-sidebar-fg);
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fsdb-view-preview-row:hover {
+  background: var(--dsw-hover);
+  color: var(--dsw-sidebar-fg-active);
+}
+
+.fsdb-view-preview-hint,
+.fsdb-view-preview-more {
+  display: block;
+  width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-label-3);
+  font-size: 12px;
+  text-align: left;
+}
+
+.fsdb-view-preview-more {
+  cursor: pointer;
+}
+
+.fsdb-view-preview-more:hover {
+  color: var(--dsw-sidebar-fg-active);
+}
+
 /* 不推整行背景，只给会话内容加约 2/3 图标宽的左内边距 */
 .sidebar-session-list {
   padding-left: 0;
