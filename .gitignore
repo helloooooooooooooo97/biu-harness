@@ -5,6 +5,8 @@ dist/
 .plugin-dev/*
 !.plugin-dev/store-heavy-ping/
 !.plugin-dev/store-heavy-ping/**
+!.plugin-dev/task-tier-router/
+!.plugin-dev/task-tier-router/**
 .workspace/
 *.log
 .DS_Store

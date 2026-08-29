@@ -1,0 +1,13 @@
+{
+  "id": "task-tier-router",
+  "name": "分层任务编排",
+  "blurb": "三级 workflow：Claude 规划 → GPT 统筹 → Kimi/DeepSeek 并行执行 → GPT 验收与整合，各层跑各自模型。",
+  "tags": [
+    "workflow",
+    "agent",
+    "tool"
+  ],
+  "author": "Biu",
+  "authorUrl": "",
+  "createdAt": 1787948034795
+}
