@@ -7,7 +7,7 @@ const STATUS = ['draft', 'live', 'archived'] as const
 const COLORS = ['red', 'orange', 'yellow', 'green', 'blue'] as const
 
 function seedCover(color: (typeof COLORS)[number]) {
-  return `/page-covers/${color}.svg`
+  return `/page-covers/${color}.png`
 }
 
 type PageRow = DbRecord & {

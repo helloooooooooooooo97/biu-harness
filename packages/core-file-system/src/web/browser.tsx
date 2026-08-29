@@ -459,7 +459,7 @@ function FieldEditor({
       <LocalText
         className="fsdb-plain-input"
         value={value}
-        placeholder={kind === 'image' ? 'https://…、/cover.svg 或 data:image' : 'https://'}
+        placeholder={kind === 'image' ? 'https://…、/cover.png 或 data:image' : 'https://'}
         onCommit={onChange}
       />
     )
