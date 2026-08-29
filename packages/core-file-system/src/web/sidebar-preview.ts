@@ -13,6 +13,16 @@ export function previewCacheKey(path: string, view: Pick<SavedView, 'id' | 'sort
   return `${path}\0${view.id}\0${view.sortField}\0${view.sortDir}\0${JSON.stringify(view.filters ?? {})}\0${view.query ?? ''}`
 }
 
+export function normalizeRecordEmoji(value: unknown) {
+  const text = String(value ?? '').trim()
+  if (!text) return ''
+  return [...text].slice(0, 2).join('')
+}
+
+export function recordPreviewEmoji(row: DbRecord) {
+  return normalizeRecordEmoji(row.emoji)
+}
+
 export function recordPreviewLabel(row: DbRecord, labelField?: string) {
   if (labelField) {
     const labeled = row[labelField]
@@ -82,6 +92,18 @@ export async function fetchViewTotal(
   const page = await fetchViewPreview(path, view, 0, 1)
   rememberPreviewTotal(key, page.total)
   return page.total
+}
+
+export async function writeRecordEmoji(path: string, recordId: string, emoji: string) {
+  const next = normalizeRecordEmoji(emoji)
+  const res = await fetch('/api/db/write', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ path: `${path}/${recordId}`, content: { emoji: next } }),
+  })
+  const body = (await res.json()) as { value?: DbRecord; error?: string }
+  if (!res.ok) throw new Error(body.error || res.statusText)
+  return normalizeRecordEmoji(body.value?.emoji ?? next)
 }
 
 export async function fetchViewPreview(

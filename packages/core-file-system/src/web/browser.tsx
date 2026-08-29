@@ -137,7 +137,7 @@ function viewForPath(collectionPath: string): SavedView | null {
 }
 
 function isListColumn(key: string) {
-  return key !== 'description' && key !== 'notes' && key !== 'content'
+  return key !== 'description' && key !== 'notes' && key !== 'content' && key !== 'emoji'
 }
 
 function toDatetimeLocal(value: unknown) {

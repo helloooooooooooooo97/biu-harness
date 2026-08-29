@@ -127,6 +127,7 @@ test('every collection schema includes id, title, createdAt and updatedAt', asyn
   assert.equal(stat.schema.fields.createdAt?.type, 'datetime')
   assert.equal(stat.schema.fields.updatedAt?.label, '更新时间')
   assert.equal(stat.schema.fields.content?.type, 'file')
+  assert.equal(stat.schema.fields.emoji?.writable, true)
   assert.equal(stat.schema.contentField, 'content')
   await assert.rejects(() => db.write('/notes/n1', { createdAt: Date.now() }), /not writable/)
   await assert.rejects(() => db.write('/notes/n1', { id: 'other' }), /not writable/)

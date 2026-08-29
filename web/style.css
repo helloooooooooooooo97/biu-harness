@@ -968,6 +968,78 @@ body {
   color: var(--dsw-sidebar-fg-active);
 }
 
+.fsdb-record-emoji {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.fsdb-emoji-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  width: 168px;
+  padding: 8px;
+  border: 1px solid var(--dsw-border);
+  border-radius: 10px;
+  background: var(--dsw-sidebar);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+}
+
+.fsdb-emoji-picker-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.fsdb-emoji-picker-item {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fsdb-emoji-picker-item:hover {
+  background: var(--dsw-hover);
+}
+
+.fsdb-emoji-picker-input {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--dsw-border);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+}
+
+.fsdb-emoji-picker-clear {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-label-3);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fsdb-emoji-picker-clear:hover {
+  color: var(--dsw-sidebar-fg-active);
+}
+
 /* 不推整行背景，只给会话内容加约 2/3 图标宽的左内边距 */
 .sidebar-session-list {
   padding-left: 0;

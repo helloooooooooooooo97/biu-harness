@@ -80,9 +80,10 @@ export const BUILTIN_FIELDS = {
   createdAt: { type: 'datetime', label: '创建时间' },
   updatedAt: { type: 'datetime', label: '更新时间' },
   content: { type: 'file', label: '内容' },
+  emoji: { type: 'string', label: '图标', writable: true },
 } as const satisfies Record<string, FieldSpec>
 
-export const BUILTIN_FIELD_KEYS = ['id', 'createdAt', 'updatedAt', 'content'] as const
+export const BUILTIN_FIELD_KEYS = ['id', 'createdAt', 'updatedAt', 'content', 'emoji'] as const
 
 export function withBuiltinFields(
   fields: Record<string, FieldSpec>,
@@ -94,6 +95,7 @@ export function withBuiltinFields(
   if (!next[labelField]) next[labelField] = { ...BUILTIN_FIELDS.title, label: labelField === 'title' ? '标题' : labelField }
   if (!next.createdAt) next.createdAt = BUILTIN_FIELDS.createdAt
   if (!next.updatedAt) next.updatedAt = BUILTIN_FIELDS.updatedAt
+  if (!next.emoji) next.emoji = BUILTIN_FIELDS.emoji
   if (contentField === 'content' && !next.content) next.content = BUILTIN_FIELDS.content
   const ordered: Record<string, FieldSpec> = {
     id: next.id,

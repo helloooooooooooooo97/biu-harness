@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   getPreviewTotal,
   nextPreviewLimit,
+  normalizeRecordEmoji,
   previewCacheKey,
   recordPreviewLabel,
   rememberPreviewTotal,
@@ -10,6 +11,12 @@ import {
   tableTotalKey,
   viewTotalKey,
 } from './sidebar-preview.ts'
+
+test('record emoji keeps a short grapheme and clears empty', () => {
+  assert.equal(normalizeRecordEmoji(' 🔥 '), '🔥')
+  assert.equal(normalizeRecordEmoji(''), '')
+  assert.equal(normalizeRecordEmoji('⭐🚀💥'), '⭐🚀')
+})
 
 test('record preview prefers label field then title', () => {
   assert.equal(recordPreviewLabel({ id: '1', title: '封面' }, 'title'), '封面')

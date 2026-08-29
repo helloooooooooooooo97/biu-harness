@@ -5,6 +5,7 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   ClipboardDocumentListIcon,
+  DocumentTextIcon,
   EyeIcon,
   ListBulletIcon,
   PencilSquareIcon,
@@ -27,11 +28,13 @@ import {
   getPreviewTotalsVersion,
   nextPreviewLimit,
   previewCacheKey,
+  recordPreviewEmoji,
   recordPreviewLabel,
   rememberPreviewTotal,
   SIDEBAR_PREVIEW_MAX,
   subscribePreviewTotals,
   viewTotalKey,
+  writeRecordEmoji,
 } from './sidebar-preview.ts'
 import {
   activeViewStorageKey,
@@ -93,6 +96,8 @@ function ViewModeGlyph({ mode }: { mode: ViewMode }) {
   return <ViewColumnsIcon aria-hidden className={cls} />
 }
 
+const RECORD_EMOJI_PRESETS = ['⭐', '🔥', '✅', '📌', '💡', '🎯', '📦', '🧩', '📄', '⚡']
+
 type PreviewState = { items: DbRecord[]; total: number; loading: boolean; error: string }
 
 const previewCache = new Map<string, { items: DbRecord[]; total: number }>()
@@ -116,6 +121,8 @@ function ViewRecordPreview({
     loading: !cached,
     error: '',
   }))
+  const [pickerId, setPickerId] = useState<string | null>(null)
+  const [emojiDraft, setEmojiDraft] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -142,6 +149,16 @@ function ViewRecordPreview({
       cancelled = true
     }
   }, [key, open, path, view.query, view.sortField, view.sortDir, view.filters])
+  useEffect(() => {
+    if (!pickerId) return
+    const onPointer = (event: MouseEvent) => {
+      const target = event.target
+      if (target instanceof Element && target.closest('.fsdb-emoji-picker, .fsdb-record-icon')) return
+      setPickerId(null)
+    }
+    document.addEventListener('mousedown', onPointer)
+    return () => document.removeEventListener('mousedown', onPointer)
+  }, [pickerId])
 
   async function loadMore() {
     const more = nextPreviewLimit(state.items.length, state.total)
@@ -159,23 +176,89 @@ function ViewRecordPreview({
     }
   }
 
+  async function saveEmoji(row: DbRecord, next: string) {
+    try {
+      const emoji = await writeRecordEmoji(path, row.id, next)
+      const items = state.items.map((item) => (item.id === row.id ? { ...item, emoji } : item))
+      previewCache.set(key, { items, total: state.total })
+      setState((prev) => ({ ...prev, items }))
+      setPickerId(null)
+      window.dispatchEvent(new Event('fsdb:change'))
+    } catch (err) {
+      setState((prev) => ({ ...prev, error: String(err) }))
+    }
+  }
+
   if (!open) return null
   const remaining = Math.max(0, state.total - state.items.length)
   const capped = state.items.length >= SIDEBAR_PREVIEW_MAX && remaining > 0
   return (
     <div className="fsdb-view-preview" role="list">
-      {state.items.map((row) => (
-        <div key={row.id} className="chat-session-row" role="listitem">
-          <button
-            type="button"
-            className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
-            title={recordPreviewLabel(row)}
-            onClick={() => onOpenRecord?.(row.id)}
-          >
-            <span className="min-w-0 flex-1 truncate font-medium">{recordPreviewLabel(row)}</span>
-          </button>
-        </div>
-      ))}
+      {state.items.map((row) => {
+        const emoji = recordPreviewEmoji(row)
+        return (
+          <div key={row.id} className="chat-session-row" role="listitem">
+            <div className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5">
+              <span className="fsdb-record-icon relative grid size-6 shrink-0 place-items-center">
+                <button
+                  type="button"
+                  className="grid size-6 place-items-center border-0 bg-transparent p-0 text-[16px] leading-none text-inherit"
+                  title={emoji ? '更换图标' : '设置图标'}
+                  aria-label={emoji ? `更换 ${recordPreviewLabel(row)} 的图标` : `设置 ${recordPreviewLabel(row)} 的图标`}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setPickerId((prev) => (prev === row.id ? null : row.id))
+                    setEmojiDraft(emoji)
+                  }}
+                >
+                  {emoji ? <span className="fsdb-record-emoji">{emoji}</span> : <DocumentTextIcon aria-hidden className="size-4" />}
+                </button>
+                {pickerId === row.id ? (
+                  <div className="fsdb-emoji-picker" onClick={(event) => event.stopPropagation()}>
+                    <div className="fsdb-emoji-picker-presets">
+                      {RECORD_EMOJI_PRESETS.map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          className="fsdb-emoji-picker-item"
+                          onClick={() => void saveEmoji(row, item)}
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      className="fsdb-emoji-picker-input"
+                      value={emojiDraft}
+                      placeholder="输入 emoji"
+                      maxLength={8}
+                      onChange={(event) => setEmojiDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          void saveEmoji(row, emojiDraft)
+                        }
+                        if (event.key === 'Escape') setPickerId(null)
+                      }}
+                    />
+                    <button type="button" className="fsdb-emoji-picker-clear" onClick={() => void saveEmoji(row, '')}>
+                      恢复默认
+                    </button>
+                  </div>
+                ) : null}
+              </span>
+              <button
+                type="button"
+                className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit"
+                title={recordPreviewLabel(row)}
+                onClick={() => onOpenRecord?.(row.id)}
+              >
+                {recordPreviewLabel(row)}
+              </button>
+            </div>
+          </div>
+        )
+      })}
       {state.loading && !state.items.length ? (
         <div className="fsdb-view-preview-hint">加载中…</div>
       ) : null}
@@ -472,7 +555,7 @@ export const DataSidebar = memo(function DataSidebar({
                         <div
                           role="button"
                           tabIndex={0}
-                          className="flex min-h-8 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md text-left text-[14px] font-medium tracking-normal text-inherit outline-none hover:text-(--dsw-sidebar-fg-active) focus-visible:ring-1 focus-visible:ring-(--dsw-border)"
+                          className="flex min-h-8 min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-md text-left text-[14px] font-medium tracking-normal text-inherit outline-none hover:text-(--dsw-sidebar-fg-active) focus-visible:ring-1 focus-visible:ring-(--dsw-border)"
                           title={name}
                           aria-expanded={open}
                           onClick={() => {
@@ -486,16 +569,18 @@ export const DataSidebar = memo(function DataSidebar({
                             }
                           }}
                         >
-                          <span className="sidebar-rail-icon sidebar-group-fold" aria-hidden>
-                            <span className="sidebar-group-fold-face">
-                              <TableGlyph icon={table.view?.icon} />
-                            </span>
-                            <span className="sidebar-group-fold-chevron">
-                              {open ? (
-                                <ChevronDownIcon className="size-4 shrink-0 opacity-80" />
-                              ) : (
-                                <ChevronRightIcon className="size-4 shrink-0 opacity-80" />
-                              )}
+                          <span className="grid size-6 shrink-0 place-items-center" aria-hidden>
+                            <span className="sidebar-rail-icon sidebar-group-fold">
+                              <span className="sidebar-group-fold-face">
+                                <TableGlyph icon={table.view?.icon} />
+                              </span>
+                              <span className="sidebar-group-fold-chevron">
+                                {open ? (
+                                  <ChevronDownIcon className="size-4 shrink-0 opacity-80" />
+                                ) : (
+                                  <ChevronRightIcon className="size-4 shrink-0 opacity-80" />
+                                )}
+                              </span>
                             </span>
                           </span>
                           <span className="min-w-0 flex-1 truncate">{name}</span>
