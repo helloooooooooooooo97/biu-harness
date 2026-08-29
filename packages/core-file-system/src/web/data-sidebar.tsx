@@ -270,7 +270,6 @@ export const DataSidebar = memo(function DataSidebar({
     }
     if (dataOpen) {
       for (const table of listedTables) {
-        jobs.push({ path: table.path, view: TABLE_TOTAL_VIEW })
         if (openTables[table.path]) {
           for (const view of viewsFor(table.path)) jobs.push({ path: table.path, view })
         }
@@ -461,11 +460,7 @@ export const DataSidebar = memo(function DataSidebar({
                   <span className="min-w-0 flex-1 truncate tracking-normal">数据</span>
                 </button>
               </div>
-              <ChatCount
-                count={listedTables.every((table) => getPreviewTotal(tableTotalKey(table.path)) != null)
-                  ? listedTables.reduce((sum, table) => sum + (getPreviewTotal(tableTotalKey(table.path)) ?? 0), 0)
-                  : undefined}
-              />
+              <ChatCount count={listedTables.length} />
             </div>
             {dataOpen ? (
               <div className="min-w-0 space-y-1.5 pt-0.5">
@@ -507,7 +502,7 @@ export const DataSidebar = memo(function DataSidebar({
                           </span>
                           <span className="min-w-0 flex-1 truncate">{name}</span>
                         </div>
-                        <ChatCount count={getPreviewTotal(tableTotalKey(table.path))} />
+                        <ChatCount count={listed.length} />
                       </div>
                       <div className={`sidebar-session-list min-w-0 ${open ? '' : 'hidden'}`} aria-hidden={!open}>
                         {listed.map((view) => {
