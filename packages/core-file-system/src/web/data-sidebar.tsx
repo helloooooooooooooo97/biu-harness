@@ -31,8 +31,6 @@ import {
   rememberPreviewTotal,
   SIDEBAR_PREVIEW_MAX,
   subscribePreviewTotals,
-  TABLE_TOTAL_VIEW,
-  tableTotalKey,
   viewTotalKey,
 } from './sidebar-preview.ts'
 import {
@@ -264,7 +262,7 @@ export const DataSidebar = memo(function DataSidebar({
   })
 
   const countJobs = useMemo(() => {
-    const jobs: Array<{ path: string; view: typeof TABLE_TOTAL_VIEW | SavedView }> = []
+    const jobs: Array<{ path: string; view: SavedView }> = []
     if (favOpen) {
       for (const { table, view } of starredRows) jobs.push({ path: table.path, view })
     }
