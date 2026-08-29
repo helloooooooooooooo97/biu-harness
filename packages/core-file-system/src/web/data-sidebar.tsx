@@ -463,7 +463,7 @@ export const DataSidebar = memo(function DataSidebar({
                 <ChatCount count={starredRows.length} />
               </div>
               {favOpen ? (
-                <div className="min-w-0 space-y-1.5 pt-0.5">
+                <div className="min-w-0 pt-0.5">
                   {starredRows.map(({ table, view }) => {
                     const tableName = table.view?.title ?? table.label
                     const active = table.path === collectionPath && view.id === activeViewId
@@ -500,9 +500,11 @@ export const DataSidebar = memo(function DataSidebar({
                             >
                               {view.name}
                             </button>
-                            <span className="shrink-0 text-[14px] leading-5 opacity-70">{tableName}</span>
                           </div>
                           <ChatCount count={getPreviewTotal(viewTotalKey(table.path, view))} />
+                          <span className="grid size-6 shrink-0 place-items-center" title={tableName} aria-label={tableName}>
+                            <TableGlyph icon={table.view?.icon} />
+                          </span>
                           <button
                             type="button"
                             className="chat-session-row-star is-on"
