@@ -245,6 +245,8 @@ export type TaskUpdateInput = Partial<{
   difficulty: TaskDifficulty
   assignee: TaskActor | null
   assigneeSessionId: string | null
+  creator: TaskActor
+  creatorSessionId: string | null
   dueAt: number | null
   description: string
   notes: string
@@ -1322,6 +1324,11 @@ export class TasksService extends Service {
       sort = Number(maxSort?.m ?? 0) + 1
     }
 
+    let creator = current.creator
+    if ('creator' in patch) {
+      creator = patch.creator ? (normalizeActor(patch.creator, '用户') ?? { kind: 'user', name: '用户' }) : { kind: 'user', name: '用户' }
+    }
+
     let assignee = current.assignee
     let assignedAt = current.assignedAt
     if ('assignee' in patch) {
@@ -1377,7 +1384,7 @@ export class TasksService extends Service {
       .prepare(
         `UPDATE tasks SET
           title = ?, status = ?, priority = ?, difficulty = ?, assignee = ?, due_at = ?, description = ?, notes = ?, sort = ?,
-          updated_at = ?, assignee_json = ?, assigned_at = ?, project = ?, tags_json = ?,
+          updated_at = ?, creator_json = ?, assignee_json = ?, assigned_at = ?, project = ?, tags_json = ?,
           parent_id = ?, depends_on = ?, depth = ?, trigger_json = ?,
           report_interval_sec = ?, last_report_prompt_at = ?
          WHERE id = ?`,
@@ -1393,6 +1400,7 @@ export class TasksService extends Service {
         notes,
         sort,
         ts,
+        JSON.stringify(creator),
         assignee ? JSON.stringify(assignee) : null,
         assignedAt,
         project,
@@ -2142,13 +2150,21 @@ export function apply(ctx: Context) {
   host.http.route('PATCH', '/api/tasks/:id', async (route) => {
     try {
       const body = (await route.json()) as TaskUpdateInput
-      const patch: TaskUpdateInput & { assignee?: TaskActor | null } = { ...body }
+      const patch: TaskUpdateInput & { assignee?: TaskActor | null; creator?: TaskActor } = { ...body }
       if (body.assigneeSessionId !== undefined || body.assignee !== undefined) {
         const resolved = await resolveAssignee(host, {
           ...(body.assigneeSessionId !== undefined ? { assigneeSessionId: body.assigneeSessionId } : {}),
           ...(body.assignee !== undefined ? { assignee: body.assignee } : {}),
         })
         if (resolved.touchAssignedAt) patch.assignee = resolved.assignee
+      }
+      if (body.creatorSessionId !== undefined) {
+        const sid = body.creatorSessionId?.trim()
+        if (!sid) patch.creator = { kind: 'user', name: '用户' }
+        else {
+          const resolved = await resolveAssignee(host, { assigneeSessionId: sid })
+          patch.creator = resolved.assignee ?? { kind: 'agent', sessionId: sid, name: sid.slice(0, 8) }
+        }
       }
       const row = tasks.update(route.params.id, patch)
       route.send(200, { task: await present(row) })

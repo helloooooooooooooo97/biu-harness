@@ -1,0 +1,16 @@
+{
+  "name": "@biu/cap-page",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Page：把每种字段类型登记进 File System，用假数据压测 Database 默认 UI",
+  "exports": {
+    "./host": "./src/host/index.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8"
+  },
+  "dependencies": {
+    "@biu/type-file-system": "0.1.0"
+  }
+}

@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { Context } from 'cordis'
-import type { PluginStoreService } from './index.ts'
+import type { PluginStoreService } from './store.ts'
 
 export type PluginCreateInput = {
   id: string
@@ -131,19 +131,19 @@ export async function readSandboxManifest(dir: string) {
 
 const CONTRACT = [
   '契约：id 与 export const name 相同。禁止 import npm / react / @biu/*。不要改 packages/ 或 cordis.plugins.json。',
-  'host 与 web 按需，至少一侧。Web：ctx.slots.place("plugin-store-extras", Comp, { key })。货架会给 extras 套 macOS 窗口框（关/缩/全屏），key 尽量用插件 id。',
+  'host 与 web 按需，至少一侧。Web：ctx.slots.place("plugin-store-extras", Comp, { key })。运行窗口会给 extras 套 macOS 窗口框（关/缩/全屏），key 尽量用插件 id。',
 ].join(' ')
 
 const PLUGIN_CREATE_DESCRIPTION = [
-  '直写货架：单文件小插件。把 host/web 源码放进本工具参数，立刻编译进 .plugin/<id>/，商店就能看到。',
+  '直写已安装插件：单文件小插件。把 host/web 源码放进本工具参数，立刻编译进 .plugin/<id>/，插件列表就能看到。',
   '适合一两百行、无相对 import、无多文件。更大或要拆文件请改用 plugin_sandbox + plugin_pack。',
   CONTRACT,
 ].join(' ')
 
 const PLUGIN_SANDBOX_DESCRIPTION = [
-  '开沙箱：多文件/大插件。只建/更新 .plugin-dev/<id>/（manifest.json，可选起点 host.ts / web.tsx），不进货架。',
+  '开沙箱：多文件/大插件。只建/更新 .plugin-dev/<id>/（manifest.json，可选起点 host.ts / web.tsx），不进已安装目录。',
   '然后用 bash / 文件工具在沙箱里写代码、相对 import。调完必须 plugin_pack 才会打进 .plugin/<id>/。',
-  '卸载删货架目录，沙箱还在。',
+  '卸载删 .plugin/<id>/，沙箱还在。',
   CONTRACT,
 ].join(' ')
 

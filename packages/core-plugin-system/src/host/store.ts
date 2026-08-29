@@ -17,9 +17,6 @@ import {
   type PluginCreateInput,
 } from './plugin-create.ts'
 
-export const name = 'plugin-store'
-export const inject = ['http', 'hub', 'tools']
-
 export type StoreListing = {
   id: string
   name: string
@@ -227,7 +224,7 @@ export class PluginStoreService extends Service {
     return { id, pluginPath: dest }
   }
 
-  /** 在 .plugin-dev/<id>/ 开沙箱，不写入货架。 */
+  /** 在 .plugin-dev/<id>/ 开沙箱，不写入已安装目录。 */
   async initSandbox(input: PluginCreateInput) {
     const id = String(input.id ?? '').trim()
     const name = String(input.name ?? '').trim()
@@ -334,7 +331,7 @@ export class PluginStoreService extends Service {
       try {
         await this.mountFromDisk(await readManifest(hit), hit)
       } catch (error) {
-        this.ctx.logger('plugin-store').error(error)
+        this.ctx.logger('core-plugin-system').error(error)
       }
     }
   }
@@ -388,44 +385,15 @@ export class PluginStoreService extends Service {
   }
 }
 
-export async function apply(ctx: Context) {
+export async function openStore(ctx: Context) {
   const store = new PluginStoreService(ctx, defaultPluginDir(), defaultStatePath(), defaultSandboxDir()).open()
   try {
     await store.restore()
   } catch (error) {
-    ctx.logger('plugin-store').error(error)
+    ctx.logger('core-plugin-system').error(error)
   }
   registerPluginCreate(ctx, store)
 
-  ctx.http.route('GET', '/api/plugin-store', async (route) => {
-    route.send(200, { items: await store.list() })
-  })
-  ctx.http.route('POST', '/api/plugin-store/open', async (route) => {
-    const payload = (await route.json()) as { id?: string }
-    try {
-      route.send(200, { item: await store.openPlugin(String(payload?.id ?? '')) })
-    } catch (error) {
-      route.send(400, { error: String(error) })
-    }
-  })
-  ctx.http.route('POST', '/api/plugin-store/close', async (route) => {
-    const payload = (await route.json()) as { id?: string }
-    try {
-      await store.close(String(payload?.id ?? ''))
-      route.send(200, { ok: true, items: await store.list() })
-    } catch (error) {
-      route.send(400, { error: String(error) })
-    }
-  })
-  ctx.http.route('POST', '/api/plugin-store/uninstall', async (route) => {
-    const payload = (await route.json()) as { id?: string }
-    try {
-      await store.uninstall(String(payload?.id ?? ''))
-      route.send(200, { ok: true, items: await store.list() })
-    } catch (error) {
-      route.send(400, { error: String(error) })
-    }
-  })
   ctx.http.route('GET', '/api/plugin-store/files/:id/:file', async (route) => {
     try {
       const body = await store.readInstalledFile(route.params.id, route.params.file)
@@ -442,6 +410,7 @@ export async function apply(ctx: Context) {
       route.send(404, { error: 'not found' })
     }
   })
+  return store
 }
 
 declare module 'cordis' {

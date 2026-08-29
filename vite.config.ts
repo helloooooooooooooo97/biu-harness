@@ -30,6 +30,7 @@ export default defineConfig({
       ['host/**', 'node'],
       ['packages/host-*/**', 'node'],
       ['packages/cap-*/src/host/**', 'node'],
+      ['packages/core-*/src/host/**', 'node'],
       ['packages/type-*/**', 'node'],
     ],
   },

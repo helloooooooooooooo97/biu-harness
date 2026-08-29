@@ -67,9 +67,11 @@ test('restore skips a broken enabled plugin and continues', async () => {
     })
     await store.openPlugin('store-bad')
     await writeFile(join(pluginDir, 'store-bad', 'host.js'), 'throw new SyntaxError("nope")\n')
-    const store2 = new PluginStoreService(ctx, pluginDir, join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
+    const ctx2 = new Context()
+    const { adopted: restored } = stubHub(ctx2)
+    const store2 = new PluginStoreService(ctx2, pluginDir, join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
     await store2.restore()
-    assert.ok(adopted.includes('store-ok'))
+    assert.ok(restored.includes('store-ok'))
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

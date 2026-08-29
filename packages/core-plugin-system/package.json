@@ -1,0 +1,20 @@
+{
+  "name": "@biu/core-plugin-system",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Core-Plugin System：已安装插件、安装卸载、运行窗口与 File System 入口",
+  "exports": {
+    "./host": "./src/host/index.ts",
+    "./web": "./src/web/index.tsx"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "react": "^19.1.1"
+  },
+  "dependencies": {
+    "@biu/type-file-system": "0.1.0",
+    "@biu/type-slots": "0.1.0",
+    "@biu/web-slots": "0.1.0"
+  }
+}

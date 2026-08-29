@@ -86,12 +86,41 @@
       "enabled": true
     },
     {
-      "id": "plugin-store",
-      "name": "插件商店",
+      "id": "core-file-system",
+      "name": "Core-File System",
       "layer": "capability",
-      "blurb": "@biu/cap-plugin-store。安装已编译包，不重编主应用。",
-      "package": "@biu/cap-plugin-store/host",
-      "web": "@biu/cap-plugin-store/web",
+      "blurb": "@biu/core-file-system。登记表 + 通用 db_* 工具与集合 UI。",
+      "package": "@biu/core-file-system/host",
+      "web": "@biu/core-file-system/web",
+      "togglable": true,
+      "enabled": true
+    },
+    {
+      "id": "core-plugin-system",
+      "name": "Core-Plugin System",
+      "layer": "capability",
+      "blurb": "@biu/core-plugin-system。已安装插件、安装卸载、运行窗口与 File System 入口。",
+      "package": "@biu/core-plugin-system/host",
+      "web": "@biu/core-plugin-system/web",
+      "togglable": true,
+      "enabled": true
+    },
+    {
+      "id": "tasks-2",
+      "name": "任务2号",
+      "layer": "capability",
+      "blurb": "@biu/cap-tasks-2。把任务表登记进 File System，前端对齐原任务面板。",
+      "package": "@biu/cap-tasks-2/host",
+      "web": "@biu/cap-tasks-2/web",
+      "togglable": true,
+      "enabled": true
+    },
+    {
+      "id": "page",
+      "name": "Page",
+      "layer": "capability",
+      "blurb": "@biu/cap-page。每种字段类型各一列，假数据压测 Database 默认 UI。",
+      "package": "@biu/cap-page/host",
       "togglable": true,
       "enabled": true
     }

@@ -1,0 +1,15 @@
+{
+  "name": "@biu/type-file-system",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "File System 登记表契约：可替换实现，业务插件只依赖这份抽象",
+  "exports": {
+    ".": "./src/index.ts",
+    "./ui": "./src/ui.ts"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "react": "^19.1.1"
+  }
+}
