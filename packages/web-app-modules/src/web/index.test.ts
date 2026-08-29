@@ -26,4 +26,7 @@ test('plugins register routes; shell does not hardcode them', async () => {
   assert.equal(moduleIdFromPath('/dashboard', plugins), 'dashboard')
   assert.equal(isAgentPath('/tasks', plugins), false)
   assert.equal(svc.list().map((item) => item.id).join(','), 'agent,tasks,dashboard')
+  assert.equal(svc.isNavReady(), false)
+  svc.markNavReady()
+  assert.equal(svc.isNavReady(), true)
 })

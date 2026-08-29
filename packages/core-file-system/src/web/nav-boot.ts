@@ -11,7 +11,13 @@ export function collectionNavKey(rows: CollectionInfo[]) {
 /** Host 插件登记表会晚于 UI apply；失败或空列表时短轮询，避免导航一直空白。 */
 export async function bootLoadCollections(
   load: () => Promise<CollectionInfo[]>,
-  opts?: { attempts?: number; delayMs?: number; stopped?: () => boolean; wait?: (ms: number) => Promise<void> },
+  opts?: {
+    attempts?: number
+    delayMs?: number
+    stopped?: () => boolean
+    wait?: (ms: number) => Promise<void>
+    onUpdate?: (rows: CollectionInfo[]) => void
+  },
 ): Promise<CollectionInfo[]> {
   const attempts = opts?.attempts ?? 30
   const delayMs = opts?.delayMs ?? 100
@@ -23,6 +29,7 @@ export async function bootLoadCollections(
     if (opts?.stopped?.()) return last
     try {
       last = await load()
+      opts?.onUpdate?.(last)
     } catch {
       last = last.length ? last : []
     }
