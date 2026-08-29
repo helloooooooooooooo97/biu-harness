@@ -40,7 +40,9 @@ export function asHttpHref(value: unknown): string {
   return /^https?:\/\//i.test(text) ? text : ''
 }
 
-/** 图片地址：http(s) 或 data:image。 */
+const SAME_ORIGIN_IMAGE = /^\/(?!\/)[^\s]*\.(?:png|jpe?g|gif|webp|svg|avif|bmp)(?:[?#][^\s]*)?$/i
+
+/** 图片地址：http(s)、data:image，或同源相对路径（如 /page-covers/red.svg）。 */
 export function asImageSrc(value: unknown): string {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     return asImageSrc(hrefFromRecord(value as Record<string, unknown>))
@@ -48,6 +50,7 @@ export function asImageSrc(value: unknown): string {
   const text = String(value ?? '').trim()
   if (/^https?:\/\//i.test(text)) return text
   if (/^data:image\//i.test(text)) return text
+  if (SAME_ORIGIN_IMAGE.test(text)) return text
   return ''
 }
 
