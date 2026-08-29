@@ -14,8 +14,8 @@ const COLOR_HEX: Record<(typeof COLORS)[number], string> = {
 }
 
 function seedCover(id: string, color: (typeof COLORS)[number]) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="${COLOR_HEX[color]}" width="100%" height="100%"/><text x="50%" y="54%" fill="#fff" font-size="28" text-anchor="middle" font-family="sans-serif">${id}</text></svg>`
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="${COLOR_HEX[color]}" width="100%" height="100%"/><text x="160" y="104" fill="#fff" font-size="28" text-anchor="middle" font-family="sans-serif">${id}</text></svg>`
+  return `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`
 }
 
 type PageRow = DbRecord & {

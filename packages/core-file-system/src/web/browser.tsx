@@ -284,7 +284,7 @@ function ImageThumb({ src }: { src: string }) {
           setOpen(true)
         }}
       >
-        <img className="fsdb-thumb" src={src} alt="" loading="lazy" decoding="async" />
+        <img className="fsdb-thumb" src={src} alt="" decoding="async" />
       </button>
       {open
         ? createPortal(
@@ -332,7 +332,7 @@ function FilePreview({ value, compact = false }: { value: unknown; compact?: boo
   const src = asImageSrc(value)
   if (src) {
     if (compact) return <ImageThumb src={src} />
-    return <img className="fsdb-fileview-img" src={src} alt="" loading="lazy" decoding="async" />
+    return <img className="fsdb-fileview-img" src={src} alt="" decoding="async" />
   }
   const file = asAttachment(value)
   if (file) {
@@ -2256,7 +2256,7 @@ if (typeof document !== 'undefined') {
 .fsdb-link{color:inherit;text-underline-offset:2px;overflow-wrap:anywhere}
 .fsdb-link:hover{text-decoration:underline}
 .fsdb-thumb-link,.fsdb-thumb-btn{display:inline-flex;align-items:center;justify-content:center;line-height:0;border:0;padding:0;background:transparent;cursor:zoom-in;vertical-align:middle}
-.fsdb-thumb{display:block;width:18px;height:18px;object-fit:cover;border-radius:4px;background:var(--dsw-hover);flex:none}
+.fsdb-thumb{display:block;width:28px;height:16px;object-fit:cover;border-radius:4px;background:var(--dsw-hover);flex:none}
 .fsdb-lightbox{position:fixed;inset:0;z-index:140;display:flex;align-items:center;justify-content:center;padding:28px;background:rgba(0,0,0,.72);cursor:zoom-out}
 .fsdb-lightbox img{max-width:min(92vw,1100px);max-height:88vh;object-fit:contain;border-radius:10px;box-shadow:0 16px 48px rgba(0,0,0,.45);cursor:default}
 .fsdb-file{display:inline-flex;align-items:center;gap:6px;min-width:0;color:inherit;text-underline-offset:2px}
