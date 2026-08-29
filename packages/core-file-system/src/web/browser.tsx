@@ -1489,7 +1489,9 @@ export function CollectionBrowser({
             ) : null}
           </div>
         </header>
-        <div className={`tasks-main fsdb-main${selected ? ' hidden' : ''}`} aria-hidden={Boolean(selected)}>
+        <div className="fsdb-right-body">
+        {!selected ? (
+        <div className="tasks-main fsdb-main">
         {!viewsOpen ? (
           <div className="fsdb-collection-head is-inline">
             <div className="fsdb-collection-name">{title}</div>
@@ -1991,7 +1993,7 @@ export function CollectionBrowser({
           </div>
         </div>
       </div>
-      {selected && schema ? (
+        ) : selected && schema ? (
         <div className="fsdb-detail-stage">
           <div className="fsdb-detail-screen" role="main" aria-label="记录详情">
             {detailTab !== 'overview' && chrome?.panes?.some((pane) => pane.id === detailTab) ? (
@@ -2109,6 +2111,7 @@ export function CollectionBrowser({
           </div>
         </div>
       ) : null}
+        </div>
       </div>
       {dlg?.kind === 'rename' ? (
         <AppDialog
@@ -2158,6 +2161,7 @@ if (typeof document !== 'undefined') {
 .fsdb-page{display:flex;min-width:0;min-height:0;flex:1;flex-direction:row;overflow:hidden;background:var(--dsw-bg);color:var(--dsw-label);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,sans-serif,"Apple Color Emoji","Segoe UI Emoji";font-size:14px;letter-spacing:-.011em}
 .fsdb-right{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
 .fsdb-right .chat-view-header{flex:none}
+.fsdb-right-body{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
 .fsdb-views{display:flex;width:280px;flex:none;flex-direction:column;min-height:0;overflow:hidden}
 .fsdb-nav-chevron{flex:none;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
 .fsdb-nav-chevron:hover{background:var(--dsw-hover);color:var(--dsw-label)}
