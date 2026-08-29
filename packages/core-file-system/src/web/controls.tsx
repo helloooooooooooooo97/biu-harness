@@ -379,3 +379,42 @@ export function AppDialog({
   )
   return createPortal(dialog, document.body)
 }
+
+/** 详情正文/文本列：输入只更新自己，失焦才回传，避免整张表跟着每个按键重绘。 */
+export function LocalText({
+  as = 'input',
+  className,
+  value,
+  rows,
+  placeholder,
+  title,
+  onCommit,
+}: {
+  as?: 'input' | 'textarea'
+  className?: string
+  value: string
+  rows?: number
+  placeholder?: string
+  title?: string
+  onCommit: (next: string) => void
+}) {
+  const [draft, setDraft] = useState(value)
+  const draftRef = useRef(draft)
+  draftRef.current = draft
+  useEffect(() => {
+    setDraft(value)
+  }, [value])
+  const commit = () => {
+    if (draftRef.current !== value) onCommit(draftRef.current)
+  }
+  const shared = {
+    className,
+    value: draft,
+    title,
+    placeholder,
+    onChange: (event: { target: { value: string } }) => setDraft(event.target.value),
+    onBlur: commit,
+  }
+  if (as === 'textarea') return <textarea {...shared} rows={rows} />
+  return <input {...shared} />
+}

@@ -59,7 +59,7 @@ import {
   uniqueValues,
   type ViewMode,
 } from './fields'
-import { AppDialog, CellSelect, CheckRow, TokenMultiSelect } from './controls.tsx'
+import { AppDialog, CellSelect, CheckRow, LocalText, TokenMultiSelect } from './controls.tsx'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
 
 type ListResult = { items: Array<DbRecord & { path?: string }>; total?: number; offset?: number; limit?: number }
@@ -437,11 +437,11 @@ function FieldEditor({
   }
   if (kind === 'datetime') {
     return (
-      <input
+      <LocalText
         className="fsdb-plain-input"
         value={toDatetimeLocal(value)}
         placeholder="YYYY-MM-DDTHH:mm"
-        onChange={(e) => onChange(fromDatetimeLocal(e.target.value))}
+        onCommit={(next) => onChange(fromDatetimeLocal(next))}
       />
     )
   }
@@ -456,15 +456,15 @@ function FieldEditor({
   }
   if (kind === 'url' || kind === 'image' || kind === 'attachment') {
     return (
-      <input
+      <LocalText
         className="fsdb-plain-input"
         value={value}
         placeholder={kind === 'image' ? 'https://… 或 data:image' : 'https://'}
-        onChange={(e) => onChange(e.target.value)}
+        onCommit={onChange}
       />
     )
   }
-  return <input className="fsdb-plain-input" value={value} title={value} placeholder={fieldKey} onChange={(e) => onChange(e.target.value)} />
+  return <LocalText className="fsdb-plain-input" value={value} title={value} placeholder={fieldKey} onCommit={onChange} />
 }
 
 function visibleActions(schema: CollectionSchema | undefined, row: DbRecord, place: 'row' | 'detail') {
@@ -644,6 +644,8 @@ export function CollectionBrowser({
   }, [collectionPath, fetchQuery, filters, page, pageSize, sortDir, sortField])
   const reloadRef = useRef(reload)
   reloadRef.current = reload
+  const detailIdRef = useRef<string | null>(null)
+  detailIdRef.current = detailId
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -699,11 +701,15 @@ export function CollectionBrowser({
     }
     let debounce = 0
     const onChange = () => {
+      if (detailIdRef.current) return
       window.clearTimeout(debounce)
       debounce = window.setTimeout(() => void reloadRef.current(), 120)
     }
     window.addEventListener('fsdb:change', onChange)
-    const timer = window.setInterval(() => void reloadRef.current(), 20000)
+    const timer = window.setInterval(() => {
+      if (detailIdRef.current) return
+      void reloadRef.current()
+    }, 20000)
     return () => {
       window.clearTimeout(debounce)
       window.clearInterval(timer)
@@ -2046,13 +2052,14 @@ export function CollectionBrowser({
             <div className="fsdb-detail-split">
               <div className="fsdb-detail-main">
                 {schema.labelField && schema.fields[schema.labelField]?.writable ? (
-                  <textarea
+                  <LocalText
+                    as="textarea"
                     className="fsdb-detail-title-input"
                     value={draft[schema.labelField] ?? ''}
                     rows={(draft[schema.labelField] ?? '').length > 48 ? 2 : 1}
-                    onChange={(event) => setDraft((prev) => ({ ...prev, [schema.labelField!]: event.target.value }))}
-                    onBlur={() => {
-                      const next = (draft[schema.labelField!] ?? '').trim()
+                    onCommit={(raw) => {
+                      const next = raw.trim()
+                      setDraft((prev) => ({ ...prev, [schema.labelField!]: next }))
                       if (next && next !== String(selected[schema.labelField!] ?? '')) {
                         void writeOne(selected, schema.labelField!, schema.fields[schema.labelField!]!, next)
                       }
@@ -2089,9 +2096,7 @@ export function CollectionBrowser({
                             options={uniqueValues(items, key, field)}
                             onChange={(next) => {
                               setDraft((prev) => ({ ...prev, [key]: next }))
-                              if (kind === 'boolean' || kind === 'select' || kind === 'multi-select') {
-                                void writeOne(selected, key, field, next)
-                              }
+                              void writeOne(selected, key, field, next)
                             }}
                           />
                         ) : (
@@ -2121,19 +2126,20 @@ export function CollectionBrowser({
                     )
                   }
                   if (spec.writable) {
+                    const saved =
+                      typeof detailBody === 'string' || detailBody == null
+                        ? String(detailBody ?? '')
+                        : JSON.stringify(detailBody, null, 2)
                     return (
-                      <textarea
+                      <LocalText
+                        as="textarea"
                         className="fsdb-detail-doc"
-                        value={draft[key] ?? ''}
+                        value={draft[key] ?? saved}
                         rows={12}
                         placeholder="内容：文本，或 JSON 文件"
-                        onChange={(event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }))}
-                        onBlur={() => {
-                          const prev =
-                            typeof detailBody === 'string' || detailBody == null
-                              ? String(detailBody ?? '')
-                              : JSON.stringify(detailBody, null, 2)
-                          if ((draft[key] ?? '') !== prev) void writeOne(selected, key, spec, draft[key] ?? '')
+                        onCommit={(next) => {
+                          setDraft((prev) => ({ ...prev, [key]: next }))
+                          if (next !== saved) void writeOne(selected, key, spec, next)
                         }}
                       />
                     )
