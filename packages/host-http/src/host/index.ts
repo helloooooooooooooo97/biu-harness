@@ -169,11 +169,16 @@ export class HttpService extends Service {
           res.end(JSON.stringify(body))
         },
       }
+      const started = Date.now()
       try {
         await match.handler(context)
       } catch (error) {
         this.ctx.logger('http').error(error)
         if (!res.headersSent) context.send(500, { error: String(error) })
+      }
+      const ms = Date.now() - started
+      if (ms >= 8 || url.pathname.startsWith('/api/db')) {
+        this.ctx.logger('http').info(`${method} ${url.pathname}${url.search} ${ms}ms`)
       }
       return
     }
