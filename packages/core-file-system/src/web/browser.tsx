@@ -459,7 +459,7 @@ function FieldEditor({
       <LocalText
         className="fsdb-plain-input"
         value={value}
-        placeholder={kind === 'image' ? 'https://… 或 data:image' : 'https://'}
+        placeholder={kind === 'image' ? 'https://…、/cover.svg 或 data:image' : 'https://'}
         onCommit={onChange}
       />
     )
@@ -2256,7 +2256,7 @@ if (typeof document !== 'undefined') {
 .fsdb-link{color:inherit;text-underline-offset:2px;overflow-wrap:anywhere}
 .fsdb-link:hover{text-decoration:underline}
 .fsdb-thumb-link,.fsdb-thumb-btn{display:inline-flex;align-items:center;justify-content:center;line-height:0;border:0;padding:0;background:transparent;cursor:zoom-in;vertical-align:middle}
-.fsdb-thumb{display:block;width:28px;height:16px;object-fit:cover;border-radius:4px;background:var(--dsw-hover);flex:none}
+.fsdb-thumb{display:block;width:96px;height:54px;object-fit:cover;border-radius:6px;background:var(--dsw-hover);flex:none;box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--dsw-border) 70%, transparent)}
 .fsdb-lightbox{position:fixed;inset:0;z-index:140;display:flex;align-items:center;justify-content:center;padding:28px;background:rgba(0,0,0,.72);cursor:zoom-out}
 .fsdb-lightbox img{max-width:min(92vw,1100px);max-height:88vh;object-fit:contain;border-radius:10px;box-shadow:0 16px 48px rgba(0,0,0,.45);cursor:default}
 .fsdb-file{display:inline-flex;align-items:center;gap:6px;min-width:0;color:inherit;text-underline-offset:2px}

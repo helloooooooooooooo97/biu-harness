@@ -5,17 +5,9 @@ export const ROW_COUNT = 240
 
 const STATUS = ['draft', 'live', 'archived'] as const
 const COLORS = ['red', 'orange', 'yellow', 'green', 'blue'] as const
-const COLOR_HEX: Record<(typeof COLORS)[number], string> = {
-  red: '#c0392b',
-  orange: '#d35400',
-  yellow: '#b7950b',
-  green: '#1e8449',
-  blue: '#1a5276',
-}
 
-function seedCover(id: string, color: (typeof COLORS)[number]) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="${COLOR_HEX[color]}" width="100%" height="100%"/><text x="160" y="104" fill="#fff" font-size="28" text-anchor="middle" font-family="sans-serif">${id}</text></svg>`
-  return `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`
+function seedCover(color: (typeof COLORS)[number]) {
+  return `/page-covers/${color}.svg`
 }
 
 type PageRow = DbRecord & {
@@ -53,7 +45,7 @@ function seed(index: number, now: number): PageRow {
     publishedAt: now - index * 3600_000,
     size: 2048 + index * 128,
     homepage: `https://example.com/pages/${id}`,
-    cover: seedCover(id, color),
+    cover: seedCover(color),
     pack: {
       name: `${id}.zip`,
       href: `https://example.com/files/${id}.zip`,

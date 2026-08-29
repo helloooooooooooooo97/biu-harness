@@ -165,7 +165,10 @@ test('write accepts url image and attachment values', async () => {
   assert.equal(written.value.link, 'https://example.com')
   assert.equal(written.value.cover, 'https://example.com/a.png')
   assert.equal((written.value.file as { name: string }).name, 'a.pdf')
+  const local = await db.write('/media/n1', { cover: '/page-covers/red.svg' })
+  assert.equal(local.value.cover, '/page-covers/red.svg')
   await assert.rejects(() => db.write('/media/n1', { link: 'javascript:alert(1)' }), /expected url/)
+  await assert.rejects(() => db.write('/media/n1', { cover: 'javascript:alert(1)' }), /expected image/)
 })
 
 test('content is omitted from list/read and served on its own path', async () => {
