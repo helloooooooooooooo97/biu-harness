@@ -77,11 +77,10 @@
     },
     {
       "id": "tasks",
-      "name": "任务",
+      "name": "Task",
       "layer": "capability",
-      "blurb": "@biu/cap-tasks。任务与秒级心跳。",
+      "blurb": "@biu/cap-tasks。任务数据、工具与心跳；界面在 Task 表。",
       "package": "@biu/cap-tasks/host",
-      "web": "@biu/cap-tasks/web",
       "togglable": true,
       "enabled": true
     },
@@ -107,9 +106,9 @@
     },
     {
       "id": "tasks-2",
-      "name": "任务2号",
+      "name": "Task",
       "layer": "capability",
-      "blurb": "@biu/cap-tasks-2。把任务表登记进 File System，前端对齐原任务面板。",
+      "blurb": "@biu/cap-tasks-2。把任务表登记进 File System，详情含脚本与进度汇报。",
       "package": "@biu/cap-tasks-2/host",
       "web": "@biu/cap-tasks-2/web",
       "togglable": true,

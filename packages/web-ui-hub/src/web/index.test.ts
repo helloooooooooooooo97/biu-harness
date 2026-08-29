@@ -54,20 +54,19 @@ test('ui-hub mounts configured ui packages including chat', async () => {
   })
   const uiIds = Object.keys(uiPackageLoaders)
   assert.ok(uiIds.length >= 1, 'virtual loaders should come from cordis.plugins.json')
-  const tasksUi = uiIds.find((id) => id.includes('cap-tasks/web'))
-  assert.ok(tasksUi, 'tasks-web loader missing')
+  const tasksUi = uiIds.find((id) => id.includes('cap-tasks-2/web'))
+  assert.ok(tasksUi, 'tasks-2-web loader missing')
   const chatUi = uiIds.find((id) => id === '@biu/cap-chat/web' || id.includes('cap-chat/web'))
   assert.ok(chatUi, `chat-ui loader missing in ${uiIds.join(',')}`)
   const base = ctx.snapshot.get()
   ctx.snapshot.get = () => ({
     ...base,
-    plugins: [plugin('tasks', true, tasksUi), plugin('chat', true, chatUi)],
+    plugins: [plugin('tasks-2', true, tasksUi), plugin('chat', true, chatUi)],
   })
   await ctx.plugin(uiHub)
   const deadline = Date.now() + 5000
   while (Date.now() < deadline && ctx.slots.list('composer').every((item) => item.id !== 'chat')) {
     await new Promise((resolve) => setTimeout(resolve, 50))
   }
-  assert.equal(ctx.slots.list('demos').length >= 1, true)
   assert.equal(ctx.slots.list('composer').some((item) => item.id === 'chat'), true)
 })

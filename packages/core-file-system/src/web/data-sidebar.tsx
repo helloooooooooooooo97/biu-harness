@@ -5,6 +5,7 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   ClipboardDocumentListIcon,
+  EyeIcon,
   PencilSquareIcon,
   PlusIcon,
   PuzzlePieceIcon,
@@ -63,6 +64,7 @@ function TableGlyph({ icon }: { icon?: string }) {
   if (name === 'clipboard-document-list' || name === 'clipboard') return <ClipboardDocumentListIcon aria-hidden className={cls} />
   if (name === 'chat-bubble' || name === 'chat-bubble-left-right') return <ChatBubbleLeftRightIcon aria-hidden className={cls} />
   if (name === 'bolt') return <BoltIcon aria-hidden className={cls} />
+  if (name === 'eye') return <EyeIcon aria-hidden className={cls} />
   return <TableCellsIcon aria-hidden className={cls} />
 }
 

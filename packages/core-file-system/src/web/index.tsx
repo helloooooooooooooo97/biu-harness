@@ -6,7 +6,11 @@ import { DATABASE_CHANNEL, type CollectionInfo, type CollectionView } from '@biu
 import type { CollectionChrome, DatabaseUi } from '@biu/type-file-system/ui'
 import { CollectionBrowser } from './browser.tsx'
 import { DatabaseUiService } from './database-ui.ts'
-import { bootLoadCollections, collectionNavKey } from './nav-boot.ts'
+import {
+  bootLoadCollections,
+  collectionNavKey,
+} from './nav-boot.ts'
+import { pushAllSavedViews } from './view-storage.ts'
 
 type SlotsService = {
   place: (slot: string, view: unknown, opts: { key: string; order?: number; props?: () => Record<string, unknown> }) => { dispose?: () => unknown }
@@ -74,6 +78,9 @@ function CollectionPage(props: SlotProps) {
     () => ui?.chrome(currentPath) ?? EMPTY_CHROME,
     () => ui?.chrome(currentPath) ?? EMPTY_CHROME,
   )
+  useEffect(() => {
+    pushAllSavedViews()
+  }, [])
   if (!row) return null
   return (
     <CollectionBrowser

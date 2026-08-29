@@ -29,6 +29,8 @@ type TaskRow = DbRecord & {
   blocked?: boolean
   reports?: TaskReport[]
   usage?: Usage
+  trigger?: unknown
+  nextTriggerAt?: number | null
 }
 
 type TasksLike = {
@@ -113,6 +115,9 @@ function taskRecord(row: TaskRow, lookup: (id: string) => TaskRow | undefined, u
     parentChain: parentChain(row, lookup),
     usage: usage.totalTokens,
     usageParts: { ...usage, aggregate },
+    reports: row.reports ?? [],
+    trigger: row.trigger ?? null,
+    nextTriggerAt: row.nextTriggerAt ?? null,
     createdAt: row.createdAt ?? 0,
     updatedAt: row.updatedAt ?? 0,
   }
@@ -146,12 +151,12 @@ export function tasksCollection(tasks: TasksLike): CollectionSpec {
   return {
     id: 'tasks',
     path: '/tasks',
-    label: '任务',
+    label: 'Task',
     view: {
       moduleId: 'tasks-2',
       route: '/tasks-2',
-      title: '任务2号',
-      blurb: '同一份任务数据；外观由任务2号前端 decorate，对照原来的 Tasks。',
+      title: 'Task',
+      blurb: 'Task table in File System; detail panes host scripts and progress reports.',
       order: 21,
       icon: 'clipboard-document-list',
     },

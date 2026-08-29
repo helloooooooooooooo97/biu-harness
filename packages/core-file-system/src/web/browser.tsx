@@ -66,6 +66,7 @@ import {
   activeViewStorageKey,
   loadActiveViewId,
   loadViews,
+  pushSavedViews,
   viewsKey,
 } from './view-storage.ts'
 
@@ -442,6 +443,7 @@ export function CollectionBrowser({
   const [items, setItems] = useState<Array<DbRecord & { path?: string }>>([])
   const [error, setError] = useState('')
   const [detailId, setDetailId] = useState<string | null>(null)
+  const [detailTab, setDetailTab] = useState('overview')
   const [detailBody, setDetailBody] = useState<unknown>(null)
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [busyKey, setBusyKey] = useState<string | null>(null)
@@ -803,6 +805,10 @@ export function CollectionBrowser({
   }, [detailId])
 
   useEffect(() => {
+    setDetailTab('overview')
+  }, [detailId])
+
+  useEffect(() => {
     if (dlg?.kind !== 'rename') return
     setDlgError('')
   }, [dlg])
@@ -811,6 +817,7 @@ export function CollectionBrowser({
     viewsRef.current = next
     setViews(next)
     localStorage.setItem(viewsKey(collectionPath), JSON.stringify(next))
+    pushSavedViews(collectionPath, next)
   }
 
   function rememberActiveView(id: string) {
@@ -1933,9 +1940,23 @@ export function CollectionBrowser({
                 </button>
               </div>
               <nav className="fsdb-detail-tabs" aria-label="详情分区">
-                <button type="button" className="is-active">
+                <button type="button" className={detailTab === 'overview' ? 'is-active' : ''} onClick={() => setDetailTab('overview')}>
                   概况
                 </button>
+                {(chrome?.panes ?? []).map((pane) => {
+                  const badge = pane.badge?.(selected)
+                  return (
+                    <button
+                      key={pane.id}
+                      type="button"
+                      className={detailTab === pane.id ? 'is-active' : ''}
+                      onClick={() => setDetailTab(pane.id)}
+                    >
+                      {pane.label}
+                      {badge != null && badge !== '' ? <span className="fsdb-detail-tab-count">{badge}</span> : null}
+                    </button>
+                  )
+                })}
               </nav>
               <div className="fsdb-detail-head-actions">
                 <RecordActions row={selected} place="detail" />
@@ -1944,6 +1965,14 @@ export function CollectionBrowser({
                 </button>
               </div>
             </header>
+            {detailTab !== 'overview' && chrome?.panes?.some((pane) => pane.id === detailTab) ? (
+              (() => {
+                const pane = chrome.panes.find((item) => item.id === detailTab)
+                if (!pane) return null
+                const Pane = pane.Pane
+                return <Pane record={selected} />
+              })()
+            ) : (
             <div className="fsdb-detail-split">
               <div className="fsdb-detail-main">
                 {schema.labelField && schema.fields[schema.labelField]?.writable ? (
@@ -2047,6 +2076,7 @@ export function CollectionBrowser({
                 })() : null}
               </div>
             </div>
+            )}
           </div>
         </div>
       ) : null}
@@ -2254,6 +2284,7 @@ if (typeof document !== 'undefined') {
 .fsdb-detail-tabs{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:8px;background:var(--dsw-muted-fill);justify-self:center}
 .fsdb-detail-tabs button{border:0;background:transparent;color:var(--dsw-label-3);padding:5px 10px;border-radius:6px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .fsdb-detail-tabs button.is-active{background:var(--dsw-surface);color:var(--dsw-label)}
+.fsdb-detail-tab-count{margin-left:6px;font-size:11px;font-weight:700;color:var(--dsw-label-3)}
 .fsdb-detail-head-actions{display:inline-flex;align-items:center;gap:2px;justify-self:end}
 .fsdb-detail-split{display:flex;flex-direction:column;flex:1;min-height:0;overflow:auto}
 .fsdb-detail-main{display:flex;flex-direction:column;gap:8px;padding:20px 22px 24px;min-width:0}

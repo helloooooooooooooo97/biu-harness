@@ -7,11 +7,11 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
   return {
     id: "plugins",
     path: "/plugins",
-    label: "插件",
+    label: "Plugin",
     view: {
       moduleId: "plugins",
       route: "/plugins",
-      title: "插件",
+      title: "Plugin",
       blurb: "",
       order: 30,
       icon: "puzzle-piece",

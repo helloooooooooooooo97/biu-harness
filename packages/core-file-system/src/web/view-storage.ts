@@ -53,6 +53,28 @@ export function persistStarredViews(items: StarredView[]) {
   localStorage.setItem(STARRED_VIEWS_KEY, JSON.stringify(items))
 }
 
+export function pushSavedViews(collectionPath: string, views: SavedView[]) {
+  void fetch('/api/db/saved-views', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ path: collectionPath, views }),
+  }).catch(() => undefined)
+}
+
+export function pushAllSavedViews() {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith('fsdb.views:')) continue
+      const path = key.slice('fsdb.views:'.length)
+      const views = loadViews(path)
+      if (views.length) pushSavedViews(path, views)
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 export function isViewStarred(items: StarredView[], path: string, viewId: string) {
   return items.some((item) => item.path === path && item.viewId === viewId)
 }

@@ -45,6 +45,7 @@ test('apply registers /tasks on database, not by importing file-system', async (
   assert.equal(registered[0]?.path, '/tasks')
   assert.equal(registered[0]?.view?.moduleId, 'tasks-2')
   assert.equal(registered[0]?.view?.route, '/tasks-2')
+  assert.equal(registered[0]?.view?.title, 'Task')
   assert.equal(registered[0]?.view?.icon, 'clipboard-document-list')
   assert.deepEqual(registered[0]?.schema.columns, ['title', 'status', 'priority', 'difficulty', 'usage', 'creator', 'assignee', 'project', 'tags', 'dueAt'])
   assert.equal(registered[0]?.schema.fields.usage?.computed, true)
