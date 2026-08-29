@@ -29,6 +29,7 @@ import {
   PlayIcon,
   PhotoIcon,
   PlusIcon,
+  PuzzlePieceIcon,
   RectangleStackIcon,
   Square2StackIcon,
   Squares2X2Icon,
@@ -38,7 +39,7 @@ import {
   ViewColumnsIcon,
   XMarkIcon,
 } from '@heroicons/react/16/solid'
-import type { CollectionActionInfo, CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
+import type { CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
 import { asAttachment, asHttpHref, asImageSrc } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import {
@@ -73,6 +74,15 @@ function actionIcon(id: string) {
   if (id === 'edit' || id === 'rename') return <PencilSquareIcon aria-hidden className={cls} />
   if (id === 'refresh') return <ArrowPathIcon aria-hidden className={cls} />
   return null
+}
+
+function TableGlyph({ icon }: { icon?: string }) {
+  const cls = 'size-4'
+  const name = (icon ?? '').trim().toLowerCase()
+  if (name === 'puzzle-piece' || name === 'puzzle') return <PuzzlePieceIcon aria-hidden className={cls} />
+  if (name === 'clipboard-document-list' || name === 'clipboard') return <ClipboardDocumentListIcon aria-hidden className={cls} />
+  if (name === 'folder') return <CircleStackIcon aria-hidden className={cls} />
+  return <TableCellsIcon aria-hidden className={cls} />
 }
 
 function ModeGlyph({ id }: { id: ViewMode }) {
@@ -480,12 +490,16 @@ export function CollectionBrowser({
   title,
   blurb,
   chrome,
+  tables = [],
+  onOpenTable,
 }: {
   moduleId?: string
   collectionPath: string
   title: string
   blurb: string
   chrome?: CollectionChrome
+  tables?: CollectionInfo[]
+  onOpenTable?: (path: string) => void
 }) {
   const [stat, setStat] = useState<StatResult | null>(null)
   const [items, setItems] = useState<Array<DbRecord & { path?: string }>>([])
@@ -515,6 +529,7 @@ export function CollectionBrowser({
       return true
     }
   })
+  const [openTables, setOpenTables] = useState<Record<string, boolean>>(() => ({ [collectionPath]: true }))
   const [viewMenuOpen, setViewMenuOpen] = useState(false)
   const [modeMenuOpen, setModeMenuOpen] = useState(false)
   const [sortMenuOpen, setSortMenuOpen] = useState(false)
@@ -1404,7 +1419,7 @@ export function CollectionBrowser({
       {viewsOpen ? (
       <aside
         className="app-side-bar fsdb-views flex min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)"
-        aria-label="视图"
+        aria-label="数据"
       >
         <div className="app-side-bar-head">
           <span className="flex min-w-0 items-center gap-1.5">
@@ -1418,8 +1433,7 @@ export function CollectionBrowser({
           </span>
         </div>
         <div className="fsdb-collection-head">
-          <div className="fsdb-collection-name">{title}</div>
-          {blurb ? <p className="fsdb-footnote">{blurb}</p> : null}
+          <div className="fsdb-collection-name">数据</div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
           <div className="app-side-actions" role="navigation" aria-label="视图操作">
@@ -1437,57 +1451,92 @@ export function CollectionBrowser({
             </button>
           </div>
           <section className="mt-2 min-w-0">
-            <div className="sidebar-section-head min-w-0">
-              <span className="min-w-0 flex-1 truncate text-[14px] font-bold tracking-normal">视图</span>
-              <span className="sidebar-chat-count">
-                <span className="sidebar-chat-count-num">{views.length}</span>
-              </span>
-            </div>
             <div className="sidebar-session-list">
-              <div className={`chat-session-row${!activeViewId ? ' is-active' : ''}`}>
-                <button
-                  type="button"
-                  className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
-                  onClick={() => setActiveViewId(null)}
-                >
-                  <span className="grid size-6 shrink-0 place-items-center">
-                    <Squares2X2Icon aria-hidden className="size-4" />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate font-medium">未保存</span>
-                </button>
-              </div>
-              {views.map((view) => (
-                <div key={view.id} className={`chat-session-row group${view.id === activeViewId ? ' is-active' : ''}`}>
-                  <button
-                    type="button"
-                    className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
-                    onClick={() => applyView(view)}
-                  >
-                    <span className="grid size-6 shrink-0 place-items-center">
-                      <ModeGlyph id={view.mode} />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate font-medium">{view.name}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="chat-session-row-delete"
-                    title="重命名"
-                    aria-label={`重命名 ${view.name}`}
-                    onClick={() => renameView(view)}
-                  >
-                    <PencilSquareIcon className="size-4 shrink-0" />
-                  </button>
-                  <button
-                    type="button"
-                    className="chat-session-row-delete"
-                    title="删除"
-                    aria-label={`删除 ${view.name}`}
-                    onClick={() => deleteView(view)}
-                  >
-                    <TrashIcon className="size-4 shrink-0" />
-                  </button>
-                </div>
-              ))}
+              {(tables.length ? tables : [{ path: collectionPath, label: title, view: { title } } as CollectionInfo]).map((table) => {
+                const name = table.view?.title ?? table.label
+                const open = openTables[table.path] ?? table.path === collectionPath
+                const listed = table.path === collectionPath ? views : loadViews(table.path)
+                return (
+                  <div key={table.path}>
+                    <div className={`chat-session-row${table.path === collectionPath ? ' is-active' : ''}`}>
+                      <button
+                        type="button"
+                        className="fsdb-nav-chevron"
+                        aria-expanded={open}
+                        aria-label={open ? `折叠 ${name}` : `展开 ${name}`}
+                        onClick={() => setOpenTables((prev) => ({ ...prev, [table.path]: !open }))}
+                      >
+                        <ChevronRightIcon className={`size-4${open ? ' rotate-90' : ''}`} />
+                      </button>
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
+                        onClick={() => {
+                          setOpenTables((prev) => ({ ...prev, [table.path]: true }))
+                          onOpenTable?.(table.path)
+                        }}
+                      >
+                        <span className="grid size-6 shrink-0 place-items-center">
+                          <TableGlyph icon={table.view?.icon} />
+                        </span>
+                        <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
+                      </button>
+                      <span className="sidebar-chat-count" title="视图数量">
+                        <span className="sidebar-chat-count-num">{listed.length}</span>
+                      </span>
+                    </div>
+                    {open
+                      ? listed.map((view) => (
+                          <div
+                            key={view.id}
+                            className={`chat-session-row group${table.path === collectionPath && view.id === activeViewId ? ' is-active' : ''}`}
+                          >
+                            <button
+                              type="button"
+                              className="flex min-w-0 flex-1 items-center gap-1.5 py-1 pl-7 text-left text-[14px] leading-5"
+                              onClick={() => {
+                                if (table.path !== collectionPath) {
+                                  try {
+                                    localStorage.setItem(activeViewStorageKey(table.path), view.id)
+                                  } catch {
+                                    /* ignore */
+                                  }
+                                  onOpenTable?.(table.path)
+                                  return
+                                }
+                                applyView(view)
+                              }}
+                            >
+                              <span className="min-w-0 flex-1 truncate font-medium">{view.name}</span>
+                            </button>
+                            {table.path === collectionPath ? (
+                              <>
+                                <button
+                                  type="button"
+                                  className="chat-session-row-delete"
+                                  title="重命名"
+                                  aria-label={`重命名 ${view.name}`}
+                                  onClick={() => renameView(view)}
+                                >
+                                  <PencilSquareIcon className="size-4 shrink-0" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="chat-session-row-delete"
+                                  title="删除"
+                                  aria-label={`删除 ${view.name}`}
+                                  onClick={() => deleteView(view)}
+                                >
+                                  <TrashIcon className="size-4 shrink-0" />
+                                </button>
+                              </>
+                            ) : null}
+                          </div>
+                        ))
+                      : null}
+                  </div>
+                )
+              })}
             </div>
           </section>
         </div>
@@ -2202,6 +2251,8 @@ if (typeof document !== 'undefined') {
   style.textContent = `
 .fsdb-page{display:flex;min-width:0;min-height:0;flex:1;flex-direction:row;overflow:hidden;background:var(--dsw-bg);color:var(--dsw-label);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,sans-serif,"Apple Color Emoji","Segoe UI Emoji";font-size:14px;letter-spacing:-.011em}
 .fsdb-views{display:flex;width:280px;flex:none;flex-direction:column;min-height:0;overflow:hidden}
+.fsdb-nav-chevron{flex:none;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
+.fsdb-nav-chevron:hover{background:var(--dsw-hover);color:var(--dsw-label)}
 .fsdb-collection-head{flex:none;padding:4px 16px 10px;min-width:0}
 .fsdb-collection-head.is-inline{padding:0 0 2px}
 .fsdb-collection-name{font-size:14px;font-weight:650;color:var(--dsw-label);line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
