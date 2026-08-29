@@ -6,6 +6,7 @@ import { resolveCatalog } from './resolve-catalog.ts'
 import type { PageSpec } from '@biu/type-http'
 import { HUB_CHANGE, HUB_CHANNEL_EVENT, HUB_CHANNEL_SNAPSHOT } from '@biu/type-http'
 import { runWithToolOrigin } from '@biu/host-tools'
+import { eventsCollection } from './events-collection.ts'
 
 export { HUB_CHANGE, HUB_CHANNEL_EVENT, HUB_CHANNEL_SNAPSHOT }
 
@@ -19,16 +20,27 @@ interface ForkRecord {
 export class HubService extends Service {
   private forks = new Map<string, ForkRecord>()
   private pages: PageSpec[] = []
-  private events: Array<{ ts: number; mode: string; name: string; args: unknown[] }> = []
+  private events: Array<{ id: string; ts: number; mode: string; name: string; args: unknown[] }> = []
   private seq = 0
+  private eventSeq = 0
 
   constructor(ctx: Context, catalog: CatalogEntry[]) {
     super(ctx, 'hub')
     ctx.on('internal/dispatch', (mode, name, args) => {
       if (skipHubEvent(name, args)) return
-      this.events.unshift({ ts: Date.now(), mode, name, args: clone(args) })
+      this.eventSeq += 1
+      this.events.unshift({
+        id: `evt-${this.eventSeq}`,
+        ts: Date.now(),
+        mode,
+        name,
+        args: clone(args),
+      })
       this.events.splice(80)
       ctx.http.broadcast(HUB_CHANNEL_EVENT, this.events[0])
+    })
+    ctx.inject(['database'], (inner) => {
+      inner.database.register(eventsCollection(this))
     })
     let snapTimer: ReturnType<typeof setTimeout> | null = null
     const pushSnapshot = () => {
@@ -62,6 +74,10 @@ export class HubService extends Service {
         this.ctx.emit(HUB_CHANGE)
       }
     }, `hub.registerPage ${page.id}`)
+  }
+
+  listEvents() {
+    return [...this.events]
   }
 
   snapshot() {
@@ -190,6 +206,7 @@ function isStorePackage(packageName?: string) {
   return typeof packageName === 'string' && packageName.startsWith('store:')
 }
 
+export { eventsCollection } from './events-collection.ts'
 export type { CatalogEntry } from './catalog.ts'
 
 export const name = 'hub'

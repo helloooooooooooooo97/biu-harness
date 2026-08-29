@@ -28,22 +28,36 @@ export function loadActiveViewId(collectionPath: string, listed: SavedView[]) {
   return listed[0]?.id ?? null
 }
 
-const STARRED_TABLES_KEY = 'fsdb.starredTables'
+export type StarredView = { path: string; viewId: string }
 
-export function loadStarredTables(): string[] {
+const STARRED_VIEWS_KEY = 'fsdb.starredViews'
+
+export function loadStarredViews(): StarredView[] {
   try {
-    const raw = localStorage.getItem(STARRED_TABLES_KEY)
+    const raw = localStorage.getItem(STARRED_VIEWS_KEY)
     const parsed = raw ? (JSON.parse(raw) as unknown) : []
-    return Array.isArray(parsed) ? parsed.map((item) => String(item)).filter(Boolean) : []
+    if (!Array.isArray(parsed)) return []
+    return parsed.flatMap((item) => {
+      if (!item || typeof item !== 'object') return []
+      const rec = item as Record<string, unknown>
+      const path = String(rec.path ?? '').trim()
+      const viewId = String(rec.viewId ?? '').trim()
+      return path && viewId ? [{ path, viewId }] : []
+    })
   } catch {
     return []
   }
 }
 
-export function persistStarredTables(paths: string[]) {
-  localStorage.setItem(STARRED_TABLES_KEY, JSON.stringify(paths))
+export function persistStarredViews(items: StarredView[]) {
+  localStorage.setItem(STARRED_VIEWS_KEY, JSON.stringify(items))
 }
 
-export function toggleStarredTable(paths: string[], path: string) {
-  return paths.includes(path) ? paths.filter((item) => item !== path) : [...paths, path]
+export function isViewStarred(items: StarredView[], path: string, viewId: string) {
+  return items.some((item) => item.path === path && item.viewId === viewId)
+}
+
+export function toggleStarredView(items: StarredView[], path: string, viewId: string): StarredView[] {
+  if (isViewStarred(items, path, viewId)) return items.filter((item) => item.path !== path || item.viewId !== viewId)
+  return [...items, { path, viewId }]
 }

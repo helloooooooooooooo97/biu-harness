@@ -26,6 +26,7 @@ import {
   type SessionMascot as AssignedMascot,
 } from './session-mascot.ts'
 import { rebuildHealedEvents } from './session-heal.ts'
+import { sessionsCollection } from './sessions-collection.ts'
 
 export type { SessionEvent, SessionEventBody, SessionProject, SessionRecord, SessionMascot, SessionType, SessionConfig }
 export { SESSION_FORMAT_VERSION, normalizeSessionType, normalizeSessionConfig, mergeSessionConfig }
@@ -279,6 +280,9 @@ export class SessionsService extends Service {
 
   constructor(ctx: Context) {
     super(ctx, 'sessions')
+    ctx.inject(['database'], (inner) => {
+      inner.database.register(sessionsCollection(this))
+    })
   }
 
   async create(
@@ -564,6 +568,8 @@ async function resolveHostProject(input: string): Promise<SessionProject> {
   if (!info.isDirectory()) throw new Error(`project path is not a directory: ${real}`)
   return { name: basename(real) || real, path: real, boundAt: Date.now() }
 }
+
+export { sessionsCollection } from './sessions-collection.ts'
 
 export const name = 'sessions'
 export const inject = ['sessionStore']
