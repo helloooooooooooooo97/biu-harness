@@ -79,8 +79,20 @@ export function apply(ctx: Context) {
     }
   }
 
+  const mountKey = () =>
+    ctx.snapshot
+      .get()
+      .plugins.filter((plugin) => plugin.web)
+      .map((plugin) => `${plugin.id}\0${plugin.web}\0${plugin.enabled}\0${plugin.state}`)
+      .sort()
+      .join('|')
+  let lastMountKey = ''
   ctx.snapshot.subscribe(() => {
+    const key = mountKey()
+    if (key === lastMountKey) return
+    lastMountKey = key
     void sync()
   })
+  lastMountKey = mountKey()
   return sync()
 }

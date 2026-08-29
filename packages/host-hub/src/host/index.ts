@@ -25,23 +25,21 @@ export class HubService extends Service {
   constructor(ctx: Context, catalog: CatalogEntry[]) {
     super(ctx, 'hub')
     ctx.on('internal/dispatch', (mode, name, args) => {
-      if (name.startsWith('internal/')) return
-      // 流式 delta 极高频，不进 hub event 总线（避免 Settings EventLog 拖垮主线程）
-      if (name === 'llm/stream') return
-      if (name === 'session/event') {
-        const payload = args[0] as { event?: { type?: string } } | undefined
-        if (payload?.event?.type === 'assistant/chunk') return
-      }
+      if (skipHubEvent(name, args)) return
       this.events.unshift({ ts: Date.now(), mode, name, args: clone(args) })
       this.events.splice(80)
       ctx.http.broadcast(HUB_CHANNEL_EVENT, this.events[0])
     })
-    ctx.on('internal/status', () => {
-      ctx.http.broadcast(HUB_CHANNEL_SNAPSHOT, this.snapshot())
-    })
-    ctx.on(HUB_CHANGE, () => {
-      ctx.http.broadcast(HUB_CHANNEL_SNAPSHOT, this.snapshot())
-    })
+    let snapTimer: ReturnType<typeof setTimeout> | null = null
+    const pushSnapshot = () => {
+      if (snapTimer) return
+      snapTimer = setTimeout(() => {
+        snapTimer = null
+        ctx.http.broadcast(HUB_CHANNEL_SNAPSHOT, this.snapshot())
+      }, 40)
+    }
+    ctx.on('internal/status', pushSnapshot)
+    ctx.on(HUB_CHANGE, pushSnapshot)
     for (const entry of catalog) {
       this.forks.set(entry.id, { entry })
     }
@@ -160,6 +158,17 @@ function clone(value: unknown): unknown[] {
   } catch {
     return ['[unserializable]']
   }
+}
+
+/** 心跳和路由登记会把 EventLog / WS 打满；FS 登记多条 /api/db 路由后更明显。 */
+export function skipHubEvent(name: string, args?: unknown[]) {
+  if (name.startsWith('internal/')) return true
+  if (name === 'llm/stream' || name === 'clock/tick' || name === 'hub/change') return true
+  if (name === 'session/event') {
+    const payload = args?.[0] as { event?: { type?: string } } | undefined
+    if (payload?.event?.type === 'assistant/chunk') return true
+  }
+  return false
 }
 
 function isStorePackage(packageName?: string) {
