@@ -13,8 +13,17 @@ import {
 import type { AppRoute } from './session-route.ts'
 import { markSidebarMascotFresh } from './session-mascot-fresh.ts'
 
-export type { AppRoute, RouteView } from './session-route.ts'
-export { parseAppPath, isKnownAppPath, buildAppPath, routeFromState } from './session-route.ts'
+export type { AppRoute, RouteView, InspectorCenterKind } from './session-route.ts'
+export {
+  parseAppPath,
+  isKnownAppPath,
+  buildAppPath,
+  routeFromState,
+  centerKindFromRoute,
+  parseDatabaseRest,
+  encodeCollectionSeg,
+  decodeCollectionSeg,
+} from './session-route.ts'
 export {
   compactSessionEvents,
   mergeDispatchedUsageIntoNodes,
@@ -335,7 +344,7 @@ export class SessionViewService extends Service {
 
   /** URL → 状态：只由路由层调用，不回写 URL */
   async applyRoute(route: AppRoute) {
-    if (route.kind === 'module') {
+    if (route.kind !== 'home' && route.kind !== 'session') {
       return
     }
     if (route.kind === 'home') {

@@ -1,5 +1,8 @@
 import { Service, type Context } from 'cordis'
+import type { DbRecord } from '@biu/type-file-system'
 import type { CollectionChrome, DatabaseUi } from '@biu/type-file-system/ui'
+
+export type RecordFocus = { path: string; recordId: string; record?: DbRecord }
 
 export function normalizeCollectionPath(path: string) {
   const raw = String(path || '/').trim() || '/'
@@ -28,6 +31,8 @@ export class DatabaseUiService extends Service implements DatabaseUi {
   private layers = new Map<string, CollectionChrome[]>()
   private snapshot = new Map<string, CollectionChrome>()
   private listeners = new Set<() => void>()
+  private recordFocus: RecordFocus | null = null
+  private inspectorHost: HTMLElement | null = null
 
   constructor(ctx: Context) {
     super(ctx, 'databaseUi')
@@ -63,6 +68,31 @@ export class DatabaseUiService extends Service implements DatabaseUi {
     return () => {
       this.listeners.delete(listener)
     }
+  }
+
+  getRecordFocus() {
+    return this.recordFocus
+  }
+
+  setRecordFocus(next: RecordFocus | null) {
+    const same =
+      (this.recordFocus == null && next == null) ||
+      (this.recordFocus?.path === next?.path &&
+        this.recordFocus?.recordId === next?.recordId &&
+        this.recordFocus?.record === next?.record)
+    if (same) return
+    this.recordFocus = next
+    this.emit()
+  }
+
+  getInspectorHost() {
+    return this.inspectorHost
+  }
+
+  setInspectorHost(el: HTMLElement | null) {
+    if (this.inspectorHost === el) return
+    this.inspectorHost = el
+    this.emit()
   }
 
   private emit() {

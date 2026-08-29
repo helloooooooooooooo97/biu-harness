@@ -46,6 +46,7 @@ import {
   subscribeStarredViews,
   toggleStarredView,
 } from './view-storage.ts'
+import { pickDomAttrs, recordPickKind, viewPickId } from './pick-dom.ts'
 
 const SIDEBAR_BRAND_GRADIENT =
   'linear-gradient(105deg, color-mix(in srgb, #0066B0 42%, var(--dsw-hover)), color-mix(in srgb, #5B3E90 40%, var(--dsw-hover)) 52%, color-mix(in srgb, #E22726 42%, var(--dsw-hover)))'
@@ -108,11 +109,13 @@ function ViewRecordPreview({
   path,
   view,
   open,
+  recordKind,
   onOpenRecord,
 }: {
   path: string
   view: SavedView
   open: boolean
+  recordKind: string
   onOpenRecord?: (recordId: string) => void
 }) {
   const key = previewCacheKey(path, view)
@@ -199,7 +202,12 @@ function ViewRecordPreview({
       {state.items.map((row) => {
         const emoji = recordPreviewEmoji(row)
         return (
-          <div key={row.id} className="chat-session-row" role="listitem">
+          <div
+            key={row.id}
+            className="chat-session-row"
+            role="listitem"
+            {...pickDomAttrs(recordKind, row.id, recordPreviewLabel(row))}
+          >
             <div className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5">
               <span className="fsdb-record-icon relative grid size-6 shrink-0 place-items-center">
                 <button
@@ -216,7 +224,7 @@ function ViewRecordPreview({
                   {emoji ? <span className="fsdb-record-emoji">{emoji}</span> : <DocumentTextIcon aria-hidden className="size-4" />}
                 </button>
                 {pickerId === row.id ? (
-                  <div className="fsdb-emoji-picker" onClick={(event) => event.stopPropagation()}>
+                  <div className="fsdb-emoji-picker" data-biu-ignore onClick={(event) => event.stopPropagation()}>
                     <div className="fsdb-emoji-picker-presets">
                       {RECORD_EMOJI_PRESETS.map((item) => (
                         <button
@@ -423,7 +431,7 @@ export const DataSidebar = memo(function DataSidebar({
         </span>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
-        <div className="app-side-actions" role="navigation" aria-label="视图操作">
+        <div className="app-side-actions" role="navigation" aria-label="视图操作" data-biu-ignore>
           <button type="button" className="app-side-actions-item" title="添加视图" onClick={onAddView}>
             <span className="app-side-actions-icon" aria-hidden>
               <PlusIcon className="size-4 shrink-0" />
@@ -471,7 +479,10 @@ export const DataSidebar = memo(function DataSidebar({
                     const expanded = expandedViewKey === previewKey
                     return (
                       <div key={previewKey} className="min-w-0">
-                        <div className={`chat-session-row group${active ? ' is-active' : ''} is-pinned`}>
+                        <div
+                          className={`chat-session-row group${active ? ' is-active' : ''} is-pinned`}
+                          {...pickDomAttrs('view', viewPickId(table.path, view.id), view.name)}
+                        >
                           <div className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5">
                             <button
                               type="button"
@@ -520,6 +531,7 @@ export const DataSidebar = memo(function DataSidebar({
                           path={table.path}
                           view={view}
                           open={expanded}
+                          recordKind={recordPickKind(table.view?.moduleId)}
                           onOpenRecord={(id) => openRecord(table.path, view, id)}
                         />
                       </div>
@@ -559,6 +571,7 @@ export const DataSidebar = memo(function DataSidebar({
                           className="flex min-h-8 min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-md text-left text-[14px] font-medium tracking-normal text-inherit outline-none hover:text-(--dsw-sidebar-fg-active) focus-visible:ring-1 focus-visible:ring-(--dsw-border)"
                           title={name}
                           aria-expanded={open}
+                          {...pickDomAttrs('collection', table.path, name)}
                           onClick={() => {
                             setOpenTables((prev) => ({ ...prev, [table.path]: !open }))
                             if (!listed.length) onOpenTable?.(table.path)
@@ -598,6 +611,7 @@ export const DataSidebar = memo(function DataSidebar({
                             <div key={view.id} className="min-w-0">
                               <div
                                 className={`chat-session-row group${active ? ' is-active' : ''}${starred ? ' is-pinned' : ''}`}
+                                {...pickDomAttrs('view', viewPickId(table.path, view.id), view.name)}
                               >
                                 <div className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5">
                                   <button
@@ -666,6 +680,7 @@ export const DataSidebar = memo(function DataSidebar({
                                 path={table.path}
                                 view={view}
                                 open={expanded}
+                                recordKind={recordPickKind(table.view?.moduleId)}
                                 onOpenRecord={(id) => openRecord(table.path, view, id)}
                               />
                             </div>

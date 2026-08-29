@@ -1,12 +1,19 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { buildAppPath, isKnownAppPath, parseAppPath, routeFromState } from '@biu/web-session-view'
+import {
+  buildAppPath,
+  centerKindFromRoute,
+  isKnownAppPath,
+  parseAppPath,
+  routeFromState,
+} from '@biu/web-session-view'
 import type { AppModule } from '@biu/web-app-modules'
 
 const plugins: AppModule[] = [
   { id: 'dashboard', label: 'Dashboard', path: '/dashboard' },
   { id: 'tasks', label: 'Tasks', path: '/tasks' },
   { id: 'channels', label: '频道', path: '/channels' },
+  { id: 'database', label: '数据', path: '/database' },
 ]
 
 test('parseAppPath covers home, session, and registered plugin modules', () => {
@@ -30,6 +37,41 @@ test('parseAppPath covers home, session, and registered plugin modules', () => {
   })
   assert.deepEqual(parseAppPath('/unknown'), { kind: 'home' })
   assert.deepEqual(parseAppPath('/tasks'), { kind: 'home' })
+  assert.deepEqual(parseAppPath('/database', plugins), { kind: 'module', moduleId: 'database', path: '/database' })
+})
+
+test('database nested routes identify view vs record without touching /s/:id', () => {
+  assert.deepEqual(parseAppPath('/database/c/pages', plugins), {
+    kind: 'collection-view',
+    moduleId: 'database',
+    path: '/database',
+    collection: '/pages',
+    viewId: undefined,
+  })
+  assert.deepEqual(parseAppPath('/database/c/pages/v/default', plugins), {
+    kind: 'collection-view',
+    moduleId: 'database',
+    path: '/database',
+    collection: '/pages',
+    viewId: 'default',
+  })
+  assert.deepEqual(parseAppPath('/database/c/pages/r/rec-1', plugins), {
+    kind: 'record',
+    moduleId: 'database',
+    path: '/database',
+    collection: '/pages',
+    viewId: undefined,
+    recordId: 'rec-1',
+  })
+  assert.deepEqual(parseAppPath('/database/c/pages/v/board/r/rec-1', plugins), {
+    kind: 'record',
+    moduleId: 'database',
+    path: '/database',
+    collection: '/pages',
+    viewId: 'board',
+    recordId: 'rec-1',
+  })
+  assert.equal(parseAppPath('/s/rec-1', plugins).kind, 'session')
 })
 
 test('isKnownAppPath only accepts builtins plus registered plugin paths', () => {
@@ -41,6 +83,7 @@ test('isKnownAppPath only accepts builtins plus registered plugin paths', () => 
   assert.equal(isKnownAppPath('/workspace'), false)
   assert.equal(isKnownAppPath('/s/abc'), true)
   assert.equal(isKnownAppPath('/unknown'), false)
+  assert.equal(isKnownAppPath('/database/c/pages/v/x', plugins), true)
 })
 
 test('buildAppPath round-trips with parseAppPath', () => {
@@ -50,10 +93,51 @@ test('buildAppPath round-trips with parseAppPath', () => {
     { kind: 'session' as const, sessionId: 's1', view: 'debug' as const },
     { kind: 'module' as const, moduleId: 'dashboard' as const, path: '/dashboard' },
     { kind: 'module' as const, moduleId: 'tasks' as const, path: '/tasks' },
+    {
+      kind: 'collection-view' as const,
+      moduleId: 'database' as const,
+      path: '/database',
+      collection: '/pages',
+      viewId: 'v1',
+    },
+    {
+      kind: 'record' as const,
+      moduleId: 'database' as const,
+      path: '/database',
+      collection: '/pages',
+      viewId: 'v1',
+      recordId: 'r1',
+    },
   ]
   for (const route of routes) {
     assert.deepEqual(parseAppPath(buildAppPath(route), plugins), route)
   }
+})
+
+test('centerKindFromRoute follows the center pane', () => {
+  assert.equal(centerKindFromRoute({ kind: 'home' }), 'session')
+  assert.equal(centerKindFromRoute({ kind: 'session', sessionId: 'a', view: 'chat' }), 'session')
+  assert.equal(centerKindFromRoute({ kind: 'module', moduleId: 'tasks', path: '/tasks' }), 'task')
+  assert.equal(centerKindFromRoute({ kind: 'module', moduleId: 'dashboard', path: '/dashboard' }), 'module')
+  assert.equal(
+    centerKindFromRoute({
+      kind: 'collection-view',
+      moduleId: 'database',
+      path: '/database',
+      collection: '/pages',
+    }),
+    'collection-view',
+  )
+  assert.equal(
+    centerKindFromRoute({
+      kind: 'record',
+      moduleId: 'database',
+      path: '/database',
+      collection: '/pages',
+      recordId: 'r1',
+    }),
+    'record',
+  )
 })
 
 test('routeFromState maps sessionView fields', () => {

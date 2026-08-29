@@ -1,16 +1,18 @@
-import { useEffect, useState, useSyncExternalStore, type ComponentType } from 'react'
+import { useEffect, useMemo, useSyncExternalStore, type ComponentType } from 'react'
 import type { Context } from 'cordis'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CircleStackIcon } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/type-slots'
 import { DATABASE_CHANNEL, type CollectionInfo, type CollectionView } from '@biu/type-file-system'
-import type { CollectionChrome, DatabaseUi } from '@biu/type-file-system/ui'
+import type { CollectionChrome } from '@biu/type-file-system/ui'
+import { buildAppPath, parseAppPath } from '@biu/web-session-view'
 import { CollectionBrowser } from './browser.tsx'
 import { DatabaseUiService } from './database-ui.ts'
 import {
   bootLoadCollections,
   collectionNavKey,
 } from './nav-boot.ts'
-import { pushAllSavedViews } from './view-storage.ts'
+import { loadActiveViewId, loadViews, pushAllSavedViews } from './view-storage.ts'
 
 type SlotsService = {
   place: (slot: string, view: unknown, opts: { key: string; order?: number; props?: () => Record<string, unknown> }) => { dispose?: () => unknown }
@@ -43,6 +45,7 @@ type SnapshotService = {
 
 const DATA_MODULE_ID = 'database'
 const DATA_MODULE_PATH = '/database'
+const DATA_MODULE = { id: DATA_MODULE_ID, label: '数据', path: DATA_MODULE_PATH }
 
 function normalizeNavPath(path: string) {
   const raw = String(path || '/').trim() || '/'
@@ -62,26 +65,104 @@ export function navConflict(view: CollectionView, title: string, modules: AppMod
 
 const EMPTY_CHROME: CollectionChrome = {}
 
+function defaultViewId(collectionPath: string) {
+  return loadActiveViewId(collectionPath, loadViews(collectionPath)) ?? undefined
+}
+
 function CollectionPage(props: SlotProps) {
   const tables = (props.tables as CollectionInfo[] | undefined) ?? []
-  const [path, setPath] = useState(() => tables[0]?.path ?? '')
-  const [focusRecordId, setFocusRecordId] = useState<string | null>(null)
-  useEffect(() => {
-    if (!tables.length) return
-    if (tables.some((row) => row.path === path)) return
-    setPath(tables[0]!.path)
-  }, [path, tables])
-  const row = tables.find((item) => item.path === path) ?? tables[0]
-  const currentPath = row?.path ?? ''
-  const ui = props.databaseUi as DatabaseUi | undefined
+  const slots = props.slots as SlotsService | undefined
+  const ui = props.databaseUi as DatabaseUiService | undefined
+  const location = useLocation()
+  const navigate = useNavigate()
+  const parsed = useMemo(() => parseAppPath(location.pathname, [DATA_MODULE]), [location.pathname])
+  const collectionFromRoute =
+    parsed.kind === 'collection-view' || parsed.kind === 'record' ? parsed.collection : ''
+  const viewFromRoute =
+    parsed.kind === 'collection-view' || parsed.kind === 'record' ? parsed.viewId : undefined
+  const recordFromRoute = parsed.kind === 'record' ? parsed.recordId : null
+  const currentPath = tables.some((item) => item.path === collectionFromRoute)
+    ? collectionFromRoute
+    : (tables[0]?.path ?? '')
+  const row = tables.find((item) => item.path === currentPath) ?? tables[0]
   const chrome = useSyncExternalStore(
     (fn) => (ui ? ui.subscribe(fn) : () => undefined),
     () => ui?.chrome(currentPath) ?? EMPTY_CHROME,
     () => ui?.chrome(currentPath) ?? EMPTY_CHROME,
   )
+
+  const go = (
+    next: { collection: string; viewId?: string; recordId?: string | null },
+    opts?: { replace?: boolean },
+  ) => {
+    if (next.recordId) {
+      navigate(
+        buildAppPath({
+          kind: 'record',
+          moduleId: DATA_MODULE_ID,
+          path: DATA_MODULE_PATH,
+          collection: next.collection,
+          viewId: next.viewId,
+          recordId: next.recordId,
+        }),
+        opts,
+      )
+      return
+    }
+    navigate(
+      buildAppPath({
+        kind: 'collection-view',
+        moduleId: DATA_MODULE_ID,
+        path: DATA_MODULE_PATH,
+        collection: next.collection,
+        viewId: next.viewId,
+      }),
+      opts,
+    )
+  }
+
   useEffect(() => {
     pushAllSavedViews()
   }, [])
+
+  useEffect(() => {
+    if (!tables.length) return
+    if (parsed.kind === 'module' && parsed.moduleId === DATA_MODULE_ID) {
+      const first = tables[0]!
+      go({ collection: first.path, viewId: defaultViewId(first.path) }, { replace: true })
+    }
+  }, [parsed.kind, parsed.moduleId, tables])
+
+  useEffect(() => {
+    if (!tables.length || !collectionFromRoute) return
+    if (tables.some((item) => item.path === collectionFromRoute)) return
+    const first = tables[0]!
+    go({ collection: first.path, viewId: defaultViewId(first.path) }, { replace: true })
+  }, [collectionFromRoute, tables])
+
+  useEffect(() => {
+    if (parsed.kind !== 'record' || !slots || !ui) return
+    const panes = chrome.panes ?? []
+    const placed = panes.map((pane) =>
+      slots.place('inspector-panels', RecordPanePanel, {
+        key: `fsdb-pane-${pane.id}`,
+        order: 20,
+        props: () => ({
+          tabId: pane.id,
+          tabLabel: pane.label,
+          tabIcon: CircleStackIcon,
+          centerKinds: ['record'],
+          paneId: pane.id,
+          databaseUi: ui,
+        }),
+      }),
+    )
+    if (panes.length) window.dispatchEvent(new Event('biu:inspector-open'))
+    return () => {
+      for (const item of placed) void item.dispose?.()
+    }
+  }, [chrome, parsed.kind, slots, ui])
+
   if (!row) return null
   return (
     <CollectionBrowser
@@ -91,11 +172,37 @@ function CollectionPage(props: SlotProps) {
       blurb={row.view?.blurb ?? ''}
       chrome={chrome}
       tables={tables}
-      onOpenTable={setPath}
-      focusRecordId={focusRecordId}
-      onFocusRecordConsumed={() => setFocusRecordId(null)}
-      onRequestRecord={setFocusRecordId}
+      databaseUi={ui}
+      routeRecordId={recordFromRoute}
+      routeViewId={viewFromRoute}
+      onOpenTable={(path) => go({ collection: path, viewId: defaultViewId(path) })}
+      onOpenView={(viewId) => go({ collection: row.path, viewId })}
+      onOpenRecord={(recordId, viewId, collection) =>
+        go({ collection: collection ?? row.path, viewId: viewId ?? viewFromRoute, recordId })
+      }
+      onCloseRecord={() => go({ collection: row.path, viewId: viewFromRoute }, { replace: true })}
     />
+  )
+}
+
+function RecordPanePanel(props: SlotProps) {
+  const ui = props.databaseUi as DatabaseUiService | undefined
+  const paneId = String(props.paneId ?? '')
+  const focus = useSyncExternalStore(
+    (fn) => (ui ? ui.subscribe(fn) : () => undefined),
+    () => ui?.getRecordFocus() ?? null,
+    () => null,
+  )
+  const pane = focus ? ui?.chrome(focus.path).panes?.find((item) => item.id === paneId) : undefined
+  const record = focus?.record
+  if (!pane || !record) {
+    return <p className="fsdb-inspector-empty">打开一条记录</p>
+  }
+  const Pane = pane.Pane
+  return (
+    <div className="fsdb-inspector-panel" data-testid={`fsdb-pane-${paneId}`}>
+      <Pane record={record} />
+    </div>
   )
 }
 
@@ -196,7 +303,8 @@ export function apply(ctx: Context) {
           props: () => ({
             moduleId: DATA_MODULE_ID,
             tables: liveTables,
-            databaseUi: ctx.get('databaseUi') as DatabaseUi,
+            databaseUi: ctx.get('databaseUi') as DatabaseUiService,
+            slots,
           }),
         })
         mounted.set(DATA_MODULE_ID, () => {

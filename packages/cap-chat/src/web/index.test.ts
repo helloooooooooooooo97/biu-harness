@@ -33,4 +33,6 @@ test('one plugin fills thread, trajectory, composer and approvals dock', async (
   assert.ok(usage)
   assert.equal(traj.props?.().requiresSession, true)
   assert.equal(usage.props?.().requiresSession, true)
+  assert.deepEqual(traj.props?.().centerKinds, ['session'])
+  assert.deepEqual(usage.props?.().centerKinds, ['session'])
 })

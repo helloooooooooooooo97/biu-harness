@@ -120,6 +120,25 @@ export function requestInspectorOpen() {
   window.dispatchEvent(new Event('biu:inspector-open'))
 }
 
+export function requestInspectorClose() {
+  window.dispatchEvent(new Event('biu:inspector-close'))
+}
+
+export function requestInspectorTab(tabId: string) {
+  if (!tabId) return
+  window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: tabId }))
+}
+
+export function inspectorTabFromEvent(event: Event): string | undefined {
+  const detail = (event as CustomEvent).detail
+  if (typeof detail === 'string' && detail) return detail
+  if (detail && typeof detail === 'object' && typeof (detail as { tabId?: unknown }).tabId === 'string') {
+    const tabId = (detail as { tabId: string }).tabId
+    return tabId || undefined
+  }
+  return undefined
+}
+
 export function toggleChatOverlay() {
   if (overlay) {
     let inspectorWidth = 320

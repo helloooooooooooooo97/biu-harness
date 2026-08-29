@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import {
   chatColumnWidth,
@@ -18,6 +18,7 @@ import {
   subscribeOverlayPinned,
   toggleOverlayPinned,
   toggleChatOverlay,
+  requestInspectorClose,
 } from './chat-overlay.ts'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
@@ -25,7 +26,8 @@ import type { SlotProps } from '@biu/web-slots'
 import { bindSnapshot, type SnapshotService } from '@biu/web-snapshot'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
-import { parseAppPath } from '@biu/web-session-view'
+import { centerKindFromRoute, parseAppPath } from '@biu/web-session-view'
+import { inspectorPanelMatches } from './inspector-panels.ts'
 import {
   isMascotDancing,
   mascotDanceShape,
@@ -466,6 +468,7 @@ function Shell(props: SlotProps) {
       } catch {
         /* ignore */
       }
+      if (!next) requestInspectorClose()
       return next
     })
   }, [])
@@ -519,6 +522,13 @@ function Shell(props: SlotProps) {
     return () => window.removeEventListener('biu:inspector-open', onOpen)
   }, [])
   const appRoute = parseAppPath(location.pathname, pluginModules)
+  const centerKind = centerKindFromRoute(appRoute)
+  const inspectorExtras = useSlotEntries(slots, 'inspector-panels')
+  const inspectorTabCount = useMemo(
+    () => inspectorExtras.filter((entry) => inspectorPanelMatches(entry.props?.() ?? {}, centerKind, sessionId)).length,
+    [centerKind, inspectorExtras, sessionId],
+  )
+  const inspectorVisible = inspectorOpen && inspectorTabCount > 0
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   const agentHref = sessionId ? `/s/${sessionId}` : '/'
@@ -629,7 +639,8 @@ function Shell(props: SlotProps) {
           >
             <MapPinIcon {...chromeIcon} />
           </button>
-        ) : (
+        ) : null}
+        {inspectorTabCount > 0 ? (
           <button
             type="button"
             className={`chat-view-header-expand${inspectorOpen ? ' is-active' : ''}`}
@@ -645,7 +656,7 @@ function Shell(props: SlotProps) {
               <ChevronDoubleLeftIcon {...chromeIcon} />
             )}
           </button>
-        )}
+        ) : null}
       </div>
     </header>
   )
@@ -653,13 +664,13 @@ function Shell(props: SlotProps) {
   return (
     <div
       className={`app-shell${activeModule === 'agent'
-          ? ` app-shell-agent${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}${inspectorOpen ? ' is-inspector-open' : ''}${chatOverlay ? ' is-chat-overlay' : ''}${overlayAutohide ? ' is-chat-overlay-autohide' : ''
+          ? ` app-shell-agent${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}${inspectorVisible ? ' is-inspector-open' : ''}${chatOverlay ? ' is-chat-overlay' : ''}${overlayAutohide ? ' is-chat-overlay-autohide' : ''
           }`
-          : ' app-shell-module'
+          : ` app-shell-module${inspectorVisible ? ' is-inspector-open' : ''}`
         }${railOpen || railPinned ? ' is-rail-open' : ''}`}
       data-testid={chatFloating ? 'chat-overlay' : undefined}
       style={
-        inspectorOpen
+        inspectorVisible
           ? ({ ['--inspector-width' as string]: `${inspectorWidth}px` } as CSSProperties)
           : undefined
       }
@@ -719,17 +730,16 @@ function Shell(props: SlotProps) {
         />
       </main>
 
-      {activeModule === 'agent' ? (
-        <SessionInspector
-          open={inspectorOpen}
-          width={inspectorWidth}
-          onWidthChange={onInspectorWidthChange}
-          useSessionView={useSessionView}
-          sessionView={sessionView}
-          slots={slots}
-          renderSlot={props.renderSlot}
-        />
-      ) : null}
+      <SessionInspector
+        open={inspectorVisible}
+        width={inspectorWidth}
+        onWidthChange={onInspectorWidthChange}
+        useSessionView={useSessionView}
+        sessionView={sessionView}
+        slots={slots}
+        renderSlot={props.renderSlot}
+        centerKind={centerKind}
+      />
 
       <SessionConfigDialog
         open={configOpen}

@@ -3,10 +3,13 @@ import { Squares2X2Icon } from '@heroicons/react/16/solid'
 import { chromeIcon } from './chrome-icon.ts'
 import {
   bindSessionView,
+  type InspectorCenterKind,
   type SessionViewService,
 } from '@biu/web-session-view'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
+import { inspectorTabFromEvent } from './chat-overlay.ts'
+import { inspectorPanelMatches } from './inspector-panels.ts'
 
 export type SessionInspectorProps = {
   open: boolean
@@ -16,6 +19,7 @@ export type SessionInspectorProps = {
   sessionView: SessionViewService
   slots: SlotsService
   renderSlot: (name: string) => ReactNode
+  centerKind: InspectorCenterKind
 }
 
 function inspectorTabStorageKey(sid: string | null | undefined) {
@@ -40,28 +44,27 @@ export const SessionInspector = memo(function SessionInspector({
   sessionView,
   slots,
   renderSlot,
+  centerKind,
 }: SessionInspectorProps) {
   const sessionId = useSessionView((state) => state.sessionId)
   const focusCallId = useSessionView((state) => state.focusCallId)
   const extras = useSlotEntries(slots, 'inspector-panels')
   const extraTabs = useMemo(() => {
-    const tabs = [...extras]
+    return [...extras]
       .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
-      .map((entry) => {
+      .flatMap((entry) => {
         const extra = entry.props?.() ?? {}
-        return {
+        if (!inspectorPanelMatches(extra, centerKind, sessionId)) return []
+        return [{
           entry,
           id: String(extra.tabId ?? entry.id),
           label: String(extra.tabLabel ?? '插件'),
           Icon: extra.tabIcon as ComponentType<{ className?: string }> | undefined,
           ensureTrajectory: Boolean(extra.ensureTrajectory),
           focusOnCall: Boolean(extra.focusOnCall),
-          requiresSession: Boolean(extra.requiresSession),
-        }
+        }]
       })
-    // 轨迹 / 用量只在进入具体会话后出现；首页无 session 时只留插件、任务等常驻页签。
-    return sessionId ? tabs : tabs.filter((item) => !item.requiresSession)
-  }, [extras, sessionId])
+  }, [centerKind, extras, sessionId])
   const allowedTabs = useMemo(() => extraTabs.map((item) => item.id), [extraTabs])
   const defaultTab = extraTabs[0]?.id ?? ''
 
@@ -93,6 +96,15 @@ export const SessionInspector = memo(function SessionInspector({
       return defaultTab
     })
   }, [sessionId, focusCallId, focusTabId, allowedTabs.join('|'), defaultTab, setTab])
+
+  useEffect(() => {
+    const onTab = (event: Event) => {
+      const next = inspectorTabFromEvent(event)
+      if (next && allowedTabs.includes(next)) setTab(next)
+    }
+    window.addEventListener('biu:inspector-tab', onTab)
+    return () => window.removeEventListener('biu:inspector-tab', onTab)
+  }, [allowedTabs.join('|'), setTab])
 
   useEffect(() => {
     if (!open) return

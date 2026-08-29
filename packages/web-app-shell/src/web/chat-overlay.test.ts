@@ -13,6 +13,8 @@ import {
   setOverlayPinned,
   clampOverlayChatHeight,
   OVERLAY_CHAT_HEIGHT_MIN,
+  inspectorTabFromEvent,
+  requestInspectorTab,
 } from './chat-overlay.ts'
 
 test('chat column subtracts rail, sidebar and inspector', () => {
@@ -81,4 +83,21 @@ test('autohide does not fire when overlay is pinned', () => {
   setOverlayPinned(false)
   requestOverlayAutohide()
   assert.equal(getOverlayAutohide(), true)
+})
+
+test('inspector tab event accepts string or { tabId }', () => {
+  assert.equal(inspectorTabFromEvent(new CustomEvent('biu:inspector-tab', { detail: 'database' })), 'database')
+  assert.equal(inspectorTabFromEvent(new CustomEvent('biu:inspector-tab', { detail: { tabId: 'traj' } })), 'traj')
+  assert.equal(inspectorTabFromEvent(new Event('biu:inspector-tab')), undefined)
+})
+
+test('requestInspectorTab dispatches tab id', () => {
+  let seen = ''
+  const onTab = (event: Event) => {
+    seen = inspectorTabFromEvent(event) ?? ''
+  }
+  window.addEventListener('biu:inspector-tab', onTab)
+  requestInspectorTab('database')
+  window.removeEventListener('biu:inspector-tab', onTab)
+  assert.equal(seen, 'database')
 })

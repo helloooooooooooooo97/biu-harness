@@ -66,6 +66,7 @@ export function apply(ctx: Context) {
       ensureTrajectory: true,
       focusOnCall: true,
       requiresSession: true,
+      centerKinds: ['session'],
     }),
   })
   ctx.slots.place('inspector-panels', InspectorUsage, {
@@ -77,6 +78,7 @@ export function apply(ctx: Context) {
       tabLabel: '用量',
       tabIcon: SignalIcon,
       requiresSession: true,
+      centerKinds: ['session'],
     }),
   })
 }

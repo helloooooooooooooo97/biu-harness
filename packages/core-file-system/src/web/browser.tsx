@@ -42,6 +42,7 @@ import {
 import type { CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
 import { asAttachment, asHttpHref, asImageSrc } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
+import type { DatabaseUiService } from './database-ui.ts'
 import {
   asStringList,
   asTime,
@@ -62,6 +63,7 @@ import {
 } from './fields'
 import { AppDialog, CellSelect, CheckRow, LocalText, TokenMultiSelect } from './controls.tsx'
 import { DataSidebar } from './data-sidebar.tsx'
+import { pickDomAttrs, recordPickKind } from './pick-dom.ts'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
 import {
   activeViewStorageKey,
@@ -437,9 +439,12 @@ export function CollectionBrowser({
   chrome,
   tables = [],
   onOpenTable,
-  focusRecordId = null,
-  onFocusRecordConsumed,
-  onRequestRecord,
+  databaseUi,
+  routeRecordId = null,
+  routeViewId,
+  onOpenView,
+  onOpenRecord,
+  onCloseRecord,
 }: {
   moduleId?: string
   collectionPath: string
@@ -448,15 +453,17 @@ export function CollectionBrowser({
   chrome?: CollectionChrome
   tables?: CollectionInfo[]
   onOpenTable?: (path: string) => void
-  focusRecordId?: string | null
-  onFocusRecordConsumed?: () => void
-  onRequestRecord?: (recordId: string) => void
+  databaseUi?: DatabaseUiService
+  routeRecordId?: string | null
+  routeViewId?: string
+  onOpenView?: (viewId: string) => void
+  onOpenRecord?: (recordId: string, viewId?: string | null, collection?: string) => void
+  onCloseRecord?: () => void
 }) {
   const [stat, setStat] = useState<StatResult | null>(null)
   const [items, setItems] = useState<Array<DbRecord & { path?: string }>>([])
   const [error, setError] = useState('')
-  const [detailId, setDetailId] = useState<string | null>(null)
-  const [detailTab, setDetailTab] = useState('overview')
+  const detailId = routeRecordId
   const [detailBody, setDetailBody] = useState<unknown>(null)
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [busyKey, setBusyKey] = useState<string | null>(null)
@@ -473,6 +480,10 @@ export function CollectionBrowser({
   const [columnKeys, setColumnKeys] = useState<string[]>(initialView?.columns ?? [])
   const [views, setViews] = useState<SavedView[]>(() => loadViews(collectionPath))
   const [activeViewId, setActiveViewId] = useState<string | null>(initialView?.id ?? null)
+  const setDetailId = (id: string | null) => {
+    if (id) onOpenRecord?.(id, activeViewId)
+    else onCloseRecord?.()
+  }
   const [hydrated, setHydrated] = useState(false)
   const [viewsOpen, setViewsOpen] = useState(() => {
     try {
@@ -643,7 +654,6 @@ export function CollectionBrowser({
     hydratePath.current = ''
     setCollapsed({})
     hydratedDetail.current = ''
-    setDetailId(null)
     const stored = viewForPath(collectionPath)
     if (stored) {
       setViews(loadViews(collectionPath))
@@ -821,14 +831,17 @@ export function CollectionBrowser({
   }, [detailId])
 
   useEffect(() => {
-    if (!focusRecordId) return
-    setDetailId(focusRecordId)
-    onFocusRecordConsumed?.()
-  }, [focusRecordId, onFocusRecordConsumed])
+    if (!detailId) {
+      databaseUi?.setRecordFocus(null)
+      return
+    }
+    const row = items.find((item) => item.id === detailId)
+    databaseUi?.setRecordFocus({ path: collectionPath, recordId: detailId, record: row })
+  }, [collectionPath, databaseUi, detailId, items])
 
   useEffect(() => {
-    setDetailTab('overview')
-  }, [detailId])
+    return () => databaseUi?.setRecordFocus(null)
+  }, [databaseUi])
 
   useEffect(() => {
     if (dlg?.kind !== 'rename') return
@@ -893,9 +906,20 @@ export function CollectionBrowser({
     setViewMenuOpen(false)
   }
 
+  function selectView(view: SavedView) {
+    applyView(view)
+    onOpenView?.(view.id)
+  }
+
+  useEffect(() => {
+    if (!routeViewId) return
+    const view = views.find((item) => item.id === routeViewId)
+    if (view) applyView(view)
+  }, [collectionPath, routeViewId])
+
   function commitView(view: SavedView) {
     persistViews([...views, view])
-    applyView(view)
+    selectView(view)
   }
 
   function uniqueViewName(base: string) {
@@ -995,11 +1019,11 @@ export function CollectionBrowser({
         query: '',
       })
       persistViews([fallback])
-      applyView(fallback)
+      selectView(fallback)
       return
     }
     persistViews(remaining)
-    if (activeViewId === removedId) applyView(remaining[0])
+    if (activeViewId === removedId) selectView(remaining[0])
   }
 
   function setVisibleColumns(next: string[]) {
@@ -1097,6 +1121,9 @@ export function CollectionBrowser({
   }
 
   const labelOf = (row: DbRecord) => String(row[schema?.labelField ?? 'id'] ?? row.id)
+  const currentTable = tables.find((item) => item.path === collectionPath)
+  const recordKind = recordPickKind(currentTable?.view?.moduleId)
+  const recordPick = (row: DbRecord) => pickDomAttrs(recordKind, row.id, labelOf(row))
 
   function renderCell(row: DbRecord, key: string, field: FieldSpec) {
     const Custom = chrome?.cells?.[key]
@@ -1192,7 +1219,7 @@ export function CollectionBrowser({
     if (!actions.length) return null
     const Action = chrome?.Action
     return (
-      <div className="tasks-row-actions" onClick={(event) => event.stopPropagation()}>
+      <div className="tasks-row-actions" data-biu-ignore onClick={(event) => event.stopPropagation()}>
         {actions.map((action) => {
           const busy = Boolean(busyKey?.endsWith(`:${row.id}`))
           const run = () => void runAction(row, action)
@@ -1247,9 +1274,9 @@ export function CollectionBrowser({
 
   function QueueRow({ row }: { row: DbRecord }) {
     return (
-      <li className={`tasks-queue-item${row.id === detailId ? ' is-active' : ''}`}>
+      <li className={`tasks-queue-item${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
         <div className="tasks-queue-item-body">
-          <button type="button" className="tasks-queue-item-main" onClick={() => setDetailId(row.id)}>
+          <button type="button" className="tasks-queue-item-main" data-biu-action="open" onClick={() => setDetailId(row.id)}>
             <span className="tasks-queue-item-title">
               <RecordTitle row={row} openDetail={false} />
             </span>
@@ -1263,9 +1290,9 @@ export function CollectionBrowser({
 
   function MiniCard({ row }: { row: DbRecord }) {
     return (
-      <div className={`tasks-minicard${row.id === detailId ? ' is-active' : ''}`}>
+      <div className={`tasks-minicard${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
         <div className="tasks-minicard-title">
-          <button type="button" className="tasks-minicard-open" onClick={() => setDetailId(row.id)}>
+          <button type="button" className="tasks-minicard-open" data-biu-action="open" onClick={() => setDetailId(row.id)}>
             <span className="tasks-minicard-titletext">
               <RecordTitle row={row} openDetail={false} />
             </span>
@@ -1294,7 +1321,7 @@ export function CollectionBrowser({
     return (
       <>
         {listed.map(({ row, depth, hasKids }) => (
-          <tr key={`${keyPrefix}${row.id}`} className={row.id === detailId ? 'is-active' : undefined}>
+          <tr key={`${keyPrefix}${row.id}`} className={row.id === detailId ? 'is-active' : undefined} {...recordPick(row)} onClick={() => setDetailId(row.id)}>
             {columns.map((col) => (
               <td key={col.key}>
                 {col.key === schema?.labelField ? (
@@ -1411,7 +1438,7 @@ export function CollectionBrowser({
           activeViewId={activeViewId}
           onOpenTable={onOpenTable}
           onApplyView={(view) => {
-            applyView(view)
+            selectView(view)
             setDetailId(null)
           }}
           onRenameView={renameView}
@@ -1419,52 +1446,20 @@ export function CollectionBrowser({
           onAddView={addEmptyView}
           onCopyView={copyView}
           onOpenRecord={(path, view, recordId) => {
-            if (path === collectionPath) {
-              applyView(view)
-              setDetailId(recordId)
-              return
-            }
-            onRequestRecord?.(recordId)
+            onOpenRecord?.(recordId, view.id, path)
           }}
         />
       ) : null}
       <div className="fsdb-right">
         <header className="chat-view-header" data-biu-ignore>
           <div className="chat-view-header-left">
-            {selected ? (
-              <span className="min-w-0 truncate text-[13px] font-semibold">{labelOf(selected)}</span>
-            ) : (
-              <span className="min-w-0 truncate text-[13px] font-semibold">{activeView?.name ?? title}</span>
-            )}
+            <span className="min-w-0 truncate text-[13px] font-semibold">
+              {selected ? labelOf(selected) : (activeView?.name ?? title)}
+            </span>
           </div>
-          {selected ? (
-            <nav className="inspector-tabs" aria-label="详情分区">
-              <button
-                type="button"
-                className={`inspector-tab${detailTab === 'overview' ? ' is-active' : ''}`}
-                onClick={() => setDetailTab('overview')}
-              >
-                概况
-              </button>
-              {(chrome?.panes ?? []).map((pane) => {
-                const badge = pane.badge?.(selected)
-                return (
-                  <button
-                    key={pane.id}
-                    type="button"
-                    className={`inspector-tab${detailTab === pane.id ? ' is-active' : ''}`}
-                    onClick={() => setDetailTab(pane.id)}
-                  >
-                    {pane.label}
-                    {badge != null && badge !== '' ? <span className="fsdb-detail-tab-count">{badge}</span> : null}
-                  </button>
-                )
-              })}
-            </nav>
-          ) : null}
           <div className="chat-view-header-right">
             {selected ? <RecordActions row={selected} place="detail" /> : null}
-            {activeViewId ? (
+            {activeViewId && !selected ? (
               <button
                 type="button"
                 className={`chat-view-header-expand${viewStarred ? ' is-active' : ''}`}
@@ -1480,8 +1475,8 @@ export function CollectionBrowser({
               <button
                 type="button"
                 className="chat-view-header-expand"
-                title="关闭 (Esc)"
-                aria-label="关闭"
+                title="返回视图 (Esc)"
+                aria-label="返回视图"
                 onClick={() => setDetailId(null)}
               >
                 <XMarkIcon aria-hidden className="size-4" />
@@ -1498,7 +1493,7 @@ export function CollectionBrowser({
             {blurb ? <p className="fsdb-footnote">{blurb}</p> : null}
           </div>
         ) : null}
-        <div className="tasks-toolbar">
+        <div className="tasks-toolbar" data-biu-ignore>
           <div className="tasks-toolbar-left">
             <div className="tasks-viewdd-wrap" ref={viewRef}>
               <button
@@ -1519,7 +1514,7 @@ export function CollectionBrowser({
                   {views.length === 0 ? <div className="tasks-viewdd-empty">还没有已保存的视图</div> : null}
                   {views.map((view) => (
                     <div key={view.id} className={`tasks-viewdd-item${view.id === activeViewId ? ' is-active' : ''}`}>
-                      <button type="button" className="tasks-viewdd-item-main" onClick={() => applyView(view)}>
+                      <button type="button" className="tasks-viewdd-item-main" onClick={() => selectView(view)}>
                         <span className="tasks-viewdd-item-name">{view.name}</span>
                         {view.id === activeViewId ? <CheckCircleIcon aria-hidden className="size-[14px] tasks-viewdd-check" /> : null}
                       </button>
@@ -1952,7 +1947,7 @@ export function CollectionBrowser({
               </div>
             ) : null}
           </div>
-          <div className="fsdb-pager">
+          <div className="fsdb-pager" data-biu-ignore>
             <span className="fsdb-pager-meta">
               {total ? `Count · 共 ${total} 条` : 'Count · 暂无记录'}
             </span>
@@ -1996,14 +1991,6 @@ export function CollectionBrowser({
         ) : selected && schema ? (
         <div className="fsdb-detail-stage">
           <div className="fsdb-detail-screen" role="main" aria-label="记录详情">
-            {detailTab !== 'overview' && chrome?.panes?.some((pane) => pane.id === detailTab) ? (
-              (() => {
-                const pane = chrome.panes.find((item) => item.id === detailTab)
-                if (!pane) return null
-                const Pane = pane.Pane
-                return <Pane record={selected} />
-              })()
-            ) : (
             <div className="fsdb-detail-split">
               <div className="fsdb-detail-main">
                 {schema.labelField && schema.fields[schema.labelField]?.writable ? (
@@ -2107,7 +2094,6 @@ export function CollectionBrowser({
                 })() : null}
               </div>
             </div>
-            )}
           </div>
         </div>
       ) : null}
@@ -2161,6 +2147,12 @@ if (typeof document !== 'undefined') {
 .fsdb-page{display:flex;min-width:0;min-height:0;flex:1;flex-direction:row;overflow:hidden;background:var(--dsw-bg);color:var(--dsw-label);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,sans-serif,"Apple Color Emoji","Segoe UI Emoji";font-size:14px;letter-spacing:-.011em}
 .fsdb-right{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
 .fsdb-right .chat-view-header{flex:none}
+.fsdb-inspector-panel{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden;background:var(--dsw-bg)}
+.fsdb-inspector-host{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
+.fsdb-inspector-host:empty{display:none}
+.fsdb-inspector-empty{margin:0;padding:16px;color:var(--dsw-label-3);font-size:13px;line-height:1.45}
+.fsdb-inspector-host:not(:empty) + .fsdb-inspector-empty{display:none}
+.fsdb-inspector-panel .fsdb-detail-stage{min-height:0;flex:1}
 .fsdb-right-body{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
 .fsdb-views{display:flex;width:280px;flex:none;flex-direction:column;min-height:0;overflow:hidden}
 .fsdb-nav-chevron{flex:none;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
@@ -2318,7 +2310,7 @@ if (typeof document !== 'undefined') {
 .fsdb-detail-rail{height:100%;flex:none;border-right:0;border-left:1px solid var(--dsw-border)}
 .fsdb-detail-rail .app-activity-indicator{left:auto;right:0;border-radius:2px 0 0 2px}
 .fsdb-detail-rail .app-activity-item:disabled{opacity:.35;cursor:default}
-.fsdb-detail-head{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 10px 8px 12px}
+.fsdb-detail-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px 8px 12px;flex:none}
 .fsdb-detail-pager{display:inline-flex;align-items:center;gap:1px;justify-self:start}
 .fsdb-detail-pager .tasks-icon-btn:disabled{opacity:.35;cursor:default}
 .fsdb-detail-tabs{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:8px;background:var(--dsw-muted-fill);justify-self:center}

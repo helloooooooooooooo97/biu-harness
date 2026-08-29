@@ -1,12 +1,8 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { test } from 'vitest'
+import assert from 'node:assert/strict'
+import { inspectorPanelMatches } from './inspector-panels.ts'
 
-const inspector = readFileSync(resolve(import.meta.dirname, './session-inspector.tsx'), 'utf8')
-
-describe('inspector session-only tabs', () => {
-  it('hides requiresSession tabs when no session is selected', () => {
-    expect(inspector).toContain('requiresSession: Boolean(extra.requiresSession)')
-    expect(inspector).toMatch(/sessionId \? tabs : tabs\.filter\(\(item\) => !item\.requiresSession\)/)
-  })
+test('requiresSession tabs hide when no session is selected', () => {
+  assert.equal(inspectorPanelMatches({ requiresSession: true }, 'session', null), false)
+  assert.equal(inspectorPanelMatches({ requiresSession: true, centerKinds: ['session'] }, 'session', 'abc'), true)
 })

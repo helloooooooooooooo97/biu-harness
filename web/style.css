@@ -674,6 +674,15 @@ body {
   grid-template-columns: var(--rail-w) minmax(0, 1fr);
 }
 
+.app-shell-module.is-inspector-open {
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--inspector-width, 320px);
+}
+
+.app-shell-module.is-inspector-open .chat-overlay-panel {
+  right: var(--inspector-width, 320px);
+  width: min(var(--dsw-chat-width), calc(100vw - var(--rail-w) - var(--inspector-width, 320px) - 40px));
+}
+
 /* 侧栏独立合成层：右侧 Markdown 重绘时少拖累左侧 :hover */
 .app-side-bar {
   contain: layout paint style;

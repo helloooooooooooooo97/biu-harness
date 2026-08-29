@@ -18,6 +18,7 @@ import {
 import { ModelConfigDialog } from './model-config-dialog.tsx'
 import { ImageThumbs } from './image-thumbs.tsx'
 import { collectClipboardImages, collectImageFiles } from './clipboard-images.ts'
+import { shouldNavigateToSession } from './composer-nav.ts'
 
 /** 按键不驱动受控 value；仅防抖更新发送按钮可用态，避免每个字符打穿 React 渲染。 */
 const INPUT_DEBOUNCE_MS = 120
@@ -701,7 +702,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
         clearDraft(id)
         flushDraftTimer()
       }
-      if (id && !location.pathname.startsWith(`/s/${id}`)) navigate(`/s/${id}`)
+      if (shouldNavigateToSession(location.pathname, id)) navigate(`/s/${id}`)
     } catch {
       /* error 已写入 sessionView */
     }

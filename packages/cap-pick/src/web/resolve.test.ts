@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { resolvePickFromNode, resolvePicksInRect } from './resolve.ts'
 import { formatPicks, parsePicks, splitPickStream, chipLabel, dedupePicks } from './types.ts'
 import { pickKindIcon } from './chip.tsx'
-import { CpuChipIcon, ClipboardDocumentCheckIcon, ChatBubbleLeftIcon, PuzzlePieceIcon, TagIcon } from '@heroicons/react/16/solid'
+import { CpuChipIcon, ClipboardDocumentCheckIcon, ChatBubbleLeftIcon, PuzzlePieceIcon, TagIcon, TableCellsIcon } from '@heroicons/react/16/solid'
 
 test('splitPickStream keeps text and chips in order', () => {
   const parts = splitPickStream('看 <pick kind="task" id="t1" label="写需求" /> 和 <pick kind="plugin" id="p1" label="Hello" /> 吧')
@@ -70,6 +70,8 @@ test('kind maps to distinct icons', () => {
   assert.equal(pickKindIcon('message'), ChatBubbleLeftIcon)
   assert.notEqual(pickKindIcon('session'), pickKindIcon('message'))
   assert.equal(pickKindIcon('task'), ClipboardDocumentCheckIcon)
+  assert.equal(pickKindIcon('page'), TableCellsIcon)
+  assert.notEqual(pickKindIcon('collection'), pickKindIcon('usage'))
   assert.equal(pickKindIcon('plugin'), PuzzlePieceIcon)
   assert.equal(pickKindIcon('unknown'), TagIcon)
 })

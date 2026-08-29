@@ -3705,7 +3705,7 @@ export const name = 'tasks-ui'
 export const inject = ['slots', 'appModules', 'snapshot']
 
 const tasksModuleProps = { moduleId: 'tasks' }
-const tasksInspectorProps = { tabId: 'tasks', tabLabel: '任务', tabIcon: ClipboardDocumentListIcon }
+const tasksInspectorProps = { tabId: 'tasks', tabLabel: '任务', tabIcon: ClipboardDocumentListIcon, centerKinds: ['task'] }
 
 type AppModulesService = {
   register: (mod: {
