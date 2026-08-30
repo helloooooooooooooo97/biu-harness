@@ -10,4 +10,14 @@ describe('panel collapse chevrons follow panel state', () => {
       /inspectorOpen \?\s*\(\s*<ChevronDoubleRightIcon[\s\S]*:\s*\(\s*<ChevronDoubleLeftIcon/,
     )
   })
+
+  it('declares inspector persist helpers once (no duplicate onOpen)', () => {
+    const persistBlock = shell.match(
+      /const persist = \(next: boolean\) => \{[\s\S]*?window\.addEventListener\('biu:inspector-toggle', onToggle\)/,
+    )
+    expect(persistBlock?.[0]).toBeTruthy()
+    expect(persistBlock?.[0].match(/const onOpen =/g)?.length).toBe(1)
+    expect(persistBlock?.[0]).toContain('const persist = (next: boolean)')
+    expect(persistBlock?.[0]).toContain('const onClose = () => persist(false)')
+  })
 })

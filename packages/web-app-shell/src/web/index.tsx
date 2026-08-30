@@ -510,14 +510,6 @@ function Shell(props: SlotProps) {
     return () => window.removeEventListener('biu:inspector-width', onWidth)
   }, [onInspectorWidthChange])
   useEffect(() => {
-    const onOpen = () => {
-      setInspectorOpen(true)
-      try {
-        localStorage.setItem('cordis.inspector.open', '1')
-      } catch {
-        /* ignore */
-      }
-    }
     const persist = (next: boolean) => {
       setInspectorOpen(next)
       try {
