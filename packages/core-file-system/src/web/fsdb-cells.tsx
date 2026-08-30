@@ -172,7 +172,7 @@ function ImageThumb({ src }: { src: string }) {
           setOpen(true)
         }}
       >
-        <img className="fsdb-thumb" src={src} alt="" decoding="async" />
+        <img className="fsdb-thumb" src={src} alt="" decoding="async" width={28} height={18} />
       </button>
       {open
         ? createPortal(
@@ -215,9 +215,27 @@ export function parseFieldValue(field: FieldSpec, raw: string): unknown {
   return raw
 }
 
-export function FilePreview({ value, compact = false }: { value: unknown; compact?: boolean }) {
-  if (value == null || value === '') return <span className="fsdb-muted">—</span>
+function previewImageSrc(kind: FieldType | undefined, value: unknown): string {
+  if (kind === 'attachment' || kind === 'url') return ''
   const src = asImageSrc(value)
+  if (!src) return ''
+  if (kind === 'image' || !kind) return src
+  if (/^data:image\//i.test(src)) return src
+  if (/\.(?:png|jpe?g|gif|webp|svg|avif|bmp)(?:[?#]|$)/i.test(src)) return src
+  return ''
+}
+
+export function FilePreview({
+  value,
+  compact = false,
+  kind,
+}: {
+  value: unknown
+  compact?: boolean
+  kind?: FieldType
+}) {
+  if (value == null || value === '') return <span className="fsdb-muted">—</span>
+  const src = previewImageSrc(kind, value)
   if (src) {
     if (compact) return <ImageThumb src={src} />
     return <img className="fsdb-fileview-img" src={src} alt="" decoding="async" />
@@ -269,7 +287,7 @@ export function DefaultCell({ field, value }: { field: FieldSpec; value: unknown
     )
   }
   if (kind === 'url' || kind === 'image' || kind === 'attachment' || kind === 'file') {
-    return <FilePreview value={value} compact />
+    return <FilePreview value={value} compact kind={kind} />
   }
   const text = formatField(field, value)
   return <span className={kind === 'datetime' || kind === 'bytes' ? 'fsdb-meta' : undefined}>{text}</span>

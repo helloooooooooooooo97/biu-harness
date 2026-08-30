@@ -32,4 +32,6 @@ test('pluginsCollection registers /plugins and start/stop/uninstall', async () =
   assert.equal(spec.write, undefined)
   assert.deepEqual(spec.schema.columns, ['name', 'blurb', 'running', 'tags'])
   assert.equal(spec.schema.fields.authorUrl?.type, 'url')
+  assert.deepEqual(spec.actions?.find((item) => item.id === 'start')?.when, { running: false })
+  assert.deepEqual(spec.actions?.find((item) => item.id === 'stop')?.when, { running: true })
 })

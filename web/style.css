@@ -145,16 +145,33 @@ body {
   min-height: calc(100% + 11rem);
   margin-bottom: -11rem;
   padding: 0;
+  overflow: visible;
 }
 
 .chat-empty-hero-glow {
   pointer-events: none;
   position: absolute;
-  inset: 18% 20% 22%;
+  left: 50%;
+  top: 50%;
+  width: 400px;
+  height: 400px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  z-index: 0;
   background:
-    radial-gradient(ellipse at 50% 48%, rgba(242, 241, 237, 0.16), transparent 62%),
-    radial-gradient(ellipse at 50% 58%, rgba(120, 160, 180, 0.08), transparent 70%);
-  filter: blur(2px);
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(242, 241, 237, 0.1) 0%,
+      rgba(242, 241, 237, 0.045) 22%,
+      rgba(242, 241, 237, 0.012) 38%,
+      transparent 52%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(120, 160, 180, 0.05) 0%,
+      transparent 48%
+    );
+  filter: blur(10px);
 }
 
 .chat-empty-hero-inner {
@@ -165,12 +182,20 @@ body {
   align-items: center;
   gap: 22px;
   text-align: center;
+  overflow: visible;
 }
 
 .chat-empty-hero-mascot {
+  position: relative;
   display: grid;
   place-items: center;
+  overflow: visible;
   animation: chat-empty-mascot-float 3.6s ease-in-out infinite;
+}
+
+.chat-empty-hero-mascot .sidebar-mascot {
+  position: relative;
+  z-index: 1;
 }
 
 .chat-empty-hero-title {
@@ -1493,7 +1518,7 @@ body {
   min-width: 0;
 }
 
-/* 顶部「收藏/项目/标签」：字号 12px，行高与会话行一致（头像 24 + 上下 4） */
+/* 顶部「收藏/项目/标签」：字号 12px，行高与会话行一致（头像 20 + 上下 4） */
 .sidebar-section-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

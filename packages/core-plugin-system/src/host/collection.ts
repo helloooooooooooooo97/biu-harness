@@ -40,7 +40,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       {
         id: "start",
         label: "运行",
-        when: { enabled: false },
+        when: { running: false },
         run: async (id) => {
           await store.openPlugin(id);
         },
@@ -48,7 +48,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       {
         id: "stop",
         label: "停止",
-        when: { enabled: true },
+        when: { running: true },
         run: async (id) => {
           await store.close(id);
         },

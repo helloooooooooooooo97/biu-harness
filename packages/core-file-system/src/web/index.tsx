@@ -15,7 +15,7 @@ import {
   collectionNavKey,
 } from './nav-boot.ts'
 import { defaultViewId, pushAllSavedViews } from './view-storage.ts'
-import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH } from './database-path.ts'
+import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, VIEWS_COLLECTION_PATH, viewsCatalogHref, viewsCatalogSource } from './database-path.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
 type SlotsService = {
@@ -123,6 +123,11 @@ function CollectionPage(props: SlotProps) {
     go({ collection: first.path, viewId: defaultViewId(first.path) }, { replace: true })
   }, [collectionFromRoute, tables])
 
+  const sourceFilter = useMemo(() => viewsCatalogSource(location.search), [location.search])
+  const lockedFilters = useMemo(
+    () => (currentPath === VIEWS_COLLECTION_PATH && sourceFilter ? { tablePath: sourceFilter } : {}),
+    [currentPath, sourceFilter],
+  )
   if (!currentPath) return null
   const title = row?.view?.title ?? row?.label ?? currentPath.replace(/^\//, '')
   return (
@@ -133,11 +138,18 @@ function CollectionPage(props: SlotProps) {
       blurb={row?.view?.blurb ?? ''}
       chrome={chrome}
       tables={tables}
+      lockedFilters={lockedFilters}
       routeRecordId={recordFromRoute}
       routeViewId={viewFromRoute}
       expandedViewKey={expandedViewKey}
       onExpandedViewKeyChange={setExpandedViewKey}
-      onOpenTable={(path, viewId) => go({ collection: path, viewId: viewId ?? defaultViewId(path) })}
+      onOpenTable={(path, viewId, opts) => {
+        if (opts?.catalog && path !== VIEWS_COLLECTION_PATH) {
+          navigate(viewsCatalogHref(path, defaultViewId(VIEWS_COLLECTION_PATH)))
+          return
+        }
+        go({ collection: path, viewId: viewId ?? defaultViewId(path) })
+      }}
       onOpenView={(viewId) => go({ collection: currentPath, viewId })}
       onOpenRecord={(recordId, _viewId, collection) =>
         go({ collection: collection ?? currentPath, recordId })

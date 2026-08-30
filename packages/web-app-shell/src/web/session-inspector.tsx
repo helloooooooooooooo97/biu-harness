@@ -415,7 +415,7 @@ export const SessionInspector = memo(function SessionInspector({
                       data-testid={`inspector-offer-add-${item.id}`}
                     >
                       {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
-                      <span className="min-w-0 flex-1 truncate">{item.repeatable ? `添加${item.label}` : item.label}</span>
+                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
                     </button>
                   ))}
                 {toolTabs.map((item) => (
@@ -459,7 +459,7 @@ export const SessionInspector = memo(function SessionInspector({
                       data-testid={`inspector-empty-${item.id}`}
                     >
                       {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
-                      <span className="min-w-0 flex-1 truncate">{item.repeatable ? `添加${item.label}` : item.label}</span>
+                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
                     </button>
                   ))}
                 {toolTabs.map((item) => (

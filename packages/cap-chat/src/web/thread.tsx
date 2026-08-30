@@ -728,9 +728,9 @@ function EmptyHero({
 }) {
   return (
     <div className="chat-empty-hero">
-      <div className="chat-empty-hero-glow" aria-hidden />
       <div className="chat-empty-hero-inner">
         <div className="chat-empty-hero-mascot">
+          <div className="chat-empty-hero-glow" aria-hidden />
           <SidebarMascot
             size={112}
             sessionId={sessionId}

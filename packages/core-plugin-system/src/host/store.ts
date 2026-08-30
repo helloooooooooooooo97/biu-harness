@@ -290,7 +290,7 @@ export class PluginStoreService extends Service {
       items.push({
         ...manifest,
         enabled,
-        running: enabled && running.has(manifest.id),
+        running: running.has(manifest.id),
         bytes: stats.bytes,
         createdAt: manifest.createdAt || stats.createdAt,
         updatedAt: stats.updatedAt,
@@ -311,6 +311,7 @@ export class PluginStoreService extends Service {
     this.setEnabled(manifest.id, true)
     this.touchLastRun(manifest.id)
     await this.mountFromDisk(manifest, hit)
+    this.invalidateList()
     return (await this.list()).find((item) => item.id === manifest.id)
   }
 
@@ -319,6 +320,7 @@ export class PluginStoreService extends Service {
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
     await this.hub().drop(id)
     this.setEnabled(id, false)
+    this.invalidateList()
   }
 
   /** 卸载：停运行，并删掉 .plugin/<id>/ 代码。 */

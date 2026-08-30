@@ -35,6 +35,7 @@ test('plus menu can add another database tab', () => {
   assert.match(inspector, /createPortal/)
   assert.match(inspector, /inspector-add-menu is-fixed/)
   assert.doesNotMatch(inspector, /inspector-tab-close/)
+  assert.doesNotMatch(inspector, /添加\$\{item\.label\}/)
 })
 
 test('inspector header tabs sit on the same vertical center as the main header', () => {

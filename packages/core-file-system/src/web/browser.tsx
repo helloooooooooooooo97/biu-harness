@@ -97,7 +97,7 @@ function isListColumn(key: string) {
 }
 
 function recordsFingerprint(rows: Array<DbRecord & { path?: string }>) {
-  return rows.map((row) => `${row.id}:${String(row.updatedAt ?? '')}`).join('|')
+  return JSON.stringify(rows)
 }
 
 export function CollectionBrowser({
@@ -108,6 +108,7 @@ export function CollectionBrowser({
   chrome,
   tables = [],
   onOpenTable,
+  lockedFilters = {},
   routeRecordId = null,
   routeViewId,
   expandedViewKey,
@@ -124,7 +125,8 @@ export function CollectionBrowser({
   blurb: string
   chrome?: CollectionChrome
   tables?: CollectionInfo[]
-  onOpenTable?: (path: string, viewId?: string) => void
+  onOpenTable?: (path: string, viewId?: string, opts?: { catalog?: boolean }) => void
+  lockedFilters?: Record<string, string>
   routeRecordId?: string | null
   routeViewId?: string
   expandedViewKey?: string | null
@@ -155,6 +157,13 @@ export function CollectionBrowser({
   const [sortField, setSortField] = useState(initialView?.sortField ?? 'id')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialView?.sortDir ?? 'asc')
   const [filters, setFilters] = useState<Record<string, string>>(initialView?.filters ?? {})
+  const queryFilters = useMemo(() => ({ ...filters, ...lockedFilters }), [filters, lockedFilters])
+  const lockedFilterKeys = Object.keys(lockedFilters)
+  const lockedSource = lockedFilters.tablePath ?? ''
+  useEffect(() => {
+    if (!lockedSource) return
+    setMode('table')
+  }, [lockedSource])
   const [columnKeys, setColumnKeys] = useState<string[]>(initialView?.columns ?? [])
   const [views, setViews] = useState<SavedView[]>(() => loadViews(collectionPath))
   const [activeViewId, setActiveViewId] = useState<string | null>(initialView?.id ?? null)
@@ -342,7 +351,7 @@ export function CollectionBrowser({
           query: fetchQuery,
           sortField,
           sortDir,
-          filters,
+          filters: queryFilters,
         }),
       ])
       if (gen !== reloadGen.current) return true
@@ -355,7 +364,7 @@ export function CollectionBrowser({
             id: activeViewId,
             sortField,
             sortDir,
-            filters,
+            filters: queryFilters,
             query: fetchQuery,
           }),
           listed.total,
@@ -368,7 +377,7 @@ export function CollectionBrowser({
       setError(String(err))
       return false
     }
-  }, [activeViewId, collectionPath, fetchQuery, filters, page, pageSize, sortDir, sortField])
+  }, [activeViewId, collectionPath, fetchQuery, queryFilters, page, pageSize, sortDir, sortField])
   const reloadRef = useRef(reload)
   reloadRef.current = reload
   const detailIdRef = useRef<string | null>(null)
@@ -383,7 +392,7 @@ export function CollectionBrowser({
 
   useEffect(() => {
     setPage((prev) => (prev === 0 ? prev : 0))
-  }, [fetchQuery, filters, sortField, sortDir, pageSize, collectionPath])
+  }, [fetchQuery, queryFilters, sortField, sortDir, pageSize, collectionPath])
 
   async function refreshNow() {
     if (refreshing) return
@@ -515,8 +524,14 @@ export function CollectionBrowser({
     columnKeys.length > 0 &&
     (columnKeys.length !== schemaDefaultKeys.length || columnKeys.some((key, index) => key !== schemaDefaultKeys[index]))
   const filterFields = useMemo(
-    () => entries.filter((item) => item.key !== bodyKey && resolveFieldType(item.field) !== 'file'),
-    [bodyKey, entries],
+    () =>
+      entries.filter(
+        (item) =>
+          item.key !== bodyKey &&
+          resolveFieldType(item.field) !== 'file' &&
+          !lockedFilterKeys.includes(item.key),
+      ),
+    [bodyKey, entries, lockedFilterKeys],
   )
   const sortFields = useMemo(
     () => filterFields.filter((item) => item.field.sortable !== false),
@@ -874,6 +889,7 @@ export function CollectionBrowser({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ path: `${collectionPath}/${row.id}`, action: action.id }),
       })
+      quietUntil.current = 0
       await reload()
     } catch (err) {
       setError(String(err))
@@ -1075,8 +1091,6 @@ export function CollectionBrowser({
       <div className="fsdb-proplist">
         {cols.map((col) => (
           <span key={col.key} className="fsdb-propchip">
-            <FieldGlyph kind={col.kind} />
-            <span className="fsdb-propchip-k">{col.field.label ?? col.key}</span>
             <span className="fsdb-propchip-v">{renderCell(row, col.key, col.field)}</span>
           </span>
         ))}
@@ -1405,8 +1419,14 @@ export function CollectionBrowser({
                 </div>
               ) : null}
             </div>
+            {lockedSource ? (
+              <span className="fsdb-locked-filter" title="按当前数据类型筛选，不可更改">
+                {tables.find((item) => item.path === lockedSource)?.view?.title ??
+                  tables.find((item) => item.path === lockedSource)?.label ??
+                  lockedSource}
+              </span>
+            ) : null}
           </div>
-          <div className="tasks-toolbar-right">
             <div className={`tasks-search-wrap${searchExpanded ? ' is-open' : ''}`} ref={searchRef}>
               <button
                 type="button"
@@ -1448,22 +1468,17 @@ export function CollectionBrowser({
                 <div className="tasks-sort-menu" role="menu">
                   <div className="tasks-sort-head">查看模式</div>
                   {VIEW_MODES.map((opt) => (
-                    <button
+                    <CheckRow
                       key={opt.id}
-                      type="button"
-                      className={`tasks-sort-item${mode === opt.id ? ' is-active' : ''}`}
-                      onClick={() => {
+                      icon={<ModeGlyph id={opt.id} />}
+                      label={opt.label}
+                      on={mode === opt.id}
+                      onToggle={() => {
                         setMode(opt.id)
                         patchActiveView({ mode: opt.id })
                         setModeMenuOpen(false)
                       }}
-                    >
-                      <span className="tasks-sort-item-label">
-                        <span className="tasks-mode-item-ico"><ModeGlyph id={opt.id} /></span>
-                        {opt.label}
-                      </span>
-                      {mode === opt.id ? <CheckCircleIcon aria-hidden className="size-[14px] tasks-sort-item-icon is-on" /> : null}
-                    </button>
+                    />
                   ))}
                 </div>
               ) : null}
@@ -1487,11 +1502,24 @@ export function CollectionBrowser({
                       <button
                         key={item.key}
                         type="button"
-                        className={`tasks-sort-item${current ? ' is-active' : ''}`}
+                        className={`fsdb-checkrow${current ? ' is-on' : ''}`}
                         onClick={() => cycleSort(item.key)}
                       >
-                        <span>{item.field.label ?? item.key}</span>
-                        {current ? (sortDir === 'asc' ? <ArrowUpIcon className="size-[14px]" /> : <ArrowDownIcon className="size-[14px]" />) : null}
+                        <span className="fsdb-checkrow-label">
+                          <span className="fsdb-checkrow-icon">
+                            <FieldGlyph kind={item.kind} />
+                          </span>
+                          {item.field.label ?? item.key}
+                        </span>
+                        {current ? (
+                          sortDir === 'asc' ? (
+                            <ArrowUpIcon aria-hidden className="size-[14px]" />
+                          ) : (
+                            <ArrowDownIcon aria-hidden className="size-[14px]" />
+                          )
+                        ) : (
+                          <span className="fsdb-checkrow-gap" aria-hidden />
+                        )}
                       </button>
                     )
                   })}
@@ -1511,41 +1539,28 @@ export function CollectionBrowser({
               {groupOpen ? (
                 <div className="tasks-sort-menu" role="menu">
                   <div className="tasks-sort-head">分组依据</div>
-                  <button
-                    type="button"
-                    className={`tasks-sort-item${!groupBy ? ' is-active' : ''}`}
-                    onClick={() => {
+                  <CheckRow
+                    icon={<Bars3BottomLeftIcon aria-hidden className="size-[14px]" />}
+                    label="不分组"
+                    on={!groupBy}
+                    onToggle={() => {
                       setGroupKey('')
                       setGroupOpen(false)
                     }}
-                  >
-                    <span className="tasks-sort-item-label">
-                      <Bars3BottomLeftIcon aria-hidden className="size-[14px] shrink-0 opacity-80" />
-                      不分组
-                    </span>
-                    {!groupBy ? <CheckCircleIcon aria-hidden className="size-[14px] tasks-sort-item-icon is-on" /> : null}
-                  </button>
+                  />
                   {groupFields.length ? (
-                    groupFields.map((item) => {
-                      const current = groupBy === item.key
-                      return (
-                        <button
-                          key={item.key}
-                          type="button"
-                          className={`tasks-sort-item${current ? ' is-active' : ''}`}
-                          onClick={() => {
-                            setGroupKey(item.key)
-                            setGroupOpen(false)
-                          }}
-                        >
-                          <span className="tasks-sort-item-label">
-                            <FieldGlyph kind={item.kind} />
-                            {item.field.label ?? item.key}
-                          </span>
-                          {current ? <CheckCircleIcon aria-hidden className="size-[14px] tasks-sort-item-icon is-on" /> : null}
-                        </button>
-                      )
-                    })
+                    groupFields.map((item) => (
+                      <CheckRow
+                        key={item.key}
+                        icon={<FieldGlyph kind={item.kind} />}
+                        label={item.field.label ?? item.key}
+                        on={groupBy === item.key}
+                        onToggle={() => {
+                          setGroupKey(item.key)
+                          setGroupOpen(false)
+                        }}
+                      />
+                    ))
                   ) : (
                     <div className="tasks-viewdd-empty">没有单选或多选字段</div>
                   )}
@@ -1571,6 +1586,7 @@ export function CollectionBrowser({
                     return (
                       <CheckRow
                         key={item.key}
+                        icon={<FieldGlyph kind={item.kind} />}
                         label={item.field.label ?? item.key}
                         on={on}
                         locked={item.key === schema?.labelField}
@@ -1610,12 +1626,15 @@ export function CollectionBrowser({
                             ]
                           : uniqueValues(items, item.key, item.field).map((option) => ({ value: option, label: option }))
                     return (
-                      <div key={item.key} className="tasks-filter-menu-label">
-                        <span>{item.field.label ?? item.key}</span>
+                      <div key={item.key} className="fsdb-filter-row">
+                        <span className="fsdb-filter-row-key">
+                          <FieldGlyph kind={item.kind} />
+                          {item.field.label ?? item.key}
+                        </span>
                         <CellSelect
                           value={filters[item.key] ?? ''}
                           placeholder="全部"
-                          variant="field"
+                          variant="cell"
                           options={[{ value: '', label: '全部' }, ...options]}
                           onSelect={(next) => setFilters((prev) => ({ ...prev, [item.key]: next }))}
                         />

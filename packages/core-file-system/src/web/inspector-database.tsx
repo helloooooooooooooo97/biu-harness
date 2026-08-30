@@ -8,7 +8,7 @@ import { buildCrumbs, pathForCrumbTarget, type Crumb, type CrumbTarget } from '.
 import { CollectionBrowser } from './browser.tsx'
 import { CrumbTrail } from './crumb-trail.tsx'
 import { defaultViewId, loadRecords, loadViews, viewForPath } from './view-storage.ts'
-import { DATA_MODULE, DATA_MODULE_ID, databaseRecordPath, databaseViewPath } from './database-path.ts'
+import { DATA_MODULE, DATA_MODULE_ID, VIEWS_COLLECTION_PATH, databaseRecordPath, databaseViewPath, viewsCatalogHref, viewsCatalogSource } from './database-path.ts'
 import {
   getInspectorDbPath,
   setInspectorDbPath,
@@ -110,6 +110,12 @@ function useBindInspectorDbPath(paneId: string, tables: CollectionInfo[], seedCo
 
 function seedOf(props: { seedCollection?: unknown }) {
   return typeof props.seedCollection === 'string' ? props.seedCollection : ''
+}
+
+function splitHref(href: string) {
+  const cut = href.indexOf('?')
+  if (cut < 0) return { pathname: href, search: '' }
+  return { pathname: href.slice(0, cut), search: href.slice(cut) }
 }
 
 function crumbsForRoute(
@@ -271,8 +277,12 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
   )
   const inspectorPath = useBindInspectorDbPath(id, tables, seedOf(props))
   useViewTick()
-  const { collection, viewId, recordId } = crumbsForRoute(inspectorPath, tables)
+  const { pathname, search } = splitHref(inspectorPath)
+  const { collection, viewId, recordId } = crumbsForRoute(pathname, tables)
   const currentPath = collection
+  const sourceFilter = viewsCatalogSource(search)
+  const lockedFilters =
+    currentPath === VIEWS_COLLECTION_PATH && sourceFilter ? { tablePath: sourceFilter } : {}
   const table = tables.find((item) => item.path === currentPath)
   const title = table ? tableLabel(table) : '数据'
   const chrome = useSyncExternalStore(
@@ -294,9 +304,14 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
       blurb={table?.view?.blurb ?? ''}
       chrome={chrome}
       tables={tables}
+      lockedFilters={lockedFilters}
       routeRecordId={recordId ?? null}
       routeViewId={viewId}
-      onOpenTable={(path, nextViewId) => {
+      onOpenTable={(path, nextViewId, opts) => {
+        if (opts?.catalog && path !== VIEWS_COLLECTION_PATH) {
+          setInspectorDbPath(id, viewsCatalogHref(path, defaultViewId(VIEWS_COLLECTION_PATH)))
+          return
+        }
         setInspectorDbPath(id, databaseViewPath(path, nextViewId ?? defaultViewId(path)))
       }}
       onOpenView={(nextViewId) => setInspectorDbPath(id, databaseViewPath(currentPath, nextViewId))}

@@ -17,7 +17,7 @@ test('data sidebar brand sits left with a collapse control on the right', () => 
 test('table and view rows only expand from the fold column', () => {
   const sidebar = readFileSync(resolve(import.meta.dirname, './data-sidebar.tsx'), 'utf8')
   const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
-  assert.match(sidebar, /onClick=\{\(\) => \{\s*onOpenTable\?\.\(table\.path\)/)
+  assert.match(sidebar, /onOpenTable\?\.\(table\.path, undefined, \{ catalog: true \}\)/)
   assert.doesNotMatch(sidebar, /\[table\.path\]: true/)
   assert.doesNotMatch(sidebar, /setOpenTables\(\(prev\) => \(\{ \.\.\.prev, \[path\]: true \}\)\)/)
   assert.match(css, /\.sidebar-group-fold:hover \.sidebar-group-fold-chevron/)
@@ -87,6 +87,12 @@ test('page collection uses a document glyph, not the table/database icon', () =>
   const glyphs = readFileSync(resolve(import.meta.dirname, './nav-glyphs.tsx'), 'utf8')
   assert.match(glyphs, /name === 'document' \|\| name === 'document-text' \|\| name === 'page'/)
   assert.match(glyphs, /<DocumentIcon/)
+})
+
+test('row actions reload even when updatedAt is unchanged', () => {
+  assert.match(browser, /function recordsFingerprint\(rows/)
+  assert.match(browser, /return JSON.stringify\(rows\)/)
+  assert.match(browser, /quietUntil\.current = 0\s*\n\s*await reload\(\)/)
 })
 
 test('inspector no longer listens for add/copy view actions', () => {
