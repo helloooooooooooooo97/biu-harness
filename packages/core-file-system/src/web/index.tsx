@@ -146,7 +146,7 @@ function CollectionPage(props: SlotProps) {
           navigate(viewsCatalogHref(path))
           return
         }
-        go({ collection: path, viewId: viewId ?? defaultViewId(path) })
+        go({ collection: path, viewId })
       }}
       onOpenView={() => {
         if (viewFromRoute || recordFromRoute) go({ collection: currentPath }, { replace: true })
