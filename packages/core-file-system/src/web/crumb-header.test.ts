@@ -5,18 +5,17 @@ import { describe, expect, it } from 'vitest'
 const trail = readFileSync(resolve(import.meta.dirname, './crumb-trail.tsx'), 'utf8')
 const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf8')
 const inspector = readFileSync(resolve(import.meta.dirname, './inspector-database.tsx'), 'utf8')
+const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
 
 describe('顶栏三级标题', () => {
-  it('悬停才露出右侧展开按钮，点标题本身不打开菜单', () => {
-    expect(trail).toContain('ChevronDownIcon')
-    expect(trail).toContain('data-testid="crumb-expand"')
-    expect(trail).toContain('crumbLabelAction')
-    expect(trail).toContain("aria-haspopup=\"menu\"")
+  it('中间顶栏点标题出菜单；检查器不靠悬停把面包屑撑开', () => {
+    expect(trail).toContain("aria-haspopup={canPick ? 'menu' : undefined}")
+    expect(trail).toContain('allowMenu')
     expect(trail).toContain('<CrumbItemGlyph kind={crumb.kind}')
     expect(trail).toContain('createPortal')
     expect(trail).toContain('data-fsdb-crumb-menu')
-    expect(trail).not.toContain('onMouseEnter')
-    expect(browser).toContain('.fsdb-crumb-expand{position:absolute')
+    expect(trail).not.toContain('data-testid="crumb-expand"')
+    expect(browser).not.toContain('.fsdb-crumb-expand{position:absolute')
     expect(browser).toContain('<CrumbTrail')
   })
 
@@ -27,11 +26,12 @@ describe('顶栏三级标题', () => {
     expect(browser).toMatch(/\.fsdb-crumb-option\{[^}]*font-weight:600/)
   })
 
-  it('右侧检查器面包屑同样用展开按钮切换，不靠悬停自动展开', () => {
-    expect(inspector).toContain('<CrumbTrail')
-    expect(inspector).toContain('onOpenId={setCrumbOpen}')
-    expect(inspector).toContain('onActivate={onActivate}')
+  it('右侧检查器用一个展开按钮控制整条面包屑，悬停不自动变成多项', () => {
+    expect(inspector).toContain('data-testid="inspector-crumb-toggle"')
+    expect(inspector).toContain('allowMenu={trailOpen}')
     expect(inspector).not.toContain('onMouseEnter')
+    expect(css).toContain('.inspector-crumb-tab.is-crumb-open .inspector-crumb-full .fsdb-crumb:not(:last-child)')
+    expect(css).not.toContain('.inspector-crumb-tab:hover .inspector-crumb-full .fsdb-crumb:not(:last-child)')
   })
 
   it('右侧检查器面包屑用记录标题而不是 id', () => {

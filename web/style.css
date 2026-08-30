@@ -456,10 +456,12 @@ body {
 }
 
 .inspector-crumb-tab {
+  position: relative;
   flex: none;
   max-width: none;
   min-width: max-content;
   overflow: visible;
+  padding-right: 18px;
 }
 
 .inspector-crumb-tab .inspector-crumb-full .fsdb-crumb:not(:last-child) {
@@ -470,14 +472,50 @@ body {
   display: none;
 }
 
-.inspector-crumb-tab:hover .inspector-crumb-full .fsdb-crumb:not(:last-child),
-.inspector-crumb-tab:has(.is-open) .inspector-crumb-full .fsdb-crumb:not(:last-child) {
+.inspector-crumb-tab.is-crumb-open .inspector-crumb-full .fsdb-crumb:not(:last-child) {
   display: inline-flex;
 }
 
-.inspector-crumb-tab:hover .inspector-crumb-full .fsdb-crumb:last-child .fsdb-crumb-sep,
-.inspector-crumb-tab:has(.is-open) .inspector-crumb-full .fsdb-crumb:last-child .fsdb-crumb-sep {
+.inspector-crumb-tab.is-crumb-open .inspector-crumb-full .fsdb-crumb:last-child .fsdb-crumb-sep {
   display: inline;
+}
+
+.inspector-crumb-toggle {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--dsw-surface);
+  box-shadow: 0 0 0 1px var(--dsw-border);
+  color: var(--dsw-sidebar-fg);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.inspector-crumb-tab:hover .inspector-crumb-toggle,
+.inspector-crumb-tab.is-crumb-open .inspector-crumb-toggle,
+.inspector-crumb-tab:focus-within .inspector-crumb-toggle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.inspector-crumb-toggle:hover,
+.inspector-crumb-toggle.is-open {
+  background: var(--dsw-hover);
+  color: var(--dsw-sidebar-fg-active);
+}
+
+.inspector-crumb-toggle.is-open {
+  transform: translateY(-50%) rotate(180deg);
 }
 
 .inspector-crumb-leaf,
@@ -492,14 +530,6 @@ body {
 
 .inspector-crumb-full .fsdb-crumb-btn {
   max-width: 140px;
-}
-
-.inspector-crumb-full .fsdb-crumb-pick {
-  overflow: visible;
-}
-
-.inspector-crumb-full .fsdb-crumb-expand {
-  z-index: 4;
 }
 
 .inspector-crumb-full .fsdb-crumb-menu {

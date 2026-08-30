@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { CircleStackIcon } from '@heroicons/react/16/solid'
+import { ChevronDownIcon, CircleStackIcon } from '@heroicons/react/16/solid'
 import { useLocation } from 'react-router-dom'
 import type { SlotProps } from '@biu/type-slots'
 import type { CollectionInfo } from '@biu/type-file-system'
@@ -160,14 +160,17 @@ export function DatabaseInspectorTab({
   )
   const inspectorPath = useBindInspectorDbPath(id, tables)
   const [crumbOpen, setCrumbOpen] = useState<string | null>(null)
+  const [trailOpen, setTrailOpen] = useState(false)
   const crumbRef = useRef<HTMLElement>(null)
+  const tabRef = useRef<HTMLDivElement>(null)
   useViewTick()
   useEffect(() => {
     function onPointer(event: globalThis.MouseEvent) {
       const target = event.target as Node
-      if (crumbRef.current?.contains(target)) return
+      if (tabRef.current?.contains(target)) return
       if (target instanceof Element && target.closest('[data-fsdb-crumb-menu]')) return
       setCrumbOpen(null)
+      setTrailOpen(false)
     }
     document.addEventListener('mousedown', onPointer)
     return () => document.removeEventListener('mousedown', onPointer)
@@ -192,7 +195,8 @@ export function DatabaseInspectorTab({
 
   return (
     <div
-      className={`inspector-tab inspector-crumb-tab${active ? ' is-active' : ''}`}
+      ref={tabRef}
+      className={`inspector-tab inspector-crumb-tab${active ? ' is-active' : ''}${trailOpen ? ' is-crumb-open' : ''}`}
       role="tab"
       aria-selected={Boolean(active)}
       data-testid="inspector-tab-database"
@@ -206,6 +210,7 @@ export function DatabaseInspectorTab({
           openId={crumbOpen}
           onOpenId={setCrumbOpen}
           onActivate={onActivate}
+          allowMenu={trailOpen}
           onPick={(target) => {
             onActivate?.()
             goInspector(id, target)
@@ -220,6 +225,27 @@ export function DatabaseInspectorTab({
           <span className="chat-view-project-name">数据</span>
         </span>
       )}
+      {crumbs.length > 1 ? (
+        <button
+          type="button"
+          className={`inspector-crumb-toggle${trailOpen ? ' is-open' : ''}`}
+          title={trailOpen ? '收起面包屑' : '展开面包屑'}
+          aria-label={trailOpen ? '收起面包屑' : '展开面包屑'}
+          aria-expanded={trailOpen}
+          data-testid="inspector-crumb-toggle"
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            onActivate?.()
+            setTrailOpen((open) => {
+              if (open) setCrumbOpen(null)
+              return !open
+            })
+          }}
+        >
+          <ChevronDownIcon aria-hidden className="size-3" />
+        </button>
+      ) : null}
     </div>
   )
 }
