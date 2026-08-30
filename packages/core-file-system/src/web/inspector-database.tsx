@@ -6,7 +6,7 @@ import type { CollectionInfo } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import type { bindSnapshot } from '@biu/web-snapshot'
 import { parseAppPath } from '@biu/web-session-view'
-import { buildCrumbs, DATABASE_ROOT_PATH, pathForCrumbTarget, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
+import { buildCrumbs, pathForCrumbTarget, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
 import { CrumbItemGlyph } from './nav-glyphs.tsx'
 import { CollectionBrowser } from './browser.tsx'
 import { loadActiveViewId, loadViews } from './view-storage.ts'
@@ -76,11 +76,7 @@ function crumbsForRoute(
   return { crumbs, collection, viewId: activeViewId, recordId }
 }
 
-function goInspector(target: CrumbTarget | { kind: 'root' }) {
-  if (target.kind === 'root') {
-    setInspectorDbPath(DATABASE_ROOT_PATH)
-    return
-  }
+function goInspector(target: CrumbTarget) {
   setInspectorDbPath(pathForCrumbTarget(target))
 }
 
@@ -110,7 +106,7 @@ export function DatabaseInspectorTab({
   const leafChoice = leaf?.choices.find((item) => item.id === leaf.id)
   const showTrail = hover && crumbs.length > 0
 
-  function go(event: MouseEvent, target: CrumbTarget | { kind: 'root' }) {
+  function go(event: MouseEvent, target: CrumbTarget) {
     event.preventDefault()
     event.stopPropagation()
     onActivate?.()
@@ -129,15 +125,11 @@ export function DatabaseInspectorTab({
     >
       {showTrail ? (
         <nav className="inspector-crumb-full" aria-label="数据库位置">
-          <button type="button" className="fsdb-crumb-btn" onClick={(event) => go(event, { kind: 'root' })}>
-            <CircleStackIcon aria-hidden className="chat-view-project-icon" />
-            <span className="chat-view-project-name">数据库</span>
-          </button>
-          {crumbs.map((crumb) => {
+          {crumbs.map((crumb, index) => {
             const current = crumb.choices.find((item) => item.id === crumb.id)
             return (
               <span key={crumb.id} className="fsdb-crumb">
-                <span className="fsdb-crumb-sep" aria-hidden>/</span>
+                {index ? <span className="fsdb-crumb-sep" aria-hidden>/</span> : null}
                 <button type="button" className="fsdb-crumb-btn" onClick={(event) => go(event, crumb.target)}>
                   <CrumbItemGlyph kind={crumb.kind} icon={current?.icon} mode={current?.mode} emoji={current?.emoji} />
                   <span className="chat-view-project-name">{crumb.label}</span>
@@ -153,7 +145,7 @@ export function DatabaseInspectorTab({
           ) : (
             <CircleStackIcon aria-hidden className="chat-view-project-icon" />
           )}
-          <span className="chat-view-project-name">{leaf?.label ?? '数据库'}</span>
+          <span className="chat-view-project-name">{leaf?.label ?? '数据'}</span>
         </span>
       )}
     </div>

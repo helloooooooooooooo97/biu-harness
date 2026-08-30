@@ -38,6 +38,7 @@ test('database can be added to the inspector and browsed by crumbs', () => {
   const browse = readFileSync(resolve(import.meta.dirname, './inspector-database.tsx'), 'utf8')
   assert.match(browse, /aria-label="数据库位置"/)
   assert.match(browse, /inspector-crumb-leaf/)
+  assert.doesNotMatch(browse, /go\(event, \{ kind: 'root' \}\)/)
   assert.match(browse, /embed/)
   assert.match(browse, /setInspectorDbPath/)
   assert.doesNotMatch(browse, /DataSidebar/)
