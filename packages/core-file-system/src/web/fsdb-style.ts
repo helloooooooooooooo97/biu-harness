@@ -217,6 +217,7 @@ const CSS = `
 .fsdb-detail-head-actions{display:inline-flex;align-items:center;gap:2px;justify-self:end}
 .fsdb-detail-split{display:flex;flex-direction:column;flex:1;min-height:0;overflow:auto}
 .fsdb-detail-main{display:flex;flex-direction:column;gap:8px;padding:20px 22px 24px;min-width:0}
+.fsdb-page:not(.inspector-database-page) .fsdb-detail-main{padding-top:80px}
 .fsdb-detail-aside{display:flex;flex-direction:column;gap:2px;padding:8px 0 12px}
 .fsdb-prop{display:grid;grid-template-columns:108px minmax(0,1fr);align-items:center;gap:8px;min-height:32px;font-size:14px;color:var(--dsw-label-3)}
 .fsdb-prop>span:first-child{font-size:14px;font-weight:600;color:var(--dsw-label-3);display:inline-flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -227,8 +228,9 @@ const CSS = `
 .fsdb-prop-val .fsdb-link{display:block;overflow-wrap:normal}
 .fsdb-prop-val .fsdb-tags{display:flex;flex-wrap:nowrap}
 .fsdb-detail-title-row{display:flex;align-items:flex-start;gap:8px;min-width:0}
-.fsdb-detail-title-input{width:100%;margin:0;border:0;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;font-weight:700;line-height:1.35;outline:none;padding:0;resize:none}
-.fsdb-detail-title-row .fsdb-detail-title-input{flex:1;min-width:0}
+.fsdb-detail-title{flex:1;min-width:0;margin:0;color:var(--dsw-label);font-size:32px;font-weight:700;line-height:1.2}
+.fsdb-detail-title-input{display:block;width:100%;margin:0;border:0;background:transparent;color:inherit;font:inherit;font-size:inherit;font-weight:inherit;line-height:inherit;outline:none;padding:0;resize:none}
+.fsdb-detail-title-row .fsdb-detail-title-input{flex:none}
 .fsdb-page .tasks-icon-btn.is-danger:hover{background:color-mix(in srgb,var(--dsw-danger) 16%,transparent);color:var(--dsw-danger)}
 .fsdb-detail-id{font-size:14px;font-weight:400;color:var(--dsw-label-2);font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-detail-doc{width:100%;min-height:180px;border:0;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;line-height:1.65;outline:none;resize:none;padding:8px 0 0;margin:0}
