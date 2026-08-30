@@ -4012,16 +4012,10 @@ body {
   padding: 2px 0;
 }
 
-.composer-pill.is-expanded .composer-tiptap p {
-  line-height: 2;
-}
-
+.composer-pill.is-expanded .composer-tiptap p,
 .composer-pill.has-chips .composer-tiptap p,
 .composer-tiptap.is-readonly p {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  line-height: 1.45;
+  line-height: 2;
 }
 
 .composer-tiptap.is-readonly {
