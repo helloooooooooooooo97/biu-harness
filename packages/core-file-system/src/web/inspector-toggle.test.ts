@@ -19,7 +19,11 @@ test('data sidebar brand sits left with a collapse control on the right', () => 
 test('table and view rows only expand from the fold column', () => {
   const sidebar = readFileSync(resolve(import.meta.dirname, './data-sidebar.tsx'), 'utf8')
   const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
-  assert.match(sidebar, /onOpenTable\?\.\(table\.path, undefined, \{ catalog: true \}\)/)
+  assert.match(sidebar, /onOpenTable\?\.\(table\.path\)/)
+  assert.doesNotMatch(sidebar, /\{ catalog: true \}/)
+  const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  assert.match(page, /go\(\{ collection: path, viewId \}\)/)
+  assert.doesNotMatch(page, /go\(\{ collection: path, viewId: viewId \?\? defaultViewId\(path\) \}\)/)
   assert.doesNotMatch(sidebar, /\[table\.path\]: true/)
   assert.doesNotMatch(sidebar, /setOpenTables\(\(prev\) => \(\{ \.\.\.prev, \[path\]: true \}\)\)/)
   assert.match(css, /\.sidebar-group-fold:hover \.sidebar-group-fold-chevron/)

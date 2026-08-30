@@ -313,7 +313,7 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
           setInspectorDbPath(id, viewsCatalogHref(path))
           return
         }
-        setInspectorDbPath(id, databaseViewPath(path, nextViewId ?? defaultViewId(path)))
+        setInspectorDbPath(id, databaseViewPath(path, nextViewId))
       }}
       onOpenView={(nextViewId) => setInspectorDbPath(id, databaseViewPath(currentPath, nextViewId))}
       onOpenRecord={(recordIdNext, _viewId, nextCollection) => {
