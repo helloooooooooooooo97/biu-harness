@@ -70,8 +70,7 @@ export function revealStartForMemory(
   totalTurns: number,
 ): number {
   if (!memory || memory.kind === 'bottom') return firstPaintStartIndex(totalTurns)
-  const index = turnIndexContaining(nodes, memory.nodeId)
-  return index < 0 ? 0 : index
+  return 0
 }
 
 function nodeSelector(nodeId: string) {
@@ -88,13 +87,7 @@ function turnSelector(nodeId: string) {
 
 /** 相对滚动容器的文档坐标；走 offsetTop，不受 sticky 视觉位置干扰。 */
 export function offsetInScroller(el: HTMLElement, scroller: HTMLElement): number {
-  let y = 0
-  let node: HTMLElement | null = el
-  while (node && node !== scroller) {
-    y += node.offsetTop
-    node = node.parentElement
-  }
-  return y
+  return el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop
 }
 
 /** 当前贴顶的用户消息：已经顶到视口上沿的最后一条。 */

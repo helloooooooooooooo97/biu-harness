@@ -4,7 +4,6 @@ import {
   ChatBubbleLeftRightIcon,
   BoltIcon,
   EyeIcon,
-  DocumentTextIcon,
   ListBulletIcon,
   PuzzlePieceIcon,
   Squares2X2Icon,
@@ -36,7 +35,7 @@ export function CrumbItemGlyph({
   kind,
   icon,
   mode,
-  emoji,
+  emoji: _emoji,
   className = 'chat-view-project-icon',
 }: {
   kind: CrumbKind
@@ -45,10 +44,7 @@ export function CrumbItemGlyph({
   emoji?: string
   className?: string
 }) {
-  if (kind === 'record') {
-    if (emoji) return <span className="fsdb-record-emoji" aria-hidden>{emoji}</span>
-    return <DocumentTextIcon aria-hidden className={className} />
-  }
+  if (kind === 'record') return <TableGlyph icon={icon} className={className} />
   if (kind === 'view') return <ViewModeGlyph mode={mode} className={className} />
   if (kind === 'collection') return <TableGlyph icon={icon} className={className} />
   return <CircleStackIcon aria-hidden className={className} />

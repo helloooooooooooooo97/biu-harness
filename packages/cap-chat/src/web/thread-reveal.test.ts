@@ -109,7 +109,7 @@ describe('chat scroll memory per session', () => {
   it('mounts from the pinned turn instead of only the tail', () => {
     const nodes = longThread()
     expect(turnIndexContaining(nodes, 'u-3')).toBe(3)
-    expect(revealStartForMemory(nodes, { kind: 'pin', nodeId: 'u-3' }, 10)).toBe(3)
+    expect(revealStartForMemory(nodes, { kind: 'pin', nodeId: 'u-3' }, 10)).toBe(0)
     expect(revealStartForMemory(nodes, { kind: 'bottom' }, 10)).toBe(10 - CHAT_FIRST_PAINT_TURNS)
   })
 
@@ -146,18 +146,18 @@ describe('chat scroll memory per session', () => {
   it('restores by scrolling the turn box to the top, ignoring sticky visual offset', () => {
     const parent = document.createElement('div')
     Object.defineProperty(parent, 'scrollTop', { value: 1800, writable: true, configurable: true })
+    parent.getBoundingClientRect = () => box(0, 800)
     const turn = document.createElement('div')
     turn.dataset.turnAnchor = 'u-3'
     turn.className = 'chat-turn'
-    Object.defineProperty(turn, 'offsetTop', { value: 640, configurable: true })
+    turn.getBoundingClientRect = () => box(-80, 200)
     const sticky = document.createElement('div')
     sticky.dataset.nodeId = 'u-3'
     sticky.dataset.chatKind = 'user'
     sticky.getBoundingClientRect = () => box(0, 40)
     turn.append(sticky)
     parent.append(turn)
-    parent.getBoundingClientRect = () => box(0, 800)
     expect(restoreChatScroll(parent, { kind: 'pin', nodeId: 'u-3' })).toBe(true)
-    expect(parent.scrollTop).toBe(640)
+    expect(parent.scrollTop).toBe(1720)
   })
 })

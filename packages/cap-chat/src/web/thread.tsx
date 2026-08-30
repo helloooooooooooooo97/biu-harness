@@ -800,6 +800,8 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const sessionIdRef = useRef(sessionId)
   sessionIdRef.current = sessionId
   const restoredForRef = useRef<string | null>(null)
+  const holdOlderRef = useRef(false)
+  const maxScrollRef = useRef(0)
   const prependHeightRef = useRef(0)
   const prefetchingRef = useRef(false)
   const [scrollEpoch, setScrollEpoch] = useState(0)
@@ -830,6 +832,8 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     stickToBottomRef.current = !mem || mem.kind === 'bottom'
     restoredForRef.current = null
     prependHeightRef.current = 0
+    holdOlderRef.current = mem?.kind === 'pin'
+    maxScrollRef.current = 0
   }, [sessionId])
 
   useEffect(() => {
@@ -874,6 +878,10 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     }
     const onUserScroll = () => {
       onScroll()
+      maxScrollRef.current = Math.max(maxScrollRef.current, parent.scrollTop)
+      if (holdOlderRef.current && maxScrollRef.current > PREFETCH_OLDER_PX && parent.scrollTop <= PREFETCH_OLDER_PX) {
+        holdOlderRef.current = false
+      }
       const id = sessionIdRef.current
       if (id && restoredForRef.current === id) rememberChatScroll(id, captureChatScroll(parent))
     }
@@ -886,6 +894,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
 
   useEffect(() => {
     if (revealStart <= 0) return
+    if (holdOlderRef.current) return
     const parent = scrollRef.current
     const fast = parent
       ? shouldRevealFast({

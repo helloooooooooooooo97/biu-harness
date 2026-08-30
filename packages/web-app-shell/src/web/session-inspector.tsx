@@ -2,13 +2,17 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { createPortal } from 'react-dom'
 import {
   CheckCircleIcon,
-  DocumentTextIcon,
   ListBulletIcon,
   PlusIcon,
   Squares2X2Icon,
   TableCellsIcon,
   TrashIcon,
   ViewColumnsIcon,
+  ClipboardDocumentListIcon,
+  ChatBubbleLeftRightIcon,
+  PuzzlePieceIcon,
+  BoltIcon,
+  EyeIcon,
 } from '@heroicons/react/16/solid'
 import { chromeIcon } from './chrome-icon.ts'
 import {
@@ -22,20 +26,31 @@ import { inspectorTabFromEvent, requestInspectorAction } from './chat-overlay.ts
 import { getInspectorCaption, getInspectorCaptionVersion, subscribeInspectorCaptions } from './inspector-captions.ts'
 import { inspectorPanelMatches, inspectorViewProps, nextRepeatableTabId, resolveInspectorTab, slotTabId } from './inspector-panels.ts'
 
+function captionTableIcon(icon?: string) {
+  const name = (icon ?? '').trim().toLowerCase()
+  if (name === 'puzzle-piece' || name === 'puzzle') return PuzzlePieceIcon
+  if (name === 'clipboard-document-list' || name === 'clipboard') return ClipboardDocumentListIcon
+  if (name === 'chat-bubble' || name === 'chat-bubble-left-right') return ChatBubbleLeftRightIcon
+  if (name === 'bolt') return BoltIcon
+  if (name === 'eye') return EyeIcon
+  return TableCellsIcon
+}
+
 function PaneLeafIcon({
   kind,
   mode,
-  emoji,
+  icon,
   Fallback,
 }: {
   kind?: string
   mode?: string
+  icon?: string
   emoji?: string
   Fallback?: ComponentType<{ className?: string }>
 }) {
-  if (kind === 'record') {
-    if (emoji) return <span className="fsdb-record-emoji" aria-hidden>{emoji}</span>
-    return <DocumentTextIcon {...chromeIcon} />
+  if (kind === 'record' || kind === 'collection') {
+    const Glyph = captionTableIcon(icon)
+    return <Glyph {...chromeIcon} />
   }
   if (kind === 'view') {
     if (mode === 'queue') return <ListBulletIcon {...chromeIcon} />
@@ -352,7 +367,7 @@ export const SessionInspector = memo(function SessionInspector({
                       onClick={() => setTab(item.id)}
                       data-testid={`inspector-offer-${item.id}`}
                     >
-                      <PaneLeafIcon kind={caption?.kind} mode={caption?.mode} emoji={caption?.emoji} Fallback={item.Icon} />
+                      <PaneLeafIcon kind={caption?.kind} mode={caption?.mode} icon={caption?.icon} Fallback={item.Icon} />
                       <span className="min-w-0 flex-1 truncate">{caption?.label || item.label}</span>
                       <CheckCircleIcon aria-hidden className="size-4 shrink-0 inspector-add-check" />
                     </button>

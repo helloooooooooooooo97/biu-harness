@@ -3,7 +3,6 @@ import {
   ChevronDoubleLeftIcon,
   ChevronDownIcon,
   ChevronRightIcon,
-  DocumentTextIcon,
   PencilSquareIcon,
   PlusIcon,
   Square2StackIcon,
@@ -55,12 +54,14 @@ function ViewRecordPreview({
   view,
   open,
   recordKind,
+  tableIcon,
   onOpenRecord,
 }: {
   path: string
   view: SavedView
   open: boolean
   recordKind: string
+  tableIcon?: string
   onOpenRecord?: (recordId: string) => void
 }) {
   const key = previewCacheKey(path, view)
@@ -166,7 +167,7 @@ function ViewRecordPreview({
                     setEmojiDraft(emoji)
                   }}
                 >
-                  {emoji ? <span className="fsdb-record-emoji">{emoji}</span> : <DocumentTextIcon aria-hidden className="size-4" />}
+                  <TableGlyph icon={tableIcon} />
                 </button>
                 {pickerId === row.id ? (
                   <div className="fsdb-emoji-picker" data-biu-ignore onClick={(event) => event.stopPropagation()}>
@@ -493,6 +494,7 @@ export const DataSidebar = memo(function DataSidebar({
                           view={view}
                           open={expanded}
                           recordKind={recordPickKind(table.view?.moduleId)}
+                          tableIcon={table.view?.icon}
                           onOpenRecord={(id) => openRecord(table.path, view, id)}
                         />
                       </div>
@@ -645,6 +647,7 @@ export const DataSidebar = memo(function DataSidebar({
                                 view={view}
                                 open={expanded}
                                 recordKind={recordPickKind(table.view?.moduleId)}
+                                tableIcon={table.view?.icon}
                                 onOpenRecord={(id) => openRecord(table.path, view, id)}
                               />
                             </div>

@@ -186,7 +186,7 @@ test('一项时点面包屑回到上一级，多项出菜单', () => {
   const crumbs = buildCrumbs({
     collection: '/tasks',
     collectionLabel: 'Task',
-    tables: [{ path: '/tasks', label: 'Task' }],
+    tables: [{ path: '/tasks', label: 'Task', icon: 'clipboard' }],
     viewId: 'v1',
     viewName: '默认视图',
     views: [{ id: 'v1', name: '默认视图' }],
@@ -194,6 +194,7 @@ test('一项时点面包屑回到上一级，多项出菜单', () => {
     recordLabel: '打开一条事件',
     records: [{ id: 'evt-194', label: '打开一条事件' }],
   })
+  assert.equal(crumbs[2]!.choices[0]!.icon, 'clipboard')
   assert.equal(crumbButtonAction(crumbs[2]!, crumbs[1]!), crumbs[1]!.target)
   assert.equal(crumbButtonAction(crumbs[1]!, crumbs[0]!), crumbs[0]!.target)
   const many = buildCrumbs({

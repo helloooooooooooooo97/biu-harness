@@ -121,6 +121,7 @@ export function buildCrumbs(input: {
     })
   }
   if (input.recordId) {
+    const tableIcon = input.tables.find((item) => item.path === input.collection)?.icon
     crumbs.push({
       kind: 'record',
       id: input.recordId,
@@ -129,7 +130,7 @@ export function buildCrumbs(input: {
       choices: (input.records ?? [{ id: input.recordId, label: input.recordLabel || input.recordId }]).map((row) => ({
         id: row.id,
         label: row.label,
-        emoji: row.emoji,
+        icon: tableIcon,
         target: { kind: 'record', collection: input.collection, recordId: row.id },
       })),
     })
