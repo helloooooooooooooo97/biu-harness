@@ -163,8 +163,18 @@ function UpdateButton() {
       .catch(() => { })
   }, [])
 
+  useEffect(() => {
+    if (!hint || behind > 0 || busy) return
+    const timer = window.setTimeout(() => setHint(undefined), 3200)
+    return () => window.clearTimeout(timer)
+  }, [hint, behind, busy])
+
   const download = useCallback(async () => {
     if (busy) return
+    if (behind <= 0) {
+      setHint('相对于主分支暂时无最新提交版本')
+      return
+    }
     setBusy(true)
     setHint(undefined)
     try {
@@ -177,17 +187,19 @@ function UpdateButton() {
       setBusy(false)
       setHint(String(error))
     }
-  }, [busy])
+  }, [busy, behind])
 
+  const idle = behind <= 0 && !busy
   const label = hint ?? (behind > 0 ? `下载更新 · 落后 ${behind}` : '下载更新')
   const badge = behind > 99 ? '99+' : String(behind)
 
   return (
     <button
       type="button"
-      className={`app-activity-item app-activity-update${busy ? ' is-busy' : ''}`}
+      className={`app-activity-item app-activity-update${busy ? ' is-busy' : ''}${idle ? ' is-idle' : ''}`}
       title={label}
       aria-label={label}
+      aria-disabled={idle}
       disabled={busy}
       onClick={() => void download()}
     >
@@ -195,6 +207,11 @@ function UpdateButton() {
       {behind > 0 && !busy ? (
         <span className="app-activity-badge" aria-hidden>
           {badge}
+        </span>
+      ) : null}
+      {hint && idle ? (
+        <span className="app-activity-update-toast" role="status">
+          {hint}
         </span>
       ) : null}
     </button>

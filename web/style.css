@@ -1710,7 +1710,7 @@ body {
   height: 100%;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .app-activity-bar {
@@ -1720,6 +1720,7 @@ body {
   min-height: 0;
   flex-direction: column;
   align-items: stretch;
+  overflow: visible;
   background: var(--dsw-sidebar);
   border-right: 1px solid var(--dsw-border);
 }
@@ -1811,6 +1812,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  overflow: visible;
   gap: 0;
   padding-bottom: 8px;
 }
@@ -1857,6 +1859,25 @@ body {
 .app-activity-update.is-busy {
   opacity: 0.55;
   cursor: wait;
+}
+
+.app-activity-update-toast {
+  position: fixed;
+  left: 56px;
+  bottom: 52px;
+  z-index: 80;
+  max-width: min(280px, calc(100vw - 72px));
+  padding: 7px 10px;
+  border: 1px solid var(--dsw-border);
+  border-radius: 8px;
+  background: var(--dsw-sidebar);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  color: var(--dsw-label);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .app-activity-badge {
