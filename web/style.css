@@ -378,7 +378,10 @@ body {
   right: 0;
   bottom: calc(100% + 52px);
   z-index: 21;
-  min-width: 200px;
+  box-sizing: border-box;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  min-width: 0;
   max-height: 280px;
   overflow: auto;
   border: 1px solid var(--dsw-border);
@@ -386,6 +389,89 @@ body {
   background: var(--dsw-surface);
   padding: 4px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.brand-agent-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand-agent-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.brand-agent-live {
+  margin-right: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.brand-agent-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: var(--dsw-label-3);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.brand-agent-project {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brand-agent-tags {
+  display: flex;
+  min-width: 0;
+  flex-shrink: 0;
+  max-width: 46%;
+  align-items: center;
+  gap: 4px;
+}
+
+.brand-agent-tags.is-empty {
+  opacity: 0.55;
+}
+
+.brand-agent-tag {
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 4px;
+  background: var(--dsw-hover);
+  padding: 0 6px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.brand-agent-tag.is-more {
+  flex-shrink: 0;
+  max-width: none;
+  opacity: 0.8;
+}
+
+.brand-agent-menu .inspector-catalog-item {
+  min-height: 48px;
+  align-items: flex-start;
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
 
 /* 右侧检查器 tab：选中态与顶栏收起检查器按钮相同，无底边指示条 */

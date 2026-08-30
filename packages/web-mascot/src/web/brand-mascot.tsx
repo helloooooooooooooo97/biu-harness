@@ -8,6 +8,25 @@ export type CornerAgent = {
   updatedAt?: number
   type?: string
   mascot?: { shape: string; color: string; eye?: number }
+  project?: { name: string; path?: string }
+  tags?: string[]
+}
+
+function AgentTags({ tags }: { tags?: string[] }) {
+  const list = (tags ?? []).map((tag) => tag.trim()).filter(Boolean)
+  if (!list.length) return <span className="brand-agent-tags is-empty">—</span>
+  const shown = list.slice(0, 2)
+  const extra = list.length - shown.length
+  return (
+    <span className="brand-agent-tags">
+      {shown.map((tag) => (
+        <span key={tag} className="brand-agent-tag">
+          {tag}
+        </span>
+      ))}
+      {extra > 0 ? <span className="brand-agent-tag is-more">+{extra}</span> : null}
+    </span>
+  )
 }
 
 export function BrandMascot({ className }: { className?: string }) {
@@ -107,9 +126,17 @@ export function BrandCornerMascot({
                     }}
                   >
                     <SidebarMascot size={24} sessionId={item.id} identity={face} animate={false} title={item.title} />
-                    <span className="min-w-0 flex-1 truncate">
-                      {(item.type ?? 'chat') === 'live' ? <span className="mr-1 text-[9px] font-semibold tracking-wide uppercase">live</span> : null}
-                      {item.title}
+                    <span className="brand-agent-copy">
+                      <span className="brand-agent-title">
+                        {(item.type ?? 'chat') === 'live' ? <span className="brand-agent-live">live</span> : null}
+                        {item.title}
+                      </span>
+                      <span className="brand-agent-meta">
+                        <span className="brand-agent-project" title={item.project?.path || item.project?.name || undefined}>
+                          {item.project?.name?.trim() || '—'}
+                        </span>
+                        <AgentTags tags={item.tags} />
+                      </span>
                     </span>
                   </button>
                 )
