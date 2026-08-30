@@ -359,6 +359,31 @@ body {
   display: none;
 }
 
+.inspector-crumb-tab {
+  max-width: min(100%, 420px);
+  min-width: 0;
+}
+
+.inspector-crumb-leaf,
+.inspector-crumb-full {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  gap: 2px;
+}
+
+.inspector-crumb-full .fsdb-crumb-btn {
+  max-width: 140px;
+}
+
+.inspector-database-rail.fsdb-views {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border-right: 0;
+}
+
 .inspector-catalog {
   display: flex;
   min-height: 0;

@@ -260,6 +260,7 @@ export const DataSidebar = memo(function DataSidebar({
   expandedViewKey: expandedViewKeyProp,
   onExpandedViewKeyChange,
   onCollapse,
+  hideChrome = false,
 }: {
   tables: CollectionInfo[]
   collectionPath: string
@@ -276,6 +277,7 @@ export const DataSidebar = memo(function DataSidebar({
   expandedViewKey?: string | null
   onExpandedViewKeyChange?: (key: string | null) => void
   onCollapse?: () => void
+  hideChrome?: boolean
 }) {
   const listedTables = useMemo(
     () => (tables.length ? tables : [{ path: collectionPath, label: title, view: { title } } as CollectionInfo]),
@@ -370,9 +372,11 @@ export const DataSidebar = memo(function DataSidebar({
 
   return (
     <aside
-      className="app-side-bar fsdb-views flex min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)"
+      className={`app-side-bar fsdb-views flex min-h-0 flex-col overflow-hidden bg-(--dsw-sidebar)${hideChrome ? ' inspector-database-rail' : ' border-r border-(--dsw-border)'}`}
       aria-label="数据"
+      data-testid={hideChrome ? 'inspector-database' : undefined}
     >
+      {hideChrome ? null : (
       <div className="app-side-bar-head">
         <span
           className="inline-flex min-w-0 max-w-full items-center truncate rounded-md px-2 py-0.5 text-[14px] font-semibold tracking-wide text-white"
@@ -391,6 +395,7 @@ export const DataSidebar = memo(function DataSidebar({
           <ChevronDoubleLeftIcon aria-hidden className="size-4" />
         </button>
       </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
         <div className="app-side-actions" role="navigation" aria-label="视图操作" data-biu-ignore>
           <button type="button" className="app-side-actions-item" title="添加视图" onClick={onAddView}>

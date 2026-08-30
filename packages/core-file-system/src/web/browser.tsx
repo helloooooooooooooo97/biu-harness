@@ -896,6 +896,7 @@ export function CollectionBrowser({
     setViews(next)
     localStorage.setItem(viewsKey(collectionPath), JSON.stringify(next))
     pushSavedViews(collectionPath, next)
+    window.dispatchEvent(new Event('fsdb:change'))
   }
 
   function rememberActiveView(id: string) {
@@ -1025,6 +1026,38 @@ export function CollectionBrowser({
     setViewMenuOpen(false)
     setDlg({ kind: 'delete', view })
   }
+
+  const addEmptyViewRef = useRef(addEmptyView)
+  const copyViewRef = useRef(copyView)
+  const renameViewRef = useRef(renameView)
+  const deleteViewRef = useRef(deleteView)
+  addEmptyViewRef.current = addEmptyView
+  copyViewRef.current = copyView
+  renameViewRef.current = renameView
+  deleteViewRef.current = deleteView
+
+  useEffect(() => {
+    const onAdd = () => addEmptyViewRef.current()
+    const onCopy = () => copyViewRef.current()
+    const onRename = (event: Event) => {
+      const view = (event as CustomEvent<SavedView>).detail
+      if (view?.id) renameViewRef.current(view)
+    }
+    const onDelete = (event: Event) => {
+      const view = (event as CustomEvent<SavedView>).detail
+      if (view?.id) deleteViewRef.current(view)
+    }
+    window.addEventListener('fsdb:add-view', onAdd)
+    window.addEventListener('fsdb:copy-view', onCopy)
+    window.addEventListener('fsdb:rename-view', onRename)
+    window.addEventListener('fsdb:delete-view', onDelete)
+    return () => {
+      window.removeEventListener('fsdb:add-view', onAdd)
+      window.removeEventListener('fsdb:copy-view', onCopy)
+      window.removeEventListener('fsdb:rename-view', onRename)
+      window.removeEventListener('fsdb:delete-view', onDelete)
+    }
+  }, [])
 
   function applyRename(name?: string) {
     if (!dlg || dlg.kind !== 'rename') return
@@ -2278,6 +2311,7 @@ if (typeof document !== 'undefined') {
 .fsdb-inspector-panel .fsdb-detail-stage{min-height:0;flex:1}
 .fsdb-right-body{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
 .fsdb-views{display:flex;width:280px;flex:none;flex-direction:column;min-height:0;overflow:hidden}
+.inspector-database-rail.fsdb-views{width:100%;flex:1;border-right:0}
 .fsdb-nav-chevron{flex:none;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
 .fsdb-nav-chevron:hover{background:var(--dsw-hover);color:var(--dsw-label)}
 .fsdb-collection-head{flex:none;padding:4px 16px 10px;min-width:0}

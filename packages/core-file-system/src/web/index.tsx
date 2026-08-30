@@ -15,7 +15,7 @@ import {
 } from './nav-boot.ts'
 import { loadActiveViewId, loadViews, pushAllSavedViews } from './view-storage.ts'
 import { bindSnapshot } from '@biu/web-snapshot'
-import { DatabaseInspectorBrowse } from './inspector-database.tsx'
+import { DatabaseInspectorBrowse, DatabaseInspectorTab } from './inspector-database.tsx'
 
 type SlotsService = {
   place: (slot: string, view: unknown, opts: { key: string; order?: number; props?: () => Record<string, unknown> }) => { dispose?: () => unknown }
@@ -354,6 +354,7 @@ export function apply(ctx: Context) {
         tabId: 'database',
         tabLabel: '数据库',
         tabIcon: CircleStackIcon,
+        Tab: DatabaseInspectorTab,
         common: true,
         useSnapshot: bindSnapshot(snapshot),
       }),

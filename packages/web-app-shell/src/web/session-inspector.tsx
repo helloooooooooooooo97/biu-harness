@@ -65,6 +65,7 @@ export const SessionInspector = memo(function SessionInspector({
           id: String(extra.tabId ?? entry.id),
           label: String(extra.tabLabel ?? '插件'),
           Icon: extra.tabIcon as ComponentType<{ className?: string }> | undefined,
+          Tab: extra.Tab as ComponentType<Record<string, unknown>> | undefined,
           ensureTrajectory: Boolean(extra.ensureTrajectory),
           focusOnCall: Boolean(extra.focusOnCall),
           common: Boolean(extra.common),
@@ -200,6 +201,17 @@ export const SessionInspector = memo(function SessionInspector({
         <div className="inspector-tabs" role="tablist" aria-label="检查器分区">
           {headerTabs.map((item) => {
             const active = tab === item.id
+            const Tab = item.Tab
+            if (Tab) {
+              return (
+                <Tab
+                  key={item.id}
+                  active={active}
+                  onActivate={() => setTab(item.id)}
+                  {...(item.entry.props?.() ?? {})}
+                />
+              )
+            }
             return (
               <button
                 key={item.id}

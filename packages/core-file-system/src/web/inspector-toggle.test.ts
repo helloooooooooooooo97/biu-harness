@@ -34,9 +34,12 @@ test('database can be added to the inspector and browsed by crumbs', () => {
   const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
   assert.match(page, /fsdb-database-browse/)
   assert.match(page, /tabLabel: '数据库'/)
+  assert.match(page, /Tab: DatabaseInspectorTab/)
   const browse = readFileSync(resolve(import.meta.dirname, './inspector-database.tsx'), 'utf8')
   assert.match(browse, /data-testid="inspector-database"/)
   assert.match(browse, /aria-label="数据库位置"/)
+  assert.match(browse, /inspector-crumb-leaf/)
+  assert.match(browse, /hideChrome/)
 })
 
 test('inspector no longer listens for add/copy view actions', () => {
