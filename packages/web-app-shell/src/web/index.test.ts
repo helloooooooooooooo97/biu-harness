@@ -35,6 +35,13 @@ test('declares generic module slots, not plugin ids', async () => {
   )
 })
 
+test('update button does not download when already current', () => {
+  const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  assert.match(shell, /相对于主分支暂时无最新提交版本/)
+  assert.match(shell, /if \(behind <= 0\)/)
+  assert.match(shell, /app-activity-update-toast/)
+})
+
 test('refresh does not send unfinished plugin routes home', () => {
   const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
   assert.doesNotMatch(shell, /navigate\('\/', \{ replace: true \}\)/)
