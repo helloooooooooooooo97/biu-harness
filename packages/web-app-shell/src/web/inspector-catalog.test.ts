@@ -9,7 +9,7 @@ const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css
 test('inspector header keeps opened tabs on top and a plus menu on the right', () => {
   assert.match(inspector, /data-testid="inspector-add"/)
   assert.match(inspector, /data-testid="inspector-add-menu"/)
-  assert.match(inspector, /className="app-side-bar-head"/)
+  assert.match(inspector, /className="app-side-bar-head" data-biu-ignore/)
   assert.match(inspector, /PlusIcon/)
   assert.match(inspector, /点右上角加号/)
   assert.match(inspector, /item.Tab/)

@@ -6,7 +6,7 @@ import { boxFromPoints, resolvePickAtPoint, resolvePicksInRect } from './resolve
 const DRAG_PX = 6
 
 const PICK_NAV_GUARD =
-  '[data-biu-ignore], .app-side-bar, .app-rail, .session-inspector, .brand-corner-cluster, [data-testid="inspector-toggle"], [data-testid="fsdb-inspector-toggle"]'
+  '[data-biu-ignore], .app-side-bar, .app-rail, .brand-corner-cluster, [data-testid="inspector-toggle"], [data-testid="fsdb-inspector-toggle"]'
 
 function ignorePickCapture(target: Element) {
   return Boolean(target.closest(PICK_NAV_GUARD))

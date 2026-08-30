@@ -261,6 +261,7 @@ export const SessionInspector = memo(function SessionInspector({
     >
       <div
         className="inspector-resize"
+        data-biu-ignore
         data-testid="inspector-resize"
         title="拖动调整宽度"
         onPointerDown={(event) => {
@@ -272,7 +273,7 @@ export const SessionInspector = memo(function SessionInspector({
         }}
       />
 
-      <div className="app-side-bar-head">
+      <div className="app-side-bar-head" data-biu-ignore>
         <div className="inspector-tabs" ref={tabsRef} role="tablist" aria-label="检查器分区">
           {headerTabs.map((item) => {
             const active = tab === item.id
@@ -324,6 +325,7 @@ export const SessionInspector = memo(function SessionInspector({
               ref={plusMenuRef}
               className="inspector-add-menu is-fixed"
               role="menu"
+              data-biu-ignore
               data-testid="inspector-add-menu"
               data-caption-rev={captionRev}
               style={{ right: plusPos.right, top: plusPos.top }}
