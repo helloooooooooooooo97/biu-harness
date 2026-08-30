@@ -60,13 +60,13 @@ function SessionTagBadges({ tags }: { tags?: string[] }) {
       {shown.map((tag) => (
         <span
           key={tag}
-          className="sidebar-tag max-w-18 truncate rounded-sm bg-(--dsw-hover-weak,var(--dsw-hover)) px-1 py-px text-[14px] leading-5 font-medium"
+          className="sidebar-tag max-w-18 truncate rounded-sm bg-(--dsw-hover-weak,var(--dsw-hover)) px-1"
         >
           {tag}
         </span>
       ))}
       {extra > 0 ? (
-        <span className="sidebar-tag shrink-0 rounded-sm px-0.5 py-px text-[14px] leading-5 font-medium opacity-80">
+        <span className="sidebar-tag shrink-0 rounded-sm px-0.5 opacity-80">
           +{extra}
         </span>
       ) : null}

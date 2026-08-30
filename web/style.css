@@ -1150,9 +1150,14 @@ body {
 }
 
 .sidebar-label,
-.app-side-actions-label,
-.sidebar-tag {
+.app-side-actions-label {
   font-size: 14px;
+}
+
+.sidebar-tag {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
 }
 
 .app-side-bar:not(.is-wide) .sidebar-tag {
