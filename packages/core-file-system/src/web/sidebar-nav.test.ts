@@ -136,14 +136,14 @@ test('面包屑点上级会清掉后面几级', () => {
     collection: '/tasks',
     collectionLabel: 'Task',
     tables: [
-      { path: '/tasks', label: 'Task' },
-      { path: '/pages', label: 'Page' },
+      { path: '/tasks', label: 'Task', icon: 'bolt' },
+      { path: '/pages', label: 'Page', icon: 'puzzle-piece' },
     ],
     viewId: '1787983501816',
     viewName: '默认视图',
     views: [
-      { id: '1787983501816', name: '默认视图' },
-      { id: 'board', name: '看板' },
+      { id: '1787983501816', name: '默认视图', mode: 'table' },
+      { id: 'board', name: '看板', mode: 'board' },
     ],
   })
   assert.deepEqual(
@@ -155,6 +155,8 @@ test('面包屑点上级会清掉后面几级', () => {
   assert.equal(pathForCrumbTarget(crumbs[1]!.target), '/database/tasks/view/1787983501816')
   const pages = crumbs[0]!.choices.find((item) => item.id === '/pages')
   assert.equal(pathForCrumbTarget(pages!.target), '/database/pages')
+  assert.equal(pages!.icon, 'puzzle-piece')
+  assert.equal(crumbs[1]!.choices.find((item) => item.id === 'board')?.mode, 'board')
 })
 
 test('记录页面包屑是表 / 视图 / 记录，点表只回到表', () => {

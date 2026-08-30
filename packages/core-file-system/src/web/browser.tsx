@@ -64,8 +64,10 @@ import {
 } from './fields'
 import { AppDialog, CellSelect, CheckRow, LocalText, TokenMultiSelect } from './controls.tsx'
 import { DataSidebar } from './data-sidebar.tsx'
-import { buildCrumbs, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
+import { CrumbItemGlyph } from './nav-glyphs.tsx'
+import { buildCrumbs, type CrumbTarget } from './sidebar-nav.ts'
 import { pickDomAttrs, recordPickKind } from './pick-dom.ts'
+import { recordPreviewEmoji } from './sidebar-preview.ts'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
 import {
   activeViewStorageKey,
@@ -152,14 +154,6 @@ function viewForPath(collectionPath: string, routeViewId?: string): SavedView | 
 
 function isListColumn(key: string) {
   return key !== 'description' && key !== 'notes' && key !== 'content' && key !== 'emoji'
-}
-
-function CrumbGlyph({ kind }: { kind: Crumb['kind'] }) {
-  const cls = 'chat-view-project-icon'
-  if (kind === 'record') return <DocumentTextIcon aria-hidden className={cls} />
-  if (kind === 'view') return <Squares2X2Icon aria-hidden className={cls} />
-  if (kind === 'collection') return <TableCellsIcon aria-hidden className={cls} />
-  return <CircleStackIcon aria-hidden className={cls} />
 }
 
 function toDatetimeLocal(value: unknown) {
@@ -1175,13 +1169,17 @@ export function CollectionBrowser({
       buildCrumbs({
         collection: collectionPath,
         collectionLabel: title,
-        tables: tables.map((table) => ({ path: table.path, label: table.view?.title ?? table.label })),
+        tables: tables.map((table) => ({
+          path: table.path,
+          label: table.view?.title ?? table.label,
+          icon: table.view?.icon,
+        })),
         viewId: routeViewId ?? activeViewId ?? undefined,
         viewName: activeView?.name,
-        views: views.map((view) => ({ id: view.id, name: view.name })),
+        views: views.map((view) => ({ id: view.id, name: view.name, mode: view.mode })),
         recordId: selected?.id,
         recordLabel: selected ? labelOf(selected) : undefined,
-        records: items.map((row) => ({ id: row.id, label: labelOf(row) })),
+        records: items.map((row) => ({ id: row.id, label: labelOf(row), emoji: recordPreviewEmoji(row) })),
       }),
     [activeView?.name, activeViewId, collectionPath, items, routeViewId, selected, tables, title, views],
   )
@@ -1527,6 +1525,7 @@ export function CollectionBrowser({
               {crumbs.map((crumb, index) => {
                 const canPick = crumb.choices.length > 1
                 const open = crumbOpen === crumb.id
+                const current = crumb.choices.find((item) => item.id === crumb.id)
                 return (
                 <span key={crumb.id} className="fsdb-crumb">
                   {index ? <span className="fsdb-crumb-sep" aria-hidden>/</span> : null}
@@ -1546,7 +1545,7 @@ export function CollectionBrowser({
                         setCrumbOpen(null)
                       }}
                     >
-                      <CrumbGlyph kind={crumb.kind} />
+                      <CrumbItemGlyph kind={crumb.kind} icon={current?.icon} mode={current?.mode} emoji={current?.emoji} />
                       <span className="chat-view-project-name">{crumb.label}</span>
                     </button>
                     {canPick && open ? (
@@ -1562,8 +1561,8 @@ export function CollectionBrowser({
                               setCrumbOpen(null)
                             }}
                           >
-                            <CrumbGlyph kind={choice.target.kind} />
-                            {choice.label}
+                            <CrumbItemGlyph kind={crumb.kind} icon={choice.icon} mode={choice.mode} emoji={choice.emoji} />
+                            <span className="chat-view-project-name">{choice.label}</span>
                           </button>
                         ))}
                       </div>

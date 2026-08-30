@@ -10,6 +10,7 @@ describe('顶栏三级标题', () => {
     expect(nav).toBeTruthy()
     expect(nav).not.toContain('ChevronDownIcon')
     expect(nav).toContain('aria-haspopup={canPick ? \'menu\' : undefined}')
-    expect(nav).toContain('<CrumbGlyph kind={choice.target.kind} />')
+    expect(nav).toContain('<CrumbItemGlyph kind={crumb.kind}')
+    expect(nav).toContain('<CrumbItemGlyph kind={crumb.kind} icon={choice.icon} mode={choice.mode} emoji={choice.emoji} />')
   })
 })

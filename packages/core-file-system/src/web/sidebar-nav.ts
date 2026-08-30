@@ -1,6 +1,7 @@
 /** 侧栏展开/收起与数据路由切换的纯逻辑，UI 和压测共用。 */
 import { parseAppPath } from '@biu/web-session-view'
 import { databaseRecordPath, databaseViewPath } from './inspector-nav.ts'
+import type { ViewMode } from './fields.ts'
 
 const DATABASE = [{ id: 'database', label: '数据', path: '/database' }]
 
@@ -51,7 +52,14 @@ export type CrumbTarget =
   | { kind: 'view'; collection: string; viewId: string }
   | { kind: 'record'; collection: string; recordId: string }
 
-export type CrumbChoice = { id: string; label: string; target: CrumbTarget }
+export type CrumbChoice = {
+  id: string
+  label: string
+  target: CrumbTarget
+  icon?: string
+  mode?: ViewMode
+  emoji?: string
+}
 
 export type Crumb = {
   kind: CrumbKind
@@ -76,13 +84,13 @@ export function pathForCrumbTarget(target: CrumbTarget) {
 export function buildCrumbs(input: {
   collection: string
   collectionLabel: string
-  tables: Array<{ path: string; label: string }>
+  tables: Array<{ path: string; label: string; icon?: string }>
   viewId?: string
   viewName?: string
-  views?: Array<{ id: string; name: string }>
+  views?: Array<{ id: string; name: string; mode?: ViewMode }>
   recordId?: string
   recordLabel?: string
-  records?: Array<{ id: string; label: string }>
+  records?: Array<{ id: string; label: string; emoji?: string }>
 }): Crumb[] {
   const crumbs: Crumb[] = []
   if (!input.collection) return crumbs
@@ -94,6 +102,7 @@ export function buildCrumbs(input: {
     choices: input.tables.map((table) => ({
       id: table.path,
       label: table.label,
+      icon: table.icon,
       target: { kind: 'collection', collection: table.path },
     })),
   })
@@ -106,6 +115,7 @@ export function buildCrumbs(input: {
       choices: (input.views ?? [{ id: input.viewId, name: input.viewName || input.viewId }]).map((view) => ({
         id: view.id,
         label: view.name,
+        mode: view.mode,
         target: { kind: 'view', collection: input.collection, viewId: view.id },
       })),
     })
@@ -119,6 +129,7 @@ export function buildCrumbs(input: {
       choices: (input.records ?? [{ id: input.recordId, label: input.recordLabel || input.recordId }]).map((row) => ({
         id: row.id,
         label: row.label,
+        emoji: row.emoji,
         target: { kind: 'record', collection: input.collection, recordId: row.id },
       })),
     })

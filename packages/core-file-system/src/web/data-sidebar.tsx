@@ -1,26 +1,16 @@
 import { memo, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import {
-  BoltIcon,
-  ChatBubbleLeftRightIcon,
   ChevronDoubleLeftIcon,
   ChevronDownIcon,
   ChevronRightIcon,
-  ClipboardDocumentListIcon,
   DocumentTextIcon,
-  EyeIcon,
-  ListBulletIcon,
   PencilSquareIcon,
   PlusIcon,
-  PuzzlePieceIcon,
   Square2StackIcon,
-  Squares2X2Icon,
   StarIcon,
-  TableCellsIcon,
   TrashIcon,
-  ViewColumnsIcon,
 } from '@heroicons/react/16/solid'
 import type { CollectionInfo, DbRecord } from '@biu/type-file-system'
-import type { ViewMode } from './fields.ts'
 import type { SavedView } from './saved-view.ts'
 import {
   fetchViewPreview,
@@ -49,28 +39,10 @@ import {
 } from './view-storage.ts'
 import { pickDomAttrs, recordPickKind, viewPickId } from './pick-dom.ts'
 import { toggleExpandedViewKey } from './sidebar-nav.ts'
+import { TableGlyph, ViewModeGlyph } from './nav-glyphs.tsx'
 
 const SIDEBAR_BRAND_GRADIENT =
   'linear-gradient(105deg, color-mix(in srgb, #0066B0 42%, var(--dsw-hover)), color-mix(in srgb, #5B3E90 40%, var(--dsw-hover)) 52%, color-mix(in srgb, #E22726 42%, var(--dsw-hover)))'
-
-function TableGlyph({ icon }: { icon?: string }) {
-  const cls = 'size-4'
-  const name = (icon ?? '').trim().toLowerCase()
-  if (name === 'puzzle-piece' || name === 'puzzle') return <PuzzlePieceIcon aria-hidden className={cls} />
-  if (name === 'clipboard-document-list' || name === 'clipboard') return <ClipboardDocumentListIcon aria-hidden className={cls} />
-  if (name === 'chat-bubble' || name === 'chat-bubble-left-right') return <ChatBubbleLeftRightIcon aria-hidden className={cls} />
-  if (name === 'bolt') return <BoltIcon aria-hidden className={cls} />
-  if (name === 'eye') return <EyeIcon aria-hidden className={cls} />
-  return <TableCellsIcon aria-hidden className={cls} />
-}
-
-function ViewModeGlyph({ mode }: { mode: ViewMode }) {
-  const cls = 'size-4'
-  if (mode === 'queue') return <ListBulletIcon aria-hidden className={cls} />
-  if (mode === 'table') return <TableCellsIcon aria-hidden className={cls} />
-  if (mode === 'cards') return <Squares2X2Icon aria-hidden className={cls} />
-  return <ViewColumnsIcon aria-hidden className={cls} />
-}
 
 const RECORD_EMOJI_PRESETS = ['⭐', '🔥', '✅', '📌', '💡', '🎯', '📦', '🧩', '📄', '⚡']
 
