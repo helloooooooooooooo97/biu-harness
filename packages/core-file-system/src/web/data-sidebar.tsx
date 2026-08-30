@@ -48,6 +48,90 @@ const SIDEBAR_BRAND_GRADIENT =
 
 const RECORD_EMOJI_PRESETS = ['⭐', '🔥', '✅', '📌', '💡', '🎯', '📦', '🧩', '📄', '⚡']
 
+function RecordEmojiBoard({
+  anchor,
+  draft,
+  onDraft,
+  onPick,
+  onClear,
+  onClose,
+}: {
+  anchor: HTMLElement
+  draft: string
+  onDraft: (next: string) => void
+  onPick: (emoji: string) => void
+  onClear: () => void
+  onClose: () => void
+}) {
+  const [pos, setPos] = useState({ left: 0, top: 0 })
+  useLayoutEffect(() => {
+    const place = () => {
+      const box = anchor.getBoundingClientRect()
+      const width = 168
+      setPos({
+        left: Math.min(box.left, Math.max(8, window.innerWidth - width - 8)),
+        top: box.bottom + 4,
+      })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [anchor])
+  useEffect(() => {
+    const onPointer = (event: MouseEvent) => {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      if (anchor.contains(target)) return
+      if (target instanceof Element && target.closest('.fsdb-emoji-picker')) return
+      onClose()
+    }
+    document.addEventListener('mousedown', onPointer)
+    return () => document.removeEventListener('mousedown', onPointer)
+  }, [anchor, onClose])
+  if (typeof document === 'undefined') return null
+  return createPortal(
+    <div
+      className="fsdb-emoji-picker is-fixed"
+      data-biu-ignore
+      role="dialog"
+      aria-label="选择图标"
+      style={{ left: pos.left, top: pos.top }}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="fsdb-emoji-picker-presets">
+        {RECORD_EMOJI_PRESETS.map((item) => (
+          <button key={item} type="button" className="fsdb-emoji-picker-item" onClick={() => onPick(item)}>
+            {item}
+          </button>
+        ))}
+      </div>
+      <input
+        className="fsdb-emoji-picker-input"
+        value={draft}
+        placeholder="输入 emoji"
+        maxLength={8}
+        onChange={(event) => onDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            onPick(draft)
+          }
+          if (event.key === 'Escape') onClose()
+        }}
+      />
+      <button type="button" className="fsdb-emoji-picker-clear" onClick={onClear}>
+        恢复默认
+      </button>
+    </div>,
+    document.body,
+  )
+}
+
 type PreviewState = { items: DbRecord[]; total: number; loading: boolean; error: string }
 
 const previewCache = new Map<string, { items: DbRecord[]; total: number }>()
@@ -76,6 +160,7 @@ function ViewRecordPreview({
     error: '',
   }))
   const [pickerId, setPickerId] = useState<string | null>(null)
+  const [pickerAnchor, setPickerAnchor] = useState<HTMLElement | null>(null)
   const [emojiDraft, setEmojiDraft] = useState('')
 
   useEffect(() => {
@@ -103,16 +188,6 @@ function ViewRecordPreview({
       cancelled = true
     }
   }, [key, open, path, view.query, view.sortField, view.sortDir, view.filters])
-  useEffect(() => {
-    if (!pickerId) return
-    const onPointer = (event: MouseEvent) => {
-      const target = event.target
-      if (target instanceof Element && target.closest('.fsdb-emoji-picker, .fsdb-record-icon')) return
-      setPickerId(null)
-    }
-    document.addEventListener('mousedown', onPointer)
-    return () => document.removeEventListener('mousedown', onPointer)
-  }, [pickerId])
 
   async function loadMore() {
     const more = nextPreviewLimit(state.items.length, state.total)
@@ -137,6 +212,7 @@ function ViewRecordPreview({
       previewCache.set(key, { items, total: state.total })
       setState((prev) => ({ ...prev, items }))
       setPickerId(null)
+      setPickerAnchor(null)
       window.dispatchEvent(new Event('fsdb:change'))
     } catch (err) {
       setState((prev) => ({ ...prev, error: String(err) }))
@@ -166,44 +242,32 @@ function ViewRecordPreview({
                   aria-label={emoji ? `更换 ${recordPreviewLabel(row)} 的图标` : `设置 ${recordPreviewLabel(row)} 的图标`}
                   onClick={(event) => {
                     event.stopPropagation()
-                    setPickerId((prev) => (prev === row.id ? null : row.id))
+                    const btn = event.currentTarget
+                    setPickerId((prev) => {
+                      if (prev === row.id) {
+                        setPickerAnchor(null)
+                        return null
+                      }
+                      setPickerAnchor(btn)
+                      return row.id
+                    })
                     setEmojiDraft(emoji)
                   }}
                 >
-                  <TableGlyph icon={tableIcon} />
+                  {emoji ? <span className="fsdb-record-emoji">{emoji}</span> : <TableGlyph icon={tableIcon} />}
                 </button>
-                {pickerId === row.id ? (
-                  <div className="fsdb-emoji-picker" data-biu-ignore onClick={(event) => event.stopPropagation()}>
-                    <div className="fsdb-emoji-picker-presets">
-                      {RECORD_EMOJI_PRESETS.map((item) => (
-                        <button
-                          key={item}
-                          type="button"
-                          className="fsdb-emoji-picker-item"
-                          onClick={() => void saveEmoji(row, item)}
-                        >
-                          {item}
-                        </button>
-                      ))}
-                    </div>
-                    <input
-                      className="fsdb-emoji-picker-input"
-                      value={emojiDraft}
-                      placeholder="输入 emoji"
-                      maxLength={8}
-                      onChange={(event) => setEmojiDraft(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                          event.preventDefault()
-                          void saveEmoji(row, emojiDraft)
-                        }
-                        if (event.key === 'Escape') setPickerId(null)
-                      }}
-                    />
-                    <button type="button" className="fsdb-emoji-picker-clear" onClick={() => void saveEmoji(row, '')}>
-                      恢复默认
-                    </button>
-                  </div>
+                {pickerId === row.id && pickerAnchor ? (
+                  <RecordEmojiBoard
+                    anchor={pickerAnchor}
+                    draft={emojiDraft}
+                    onDraft={setEmojiDraft}
+                    onPick={(next) => void saveEmoji(row, next)}
+                    onClear={() => void saveEmoji(row, '')}
+                    onClose={() => {
+                      setPickerId(null)
+                      setPickerAnchor(null)
+                    }}
+                  />
                 ) : null}
               </span>
               <button
