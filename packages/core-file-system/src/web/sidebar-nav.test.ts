@@ -188,7 +188,7 @@ test('记录页面包屑是表 / 视图 / 记录，点表只回到表', () => {
   assert.ok(!pathForCrumbTarget(crumbs[1]!.target).includes('/record/'))
 })
 
-test('一项时点面包屑回到上一级，多项出菜单', () => {
+test('表视图记录都出菜单，点标题仍可回到上一级', () => {
   const crumbs = buildCrumbs({
     collection: '/tasks',
     collectionLabel: 'Task',
@@ -201,9 +201,10 @@ test('一项时点面包屑回到上一级，多项出菜单', () => {
     records: [{ id: 'evt-194', label: '打开一条事件' }],
   })
   assert.equal(crumbs[2]!.choices[0]!.icon, 'clipboard')
-  assert.equal(crumbButtonAction(crumbs[2]!, crumbs[1]!), crumbs[1]!.target)
-  assert.equal(crumbButtonAction(crumbs[1]!, crumbs[0]!), crumbs[0]!.target)
+  assert.equal(crumbButtonAction(crumbs[2]!, crumbs[1]!), 'menu')
+  assert.equal(crumbButtonAction(crumbs[1]!, crumbs[0]!), 'menu')
   assert.equal(crumbButtonAction(crumbs[0]!), 'menu')
+  assert.equal(crumbLabelAction(crumbs[1]!, crumbs[0]!), crumbs[0]!.target)
   const many = buildCrumbs({
     collection: '/tasks',
     collectionLabel: 'Task',

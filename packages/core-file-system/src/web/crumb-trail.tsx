@@ -1,7 +1,129 @@
-import { useLayoutEffect, useRef, useState, type MouseEvent, type Ref } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type Ref } from 'react'
 import { createPortal } from 'react-dom'
+import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/16/solid'
 import { CrumbItemGlyph, TableGlyph } from './nav-glyphs.tsx'
 import { crumbButtonAction, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
+
+function canOpenCrumbMenu(crumb: Crumb) {
+  return crumb.kind === 'collection' || crumb.kind === 'view' || crumb.kind === 'record'
+}
+
+function createKindOf(crumb: Crumb): 'view' | 'record' | null {
+  if (crumb.kind === 'record') return 'record'
+  if (crumb.kind === 'collection' || crumb.kind === 'view') return 'view'
+  return null
+}
+
+function CrumbMenu({
+  crumb,
+  crumbs,
+  pos,
+  onPick,
+  onOpenId,
+  onCreate,
+  canCreateView,
+  canCreateRecord,
+}: {
+  crumb: Crumb
+  crumbs: Crumb[]
+  pos: { left: number; top: number }
+  onPick: (target: CrumbTarget) => void
+  onOpenId: (id: string | null) => void
+  onCreate?: (kind: 'view' | 'record') => void
+  canCreateView?: boolean
+  canCreateRecord?: boolean
+}) {
+  const searchRef = useRef<HTMLInputElement>(null)
+  const [query, setQuery] = useState('')
+  const q = query.trim().toLowerCase()
+  const filtered = useMemo(
+    () => crumb.choices.filter((item) => !q || item.label.toLowerCase().includes(q) || item.id.toLowerCase().includes(q)),
+    [crumb.choices, q],
+  )
+  const createKind = createKindOf(crumb)
+  const showCreate =
+    (createKind === 'view' && canCreateView && onCreate) || (createKind === 'record' && canCreateRecord && onCreate)
+
+  useEffect(() => {
+    const id = window.setTimeout(() => searchRef.current?.focus(), 0)
+    return () => window.clearTimeout(id)
+  }, [])
+
+  return (
+    <div
+      className="fsdb-crumb-menu is-fixed"
+      role="menu"
+      data-fsdb-crumb-menu=""
+      style={{ left: pos.left, top: pos.top }}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <label className="fsdb-crumb-search">
+        <MagnifyingGlassIcon aria-hidden className="size-[14px]" />
+        <input
+          ref={searchRef}
+          value={query}
+          placeholder="搜索"
+          aria-label="搜索"
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              onOpenId(null)
+              return
+            }
+            if (event.key !== 'Enter' || !filtered[0]) return
+            event.preventDefault()
+            onPick(filtered[0].target)
+            onOpenId(null)
+          }}
+        />
+      </label>
+      <div className="fsdb-crumb-menu-list">
+        {filtered.length === 0 ? <div className="fsdb-crumb-empty">没有匹配项</div> : null}
+        {filtered.map((choice) => {
+          const viewId = crumbs.find((item) => item.kind === 'view')?.id
+          const active =
+            choice.target.kind === 'view' ? choice.target.viewId === viewId : choice.id === crumb.id
+          const glyphKind = choice.target.kind === 'view' ? 'view' : crumb.kind
+          return (
+            <button
+              key={choice.id}
+              type="button"
+              className={`fsdb-crumb-option${active ? ' is-active' : ''}`}
+              role="menuitem"
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                onPick(choice.target)
+                onOpenId(null)
+              }}
+            >
+              <CrumbItemGlyph kind={glyphKind} icon={choice.icon} mode={choice.mode} emoji={choice.emoji} />
+              <span className="chat-view-project-name">{choice.label}</span>
+            </button>
+          )
+        })}
+      </div>
+      {showCreate && createKind ? (
+        <div className="fsdb-crumb-menu-foot">
+          <button
+            type="button"
+            className="fsdb-crumb-create"
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              onCreate?.(createKind)
+              onOpenId(null)
+            }}
+          >
+            <PlusIcon aria-hidden className="size-[14px]" />
+            {createKind === 'record' ? '新建记录' : '添加视图'}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  )
+}
 
 export function CrumbTrail({
   crumbs,
@@ -9,6 +131,9 @@ export function CrumbTrail({
   onOpenId,
   onPick,
   onActivate,
+  onCreate,
+  canCreateView = false,
+  canCreateRecord = false,
   navRef,
   className,
   label,
@@ -19,6 +144,9 @@ export function CrumbTrail({
   onOpenId: (id: string | null) => void
   onPick: (target: CrumbTarget) => void
   onActivate?: () => void
+  onCreate?: (kind: 'view' | 'record') => void
+  canCreateView?: boolean
+  canCreateRecord?: boolean
   navRef?: Ref<HTMLElement | null>
   className?: string
   label?: string
@@ -44,8 +172,7 @@ export function CrumbTrail({
   return (
     <nav className={className ?? 'fsdb-crumbs'} aria-label={label ?? '位置'} ref={navRef}>
       {crumbs.map((crumb, index) => {
-        const canPick =
-          allowMenu && (crumb.kind === 'collection' ? crumb.choices.length > 0 : crumb.choices.length > 1)
+        const canPick = allowMenu && canOpenCrumbMenu(crumb)
         const open = openId === crumb.id
         const current = crumb.choices.find((item) => item.id === crumb.id)
         return (
@@ -87,44 +214,19 @@ export function CrumbTrail({
           </span>
         )
       })}
-      {allowMenu &&
-      openCrumb &&
-      (openCrumb.kind === 'collection' ? openCrumb.choices.length > 0 : openCrumb.choices.length > 1) &&
-      menuPos &&
-      typeof document !== 'undefined'
+      {allowMenu && openCrumb && canOpenCrumbMenu(openCrumb) && menuPos && typeof document !== 'undefined'
         ? createPortal(
-            <div
-              className="fsdb-crumb-menu is-fixed"
-              role="menu"
-              data-fsdb-crumb-menu=""
-              style={{ left: menuPos.left, top: menuPos.top }}
-            >
-              {openCrumb.choices.map((choice) => {
-                const viewId = crumbs.find((item) => item.kind === 'view')?.id
-                const active =
-                  choice.target.kind === 'view'
-                    ? choice.target.viewId === viewId
-                    : choice.id === openCrumb.id
-                const glyphKind = choice.target.kind === 'view' ? 'view' : openCrumb.kind
-                return (
-                  <button
-                    key={choice.id}
-                    type="button"
-                    className={`fsdb-crumb-option${active ? ' is-active' : ''}`}
-                    role="menuitem"
-                    onClick={(event) => {
-                      event.preventDefault()
-                      event.stopPropagation()
-                      onPick(choice.target)
-                      onOpenId(null)
-                    }}
-                  >
-                    <CrumbItemGlyph kind={glyphKind} icon={choice.icon} mode={choice.mode} emoji={choice.emoji} />
-                    <span className="chat-view-project-name">{choice.label}</span>
-                  </button>
-                )
-              })}
-            </div>,
+            <CrumbMenu
+              key={openCrumb.id}
+              crumb={openCrumb}
+              crumbs={crumbs}
+              pos={menuPos}
+              onPick={onPick}
+              onOpenId={onOpenId}
+              onCreate={onCreate}
+              canCreateView={canCreateView}
+              canCreateRecord={canCreateRecord}
+            />,
             document.body,
           )
         : null}

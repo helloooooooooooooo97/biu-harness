@@ -1467,6 +1467,12 @@ export function CollectionBrowser({
               crumbs={crumbs}
               openId={crumbOpen}
               onOpenId={setCrumbOpen}
+              canCreateView
+              canCreateRecord={canCreate && !tableHub}
+              onCreate={(kind) => {
+                if (kind === 'record') void createRecord()
+                else addEmptyView()
+              }}
               onPick={(target) => {
                 if (target.kind === 'view' && target.collection === collectionPath) {
                   const view = views.find((item) => item.id === target.viewId)
