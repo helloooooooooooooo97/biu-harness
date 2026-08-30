@@ -292,12 +292,14 @@ body {
 }
 
 .app-side-bar-head-brand {
-  justify-content: center;
+  justify-content: flex-start;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .app-side-bar-head-brand .chat-view-header-expand {
   position: absolute;
-  right: 12px;
+  right: 8px;
 }
 
 .brand-corner-cluster {

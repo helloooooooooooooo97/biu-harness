@@ -373,7 +373,7 @@ export const DataSidebar = memo(function DataSidebar({
       className="app-side-bar fsdb-views flex min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)"
       aria-label="数据"
     >
-      <div className="app-side-bar-head">
+      <div className="app-side-bar-head app-side-bar-head-brand">
         <span
           className="inline-flex min-w-0 max-w-full items-center truncate rounded-md px-2 py-0.5 text-[14px] font-semibold tracking-wide text-white"
           style={{ background: SIDEBAR_BRAND_GRADIENT }}

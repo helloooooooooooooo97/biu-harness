@@ -11,4 +11,9 @@ describe('sidebar text colors', () => {
     expect(css).toMatch(/\.app-side-bar\s*\{[^}]*color:\s*var\(--dsw-sidebar-fg\)/s)
     expect(css).toMatch(/\.chat-session-row\.is-active\s*\{[^}]*color:\s*var\(--dsw-sidebar-fg-active\)/s)
   })
+
+  it('left-aligns the sidebar brand with the list below', () => {
+    expect(css).toMatch(/\.app-side-bar-head-brand\s*\{[^}]*justify-content:\s*flex-start/s)
+    expect(css).not.toMatch(/\.app-side-bar-head-brand\s*\{[^}]*justify-content:\s*center/s)
+  })
 })

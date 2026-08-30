@@ -7,7 +7,7 @@ const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf
 
 test('data sidebar brand sits left with a collapse control on the right', () => {
   const sidebar = readFileSync(resolve(import.meta.dirname, './data-sidebar.tsx'), 'utf8')
-  assert.match(sidebar, /Biu Agent OS/)
+  assert.match(sidebar, /app-side-bar-head-brand/)
   assert.match(sidebar, /data-testid="sidebar-collapse"/)
   assert.doesNotMatch(sidebar, /SidebarBrandMascot/)
   assert.match(browser, /onCollapse=\{toggleViewsOpen\}/)
