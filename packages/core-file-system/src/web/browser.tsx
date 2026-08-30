@@ -1527,6 +1527,7 @@ export function CollectionBrowser({
           }}
           expandedViewKey={expandedViewKey}
           onExpandedViewKeyChange={onExpandedViewKeyChange}
+          onCollapse={toggleViewsOpen}
         />
       ) : null}
       <div className="fsdb-right">

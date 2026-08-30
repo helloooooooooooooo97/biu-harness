@@ -5,6 +5,14 @@ import assert from 'node:assert/strict'
 
 const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf8')
 
+test('data sidebar brand sits left with a collapse control on the right', () => {
+  const sidebar = readFileSync(resolve(import.meta.dirname, './data-sidebar.tsx'), 'utf8')
+  assert.match(sidebar, /Biu Agent OS/)
+  assert.match(sidebar, /data-testid="sidebar-collapse"/)
+  assert.doesNotMatch(sidebar, /SidebarBrandMascot/)
+  assert.match(browser, /onCollapse=\{toggleViewsOpen\}/)
+})
+
 test('filesystem header toggles the right inspector, not the left data sidebar', () => {
   assert.match(browser, /data-testid="fsdb-inspector-toggle"/)
   assert.match(browser, /biu:inspector-toggle/)

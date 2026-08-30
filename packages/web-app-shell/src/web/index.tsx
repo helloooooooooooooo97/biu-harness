@@ -42,7 +42,7 @@ import {
 } from '@biu/web-app-modules'
 import { ChatSidebar } from './chat-sidebar.tsx'
 import { ChatSessionTitle } from './chat-session-title.tsx'
-import { DanceStage } from '@biu/web-mascot'
+import { BrandCornerMascot, DanceStage } from '@biu/web-mascot'
 import { SessionInspector } from './session-inspector.tsx'
 import { SessionConfigDialog } from '@biu/web-session-view/dialog'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
@@ -719,9 +719,11 @@ function Shell(props: SlotProps) {
         routeSessionId={routeSessionId}
         useSessionView={useSessionView}
         sessionView={sessionView}
+        onCollapse={() => setSidebarCollapsed(true)}
       />
 
       <DanceStage sessions={danceSessions} on={dancing} shape={danceShape} />
+      <BrandCornerMascot />
 
       <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
         <div
