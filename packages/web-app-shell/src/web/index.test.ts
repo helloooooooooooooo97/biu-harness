@@ -1,5 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { Context } from 'cordis'
 import * as slots from '@biu/web-slots'
 import * as appModules from '@biu/web-app-modules'
@@ -30,4 +32,10 @@ test('declares generic module slots, not plugin ids', async () => {
   assert.equal(addView?.props?.().common, true)
   assert.equal(addView?.props?.().action, 'add-view')
   assert.equal(addView?.props?.().tabLabel, '添加视图')
+})
+
+test('refresh does not send unfinished plugin routes home', () => {
+  const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  assert.doesNotMatch(shell, /navigate\('\/', \{ replace: true \}\)/)
+  assert.match(shell, /waitingOnNav/)
 })

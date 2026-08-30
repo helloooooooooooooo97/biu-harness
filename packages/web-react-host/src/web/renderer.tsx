@@ -1,8 +1,7 @@
 import { useCallback, useSyncExternalStore, type ReactNode } from 'react'
-import { BrowserRouter, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter } from 'react-router-dom'
 import { SlotEvent, type SlotEntry, type SlotKind, type SlotsService } from '@biu/web-slots'
 import type { AppModulesService } from '@biu/web-app-modules'
-import { isKnownAppPath } from '@biu/web-session-view'
 
 function Outlet({ slots, name, kind }: { slots: SlotsService; name: string; kind?: SlotKind }) {
   useSyncExternalStore(
@@ -39,9 +38,8 @@ function AppShell({ slots }: { slots: SlotsService }) {
   return <Outlet slots={slots} name="root" kind="single" />
 }
 
-/** 单壳常驻：路由变化不卸载 Shell，避免 Chat/Debug/模块切换整树重挂。 */
+/** 单壳常驻：路由变化不卸载 Shell，避免 Chat/Debug/模块切换整树重挂。未知路径也不踢回首页，等插件登记完再认。 */
 function Root({ slots, modules }: { slots: SlotsService; modules?: AppModulesService }) {
-  const location = useLocation()
   useSyncExternalStore(
     modules?.subscribe ?? ((fn: () => void) => {
       void fn
@@ -50,10 +48,6 @@ function Root({ slots, modules }: { slots: SlotsService; modules?: AppModulesSer
     modules?.version ?? (() => 0),
     modules?.version ?? (() => 0),
   )
-  const plugins = modules?.plugins() ?? []
-  if (!isKnownAppPath(location.pathname, plugins)) {
-    return <Navigate to="/" replace />
-  }
   return <AppShell slots={slots} />
 }
 

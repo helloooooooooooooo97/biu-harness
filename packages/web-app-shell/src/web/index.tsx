@@ -569,13 +569,14 @@ function Shell(props: SlotProps) {
     }
   }, [focusCallId, routeView])
 
-  // 单向：URL → sessionView。回写只靠 Link / navigate，不做 state→URL。
+  // 单向：URL → sessionView。插件还没挂上时不要把 /database 当成首页。
   useEffect(() => {
+    const waitingOnNav =
+      !navReady && location.pathname !== '/' && !location.pathname.startsWith('/s/')
+    if (waitingOnNav) return
     const route = parseAppPath(location.pathname, pluginModules)
-    void sessionView.applyRoute(route).catch(() => {
-      if (location.pathname !== '/') navigate('/', { replace: true })
-    })
-  }, [location.pathname, navigate, sessionView, appModules.version()])
+    void sessionView.applyRoute(route).catch(() => undefined)
+  }, [location.pathname, navReady, sessionView, appModules.version()])
 
   // /debug 兼容：主区仍聊天，轨迹在右侧；URL 收成 /s/:id
   useEffect(() => {
