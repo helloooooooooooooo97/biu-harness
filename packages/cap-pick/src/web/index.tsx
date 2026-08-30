@@ -15,15 +15,15 @@ export const inject = ['slots']
 export function apply(ctx: Context) {
   const pick = new PickService(ctx)
   const slots = ctx.slots as SlotsService
-  slots.place('header-tools', PickToggle, {
+  slots.place('corner-tools', PickToggle, {
     key: 'pick-toggle',
     order: 10,
-    props: () => ({ pick }),
+    props: () => ({}),
   })
   slots.place('root-overlays', PickOverlay, {
     key: 'pick-overlay',
     order: 10,
-    props: () => ({ pick }),
+    props: () => ({}),
   })
 }
 

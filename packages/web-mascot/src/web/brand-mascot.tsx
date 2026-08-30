@@ -1,4 +1,5 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ChatBubbleLeftIcon, UserGroupIcon } from '@heroicons/react/16/solid'
 import { SidebarMascot } from './sidebar-mascot.tsx'
 import { resolveSessionMascot } from './session-mascot.ts'
 
@@ -43,12 +44,19 @@ export function BrandCornerMascot({
   agents = [],
   activeId,
   onSelect,
+  overlayOn = false,
+  onToggleOverlay,
+  leading,
 }: {
   agents?: CornerAgent[]
   activeId?: string | null
   onSelect?: (id: string) => void
+  overlayOn?: boolean
+  onToggleOverlay?: () => void
+  leading?: ReactNode
 }) {
-  const [open, setOpen] = useState(false)
+  const [dock, setDock] = useState(false)
+  const [agentsOpen, setAgentsOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const ranked = useMemo(
     () => [...agents].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0) || a.id.localeCompare(b.id)),
@@ -58,63 +66,100 @@ export function BrandCornerMascot({
   const identity = current ? resolveSessionMascot(current.id, current.mascot) : undefined
 
   useEffect(() => {
-    if (!open) return
+    if (!dock && !agentsOpen) return
     function onPointer(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setDock(false)
+        setAgentsOpen(false)
+      }
     }
     window.addEventListener('mousedown', onPointer)
     return () => window.removeEventListener('mousedown', onPointer)
-  }, [open])
+  }, [dock, agentsOpen])
 
   return (
-    <div className="brand-corner-mascot" ref={rootRef} data-testid="brand-corner-mascot">
-      <button
-        type="button"
-        className="brand-corner-mascot-btn"
-        title={current ? current.title : '选择 Agent'}
-        aria-label={current ? `当前 Agent：${current.title}` : '选择 Agent'}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        data-testid="brand-corner-mascot-toggle"
-        onClick={() => setOpen((prev) => !prev)}
-      >
-        {identity && current ? (
-          <SidebarMascot size={36} sessionId={current.id} identity={identity} animate={false} title={current.title} />
-        ) : (
-          <BrandMascot className="size-9" />
-        )}
-      </button>
-      {open ? (
-        <div className="brand-agent-menu" role="menu" data-testid="brand-agent-menu">
-          {ranked.length ? (
-            ranked.map((item) => {
-              const face = resolveSessionMascot(item.id, item.mascot)
-              const active = item.id === (activeId ?? current?.id)
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="menuitem"
-                  className={`inspector-catalog-item${active ? ' is-active' : ''}`}
-                  data-testid={`brand-agent-${item.id}`}
-                  onClick={() => {
-                    onSelect?.(item.id)
-                    setOpen(false)
-                  }}
-                >
-                  <SidebarMascot size={24} sessionId={item.id} identity={face} animate={false} title={item.title} />
-                  <span className="min-w-0 flex-1 truncate">
-                    {(item.type ?? 'chat') === 'live' ? <span className="mr-1 text-[9px] font-semibold tracking-wide uppercase">live</span> : null}
-                    {item.title}
-                  </span>
-                </button>
-              )
-            })
+    <div className="brand-corner-cluster" ref={rootRef} data-testid="brand-corner-mascot">
+      {leading ? <div className="brand-corner-leading">{leading}</div> : null}
+      <div className="brand-corner-mascot">
+        <button
+          type="button"
+          className={`brand-corner-mascot-btn${dock ? ' is-active' : ''}`}
+          title={current ? current.title : '快捷入口'}
+          aria-label={current ? `快捷入口，当前 Agent：${current.title}` : '快捷入口'}
+          aria-haspopup="toolbar"
+          aria-expanded={dock}
+          data-testid="brand-corner-mascot-toggle"
+          onClick={() => {
+            setDock((prev) => !prev)
+            setAgentsOpen(false)
+          }}
+        >
+          {identity && current ? (
+            <SidebarMascot size={36} sessionId={current.id} identity={identity} animate={false} title={current.title} />
           ) : (
-            <p className="inspector-catalog-empty">还没有 Agent</p>
+            <BrandMascot className="size-9" />
           )}
-        </div>
-      ) : null}
+        </button>
+        {dock ? (
+          <div className="brand-corner-dock" role="toolbar" aria-label="快捷入口" data-testid="brand-corner-dock">
+            <button
+              type="button"
+              className={`brand-corner-dock-btn${overlayOn ? ' is-active' : ''}`}
+              title={overlayOn ? '收起聊天浮窗' : '打开聊天浮窗'}
+              aria-label={overlayOn ? '收起聊天浮窗' : '打开聊天浮窗'}
+              aria-pressed={overlayOn}
+              data-testid="brand-corner-chat-overlay"
+              onClick={() => onToggleOverlay?.()}
+            >
+              <ChatBubbleLeftIcon aria-hidden className="size-4" />
+            </button>
+            <button
+              type="button"
+              className={`brand-corner-dock-btn${agentsOpen ? ' is-active' : ''}`}
+              title="切换 Agent"
+              aria-label="切换 Agent"
+              aria-haspopup="menu"
+              aria-expanded={agentsOpen}
+              data-testid="brand-corner-agents"
+              onClick={() => setAgentsOpen((prev) => !prev)}
+            >
+              <UserGroupIcon aria-hidden className="size-4" />
+            </button>
+          </div>
+        ) : null}
+        {agentsOpen ? (
+          <div className="brand-agent-menu" role="menu" data-testid="brand-agent-menu">
+            {ranked.length ? (
+              ranked.map((item) => {
+                const face = resolveSessionMascot(item.id, item.mascot)
+                const active = item.id === (activeId ?? current?.id)
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="menuitem"
+                    className={`inspector-catalog-item${active ? ' is-active' : ''}`}
+                    data-testid={`brand-agent-${item.id}`}
+                    onClick={() => {
+                      onSelect?.(item.id)
+                      setAgentsOpen(false)
+                      setDock(false)
+                    }}
+                  >
+                    <SidebarMascot size={24} sessionId={item.id} identity={face} animate={false} title={item.title} />
+                    <span className="min-w-0 flex-1 truncate">
+                      {(item.type ?? 'chat') === 'live' ? <span className="mr-1 text-[9px] font-semibold tracking-wide uppercase">live</span> : null}
+                      {item.title}
+                    </span>
+                  </button>
+                )
+              })
+            ) : (
+              <p className="inspector-catalog-empty">还没有 Agent</p>
+            )}
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }

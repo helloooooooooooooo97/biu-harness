@@ -1,10 +1,9 @@
 import { CursorArrowRaysIcon } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/type-slots'
-import type { PickService } from './service.ts'
-import { usePickState } from './service.ts'
+import { getPick, usePickState } from './service.ts'
 
-export function PickToggle(props: SlotProps) {
-  const pick = props.pick as PickService
+export function PickToggle(_props: SlotProps) {
+  const pick = getPick()
   const { picking } = usePickState(pick)
   return (
     <button
@@ -13,9 +12,9 @@ export function PickToggle(props: SlotProps) {
       aria-label="选取对象"
       data-dock-tip="选取对象"
       aria-pressed={picking}
-      data-testid="header-pick-toggle"
+      data-testid="corner-pick-toggle"
       data-biu-ignore
-      onClick={() => pick.toggle()}
+      onClick={() => pick?.toggle()}
     >
       <CursorArrowRaysIcon className="size-4" />
     </button>

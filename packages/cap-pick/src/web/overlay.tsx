@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import type { SlotProps } from '@biu/type-slots'
-import type { PickService } from './service.ts'
-import { usePickState } from './service.ts'
+import { getPick, usePickState } from './service.ts'
 import { boxFromPoints, resolvePickAtPoint, resolvePicksInRect } from './resolve.ts'
 
 const DRAG_PX = 6
@@ -11,12 +10,12 @@ function hoverBox(el: HTMLElement) {
   return { top: box.top, left: box.left, width: box.width, height: box.height }
 }
 
-export function PickOverlay(props: SlotProps) {
-  const pick = props.pick as PickService
+export function PickOverlay(_props: SlotProps) {
+  const pick = getPick()
   const { picking, hover, marquee, marqueeHits } = usePickState(pick)
 
   useEffect(() => {
-    if (!picking) {
+    if (!pick || !picking) {
       document.documentElement.classList.remove('pick-mode')
       return
     }
@@ -100,6 +99,7 @@ export function PickOverlay(props: SlotProps) {
     const onHotkey = (event: KeyboardEvent) => {
       if (!(event.altKey && (event.key === 'c' || event.key === 'C'))) return
       if (event.repeat) return
+      if (!pick) return
       event.preventDefault()
       pick.toggle()
     }

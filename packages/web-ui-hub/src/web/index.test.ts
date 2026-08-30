@@ -49,6 +49,7 @@ test('ui-hub mounts configured ui packages including chat', async () => {
       'app-modules': { kind: 'list' },
       'inspector-panels': { kind: 'list' },
       'header-tools': { kind: 'list' },
+      'corner-tools': { kind: 'list' },
       'root-overlays': { kind: 'list' },
     },
   })
