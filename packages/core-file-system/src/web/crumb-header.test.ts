@@ -29,6 +29,7 @@ describe('顶栏三级标题', () => {
   it('右侧检查器用一个展开按钮控制整条面包屑，悬停不自动变成多项', () => {
     expect(inspector).toContain('data-testid="inspector-crumb-toggle"')
     expect(inspector).toContain('ChevronRightIcon')
+    expect(inspector).toContain('ChevronLeftIcon')
     expect(inspector).not.toContain('ChevronDownIcon')
     expect(inspector).toContain('allowMenu={trailOpen}')
     expect(css).toMatch(/\.inspector-crumb-toggle\s*\{[^}]*background:\s*transparent/s)

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { ChevronRightIcon, CircleStackIcon } from '@heroicons/react/16/solid'
+import { ChevronLeftIcon, ChevronRightIcon, CircleStackIcon } from '@heroicons/react/16/solid'
 import { useLocation } from 'react-router-dom'
 import type { SlotProps } from '@biu/type-slots'
 import type { CollectionInfo } from '@biu/type-file-system'
@@ -243,7 +243,11 @@ export function DatabaseInspectorTab({
             })
           }}
         >
-          <ChevronRightIcon aria-hidden className="size-3" />
+          {trailOpen ? (
+            <ChevronLeftIcon aria-hidden className="size-3" />
+          ) : (
+            <ChevronRightIcon aria-hidden className="size-3" />
+          )}
         </button>
       ) : null}
     </div>
