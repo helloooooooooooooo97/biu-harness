@@ -9,6 +9,7 @@ import {
   INSPECTOR_MIN,
   SIDEBAR_MAX,
   SIDEBAR_MIN,
+  SIDEBAR_DEFAULT,
   SIDEBAR_LABEL_AT,
   getChatOverlay,
   setChatOverlay,
@@ -37,8 +38,11 @@ test('collapsed chat sidebar still occupies the icon rail', () => {
 })
 
 test('sidebar labels appear only after LABEL_AT', () => {
-  assert.equal(SIDEBAR_LABEL_AT, 160)
-  assert.ok(SIDEBAR_MIN < SIDEBAR_LABEL_AT)
+  assert.equal(SIDEBAR_DEFAULT, 72)
+  assert.equal(SIDEBAR_MIN, Math.round(SIDEBAR_DEFAULT * (2 / 3)))
+  assert.equal(SIDEBAR_LABEL_AT, SIDEBAR_DEFAULT + 1)
+  assert.ok(SIDEBAR_DEFAULT < SIDEBAR_LABEL_AT)
+  assert.ok(SIDEBAR_MIN < SIDEBAR_DEFAULT)
   const icon = allocateShellColumns({
     viewportWidth: 1600,
     leftPane: true,

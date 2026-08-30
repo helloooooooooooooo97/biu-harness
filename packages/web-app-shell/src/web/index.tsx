@@ -19,6 +19,7 @@ import {
   toggleOverlayPinned,
   requestInspectorClose,
   allocateShellColumns,
+  SIDEBAR_DEFAULT,
   SIDEBAR_LABEL_AT,
   SIDEBAR_MAX,
   SIDEBAR_MIN,
@@ -456,7 +457,7 @@ function Shell(props: SlotProps) {
     } catch {
       /* ignore */
     }
-    return SIDEBAR_MAX
+    return SIDEBAR_DEFAULT
   })
   const lastWideSidebar = useRef(sidebarWidth >= SIDEBAR_LABEL_AT ? sidebarWidth : SIDEBAR_MAX)
   const persistSidebar = useCallback((width: number, collapsed: boolean) => {

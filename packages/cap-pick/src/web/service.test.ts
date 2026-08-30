@@ -26,6 +26,23 @@ test('addMany dedupes kind+id and removeLast pops from the tail', () => {
   assert.equal(pick.refs.length, 0)
 })
 
+test('adding a pick while picking stays in pick mode so you can select again', () => {
+  const ctx = new Context()
+  const pick = new PickService(ctx)
+  pick.enter()
+  pick.add({ kind: 'page', id: 'p1', label: '页面', route: '/pages' })
+  assert.equal(pick.picking, true)
+  pick.add({ kind: 'page', id: 'p2', label: '另一页', route: '/pages' })
+  assert.equal(pick.picking, true)
+  assert.deepEqual(
+    pick.refs.map((item) => item.id),
+    ['p1', 'p2'],
+  )
+  pick.exit()
+  assert.equal(pick.picking, false)
+  assert.equal(pick.refs.length, 2)
+})
+
 test('adding a pick notifies the overlay to open', () => {
   const ctx = new Context()
   const pick = new PickService(ctx)

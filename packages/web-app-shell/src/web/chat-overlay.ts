@@ -1,10 +1,12 @@
 /** 聊天列窄于此时自动弹出覆盖对话框（px）。不自动收回。 */
 export const CHAT_OVERLAY_ENTER = 420
 export const SIDEBAR_MAX = 280
-/** 收成图标轨的宽度；再窄就整栏关掉。 */
-export const SIDEBAR_MIN = 52
-/** 侧栏至少这么宽才显示文字标签（会话名、「添加聊天」等）。 */
-export const SIDEBAR_LABEL_AT = 160
+/** 聊天左侧默认宽度：图标轨，不显示会话名。往外拉过这个宽度才出标签。 */
+export const SIDEBAR_DEFAULT = 72
+/** 最小宽度约为默认的 2/3，再窄图标会挤。 */
+export const SIDEBAR_MIN = Math.round(SIDEBAR_DEFAULT * (2 / 3))
+/** 比默认宽度更宽才显示文字标签（会话名、「添加聊天」等）。 */
+export const SIDEBAR_LABEL_AT = SIDEBAR_DEFAULT + 1
 /** 中间列最窄约为对话内容最大宽 768 的 2/3，好让左右栏先完整显示。 */
 export const CENTER_MIN = 512
 export const INSPECTOR_MIN = 240
