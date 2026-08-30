@@ -69,6 +69,14 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\[data-testid='session-inspector'\] \.usage-panel\s*\{[^}]*background:\s*var\(--dsw-sidebar\)/s)
   })
 
+  it('keeps pick chips from inheriting the composer line-height', () => {
+    const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
+    expect(css).toMatch(/\.composer-inline-chip\s*\{[^}]*align-items:\s*center/s)
+    expect(css).toMatch(/\.composer-inline-chip\s*\{[^}]*vertical-align:\s*middle/s)
+    expect(css).toMatch(/\.composer-tool-chip\.is-pick,\s*\n\.user-pick-chip\s*\{[^}]*line-height:\s*1/s)
+    expect(css).toMatch(/\.pick-kind-icon\s*\{[^}]*display:\s*block/s)
+  })
+
   it('uses Tiptap for inline pick chips in the composer', () => {
     const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
     const node = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer-pick-node.tsx'), 'utf8')
