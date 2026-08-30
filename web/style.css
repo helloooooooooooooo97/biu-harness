@@ -334,41 +334,8 @@ body {
   cursor: pointer;
 }
 
-.brand-corner-mascot-btn.is-active,
-.brand-corner-dock-btn.is-active {
+.brand-corner-mascot-btn.is-active {
   background: var(--dsw-hover);
-}
-
-.brand-corner-dock {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 8px);
-  z-index: 22;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid var(--dsw-border);
-  border-radius: 10px;
-  background: var(--dsw-surface);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
-}
-
-.brand-corner-dock-btn {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--dsw-sidebar-fg);
-  cursor: pointer;
-}
-
-.brand-corner-dock-btn:hover {
-  background: var(--dsw-hover);
-  color: var(--dsw-sidebar-fg-active);
 }
 
 .brand-corner-leading .project-chip,

@@ -1,13 +1,11 @@
 import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  setChatOverlay,
-  getChatOverlay,
-  subscribeChatOverlay,
-  openOverlayComposer,
   clampOverlayChatHeight,
   OVERLAY_CHAT_HEIGHT_DEFAULT,
   OVERLAY_CHAT_HEIGHT_MIN,
+  getChatOverlay,
+  subscribeChatOverlay,
   getOverlayThread,
   subscribeOverlayThread,
   getOverlayAutohide,
@@ -488,7 +486,6 @@ function Shell(props: SlotProps) {
   })
   const overlayAutohide = useSyncExternalStore(subscribeOverlayAutohide, getOverlayAutohide, () => false)
   const overlayPinned = useSyncExternalStore(subscribeOverlayPinned, getOverlayPinned, () => false)
-  const overlayOpen = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
   const toggleInspector = useCallback(() => {
     setInspectorOpen((prev) => {
       const next = !prev
@@ -755,12 +752,7 @@ function Shell(props: SlotProps) {
       <BrandCornerMascot
         agents={danceSessions}
         activeId={sessionId}
-        overlayOn={overlayOpen}
-        onToggleOverlay={() => {
-          if (getChatOverlay()) setChatOverlay(false)
-          else openOverlayComposer({ revealThread: true })
-        }}
-        leading={props.renderSlot('corner-tools')}
+        leading={activeModule === 'agent' ? null : props.renderSlot('corner-tools')}
         onSelect={(id) => {
           if (activeModule === 'agent') navigate(`/s/${encodeURIComponent(id)}`)
           else void sessionView.load(id, { view: 'chat' })

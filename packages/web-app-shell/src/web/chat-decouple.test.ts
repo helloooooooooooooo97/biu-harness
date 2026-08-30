@@ -5,13 +5,13 @@ import assert from 'node:assert/strict'
 
 const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
 
-test('overlay chat is off on the agent page and elsewhere until the corner dock opens it', () => {
+test('overlay chat is off on the agent page and elsewhere until pick attaches', () => {
   assert.match(shell, /showCenter=\{activeModule === 'agent'\}/)
   assert.match(shell, /floating=\{activeModule !== 'agent'\}/)
   assert.match(shell, /overlay && overlayMounted && overlayOpen/)
-  assert.match(shell, /openOverlayComposer\(\{ revealThread: true \}\)/)
   assert.match(shell, /is-compose-only/)
   assert.doesNotMatch(shell, /setChatOverlay\(true\)/)
+  assert.doesNotMatch(shell, /openOverlayComposer\(\{ revealThread: true \}\)/)
   assert.doesNotMatch(shell, /chat-overlay-toggle/)
   assert.doesNotMatch(shell, /toggleChatOverlay/)
   assert.doesNotMatch(shell, /放大聊天窗口/)
