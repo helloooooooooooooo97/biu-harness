@@ -60,6 +60,8 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).not.toMatch(/\.project-chip-hist-bar\s*\{[^}]*color-scheme:/s)
     expect(css).not.toMatch(/\.project-chip-hist-bar\s*\{[^}]*mix-blend-mode:/s)
     expect(approvals).toMatch(/project-chip-hist-bar/)
+    expect(approvals).toContain('上下文占输入文字')
+    expect(approvals).not.toMatch(/清空上下文 · 历史/)
     expect(approvals).not.toMatch(/backgroundColor/)
   })
 
