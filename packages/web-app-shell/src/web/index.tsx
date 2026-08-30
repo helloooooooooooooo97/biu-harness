@@ -881,15 +881,16 @@ function Shell(props: SlotProps) {
       ) : null}
 
       <DanceStage sessions={danceSessions} on={dancing} shape={danceShape} />
-      <BrandCornerMascot
-        agents={danceSessions}
-        activeId={sessionId}
-        leading={activeModule === 'agent' ? null : props.renderSlot('corner-tools')}
-        onSelect={(id) => {
-          if (activeModule === 'agent') navigate(`/s/${encodeURIComponent(id)}`)
-          else void sessionView.load(id, { view: 'chat' })
-        }}
-      />
+      {activeModule === 'agent' ? null : (
+        <BrandCornerMascot
+          agents={danceSessions}
+          activeId={sessionId}
+          leading={props.renderSlot('corner-tools')}
+          onSelect={(id) => {
+            void sessionView.load(id, { view: 'chat' })
+          }}
+        />
+      )}
 
       <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
         <div
