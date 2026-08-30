@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useSyncExternalStore, type ComponentType } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore, type ComponentType } from 'react'
 import type { Context } from 'cordis'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { CircleStackIcon } from '@heroicons/react/16/solid'
@@ -75,6 +75,7 @@ function CollectionPage(props: SlotProps) {
   const ui = props.databaseUi as DatabaseUiService | undefined
   const location = useLocation()
   const navigate = useNavigate()
+  const [expandedViewKey, setExpandedViewKey] = useState<string | null>(null)
   const parsed = useMemo(() => parseAppPath(location.pathname, [DATA_MODULE]), [location.pathname])
   const collectionFromRoute =
     parsed.kind === 'collection-view' || parsed.kind === 'record' ? parsed.collection : ''
@@ -186,6 +187,8 @@ function CollectionPage(props: SlotProps) {
       databaseUi={ui}
       routeRecordId={recordFromRoute}
       routeViewId={viewFromRoute}
+      expandedViewKey={expandedViewKey}
+      onExpandedViewKeyChange={setExpandedViewKey}
       onOpenTable={(path, viewId) => go({ collection: path, viewId: viewId ?? defaultViewId(path) })}
       onOpenView={(viewId) => go({ collection: currentPath, viewId })}
       onOpenRecord={(recordId, _viewId, collection) =>

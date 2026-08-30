@@ -445,6 +445,8 @@ export function CollectionBrowser({
   databaseUi,
   routeRecordId = null,
   routeViewId,
+  expandedViewKey,
+  onExpandedViewKeyChange,
   onOpenView,
   onOpenRecord,
   onCloseRecord,
@@ -459,6 +461,8 @@ export function CollectionBrowser({
   databaseUi?: DatabaseUiService
   routeRecordId?: string | null
   routeViewId?: string
+  expandedViewKey?: string | null
+  onExpandedViewKeyChange?: (key: string | null) => void
   onOpenView?: (viewId: string) => void
   onOpenRecord?: (recordId: string, viewId?: string | null, collection?: string) => void
   onCloseRecord?: () => void
@@ -677,7 +681,7 @@ export function CollectionBrowser({
       setQuery('')
       setFilters({})
     }
-  }, [collectionPath, routeViewId])
+  }, [collectionPath])
 
   useEffect(() => {
     let debounce = 0
@@ -1454,6 +1458,8 @@ export function CollectionBrowser({
           onOpenRecord={(path, view, recordId) => {
             onOpenRecord?.(recordId, view.id, path)
           }}
+          expandedViewKey={expandedViewKey}
+          onExpandedViewKeyChange={onExpandedViewKeyChange}
         />
       ) : null}
       <div className="fsdb-right">

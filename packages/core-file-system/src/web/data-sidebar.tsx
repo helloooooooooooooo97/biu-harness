@@ -312,6 +312,8 @@ export const DataSidebar = memo(function DataSidebar({
   onAddView,
   onCopyView,
   onOpenRecord,
+  expandedViewKey: expandedViewKeyProp,
+  onExpandedViewKeyChange,
 }: {
   tables: CollectionInfo[]
   collectionPath: string
@@ -325,6 +327,8 @@ export const DataSidebar = memo(function DataSidebar({
   onAddView: () => void
   onCopyView: () => void
   onOpenRecord?: (path: string, view: SavedView, recordId: string) => void
+  expandedViewKey?: string | null
+  onExpandedViewKeyChange?: (key: string | null) => void
 }) {
   const listedTables = useMemo(
     () => (tables.length ? tables : [{ path: collectionPath, label: title, view: { title } } as CollectionInfo]),
@@ -341,7 +345,9 @@ export const DataSidebar = memo(function DataSidebar({
     }
   })
   const [dataOpen, setDataOpen] = useState(true)
-  const [expandedViewKey, setExpandedViewKey] = useState<string | null>(null)
+  const [expandedViewKeyLocal, setExpandedViewKeyLocal] = useState<string | null>(null)
+  const expandedViewKey = expandedViewKeyProp !== undefined ? expandedViewKeyProp : expandedViewKeyLocal
+  const setExpandedViewKey = onExpandedViewKeyChange ?? setExpandedViewKeyLocal
   usePreviewTotalsVersion()
 
   function viewsFor(path: string) {
