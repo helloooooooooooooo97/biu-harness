@@ -8,7 +8,7 @@ import type { CollectionChrome } from '@biu/type-file-system/ui'
 import { isLegacyDatabasePath, parseAppPath } from '@biu/web-session-view'
 import { pathForCenter, pathForCrumbTarget, type CrumbTarget } from './sidebar-nav.ts'
 import { CollectionBrowser } from './browser.tsx'
-import { DatabaseUiService } from './database-ui.ts'
+import { DatabaseUiService, getDatabaseUi } from './database-ui.ts'
 import {
   bootLoadCollections,
   collectionNavKey,
@@ -152,7 +152,6 @@ function CollectionPage(props: SlotProps) {
           tabIcon: CircleStackIcon,
           centerKinds: ['collection-view', 'record'],
           paneId: pane.id,
-          databaseUi: ui,
         }),
       }),
     )
@@ -191,7 +190,7 @@ function CollectionPage(props: SlotProps) {
 }
 
 function RecordPanePanel(props: SlotProps) {
-  const ui = props.databaseUi as DatabaseUiService | undefined
+  const ui = getDatabaseUi()
   const paneId = String(props.paneId ?? '')
   const focus = useSyncExternalStore(
     (fn) => (ui ? ui.subscribe(fn) : () => undefined),
@@ -357,7 +356,6 @@ export function apply(ctx: Context) {
         Tab: DatabaseInspectorTab,
         common: true,
         useSnapshot: bindSnapshot(snapshot),
-        databaseUi: ctx.get('databaseUi') as DatabaseUiService,
       }),
     })
     let lastKey = ''

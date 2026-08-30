@@ -17,7 +17,7 @@ import {
   setInspectorDbPath,
   subscribeInspectorDbPath,
 } from './inspector-db-route.ts'
-import type { DatabaseUiService } from './database-ui.ts'
+import { getDatabaseUi } from './database-ui.ts'
 
 const DATA_MODULE = { id: 'database', label: '数据', path: '/database' }
 const EMPTY_CHROME: CollectionChrome = {}
@@ -162,7 +162,7 @@ export function DatabaseInspectorTab({
 
 export function DatabaseInspectorBrowse(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
-  const ui = props.databaseUi as DatabaseUiService | undefined
+  const ui = getDatabaseUi()
   const location = useLocation()
   const inspectorPath = useInspectorDbPath()
   useViewTick()

@@ -27,6 +27,12 @@ function mergeChrome(layers: CollectionChrome[]): CollectionChrome {
   return { cells, Action, Title, Content, panes: panes.length ? panes : undefined }
 }
 
+let boundDatabaseUi: DatabaseUiService | undefined
+
+export function getDatabaseUi() {
+  return boundDatabaseUi
+}
+
 export class DatabaseUiService extends Service implements DatabaseUi {
   private layers = new Map<string, CollectionChrome[]>()
   private snapshot = new Map<string, CollectionChrome>()
@@ -36,6 +42,7 @@ export class DatabaseUiService extends Service implements DatabaseUi {
 
   constructor(ctx: Context) {
     super(ctx, 'databaseUi')
+    boundDatabaseUi = this
   }
 
   decorate(path: string, chrome: CollectionChrome) {

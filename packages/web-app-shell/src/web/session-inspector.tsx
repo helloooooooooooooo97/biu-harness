@@ -9,7 +9,7 @@ import {
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import { inspectorTabFromEvent, requestInspectorAction } from './chat-overlay.ts'
-import { inspectorPanelMatches, resolveInspectorTab } from './inspector-panels.ts'
+import { inspectorPanelMatches, inspectorViewProps, resolveInspectorTab } from './inspector-panels.ts'
 
 export type SessionInspectorProps = {
   open: boolean
@@ -203,12 +203,13 @@ export const SessionInspector = memo(function SessionInspector({
             const active = tab === item.id
             const Tab = item.Tab
             if (Tab) {
+              const raw = (item.entry.props?.() ?? {}) as Record<string, unknown>
               return (
                 <Tab
                   key={item.id}
                   active={active}
                   onActivate={() => setTab(item.id)}
-                  {...(item.entry.props?.() ?? {})}
+                  {...inspectorViewProps(raw)}
                 />
               )
             }
@@ -277,7 +278,7 @@ export const SessionInspector = memo(function SessionInspector({
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {extraActive && ExtraComponent ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid={`inspector-${extraActive.id}`}>
-            <ExtraComponent {...(extraActive.entry.props?.() ?? {})} renderSlot={renderSlot} />
+            <ExtraComponent {...inspectorViewProps((extraActive.entry.props?.() ?? {}) as Record<string, unknown>)} renderSlot={renderSlot} />
           </div>
         ) : (
           <p className="inspector-catalog-empty" data-testid="inspector-catalog">

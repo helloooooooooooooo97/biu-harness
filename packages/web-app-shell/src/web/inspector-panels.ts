@@ -30,7 +30,29 @@ export function inspectorPanelMatches(
   return true
 }
 
-/** 不自动打开任何分区：只有用户点过、且该项仍可用时才保持。 */
+/** 检查器槽位上的元数据不要摊到 React 组件 props 上（Cordis 服务一碰 $$typeof 就会炸）。 */
+const INSPECTOR_VIEW_OMIT = new Set([
+  'tabId',
+  'tabLabel',
+  'tabIcon',
+  'Tab',
+  'centerKinds',
+  'common',
+  'action',
+  'ensureTrajectory',
+  'focusOnCall',
+  'requiresSession',
+  'databaseUi',
+])
+
+export function inspectorViewProps(raw: Record<string, unknown>) {
+  const next: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(raw)) {
+    if (INSPECTOR_VIEW_OMIT.has(key)) continue
+    next[key] = value
+  }
+  return next
+}
 export function resolveInspectorTab(current: string, allowed: string[]) {
   if (current && allowed.includes(current)) return current
   return ''

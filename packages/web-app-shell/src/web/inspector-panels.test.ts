@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { inspectorPanelMatches, resolveInspectorTab } from './inspector-panels.ts'
+import { inspectorPanelMatches, inspectorViewProps, resolveInspectorTab } from './inspector-panels.ts'
 
 test('session-only panels stay on chat and hide on database/task', () => {
   const extra = { centerKinds: ['session'], requiresSession: true }
@@ -45,4 +45,17 @@ test('legacy untagged panels stay off session and database centers', () => {
   assert.equal(inspectorPanelMatches({}, 'record', null), false)
   assert.equal(inspectorPanelMatches({ requiresSession: true }, 'session', 's1'), true)
   assert.equal(inspectorPanelMatches({ requiresSession: true }, 'task', 's1'), false)
+})
+
+test('inspector view props drop tab chrome and databaseUi', () => {
+  const next = inspectorViewProps({
+    tabId: 'database',
+    tabLabel: '数据库',
+    Tab: () => null,
+    tabIcon: () => null,
+    databaseUi: { boom: true },
+    useSnapshot: 1,
+    paneId: 'x',
+  })
+  assert.deepEqual(next, { useSnapshot: 1, paneId: 'x' })
 })

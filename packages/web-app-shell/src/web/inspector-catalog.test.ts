@@ -12,4 +12,5 @@ test('inspector header keeps opened tabs on top and a plus menu on the right', (
   assert.match(inspector, /PlusIcon/)
   assert.match(inspector, /点右上角加号/)
   assert.match(inspector, /item.Tab/)
+  assert.match(inspector, /inspectorViewProps/)
 })
