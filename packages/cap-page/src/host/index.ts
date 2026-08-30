@@ -1,71 +1,12 @@
 import type { Context } from 'cordis'
-import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
+import type { CollectionSpec } from '@biu/type-file-system'
+import { PagesStore, STATUS, type WorkspaceFs } from './store.ts'
 
-export const ROW_COUNT = 240
+export { PAGE_ROOT, PAGE_ASSETS, PagesStore } from './store.ts'
 
-const STATUS = ['draft', 'live', 'archived'] as const
 const COLORS = ['red', 'orange', 'yellow', 'green', 'blue'] as const
 
-function seedCover(color: (typeof COLORS)[number]) {
-  return `/page-covers/${color}.png`
-}
-
-type PageRow = DbRecord & {
-  title: string
-  blurb: string
-  count: number
-  enabled: boolean
-  status: (typeof STATUS)[number]
-  tags: string[]
-  aliases: string[]
-  publishedAt: number
-  size: number
-  homepage: string
-  cover: string
-  pack: { name: string; href: string; bytes: number }
-  notes: { kind: string; body: string }
-  score: number
-  parentId: string | null
-}
-
-function seed(index: number, now: number): PageRow {
-  const id = `p${String(index).padStart(3, '0')}`
-  const status = STATUS[index % STATUS.length]!
-  const color = COLORS[index % COLORS.length]!
-  const parentId = index > 0 && index % 10 === 3 ? `p${String(index - 3).padStart(3, '0')}` : null
-  return {
-    id,
-    title: `页面 ${index + 1}`,
-    blurb: `用于压测 Database 默认表的第 ${index + 1} 条假数据。`,
-    count: (index * 7) % 1000,
-    enabled: index % 3 !== 0,
-    status,
-    tags: [color, status === 'live' ? 'prod' : 'lab'],
-    aliases: [`page-${index + 1}`, `p${index}`],
-    publishedAt: now - index * 3600_000,
-    size: 2048 + index * 128,
-    homepage: `https://example.com/pages/${id}`,
-    cover: seedCover(color),
-    pack: {
-      name: `${id}.zip`,
-      href: `https://example.com/files/${id}.zip`,
-      bytes: 48_000 + index * 256,
-    },
-    notes: { kind: 'doc', body: `这是 ${id} 的正文文件内容。` },
-    score: (index % 17) * 3,
-    parentId,
-    createdAt: now - index * 7200_000,
-    updatedAt: now - index * 1800_000,
-  }
-}
-
-function pagesCollection(now = Date.now()): CollectionSpec {
-  const rows = new Map<string, PageRow>()
-  for (let i = 0; i < ROW_COUNT; i++) {
-    const row = seed(i, now)
-    rows.set(row.id, row)
-  }
-
+export function pagesCollection(store: PagesStore): CollectionSpec {
   return {
     id: 'pages',
     path: '/pages',
@@ -75,7 +16,7 @@ function pagesCollection(now = Date.now()): CollectionSpec {
       route: '/pages',
       title: '页面',
       inspector: true,
-      blurb: '每种字段类型各登记一列，假数据用来压测 Database 默认界面。',
+      blurb: '页面存成工作区 .page 下的 Markdown；属性写在 YAML frontmatter，图片和附件在 .page/assets。',
       order: 25,
       icon: 'document',
     },
@@ -116,52 +57,34 @@ function pagesCollection(now = Date.now()): CollectionSpec {
       },
     },
     records: { update: true, create: true, delete: true },
-    list: () => [...rows.values()],
-    get: (id) => rows.get(id) ?? null,
-    update: (id, patch) => {
-      const current = rows.get(id)
-      if (!current) throw new Error(`unknown page: ${id}`)
-      const next: PageRow = {
-        ...current,
-        ...patch,
-        id,
-        score: current.score,
-        updatedAt: Date.now(),
-      }
-      rows.set(id, next)
-      return next
-    },
-    create: (fields = {}) => {
-      let n = rows.size
-      let id = `p${String(n).padStart(3, '0')}`
-      while (rows.has(id)) {
-        n += 1
-        id = `p${String(n).padStart(3, '0')}`
-      }
-      const ts = Date.now()
-      const row: PageRow = {
-        ...seed(n, ts),
-        ...fields,
-        id,
-        title: typeof fields.title === 'string' && fields.title.trim() ? fields.title.trim() : '未命名页面',
-        score: 0,
-        createdAt: ts,
-        updatedAt: ts,
-      }
-      rows.set(id, row)
-      return row
-    },
-    remove: (id) => {
-      if (!rows.delete(id)) throw new Error(`unknown page: ${id}`)
-    },
+    list: () => store.list(),
+    get: (id) => store.get(id),
+    update: (id, patch) => store.update(id, patch),
+    create: (fields = {}) => store.create(fields),
+    remove: (id) => store.remove(id),
   }
 }
 
-export const name = 'page'
-export const inject = ['database']
-
-export function apply(ctx: Context) {
-  ctx.database.register(pagesCollection())
+function servePageFile(ctx: Context, store: PagesStore) {
+  ctx.inject(['http'], (inner) => {
+    inner.http.route('GET', '/api/page/file/:name', async (route) => {
+      try {
+        const { bytes, type } = await store.readAsset(route.params.name ?? '')
+        route.res.writeHead(200, { 'content-type': type, 'cache-control': 'private, max-age=60' })
+        route.res.end(bytes)
+      } catch {
+        route.send(404, { error: 'not found' })
+      }
+    })
+  })
 }
 
-export { pagesCollection }
+export const name = 'page'
+export const inject = ['database', 'fs']
+
+export function apply(ctx: Context) {
+  const store = new PagesStore(ctx.fs as WorkspaceFs)
+  ctx.database.register(pagesCollection(store))
+  servePageFile(ctx, store)
+}
+
