@@ -355,12 +355,16 @@ body {
   border: 0;
   border-radius: 12px;
   background: transparent;
+  box-shadow: none;
   padding: 0;
   cursor: pointer;
 }
 
-.brand-corner-mascot-btn.is-active {
-  background: var(--dsw-hover);
+.brand-corner-mascot-btn.is-active,
+.brand-corner-mascot-btn:hover,
+.brand-corner-mascot-btn:focus-visible {
+  background: transparent;
+  box-shadow: none;
 }
 
 .brand-corner-leading .project-chip,
