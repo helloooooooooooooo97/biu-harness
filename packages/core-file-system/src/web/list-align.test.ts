@@ -17,4 +17,7 @@ test('list view spans the pane and pins row meta to the right', () => {
   assert.match(css, /\.tasks-queue-item-body > \.fsdb-proplist\{[^}]*flex-wrap:nowrap/)
   assert.match(css, /\.tasks-board-col\{[^}]*background:#202020/)
   assert.match(css, /\.tasks-board-col \.tasks-minicard\{[^}]*background:#191919/)
+  assert.match(css, /\.fsdb-cards\{[^}]*align-items:stretch/)
+  assert.match(css, /\.fsdb-cards\{[^}]*grid-auto-rows:auto/)
+  assert.match(css, /\.fsdb-cards > \.tasks-minicard\{[^}]*height:100%/)
 })

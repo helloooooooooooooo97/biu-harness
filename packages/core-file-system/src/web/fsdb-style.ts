@@ -190,8 +190,8 @@ const CSS = `
 .fsdb-pager .tasks-icon-btn{color:var(--dsw-label-3);width:26px;height:26px}
 .fsdb-pager .fsdb-pager-size-btn{width:auto}
 .fsdb-stage{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
-.fsdb-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));grid-auto-flow:row;grid-auto-rows:max-content;grid-template-rows:none;gap:10px;align-content:start;align-items:start;justify-items:stretch;overflow:auto;flex:1;min-width:0;min-height:0;position:relative}
-.fsdb-cards > .tasks-minicard{position:static;grid-row:auto;grid-column:auto;inset:auto}
+.fsdb-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));grid-auto-flow:row;grid-auto-rows:auto;gap:10px;align-content:start;align-items:stretch;justify-items:stretch;overflow:auto;flex:1;min-width:0;min-height:0;position:relative}
+.fsdb-cards > .tasks-minicard{position:static;grid-row:auto;grid-column:auto;inset:auto;height:100%}
 .fsdb-cards-stack{display:flex;flex-direction:column;gap:16px;overflow:auto;flex:1;min-width:0;min-height:0;padding:2px 0 12px}
 .fsdb-cards-stack .fsdb-cards{overflow:visible;flex:none;min-height:0}
 .fsdb-bool{display:inline-flex;align-items:center;flex:none;line-height:0;vertical-align:middle}
