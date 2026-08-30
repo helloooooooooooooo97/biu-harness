@@ -2253,8 +2253,13 @@ body {
   border-top: 1px solid var(--dsw-border);
 }
 
-/* 右侧检查器底板与中间画布同色，不跟左侧栏 */
-[data-testid='session-inspector'] .usage-panel,
+/* 右侧检查器：用量卡片用输入条同色底，不要描边 */
+[data-testid='session-inspector'] .usage-panel {
+  background: var(--dsw-sidebar);
+  border: 0;
+  box-shadow: none;
+}
+
 [data-testid='session-inspector'] .traj-root,
 [data-testid='session-inspector'] .traj-meta,
 [data-testid='session-inspector'] .traj-head,
@@ -2596,11 +2601,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  border: 1px solid var(--dsw-border);
+  border: 0;
   border-radius: 14px;
   padding: 12px;
-  background: var(--dsw-surface);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  background: var(--dsw-sidebar);
+  box-shadow: none;
 }
 
 .usage-panel-head {
