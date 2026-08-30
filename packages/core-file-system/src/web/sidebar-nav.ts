@@ -138,11 +138,16 @@ export function buildCrumbs(input: {
   return crumbs
 }
 
+/** 点标题：回到上一级。多项选择改走右侧展开按钮，避免和标题点击抢手。 */
+export function crumbLabelAction(crumb: Crumb, parent?: Crumb): CrumbTarget {
+  if (parent) return parent.target
+  return { kind: 'root' }
+}
+
 /** 多项则出菜单；只有一项时点这一级回到上一级。 */
 export function crumbButtonAction(crumb: Crumb, parent?: Crumb): 'menu' | CrumbTarget {
   if (crumb.choices.length > 1) return 'menu'
-  if (parent) return parent.target
-  return { kind: 'root' }
+  return crumbLabelAction(crumb, parent)
 }
 
 export function parseCenterPath(pathname: string): DataCenter | null {

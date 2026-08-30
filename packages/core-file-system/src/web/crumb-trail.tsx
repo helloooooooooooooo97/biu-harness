@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef, useState, type MouseEvent, type Ref } from 'react'
 import { createPortal } from 'react-dom'
+import { ChevronDownIcon } from '@heroicons/react/16/solid'
 import { CrumbItemGlyph } from './nav-glyphs.tsx'
-import { crumbButtonAction, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
+import { crumbLabelAction, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
 
 export function CrumbTrail({
   crumbs,
@@ -45,33 +46,45 @@ export function CrumbTrail({
         return (
           <span key={crumb.id} className="fsdb-crumb">
             {index ? <span className="fsdb-crumb-sep" aria-hidden>/</span> : null}
-            <span className="fsdb-crumb-pick">
+            <span className={`fsdb-crumb-pick${open ? ' is-open' : ''}`}>
               <button
                 type="button"
-                ref={(el) => {
-                  if (el) btnRefs.current.set(crumb.id, el)
-                  else btnRefs.current.delete(crumb.id)
-                }}
                 className={`fsdb-crumb-btn${open ? ' is-open' : ''}`}
                 title={crumb.label}
-                aria-haspopup={canPick ? 'menu' : undefined}
-                aria-expanded={canPick ? open : undefined}
                 onClick={(event: MouseEvent) => {
                   event.preventDefault()
                   event.stopPropagation()
                   onActivate?.()
-                  const action = crumbButtonAction(crumb, index ? crumbs[index - 1] : undefined)
-                  if (action === 'menu') {
-                    onOpenId(open ? null : crumb.id)
-                    return
-                  }
-                  onPick(action)
+                  onPick(crumbLabelAction(crumb, index ? crumbs[index - 1] : undefined))
                   onOpenId(null)
                 }}
               >
                 <CrumbItemGlyph kind={crumb.kind} icon={current?.icon} mode={current?.mode} emoji={current?.emoji} />
                 <span className="chat-view-project-name">{crumb.label}</span>
               </button>
+              {canPick ? (
+                <button
+                  type="button"
+                  ref={(el) => {
+                    if (el) btnRefs.current.set(crumb.id, el)
+                    else btnRefs.current.delete(crumb.id)
+                  }}
+                  className={`fsdb-crumb-expand${open ? ' is-open' : ''}`}
+                  title="展开选择"
+                  aria-label={`展开 ${crumb.label}`}
+                  aria-haspopup="menu"
+                  aria-expanded={open}
+                  data-testid="crumb-expand"
+                  onClick={(event: MouseEvent) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    onActivate?.()
+                    onOpenId(open ? null : crumb.id)
+                  }}
+                >
+                  <ChevronDownIcon aria-hidden className="size-3" />
+                </button>
+              ) : null}
             </span>
           </span>
         )

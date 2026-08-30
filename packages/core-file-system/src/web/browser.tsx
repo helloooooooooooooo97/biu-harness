@@ -2347,6 +2347,9 @@ if (typeof document !== 'undefined') {
 .fsdb-crumb-btn:hover,.fsdb-crumb-btn.is-open{background:var(--dsw-hover);color:var(--dsw-sidebar-fg-active)}
 .fsdb-crumb-btn .chat-view-project-name,.fsdb-crumb-option .chat-view-project-name{font-size:14px;font-weight:600;color:inherit}
 .fsdb-crumb-pick{position:relative;flex:none}
+.fsdb-crumb-expand{position:absolute;right:-2px;top:50%;z-index:2;display:grid;place-items:center;width:16px;height:16px;margin:0;border:0;border-radius:4px;background:var(--dsw-surface);box-shadow:0 0 0 1px var(--dsw-border);color:var(--dsw-sidebar-fg);opacity:0;pointer-events:none;transform:translateY(-50%);cursor:pointer}
+.fsdb-crumb-pick:hover .fsdb-crumb-expand,.fsdb-crumb-pick.is-open .fsdb-crumb-expand,.fsdb-crumb-pick:focus-within .fsdb-crumb-expand{opacity:1;pointer-events:auto}
+.fsdb-crumb-expand:hover,.fsdb-crumb-expand.is-open{background:var(--dsw-hover);color:var(--dsw-sidebar-fg-active)}
 .fsdb-crumb-menu{position:absolute;left:0;top:calc(100% + 4px);z-index:80;min-width:160px;max-height:240px;overflow:auto;border:1px solid var(--dsw-border);border-radius:8px;background:var(--dsw-surface);padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.16)}
 .fsdb-crumb-menu.is-fixed{position:fixed;z-index:140}
 .fsdb-crumb-option{display:flex;width:100%;min-width:0;align-items:center;gap:6px;border:0;border-radius:6px;background:transparent;padding:6px 8px;color:var(--dsw-sidebar-fg);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer}

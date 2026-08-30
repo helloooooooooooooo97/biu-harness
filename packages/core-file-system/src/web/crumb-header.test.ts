@@ -7,13 +7,16 @@ const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf
 const inspector = readFileSync(resolve(import.meta.dirname, './inspector-database.tsx'), 'utf8')
 
 describe('顶栏三级标题', () => {
-  it('没有单独的下拉箭头，点标题本身出菜单', () => {
-    expect(trail).not.toContain('ChevronDownIcon')
-    expect(trail).toContain("aria-haspopup={canPick ? 'menu' : undefined}")
+  it('悬停才露出右侧展开按钮，点标题本身不打开菜单', () => {
+    expect(trail).toContain('ChevronDownIcon')
+    expect(trail).toContain('data-testid="crumb-expand"')
+    expect(trail).toContain('crumbLabelAction')
+    expect(trail).toContain("aria-haspopup=\"menu\"")
     expect(trail).toContain('<CrumbItemGlyph kind={crumb.kind}')
     expect(trail).toContain('createPortal')
     expect(trail).toContain('data-fsdb-crumb-menu')
-    expect(trail).toContain('<CrumbItemGlyph kind={openCrumb.kind} icon={choice.icon} mode={choice.mode} emoji={choice.emoji} />')
+    expect(trail).not.toContain('onMouseEnter')
+    expect(browser).toContain('.fsdb-crumb-expand{position:absolute')
     expect(browser).toContain('<CrumbTrail')
   })
 
@@ -24,7 +27,7 @@ describe('顶栏三级标题', () => {
     expect(browser).toMatch(/\.fsdb-crumb-option\{[^}]*font-weight:600/)
   })
 
-  it('右侧检查器面包屑同样用下拉切换，不靠点回去退', () => {
+  it('右侧检查器面包屑同样用展开按钮切换，不靠悬停自动展开', () => {
     expect(inspector).toContain('<CrumbTrail')
     expect(inspector).toContain('onOpenId={setCrumbOpen}')
     expect(inspector).toContain('onActivate={onActivate}')

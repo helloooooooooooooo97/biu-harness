@@ -6,6 +6,7 @@ import {
   assertSidebarInvariants,
   buildCrumbs,
   crumbButtonAction,
+  crumbLabelAction,
   parseCenterPath,
   pathForCenter,
   pathForCrumbTarget,
@@ -209,6 +210,7 @@ test('一项时点面包屑回到上一级，多项出菜单', () => {
     ],
   })
   assert.equal(crumbButtonAction(many[1]!, many[0]!), 'menu')
+  assert.equal(crumbLabelAction(many[1]!, many[0]!), many[0]!.target)
 })
 
 test('压测：随机切换表/视图/记录/展开，路由与展开不串台', () => {
