@@ -48,7 +48,6 @@ test('overlay store set/get', () => {
   assert.equal(getChatOverlay(), false)
   setChatOverlay(true)
   assert.equal(getChatOverlay(), true)
-  setChatOverlay(false)
 })
 
 test('autohide resets when overlay closes', () => {

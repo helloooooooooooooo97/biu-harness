@@ -472,14 +472,6 @@ body {
   grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--inspector-width, 320px);
 }
 
-.app-shell-agent.is-inspector-open.is-chat-overlay {
-  grid-template-columns: var(--rail-w) 280px 0 minmax(0, 1fr);
-}
-
-.app-shell-agent.is-sidebar-collapsed.is-inspector-open.is-chat-overlay {
-  grid-template-columns: var(--rail-w) 0 minmax(0, 1fr);
-}
-
 .session-inspector {
   border-left: 1px solid var(--dsw-border);
 }

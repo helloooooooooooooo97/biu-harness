@@ -25,7 +25,7 @@ export function inspectorWidthForExpandedChat(opts: {
   return Math.min(opts.inspectorWidth, Math.max(240, Math.round(maxInspector)))
 }
 
-let overlay = false
+let overlay = true
 let autohide = false
 let resizing = false
 let pinned = false
