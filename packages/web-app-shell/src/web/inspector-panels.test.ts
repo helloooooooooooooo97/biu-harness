@@ -25,6 +25,15 @@ test('task inspector only appears on the tasks module', () => {
   assert.equal(inspectorPanelMatches(extra, 'record', null), false)
 })
 
+test('common tools stay available on every center', () => {
+  const extra = { common: true, action: 'add-view' }
+  assert.equal(inspectorPanelMatches(extra, 'collection-view', null), true)
+  assert.equal(inspectorPanelMatches(extra, 'record', null), true)
+  assert.equal(inspectorPanelMatches(extra, 'session', 's1'), true)
+  assert.equal(inspectorPanelMatches(extra, 'session', null), true)
+  assert.equal(inspectorPanelMatches(extra, 'module', null), true)
+})
+
 test('inspector does not auto-open the first available tab', () => {
   assert.equal(resolveInspectorTab('', ['script', 'reports']), '')
   assert.equal(resolveInspectorTab('script', ['script', 'reports']), 'script')

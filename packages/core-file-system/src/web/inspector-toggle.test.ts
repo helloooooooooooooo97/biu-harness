@@ -21,3 +21,10 @@ test('database does not auto-open inspector content; panes follow the current ta
   assert.doesNotMatch(page, /biu:inspector-open/)
   assert.match(page, /centerKinds: \['collection-view', 'record'\]/)
 })
+
+test('common inspector actions add or copy a view', () => {
+  const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf8')
+  assert.match(browser, /biu:inspector-action/)
+  assert.match(browser, /add-view/)
+  assert.match(browser, /copy-view/)
+})

@@ -8,7 +8,7 @@ import {
 } from '@biu/web-session-view'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
-import { inspectorTabFromEvent } from './chat-overlay.ts'
+import { inspectorTabFromEvent, requestInspectorAction } from './chat-overlay.ts'
 import { inspectorPanelMatches, resolveInspectorTab } from './inspector-panels.ts'
 
 export type SessionInspectorProps = {
@@ -52,6 +52,8 @@ export const SessionInspector = memo(function SessionInspector({
           Icon: extra.tabIcon as ComponentType<{ className?: string }> | undefined,
           ensureTrajectory: Boolean(extra.ensureTrajectory),
           focusOnCall: Boolean(extra.focusOnCall),
+          common: Boolean(extra.common),
+          action: typeof extra.action === 'string' ? extra.action : '',
         }]
       })
   }, [centerKind, extras, sessionId])
@@ -118,8 +120,18 @@ export const SessionInspector = memo(function SessionInspector({
 
   if (!open) return null
 
-  const extraActive = extraTabs.find((item) => item.id === tab)
+  const extraActive = extraTabs.find((item) => item.id === tab && !item.action)
   const ExtraComponent = extraActive?.entry.Component
+  const commonTabs = extraTabs.filter((item) => item.common)
+  const pageTabs = extraTabs.filter((item) => !item.common)
+
+  function pickOffer(item: (typeof extraTabs)[number]) {
+    if (item.action) {
+      requestInspectorAction(item.action)
+      return
+    }
+    setTab(item.id)
+  }
 
   return (
     <aside
@@ -172,23 +184,36 @@ export const SessionInspector = memo(function SessionInspector({
           </div>
         ) : (
           <div className="inspector-catalog" data-testid="inspector-catalog">
-            <p className="inspector-catalog-lead">可打开</p>
-            {extraTabs.length ? (
-              extraTabs.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className="inspector-catalog-item"
-                  onClick={() => setTab(item.id)}
-                  data-testid={`inspector-offer-${item.id}`}
-                >
-                  {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
-                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                </button>
-              ))
-            ) : (
-              <p className="inspector-catalog-empty">当前中间页没有可打开的内容</p>
-            )}
+            <p className="inspector-catalog-lead">工具</p>
+            {commonTabs.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="inspector-catalog-item"
+                onClick={() => pickOffer(item)}
+                data-testid={`inspector-offer-${item.id}`}
+              >
+                {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              </button>
+            ))}
+            {pageTabs.length ? (
+              <>
+                <p className="inspector-catalog-lead">此页</p>
+                {pageTabs.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="inspector-catalog-item"
+                    onClick={() => pickOffer(item)}
+                    data-testid={`inspector-offer-${item.id}`}
+                  >
+                    {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
+                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  </button>
+                ))}
+              </>
+            ) : null}
           </div>
         )}
       </div>

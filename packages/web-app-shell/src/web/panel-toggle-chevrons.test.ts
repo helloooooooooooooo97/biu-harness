@@ -14,6 +14,7 @@ describe('panel collapse chevrons follow panel state', () => {
   it('opens the inspector rail even when no tab is selected yet', () => {
     expect(shell).toMatch(/const inspectorVisible = inspectorOpen/)
     expect(shell).not.toMatch(/inspectorVisible = inspectorOpen && inspectorTabCount/)
+    expect(shell).not.toMatch(/inspectorTabCount > 0/)
   })
 
   it('declares inspector persist helpers once (no duplicate onOpen)', () => {

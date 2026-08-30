@@ -8,6 +8,7 @@ const inspector = readFileSync(resolve(import.meta.dirname, './session-inspector
 test('inspector starts as a catalog and only renders a panel after a pick', () => {
   assert.match(inspector, /useState\(''\)/)
   assert.match(inspector, /data-testid="inspector-catalog"/)
-  assert.match(inspector, /可打开/)
+  assert.match(inspector, /工具/)
+  assert.match(inspector, /requestInspectorAction/)
   assert.match(inspector, /setTab\(active \? '' : item\.id\)/)
 })

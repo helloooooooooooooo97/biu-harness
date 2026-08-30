@@ -3,6 +3,8 @@ import type { InspectorCenterKind } from '@biu/web-session-view'
 export type InspectorPanelExtra = {
   centerKinds?: unknown
   requiresSession?: unknown
+  common?: unknown
+  action?: unknown
 }
 
 export function inspectorPanelMatches(
@@ -10,6 +12,10 @@ export function inspectorPanelMatches(
   centerKind: InspectorCenterKind,
   sessionId: string | null,
 ): boolean {
+  if (extra.common) {
+    if (extra.requiresSession && !sessionId) return false
+    return true
+  }
   const kinds = Array.isArray(extra.centerKinds)
     ? extra.centerKinds.filter((item): item is InspectorCenterKind => typeof item === 'string')
     : []

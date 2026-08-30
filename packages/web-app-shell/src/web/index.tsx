@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import {
   chatColumnWidth,
@@ -27,7 +27,7 @@ import { bindSnapshot, type SnapshotService } from '@biu/web-snapshot'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
 import { centerKindFromRoute, parseAppPath } from '@biu/web-session-view'
-import { inspectorPanelMatches } from './inspector-panels.ts'
+import { placeCommonInspectorTools } from './inspector-common.tsx'
 import {
   isMascotDancing,
   mascotDanceShape,
@@ -543,11 +543,6 @@ function Shell(props: SlotProps) {
   }, [])
   const appRoute = parseAppPath(location.pathname, pluginModules)
   const centerKind = centerKindFromRoute(appRoute)
-  const inspectorExtras = useSlotEntries(slots, 'inspector-panels')
-  const inspectorTabCount = useMemo(
-    () => inspectorExtras.filter((entry) => inspectorPanelMatches(entry.props?.() ?? {}, centerKind, sessionId)).length,
-    [centerKind, inspectorExtras, sessionId],
-  )
   const inspectorVisible = inspectorOpen
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
@@ -660,23 +655,21 @@ function Shell(props: SlotProps) {
             <MapPinIcon {...chromeIcon} />
           </button>
         ) : null}
-        {inspectorTabCount > 0 ? (
-          <button
-            type="button"
-            className={`chat-view-header-expand${inspectorOpen ? ' is-active' : ''}`}
-            title={inspectorOpen ? '收起检查器' : '打开检查器'}
-            aria-label={inspectorOpen ? '收起检查器' : '打开检查器'}
-            aria-pressed={inspectorOpen}
-            data-testid="inspector-toggle"
-            onClick={toggleInspector}
-          >
-            {inspectorOpen ? (
-              <ChevronDoubleRightIcon {...chromeIcon} />
-            ) : (
-              <ChevronDoubleLeftIcon {...chromeIcon} />
-            )}
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className={`chat-view-header-expand${inspectorOpen ? ' is-active' : ''}`}
+          title={inspectorOpen ? '收起检查器' : '打开检查器'}
+          aria-label={inspectorOpen ? '收起检查器' : '打开检查器'}
+          aria-pressed={inspectorOpen}
+          data-testid="inspector-toggle"
+          onClick={toggleInspector}
+        >
+          {inspectorOpen ? (
+            <ChevronDoubleRightIcon {...chromeIcon} />
+          ) : (
+            <ChevronDoubleLeftIcon {...chromeIcon} />
+          )}
+        </button>
       </div>
     </header>
   )
@@ -864,4 +857,5 @@ export function apply(ctx: Context) {
     },
     props: () => shellProps,
   })
+  placeCommonInspectorTools(ctx.slots as SlotsService)
 }

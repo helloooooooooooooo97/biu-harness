@@ -14,7 +14,9 @@ import {
   clampOverlayChatHeight,
   OVERLAY_CHAT_HEIGHT_MIN,
   inspectorTabFromEvent,
+  inspectorActionFromEvent,
   requestInspectorTab,
+  requestInspectorAction,
 } from './chat-overlay.ts'
 
 test('chat column subtracts rail, sidebar and inspector', () => {
@@ -100,4 +102,15 @@ test('requestInspectorTab dispatches tab id', () => {
   requestInspectorTab('database')
   window.removeEventListener('biu:inspector-tab', onTab)
   assert.equal(seen, 'database')
+})
+
+test('requestInspectorAction dispatches tool id', () => {
+  let seen = ''
+  const onAction = (event: Event) => {
+    seen = inspectorActionFromEvent(event) ?? ''
+  }
+  window.addEventListener('biu:inspector-action', onAction)
+  requestInspectorAction('add-view')
+  window.removeEventListener('biu:inspector-action', onAction)
+  assert.equal(seen, 'add-view')
 })

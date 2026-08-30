@@ -129,6 +129,16 @@ export function requestInspectorTab(tabId: string) {
   window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: tabId }))
 }
 
+export function requestInspectorAction(action: string) {
+  if (!action) return
+  window.dispatchEvent(new CustomEvent('biu:inspector-action', { detail: action }))
+}
+
+export function inspectorActionFromEvent(event: Event): string | undefined {
+  const detail = (event as CustomEvent).detail
+  return typeof detail === 'string' && detail ? detail : undefined
+}
+
 export function inspectorTabFromEvent(event: Event): string | undefined {
   const detail = (event as CustomEvent).detail
   if (typeof detail === 'string' && detail) return detail
