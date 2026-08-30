@@ -2,6 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { Context } from 'cordis'
 import * as slots from './index.ts'
+import { disposeSlot } from './service.ts'
 
 const Dummy = () => null
 
@@ -59,7 +60,7 @@ test('place().dispose unregisters so React remount can place again', async () =>
   ctx.slots.fill('root', Dummy, { children: { stage: { kind: 'list' } } })
   const first = ctx.slots.place('stage', Dummy, { key: 'fsdb-pane-script' })
   assert.equal(ctx.slots.list('stage').length, 1)
-  await first.dispose()
+  await Promise.resolve(disposeSlot(first))
   ctx.slots.place('stage', Dummy, { key: 'fsdb-pane-script' })
   assert.equal(ctx.slots.list('stage').length, 1)
 })

@@ -5,6 +5,7 @@ export type InspectorPanelExtra = {
   requiresSession?: unknown
   common?: unknown
   action?: unknown
+  repeatable?: unknown
 }
 
 /** 右侧检查器跟当前 Session：页面附加块不进这一栏，但 Session 可以加数据库。 */

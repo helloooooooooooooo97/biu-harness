@@ -119,7 +119,7 @@ test('点展开箭头不改路由；点侧栏开关不改路由', () => {
 })
 
 test('从记录返回回到上次视图，展开状态仍在', () => {
-  let state = { ...seedState(), expandedViewKey: previewKey('/tasks', '1787983501816') }
+  let state: SidebarNavState = { ...seedState(), expandedViewKey: previewKey('/tasks', '1787983501816') }
   state = applySidebarAction(state, {
     type: 'open-record',
     path: '/tasks',

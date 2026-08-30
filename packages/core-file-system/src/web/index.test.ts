@@ -9,9 +9,9 @@ test('file-system web is the implementation plugin, not a domain module', () => 
 })
 
 test('shell matches the data module by extra.moduleId database', () => {
-  const extra = { moduleId: DATA_MODULE_ID, tables: [] }
+  const extra = { moduleId: DATA_MODULE_ID, tables: [] as never[] }
   const slotKey = 'fsdb-database'
-  assert.equal(String(extra.moduleId ?? extra.id ?? slotKey), 'database')
+  assert.equal(String(extra.moduleId ?? slotKey), 'database')
 })
 
 test('navConflict flags duplicate route and display name against existing modules', () => {

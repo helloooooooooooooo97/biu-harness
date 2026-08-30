@@ -108,13 +108,13 @@ function CollectionPage(props: SlotProps) {
     }
   }, [location.pathname, parsed])
 
+  const dataHome = parsed.kind === 'module' && parsed.moduleId === DATA_MODULE_ID
   useEffect(() => {
     if (!tables.length) return
-    if (parsed.kind === 'module' && parsed.moduleId === DATA_MODULE_ID) {
-      const first = tables[0]!
-      go({ collection: first.path }, { replace: true })
-    }
-  }, [parsed.kind, parsed.moduleId, tables])
+    if (!dataHome) return
+    const first = tables[0]!
+    go({ collection: first.path }, { replace: true })
+  }, [dataHome, tables])
 
   useEffect(() => {
     if (!tables.length || !collectionFromRoute) return

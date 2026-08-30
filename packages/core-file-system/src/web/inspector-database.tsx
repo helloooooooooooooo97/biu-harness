@@ -108,6 +108,10 @@ function useBindInspectorDbPath(paneId: string, tables: CollectionInfo[], seedCo
   return inspectorPath || defaultInspectorDbPath(tables, seedCollection)
 }
 
+function paneOf(props: { paneId?: unknown }) {
+  return String(props.paneId || 'database')
+}
+
 function seedOf(props: { seedCollection?: unknown }) {
   return typeof props.seedCollection === 'string' ? props.seedCollection : ''
 }
@@ -148,10 +152,6 @@ function crumbsForRoute(
 
 function goInspector(paneId: string, target: CrumbTarget) {
   setInspectorDbPath(paneId, pathForCrumbTarget(target))
-}
-
-function paneOf(props: { paneId?: unknown }) {
-  return String(props.paneId || 'database')
 }
 
 export function DatabaseInspectorTab({
@@ -268,14 +268,15 @@ export function DatabaseInspectorTab({
 }
 
 export function DatabaseInspectorBrowse(props: SlotProps) {
-  const id = paneOf(props)
+  const extra = props as SlotProps & { paneId?: unknown; seedCollection?: unknown }
+  const id = paneOf(extra)
   const ui = getDatabaseUi()
   const collections = useInspectorCollections()
   const tables = useMemo(
     () => collections.filter((row) => row.path && row.path !== '/'),
     [collections],
   )
-  const inspectorPath = useBindInspectorDbPath(id, tables, seedOf(props))
+  const inspectorPath = useBindInspectorDbPath(id, tables, seedOf(extra))
   useViewTick()
   const { pathname, search } = splitHref(inspectorPath)
   const { collection, viewId, recordId } = crumbsForRoute(pathname, tables)

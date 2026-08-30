@@ -75,6 +75,7 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\.composer-inline-chip\s*\{[^}]*vertical-align:\s*middle/s)
     expect(css).toMatch(/\.composer-tool-chip\.is-pick,\s*\n\.user-pick-chip\s*\{[^}]*line-height:\s*1/s)
     expect(css).toMatch(/\.pick-kind-icon\s*\{[^}]*display:\s*block/s)
+    expect(css).toMatch(/\.composer-pill\.has-chips \.composer-tiptap p[\s\S]*?align-items:\s*center/)
   })
 
   it('uses Tiptap for inline pick chips in the composer', () => {

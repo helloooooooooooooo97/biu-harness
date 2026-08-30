@@ -283,6 +283,6 @@ test('registered actions run when when-clause matches', async () => {
   assert.equal(stat.schema.actions?.[0]?.id, 'pin')
   assert.equal('run' in (stat.schema.actions?.[0] ?? {}), false)
   const done = await db.action('/notes/n1', 'pin')
-  assert.equal((done.value as { pinned: boolean }).pinned, true)
+  assert.equal((done.value as unknown as { pinned: boolean }).pinned, true)
   await assert.rejects(() => db.action('/notes/n1', 'pin'), /not available/)
 })

@@ -97,7 +97,7 @@ export function captureChatScroll(parent: HTMLElement): ChatScrollMemory {
   const parentTop = parent.getBoundingClientRect().top
   const users = parent.querySelectorAll<HTMLElement>('[data-chat-kind="user"][data-node-id]')
   let pin: HTMLElement | null = null
-  for (const el of users) {
+  for (const el of Array.from(users)) {
     if (el.getBoundingClientRect().top <= parentTop + PIN_TOP_SLACK_PX) pin = el
   }
   const id = pin?.dataset.nodeId ?? users[0]?.dataset.nodeId

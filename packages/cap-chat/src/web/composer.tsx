@@ -713,7 +713,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
         clearDraft(id)
         flushDraftTimer()
       }
-      if (shouldNavigateToSession(location.pathname, id)) navigate(`/s/${id}`)
+      if (id && shouldNavigateToSession(location.pathname, id)) navigate(`/s/${id}`)
     } catch {
       /* error 已写入 sessionView */
     }

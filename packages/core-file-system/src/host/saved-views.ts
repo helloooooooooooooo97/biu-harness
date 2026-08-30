@@ -32,7 +32,10 @@ export class SavedViewsStore {
         ...cur,
         ...(typeof patch.title === 'string' ? { name: patch.title } : {}),
         ...(typeof patch.name === 'string' ? { name: patch.name } : {}),
-        ...(typeof patch.mode === 'string' ? { mode: patch.mode } : {}),
+        ...(typeof patch.mode === 'string' &&
+        (patch.mode === 'queue' || patch.mode === 'table' || patch.mode === 'cards' || patch.mode === 'board')
+          ? { mode: patch.mode }
+          : {}),
         ...(typeof patch.sortField === 'string' ? { sortField: patch.sortField } : {}),
         ...(patch.sortDir === 'asc' || patch.sortDir === 'desc' ? { sortDir: patch.sortDir } : {}),
         ...(typeof patch.query === 'string' ? { query: patch.query } : {}),
