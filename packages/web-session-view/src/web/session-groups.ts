@@ -22,6 +22,23 @@ export function compareSessionRows(a: SessionListItem, b: SessionListItem) {
   return b.updatedAt - a.updatedAt || a.id.localeCompare(b.id)
 }
 
+/** 悬浮聊天用：按更新时间取最近一条对话（忽略置顶；优先普通 chat）。 */
+export function mostRecentSessionId(sessions: SessionListItem[]): string | undefined {
+  const chats = sessions.filter((item) => (item.type ?? 'chat') !== 'live')
+  const pool = chats.length ? chats : sessions
+  let best: SessionListItem | undefined
+  for (const item of pool) {
+    if (
+      !best ||
+      item.updatedAt > best.updatedAt ||
+      (item.updatedAt === best.updatedAt && item.id.localeCompare(best.id) < 0)
+    ) {
+      best = item
+    }
+  }
+  return best?.id
+}
+
 function sortGroupSessions(group: SessionSidebarGroup) {
   group.sessions.sort(compareSessionRows)
   group.updatedAt = group.sessions.reduce((max, item) => Math.max(max, item.updatedAt), 0)

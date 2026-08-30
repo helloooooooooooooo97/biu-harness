@@ -11,6 +11,7 @@ import {
   type TrajectoryUsage,
 } from './session-project.ts'
 import type { AppRoute } from './session-route.ts'
+import { mostRecentSessionId } from './session-groups.ts'
 import { markSidebarMascotFresh } from './session-mascot-fresh.ts'
 
 export type { AppRoute, RouteView, InspectorCenterKind } from './session-route.ts'
@@ -46,6 +47,7 @@ export {
   UNGROUPED_PROJECT_KEY,
   UNGROUPED_TAG_KEY,
   PINNED_GROUP_KEY,
+  mostRecentSessionId,
   groupSessionsByProject,
   groupSessionsByTag,
   buildSidebarGroups,
@@ -343,66 +345,49 @@ export class SessionViewService extends Service {
     void this.ensureTrajectory()
   }
 
-  /** URL → 状态：只由路由层调用，不回写 URL */
+  /** URL → 状态：只由路由层调用，不回写 URL。
+   * `/s/:id` 打开该会话；其它页面（含首页、数据库等）打开最近一条对话，供全局悬浮窗使用。 */
   async applyRoute(route: AppRoute) {
-    if (route.kind !== 'home' && route.kind !== 'session') {
-      return
-    }
-    if (route.kind === 'home') {
-      if (!this.value.sessionId && this.value.view === 'chat') return
-      this.stashCurrent()
-      this.loadGen += 1
-      this.trajectoryLive = false
-      this.trajGen += 1
-      this.replace({
-        sessionId: null,
-        events: [],
-        nodes: [],
-        trajectory: [],
-        view: 'chat',
-        focusCallId: undefined,
-        pending: false,
-        agentStatus: 'idle',
-        inbox: [],
-        project: undefined,
-        hasMoreOlder: false,
-        loadingOlder: false,
-        trajectoryHasMore: false,
-        trajectoryLoading: false,
-        totalTurns: 0,
-        switchingSession: false,
-        error: undefined,
-      })
-      return
-    }
-    if (this.value.sessionId !== route.sessionId) {
-      try {
-        await this.load(route.sessionId, { view: route.view })
-      } catch (error) {
+    if (route.kind === 'session') {
+      if (this.value.sessionId !== route.sessionId) {
+        try {
+          await this.load(route.sessionId, { view: route.view })
+        } catch (error) {
+          this.replace({
+            error: String(error),
+            sessionId: null,
+            events: [],
+            nodes: [],
+            trajectory: [],
+            view: 'chat',
+            focusCallId: undefined,
+            hasMoreOlder: false,
+            loadingOlder: false,
+            trajectoryHasMore: false,
+            trajectoryLoading: false,
+            totalTurns: 0,
+            switchingSession: false,
+          })
+          throw error
+        }
+      } else if (this.value.view !== route.view) {
         this.replace({
-          error: String(error),
-          sessionId: null,
-          events: [],
-          nodes: [],
-          trajectory: [],
-          view: 'chat',
-          focusCallId: undefined,
-          hasMoreOlder: false,
-          loadingOlder: false,
-          trajectoryHasMore: false,
-          trajectoryLoading: false,
-          totalTurns: 0,
-          switchingSession: false,
+          view: route.view,
+          focusCallId: route.view === 'chat' ? undefined : this.value.focusCallId,
         })
-        throw error
       }
-    } else if (this.value.view !== route.view) {
-      this.replace({
-        view: route.view,
-        focusCallId: route.view === 'chat' ? undefined : this.value.focusCallId,
-      })
+      if (this.wantsTrajectory(route.view)) await this.ensureTrajectory()
+      return
     }
-    if (this.wantsTrajectory(route.view)) await this.ensureTrajectory()
+    await this.loadMostRecentSession()
+  }
+
+  private async loadMostRecentSession() {
+    if (!this.value.sessions.length) await this.refreshSessions()
+    const latest = mostRecentSessionId(this.value.sessions)
+    if (!latest) return
+    if (this.value.sessionId === latest) return
+    await this.load(latest, { view: 'chat' })
   }
 
   ingest(sessionId: string, event: SessionEvent) {

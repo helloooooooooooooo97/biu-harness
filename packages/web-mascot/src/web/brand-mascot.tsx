@@ -1,4 +1,14 @@
-import { useId } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { SidebarMascot } from './sidebar-mascot.tsx'
+import { resolveSessionMascot } from './session-mascot.ts'
+
+export type CornerAgent = {
+  id: string
+  title: string
+  updatedAt?: number
+  type?: string
+  mascot?: { shape: string; color: string; eye?: number }
+}
 
 export function BrandMascot({ className }: { className?: string }) {
   const uid = useId().replace(/:/g, '')
@@ -29,10 +39,82 @@ export function BrandMascot({ className }: { className?: string }) {
   )
 }
 
-export function BrandCornerMascot() {
+export function BrandCornerMascot({
+  agents = [],
+  activeId,
+  onSelect,
+}: {
+  agents?: CornerAgent[]
+  activeId?: string | null
+  onSelect?: (id: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const ranked = useMemo(
+    () => [...agents].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0) || a.id.localeCompare(b.id)),
+    [agents],
+  )
+  const current = ranked.find((item) => item.id === activeId) ?? ranked[0]
+  const identity = current ? resolveSessionMascot(current.id, current.mascot) : undefined
+
+  useEffect(() => {
+    if (!open) return
+    function onPointer(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    window.addEventListener('mousedown', onPointer)
+    return () => window.removeEventListener('mousedown', onPointer)
+  }, [open])
+
   return (
-    <div className="brand-corner-mascot" data-testid="brand-corner-mascot" aria-hidden>
-      <BrandMascot className="size-9" />
+    <div className="brand-corner-mascot" ref={rootRef} data-testid="brand-corner-mascot">
+      <button
+        type="button"
+        className="brand-corner-mascot-btn"
+        title={current ? current.title : '选择 Agent'}
+        aria-label={current ? `当前 Agent：${current.title}` : '选择 Agent'}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        data-testid="brand-corner-mascot-toggle"
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        {identity && current ? (
+          <SidebarMascot size={36} sessionId={current.id} identity={identity} animate={false} title={current.title} />
+        ) : (
+          <BrandMascot className="size-9" />
+        )}
+      </button>
+      {open ? (
+        <div className="brand-agent-menu" role="menu" data-testid="brand-agent-menu">
+          {ranked.length ? (
+            ranked.map((item) => {
+              const face = resolveSessionMascot(item.id, item.mascot)
+              const active = item.id === (activeId ?? current?.id)
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="menuitem"
+                  className={`inspector-catalog-item${active ? ' is-active' : ''}`}
+                  data-testid={`brand-agent-${item.id}`}
+                  onClick={() => {
+                    onSelect?.(item.id)
+                    setOpen(false)
+                  }}
+                >
+                  <SidebarMascot size={24} sessionId={item.id} identity={face} animate={false} title={item.title} />
+                  <span className="min-w-0 flex-1 truncate">
+                    {(item.type ?? 'chat') === 'live' ? <span className="mr-1 text-[9px] font-semibold tracking-wide uppercase">live</span> : null}
+                    {item.title}
+                  </span>
+                </button>
+              )
+            })
+          ) : (
+            <p className="inspector-catalog-empty">还没有 Agent</p>
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }

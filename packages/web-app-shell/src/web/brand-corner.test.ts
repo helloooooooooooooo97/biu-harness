@@ -8,7 +8,11 @@ const chat = readFileSync(resolve(import.meta.dirname, './chat-sidebar.tsx'), 'u
 
 test('brand mascot lives at the corner; sidebar head is title plus collapse', () => {
   assert.match(shell, /BrandCornerMascot/)
+  assert.match(shell, /onSelect/)
   assert.match(chat, /data-testid="sidebar-collapse"/)
   assert.match(chat, /Biu Agent OS/)
   assert.doesNotMatch(chat, /SidebarBrandMascot/)
+  const mascot = readFileSync(resolve(import.meta.dirname, '../../../web-mascot/src/web/brand-mascot.tsx'), 'utf8')
+  assert.match(mascot, /brand-agent-menu/)
+  assert.match(mascot, /brand-corner-mascot-toggle/)
 })

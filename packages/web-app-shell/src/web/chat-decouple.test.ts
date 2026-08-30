@@ -5,9 +5,9 @@ import assert from 'node:assert/strict'
 
 const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
 
-test('overlay chat coexists with the center chat and has no enlarge or sidebar buttons', () => {
+test('overlay chat is off on the agent page and on elsewhere', () => {
   assert.match(shell, /showCenter=\{activeModule === 'agent'\}/)
-  assert.match(shell, /floating/)
+  assert.match(shell, /floating=\{activeModule !== 'agent'\}/)
   assert.doesNotMatch(shell, /chat-overlay-toggle/)
   assert.doesNotMatch(shell, /toggleChatOverlay/)
   assert.doesNotMatch(shell, /放大聊天窗口/)

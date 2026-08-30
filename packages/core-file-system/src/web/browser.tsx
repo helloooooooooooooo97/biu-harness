@@ -1562,6 +1562,7 @@ export function CollectionBrowser({
                               setCrumbOpen(null)
                             }}
                           >
+                            <CrumbGlyph kind={choice.target.kind} />
                             {choice.label}
                           </button>
                         ))}
@@ -2268,7 +2269,7 @@ if (typeof document !== 'undefined') {
 .fsdb-crumb-btn:hover,.fsdb-crumb-btn.is-open{background:var(--dsw-hover);color:var(--dsw-sidebar-fg-active)}
 .fsdb-crumb-pick{position:relative;flex:none}
 .fsdb-crumb-menu{position:absolute;left:0;top:calc(100% + 4px);z-index:20;min-width:160px;max-height:240px;overflow:auto;border:1px solid var(--dsw-border);border-radius:8px;background:var(--dsw-surface);padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.16)}
-.fsdb-crumb-option{display:block;width:100%;border:0;border-radius:6px;background:transparent;padding:6px 8px;color:var(--dsw-label);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.fsdb-crumb-option{display:flex;width:100%;min-width:0;align-items:center;gap:6px;border:0;border-radius:6px;background:transparent;padding:6px 8px;color:var(--dsw-label);font:inherit;font-size:13px;text-align:left;cursor:pointer}
 .fsdb-crumb-option:hover,.fsdb-crumb-option.is-active{background:var(--dsw-hover)}
 .fsdb-inspector-panel{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden;background:var(--dsw-bg)}
 .fsdb-inspector-host{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}

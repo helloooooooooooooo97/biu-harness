@@ -9,6 +9,7 @@ import {
   folderNameFromPath,
   groupSessionsByProject,
   groupSessionsByTag,
+  mostRecentSessionId,
 } from './session-groups.ts'
 import type { SessionListItem } from './index.ts'
 
@@ -171,5 +172,16 @@ test('buildSidebarSections keeps a pinned section that holds pinned rows', () =>
   assert.deepEqual(
     sections[0]?.sessions?.map((r) => r.id),
     ['a'],
+  )
+})
+
+test('mostRecentSessionId prefers newest chat and ignores pin', () => {
+  assert.equal(
+    mostRecentSessionId([
+      item({ id: 'old', updatedAt: 1, pinned: true }),
+      item({ id: 'new', updatedAt: 9 }),
+      item({ id: 'live', updatedAt: 99, type: 'live' }),
+    ]),
+    'new',
   )
 })

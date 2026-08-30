@@ -289,8 +289,35 @@ body {
   position: fixed;
   right: 16px;
   bottom: 16px;
-  z-index: 40;
-  pointer-events: none;
+  z-index: 90;
+  pointer-events: auto;
+}
+
+.brand-corner-mascot-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.brand-agent-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 21;
+  min-width: 200px;
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid var(--dsw-border);
+  border-radius: 8px;
+  background: var(--dsw-surface);
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
 }
 
 /* 右侧检查器 tab：选中态与顶栏收起检查器按钮相同，无底边指示条 */

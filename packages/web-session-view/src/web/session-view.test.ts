@@ -684,3 +684,29 @@ test('forkCurrent inserts the child into the sidebar list', async () => {
   assert.equal(view.get().sessionId, 's2')
   assert.equal(view.get().sessions.some((item) => item.id === 's2'), true)
 })
+
+test('home and module routes open the most recently updated chat', async () => {
+  mockFetch({
+    '/api/sessions': () => ({
+      sessions: [
+        { id: 'old', title: 'old', eventCount: 1, updatedAt: 1 },
+        { id: 'new', title: 'new', eventCount: 1, updatedAt: 9 },
+      ],
+    }),
+    '/api/sessions/new?turns=': () => ({
+      id: 'new',
+      events: [{ type: 'session/open', version: 1, seq: 0, ts: 1 }],
+      hasMore: false,
+      totalTurns: 0,
+    }),
+    '/api/approvals': () => ({ mode: 'auto', pending: [] }),
+  })
+  const ctx = new Context()
+  await ctx.plugin(sessionView)
+  const view = ctx.sessionView as SessionViewService
+  await view.refreshSessions()
+  await view.applyRoute({ kind: 'home' })
+  assert.equal(view.get().sessionId, 'new')
+  await view.applyRoute({ kind: 'module', moduleId: 'database', path: '/database' })
+  assert.equal(view.get().sessionId, 'new')
+})

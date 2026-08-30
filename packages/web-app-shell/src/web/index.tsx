@@ -705,7 +705,14 @@ function Shell(props: SlotProps) {
       />
 
       <DanceStage sessions={danceSessions} on={dancing} shape={danceShape} />
-      <BrandCornerMascot />
+      <BrandCornerMascot
+        agents={danceSessions}
+        activeId={sessionId}
+        onSelect={(id) => {
+          if (activeModule === 'agent') navigate(`/s/${encodeURIComponent(id)}`)
+          else void sessionView.load(id, { view: 'chat' })
+        }}
+      />
 
       <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
         <div
@@ -715,7 +722,7 @@ function Shell(props: SlotProps) {
           <AgentMainPanels
             renderSlot={props.renderSlot}
             header={overlayHeader}
-            floating
+            floating={activeModule !== 'agent'}
             showCenter={activeModule === 'agent'}
             withSidebar={showChatSidebar}
             railOpen={railOpen || railPinned}
