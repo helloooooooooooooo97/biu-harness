@@ -156,10 +156,13 @@ test('面包屑点上级会清掉后面几级', () => {
   assert.equal(crumbs[0]!.label, 'Task')
   assert.equal(pathForCrumbTarget(crumbs[0]!.target), '/database/tasks')
   assert.equal(pathForCrumbTarget(crumbs[1]!.target), '/database/tasks/view/1787983501816')
-  const pages = crumbs[0]!.choices.find((item) => item.id === '/pages')
-  assert.equal(pathForCrumbTarget(pages!.target), '/database/pages')
-  assert.equal(pages!.icon, 'puzzle-piece')
+  assert.equal(crumbButtonAction(crumbs[0]!), 'menu')
+  const board = crumbs[0]!.choices.find((item) => item.id === 'board')
+  assert.equal(board?.label, '看板')
+  assert.equal(board?.mode, 'board')
+  assert.equal(pathForCrumbTarget(board!.target), '/database/tasks/view/board')
   assert.equal(crumbs[1]!.choices.find((item) => item.id === 'board')?.mode, 'board')
+  assert.ok(!crumbs[0]!.choices.some((item) => item.id === '/pages'))
 })
 
 test('记录页面包屑是表 / 视图 / 记录，点表只回到表', () => {
@@ -199,6 +202,7 @@ test('一项时点面包屑回到上一级，多项出菜单', () => {
   assert.equal(crumbs[2]!.choices[0]!.icon, 'clipboard')
   assert.equal(crumbButtonAction(crumbs[2]!, crumbs[1]!), crumbs[1]!.target)
   assert.equal(crumbButtonAction(crumbs[1]!, crumbs[0]!), crumbs[0]!.target)
+  assert.equal(crumbButtonAction(crumbs[0]!), 'menu')
   const many = buildCrumbs({
     collection: '/tasks',
     collectionLabel: 'Task',

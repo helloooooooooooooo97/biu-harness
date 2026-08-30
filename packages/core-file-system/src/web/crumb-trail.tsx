@@ -44,7 +44,8 @@ export function CrumbTrail({
   return (
     <nav className={className ?? 'fsdb-crumbs'} aria-label={label ?? '位置'} ref={navRef}>
       {crumbs.map((crumb, index) => {
-        const canPick = allowMenu && crumb.choices.length > 1
+        const canPick =
+          allowMenu && (crumb.kind === 'collection' ? crumb.choices.length > 0 : crumb.choices.length > 1)
         const open = openId === crumb.id
         const current = crumb.choices.find((item) => item.id === crumb.id)
         return (
@@ -86,7 +87,11 @@ export function CrumbTrail({
           </span>
         )
       })}
-      {allowMenu && openCrumb && openCrumb.choices.length > 1 && menuPos && typeof document !== 'undefined'
+      {allowMenu &&
+      openCrumb &&
+      (openCrumb.kind === 'collection' ? openCrumb.choices.length > 0 : openCrumb.choices.length > 1) &&
+      menuPos &&
+      typeof document !== 'undefined'
         ? createPortal(
             <div
               className="fsdb-crumb-menu is-fixed"
@@ -94,23 +99,31 @@ export function CrumbTrail({
               data-fsdb-crumb-menu=""
               style={{ left: menuPos.left, top: menuPos.top }}
             >
-              {openCrumb.choices.map((choice) => (
-                <button
-                  key={choice.id}
-                  type="button"
-                  className={`fsdb-crumb-option${choice.id === openCrumb.id ? ' is-active' : ''}`}
-                  role="menuitem"
-                  onClick={(event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                    onPick(choice.target)
-                    onOpenId(null)
-                  }}
-                >
-                  <CrumbItemGlyph kind={openCrumb.kind} icon={choice.icon} mode={choice.mode} emoji={choice.emoji} />
-                  <span className="chat-view-project-name">{choice.label}</span>
-                </button>
-              ))}
+              {openCrumb.choices.map((choice) => {
+                const viewId = crumbs.find((item) => item.kind === 'view')?.id
+                const active =
+                  choice.target.kind === 'view'
+                    ? choice.target.viewId === viewId
+                    : choice.id === openCrumb.id
+                const glyphKind = choice.target.kind === 'view' ? 'view' : openCrumb.kind
+                return (
+                  <button
+                    key={choice.id}
+                    type="button"
+                    className={`fsdb-crumb-option${active ? ' is-active' : ''}`}
+                    role="menuitem"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      onPick(choice.target)
+                      onOpenId(null)
+                    }}
+                  >
+                    <CrumbItemGlyph kind={glyphKind} icon={choice.icon} mode={choice.mode} emoji={choice.emoji} />
+                    <span className="chat-view-project-name">{choice.label}</span>
+                  </button>
+                )
+              })}
             </div>,
             document.body,
           )

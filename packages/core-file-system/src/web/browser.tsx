@@ -1443,6 +1443,12 @@ export function CollectionBrowser({
               openId={crumbOpen}
               onOpenId={setCrumbOpen}
               onPick={(target) => {
+                if (target.kind === 'view' && target.collection === collectionPath) {
+                  const view = views.find((item) => item.id === target.viewId)
+                  if (view) selectView(view)
+                  setCrumbOpen(null)
+                  return
+                }
                 onCrumbTarget?.(target)
                 setCrumbOpen(null)
               }}
