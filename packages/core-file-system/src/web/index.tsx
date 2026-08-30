@@ -5,7 +5,7 @@ import { CircleStackIcon } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/type-slots'
 import { DATABASE_CHANNEL, type CollectionInfo, type CollectionView } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
-import { buildAppPath, parseAppPath } from '@biu/web-session-view'
+import { buildAppPath, isLegacyDatabasePath, parseAppPath } from '@biu/web-session-view'
 import { CollectionBrowser } from './browser.tsx'
 import { DatabaseUiService } from './database-ui.ts'
 import {
@@ -81,10 +81,8 @@ function CollectionPage(props: SlotProps) {
   const viewFromRoute =
     parsed.kind === 'collection-view' || parsed.kind === 'record' ? parsed.viewId : undefined
   const recordFromRoute = parsed.kind === 'record' ? parsed.recordId : null
-  const currentPath = tables.some((item) => item.path === collectionFromRoute)
-    ? collectionFromRoute
-    : (tables[0]?.path ?? '')
-  const row = tables.find((item) => item.path === currentPath) ?? tables[0]
+  const currentPath = collectionFromRoute || tables[0]?.path || ''
+  const row = tables.find((item) => item.path === currentPath)
   const chrome = useSyncExternalStore(
     (fn) => (ui ? ui.subscribe(fn) : () => undefined),
     () => ui?.chrome(currentPath) ?? EMPTY_CHROME,
@@ -126,6 +124,19 @@ function CollectionPage(props: SlotProps) {
   }, [])
 
   useEffect(() => {
+    if (isLegacyDatabasePath(location.pathname) && (parsed.kind === 'collection-view' || parsed.kind === 'record')) {
+      go(
+        {
+          collection: parsed.collection,
+          viewId: parsed.viewId,
+          recordId: parsed.kind === 'record' ? parsed.recordId : null,
+        },
+        { replace: true },
+      )
+    }
+  }, [location.pathname, parsed])
+
+  useEffect(() => {
     if (!tables.length) return
     if (parsed.kind === 'module' && parsed.moduleId === DATA_MODULE_ID) {
       const first = tables[0]!
@@ -163,24 +174,26 @@ function CollectionPage(props: SlotProps) {
     }
   }, [chrome, parsed.kind, slots, ui])
 
-  if (!row) return null
+  if (!currentPath) return null
+  const title = row?.view?.title ?? row?.label ?? currentPath.replace(/^\//, '')
   return (
     <CollectionBrowser
+      key={`${currentPath}:${viewFromRoute ?? ''}`}
       moduleId={DATA_MODULE_ID}
-      collectionPath={row.path}
-      title={row.view?.title ?? row.label}
-      blurb={row.view?.blurb ?? ''}
+      collectionPath={currentPath}
+      title={title}
+      blurb={row?.view?.blurb ?? ''}
       chrome={chrome}
       tables={tables}
       databaseUi={ui}
       routeRecordId={recordFromRoute}
       routeViewId={viewFromRoute}
-      onOpenTable={(path) => go({ collection: path, viewId: defaultViewId(path) })}
-      onOpenView={(viewId) => go({ collection: row.path, viewId })}
+      onOpenTable={(path, viewId) => go({ collection: path, viewId: viewId ?? defaultViewId(path) })}
+      onOpenView={(viewId) => go({ collection: currentPath, viewId })}
       onOpenRecord={(recordId, viewId, collection) =>
-        go({ collection: collection ?? row.path, viewId: viewId ?? viewFromRoute, recordId })
+        go({ collection: collection ?? currentPath, viewId: viewId ?? viewFromRoute, recordId })
       }
-      onCloseRecord={() => go({ collection: row.path, viewId: viewFromRoute }, { replace: true })}
+      onCloseRecord={() => go({ collection: currentPath, viewId: viewFromRoute }, { replace: true })}
     />
   )
 }

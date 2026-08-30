@@ -21,6 +21,7 @@ export {
   routeFromState,
   centerKindFromRoute,
   parseDatabaseRest,
+  isLegacyDatabasePath,
   encodeCollectionSeg,
   decodeCollectionSeg,
 } from './session-route.ts'

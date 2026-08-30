@@ -4,6 +4,7 @@ import {
   buildAppPath,
   centerKindFromRoute,
   isKnownAppPath,
+  isLegacyDatabasePath,
   parseAppPath,
   routeFromState,
 } from '@biu/web-session-view'
@@ -41,26 +42,34 @@ test('parseAppPath covers home, session, and registered plugin modules', () => {
 })
 
 test('database nested routes identify view vs record without touching /s/:id', () => {
-  assert.deepEqual(parseAppPath('/database/c/pages', plugins), {
+  assert.deepEqual(parseAppPath('/database/pages', plugins), {
     kind: 'collection-view',
     moduleId: 'database',
     path: '/database',
     collection: '/pages',
     viewId: undefined,
   })
-  assert.deepEqual(parseAppPath('/database/c/pages/v/default', plugins), {
+  assert.deepEqual(parseAppPath('/database/pages/view/default', plugins), {
     kind: 'collection-view',
     moduleId: 'database',
     path: '/database',
     collection: '/pages',
     viewId: 'default',
   })
-  assert.deepEqual(parseAppPath('/database/c/pages/r/rec-1', plugins), {
+  assert.deepEqual(parseAppPath('/database/pages/record/rec-1', plugins), {
     kind: 'record',
     moduleId: 'database',
     path: '/database',
     collection: '/pages',
     viewId: undefined,
+    recordId: 'rec-1',
+  })
+  assert.deepEqual(parseAppPath('/database/pages/view/board/record/rec-1', plugins), {
+    kind: 'record',
+    moduleId: 'database',
+    path: '/database',
+    collection: '/pages',
+    viewId: 'board',
     recordId: 'rec-1',
   })
   assert.deepEqual(parseAppPath('/database/c/pages/v/board/r/rec-1', plugins), {
@@ -71,6 +80,8 @@ test('database nested routes identify view vs record without touching /s/:id', (
     viewId: 'board',
     recordId: 'rec-1',
   })
+  assert.equal(isLegacyDatabasePath('/database/c/pages/v/x'), true)
+  assert.equal(isLegacyDatabasePath('/database/pages/view/x'), false)
   assert.equal(parseAppPath('/s/rec-1', plugins).kind, 'session')
 })
 
@@ -83,7 +94,7 @@ test('isKnownAppPath only accepts builtins plus registered plugin paths', () => 
   assert.equal(isKnownAppPath('/workspace'), false)
   assert.equal(isKnownAppPath('/s/abc'), true)
   assert.equal(isKnownAppPath('/unknown'), false)
-  assert.equal(isKnownAppPath('/database/c/pages/v/x', plugins), true)
+  assert.equal(isKnownAppPath('/database/pages/view/x', plugins), true)
 })
 
 test('buildAppPath round-trips with parseAppPath', () => {

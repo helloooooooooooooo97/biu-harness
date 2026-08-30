@@ -139,10 +139,13 @@ function draftFromRecord(schema: CollectionSchema, row: DbRecord, bodyKey: strin
   return next
 }
 
-function viewForPath(collectionPath: string): SavedView | null {
+function viewForPath(collectionPath: string, routeViewId?: string): SavedView | null {
   const listed = loadViews(collectionPath)
-  const view = listed.find((item) => item.id === loadActiveViewId(collectionPath, listed)) ?? listed[0]
-  return view ? normalizeSavedView(view) : null
+  const preferred =
+    (routeViewId ? listed.find((item) => item.id === routeViewId) : undefined) ??
+    listed.find((item) => item.id === loadActiveViewId(collectionPath, listed)) ??
+    listed[0]
+  return preferred ? normalizeSavedView(preferred) : null
 }
 
 function isListColumn(key: string) {
@@ -452,7 +455,7 @@ export function CollectionBrowser({
   blurb: string
   chrome?: CollectionChrome
   tables?: CollectionInfo[]
-  onOpenTable?: (path: string) => void
+  onOpenTable?: (path: string, viewId?: string) => void
   databaseUi?: DatabaseUiService
   routeRecordId?: string | null
   routeViewId?: string
@@ -467,7 +470,7 @@ export function CollectionBrowser({
   const [detailBody, setDetailBody] = useState<unknown>(null)
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [busyKey, setBusyKey] = useState<string | null>(null)
-  const initialView = viewForPath(collectionPath)
+  const initialView = viewForPath(collectionPath, routeViewId)
   const [query, setQuery] = useState(initialView?.query ?? '')
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(() => normalizePageSize(initialView?.pageSize))
@@ -654,7 +657,7 @@ export function CollectionBrowser({
     hydratePath.current = ''
     setCollapsed({})
     hydratedDetail.current = ''
-    const stored = viewForPath(collectionPath)
+    const stored = viewForPath(collectionPath, routeViewId)
     if (stored) {
       setViews(loadViews(collectionPath))
       setActiveViewId(stored.id)
@@ -674,7 +677,7 @@ export function CollectionBrowser({
       setQuery('')
       setFilters({})
     }
-  }, [collectionPath])
+  }, [collectionPath, routeViewId])
 
   useEffect(() => {
     let debounce = 0
@@ -913,9 +916,9 @@ export function CollectionBrowser({
 
   useEffect(() => {
     if (!routeViewId) return
-    const view = views.find((item) => item.id === routeViewId)
+    const view = viewsRef.current.find((item) => item.id === routeViewId) ?? views.find((item) => item.id === routeViewId)
     if (view) applyView(view)
-  }, [collectionPath, routeViewId])
+  }, [collectionPath, routeViewId, views])
 
   function commitView(view: SavedView) {
     persistViews([...views, view])
@@ -1380,7 +1383,10 @@ export function CollectionBrowser({
       ]
     }
     persistViews(next)
-    const view = next.find((item) => item.id === loadActiveViewId(collectionPath, next)) ?? next[0]
+    const view =
+      next.find((item) => item.id === routeViewId) ??
+      next.find((item) => item.id === loadActiveViewId(collectionPath, next)) ??
+      next[0]
     applyView(view)
     setHydrated(true)
   }, [allColumnKeys, collectionPath, schema, schemaDefaultKeys])

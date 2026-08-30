@@ -318,7 +318,7 @@ export const DataSidebar = memo(function DataSidebar({
   title: string
   views: SavedView[]
   activeViewId: string | null
-  onOpenTable?: (path: string) => void
+  onOpenTable?: (path: string, viewId?: string) => void
   onApplyView: (view: SavedView) => void
   onRenameView: (view: SavedView) => void
   onDeleteView: (view: SavedView) => void
@@ -399,7 +399,7 @@ export const DataSidebar = memo(function DataSidebar({
     const listed = viewsFor(path)
     const view = listed.find((item) => item.id === viewId)
     if (path !== collectionPath) {
-      onOpenTable?.(path)
+      onOpenTable?.(path, viewId)
       return
     }
     if (view) onApplyView(view)

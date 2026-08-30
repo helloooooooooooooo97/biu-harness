@@ -2,10 +2,11 @@
  * `/` | `/s/:id` | `/s/:id/debug` | 插件 path
  * 数据模块（默认 `/database`）：
  *   `/database` 集合入口
- *   `/database/c/:collection` 集合默认/当前视图
- *   `/database/c/:collection/v/:viewId` 已保存视图
- *   `/database/c/:collection/r/:recordId` 记录（中心页）
- *   `/database/c/:collection/v/:viewId/r/:recordId` 从某视图打开的记录（后退回视图）
+ *   `/database/:collection` 集合（默认/当前视图）
+ *   `/database/:collection/view/:viewId` 已保存视图
+ *   `/database/:collection/record/:recordId` 记录（中心页）
+ *   `/database/:collection/view/:viewId/record/:recordId` 从某视图打开的记录（后退回视图）
+ * 旧写法 `/database/c/.../v/.../r/...` 仍能解析，写入时改成上面这种。
  * `:collection` 为集合 path 去掉前导 `/` 再 encode（`/pages` → `pages`）。
  * 记录 id / 视图 id 不进聊天路由 `/s/:id`。
  */
@@ -22,7 +23,8 @@ export type AppRoute =
   | { kind: 'collection-view'; moduleId: string; path: string; collection: string; viewId?: string }
   | { kind: 'record'; moduleId: string; path: string; collection: string; viewId?: string; recordId: string }
 
-const DATABASE_SEG = /^\/c\/([^/]+)(?:\/v\/([^/]+))?(?:\/r\/([^/]+))?$/
+const DATABASE_SEG =
+  /^\/(?:c\/)?([^/]+)(?:\/(?:v|view)\/([^/]+))?(?:\/(?:r|record)\/([^/]+))?$/
 
 export function encodeCollectionSeg(path: string) {
   return encodeURIComponent(normalizeCollectionKey(path).replace(/^\//, ''))
@@ -39,6 +41,14 @@ export function normalizeCollectionKey(path: string) {
   const withSlash = raw.startsWith('/') ? raw : `/${raw}`
   if (withSlash === '/') return '/'
   return withSlash.replace(/\/+$/, '') || '/'
+}
+
+export function isLegacyDatabasePath(pathname: string, modulePath = '/database') {
+  const path = normalizePath(pathname)
+  const base = normalizePath(modulePath)
+  if (path === base || !path.startsWith(`${base}/`)) return false
+  const rest = path.slice(base.length)
+  return /^\/c\//.test(rest) || /\/(?:v|r)\//.test(rest)
 }
 
 export function parseDatabaseRest(pathname: string, module: AppModule): AppRoute | null {
@@ -89,9 +99,9 @@ export function buildAppPath(route: AppRoute): string {
   if (route.kind === 'module') return route.path || `/${route.moduleId}`
   if (route.kind === 'collection-view' || route.kind === 'record') {
     const base = route.path || `/${route.moduleId}`
-    let next = `${normalizePath(base)}/c/${encodeCollectionSeg(route.collection)}`
-    if (route.viewId) next += `/v/${encodeURIComponent(route.viewId)}`
-    if (route.kind === 'record') next += `/r/${encodeURIComponent(route.recordId)}`
+    let next = `${normalizePath(base)}/${encodeCollectionSeg(route.collection)}`
+    if (route.viewId) next += `/view/${encodeURIComponent(route.viewId)}`
+    if (route.kind === 'record') next += `/record/${encodeURIComponent(route.recordId)}`
     return next
   }
   if (route.view === 'debug') return `/s/${encodeURIComponent(route.sessionId)}/debug`
