@@ -1041,22 +1041,26 @@ export function CollectionBrowser({
     if (!openDetail && !tree) return body
     return (
       <div className="tasks-title-cell" style={tree ? { paddingLeft: depth * 16 } : undefined}>
-        {tree && hasKids ? (
-          <button
-            type="button"
-            className="tasks-tree-toggle"
-            aria-label={collapsed[row.id] ? '展开子记录' : '收起子记录'}
-            onClick={(event) => {
-              event.stopPropagation()
-              setCollapsed((prev) => ({ ...prev, [row.id]: !prev[row.id] }))
-            }}
-          >
-            {collapsed[row.id] ? (
-              <ChevronRightIcon aria-hidden className="size-[14px]" />
-            ) : (
-              <ChevronDownIcon aria-hidden className="size-[14px]" />
-            )}
-          </button>
+        {tree ? (
+          hasKids ? (
+            <button
+              type="button"
+              className="tasks-tree-toggle"
+              aria-label={collapsed[row.id] ? '展开子记录' : '收起子记录'}
+              onClick={(event) => {
+                event.stopPropagation()
+                setCollapsed((prev) => ({ ...prev, [row.id]: !prev[row.id] }))
+              }}
+            >
+              {collapsed[row.id] ? (
+                <ChevronRightIcon aria-hidden className="size-[14px]" />
+              ) : (
+                <ChevronDownIcon aria-hidden className="size-[14px]" />
+              )}
+            </button>
+          ) : (
+            <span className="tasks-tree-toggle is-empty" aria-hidden />
+          )
         ) : null}
         <span className="fsdb-title-text">{body}</span>
         {openDetail ? (

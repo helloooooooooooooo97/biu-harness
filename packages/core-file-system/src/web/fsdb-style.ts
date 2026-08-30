@@ -105,7 +105,8 @@ const CSS = `
 .fsdb-page .tasks-title-cell{display:flex;align-items:center;gap:2px;min-width:0}
 .fsdb-page .tasks-tree-toggle{width:20px;height:20px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--dsw-label-3);border-radius:4px;cursor:pointer;padding:0}
 .fsdb-page .tasks-tree-toggle:hover{background:var(--dsw-hover)}
-.fsdb-page .tasks-tree-toggle.is-empty{cursor:default}
+.fsdb-page .tasks-tree-toggle.is-empty{cursor:default;pointer-events:none}
+.fsdb-page .tasks-tree-toggle.is-empty:hover{background:transparent}
 .fsdb-page .fsdb-title-text{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .fsdb-page .tasks-table.is-wrap .fsdb-title-text{white-space:normal}
 .fsdb-page .tasks-title-open{flex:none;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--dsw-label-3);border-radius:4px;cursor:pointer;padding:0;opacity:0}

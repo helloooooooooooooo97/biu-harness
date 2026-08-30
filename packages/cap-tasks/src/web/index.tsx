@@ -2852,7 +2852,9 @@ function TasksTable({
                     >
                       {collapsed[task.id] ? <ChevronRightIcon aria-hidden className="size-[14px]" /> : <ChevronDownIcon aria-hidden className="size-[14px]" />}
                     </button>
-                  ) : null}
+                  ) : (
+                    <span className="tasks-tree-toggle is-empty" aria-hidden />
+                  )}
                   <input
                     className="tasks-cell-input"
                     defaultValue={task.title}
@@ -3919,7 +3921,8 @@ if (typeof document !== 'undefined') {
 .tasks-title-open:hover { opacity:1; color:var(--dsw-label); background:var(--dsw-hover); }
 .tasks-tree-toggle { width:20px; height:20px; flex:none; display:inline-flex; align-items:center; justify-content:center; border:0; background:transparent; color:var(--dsw-label-3); border-radius:4px; cursor:pointer; padding:0; }
 .tasks-tree-toggle:hover { background:var(--dsw-hover); }
-.tasks-tree-toggle.is-empty { cursor:default; }
+.tasks-tree-toggle.is-empty { cursor:default; pointer-events:none; }
+.tasks-tree-toggle.is-empty:hover { background:transparent; }
 .tasks-col-tags { width:130px; }
 .tasks-col-project { width:150px; min-width:150px; }
 .tasks-col-project .tasks-proj-tag { max-width:100%; overflow:hidden; text-overflow:ellipsis; display:inline-block; }
