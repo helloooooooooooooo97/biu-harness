@@ -4,6 +4,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 
 const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf8')
+const detail = readFileSync(resolve(import.meta.dirname, './record-detail.tsx'), 'utf8')
 
 test('data sidebar brand sits left with a collapse control on the right', () => {
   const sidebar = readFileSync(resolve(import.meta.dirname, './data-sidebar.tsx'), 'utf8')
@@ -58,8 +59,10 @@ test('database extras sit after the record detail, not in the inspector', () => 
   assert.doesNotMatch(page, /slots\.place\('inspector-panels'/)
   assert.doesNotMatch(page, /RecordPanePanel/)
   assert.doesNotMatch(page, /fsdb-database-browse/)
-  assert.match(browser, /fsdb-detail-extras/)
-  assert.match(browser, /data-testid=\{`fsdb-pane-\$\{pane\.id\}`\}/)
+  assert.match(detail, /fsdb-detail-extras/)
+  assert.match(detail, /data-testid=\{`fsdb-pane-\$\{pane\.id\}`\}/)
+  assert.doesNotMatch(browser, /embed \?/)
+  assert.doesNotMatch(browser, /setRecordFocus/)
 })
 
 test('switching tables does not remount the whole browser', () => {
@@ -67,8 +70,8 @@ test('switching tables does not remount the whole browser', () => {
   assert.doesNotMatch(page, /key=\{currentPath\}/)
 })
 
-test('inspector embed does not poll the collection every 20s', () => {
-  assert.match(browser, /const timer = embed/)
+test('list polling pauses while a record is open', () => {
+  assert.match(browser, /if \(detailIdRef\.current\) return/)
   assert.match(browser, /}, 20000\)/)
 })
 

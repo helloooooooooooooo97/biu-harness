@@ -1,0 +1,160 @@
+import type { ReactNode, Dispatch, SetStateAction } from 'react'
+import type { CollectionChrome } from '@biu/type-file-system/ui'
+import type { CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
+import { HashtagIcon } from '@heroicons/react/16/solid'
+import { contentFieldKey, formatField, resolveFieldType, uniqueValues } from './fields.ts'
+import { LocalText } from './controls.tsx'
+import { FieldEditor, FieldGlyph, FilePreview } from './fsdb-cells.tsx'
+
+export function RecordDetail({
+  selected,
+  schema,
+  chrome,
+  draft,
+  items,
+  detailBody,
+  labelOf,
+  renderCell,
+  setDraft,
+  writeOne,
+  writePatch,
+}: {
+  selected: DbRecord
+  schema: CollectionSchema
+  chrome?: CollectionChrome
+  draft: Record<string, string>
+  items: DbRecord[]
+  detailBody: unknown
+  labelOf: (row: DbRecord) => string
+  renderCell: (row: DbRecord, key: string, field: FieldSpec) => ReactNode
+  setDraft: Dispatch<SetStateAction<Record<string, string>>>
+  writeOne: (row: DbRecord, key: string, field: FieldSpec, raw: string) => Promise<unknown> | void
+  writePatch: (row: DbRecord, patch: Record<string, unknown>) => Promise<unknown> | void
+}) {
+  return (
+<div className="fsdb-detail-stage">
+          <div className="fsdb-detail-screen" role="main" aria-label="记录详情">
+            <div className="fsdb-detail-split">
+              <div className="fsdb-detail-main">
+                {schema.labelField && schema.fields[schema.labelField]?.writable ? (
+                  <LocalText
+                    as="textarea"
+                    className="fsdb-detail-title-input"
+                    value={draft[schema.labelField] ?? ''}
+                    rows={(draft[schema.labelField] ?? '').length > 48 ? 2 : 1}
+                    onCommit={(raw) => {
+                      const next = raw.trim()
+                      setDraft((prev) => ({ ...prev, [schema.labelField!]: next }))
+                      if (next && next !== String(selected[schema.labelField!] ?? '')) {
+                        void writeOne(selected, schema.labelField!, schema.fields[schema.labelField!]!, next)
+                      }
+                    }}
+                  />
+                ) : (
+                  <h2 className="fsdb-detail-title-input">{labelOf(selected)}</h2>
+                )}
+                <div className="fsdb-detail-aside">
+                  <div className="fsdb-prop">
+                    <span>
+                      <HashtagIcon aria-hidden className="size-[14px]" />
+                      ID
+                    </span>
+                    <span className="fsdb-detail-id" title={selected.id}>
+                      {selected.id}
+                    </span>
+                  </div>
+                  {Object.entries(schema.fields).map(([key, field]) => {
+                    if (key === 'id' || key === schema.labelField || key === contentFieldKey(schema)) return null
+                    const kind = resolveFieldType(field)
+                    return (
+                      <div key={key} className="fsdb-prop">
+                        <span title={field.label ?? key}>
+                          <FieldGlyph kind={kind} />
+                          {field.label ?? key}
+                        </span>
+                        <div className="fsdb-prop-val" title={formatField(field, selected[key])}>
+                        {field.writable ? (
+                          <FieldEditor
+                            fieldKey={key}
+                            field={field}
+                            value={draft[key] ?? ''}
+                            options={uniqueValues(items, key, field)}
+                            onChange={(next) => {
+                              setDraft((prev) => ({ ...prev, [key]: next }))
+                              void writeOne(selected, key, field, next)
+                            }}
+                          />
+                        ) : (
+                          renderCell(selected, key, field)
+                        )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                {contentFieldKey(schema) && schema.fields[contentFieldKey(schema)!] ? (() => {
+                  const key = contentFieldKey(schema)!
+                  const spec = schema.fields[key]!
+                  const ContentView = chrome?.Content
+                  if (ContentView) {
+                    return (
+                      <div className="fsdb-fileview">
+                        <ContentView
+                          record={selected}
+                          field={key}
+                          spec={spec}
+                          value={detailBody}
+                          writable={spec.writable}
+                          onChange={(next) => void writePatch(selected, { [key]: next })}
+                        />
+                      </div>
+                    )
+                  }
+                  if (spec.writable) {
+                    const saved =
+                      typeof detailBody === 'string' || detailBody == null
+                        ? String(detailBody ?? '')
+                        : JSON.stringify(detailBody, null, 2)
+                    return (
+                      <LocalText
+                        as="textarea"
+                        className="fsdb-detail-doc"
+                        value={draft[key] ?? saved}
+                        rows={12}
+                        placeholder="内容：文本，或 JSON 文件"
+                        onCommit={(next) => {
+                          setDraft((prev) => ({ ...prev, [key]: next }))
+                          if (next !== saved) void writeOne(selected, key, spec, next)
+                        }}
+                      />
+                    )
+                  }
+                  return (
+                    <div className="fsdb-fileview">
+                      <FilePreview value={detailBody} />
+                    </div>
+                  )
+                })() : null}
+                {chrome?.panes?.length ? (
+                  <div className="fsdb-detail-extras">
+                    {chrome.panes.map((pane) => {
+                      const Pane = pane.Pane
+                      const count = pane.badge?.(selected)
+                      return (
+                        <section key={pane.id} className="fsdb-detail-extra" data-testid={`fsdb-pane-${pane.id}`}>
+                          <h3 className="fsdb-detail-extra-title">
+                            {pane.label}
+                            {count ? <span className="fsdb-detail-extra-count">{count}</span> : null}
+                          </h3>
+                          <Pane record={selected} />
+                        </section>
+                      )
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+  )
+}

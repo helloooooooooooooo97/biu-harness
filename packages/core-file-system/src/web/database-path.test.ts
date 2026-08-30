@@ -1,7 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { parseAppPath } from '@biu/web-session-view'
-import { databaseRecordPath, databaseViewPath } from './inspector-nav.ts'
+import { databaseRecordPath, databaseViewPath } from './database-path.ts'
 
 const plugins = [{ id: 'database', label: '数据', path: '/database' }]
 

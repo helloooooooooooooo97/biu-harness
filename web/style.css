@@ -501,19 +501,6 @@ body {
   z-index: 90;
 }
 
-.inspector-database-rail.fsdb-views {
-  width: 100%;
-  flex: 1;
-  min-height: 0;
-  border-right: 0;
-}
-
-.inspector-database-page {
-  width: 100%;
-  min-height: 0;
-  flex: 1;
-}
-
 .inspector-catalog {
   display: flex;
   min-height: 0;
