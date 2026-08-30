@@ -146,6 +146,15 @@ export const SessionInspector = memo(function SessionInspector({
   )
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
+  useEffect(() => {
+    setOpened(readOpened(sessionId))
+    try {
+      setTabState(localStorage.getItem(inspectorTabStorageKey(sessionId)) ?? '')
+    } catch {
+      setTabState('')
+    }
+  }, [sessionId])
+
   const focusTabId = extraTabs.find((item) => item.focusOnCall)?.id
   useEffect(() => {
     if (focusCallId && focusTabId) {
@@ -227,7 +236,7 @@ export const SessionInspector = memo(function SessionInspector({
     if (!item) return []
     return [{ ...item, id: openedId }]
   })
-  const extraActive = headerTabs.find((item) => item.id === tab) ?? displayTabs.find((item) => item.id === tab)
+  const extraActive = headerTabs.find((item) => item.id === tab)
   const ExtraComponent = extraActive?.entry.Component
 
   function pickOffer(item: (typeof extraTabs)[number]) {

@@ -22,6 +22,7 @@ test('plus menu can add another database tab', () => {
   assert.match(inspector, /slotTabId/)
   assert.match(inspector, /paneId=\{item.id\}/)
   assert.match(inspector, /paneId=\{extraActive.id\}/)
+  assert.doesNotMatch(inspector, /displayTabs.find\(\(item\) => item.id === tab\)/)
   assert.match(inspector, /inspector-add-trash/)
   assert.match(inspector, /closeOpenedTab/)
   assert.match(inspector, /item.repeatable/)

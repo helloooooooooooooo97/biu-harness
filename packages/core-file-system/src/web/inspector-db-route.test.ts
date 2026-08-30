@@ -2,6 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import {
   getInspectorDbPath,
+  isInspectorDatabasePath,
   seedInspectorDbPath,
   setInspectorDbPath,
 } from './inspector-db-route.ts'
@@ -14,6 +15,16 @@ test('inspector database path does not overwrite after first seed', () => {
   assert.equal(getInspectorDbPath(), '/database/pages')
   setInspectorDbPath('/database/tasks')
   assert.equal(getInspectorDbPath(), '/database/tasks')
+})
+
+test('chat routes are not seeded as inspector database paths', () => {
+  setInspectorDbPath('')
+  assert.equal(isInspectorDatabasePath('/s/abc'), false)
+  assert.equal(isInspectorDatabasePath('/database/pages'), true)
+  seedInspectorDbPath('/s/abc')
+  assert.equal(getInspectorDbPath(), '')
+  seedInspectorDbPath('/database/pages')
+  assert.equal(getInspectorDbPath(), '/database/pages')
 })
 
 test('each inspector database pane keeps its own path', () => {

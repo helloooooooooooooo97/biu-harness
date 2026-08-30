@@ -12,6 +12,7 @@ import { loadActiveViewId, loadRecords, loadViews } from './view-storage.ts'
 import { databaseRecordPath, databaseViewPath } from './inspector-nav.ts'
 import {
   getInspectorDbPath,
+  isInspectorDatabasePath,
   seedInspectorDbPath,
   setInspectorDbPath,
   subscribeInspectorDbPath,
@@ -80,6 +81,29 @@ function useInspectorDbPath(paneId: string) {
   )
 }
 
+function defaultInspectorDbPath(tables: CollectionInfo[]) {
+  const first = tables[0]
+  if (!first?.path) return ''
+  return databaseViewPath(first.path, loadActiveViewId(first.path, loadViews(first.path)) ?? undefined)
+}
+
+function useBindInspectorDbPath(paneId: string, tables: CollectionInfo[]) {
+  const location = useLocation()
+  const inspectorPath = useInspectorDbPath(paneId)
+  useEffect(() => {
+    if (inspectorPath) return
+    if (isInspectorDatabasePath(location.pathname)) {
+      seedInspectorDbPath(paneId, location.pathname)
+      return
+    }
+    const fallback = defaultInspectorDbPath(tables)
+    if (fallback) setInspectorDbPath(paneId, fallback)
+  }, [inspectorPath, location.pathname, paneId, tables])
+  if (inspectorPath) return inspectorPath
+  if (isInspectorDatabasePath(location.pathname)) return location.pathname
+  return ''
+}
+
 function crumbsForRoute(
   pathname: string,
   tables: CollectionInfo[],
@@ -129,14 +153,15 @@ export function DatabaseInspectorTab({
   paneId?: string
 }) {
   const id = paneOf({ paneId })
-  const location = useLocation()
-  const inspectorPath = useInspectorDbPath(id)
+  const collections = useInspectorCollections()
+  const tables = useMemo(
+    () => collections.filter((row) => row.path && row.path !== '/'),
+    [collections],
+  )
+  const inspectorPath = useBindInspectorDbPath(id, tables)
   const [crumbOpen, setCrumbOpen] = useState<string | null>(null)
   const crumbRef = useRef<HTMLElement>(null)
   useViewTick()
-  useEffect(() => {
-    seedInspectorDbPath(id, location.pathname)
-  }, [id, location.pathname])
   useEffect(() => {
     function onPointer(event: globalThis.MouseEvent) {
       const target = event.target as Node
@@ -147,12 +172,7 @@ export function DatabaseInspectorTab({
     document.addEventListener('mousedown', onPointer)
     return () => document.removeEventListener('mousedown', onPointer)
   }, [])
-  const collections = useInspectorCollections()
-  const tables = useMemo(
-    () => collections.filter((row) => row.path && row.path !== '/'),
-    [collections],
-  )
-  const { crumbs } = crumbsForRoute(inspectorPath || location.pathname, tables)
+  const { crumbs } = crumbsForRoute(inspectorPath, tables)
   const leaf = crumbs.at(-1)
   const leafChoice = leaf?.choices.find((item) => item.id === leaf.id)
   useEffect(() => {
@@ -207,20 +227,15 @@ export function DatabaseInspectorTab({
 export function DatabaseInspectorBrowse(props: SlotProps) {
   const id = paneOf(props)
   const ui = getDatabaseUi()
-  const location = useLocation()
-  const inspectorPath = useInspectorDbPath(id)
-  useViewTick()
-  useEffect(() => {
-    seedInspectorDbPath(id, location.pathname)
-  }, [id, location.pathname])
   const collections = useInspectorCollections()
   const tables = useMemo(
     () => collections.filter((row) => row.path && row.path !== '/'),
     [collections],
   )
-  const pathname = inspectorPath || location.pathname
-  const { collection, viewId, recordId } = crumbsForRoute(pathname, tables)
-  const currentPath = collection || tables[0]?.path || ''
+  const inspectorPath = useBindInspectorDbPath(id, tables)
+  useViewTick()
+  const { collection, viewId, recordId } = crumbsForRoute(inspectorPath, tables)
+  const currentPath = collection
   const table = tables.find((item) => item.path === currentPath)
   const title = table ? tableLabel(table) : '数据'
   const chrome = useSyncExternalStore(

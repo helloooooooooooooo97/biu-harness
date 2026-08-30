@@ -15,24 +15,35 @@ function bump() {
   for (const fn of listeners) fn()
 }
 
+export function isInspectorDatabasePath(pathname: string) {
+  const path = String(pathname || '').split('?')[0]
+  return path === '/database' || path.startsWith('/database/')
+}
+
+function panePath(paneId = DEFAULT_PANE) {
+  const path = paths.get(paneId) ?? ''
+  return isInspectorDatabasePath(path) ? path : ''
+}
+
 export function getInspectorDbPath(paneId = DEFAULT_PANE) {
-  return paths.get(paneId) ?? ''
+  return panePath(paneId)
 }
 
 export function setInspectorDbPath(paneId: string, next?: string) {
   const id = next === undefined ? DEFAULT_PANE : paneId
   const path = next === undefined ? paneId : next
-  if ((paths.get(id) ?? '') === path) return
-  if (!path) paths.delete(id)
-  else paths.set(id, path)
+  const stored = isInspectorDatabasePath(path) ? path : ''
+  if ((paths.get(id) ?? '') === stored) return
+  if (!stored) paths.delete(id)
+  else paths.set(id, stored)
   bump()
 }
 
 export function seedInspectorDbPath(paneId: string, pathname?: string) {
   const id = pathname === undefined ? DEFAULT_PANE : paneId
   const path = pathname === undefined ? paneId : pathname
-  if (paths.get(id)) return
-  if (!path) return
+  if (panePath(id)) return
+  if (!isInspectorDatabasePath(path)) return
   paths.set(id, path)
   bump()
 }
