@@ -176,7 +176,7 @@ function CollectionPage(props: SlotProps) {
   const title = row?.view?.title ?? row?.label ?? currentPath.replace(/^\//, '')
   return (
     <CollectionBrowser
-      key={`${currentPath}:${viewFromRoute ?? ''}`}
+      key={currentPath}
       moduleId={DATA_MODULE_ID}
       collectionPath={currentPath}
       title={title}

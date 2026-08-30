@@ -410,7 +410,6 @@ export const DataSidebar = memo(function DataSidebar({
   }
 
   function openRecord(path: string, view: SavedView, recordId: string) {
-    openView(path, view.id)
     onOpenRecord?.(path, view, recordId)
   }
 
