@@ -1486,11 +1486,6 @@ export function CollectionBrowser({
         <div className="tasks-main fsdb-main">
         <div className="tasks-toolbar" data-biu-ignore>
           <div className="tasks-toolbar-left">
-            {canCreate ? (
-              <button type="button" className="tasks-sort-btn" aria-label="新建记录" title="新建" onClick={() => void createRecord()}>
-                <PlusIcon aria-hidden className="size-[14px]" />
-              </button>
-            ) : null}
             <div className="tasks-viewdd-wrap" ref={viewRef}>
               <button
                 type="button"
@@ -1830,6 +1825,18 @@ export function CollectionBrowser({
                 </span>
               ) : null}
             </div>
+            {canCreate ? (
+              <button
+                type="button"
+                className="fsdb-create-btn"
+                aria-label="新建记录"
+                title="新建"
+                onClick={() => void createRecord()}
+              >
+                <PlusIcon aria-hidden className="size-[14px]" />
+                新建
+              </button>
+            ) : null}
           </div>
         </div>
 

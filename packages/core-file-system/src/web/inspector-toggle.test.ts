@@ -48,6 +48,18 @@ test('table title opens record from the title-side button', () => {
   assert.doesNotMatch(browser, /recordPick\(row\)\} onClick=\{\(\) => setDetailId\(row\.id\)\}/)
 })
 
+test('create record sits at the right of the toolbar with a blue label', () => {
+  assert.match(browser, /className="fsdb-create-btn"/)
+  assert.match(browser, /新建记录/)
+  assert.match(browser, /<PlusIcon[\s\S]*新建/)
+  assert.doesNotMatch(
+    browser,
+    /className="tasks-toolbar-left"[\s\S]*?aria-label="新建记录"[\s\S]*?className="tasks-toolbar-right"/,
+  )
+  const css = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8')
+  assert.match(css, /\.fsdb-create-btn\{[^}]*background:#4B90F6/)
+})
+
 test('filesystem header expands the shared left sidebar and toggles the right inspector', () => {
   assert.match(browser, /cordis\.sidebar\.collapsed/)
   assert.match(browser, /!viewsOpen \?/)
