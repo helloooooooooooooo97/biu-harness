@@ -83,7 +83,6 @@ function ModuleRail({
   pinned,
   onTogglePin,
   onSettings,
-  onAgentRailClick,
 }: {
   active: string
   agentHref: string
@@ -91,7 +90,6 @@ function ModuleRail({
   pinned: boolean
   onTogglePin: () => void
   onSettings: () => void
-  onAgentRailClick: (alreadyActive: boolean) => void
 }) {
   return (
     <nav className="app-activity-bar" aria-label="Activity bar" data-biu-ignore>
@@ -108,17 +106,11 @@ function ModuleRail({
               aria-label={module.label}
               aria-current={isActive ? 'page' : undefined}
               onClick={
-                module.id === 'agent'
+                isActive
                   ? (event) => {
-                      if (isActive) event.preventDefault()
-                      onAgentRailClick(isActive)
+                      event.preventDefault()
                     }
-                  : isActive
-                    ? (event) => {
-                        event.preventDefault()
-                        window.dispatchEvent(new CustomEvent('biu:toggle-module-sidebar', { detail: { id: module.id } }))
-                      }
-                    : undefined
+                  : undefined
               }
             >
               <span className="app-activity-indicator" aria-hidden />
@@ -132,9 +124,10 @@ function ModuleRail({
         <button
           type="button"
           className={`app-activity-item app-activity-pin${pinned ? ' is-active' : ''}`}
-          title={pinned ? '取消固定导航' : '固定导航'}
-          aria-label={pinned ? '取消固定导航' : '固定导航'}
+          title={pinned ? '取消固定左侧导航' : '固定左侧导航'}
+          aria-label={pinned ? '取消固定左侧导航' : '固定左侧导航'}
           aria-pressed={pinned}
+          data-testid="activity-rail-pin"
           onClick={onTogglePin}
         >
           <MapPinIcon {...chromeIcon} />
@@ -668,12 +661,6 @@ function Shell(props: SlotProps) {
     inspectorWidth,
   })
   const leftHidden = shellColumns.left <= 0
-  const onAgentRailClick = useCallback((alreadyActive: boolean) => {
-    if (alreadyActive) {
-      if (sidebarCollapsed || sidebarWidth < SIDEBAR_LABEL_AT) expandSidebar()
-      else collapseSidebar()
-    } else expandSidebar()
-  }, [collapseSidebar, expandSidebar, sidebarCollapsed, sidebarWidth])
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('biu:shell-sidebar-width', { detail: sidebarCol }))
   }, [sidebarCol])
@@ -860,7 +847,6 @@ function Shell(props: SlotProps) {
             pinned={railPinned}
             onTogglePin={toggleRailPin}
             onSettings={() => setSettingsOpen(true)}
-            onAgentRailClick={onAgentRailClick}
           />
         </div>
       </div>
