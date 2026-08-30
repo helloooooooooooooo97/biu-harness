@@ -9,7 +9,7 @@ import {
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import { inspectorTabFromEvent, requestInspectorAction } from './chat-overlay.ts'
-import { inspectorPanelMatches, inspectorViewProps, resolveInspectorTab } from './inspector-panels.ts'
+import { inspectorPanelMatches, inspectorViewProps, nextRepeatableTabId, resolveInspectorTab, slotTabId } from './inspector-panels.ts'
 
 export type SessionInspectorProps = {
   open: boolean
@@ -69,6 +69,7 @@ export const SessionInspector = memo(function SessionInspector({
           ensureTrajectory: Boolean(extra.ensureTrajectory),
           focusOnCall: Boolean(extra.focusOnCall),
           common: Boolean(extra.common),
+          repeatable: Boolean(extra.repeatable),
           action: typeof extra.action === 'string' ? extra.action : '',
         }]
       })
@@ -163,13 +164,24 @@ export const SessionInspector = memo(function SessionInspector({
 
   if (!open) return null
 
-  const headerTabs = displayTabs.filter((item) => opened.includes(item.id))
-  const extraActive = displayTabs.find((item) => item.id === tab)
+  const headerTabs = opened.flatMap((openedId) => {
+    const item = displayTabs.find((tabItem) => tabItem.id === slotTabId(openedId))
+    if (!item) return []
+    return [{ ...item, id: openedId }]
+  })
+  const extraActive = headerTabs.find((item) => item.id === tab) ?? displayTabs.find((item) => item.id === tab)
   const ExtraComponent = extraActive?.entry.Component
 
   function pickOffer(item: (typeof extraTabs)[number]) {
     if (item.action) {
       requestInspectorAction(item.action)
+      setPlusOpen(false)
+      return
+    }
+    if (item.repeatable) {
+      const instanceId = nextRepeatableTabId(item.id)
+      persistOpened([...opened, instanceId])
+      setTab(instanceId)
       setPlusOpen(false)
       return
     }
@@ -210,6 +222,7 @@ export const SessionInspector = memo(function SessionInspector({
                   active={active}
                   onActivate={() => setTab(item.id)}
                   {...inspectorViewProps(raw)}
+                  paneId={item.id}
                 />
               )
             }
@@ -248,7 +261,7 @@ export const SessionInspector = memo(function SessionInspector({
                 <button
                   key={item.id}
                   type="button"
-                  className={`inspector-catalog-item${item.id === tab ? ' is-active' : ''}`}
+                  className={`inspector-catalog-item${slotTabId(tab) === item.id ? ' is-active' : ''}`}
                   role="menuitem"
                   onClick={() => pickOffer(item)}
                   data-testid={`inspector-offer-${item.id}`}
@@ -278,7 +291,7 @@ export const SessionInspector = memo(function SessionInspector({
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {extraActive && ExtraComponent ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid={`inspector-${extraActive.id}`}>
-            <ExtraComponent {...inspectorViewProps((extraActive.entry.props?.() ?? {}) as Record<string, unknown>)} renderSlot={renderSlot} />
+            <ExtraComponent {...inspectorViewProps((extraActive.entry.props?.() ?? {}) as Record<string, unknown>)} paneId={extraActive.id} renderSlot={renderSlot} />
           </div>
         ) : (
           <p className="inspector-catalog-empty" data-testid="inspector-catalog">

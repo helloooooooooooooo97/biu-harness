@@ -365,6 +365,7 @@ export function apply(ctx: Context) {
         tabIcon: CircleStackIcon,
         Tab: DatabaseInspectorTab,
         common: true,
+        repeatable: true,
       }),
     })
     let lastKey = ''

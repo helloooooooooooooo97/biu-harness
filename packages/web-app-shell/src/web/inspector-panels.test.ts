@@ -38,6 +38,7 @@ test('inspector does not auto-open the first available tab', () => {
   assert.equal(resolveInspectorTab('', ['script', 'reports']), '')
   assert.equal(resolveInspectorTab('script', ['script', 'reports']), 'script')
   assert.equal(resolveInspectorTab('gone', ['script', 'reports']), '')
+  assert.equal(resolveInspectorTab('database::a1', ['database']), 'database::a1')
 })
 
 test('legacy untagged panels stay off session and database centers', () => {
@@ -56,6 +57,7 @@ test('inspector view props drop tab chrome and databaseUi', () => {
     databaseUi: { boom: true },
     useSnapshot: 1,
     paneId: 'x',
+    repeatable: true,
   })
   assert.deepEqual(next, { paneId: 'x' })
 })

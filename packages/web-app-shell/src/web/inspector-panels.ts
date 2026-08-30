@@ -46,6 +46,7 @@ const INSPECTOR_VIEW_OMIT = new Set([
   'useSnapshot',
   'slots',
   'sessionView',
+  'repeatable',
 ])
 
 export function inspectorViewProps(raw: Record<string, unknown>) {
@@ -56,7 +57,17 @@ export function inspectorViewProps(raw: Record<string, unknown>) {
   }
   return next
 }
+export function slotTabId(openedId: string) {
+  const split = openedId.indexOf('::')
+  return split === -1 ? openedId : openedId.slice(0, split)
+}
+
+export function nextRepeatableTabId(tabId: string) {
+  return `${tabId}::${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+}
+
 export function resolveInspectorTab(current: string, allowed: string[]) {
-  if (current && allowed.includes(current)) return current
+  if (!current) return ''
+  if (allowed.includes(current) || allowed.includes(slotTabId(current))) return current
   return ''
 }

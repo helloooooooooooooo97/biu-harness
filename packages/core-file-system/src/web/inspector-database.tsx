@@ -70,8 +70,12 @@ function useViewTick() {
   )
 }
 
-function useInspectorDbPath() {
-  return useSyncExternalStore(subscribeInspectorDbPath, getInspectorDbPath, () => '')
+function useInspectorDbPath(paneId: string) {
+  return useSyncExternalStore(
+    subscribeInspectorDbPath,
+    () => getInspectorDbPath(paneId),
+    () => '',
+  )
 }
 
 function crumbsForRoute(
@@ -99,24 +103,31 @@ function crumbsForRoute(
   return { crumbs, collection, viewId: activeViewId, recordId }
 }
 
-function goInspector(target: CrumbTarget) {
-  setInspectorDbPath(pathForCrumbTarget(target))
+function goInspector(paneId: string, target: CrumbTarget) {
+  setInspectorDbPath(paneId, pathForCrumbTarget(target))
+}
+
+function paneOf(props: { paneId?: unknown }) {
+  return String(props.paneId || 'database')
 }
 
 export function DatabaseInspectorTab({
   active,
   onActivate,
+  paneId,
 }: {
   active?: boolean
   onActivate?: () => void
+  paneId?: string
 }) {
+  const id = paneOf({ paneId })
   const location = useLocation()
-  const inspectorPath = useInspectorDbPath()
+  const inspectorPath = useInspectorDbPath(id)
   const [hover, setHover] = useState(false)
   useViewTick()
   useEffect(() => {
-    seedInspectorDbPath(location.pathname)
-  }, [location.pathname])
+    seedInspectorDbPath(id, location.pathname)
+  }, [id, location.pathname])
   const collections = useInspectorCollections()
   const tables = useMemo(
     () => collections.filter((row) => row.path && row.path !== '/'),
@@ -131,7 +142,7 @@ export function DatabaseInspectorTab({
     event.preventDefault()
     event.stopPropagation()
     onActivate?.()
-    goInspector(target)
+    goInspector(id, target)
   }
 
   return (
@@ -140,6 +151,7 @@ export function DatabaseInspectorTab({
       role="tab"
       aria-selected={Boolean(active)}
       data-testid="inspector-tab-database"
+      data-pane={id}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onClick={() => onActivate?.()}
@@ -173,14 +185,15 @@ export function DatabaseInspectorTab({
   )
 }
 
-export function DatabaseInspectorBrowse(_props: SlotProps) {
+export function DatabaseInspectorBrowse(props: SlotProps) {
+  const id = paneOf(props)
   const ui = getDatabaseUi()
   const location = useLocation()
-  const inspectorPath = useInspectorDbPath()
+  const inspectorPath = useInspectorDbPath(id)
   useViewTick()
   useEffect(() => {
-    seedInspectorDbPath(location.pathname)
-  }, [location.pathname])
+    seedInspectorDbPath(id, location.pathname)
+  }, [id, location.pathname])
   const collections = useInspectorCollections()
   const tables = useMemo(
     () => collections.filter((row) => row.path && row.path !== '/'),
@@ -213,16 +226,16 @@ export function DatabaseInspectorBrowse(_props: SlotProps) {
       routeRecordId={recordId ?? null}
       routeViewId={viewId}
       onOpenTable={(path, nextViewId) => {
-        setInspectorDbPath(databaseViewPath(path, nextViewId ?? loadActiveViewId(path, loadViews(path)) ?? undefined))
+        setInspectorDbPath(id, databaseViewPath(path, nextViewId ?? loadActiveViewId(path, loadViews(path)) ?? undefined))
       }}
-      onOpenView={(nextViewId) => setInspectorDbPath(databaseViewPath(currentPath, nextViewId))}
-      onOpenRecord={(id, _viewId, nextCollection) => {
-        setInspectorDbPath(databaseRecordPath(nextCollection ?? currentPath, id))
+      onOpenView={(nextViewId) => setInspectorDbPath(id, databaseViewPath(currentPath, nextViewId))}
+      onOpenRecord={(recordIdNext, _viewId, nextCollection) => {
+        setInspectorDbPath(id, databaseRecordPath(nextCollection ?? currentPath, recordIdNext))
       }}
       onCloseRecord={() => {
-        setInspectorDbPath(databaseViewPath(currentPath, loadActiveViewId(currentPath, loadViews(currentPath)) ?? undefined))
+        setInspectorDbPath(id, databaseViewPath(currentPath, loadActiveViewId(currentPath, loadViews(currentPath)) ?? undefined))
       }}
-      onCrumbTarget={(target) => goInspector(target)}
+      onCrumbTarget={(target) => goInspector(id, target)}
     />
   )
 }

@@ -36,6 +36,7 @@ test('database can be added to the inspector and browsed by crumbs', () => {
   assert.match(page, /fsdb-database-browse/)
   assert.match(page, /tabLabel: '数据库'/)
   assert.match(page, /Tab: DatabaseInspectorTab/)
+  assert.match(page, /repeatable: true/)
   const browse = readFileSync(resolve(import.meta.dirname, './inspector-database.tsx'), 'utf8')
   assert.match(browse, /bindInspectorSnapshot/)
   assert.doesNotMatch(browse, /useSnapshot\?:/)

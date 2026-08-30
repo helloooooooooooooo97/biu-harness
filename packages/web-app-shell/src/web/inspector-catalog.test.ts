@@ -14,3 +14,11 @@ test('inspector header keeps opened tabs on top and a plus menu on the right', (
   assert.match(inspector, /item.Tab/)
   assert.match(inspector, /inspectorViewProps/)
 })
+
+test('plus menu can add another database tab', () => {
+  assert.match(inspector, /repeatable/)
+  assert.match(inspector, /nextRepeatableTabId/)
+  assert.match(inspector, /slotTabId/)
+  assert.match(inspector, /paneId=\{item.id\}/)
+  assert.match(inspector, /paneId=\{extraActive.id\}/)
+})

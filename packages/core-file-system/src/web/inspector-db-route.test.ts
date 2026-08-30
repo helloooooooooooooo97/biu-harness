@@ -15,3 +15,12 @@ test('inspector database path does not overwrite after first seed', () => {
   setInspectorDbPath('/database/tasks')
   assert.equal(getInspectorDbPath(), '/database/tasks')
 })
+
+test('each inspector database pane keeps its own path', () => {
+  setInspectorDbPath('database::a', '/database/pages')
+  setInspectorDbPath('database::b', '/database/tasks')
+  assert.equal(getInspectorDbPath('database::a'), '/database/pages')
+  assert.equal(getInspectorDbPath('database::b'), '/database/tasks')
+  seedInspectorDbPath('database::a', '/database/events')
+  assert.equal(getInspectorDbPath('database::a'), '/database/pages')
+})
