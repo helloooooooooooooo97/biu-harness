@@ -337,11 +337,12 @@ const AgentMainPanels = memo(function AgentMainPanels({
     </div>
   )
 
+  const overlayCollapsed = !overlayOpen || hidden
   const overlayNode =
-    overlay && overlayMounted && overlayOpen
+    overlay && overlayMounted
       ? createPortal(
         <div
-          className={`chat-overlay-panel${hidden ? ' is-autohide' : ''}${threadOpen ? '' : ' is-compose-only'}`}
+          className={`chat-overlay-panel${overlayCollapsed ? ' is-autohide' : ''}${threadOpen ? '' : ' is-compose-only'}`}
           data-with-sidebar={withSidebar ? '1' : '0'}
           data-testid="chat-overlay-panel"
           data-compose-only={threadOpen ? undefined : '1'}
