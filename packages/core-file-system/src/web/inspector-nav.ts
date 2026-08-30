@@ -11,12 +11,11 @@ export function databaseViewPath(collection: string, viewId?: string): string {
   })
 }
 
-export function databaseRecordPath(collection: string, recordId: string, viewId?: string): string {
+export function databaseRecordPath(collection: string, recordId: string): string {
   return buildAppPath({
     kind: 'record',
     ...DATABASE,
     collection,
-    viewId,
     recordId,
   } satisfies AppRoute)
 }

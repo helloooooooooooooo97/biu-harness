@@ -7,7 +7,7 @@ const plugins = [{ id: 'database', label: '数据', path: '/database' }]
 
 test('view and record helpers match the database URL scheme', () => {
   assert.equal(databaseViewPath('/pages', 'default'), '/database/pages/view/default')
-  assert.equal(databaseRecordPath('/pages', 'rec-1', 'default'), '/database/pages/view/default/record/rec-1')
+  assert.equal(databaseRecordPath('/pages', 'rec-1'), '/database/pages/record/rec-1')
   assert.equal(parseAppPath(databaseViewPath('/pages', 'default'), plugins).kind, 'collection-view')
   assert.equal(parseAppPath(databaseRecordPath('/pages', 'rec-1'), plugins).kind, 'record')
 })

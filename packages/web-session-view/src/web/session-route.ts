@@ -1,14 +1,12 @@
 /** URL = 中心舞台。
  * `/` | `/s/:id` | `/s/:id/debug` | 插件 path
  * 数据模块（默认 `/database`）：
- *   `/database` 集合入口
- *   `/database/:collection` 集合（默认/当前视图）
- *   `/database/:collection/view/:viewId` 已保存视图
- *   `/database/:collection/record/:recordId` 记录（中心页）
- *   `/database/:collection/view/:viewId/record/:recordId` 从某视图打开的记录（后退回视图）
- * 旧写法 `/database/c/.../v/.../r/...` 仍能解析，写入时改成上面这种。
- * `:collection` 为集合 path 去掉前导 `/` 再 encode（`/pages` → `pages`）。
- * 记录 id / 视图 id 不进聊天路由 `/s/:id`。
+ *   `/database` 入口
+ *   `/database/:type` 某张表
+ *   `/database/:type/view/:viewId` 某个视图（看记录时不要这一段）
+ *   `/database/:type/record/:recordId` 某条记录
+ * 旧写法 `/c/` `/v/` `/r/` 以及 view+record 叠在一起的路径仍能解析，写入时改成上面这种。
+ * `:type` 为集合 path 去掉前导 `/` 再 encode（`/pages` → `pages`）。
  */
 import { matchRegisteredModule, type AppModule } from '@biu/web-app-modules'
 
@@ -21,10 +19,11 @@ export type AppRoute =
   | { kind: 'session'; sessionId: string; view: RouteView }
   | { kind: 'module'; moduleId: string; path: string }
   | { kind: 'collection-view'; moduleId: string; path: string; collection: string; viewId?: string }
-  | { kind: 'record'; moduleId: string; path: string; collection: string; viewId?: string; recordId: string }
+  | { kind: 'record'; moduleId: string; path: string; collection: string; recordId: string }
 
-const DATABASE_SEG =
-  /^\/(?:c\/)?([^/]+)(?:\/(?:v|view)\/([^/]+))?(?:\/(?:r|record)\/([^/]+))?$/
+const DATABASE_FLAT = /^\/(?:c\/)?([^/]+)(?:\/(?:view|v)\/([^/]+)|\/(?:record|r)\/([^/]+))?$/
+const DATABASE_NESTED_RECORD =
+  /^\/(?:c\/)?([^/]+)\/(?:view|v)\/[^/]+\/(?:record|r)\/([^/]+)$/
 
 export function encodeCollectionSeg(path: string) {
   return encodeURIComponent(normalizeCollectionKey(path).replace(/^\//, ''))
@@ -48,7 +47,7 @@ export function isLegacyDatabasePath(pathname: string, modulePath = '/database')
   const base = normalizePath(modulePath)
   if (path === base || !path.startsWith(`${base}/`)) return false
   const rest = path.slice(base.length)
-  return /^\/c\//.test(rest) || /\/(?:v|r)\//.test(rest)
+  return /^\/c\//.test(rest) || /\/(?:v|r)\//.test(rest) || /\/view\/[^/]+\/record\//.test(rest)
 }
 
 export function parseDatabaseRest(pathname: string, module: AppModule): AppRoute | null {
@@ -57,13 +56,23 @@ export function parseDatabaseRest(pathname: string, module: AppModule): AppRoute
   if (path === base) return null
   if (!path.startsWith(`${base}/`)) return null
   const rest = path.slice(base.length)
-  const match = rest.match(DATABASE_SEG)
+  const nested = rest.match(DATABASE_NESTED_RECORD)
+  if (nested?.[1] && nested[2]) {
+    return {
+      kind: 'record',
+      moduleId: module.id,
+      path: base,
+      collection: decodeCollectionSeg(nested[1]),
+      recordId: decodeURIComponent(nested[2]),
+    }
+  }
+  const match = rest.match(DATABASE_FLAT)
   if (!match?.[1]) return { kind: 'module', moduleId: module.id, path: base }
   const collection = decodeCollectionSeg(match[1])
   const viewId = match[2] ? decodeURIComponent(match[2]) : undefined
   const recordId = match[3] ? decodeURIComponent(match[3]) : undefined
   if (recordId) {
-    return { kind: 'record', moduleId: module.id, path: base, collection, viewId, recordId }
+    return { kind: 'record', moduleId: module.id, path: base, collection, recordId }
   }
   return { kind: 'collection-view', moduleId: module.id, path: base, collection, viewId }
 }
@@ -99,9 +108,9 @@ export function buildAppPath(route: AppRoute): string {
   if (route.kind === 'module') return route.path || `/${route.moduleId}`
   if (route.kind === 'collection-view' || route.kind === 'record') {
     const base = route.path || `/${route.moduleId}`
-    let next = `${normalizePath(base)}/${encodeCollectionSeg(route.collection)}`
-    if (route.viewId) next += `/view/${encodeURIComponent(route.viewId)}`
-    if (route.kind === 'record') next += `/record/${encodeURIComponent(route.recordId)}`
+    const next = `${normalizePath(base)}/${encodeCollectionSeg(route.collection)}`
+    if (route.kind === 'record') return `${next}/record/${encodeURIComponent(route.recordId)}`
+    if (route.viewId) return `${next}/view/${encodeURIComponent(route.viewId)}`
     return next
   }
   if (route.view === 'debug') return `/s/${encodeURIComponent(route.sessionId)}/debug`

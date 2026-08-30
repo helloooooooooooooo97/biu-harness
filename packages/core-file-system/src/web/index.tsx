@@ -78,8 +78,7 @@ function CollectionPage(props: SlotProps) {
   const parsed = useMemo(() => parseAppPath(location.pathname, [DATA_MODULE]), [location.pathname])
   const collectionFromRoute =
     parsed.kind === 'collection-view' || parsed.kind === 'record' ? parsed.collection : ''
-  const viewFromRoute =
-    parsed.kind === 'collection-view' || parsed.kind === 'record' ? parsed.viewId : undefined
+  const viewFromRoute = parsed.kind === 'collection-view' ? parsed.viewId : undefined
   const recordFromRoute = parsed.kind === 'record' ? parsed.recordId : null
   const currentPath = collectionFromRoute || tables[0]?.path || ''
   const row = tables.find((item) => item.path === currentPath)
@@ -100,7 +99,6 @@ function CollectionPage(props: SlotProps) {
           moduleId: DATA_MODULE_ID,
           path: DATA_MODULE_PATH,
           collection: next.collection,
-          viewId: next.viewId,
           recordId: next.recordId,
         }),
         opts,
@@ -128,7 +126,7 @@ function CollectionPage(props: SlotProps) {
       go(
         {
           collection: parsed.collection,
-          viewId: parsed.viewId,
+          viewId: parsed.kind === 'collection-view' ? parsed.viewId : undefined,
           recordId: parsed.kind === 'record' ? parsed.recordId : null,
         },
         { replace: true },
@@ -190,10 +188,12 @@ function CollectionPage(props: SlotProps) {
       routeViewId={viewFromRoute}
       onOpenTable={(path, viewId) => go({ collection: path, viewId: viewId ?? defaultViewId(path) })}
       onOpenView={(viewId) => go({ collection: currentPath, viewId })}
-      onOpenRecord={(recordId, viewId, collection) =>
-        go({ collection: collection ?? currentPath, viewId: viewId ?? viewFromRoute, recordId })
+      onOpenRecord={(recordId, _viewId, collection) =>
+        go({ collection: collection ?? currentPath, recordId })
       }
-      onCloseRecord={() => go({ collection: currentPath, viewId: viewFromRoute }, { replace: true })}
+      onCloseRecord={() =>
+        go({ collection: currentPath, viewId: defaultViewId(currentPath) }, { replace: true })
+      }
     />
   )
 }

@@ -61,7 +61,6 @@ test('database nested routes identify view vs record without touching /s/:id', (
     moduleId: 'database',
     path: '/database',
     collection: '/pages',
-    viewId: undefined,
     recordId: 'rec-1',
   })
   assert.deepEqual(parseAppPath('/database/pages/view/board/record/rec-1', plugins), {
@@ -69,7 +68,6 @@ test('database nested routes identify view vs record without touching /s/:id', (
     moduleId: 'database',
     path: '/database',
     collection: '/pages',
-    viewId: 'board',
     recordId: 'rec-1',
   })
   assert.deepEqual(parseAppPath('/database/c/pages/v/board/r/rec-1', plugins), {
@@ -77,11 +75,22 @@ test('database nested routes identify view vs record without touching /s/:id', (
     moduleId: 'database',
     path: '/database',
     collection: '/pages',
-    viewId: 'board',
     recordId: 'rec-1',
   })
   assert.equal(isLegacyDatabasePath('/database/c/pages/v/x'), true)
+  assert.equal(isLegacyDatabasePath('/database/pages/view/board/record/rec-1'), true)
   assert.equal(isLegacyDatabasePath('/database/pages/view/x'), false)
+  assert.equal(isLegacyDatabasePath('/database/pages/record/rec-1'), false)
+  assert.equal(
+    buildAppPath({
+      kind: 'record',
+      moduleId: 'database',
+      path: '/database',
+      collection: '/tasks',
+      recordId: 'task_mtdbgnqj_5022je',
+    }),
+    '/database/tasks/record/task_mtdbgnqj_5022je',
+  )
   assert.equal(parseAppPath('/s/rec-1', plugins).kind, 'session')
 })
 
@@ -116,7 +125,6 @@ test('buildAppPath round-trips with parseAppPath', () => {
       moduleId: 'database' as const,
       path: '/database',
       collection: '/pages',
-      viewId: 'v1',
       recordId: 'r1',
     },
   ]
