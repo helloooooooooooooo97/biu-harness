@@ -2,6 +2,8 @@ import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore, t
 import { createPortal } from 'react-dom'
 import {
   setChatOverlay,
+  getChatOverlay,
+  subscribeChatOverlay,
   clampOverlayChatHeight,
   OVERLAY_CHAT_HEIGHT_DEFAULT,
   OVERLAY_CHAT_HEIGHT_MIN,
@@ -209,6 +211,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
   showCenter: boolean
 }) {
   const overlay = floating
+  const overlayOpen = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
   const [overlayMounted, setOverlayMounted] = useState(false)
   useEffect(() => {
     setOverlayMounted(true)
@@ -302,7 +305,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
   )
 
   const overlayNode =
-    overlay && overlayMounted
+    overlay && overlayMounted && overlayOpen
       ? createPortal(
         <div
           className={`chat-overlay-panel${hidden ? ' is-autohide' : ''}`}
@@ -463,6 +466,7 @@ function Shell(props: SlotProps) {
   })
   const overlayAutohide = useSyncExternalStore(subscribeOverlayAutohide, getOverlayAutohide, () => false)
   const overlayPinned = useSyncExternalStore(subscribeOverlayPinned, getOverlayPinned, () => false)
+  const overlayOpen = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
   const toggleInspector = useCallback(() => {
     setInspectorOpen((prev) => {
       const next = !prev
@@ -485,9 +489,6 @@ function Shell(props: SlotProps) {
     }
   }, [])
   const activeModule = moduleIdFromPath(location.pathname, pluginModules)
-  useEffect(() => {
-    setChatOverlay(true)
-  }, [])
   useEffect(() => {
     const onWidth = (event: Event) => {
       const n = (event as CustomEvent<number>).detail
@@ -708,6 +709,9 @@ function Shell(props: SlotProps) {
       <BrandCornerMascot
         agents={danceSessions}
         activeId={sessionId}
+        overlayOn={overlayOpen}
+        onToggleOverlay={() => setChatOverlay(!getChatOverlay())}
+        leading={props.renderSlot('corner-tools')}
         onSelect={(id) => {
           if (activeModule === 'agent') navigate(`/s/${encodeURIComponent(id)}`)
           else void sessionView.load(id, { view: 'chat' })
@@ -845,6 +849,7 @@ export function apply(ctx: Context) {
       'app-modules': { kind: 'list' },
       'inspector-panels': { kind: 'list' },
       'header-tools': { kind: 'list' },
+      'corner-tools': { kind: 'list' },
       'root-overlays': { kind: 'list' },
     },
     props: () => shellProps,

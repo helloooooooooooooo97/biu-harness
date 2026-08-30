@@ -71,9 +71,11 @@ function defaultViewId(collectionPath: string) {
   return loadActiveViewId(collectionPath, loadViews(collectionPath)) ?? undefined
 }
 
+let fileSystemSlots: SlotsService | undefined
+
 function CollectionPage(props: SlotProps) {
   const tables = (props.tables as CollectionInfo[] | undefined) ?? []
-  const slots = props.slots as SlotsService | undefined
+  const slots = fileSystemSlots
   const ui = getDatabaseUi()
   const location = useLocation()
   const navigate = useNavigate()
@@ -250,6 +252,7 @@ export const inject = ['slots', 'appModules']
 export function apply(ctx: Context) {
   new DatabaseUiService(ctx)
   const slots = ctx.get('slots') as SlotsService
+  fileSystemSlots = slots
   const appModules = ctx.get('appModules') as AppModulesService
   const mounted = new Map<string, () => void>()
   let liveTables: CollectionInfo[] = []
@@ -304,7 +307,6 @@ export function apply(ctx: Context) {
           props: () => ({
             moduleId: DATA_MODULE_ID,
             tables: liveTables,
-            slots,
           }),
         })
         mounted.set(DATA_MODULE_ID, () => {

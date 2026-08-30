@@ -4,6 +4,12 @@ import { pickKey, dedupePicks, type PickRef } from './types.ts'
 
 export type PickHover = { top: number; left: number; width: number; height: number }
 
+let boundPick: PickService | undefined
+
+export function getPick() {
+  return boundPick
+}
+
 export class PickService extends Service {
   picking = false
   refs: PickRef[] = []
@@ -15,6 +21,7 @@ export class PickService extends Service {
 
   constructor(ctx: Context) {
     super(ctx, 'pick')
+    boundPick = this
   }
 
   subscribe = (fn: () => void) => {

@@ -285,12 +285,24 @@ body {
   padding: 0 12px;
 }
 
-.brand-corner-mascot {
+.brand-corner-cluster {
   position: fixed;
   right: 16px;
   bottom: 16px;
   z-index: 90;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
   pointer-events: auto;
+}
+
+.brand-corner-leading {
+  display: flex;
+  align-items: center;
+}
+
+.brand-corner-mascot {
+  position: relative;
 }
 
 .brand-corner-mascot-btn {
@@ -305,10 +317,61 @@ body {
   cursor: pointer;
 }
 
-.brand-agent-menu {
+.brand-corner-mascot-btn.is-active,
+.brand-corner-dock-btn.is-active,
+.brand-corner-leading .project-chip-icon-only.is-active {
+  background: var(--dsw-hover);
+}
+
+.brand-corner-dock {
   position: absolute;
   right: 0;
   bottom: calc(100% + 8px);
+  z-index: 22;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--dsw-border);
+  border-radius: 10px;
+  background: var(--dsw-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.brand-corner-dock-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-sidebar-fg);
+  cursor: pointer;
+}
+
+.brand-corner-dock-btn:hover {
+  background: var(--dsw-hover);
+  color: var(--dsw-sidebar-fg-active);
+}
+
+.brand-corner-leading .project-chip,
+.brand-corner-leading .project-chip-icon-only {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--dsw-sidebar-fg);
+  cursor: pointer;
+}
+
+.brand-agent-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 52px);
   z-index: 21;
   min-width: 200px;
   max-height: 280px;

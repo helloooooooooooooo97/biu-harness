@@ -43,11 +43,12 @@ test('expanding chat clamps inspector so the column is at least ENTER', () => {
   )
 })
 
-test('overlay store set/get', () => {
+test('overlay starts closed', () => {
   setChatOverlay(false)
   assert.equal(getChatOverlay(), false)
   setChatOverlay(true)
   assert.equal(getChatOverlay(), true)
+  setChatOverlay(false)
 })
 
 test('autohide resets when overlay closes', () => {
