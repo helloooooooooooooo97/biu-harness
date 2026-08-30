@@ -39,15 +39,21 @@ import { LiveDispatchTable } from './live-dispatch-table.tsx'
 import { UsageInline } from './usage-inline.tsx'
 import {
   bumpRevealStart,
+  captureChatScroll,
+  CHAT_NEAR_BOTTOM_PX,
   firstPaintStartIndex,
   groupNodesIntoTurns,
+  recalledChatScroll,
+  rememberChatScroll,
+  restoreChatScroll,
+  revealStartForMemory,
   shouldRevealFast,
   sliceTurnsFrom,
 } from './thread-reveal.ts'
 
 export { groupNodesIntoTurns } from './thread-reveal.ts'
 
-const NEAR_BOTTOM_PX = 96
+const NEAR_BOTTOM_PX = CHAT_NEAR_BOTTOM_PX
 /** 提早预取更早消息，避免滑到顶才开始请求 */
 const PREFETCH_OLDER_PX = 720
 
@@ -769,11 +775,11 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   if (sessionId !== sessionKeyRef.current) {
     sessionKeyRef.current = sessionId
     prevTotalRef.current = totalTurns
-    const next = firstPaintStartIndex(totalTurns)
+    const next = revealStartForMemory(nodes, recalledChatScroll(sessionId), totalTurns)
     if (next !== revealStart) setRevealStart(next)
   } else if (prevTotalRef.current === 0 && totalTurns > 0) {
     prevTotalRef.current = totalTurns
-    const next = firstPaintStartIndex(totalTurns)
+    const next = revealStartForMemory(nodes, recalledChatScroll(sessionId), totalTurns)
     if (next !== revealStart) setRevealStart(next)
   } else {
     prevTotalRef.current = totalTurns
@@ -791,6 +797,10 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLElement | null>(null)
   const stickToBottomRef = useRef(true)
+  const sessionIdRef = useRef(sessionId)
+  sessionIdRef.current = sessionId
+  const restoredForRef = useRef<string | null>(null)
+  const prependHeightRef = useRef(0)
   const prefetchingRef = useRef(false)
   const [scrollEpoch, setScrollEpoch] = useState(0)
 
@@ -815,9 +825,20 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     }
   }, [sessionId])
 
-  useEffect(() => {
-    stickToBottomRef.current = true
+  useLayoutEffect(() => {
+    const mem = recalledChatScroll(sessionId)
+    stickToBottomRef.current = !mem || mem.kind === 'bottom'
+    restoredForRef.current = null
+    prependHeightRef.current = 0
   }, [sessionId])
+
+  useEffect(() => {
+    return () => {
+      const parent = scrollRef.current
+      const id = sessionIdRef.current
+      if (id && parent) rememberChatScroll(id, captureChatScroll(parent))
+    }
+  }, [])
 
   useEffect(() => {
     if (pending) stickToBottomRef.current = true
@@ -851,10 +872,15 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       stickToBottomRef.current = distance <= NEAR_BOTTOM_PX
       maybePrefetchOlder()
     }
+    const onUserScroll = () => {
+      onScroll()
+      const id = sessionIdRef.current
+      if (id && restoredForRef.current === id) rememberChatScroll(id, captureChatScroll(parent))
+    }
     onScroll()
-    parent.addEventListener('scroll', onScroll, { passive: true })
+    parent.addEventListener('scroll', onUserScroll, { passive: true })
     return () => {
-      parent.removeEventListener('scroll', onScroll)
+      parent.removeEventListener('scroll', onUserScroll)
     }
   }, [sessionId, scrollEpoch, hasMoreOlder, loadingOlder, sessionView])
 
@@ -887,10 +913,20 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       ? `${lastNode.id}:${Math.floor(lastNode.copyText.length / 96)}:1`
       : `${mountedNodes.length}:${pending ? 1 : 0}:${error ?? ''}`
 
-  const prependHeightRef = useRef(0)
   useLayoutEffect(() => {
     const parent = scrollRef.current
     if (!parent) return
+    const mem = recalledChatScroll(sessionId)
+    if (sessionId && restoredForRef.current !== sessionId && mem?.kind === 'anchor') {
+      if (restoreChatScroll(parent, mem)) {
+        restoredForRef.current = sessionId
+        stickToBottomRef.current = false
+        prependHeightRef.current = parent.scrollHeight
+        return
+      }
+      return
+    }
+    if (sessionId) restoredForRef.current = sessionId
     if (stickToBottomRef.current) {
       if (mountedNodes.length > 0) parent.scrollTop = parent.scrollHeight
     } else if (prependHeightRef.current) {
@@ -898,7 +934,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       if (delta) parent.scrollTop += delta
     }
     prependHeightRef.current = parent.scrollHeight
-  }, [stickKey, mountedNodes.length, revealStart])
+  }, [stickKey, mountedNodes.length, revealStart, sessionId])
 
   if (nodes.length === 0 && !pending && !error && !switchingSession) {
     const session = sessions.find((item) => item.id === sessionId)

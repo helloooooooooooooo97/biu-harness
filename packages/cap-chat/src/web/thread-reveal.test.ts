@@ -1,13 +1,24 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import type { ChatNode } from '@biu/web-session-view'
 import {
   bumpRevealStart,
+  captureChatScroll,
   CHAT_FIRST_PAINT_TURNS,
   firstPaintStartIndex,
   groupNodesIntoTurns,
+  recalledChatScroll,
+  rememberChatScroll,
+  resetChatScrollMemoryForTests,
+  restoreChatScroll,
+  revealStartForMemory,
   shouldRevealFast,
   sliceTurnsFrom,
+  turnIndexContaining,
 } from './thread-reveal.ts'
+
+afterEach(() => {
+  resetChatScrollMemoryForTests()
+})
 
 function user(id: string): ChatNode {
   return { id, kind: 'user', text: id }
@@ -68,5 +79,73 @@ describe('thread reveal (visible first, then older)', () => {
     expect(
       shouldRevealFast({ scrollTop: 40, scrollHeight: 4000, clientHeight: 800 }),
     ).toBe(true)
+  })
+})
+
+function box(top: number, height: number): DOMRect {
+  return {
+    x: 0,
+    y: top,
+    top,
+    bottom: top + height,
+    left: 0,
+    right: 400,
+    width: 400,
+    height,
+    toJSON() {
+      return {}
+    },
+  }
+}
+
+describe('chat scroll memory per session', () => {
+  it('keeps an independent reading position for each session', () => {
+    rememberChatScroll('s-a', { kind: 'anchor', nodeId: 'u-3', offset: 24 })
+    rememberChatScroll('s-b', { kind: 'bottom' })
+    expect(recalledChatScroll('s-a')).toEqual({ kind: 'anchor', nodeId: 'u-3', offset: 24 })
+    expect(recalledChatScroll('s-b')).toEqual({ kind: 'bottom' })
+  })
+
+  it('mounts from the remembered turn instead of only the tail', () => {
+    const nodes = longThread()
+    expect(turnIndexContaining(nodes, 'u-3')).toBe(3)
+    expect(revealStartForMemory(nodes, { kind: 'anchor', nodeId: 'u-3', offset: 12 }, 10)).toBe(3)
+    expect(revealStartForMemory(nodes, { kind: 'bottom' }, 10)).toBe(10 - CHAT_FIRST_PAINT_TURNS)
+  })
+
+  it('captures the first visible node when not pinned to the bottom', () => {
+    const parent = document.createElement('div')
+    Object.defineProperty(parent, 'scrollHeight', { value: 4000, configurable: true })
+    Object.defineProperty(parent, 'scrollTop', { value: 1200, writable: true, configurable: true })
+    Object.defineProperty(parent, 'clientHeight', { value: 800, configurable: true })
+    parent.getBoundingClientRect = () => box(0, 800)
+    const above = document.createElement('div')
+    above.dataset.nodeId = 'u-2'
+    above.getBoundingClientRect = () => box(-80, 40)
+    const visible = document.createElement('div')
+    visible.dataset.nodeId = 'u-3'
+    visible.getBoundingClientRect = () => box(40, 80)
+    parent.append(above, visible)
+    expect(captureChatScroll(parent)).toEqual({ kind: 'anchor', nodeId: 'u-3', offset: -40 })
+  })
+
+  it('captures bottom when close to the latest messages', () => {
+    const parent = document.createElement('div')
+    Object.defineProperty(parent, 'scrollHeight', { value: 2000, configurable: true })
+    Object.defineProperty(parent, 'scrollTop', { value: 1180, writable: true, configurable: true })
+    Object.defineProperty(parent, 'clientHeight', { value: 800, configurable: true })
+    expect(captureChatScroll(parent)).toEqual({ kind: 'bottom' })
+  })
+
+  it('restores the saved offset onto the same node', () => {
+    const parent = document.createElement('div')
+    Object.defineProperty(parent, 'scrollTop', { value: 500, writable: true, configurable: true })
+    parent.getBoundingClientRect = () => box(0, 800)
+    const row = document.createElement('div')
+    row.dataset.nodeId = 'u-3'
+    row.getBoundingClientRect = () => box(120, 80)
+    parent.append(row)
+    expect(restoreChatScroll(parent, { kind: 'anchor', nodeId: 'u-3', offset: -40 })).toBe(true)
+    expect(parent.scrollTop).toBe(500 + 120 + -40)
   })
 })

@@ -36,6 +36,74 @@ export function bumpRevealStart(startIndex: number, batch = CHAT_REVEAL_BATCH): 
   return Math.max(0, startIndex - Math.max(1, batch))
 }
 
+export const CHAT_NEAR_BOTTOM_PX = 96
+
+/** 贴底，或某条消息相对视口顶的偏移。切回会话时按这个还原进度条。 */
+export type ChatScrollMemory =
+  | { kind: 'bottom' }
+  | { kind: 'anchor'; nodeId: string; offset: number }
+
+const chatScrollBySession = new Map<string, ChatScrollMemory>()
+
+export function rememberChatScroll(sessionId: string, memory: ChatScrollMemory) {
+  chatScrollBySession.set(sessionId, memory)
+}
+
+export function recalledChatScroll(sessionId: string | null | undefined): ChatScrollMemory | undefined {
+  if (!sessionId) return undefined
+  return chatScrollBySession.get(sessionId)
+}
+
+export function resetChatScrollMemoryForTests() {
+  chatScrollBySession.clear()
+}
+
+export function turnIndexContaining(nodes: ChatNode[], nodeId: string): number {
+  return groupNodesIntoTurns(nodes).findIndex((turn) => turn.some((node) => node.id === nodeId))
+}
+
+/** 回到中间阅读位置时，从那一回合挂到最新；贴底则仍只先挂尾巴。 */
+export function revealStartForMemory(
+  nodes: ChatNode[],
+  memory: ChatScrollMemory | undefined,
+  totalTurns: number,
+): number {
+  if (!memory || memory.kind === 'bottom') return firstPaintStartIndex(totalTurns)
+  const index = turnIndexContaining(nodes, memory.nodeId)
+  return index < 0 ? 0 : index
+}
+
+export function captureChatScroll(parent: HTMLElement): ChatScrollMemory {
+  const distance = parent.scrollHeight - parent.scrollTop - parent.clientHeight
+  if (distance <= CHAT_NEAR_BOTTOM_PX) return { kind: 'bottom' }
+  const parentTop = parent.getBoundingClientRect().top
+  const rows = parent.querySelectorAll<HTMLElement>('[data-node-id]')
+  for (const el of rows) {
+    const id = el.dataset.nodeId
+    if (!id) continue
+    const rect = el.getBoundingClientRect()
+    if (rect.bottom > parentTop + 1) {
+      return { kind: 'anchor', nodeId: id, offset: parentTop - rect.top }
+    }
+  }
+  return { kind: 'bottom' }
+}
+
+export function restoreChatScroll(parent: HTMLElement, memory: ChatScrollMemory): boolean {
+  if (memory.kind === 'bottom') {
+    parent.scrollTop = parent.scrollHeight
+    return true
+  }
+  const escaped =
+    typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(memory.nodeId) : memory.nodeId
+  const el = parent.querySelector(`[data-node-id="${escaped}"]`)
+  if (!(el instanceof HTMLElement)) return false
+  const parentTop = parent.getBoundingClientRect().top
+  const top = el.getBoundingClientRect().top
+  parent.scrollTop += top - parentTop + memory.offset
+  return true
+}
+
 /** 视口还没被尾巴填满，或用户已经滑到顶等更早内容：用 rAF 快补。 */
 export function shouldRevealFast(opts: {
   scrollTop: number
