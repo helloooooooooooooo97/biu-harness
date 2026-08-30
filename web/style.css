@@ -371,6 +371,15 @@ body {
   border-radius: 999px;
   background: #262626;
   color: var(--dsw-sidebar-fg);
+  outline: none;
+  box-shadow: none;
+}
+
+.brand-corner-leading .project-chip:focus,
+.brand-corner-leading .project-chip:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--dsw-border);
 }
 
 .brand-agent-menu {
@@ -2007,8 +2016,9 @@ body {
   border-style: dashed;
 }
 
-.project-chip:hover:not(:disabled) {
-  color: var(--dsw-sidebar-fg-active);
+.project-chip:focus,
+.project-chip:focus-visible {
+  outline: none;
 }
 
 .project-chip:disabled,

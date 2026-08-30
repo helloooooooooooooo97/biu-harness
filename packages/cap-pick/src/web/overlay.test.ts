@@ -13,6 +13,11 @@ test('pick capture does not eat sidebar, rail, or inspector chrome clicks', () =
   assert.doesNotMatch(overlay, /\.session-inspector/)
 })
 
+test('Escape exits pick and blurs so no focus ring remains', () => {
+  assert.match(overlay, /event.key === 'Escape'/)
+  assert.match(overlay, /active\.blur\(\)/)
+})
+
 test('Command/Ctrl+Q toggles pick mode', () => {
   assert.match(overlay, /event.metaKey \|\| event.ctrlKey/)
   assert.match(overlay, /key === 'q'/)

@@ -84,6 +84,8 @@ export function PickOverlay(_props: SlotProps) {
       if (event.key === 'Escape') {
         event.preventDefault()
         pick.exit()
+        const active = document.activeElement
+        if (active instanceof HTMLElement) active.blur()
       }
     }
 
