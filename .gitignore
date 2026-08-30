@@ -10,3 +10,6 @@ dist/
 .DS_Store
 src/**/*.js
 src/**/*.js.map
+
+# 页面数据（.page Markdown 存储），本地数据不纳入版本控制
+.page/
