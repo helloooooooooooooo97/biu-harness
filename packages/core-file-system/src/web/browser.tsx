@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { createPortal } from 'react-dom'
+import { createPortal, flushSync } from 'react-dom'
 import {
   ArrowDownIcon,
   ArrowPathIcon,
@@ -480,7 +480,8 @@ export function CollectionBrowser({
   const [stat, setStat] = useState<StatResult | null>(null)
   const [items, setItems] = useState<Array<DbRecord & { path?: string }>>([])
   const [error, setError] = useState('')
-  const detailId = routeRecordId
+  const [openDetailId, setOpenDetailId] = useState<string | null>(routeRecordId)
+  const [detailRow, setDetailRow] = useState<DbRecord | null>(null)
   const [detailBody, setDetailBody] = useState<unknown>(null)
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [busyKey, setBusyKey] = useState<string | null>(null)
@@ -497,7 +498,13 @@ export function CollectionBrowser({
   const [columnKeys, setColumnKeys] = useState<string[]>(initialView?.columns ?? [])
   const [views, setViews] = useState<SavedView[]>(() => loadViews(collectionPath))
   const [activeViewId, setActiveViewId] = useState<string | null>(initialView?.id ?? null)
-  const setDetailId = (id: string | null) => {
+  const detailId = openDetailId
+  const setDetailId = (id: string | null, row?: DbRecord | null) => {
+    flushSync(() => {
+      setOpenDetailId(id)
+      if (id && row) setDetailRow(row)
+      if (!id) setDetailRow(null)
+    })
     if (id) onOpenRecord?.(id, activeViewId)
     else onCloseRecord?.()
   }
@@ -777,6 +784,35 @@ export function CollectionBrowser({
     void reload()
   }, [reload])
 
+  useLayoutEffect(() => {
+    setOpenDetailId(routeRecordId)
+    if (!routeRecordId) setDetailRow(null)
+  }, [routeRecordId])
+
+  useEffect(() => {
+    if (!detailId) {
+      setDetailRow(null)
+      return
+    }
+    const hit = items.find((row) => row.id === detailId)
+    if (hit) {
+      setDetailRow(hit)
+      return
+    }
+    if (detailRow?.id === detailId) return
+    let cancelled = false
+    void readJson<{ value?: DbRecord }>(`/api/db/read?path=${encodeURIComponent(`${collectionPath}/${detailId}`)}`)
+      .then((data) => {
+        const row = data.value
+        if (cancelled || !row?.id) return
+        setDetailRow(row)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [collectionPath, detailId, detailRow?.id, items])
+
   useEffect(() => () => window.clearTimeout(noticeTimer.current), [])
 
   const schema = stat?.schema
@@ -853,7 +889,10 @@ export function CollectionBrowser({
     [collapsed, parentKey, showTree],
   )
 
-  const selected = visible.find((item) => item.id === detailId) ?? items.find((item) => item.id === detailId) ?? null
+  const selected =
+    (detailId &&
+      (items.find((item) => item.id === detailId) ?? (detailRow?.id === detailId ? detailRow : null))) ||
+    null
   useEffect(() => {
     const rows = items.map((row) => ({
       id: row.id,
@@ -1599,7 +1638,13 @@ export function CollectionBrowser({
           onDeleteView={deleteView}
           onAddView={addEmptyView}
           onCopyView={copyView}
-          onOpenRecord={(path, view, recordId) => {
+          onOpenRecord={(path, view, recordId, row) => {
+            if (path === collectionPath) {
+              flushSync(() => {
+                setOpenDetailId(recordId)
+                if (row) setDetailRow(row)
+              })
+            }
             onOpenRecord?.(recordId, view.id, path)
           }}
           expandedViewKey={expandedViewKey}
@@ -1655,7 +1700,7 @@ export function CollectionBrowser({
         </header>
         )}
         <div className="fsdb-right-body">
-        {!selected ? (
+        {!detailId ? (
         <div className="tasks-main fsdb-main">
         <div className="tasks-toolbar" data-biu-ignore>
           <div className="tasks-toolbar-left">

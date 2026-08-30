@@ -23,7 +23,19 @@ test('table and view rows only expand from the fold column', () => {
   assert.doesNotMatch(css, /\.chat-session-row:hover \.sidebar-group-fold-chevron/)
 })
 
-test('table view opens a record only from the title-side button', () => {
+test('sidebar records paint detail immediately without reloading the view', () => {
+  const sidebar = readFileSync(resolve(import.meta.dirname, './data-sidebar.tsx'), 'utf8')
+  assert.match(browser, /flushSync\(\(\) => \{\s*setOpenDetailId\(recordId\)/)
+  assert.match(browser, /if \(row\) setDetailRow\(row\)/)
+  assert.match(browser, /onOpenRecord\?\.\(recordId, view\.id, path\)/)
+  assert.doesNotMatch(browser, /if \(path === collectionPath\) applyView\(view\)/)
+  assert.doesNotMatch(browser, /onOpenRecord=\{\(path, view, recordId\) => \{\s*selectView/)
+  assert.match(browser, /!detailId \?/)
+  assert.match(sidebar, /onOpenRecord\?\.\(row\.id, row\)/)
+  assert.match(sidebar, /event.stopPropagation\(\)/)
+})
+
+test('table title opens record from the title-side button', () => {
   assert.match(browser, /data-testid="record-title-open"/)
   assert.match(browser, /className="tasks-title-open"/)
   assert.doesNotMatch(browser, /recordPick\(row\)\} onClick=\{\(\) => setDetailId\(row\.id\)\}/)

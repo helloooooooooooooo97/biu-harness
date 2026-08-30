@@ -62,7 +62,7 @@ function ViewRecordPreview({
   open: boolean
   recordKind: string
   tableIcon?: string
-  onOpenRecord?: (recordId: string) => void
+  onOpenRecord?: (recordId: string, row?: DbRecord) => void
 }) {
   const key = previewCacheKey(path, view)
   const cached = previewCache.get(key)
@@ -207,7 +207,10 @@ function ViewRecordPreview({
                 type="button"
                 className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit"
                 title={recordPreviewLabel(row)}
-                onClick={() => onOpenRecord?.(row.id)}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onOpenRecord?.(row.id, row)
+                }}
               >
                 {recordPreviewLabel(row)}
               </button>
@@ -273,7 +276,7 @@ export const DataSidebar = memo(function DataSidebar({
   onDeleteView: (view: SavedView) => void
   onAddView: () => void
   onCopyView: () => void
-  onOpenRecord?: (path: string, view: SavedView, recordId: string) => void
+  onOpenRecord?: (path: string, view: SavedView, recordId: string, row?: DbRecord) => void
   expandedViewKey?: string | null
   onExpandedViewKeyChange?: (key: string | null) => void
   onCollapse?: () => void
@@ -364,8 +367,8 @@ export const DataSidebar = memo(function DataSidebar({
     else setExpandedViewKeyLocal(next)
   }
 
-  function openRecord(path: string, view: SavedView, recordId: string) {
-    onOpenRecord?.(path, view, recordId)
+  function openRecord(path: string, view: SavedView, recordId: string, row?: DbRecord) {
+    onOpenRecord?.(path, view, recordId, row)
   }
 
   return (
@@ -494,7 +497,7 @@ export const DataSidebar = memo(function DataSidebar({
                           open={expanded}
                           recordKind={recordPickKind(table.view?.moduleId)}
                           tableIcon={table.view?.icon}
-                          onOpenRecord={(id) => openRecord(table.path, view, id)}
+                          onOpenRecord={(id, row) => openRecord(table.path, view, id, row)}
                         />
                       </div>
                     )
@@ -646,7 +649,7 @@ export const DataSidebar = memo(function DataSidebar({
                                 open={expanded}
                                 recordKind={recordPickKind(table.view?.moduleId)}
                                 tableIcon={table.view?.icon}
-                                onOpenRecord={(id) => openRecord(table.path, view, id)}
+                                onOpenRecord={(id, row) => openRecord(table.path, view, id, row)}
                               />
                             </div>
                           )
