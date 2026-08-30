@@ -93,7 +93,6 @@ test('database extras sit after the record detail, not in the inspector', () => 
   assert.match(page, /tabLabel: current\?\.view\?\.title/)
   assert.doesNotMatch(page, /tabLabel: '数据库'/)
   assert.doesNotMatch(page, /RecordPanePanel/)
-  const style = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8')
   assert.match(detail, /fsdb-detail-extras/)
   assert.match(detail, /<h1 className="fsdb-detail-title">/)
   assert.doesNotMatch(detail, /<h2 className="fsdb-detail-title-input">/)
