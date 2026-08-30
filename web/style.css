@@ -959,6 +959,7 @@ body {
   padding: 0;
   background: transparent;
   box-shadow: none;
+  overflow: visible;
   pointer-events: none !important;
 }
 

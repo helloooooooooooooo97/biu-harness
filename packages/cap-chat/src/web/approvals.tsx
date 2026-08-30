@@ -15,7 +15,6 @@ import { bindSessionView, type ChatNode, type DispatchedTaskRow, type SessionVie
 import { BrandAgentMenu, SidebarMascot, resolveSessionMascot } from '@biu/web-mascot'
 import { SessionProjectPanel } from './project-panel.tsx'
 import { ChatLiveMetrics } from './live-hud.tsx'
-import { setOverlayAutohide } from '@biu/web-app-shell/chat-overlay'
 import { shouldNavigateToSession } from './composer-nav.ts'
 
 type AgentMode = 'minimal' | 'standard' | 'create'
@@ -349,7 +348,15 @@ export function ApprovalsRail(props: SlotProps) {
               ref={sessionPickerRef}
               className="dock-agent-stack"
               data-testid="dock-agent-stack"
-              onMouseEnter={() => setOverlayAutohide(false)}
+              onMouseEnter={() => {
+                setSessionPickerOpen(true)
+                setAgentMenuOpen(false)
+                setApprovalMenuOpen(false)
+              }}
+              onMouseLeave={(event) => {
+                if (sessionPickerRef.current?.contains(event.relatedTarget as Node)) return
+                setSessionPickerOpen(false)
+              }}
             >
               <button
                 type="button"
