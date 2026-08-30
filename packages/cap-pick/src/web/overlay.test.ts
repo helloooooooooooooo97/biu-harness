@@ -12,3 +12,8 @@ test('pick capture does not eat sidebar, rail, or inspector chrome clicks', () =
   assert.match(overlay, /data-biu-ignore/)
   assert.doesNotMatch(overlay, /\.session-inspector/)
 })
+
+test('Command/Ctrl+Q toggles pick mode', () => {
+  assert.match(overlay, /event.metaKey \|\| event.ctrlKey/)
+  assert.match(overlay, /key === 'q'/)
+})

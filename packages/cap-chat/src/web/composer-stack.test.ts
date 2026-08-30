@@ -22,6 +22,14 @@ describe('composer dock stacking above sticky user', () => {
     expect(shell).not.toMatch(/bottom-0 z-\[2\]/)
   })
 
+  it('compose-only overlay hides the reply thread until send', () => {
+    const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
+    const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
+    expect(css).toMatch(/\.chat-overlay-panel\.is-compose-only \.chat-overlay-thread/)
+    expect(composer).toContain('revealOverlayThread')
+    expect(composer).toContain('biu:composer-focus')
+  })
+
   it('squares the composer when pick chips are present', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')

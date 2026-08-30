@@ -10,6 +10,9 @@ import {
   SIDEBAR_MAX,
   getChatOverlay,
   setChatOverlay,
+  getOverlayThread,
+  openOverlayComposer,
+  revealOverlayThread,
   getOverlayAutohide,
   setOverlayAutohide,
   requestOverlayAutohide,
@@ -96,6 +99,18 @@ test('overlay starts closed', () => {
   setChatOverlay(true)
   assert.equal(getChatOverlay(), true)
   setChatOverlay(false)
+})
+
+test('pick opens a compose-only overlay; send reveals the thread', () => {
+  setChatOverlay(false)
+  openOverlayComposer({ revealThread: false })
+  assert.equal(getChatOverlay(), true)
+  assert.equal(getOverlayThread(), false)
+  assert.equal(getOverlayAutohide(), false)
+  revealOverlayThread()
+  assert.equal(getOverlayThread(), true)
+  setChatOverlay(false)
+  assert.equal(getOverlayThread(), false)
 })
 
 test('autohide resets when overlay closes', () => {

@@ -18,6 +18,7 @@ import {
 import { ModelConfigDialog } from './model-config-dialog.tsx'
 import { ImageThumbs } from './image-thumbs.tsx'
 import { collectClipboardImages, collectImageFiles } from './clipboard-images.ts'
+import { revealOverlayThread } from '@biu/web-app-shell/chat-overlay'
 import { shouldNavigateToSession } from './composer-nav.ts'
 
 /** 按键不驱动受控 value；仅防抖更新发送按钮可用态，避免每个字符打穿 React 渲染。 */
@@ -536,6 +537,14 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     },
   })
 
+  useEffect(() => {
+    const onFocus = () => {
+      editor?.commands.focus('end')
+    }
+    window.addEventListener('biu:composer-focus', onFocus)
+    return () => window.removeEventListener('biu:composer-focus', onFocus)
+  }, [editor])
+
   useEffect(
     () => () => {
       if (debounceRef.current != null) clearTimeout(debounceRef.current)
@@ -690,6 +699,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     const packed = await Promise.all(pendingImages.map((item) => readFileDataUrl(item.file)))
     clearInput()
     pick?.clear()
+    revealOverlayThread()
     try {
       await sessionView.send(
         text,
@@ -697,6 +707,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
         tools,
         packed.filter((item) => item.url.startsWith('data:image/')),
       )
+      revealOverlayThread()
       const id = sessionView.get().sessionId
       if (id) {
         clearDraft(id)

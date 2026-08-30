@@ -896,16 +896,14 @@ body {
   position: static;
 }
 
-.chat-overlay-panel .chat-composer-dock {
-  position: relative;
-  inset: auto;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  pointer-events: auto;
+.chat-overlay-panel.is-compose-only {
+  padding-top: 10px;
+}
+
+.chat-overlay-panel.is-compose-only .chat-overlay-resize,
+.chat-overlay-panel.is-compose-only .chat-overlay-thread,
+.chat-overlay-panel.is-compose-only .chat-view-header {
+  display: none;
 }
 
 .chat-overlay-panel.is-autohide {

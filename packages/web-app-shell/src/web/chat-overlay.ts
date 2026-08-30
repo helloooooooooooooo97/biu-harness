@@ -61,9 +61,11 @@ let overlay = false
 let autohide = false
 let resizing = false
 let pinned = false
+let overlayThread = false
 const listeners = new Set<() => void>()
 const autohideListeners = new Set<() => void>()
 const pinListeners = new Set<() => void>()
+const threadListeners = new Set<() => void>()
 
 function emit() {
   for (const fn of listeners) fn()
@@ -75,6 +77,10 @@ function emitAutohide() {
 
 function emitPin() {
   for (const fn of pinListeners) fn()
+}
+
+function emitThread() {
+  for (const fn of threadListeners) fn()
 }
 
 export function getChatOverlay() {
@@ -91,8 +97,48 @@ export function subscribeChatOverlay(fn: () => void) {
 export function setChatOverlay(next: boolean) {
   if (overlay === next) return
   overlay = next
-  if (!next) setOverlayAutohide(false)
+  if (!next) {
+    setOverlayAutohide(false)
+    setOverlayThread(false)
+  }
   emit()
+}
+
+export function getOverlayThread() {
+  return overlayThread
+}
+
+export function subscribeOverlayThread(fn: () => void) {
+  threadListeners.add(fn)
+  return () => {
+    threadListeners.delete(fn)
+  }
+}
+
+export function setOverlayThread(next: boolean) {
+  if (overlayThread === next) return
+  overlayThread = next
+  emitThread()
+}
+
+export function requestComposerFocus() {
+  const fire = () => window.dispatchEvent(new Event('biu:composer-focus'))
+  fire()
+  requestAnimationFrame(fire)
+  window.setTimeout(fire, 40)
+}
+
+/** 选取对象后弹出输入条：工具栏 + 统计 + 输入框，回复区等发出去再展开。 */
+export function openOverlayComposer(opts?: { revealThread?: boolean }) {
+  setChatOverlay(true)
+  setOverlayAutohide(false)
+  setOverlayThread(Boolean(opts?.revealThread))
+  requestComposerFocus()
+}
+
+export function revealOverlayThread() {
+  if (!overlay) return
+  setOverlayThread(true)
 }
 
 export function getOverlayAutohide() {
@@ -229,4 +275,10 @@ export function clampOverlayChatHeight(height: number, maxHeight = 800) {
   const max = Math.max(OVERLAY_CHAT_HEIGHT_MIN, Math.round(maxHeight))
   if (!Number.isFinite(height)) return OVERLAY_CHAT_HEIGHT_DEFAULT
   return Math.min(max, Math.max(OVERLAY_CHAT_HEIGHT_MIN, Math.round(height)))
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('biu:pick-attached', () => {
+    openOverlayComposer({ revealThread: false })
+  })
 }

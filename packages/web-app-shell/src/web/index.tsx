@@ -4,9 +4,12 @@ import {
   setChatOverlay,
   getChatOverlay,
   subscribeChatOverlay,
+  openOverlayComposer,
   clampOverlayChatHeight,
   OVERLAY_CHAT_HEIGHT_DEFAULT,
   OVERLAY_CHAT_HEIGHT_MIN,
+  getOverlayThread,
+  subscribeOverlayThread,
   getOverlayAutohide,
   setOverlayAutohide,
   subscribeOverlayAutohide,
@@ -214,6 +217,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
 }) {
   const overlay = floating
   const overlayOpen = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
+  const threadOpen = useSyncExternalStore(subscribeOverlayThread, getOverlayThread, () => false)
   const [overlayMounted, setOverlayMounted] = useState(false)
   const [heldCenter, setHeldCenter] = useState(showCenter)
   if (showCenter && !heldCenter) setHeldCenter(true)
@@ -322,9 +326,10 @@ const AgentMainPanels = memo(function AgentMainPanels({
     overlay && overlayMounted && overlayOpen
       ? createPortal(
         <div
-          className={`chat-overlay-panel${hidden ? ' is-autohide' : ''}`}
+          className={`chat-overlay-panel${hidden ? ' is-autohide' : ''}${threadOpen ? '' : ' is-compose-only'}`}
           data-with-sidebar={withSidebar ? '1' : '0'}
           data-testid="chat-overlay-panel"
+          data-compose-only={threadOpen ? undefined : '1'}
           style={{
             ['--overlay-chat-height' as string]: `${overlayChatHeight}px`,
             ['--rail-w' as string]: railOpen ? '48px' : '0px',
@@ -751,7 +756,10 @@ function Shell(props: SlotProps) {
         agents={danceSessions}
         activeId={sessionId}
         overlayOn={overlayOpen}
-        onToggleOverlay={() => setChatOverlay(!getChatOverlay())}
+        onToggleOverlay={() => {
+          if (getChatOverlay()) setChatOverlay(false)
+          else openOverlayComposer({ revealThread: true })
+        }}
         leading={props.renderSlot('corner-tools')}
         onSelect={(id) => {
           if (activeModule === 'agent') navigate(`/s/${encodeURIComponent(id)}`)

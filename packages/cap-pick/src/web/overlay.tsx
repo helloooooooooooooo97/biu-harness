@@ -104,9 +104,12 @@ export function PickOverlay(_props: SlotProps) {
 
   useEffect(() => {
     const onHotkey = (event: KeyboardEvent) => {
-      if (!(event.altKey && (event.key === 'c' || event.key === 'C'))) return
       if (event.repeat) return
       if (!pick) return
+      const key = event.key.toLowerCase()
+      const pickChord = (event.metaKey || event.ctrlKey) && key === 'q'
+      const legacy = event.altKey && key === 'c'
+      if (!pickChord && !legacy) return
       event.preventDefault()
       pick.toggle()
     }

@@ -72,6 +72,7 @@ export class PickService extends Service {
     this.marquee = null
     this.marqueeHits = []
     this.bump()
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('biu:pick-attached'))
   }
 
   removeLast() {

@@ -9,6 +9,8 @@ test('overlay chat is off on the agent page and elsewhere until the corner dock 
   assert.match(shell, /showCenter=\{activeModule === 'agent'\}/)
   assert.match(shell, /floating=\{activeModule !== 'agent'\}/)
   assert.match(shell, /overlay && overlayMounted && overlayOpen/)
+  assert.match(shell, /openOverlayComposer\(\{ revealThread: true \}\)/)
+  assert.match(shell, /is-compose-only/)
   assert.doesNotMatch(shell, /setChatOverlay\(true\)/)
   assert.doesNotMatch(shell, /chat-overlay-toggle/)
   assert.doesNotMatch(shell, /toggleChatOverlay/)
