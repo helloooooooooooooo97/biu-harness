@@ -210,6 +210,10 @@ const AgentMainPanels = memo(function AgentMainPanels({
   showCenter: boolean
 }) {
   const overlay = floating
+  const [overlayMounted, setOverlayMounted] = useState(false)
+  useEffect(() => {
+    setOverlayMounted(true)
+  }, [])
   const hidden = useSyncExternalStore(subscribeOverlayAutohide, getOverlayAutohide, () => false)
   const stageRef = useRef<HTMLDivElement>(null)
   const heightRef = useRef(OVERLAY_CHAT_HEIGHT_DEFAULT)
@@ -298,8 +302,9 @@ const AgentMainPanels = memo(function AgentMainPanels({
     </div>
   )
 
-  const overlayNode = overlay
-    ? createPortal(
+  const overlayNode =
+    overlay && overlayMounted
+      ? createPortal(
         <div
           className={`chat-overlay-panel${hidden ? ' is-autohide' : ''}`}
           data-with-sidebar={withSidebar ? '1' : '0'}
