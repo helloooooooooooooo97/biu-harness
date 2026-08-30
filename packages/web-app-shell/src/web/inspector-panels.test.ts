@@ -57,5 +57,5 @@ test('inspector view props drop tab chrome and databaseUi', () => {
     useSnapshot: 1,
     paneId: 'x',
   })
-  assert.deepEqual(next, { useSnapshot: 1, paneId: 'x' })
+  assert.deepEqual(next, { paneId: 'x' })
 })

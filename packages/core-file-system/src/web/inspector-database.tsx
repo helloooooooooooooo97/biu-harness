@@ -4,7 +4,6 @@ import { useLocation } from 'react-router-dom'
 import type { SlotProps } from '@biu/type-slots'
 import type { CollectionInfo } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
-import type { bindSnapshot } from '@biu/web-snapshot'
 import { parseAppPath } from '@biu/web-session-view'
 import { buildCrumbs, pathForCrumbTarget, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
 import { CrumbItemGlyph } from './nav-glyphs.tsx'
@@ -21,6 +20,30 @@ import { getDatabaseUi } from './database-ui.ts'
 
 const DATA_MODULE = { id: 'database', label: '数据', path: '/database' }
 const EMPTY_CHROME: CollectionChrome = {}
+
+type InspectorSnapshot = {
+  subscribe: (fn: () => void) => () => void
+  get: () => { collections?: CollectionInfo[] }
+}
+
+let snapshotRef: InspectorSnapshot | undefined
+
+export function bindInspectorSnapshot(source: InspectorSnapshot) {
+  snapshotRef = source
+}
+
+function subscribeInspectorSnapshot(fn: () => void) {
+  if (!snapshotRef) return () => undefined
+  return snapshotRef.subscribe(fn)
+}
+
+function readInspectorCollections() {
+  return (snapshotRef?.get().collections ?? []) as CollectionInfo[]
+}
+
+function useInspectorCollections() {
+  return useSyncExternalStore(subscribeInspectorSnapshot, readInspectorCollections, () => [] as CollectionInfo[])
+}
 
 let viewTick = 0
 
@@ -83,11 +106,9 @@ function goInspector(target: CrumbTarget) {
 export function DatabaseInspectorTab({
   active,
   onActivate,
-  useSnapshot,
 }: {
   active?: boolean
   onActivate?: () => void
-  useSnapshot?: ReturnType<typeof bindSnapshot>
 }) {
   const location = useLocation()
   const inspectorPath = useInspectorDbPath()
@@ -96,7 +117,7 @@ export function DatabaseInspectorTab({
   useEffect(() => {
     seedInspectorDbPath(location.pathname)
   }, [location.pathname])
-  const collections = (useSnapshot?.((state) => state.collections ?? []) ?? []) as CollectionInfo[]
+  const collections = useInspectorCollections()
   const tables = useMemo(
     () => collections.filter((row) => row.path && row.path !== '/'),
     [collections],
@@ -152,8 +173,7 @@ export function DatabaseInspectorTab({
   )
 }
 
-export function DatabaseInspectorBrowse(props: SlotProps) {
-  const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
+export function DatabaseInspectorBrowse(_props: SlotProps) {
   const ui = getDatabaseUi()
   const location = useLocation()
   const inspectorPath = useInspectorDbPath()
@@ -161,7 +181,7 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
   useEffect(() => {
     seedInspectorDbPath(location.pathname)
   }, [location.pathname])
-  const collections = (useSnapshot((state) => state.collections ?? []) ?? []) as CollectionInfo[]
+  const collections = useInspectorCollections()
   const tables = useMemo(
     () => collections.filter((row) => row.path && row.path !== '/'),
     [collections],

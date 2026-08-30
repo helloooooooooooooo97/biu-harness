@@ -43,6 +43,9 @@ const INSPECTOR_VIEW_OMIT = new Set([
   'focusOnCall',
   'requiresSession',
   'databaseUi',
+  'useSnapshot',
+  'slots',
+  'sessionView',
 ])
 
 export function inspectorViewProps(raw: Record<string, unknown>) {

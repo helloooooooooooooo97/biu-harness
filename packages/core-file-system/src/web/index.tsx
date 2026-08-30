@@ -14,8 +14,7 @@ import {
   collectionNavKey,
 } from './nav-boot.ts'
 import { loadActiveViewId, loadViews, pushAllSavedViews } from './view-storage.ts'
-import { bindSnapshot } from '@biu/web-snapshot'
-import { DatabaseInspectorBrowse, DatabaseInspectorTab } from './inspector-database.tsx'
+import { DatabaseInspectorBrowse, DatabaseInspectorTab, bindInspectorSnapshot } from './inspector-database.tsx'
 
 type SlotsService = {
   place: (slot: string, view: unknown, opts: { key: string; order?: number; props?: () => Record<string, unknown> }) => { dispose?: () => unknown }
@@ -75,7 +74,7 @@ function defaultViewId(collectionPath: string) {
 function CollectionPage(props: SlotProps) {
   const tables = (props.tables as CollectionInfo[] | undefined) ?? []
   const slots = props.slots as SlotsService | undefined
-  const ui = props.databaseUi as DatabaseUiService | undefined
+  const ui = getDatabaseUi()
   const location = useLocation()
   const navigate = useNavigate()
   const [expandedViewKey, setExpandedViewKey] = useState<string | null>(null)
@@ -171,7 +170,6 @@ function CollectionPage(props: SlotProps) {
       blurb={row?.view?.blurb ?? ''}
       chrome={chrome}
       tables={tables}
-      databaseUi={ui}
       routeRecordId={recordFromRoute}
       routeViewId={viewFromRoute}
       expandedViewKey={expandedViewKey}
@@ -307,7 +305,6 @@ export function apply(ctx: Context) {
           props: () => ({
             moduleId: DATA_MODULE_ID,
             tables: liveTables,
-            databaseUi: ctx.get('databaseUi') as DatabaseUiService,
             slots,
           }),
         })
@@ -346,6 +343,10 @@ export function apply(ctx: Context) {
   })
   ctx.inject(['snapshot'], (inner) => {
     const snapshot = inner.get('snapshot') as SnapshotService
+    bindInspectorSnapshot({
+      subscribe: snapshot.subscribe ?? (() => () => undefined),
+      get: () => snapshot.get?.() ?? {},
+    })
     const databaseBrowse = slots.place('inspector-panels', DatabaseInspectorBrowse, {
       key: 'fsdb-database-browse',
       order: -25,
@@ -355,7 +356,6 @@ export function apply(ctx: Context) {
         tabIcon: CircleStackIcon,
         Tab: DatabaseInspectorTab,
         common: true,
-        useSnapshot: bindSnapshot(snapshot),
       }),
     })
     let lastKey = ''

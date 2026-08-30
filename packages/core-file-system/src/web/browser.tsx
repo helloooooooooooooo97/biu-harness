@@ -43,7 +43,7 @@ import {
 import type { CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
 import { asAttachment, asHttpHref, asImageSrc } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
-import type { DatabaseUiService } from './database-ui.ts'
+import { getDatabaseUi } from './database-ui.ts'
 import {
   asStringList,
   asTime,
@@ -446,7 +446,6 @@ export function CollectionBrowser({
   chrome,
   tables = [],
   onOpenTable,
-  databaseUi,
   routeRecordId = null,
   routeViewId,
   expandedViewKey,
@@ -464,7 +463,6 @@ export function CollectionBrowser({
   chrome?: CollectionChrome
   tables?: CollectionInfo[]
   onOpenTable?: (path: string, viewId?: string) => void
-  databaseUi?: DatabaseUiService
   routeRecordId?: string | null
   routeViewId?: string
   expandedViewKey?: string | null
@@ -476,6 +474,7 @@ export function CollectionBrowser({
   /** 检查器内页：只有中间舞台，不写侧栏开关/视图存储，也不抢记录焦点。 */
   embed?: boolean
 }) {
+  const databaseUi = getDatabaseUi()
   const [stat, setStat] = useState<StatResult | null>(null)
   const [items, setItems] = useState<Array<DbRecord & { path?: string }>>([])
   const [error, setError] = useState('')
