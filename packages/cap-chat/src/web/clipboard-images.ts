@@ -3,7 +3,7 @@ const IMAGE_MIMES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp
 export { IMAGE_MIMES }
 
 function fileFingerprint(file: File): string {
-  return `${file.name}\0${file.size}\0${file.lastModified}\0${file.type}`
+  return `${file.type}\0${file.size}`
 }
 
 /** Drop / file-input: keep image files only. */
@@ -14,8 +14,9 @@ export function collectImageFiles(list: FileList | File[] | null | undefined): F
 
 /**
  * Paste often exposes the same screenshot via both `clipboardData.files`
- * and `clipboardData.items`. Dedup by name/size/mtime/type so one paste
- * becomes one pending image.
+ * and `clipboardData.items`, as two File objects with different names/mtime.
+ * Prefer `files` when it already has images; otherwise read `items`.
+ * Dedup leftover twins by type+size.
  */
 export function uniqueImageFiles(files: Array<File | null | undefined>): File[] {
   const seen = new Set<string>()
@@ -32,8 +33,9 @@ export function uniqueImageFiles(files: Array<File | null | undefined>): File[] 
 
 export function collectClipboardImages(clipboard: DataTransfer | null | undefined): File[] {
   if (!clipboard) return []
-  const fromFiles = Array.from(clipboard.files ?? [])
-  const fromItems = Array.from(clipboard.items)
-    .map((item) => (item.kind === 'file' ? item.getAsFile() : null))
-  return uniqueImageFiles([...fromFiles, ...fromItems])
+  const fromFiles = uniqueImageFiles(Array.from(clipboard.files ?? []))
+  if (fromFiles.length) return fromFiles
+  return uniqueImageFiles(
+    Array.from(clipboard.items).map((item) => (item.kind === 'file' ? item.getAsFile() : null)),
+  )
 }

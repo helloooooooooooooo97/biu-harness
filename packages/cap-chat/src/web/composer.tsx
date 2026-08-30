@@ -454,8 +454,9 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       handlePaste(_view, event) {
         const images = collectClipboardImages(event.clipboardData)
         if (!images.length) return false
+        event.preventDefault()
         addImageFiles(images)
-        return !event.clipboardData?.getData('text/plain')
+        return true
       },
       handleKeyDown(_view, event) {
         const menu = live.current.slash
