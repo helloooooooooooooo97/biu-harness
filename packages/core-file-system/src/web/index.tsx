@@ -357,6 +357,7 @@ export function apply(ctx: Context) {
         Tab: DatabaseInspectorTab,
         common: true,
         useSnapshot: bindSnapshot(snapshot),
+        databaseUi: ctx.get('databaseUi') as DatabaseUiService,
       }),
     })
     let lastKey = ''

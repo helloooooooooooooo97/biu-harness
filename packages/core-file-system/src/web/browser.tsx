@@ -455,6 +455,7 @@ export function CollectionBrowser({
   onOpenRecord,
   onCloseRecord,
   onCrumbTarget,
+  embed = false,
 }: {
   moduleId?: string
   collectionPath: string
@@ -472,6 +473,8 @@ export function CollectionBrowser({
   onOpenRecord?: (recordId: string, viewId?: string | null, collection?: string) => void
   onCloseRecord?: () => void
   onCrumbTarget?: (target: CrumbTarget) => void
+  /** 检查器内页：只有中间舞台，不写侧栏开关/视图存储，也不抢记录焦点。 */
+  embed?: boolean
 }) {
   const [stat, setStat] = useState<StatResult | null>(null)
   const [items, setItems] = useState<Array<DbRecord & { path?: string }>>([])
@@ -566,6 +569,7 @@ export function CollectionBrowser({
   }
 
   useEffect(() => {
+    if (embed) return
     function onToggle(event: Event) {
       const id = (event as CustomEvent<{ id?: string }>).detail?.id
       if (!id || (moduleId && id !== moduleId)) return
@@ -573,9 +577,10 @@ export function CollectionBrowser({
     }
     window.addEventListener('biu:toggle-module-sidebar', onToggle)
     return () => window.removeEventListener('biu:toggle-module-sidebar', onToggle)
-  }, [collectionPath, moduleId])
+  }, [collectionPath, embed, moduleId])
 
   useEffect(() => {
+    if (embed) return
     const sync = (open: boolean) => setInspectorOpen(open)
     const onOpen = () => sync(true)
     const onClose = () => sync(false)
@@ -588,7 +593,7 @@ export function CollectionBrowser({
       window.removeEventListener('biu:inspector-close', onClose)
       window.removeEventListener('biu:inspector-toggle', onToggle)
     }
-  }, [])
+  }, [embed])
 
   useEffect(() => {
     function onPointer(event: MouseEvent) {
@@ -865,26 +870,28 @@ export function CollectionBrowser({
   }, [collectionPath, detailId])
 
   useEffect(() => {
-    if (!detailId) return
+    if (embed || !detailId) return
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setDetailId(null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [detailId])
+  }, [detailId, embed])
 
   useEffect(() => {
+    if (embed) return
     if (!detailId) {
       databaseUi?.setRecordFocus(null)
       return
     }
     const row = items.find((item) => item.id === detailId)
     databaseUi?.setRecordFocus({ path: collectionPath, recordId: detailId, record: row })
-  }, [collectionPath, databaseUi, detailId, items])
+  }, [collectionPath, databaseUi, detailId, embed, items])
 
   useEffect(() => {
+    if (embed) return
     return () => databaseUi?.setRecordFocus(null)
-  }, [databaseUi])
+  }, [databaseUi, embed])
 
   useEffect(() => {
     if (dlg?.kind !== 'rename') return
@@ -894,6 +901,7 @@ export function CollectionBrowser({
   function persistViews(next: SavedView[]) {
     viewsRef.current = next
     setViews(next)
+    if (embed) return
     localStorage.setItem(viewsKey(collectionPath), JSON.stringify(next))
     pushSavedViews(collectionPath, next)
     window.dispatchEvent(new Event('fsdb:change'))
@@ -901,6 +909,7 @@ export function CollectionBrowser({
 
   function rememberActiveView(id: string) {
     setActiveViewId(id)
+    if (embed) return
     try {
       localStorage.setItem(activeViewStorageKey(collectionPath), id)
     } catch {
@@ -1026,38 +1035,6 @@ export function CollectionBrowser({
     setViewMenuOpen(false)
     setDlg({ kind: 'delete', view })
   }
-
-  const addEmptyViewRef = useRef(addEmptyView)
-  const copyViewRef = useRef(copyView)
-  const renameViewRef = useRef(renameView)
-  const deleteViewRef = useRef(deleteView)
-  addEmptyViewRef.current = addEmptyView
-  copyViewRef.current = copyView
-  renameViewRef.current = renameView
-  deleteViewRef.current = deleteView
-
-  useEffect(() => {
-    const onAdd = () => addEmptyViewRef.current()
-    const onCopy = () => copyViewRef.current()
-    const onRename = (event: Event) => {
-      const view = (event as CustomEvent<SavedView>).detail
-      if (view?.id) renameViewRef.current(view)
-    }
-    const onDelete = (event: Event) => {
-      const view = (event as CustomEvent<SavedView>).detail
-      if (view?.id) deleteViewRef.current(view)
-    }
-    window.addEventListener('fsdb:add-view', onAdd)
-    window.addEventListener('fsdb:copy-view', onCopy)
-    window.addEventListener('fsdb:rename-view', onRename)
-    window.addEventListener('fsdb:delete-view', onDelete)
-    return () => {
-      window.removeEventListener('fsdb:add-view', onAdd)
-      window.removeEventListener('fsdb:copy-view', onCopy)
-      window.removeEventListener('fsdb:rename-view', onRename)
-      window.removeEventListener('fsdb:delete-view', onDelete)
-    }
-  }, [])
 
   function applyRename(name?: string) {
     if (!dlg || dlg.kind !== 'rename') return
@@ -1526,8 +1503,11 @@ export function CollectionBrowser({
   ])
 
   return (
-    <div className="fsdb-page tasks-root">
-      {viewsOpen ? (
+    <div
+      className={`fsdb-page tasks-root${embed ? ' inspector-database-page' : ''}`}
+      data-testid={embed ? 'inspector-database' : undefined}
+    >
+      {!embed && viewsOpen ? (
         <DataSidebar
           tables={tables}
           collectionPath={collectionPath}
@@ -1552,6 +1532,7 @@ export function CollectionBrowser({
         />
       ) : null}
       <div className="fsdb-right">
+        {embed ? null : (
         <header className="chat-view-header" data-biu-ignore>
           <div className="chat-view-header-left">
             <nav className="fsdb-crumbs" aria-label="位置" ref={crumbRef}>
@@ -1637,6 +1618,7 @@ export function CollectionBrowser({
             </button>
           </div>
         </header>
+        )}
         <div className="fsdb-right-body">
         {!selected ? (
         <div className="tasks-main fsdb-main">
@@ -2311,7 +2293,7 @@ if (typeof document !== 'undefined') {
 .fsdb-inspector-panel .fsdb-detail-stage{min-height:0;flex:1}
 .fsdb-right-body{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
 .fsdb-views{display:flex;width:280px;flex:none;flex-direction:column;min-height:0;overflow:hidden}
-.inspector-database-rail.fsdb-views{width:100%;flex:1;border-right:0}
+.inspector-database-page{width:100%;min-height:0;flex:1}
 .fsdb-nav-chevron{flex:none;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
 .fsdb-nav-chevron:hover{background:var(--dsw-hover);color:var(--dsw-label)}
 .fsdb-collection-head{flex:none;padding:4px 16px 10px;min-width:0}

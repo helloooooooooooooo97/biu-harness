@@ -1,18 +1,26 @@
-import { useMemo, useState, useSyncExternalStore, type MouseEvent } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore, type MouseEvent } from 'react'
 import { CircleStackIcon } from '@heroicons/react/16/solid'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import type { SlotProps } from '@biu/type-slots'
 import type { CollectionInfo } from '@biu/type-file-system'
+import type { CollectionChrome } from '@biu/type-file-system/ui'
 import type { bindSnapshot } from '@biu/web-snapshot'
 import { parseAppPath } from '@biu/web-session-view'
 import { buildCrumbs, DATABASE_ROOT_PATH, pathForCrumbTarget, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
 import { CrumbItemGlyph } from './nav-glyphs.tsx'
-import { DataSidebar } from './data-sidebar.tsx'
+import { CollectionBrowser } from './browser.tsx'
 import { loadActiveViewId, loadViews } from './view-storage.ts'
 import { databaseRecordPath, databaseViewPath } from './inspector-nav.ts'
-import type { SavedView } from './saved-view.ts'
+import {
+  getInspectorDbPath,
+  seedInspectorDbPath,
+  setInspectorDbPath,
+  subscribeInspectorDbPath,
+} from './inspector-db-route.ts'
+import type { DatabaseUiService } from './database-ui.ts'
 
 const DATA_MODULE = { id: 'database', label: '数据', path: '/database' }
+const EMPTY_CHROME: CollectionChrome = {}
 
 let viewTick = 0
 
@@ -37,6 +45,10 @@ function useViewTick() {
     () => viewTick,
     () => 0,
   )
+}
+
+function useInspectorDbPath() {
+  return useSyncExternalStore(subscribeInspectorDbPath, getInspectorDbPath, () => '')
 }
 
 function crumbsForRoute(
@@ -64,6 +76,14 @@ function crumbsForRoute(
   return { crumbs, collection, viewId: activeViewId, recordId }
 }
 
+function goInspector(target: CrumbTarget | { kind: 'root' }) {
+  if (target.kind === 'root') {
+    setInspectorDbPath(DATABASE_ROOT_PATH)
+    return
+  }
+  setInspectorDbPath(pathForCrumbTarget(target))
+}
+
 export function DatabaseInspectorTab({
   active,
   onActivate,
@@ -74,15 +94,18 @@ export function DatabaseInspectorTab({
   useSnapshot?: ReturnType<typeof bindSnapshot>
 }) {
   const location = useLocation()
-  const navigate = useNavigate()
+  const inspectorPath = useInspectorDbPath()
   const [hover, setHover] = useState(false)
   useViewTick()
+  useEffect(() => {
+    seedInspectorDbPath(location.pathname)
+  }, [location.pathname])
   const collections = (useSnapshot?.((state) => state.collections ?? []) ?? []) as CollectionInfo[]
   const tables = useMemo(
     () => collections.filter((row) => row.path && row.path !== '/'),
     [collections],
   )
-  const { crumbs } = crumbsForRoute(location.pathname, tables)
+  const { crumbs } = crumbsForRoute(inspectorPath || location.pathname, tables)
   const leaf = crumbs.at(-1)
   const leafChoice = leaf?.choices.find((item) => item.id === leaf.id)
   const showTrail = hover && crumbs.length > 0
@@ -91,11 +114,7 @@ export function DatabaseInspectorTab({
     event.preventDefault()
     event.stopPropagation()
     onActivate?.()
-    if (target.kind === 'root') {
-      navigate(DATABASE_ROOT_PATH)
-      return
-    }
-    navigate(pathForCrumbTarget(target))
+    goInspector(target)
   }
 
   return (
@@ -143,47 +162,56 @@ export function DatabaseInspectorTab({
 
 export function DatabaseInspectorBrowse(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
+  const ui = props.databaseUi as DatabaseUiService | undefined
   const location = useLocation()
-  const navigate = useNavigate()
+  const inspectorPath = useInspectorDbPath()
   useViewTick()
+  useEffect(() => {
+    seedInspectorDbPath(location.pathname)
+  }, [location.pathname])
   const collections = (useSnapshot((state) => state.collections ?? []) ?? []) as CollectionInfo[]
   const tables = useMemo(
     () => collections.filter((row) => row.path && row.path !== '/'),
     [collections],
   )
-  const { collection, viewId } = crumbsForRoute(location.pathname, tables)
-  const collectionPath = collection || tables[0]?.path || ''
-  const table = tables.find((item) => item.path === collectionPath)
-  const views = collectionPath ? loadViews(collectionPath) : []
-  const activeViewId = viewId || loadActiveViewId(collectionPath, views)
+  const pathname = inspectorPath || location.pathname
+  const { collection, viewId, recordId } = crumbsForRoute(pathname, tables)
+  const currentPath = collection || tables[0]?.path || ''
+  const table = tables.find((item) => item.path === currentPath)
   const title = table ? tableLabel(table) : '数据'
+  const chrome = useSyncExternalStore(
+    (fn) => (ui ? ui.subscribe(fn) : () => undefined),
+    () => (currentPath ? ui?.chrome(currentPath) ?? EMPTY_CHROME : EMPTY_CHROME),
+    () => (currentPath ? ui?.chrome(currentPath) ?? EMPTY_CHROME : EMPTY_CHROME),
+  )
 
-  function openTable(path: string, nextViewId?: string) {
-    navigate(databaseViewPath(path, nextViewId ?? loadActiveViewId(path, loadViews(path)) ?? undefined))
-  }
-
-  function applyView(view: SavedView) {
-    if (!collectionPath) return
-    navigate(databaseViewPath(collectionPath, view.id))
+  if (!currentPath) {
+    return <p className="fsdb-inspector-empty">没有数据表</p>
   }
 
   return (
-    <DataSidebar
-      hideChrome
-      tables={tables}
-      collectionPath={collectionPath}
+    <CollectionBrowser
+      embed
+      key={currentPath}
+      moduleId="database"
+      collectionPath={currentPath}
       title={title}
-      views={views}
-      activeViewId={activeViewId}
-      onOpenTable={openTable}
-      onApplyView={applyView}
-      onRenameView={(view) => window.dispatchEvent(new CustomEvent('fsdb:rename-view', { detail: view }))}
-      onDeleteView={(view) => window.dispatchEvent(new CustomEvent('fsdb:delete-view', { detail: view }))}
-      onAddView={() => window.dispatchEvent(new Event('fsdb:add-view'))}
-      onCopyView={() => window.dispatchEvent(new Event('fsdb:copy-view'))}
-      onOpenRecord={(path, view, recordId) => {
-        navigate(databaseRecordPath(path, recordId))
+      blurb={table?.view?.blurb ?? ''}
+      chrome={chrome}
+      tables={tables}
+      routeRecordId={recordId ?? null}
+      routeViewId={viewId}
+      onOpenTable={(path, nextViewId) => {
+        setInspectorDbPath(databaseViewPath(path, nextViewId ?? loadActiveViewId(path, loadViews(path)) ?? undefined))
       }}
+      onOpenView={(nextViewId) => setInspectorDbPath(databaseViewPath(currentPath, nextViewId))}
+      onOpenRecord={(id, _viewId, nextCollection) => {
+        setInspectorDbPath(databaseRecordPath(nextCollection ?? currentPath, id))
+      }}
+      onCloseRecord={() => {
+        setInspectorDbPath(databaseViewPath(currentPath, loadActiveViewId(currentPath, loadViews(currentPath)) ?? undefined))
+      }}
+      onCrumbTarget={(target) => goInspector(target)}
     />
   )
 }

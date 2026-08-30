@@ -384,6 +384,12 @@ body {
   border-right: 0;
 }
 
+.inspector-database-page {
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+}
+
 .inspector-catalog {
   display: flex;
   min-height: 0;
