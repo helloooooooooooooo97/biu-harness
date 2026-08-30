@@ -14,6 +14,7 @@ describe('sidebar text colors', () => {
 
   it('left-aligns the sidebar brand with the list below', () => {
     expect(css).toMatch(/\.app-side-bar-head-brand\s*\{[^}]*justify-content:\s*flex-start/s)
+    expect(css).toMatch(/\.app-side-bar-head-brand\s*\{[^}]*padding-left:\s*16px/s)
     expect(css).not.toMatch(/\.app-side-bar-head-brand\s*\{[^}]*justify-content:\s*center/s)
   })
 })
