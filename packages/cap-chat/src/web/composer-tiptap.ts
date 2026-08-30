@@ -95,21 +95,30 @@ export function collectPickKeys(editor: Editor | null) {
   return keys
 }
 
-export function insertPickChip(editor: Editor, ref: PickRef) {
+function chipContent(ref: PickRef) {
+  return {
+    type: 'pickChip',
+    attrs: {
+      kind: ref.kind,
+      id: ref.id,
+      label: ref.label,
+      route: ref.route,
+      action: ref.action ?? null,
+    },
+  }
+}
+
+export function insertPickChips(editor: Editor, refs: PickRef[]) {
+  if (!refs.length || editor.isDestroyed) return
   editor
     .chain()
     .focus()
-    .insertContent({
-        type: 'pickChip',
-        attrs: {
-          kind: ref.kind,
-          id: ref.id,
-          label: ref.label,
-          route: ref.route,
-          action: ref.action ?? null,
-        },
-      })
+    .insertContent(refs.map(chipContent))
     .run()
+}
+
+export function insertPickChip(editor: Editor, ref: PickRef) {
+  insertPickChips(editor, [ref])
 }
 
 export function editorCaretPlain(editor: Editor | null): { value: string; cursor: number } {

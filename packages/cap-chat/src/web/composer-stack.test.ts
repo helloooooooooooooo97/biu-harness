@@ -63,8 +63,12 @@ describe('composer dock stacking above sticky user', () => {
 
   it('uses Tiptap for inline pick chips in the composer', () => {
     const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
+    const node = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer-pick-node.tsx'), 'utf8')
     expect(composer).toMatch(/useEditor/)
     expect(composer).toMatch(/composerDocExtensions/)
     expect(composer).toMatch(/EditorContent/)
+    expect(composer).toMatch(/insertPickChips/)
+    expect(node).not.toMatch(/ReactNodeViewRenderer/)
+    expect(node).toMatch(/queueMicrotask/)
   })
 })

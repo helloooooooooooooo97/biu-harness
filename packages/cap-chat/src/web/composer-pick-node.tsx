@@ -1,23 +1,26 @@
 import { Node, mergeAttributes } from '@tiptap/core'
-import { NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react'
-import { PickChipLabel, chipLabel } from '@biu/cap-pick/web'
+import { createRoot, type Root } from 'react-dom/client'
+import { PickChipLabel, chipLabel, type PickRef } from '@biu/cap-pick/web'
 
-function PickChipView({ node }: { node: { attrs: Record<string, string | null> } }) {
-  const kind = String(node.attrs.kind ?? '')
-  const id = String(node.attrs.id ?? '')
-  const label = String(node.attrs.label ?? id)
-  const route = String(node.attrs.route ?? '')
-  const action = node.attrs.action ? String(node.attrs.action) : undefined
+function refFromAttrs(attrs: Record<string, unknown>): PickRef {
+  const kind = String(attrs.kind ?? '')
+  const id = String(attrs.id ?? '')
+  const label = String(attrs.label ?? id)
+  const route = String(attrs.route ?? '')
+  const action = attrs.action ? String(attrs.action) : undefined
+  return { kind, id, label, route, ...(action ? { action } : {}) }
+}
+
+function PickChipView({ attrs }: { attrs: Record<string, unknown> }) {
+  const pick = refFromAttrs(attrs)
   return (
-    <NodeViewWrapper as="span" className="composer-inline-chip">
-      <span
-        className="composer-tool-chip is-pick"
-        data-testid="user-pick-chip"
-        title={`${kind} · ${chipLabel({ kind, id, label, route, action })}`}
-      >
-        <PickChipLabel pick={{ kind, id, label, route, ...(action ? { action } : {}) }} />
-      </span>
-    </NodeViewWrapper>
+    <span
+      className="composer-tool-chip is-pick"
+      data-testid="user-pick-chip"
+      title={`${pick.kind} · ${chipLabel(pick)}`}
+    >
+      <PickChipLabel pick={pick} />
+    </span>
   )
 }
 
@@ -50,6 +53,37 @@ export const PickChipNode = Node.create({
     ]
   },
   addNodeView() {
-    return ReactNodeViewRenderer(PickChipView, { as: 'span' })
+    return ({ node }) => {
+      const dom = document.createElement('span')
+      dom.className = 'composer-inline-chip'
+      dom.setAttribute('data-pick-chip', '')
+      let attrs = node.attrs as Record<string, unknown>
+      let root: Root | null = createRoot(dom)
+      let paintQueued = false
+      const paint = () => {
+        paintQueued = false
+        root?.render(<PickChipView attrs={attrs} />)
+      }
+      const schedulePaint = () => {
+        if (paintQueued || !root) return
+        paintQueued = true
+        queueMicrotask(paint)
+      }
+      schedulePaint()
+      return {
+        dom,
+        update(updated) {
+          if (updated.type.name !== 'pickChip') return false
+          attrs = updated.attrs as Record<string, unknown>
+          schedulePaint()
+          return true
+        },
+        destroy() {
+          const current = root
+          root = null
+          queueMicrotask(() => current?.unmount())
+        },
+      }
+    }
   },
 })

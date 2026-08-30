@@ -11,7 +11,7 @@ import {
   collectPickKeys,
   deletePlainRange,
   editorCaretPlain,
-  insertPickChip,
+  insertPickChips,
   jsonFromDraft,
   serializeComposer,
 } from './composer-tiptap.ts'
@@ -562,15 +562,15 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
 
   useEffect(() => {
     if (!editor) return
+    const missing = pickRefs.filter((ref) => !pickKeysRef.current.has(pickKey(ref)))
     const nextKeys = new Set(pickRefs.map((item) => pickKey(item)))
-    for (const ref of pickRefs) {
-      const key = pickKey(ref)
-      if (pickKeysRef.current.has(key)) continue
-      insertPickChip(editor, ref)
-    }
-    pickKeysRef.current = nextKeys
-    const packed = serializeComposer(editor)
-    scheduleCanSubmit(packed.plain, picked, packed.refs.length, pendingImages.length)
+    queueMicrotask(() => {
+      if (editor.isDestroyed) return
+      insertPickChips(editor, missing)
+      pickKeysRef.current = nextKeys
+      const packed = serializeComposer(editor)
+      scheduleCanSubmit(packed.plain, picked, packed.refs.length, pendingImages.length)
+    })
   }, [pickRefs, editor, picked.length, pendingImages.length])
 
   function clearInput() {
