@@ -84,30 +84,16 @@ import {
   pushSavedViews,
   subscribeStarredViews,
   toggleStarredView,
+  viewForPath,
   viewsKey,
 } from './view-storage.ts'
+import { listCollection, readJson } from './db-client.ts'
+import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 
-type ListResult = { items: Array<DbRecord & { path?: string }>; total?: number; offset?: number; limit?: number }
 type StatResult = { schema?: CollectionSchema }
-
-function viewForPath(collectionPath: string, routeViewId?: string): SavedView | null {
-  const listed = loadViews(collectionPath)
-  const preferred =
-    (routeViewId ? listed.find((item) => item.id === routeViewId) : undefined) ??
-    listed.find((item) => item.id === loadActiveViewId(collectionPath, listed)) ??
-    listed[0]
-  return preferred ? normalizeSavedView(preferred) : null
-}
 
 function isListColumn(key: string) {
   return key !== 'description' && key !== 'notes' && key !== 'content' && key !== 'emoji'
-}
-
-async function readJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, init)
-  const body = (await res.json()) as T & { error?: string }
-  if (!res.ok) throw new Error(body.error || res.statusText)
-  return body
 }
 
 function recordsFingerprint(rows: Array<DbRecord & { path?: string }>) {
@@ -342,23 +328,34 @@ export function CollectionBrowser({
     if (Date.now() < quietUntil.current) return true
     const gen = ++reloadGen.current
     try {
-      const params = new URLSearchParams({
-        path: collectionPath,
-        limit: String(pageSize),
-        offset: String(page * pageSize),
-        q: fetchQuery,
-        sort: sortField,
-        dir: sortDir,
-        filter: JSON.stringify(filters),
-      })
       const [nextStat, listed] = await Promise.all([
         readJson<StatResult>(`/api/db/stat?path=${encodeURIComponent(collectionPath)}`),
-        readJson<ListResult>(`/api/db/list?${params}`),
+        listCollection({
+          path: collectionPath,
+          limit: pageSize,
+          offset: page * pageSize,
+          query: fetchQuery,
+          sortField,
+          sortDir,
+          filters,
+        }),
       ])
       if (gen !== reloadGen.current) return true
       setStat((prev) => (prev?.schema && JSON.stringify(prev.schema) === JSON.stringify(nextStat.schema) ? prev : nextStat))
       setItems((prev) => (recordsFingerprint(prev) === recordsFingerprint(listed.items) ? prev : listed.items))
-      setTotal(typeof listed.total === 'number' ? listed.total : listed.items.length)
+      setTotal(listed.total)
+      if (activeViewId) {
+        rememberPreviewTotal(
+          viewTotalKey(collectionPath, {
+            id: activeViewId,
+            sortField,
+            sortDir,
+            filters,
+            query: fetchQuery,
+          }),
+          listed.total,
+        )
+      }
       setError('')
       return true
     } catch (err) {
@@ -366,7 +363,7 @@ export function CollectionBrowser({
       setError(String(err))
       return false
     }
-  }, [collectionPath, fetchQuery, filters, page, pageSize, sortDir, sortField])
+  }, [activeViewId, collectionPath, fetchQuery, filters, page, pageSize, sortDir, sortField])
   const reloadRef = useRef(reload)
   reloadRef.current = reload
   const detailIdRef = useRef<string | null>(null)
@@ -910,7 +907,7 @@ export function CollectionBrowser({
     await writePatch(row, { [key]: parseFieldValue(field, raw) })
   }
 
-  const labelOf = (row: DbRecord) => String(row[schema?.labelField ?? 'id'] ?? row.id)
+  const labelOf = (row: DbRecord) => crumbRecordLabel(row, schema?.labelField)
   const crumbs = useMemo(
     () =>
       buildCrumbs({

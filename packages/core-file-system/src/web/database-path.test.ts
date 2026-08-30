@@ -1,9 +1,9 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { parseAppPath } from '@biu/web-session-view'
-import { databaseRecordPath, databaseViewPath } from './database-path.ts'
+import { DATA_MODULE, databaseRecordPath, databaseViewPath } from './database-path.ts'
 
-const plugins = [{ id: 'database', label: '数据', path: '/database' }]
+const plugins = [DATA_MODULE]
 
 test('view and record helpers match the database URL scheme', () => {
   assert.equal(databaseViewPath('/pages', 'default'), '/database/pages/view/default')

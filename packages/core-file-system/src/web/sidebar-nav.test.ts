@@ -1,6 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { parseAppPath } from '@biu/web-session-view'
+import { DATA_MODULE } from './database-path.ts'
 import {
   applySidebarAction,
   assertSidebarInvariants,
@@ -17,7 +18,7 @@ import {
   type SidebarNavState,
 } from './sidebar-nav.ts'
 
-const plugins = [{ id: 'database', label: '数据', path: '/database' }]
+const plugins = [DATA_MODULE]
 
 const TABLES = ['/tasks', '/pages'] as const
 const VIEWS: Record<(typeof TABLES)[number], string[]> = {

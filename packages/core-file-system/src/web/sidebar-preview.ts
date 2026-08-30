@@ -1,5 +1,6 @@
 import type { DbRecord } from '@biu/type-file-system'
 import type { SavedView } from './saved-view.ts'
+import { listCollection, readJson } from './db-client.ts'
 
 export const SIDEBAR_PREVIEW_PAGE = 20
 export const SIDEBAR_PREVIEW_MAX = 100
@@ -35,7 +36,7 @@ export function recordPreviewLabel(row: DbRecord, labelField?: string) {
   return String(row.id)
 }
 
-/** 面包屑用：labelField 若是 id，改走 title/name，避免检查器只显示编号。 */
+/** 面包屑与列表共用：labelField 若是 id，改走 title/name，避免只显示编号。 */
 export function crumbRecordLabel(row: DbRecord, labelField?: string) {
   return recordPreviewLabel(row, labelField && labelField !== 'id' ? labelField : undefined)
 }
@@ -101,13 +102,11 @@ export async function fetchViewTotal(
 
 export async function writeRecordEmoji(path: string, recordId: string, emoji: string) {
   const next = normalizeRecordEmoji(emoji)
-  const res = await fetch('/api/db/write', {
+  const body = await readJson<{ value?: DbRecord }>('/api/db/write', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ path: `${path}/${recordId}`, content: { emoji: next } }),
   })
-  const body = (await res.json()) as { value?: DbRecord; error?: string }
-  if (!res.ok) throw new Error(body.error || res.statusText)
   return normalizeRecordEmoji(body.value?.emoji ?? next)
 }
 
@@ -117,20 +116,13 @@ export async function fetchViewPreview(
   offset: number,
   limit = SIDEBAR_PREVIEW_PAGE,
 ): Promise<PreviewPage> {
-  const params = new URLSearchParams({
+  return listCollection({
     path,
-    limit: String(Math.max(1, Math.min(limit, SIDEBAR_PREVIEW_PAGE))),
-    offset: String(Math.max(0, offset)),
-    q: view.query ?? '',
-    sort: view.sortField || 'id',
-    dir: view.sortDir === 'desc' ? 'desc' : 'asc',
-    filter: JSON.stringify(view.filters ?? {}),
+    limit: Math.min(limit, SIDEBAR_PREVIEW_PAGE),
+    offset,
+    query: view.query,
+    sortField: view.sortField,
+    sortDir: view.sortDir,
+    filters: view.filters,
   })
-  const res = await fetch(`/api/db/list?${params}`)
-  const body = (await res.json()) as PreviewPage & { error?: string }
-  if (!res.ok) throw new Error(body.error || res.statusText)
-  return {
-    items: Array.isArray(body.items) ? body.items : [],
-    total: typeof body.total === 'number' ? body.total : (body.items?.length ?? 0),
-  }
 }

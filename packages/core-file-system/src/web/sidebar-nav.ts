@@ -1,9 +1,9 @@
 /** 侧栏展开/收起与数据路由切换的纯逻辑，UI 和压测共用。 */
 import { parseAppPath } from '@biu/web-session-view'
-import { databaseRecordPath, databaseViewPath } from './database-path.ts'
+import { DATA_MODULE, databaseRecordPath, databaseViewPath } from './database-path.ts'
 import type { ViewMode } from './fields.ts'
 
-const DATABASE = [{ id: 'database', label: '数据', path: '/database' }]
+const DATABASE = [DATA_MODULE]
 
 export type DataCenter = {
   collection: string

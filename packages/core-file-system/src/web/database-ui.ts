@@ -1,12 +1,8 @@
 import { Service, type Context } from 'cordis'
 import type { CollectionChrome, DatabaseUi } from '@biu/type-file-system/ui'
+import { normalizeCollectionPath } from '../paths.ts'
 
-export function normalizeCollectionPath(path: string) {
-  const raw = String(path || '/').trim() || '/'
-  const withSlash = raw.startsWith('/') ? raw : `/${raw}`
-  if (withSlash === '/') return '/'
-  return withSlash.replace(/\/+$/, '') || '/'
-}
+export { normalizeCollectionPath }
 
 function mergeChrome(layers: CollectionChrome[]): CollectionChrome {
   const cells: CollectionChrome['cells'] = {}

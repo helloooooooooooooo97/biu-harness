@@ -251,7 +251,7 @@ export const SessionInspector = memo(function SessionInspector({
   }, [onWidthChange])
 
   useEffect(() => {
-    const activeTab = tabsRef.current?.querySelector<HTMLElement>('.inspector-tab.is-active, .inspector-crumb-tab.is-active')
+    const activeTab = tabsRef.current?.querySelector<HTMLElement>('.inspector-tab.is-active')
     activeTab?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
   }, [tab])
 

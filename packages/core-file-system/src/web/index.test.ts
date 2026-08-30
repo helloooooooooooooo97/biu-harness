@@ -1,6 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { apply, name, navConflict } from './index.tsx'
+import { DATA_MODULE_ID } from './database-path.ts'
 
 test('file-system web is the implementation plugin, not a domain module', () => {
   assert.equal(name, 'core-file-system-ui')
@@ -8,7 +9,7 @@ test('file-system web is the implementation plugin, not a domain module', () => 
 })
 
 test('shell matches the data module by extra.moduleId database', () => {
-  const extra = { moduleId: 'database', tables: [] }
+  const extra = { moduleId: DATA_MODULE_ID, tables: [] }
   const slotKey = 'fsdb-database'
   assert.equal(String(extra.moduleId ?? extra.id ?? slotKey), 'database')
 })

@@ -16,6 +16,7 @@ import {
   type ListPage,
 } from '@biu/type-file-system'
 import { SavedViewsStore, viewsCollection, type StoredView } from './saved-views.ts'
+import { normalizeCollectionPath } from '../paths.ts'
 
 function publicAction(action: CollectionAction): CollectionActionInfo {
   const { run: _run, ...info } = action
@@ -75,15 +76,8 @@ function publicCollection(item: CollectionSpec): CollectionInfo {
   }
 }
 
-function normalizePath(path: string) {
-  const raw = String(path || '/').trim() || '/'
-  const withSlash = raw.startsWith('/') ? raw : `/${raw}`
-  if (withSlash === '/') return '/'
-  return withSlash.replace(/\/+$/, '')
-}
-
 function splitPath(path: string): string[] {
-  const normalized = normalizePath(path)
+  const normalized = normalizeCollectionPath(path)
   if (normalized === '/') return []
   return normalized.slice(1).split('/').filter(Boolean)
 }
@@ -153,7 +147,7 @@ function pickWritablePatch(schema: CollectionSchema, patch: Record<string, unkno
 }
 
 function navPath(path: string) {
-  return normalizePath(path)
+  return normalizeCollectionPath(path)
 }
 
 function navTitle(spec: CollectionSpec) {
@@ -258,7 +252,7 @@ export class DatabaseService extends Service implements Database {
   }
 
   register(spec: CollectionSpec) {
-    const path = normalizePath(spec.path || `/${spec.id}`)
+    const path = normalizeCollectionPath(spec.path || `/${spec.id}`)
     if (path === '/') throw new Error('collection path cannot be /')
     if (splitPath(path).length !== 1) throw new Error(`collection path must be one segment: ${path}`)
     let entry = { ...spec, path }
@@ -280,7 +274,7 @@ export class DatabaseService extends Service implements Database {
   }
 
   collection(pathOrId: string) {
-    const path = normalizePath(pathOrId)
+    const path = normalizeCollectionPath(pathOrId)
     return (
       this.collections.get(pathOrId) ??
       [...this.collections.values()].find((item) => item.path === path || item.id === pathOrId)
@@ -330,7 +324,7 @@ export class DatabaseService extends Service implements Database {
         value: withoutContent(spec, record),
       }
     }
-    throw new Error(`path too deep: ${normalizePath(path)}`)
+    throw new Error(`path too deep: ${normalizeCollectionPath(path)}`)
   }
 
   async list(path: string, filter?: Record<string, unknown>, page?: ListPage) {
@@ -342,7 +336,7 @@ export class DatabaseService extends Service implements Database {
         items: this.collectionsList().map(publicCollection),
       }
     }
-    if (parts.length !== 1) throw new Error(`cannot list: ${normalizePath(path)}`)
+    if (parts.length !== 1) throw new Error(`cannot list: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     const schema = schemaFor(spec)
@@ -377,7 +371,7 @@ export class DatabaseService extends Service implements Database {
     const parts = splitPath(path)
     if (parts.length === 0) return this.stat('/')
     if (parts.length === 1) return this.list(`/${parts[0]}`)
-    if (parts.length !== 2) throw new Error(`cannot read: ${normalizePath(path)}`)
+    if (parts.length !== 2) throw new Error(`cannot read: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     const record = await spec.get(parts[1]!)
@@ -387,7 +381,7 @@ export class DatabaseService extends Service implements Database {
 
   async write(path: string, content: unknown) {
     const parts = splitPath(path)
-    if (parts.length !== 2) throw new Error(`cannot write: ${normalizePath(path)}`)
+    if (parts.length !== 2) throw new Error(`cannot write: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     if (!spec.write) throw new Error(`collection not writable: ${spec.path}`)
@@ -399,7 +393,7 @@ export class DatabaseService extends Service implements Database {
 
   async action(path: string, actionId: string) {
     const parts = splitPath(path)
-    if (parts.length !== 2) throw new Error(`cannot action: ${normalizePath(path)}`)
+    if (parts.length !== 2) throw new Error(`cannot action: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     const record = await spec.get(parts[1]!)
@@ -415,7 +409,7 @@ export class DatabaseService extends Service implements Database {
 
   async content(path: string) {
     const parts = splitPath(path)
-    if (parts.length !== 2) throw new Error(`cannot content: ${normalizePath(path)}`)
+    if (parts.length !== 2) throw new Error(`cannot content: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     const schema = schemaFor(spec)
@@ -433,7 +427,7 @@ export class DatabaseService extends Service implements Database {
 
   async writeContent(path: string, value: unknown) {
     const parts = splitPath(path)
-    if (parts.length !== 2) throw new Error(`cannot write content: ${normalizePath(path)}`)
+    if (parts.length !== 2) throw new Error(`cannot write content: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     if (!spec.write) throw new Error(`collection not writable: ${spec.path}`)

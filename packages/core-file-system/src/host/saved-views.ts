@@ -1,26 +1,14 @@
 import type { CollectionInfo, CollectionSpec, DbRecord } from '@biu/type-file-system'
+import type { SavedView } from '../web/saved-view.ts'
+import { normalizeCollectionPath } from '../paths.ts'
 
-export type StoredView = {
-  id: string
-  name: string
-  mode?: string
-  sortField?: string
-  sortDir?: string
-  filters?: Record<string, string>
-  columns?: string[]
-  groupBy?: string
-  tree?: boolean
-  wrap?: boolean
-  truncate?: boolean
-  query?: string
-  pageSize?: number
-}
+export type StoredView = Partial<SavedView> & Pick<SavedView, 'id' | 'name'>
 
 export class SavedViewsStore {
   private byPath = new Map<string, StoredView[]>()
 
   replace(collectionPath: string, views: StoredView[]) {
-    const path = collectionPath.startsWith('/') ? collectionPath : `/${collectionPath}`
+    const path = normalizeCollectionPath(collectionPath)
     this.byPath.set(path, views.map((view) => ({ ...view, id: String(view.id), name: String(view.name || view.id) })))
   }
 

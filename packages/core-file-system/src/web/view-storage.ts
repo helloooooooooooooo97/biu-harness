@@ -49,6 +49,19 @@ export function loadActiveViewId(collectionPath: string, listed: SavedView[]) {
   return listed[0]?.id ?? null
 }
 
+export function viewForPath(collectionPath: string, routeViewId?: string): SavedView | null {
+  const listed = loadViews(collectionPath)
+  const preferred =
+    (routeViewId ? listed.find((item) => item.id === routeViewId) : undefined) ??
+    listed.find((item) => item.id === loadActiveViewId(collectionPath, listed)) ??
+    listed[0]
+  return preferred ? normalizeSavedView(preferred) : null
+}
+
+export function defaultViewId(collectionPath: string, routeViewId?: string) {
+  return viewForPath(collectionPath, routeViewId)?.id
+}
+
 export type StarredView = { path: string; viewId: string }
 
 const STARRED_VIEWS_KEY = 'fsdb.starredViews'

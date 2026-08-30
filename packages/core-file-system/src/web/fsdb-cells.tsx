@@ -59,7 +59,7 @@ export const VIEW_MODES: Array<{ id: ViewMode; label: string }> = [
   { id: 'board', label: '看板' },
 ]
 
-export function draftFromRecord(schema: CollectionSchema, row: DbRecord, bodyKey: string | undefined, detailBody: unknown) {
+export function draftFromRecord(schema: CollectionSchema, row: DbRecord, bodyKey: string | null | undefined, detailBody: unknown) {
   const next: Record<string, string> = {}
   for (const [key, field] of Object.entries(schema.fields)) {
     const value = key === bodyKey ? detailBody : row[key]
@@ -268,31 +268,9 @@ export function DefaultCell({ field, value }: { field: FieldSpec; value: unknown
       </span>
     )
   }
-  if (kind === 'url') {
-    const href = asHttpHref(value)
-    if (!href) return <span className="fsdb-muted">—</span>
-    return (
-      <a className="fsdb-link" href={href} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-        {href}
-      </a>
-    )
+  if (kind === 'url' || kind === 'image' || kind === 'attachment' || kind === 'file') {
+    return <FilePreview value={value} compact />
   }
-  if (kind === 'image') {
-    const src = asImageSrc(value)
-    if (!src) return <span className="fsdb-muted">—</span>
-    return <ImageThumb src={src} />
-  }
-  if (kind === 'attachment') {
-    const file = asAttachment(value)
-    if (!file) return <span className="fsdb-muted">—</span>
-    return (
-      <a className="fsdb-file" href={file.href} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-        <PaperClipIcon aria-hidden className="size-[14px] shrink-0" />
-        <span className="fsdb-file-name">{file.name}</span>
-      </a>
-    )
-  }
-  if (kind === 'file') return <FilePreview value={value} compact />
   const text = formatField(field, value)
   return <span className={kind === 'datetime' || kind === 'bytes' ? 'fsdb-meta' : undefined}>{text}</span>
 }

@@ -13,7 +13,9 @@ import {
   bootLoadCollections,
   collectionNavKey,
 } from './nav-boot.ts'
-import { loadActiveViewId, loadViews, pushAllSavedViews } from './view-storage.ts'
+import { defaultViewId, pushAllSavedViews } from './view-storage.ts'
+import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH } from './database-path.ts'
+import { normalizeCollectionPath } from '../paths.ts'
 
 type SlotsService = {
   place: (slot: string, view: unknown, opts: { key: string; order?: number; props?: () => Record<string, unknown> }) => { dispose?: () => unknown }
@@ -44,20 +46,9 @@ type SnapshotService = {
   subscribe?: (fn: () => void) => () => void
 }
 
-const DATA_MODULE_ID = 'database'
-const DATA_MODULE_PATH = '/database'
-const DATA_MODULE = { id: DATA_MODULE_ID, label: '数据', path: DATA_MODULE_PATH }
-
-function normalizeNavPath(path: string) {
-  const raw = String(path || '/').trim() || '/'
-  const withSlash = raw.startsWith('/') ? raw : `/${raw}`
-  if (withSlash === '/') return '/'
-  return withSlash.replace(/\/+$/, '') || '/'
-}
-
 export function navConflict(view: CollectionView, title: string, modules: AppModule[], selfId: string): string | null {
-  const route = normalizeNavPath(view.route)
-  const pathHit = modules.find((item) => item.id !== selfId && normalizeNavPath(item.path) === route)
+  const route = normalizeCollectionPath(view.route)
+  const pathHit = modules.find((item) => item.id !== selfId && normalizeCollectionPath(item.path) === route)
   if (pathHit) return `路由重复：${route} 已被「${pathHit.label}」占用，请换一个路由再登记`
   const nameHit = modules.find((item) => item.id !== selfId && item.label === title)
   if (nameHit) return `名称重复：最左导航已有「${title}」，请换一个名字`
@@ -65,10 +56,6 @@ export function navConflict(view: CollectionView, title: string, modules: AppMod
 }
 
 const EMPTY_CHROME: CollectionChrome = {}
-
-function defaultViewId(collectionPath: string) {
-  return loadActiveViewId(collectionPath, loadViews(collectionPath)) ?? undefined
-}
 
 function CollectionPage(props: SlotProps) {
   const tables = (props.tables as CollectionInfo[] | undefined) ?? []
@@ -230,15 +217,15 @@ export function apply(ctx: Context) {
       return
     }
     const occupied = appModules.list()
-    const pathHit = occupied.find((item) => item.id !== DATA_MODULE_ID && normalizeNavPath(item.path) === DATA_MODULE_PATH)
+    const pathHit = occupied.find((item) => item.id !== DATA_MODULE_ID && normalizeCollectionPath(item.path) === DATA_MODULE_PATH)
     if (pathHit) {
       errors.push(`路由重复：${DATA_MODULE_PATH} 已被「${pathHit.label}」占用`)
       setNavErrors(errors)
       return
     }
-    const nameHit = occupied.find((item) => item.id !== DATA_MODULE_ID && item.label === '数据')
+    const nameHit = occupied.find((item) => item.id !== DATA_MODULE_ID && item.label === DATA_MODULE.label)
     if (nameHit) {
-      errors.push(`名称重复：最左导航已有「数据」`)
+      errors.push(`名称重复：最左导航已有「${DATA_MODULE.label}」`)
       setNavErrors(errors)
       return
     }
@@ -246,9 +233,9 @@ export function apply(ctx: Context) {
       try {
         const order = Math.min(...views.map((row) => row.view?.order ?? 50))
         const mod = appModules.register({
-          id: DATA_MODULE_ID,
-          label: '数据',
-          path: DATA_MODULE_PATH,
+          id: DATA_MODULE.id,
+          label: DATA_MODULE.label,
+          path: DATA_MODULE.path,
           description: '任务、页面和插件',
           order,
           Icon: CircleStackIcon,
