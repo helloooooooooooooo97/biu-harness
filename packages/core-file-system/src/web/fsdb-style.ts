@@ -223,8 +223,8 @@ const CSS = `
 .fsdb-detail-tab-count{margin-left:6px;font-size:11px;font-weight:700;color:var(--dsw-label-3)}
 .fsdb-detail-head-actions{display:inline-flex;align-items:center;gap:2px;justify-self:end}
 .fsdb-detail-split{display:flex;flex-direction:column;flex:1;min-height:0;overflow:auto}
-.fsdb-detail-main{display:flex;flex-direction:column;gap:8px;padding:20px 22px 24px;min-width:0}
-.fsdb-page:not(.inspector-database-page) .fsdb-detail-main{padding-top:80px}
+.fsdb-detail-main{box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:20px 24px 24px;min-width:0}
+.fsdb-page:not(.inspector-database-page) .fsdb-detail-main{padding:80px 24px 24px}
 .fsdb-detail-aside{display:flex;flex-direction:column;gap:2px;padding:8px 0 12px}
 .fsdb-prop{display:grid;grid-template-columns:108px minmax(0,1fr);align-items:center;gap:8px;min-height:32px;font-size:14px;color:var(--dsw-label-3)}
 .fsdb-prop>span:first-child{font-size:14px;font-weight:600;color:var(--dsw-label-3);display:inline-flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
