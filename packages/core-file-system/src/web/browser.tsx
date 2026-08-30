@@ -1370,7 +1370,7 @@ export function CollectionBrowser({
             title="查看详情"
             onClick={(event) => {
               event.stopPropagation()
-              setDetailId(row.id)
+              setDetailId(row.id, row)
             }}
           >
             <ArrowsPointingOutIcon aria-hidden className="size-[14px]" />
@@ -1463,7 +1463,7 @@ export function CollectionBrowser({
     return (
       <li className={`tasks-queue-item${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
         <div className="tasks-queue-item-body">
-          <button type="button" className="tasks-queue-item-main" data-biu-action="open" onClick={() => setDetailId(row.id)}>
+          <button type="button" className="tasks-queue-item-main" data-biu-action="open" onClick={() => setDetailId(row.id, row)}>
             <span className="tasks-queue-item-title">
               <RecordTitle row={row} openDetail={false} />
             </span>
@@ -1479,7 +1479,7 @@ export function CollectionBrowser({
     return (
       <div className={`tasks-minicard${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
         <div className="tasks-minicard-title">
-          <button type="button" className="tasks-minicard-open" data-biu-action="open" onClick={() => setDetailId(row.id)}>
+          <button type="button" className="tasks-minicard-open" data-biu-action="open" onClick={() => setDetailId(row.id, row)}>
             <span className="tasks-minicard-titletext">
               <RecordTitle row={row} openDetail={false} />
             </span>
