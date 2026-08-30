@@ -52,11 +52,9 @@ test('sidebar below min width is gone', () => {
 test('sidebar labels appear only after LABEL_AT', () => {
   assert.equal(SIDEBAR_DEFAULT, 72)
   assert.equal(SIDEBAR_MIN, Math.round(SIDEBAR_DEFAULT * (2 / 3)))
-  assert.equal(SIDEBAR_LABEL_AT, 160)
-  assert.equal(SIDEBAR_TAG_AT, 300)
+  assert.equal(SIDEBAR_LABEL_AT, SIDEBAR_MAX)
+  assert.equal(SIDEBAR_TAG_AT, SIDEBAR_MAX)
   assert.ok(SIDEBAR_DEFAULT < SIDEBAR_LABEL_AT)
-  assert.ok(SIDEBAR_LABEL_AT < SIDEBAR_TAG_AT)
-  assert.ok(SIDEBAR_TAG_AT < SIDEBAR_MAX)
   assert.ok(SIDEBAR_MIN < SIDEBAR_DEFAULT)
   const icon = allocateShellColumns({
     viewportWidth: 1600,
