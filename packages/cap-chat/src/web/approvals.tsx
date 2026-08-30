@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   BoltIcon,
   CheckCircleIcon,
@@ -11,11 +12,11 @@ import {
 } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type ChatNode, type DispatchedTaskRow, type SessionViewService } from '@biu/web-session-view'
-import { SidebarMascot } from '@biu/web-mascot'
-import { resolveSessionMascot } from '@biu/web-mascot'
+import { BrandAgentMenu, SidebarMascot, resolveSessionMascot } from '@biu/web-mascot'
 import { SessionProjectPanel } from './project-panel.tsx'
 import { ChatLiveMetrics } from './live-hud.tsx'
 import { setOverlayAutohide } from '@biu/web-app-shell/chat-overlay'
+import { shouldNavigateToSession } from './composer-nav.ts'
 
 type AgentMode = 'minimal' | 'standard' | 'create'
 
@@ -167,8 +168,23 @@ export function ApprovalsRail(props: SlotProps) {
   const [clearBusy, setClearBusy] = useState(false)
   const [agentMenuOpen, setAgentMenuOpen] = useState(false)
   const [approvalMenuOpen, setApprovalMenuOpen] = useState(false)
+  const [sessionPickerOpen, setSessionPickerOpen] = useState(false)
   const agentMenuRef = useRef<HTMLDivElement>(null)
   const approvalMenuRef = useRef<HTMLDivElement>(null)
+  const sessionPickerRef = useRef<HTMLSpanElement>(null)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const cornerAgents = useMemo(
+    () =>
+      sessions.map((item) => ({
+        id: item.id,
+        title: item.title,
+        updatedAt: item.updatedAt,
+        type: item.type,
+        mascot: item.mascot,
+      })),
+    [sessions],
+  )
 
   const refreshAgentMode = useCallback(async () => {
     try {
@@ -186,17 +202,25 @@ export function ApprovalsRail(props: SlotProps) {
   }, [refreshAgentMode])
 
   useEffect(() => {
-    if (!agentMenuOpen && !approvalMenuOpen) return
+    if (!agentMenuOpen && !approvalMenuOpen && !sessionPickerOpen) return
     const onDown = (event: MouseEvent) => {
       const node = event.target as Node
-      if (agentMenuRef.current?.contains(node) || approvalMenuRef.current?.contains(node)) return
+      if (
+        agentMenuRef.current?.contains(node) ||
+        approvalMenuRef.current?.contains(node) ||
+        sessionPickerRef.current?.contains(node)
+      ) {
+        return
+      }
       setAgentMenuOpen(false)
       setApprovalMenuOpen(false)
+      setSessionPickerOpen(false)
     }
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       setAgentMenuOpen(false)
       setApprovalMenuOpen(false)
+      setSessionPickerOpen(false)
     }
     window.addEventListener('mousedown', onDown)
     window.addEventListener('keydown', onKey)
@@ -204,7 +228,7 @@ export function ApprovalsRail(props: SlotProps) {
       window.removeEventListener('mousedown', onDown)
       window.removeEventListener('keydown', onKey)
     }
-  }, [agentMenuOpen, approvalMenuOpen])
+  }, [agentMenuOpen, approvalMenuOpen, sessionPickerOpen])
 
   // 快捷键：command+e / ctrl+e 触发清空上下文（在输入框中同样生效）
   const clearContextRef = useRef<() => void>(() => {})
@@ -322,14 +346,25 @@ export function ApprovalsRail(props: SlotProps) {
           </button>
           {sessionId && sessionIdentity ? (
             <span
+              ref={sessionPickerRef}
               className="dock-agent-stack"
               data-testid="dock-agent-stack"
               onMouseEnter={() => setOverlayAutohide(false)}
             >
-              <span
+              <button
+                type="button"
                 className="dock-session-mascot"
                 data-testid="dock-session-mascot"
                 data-dock-tip={mainAgentName}
+                title={mainAgentName}
+                aria-label={mainAgentName ? `切换 Agent，当前：${mainAgentName}` : '切换 Agent'}
+                aria-haspopup="menu"
+                aria-expanded={sessionPickerOpen}
+                onClick={() => {
+                  setSessionPickerOpen((prev) => !prev)
+                  setAgentMenuOpen(false)
+                  setApprovalMenuOpen(false)
+                }}
               >
                 <SidebarMascot
                   size={28}
@@ -337,9 +372,20 @@ export function ApprovalsRail(props: SlotProps) {
                   identity={sessionIdentity}
                   busy={agentStatus === 'running' || Boolean(currentSession?.busy)}
                   animate={false}
-                  title={mainAgentName}
+                  title=""
                 />
-              </span>
+              </button>
+              {sessionPickerOpen ? (
+                <BrandAgentMenu
+                  agents={cornerAgents}
+                  activeId={sessionId}
+                  onSelect={(id) => {
+                    setSessionPickerOpen(false)
+                    if (shouldNavigateToSession(location.pathname, id)) navigate(`/s/${encodeURIComponent(id)}`)
+                    else void sessionView.load(id, { view: 'chat' })
+                  }}
+                />
+              ) : null}
               {visibleWorkers.map((worker, index) => {
                 const identity = resolveSessionMascot(worker.sessionId, worker.mascot)
                 const listed = sessions.find((item) => item.id === worker.sessionId)

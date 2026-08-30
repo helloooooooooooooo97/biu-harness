@@ -39,6 +39,51 @@ export function BrandMascot({ className }: { className?: string }) {
   )
 }
 
+export function rankCornerAgents(agents: CornerAgent[]) {
+  return [...agents].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0) || a.id.localeCompare(b.id))
+}
+
+export function BrandAgentMenu({
+  agents,
+  activeId,
+  onSelect,
+}: {
+  agents: CornerAgent[]
+  activeId?: string | null
+  onSelect: (id: string) => void
+}) {
+  const ranked = useMemo(() => rankCornerAgents(agents), [agents])
+  const currentId = activeId ?? ranked[0]?.id
+  return (
+    <div className="brand-agent-menu" role="menu" data-testid="brand-agent-menu">
+      {ranked.length ? (
+        ranked.map((item) => {
+          const face = resolveSessionMascot(item.id, item.mascot)
+          const active = item.id === currentId
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="menuitem"
+              className={`inspector-catalog-item${active ? ' is-active' : ''}`}
+              data-testid={`brand-agent-${item.id}`}
+              onClick={() => onSelect(item.id)}
+            >
+              <SidebarMascot size={24} sessionId={item.id} identity={face} animate={false} title={item.title} />
+              <span className="min-w-0 flex-1 truncate">
+                {(item.type ?? 'chat') === 'live' ? <span className="mr-1 text-[9px] font-semibold tracking-wide uppercase">live</span> : null}
+                {item.title}
+              </span>
+            </button>
+          )
+        })
+      ) : (
+        <p className="inspector-catalog-empty">还没有 Agent</p>
+      )}
+    </div>
+  )
+}
+
 export function BrandCornerMascot({
   agents = [],
   activeId,
@@ -52,12 +97,10 @@ export function BrandCornerMascot({
 }) {
   const [agentsOpen, setAgentsOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
-  const ranked = useMemo(
-    () => [...agents].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0) || a.id.localeCompare(b.id)),
-    [agents],
-  )
+  const ranked = useMemo(() => rankCornerAgents(agents), [agents])
   const current = ranked.find((item) => item.id === activeId) ?? ranked[0]
   const identity = current ? resolveSessionMascot(current.id, current.mascot) : undefined
+  const name = current?.title?.trim() || '切换 Agent'
 
   useEffect(() => {
     if (!agentsOpen) return
@@ -75,49 +118,29 @@ export function BrandCornerMascot({
         <button
           type="button"
           className={`brand-corner-mascot-btn${agentsOpen ? ' is-active' : ''}`}
-          title={current ? `切换 Agent，当前：${current.title}` : '切换 Agent'}
-          aria-label={current ? `切换 Agent，当前：${current.title}` : '切换 Agent'}
+          title={name}
+          aria-label={current ? `切换 Agent，当前：${name}` : '切换 Agent'}
           aria-haspopup="menu"
           aria-expanded={agentsOpen}
+          data-dock-tip={name}
           data-testid="brand-corner-mascot-toggle"
           onClick={() => setAgentsOpen((prev) => !prev)}
         >
           {identity && current ? (
-            <SidebarMascot size={36} sessionId={current.id} identity={identity} animate={false} title={current.title} />
+            <SidebarMascot size={36} sessionId={current.id} identity={identity} animate={false} title="" />
           ) : (
             <BrandMascot className="size-9" />
           )}
         </button>
         {agentsOpen ? (
-          <div className="brand-agent-menu" role="menu" data-testid="brand-agent-menu">
-            {ranked.length ? (
-              ranked.map((item) => {
-                const face = resolveSessionMascot(item.id, item.mascot)
-                const active = item.id === (activeId ?? current?.id)
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    role="menuitem"
-                    className={`inspector-catalog-item${active ? ' is-active' : ''}`}
-                    data-testid={`brand-agent-${item.id}`}
-                    onClick={() => {
-                      onSelect?.(item.id)
-                      setAgentsOpen(false)
-                    }}
-                  >
-                    <SidebarMascot size={24} sessionId={item.id} identity={face} animate={false} title={item.title} />
-                    <span className="min-w-0 flex-1 truncate">
-                      {(item.type ?? 'chat') === 'live' ? <span className="mr-1 text-[9px] font-semibold tracking-wide uppercase">live</span> : null}
-                      {item.title}
-                    </span>
-                  </button>
-                )
-              })
-            ) : (
-              <p className="inspector-catalog-empty">还没有 Agent</p>
-            )}
-          </div>
+          <BrandAgentMenu
+            agents={ranked}
+            activeId={activeId ?? current?.id}
+            onSelect={(id) => {
+              onSelect?.(id)
+              setAgentsOpen(false)
+            }}
+          />
         ) : null}
       </div>
     </div>

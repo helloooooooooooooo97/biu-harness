@@ -41,6 +41,8 @@
   --dsw-chat-ui-font-size: 12px;
   --dsw-chat-chip-font-size: 12px;
   --dsw-chat-gap: 12px;
+  /* 与输入栏 pb-4 + .composer-pill-row 对齐，检查器底栏下沿贴胶囊上沿 */
+  --brand-corner-clearance: calc(1rem + 44px);
   --dsw-chat-gap-turn: 24px;
   --dsw-chat-pad-x: 12px;
   --dsw-chat-pad-y: 10px;
@@ -334,6 +336,7 @@ body {
   bottom: 16px;
   z-index: 90;
   display: flex;
+  overflow: visible;
   align-items: center;
   gap: 6px;
   pointer-events: auto;
@@ -382,17 +385,17 @@ body {
 .brand-agent-menu {
   position: absolute;
   right: 0;
-  bottom: calc(100% + 52px);
+  bottom: calc(100% + 8px);
   z-index: 21;
   box-sizing: border-box;
   width: 320px;
   min-width: 320px;
   max-width: 320px;
-  max-height: 280px;
+  max-height: 400px;
   overflow: auto;
   border: 0;
   border-radius: 8px;
-  background: var(--dsw-surface);
+  background: #202020;
   padding: 4px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
 }
@@ -845,6 +848,8 @@ body {
   width: 100%;
   border-left: 1px solid var(--dsw-border);
   overflow: visible;
+  box-sizing: border-box;
+  padding-bottom: var(--brand-corner-clearance);
 }
 
 .app-shell-agent.is-chat-overlay .session-inspector {
@@ -1971,11 +1976,18 @@ body {
 }
 
 .dock-agent-stack {
+  position: relative;
   display: inline-flex;
   overflow: visible;
   flex: none;
   align-items: center;
   gap: 4px;
+}
+
+.dock-agent-stack .brand-agent-menu {
+  left: 0;
+  right: auto;
+  bottom: calc(100% + 8px);
 }
 
 .dock-session-mascot,
