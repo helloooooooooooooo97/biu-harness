@@ -33,11 +33,12 @@ export function eventsCollection(hub: HubLike): CollectionSpec {
   return {
     id: 'events',
     path: '/events',
-    label: 'Event',
+    label: '事件',
     view: {
       moduleId: 'events-db',
       route: '/db-events',
-      title: 'Event',
+      title: '事件',
+      inspector: true,
       blurb: 'Hub 已缓冲的 internal/dispatch 事件（最多约 80 条），只读。',
       order: 19,
       icon: 'bolt',

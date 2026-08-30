@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentType } from 'react'
 import { ChevronLeftIcon, ChevronRightIcon, CircleStackIcon } from '@heroicons/react/16/solid'
-import { useLocation } from 'react-router-dom'
 import type { SlotProps } from '@biu/type-slots'
 import type { CollectionInfo } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
@@ -12,12 +11,24 @@ import { defaultViewId, loadRecords, loadViews, viewForPath } from './view-stora
 import { DATA_MODULE, DATA_MODULE_ID, databaseRecordPath, databaseViewPath } from './database-path.ts'
 import {
   getInspectorDbPath,
-  isInspectorDatabasePath,
-  seedInspectorDbPath,
   setInspectorDbPath,
   subscribeInspectorDbPath,
 } from './inspector-db-route.ts'
 import { getDatabaseUi } from './database-ui.ts'
+import { TableGlyph } from './nav-glyphs.tsx'
+
+const tabIcons = new Map<string, ComponentType<{ className?: string }>>()
+
+export function collectionTabIcon(icon?: string) {
+  const key = icon ?? ''
+  const cached = tabIcons.get(key)
+  if (cached) return cached
+  function Icon({ className }: { className?: string }) {
+    return <TableGlyph icon={icon} className={className ?? 'size-4'} />
+  }
+  tabIcons.set(key, Icon)
+  return Icon
+}
 
 const EMPTY_CHROME: CollectionChrome = {}
 
@@ -80,27 +91,25 @@ function useInspectorDbPath(paneId: string) {
   )
 }
 
-function defaultInspectorDbPath(tables: CollectionInfo[]) {
-  const first = tables[0]
+function defaultInspectorDbPath(tables: CollectionInfo[], seedCollection?: string) {
+  const seeded = seedCollection ? tables.find((item) => item.path === seedCollection) : undefined
+  const first = seeded ?? tables[0]
   if (!first?.path) return ''
   return databaseViewPath(first.path, defaultViewId(first.path))
 }
 
-function useBindInspectorDbPath(paneId: string, tables: CollectionInfo[]) {
-  const location = useLocation()
+function useBindInspectorDbPath(paneId: string, tables: CollectionInfo[], seedCollection?: string) {
   const inspectorPath = useInspectorDbPath(paneId)
   useEffect(() => {
     if (inspectorPath) return
-    if (isInspectorDatabasePath(location.pathname)) {
-      seedInspectorDbPath(paneId, location.pathname)
-      return
-    }
-    const fallback = defaultInspectorDbPath(tables)
+    const fallback = defaultInspectorDbPath(tables, seedCollection)
     if (fallback) setInspectorDbPath(paneId, fallback)
-  }, [inspectorPath, location.pathname, paneId, tables])
-  if (inspectorPath) return inspectorPath
-  if (isInspectorDatabasePath(location.pathname)) return location.pathname
-  return ''
+  }, [inspectorPath, paneId, seedCollection, tables])
+  return inspectorPath || defaultInspectorDbPath(tables, seedCollection)
+}
+
+function seedOf(props: { seedCollection?: unknown }) {
+  return typeof props.seedCollection === 'string' ? props.seedCollection : ''
 }
 
 function crumbsForRoute(
@@ -143,10 +152,12 @@ export function DatabaseInspectorTab({
   active,
   onActivate,
   paneId,
+  seedCollection,
 }: {
   active?: boolean
   onActivate?: () => void
   paneId?: string
+  seedCollection?: string
 }) {
   const id = paneOf({ paneId })
   const collections = useInspectorCollections()
@@ -154,7 +165,7 @@ export function DatabaseInspectorTab({
     () => collections.filter((row) => row.path && row.path !== '/'),
     [collections],
   )
-  const inspectorPath = useBindInspectorDbPath(id, tables)
+  const inspectorPath = useBindInspectorDbPath(id, tables, seedCollection)
   const [crumbOpen, setCrumbOpen] = useState<string | null>(null)
   const [trailOpen, setTrailOpen] = useState(false)
   const crumbRef = useRef<HTMLElement>(null)
@@ -258,7 +269,7 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
     () => collections.filter((row) => row.path && row.path !== '/'),
     [collections],
   )
-  const inspectorPath = useBindInspectorDbPath(id, tables)
+  const inspectorPath = useBindInspectorDbPath(id, tables, seedOf(props))
   useViewTick()
   const { collection, viewId, recordId } = crumbsForRoute(inspectorPath, tables)
   const currentPath = collection

@@ -76,11 +76,12 @@ export function viewsCollection(store: SavedViewsStore, tables: () => Collection
   return {
     id: 'views',
     path: '/views',
-    label: 'View',
+    label: '视图',
     view: {
       moduleId: 'views-db',
       route: '/db-views',
-      title: 'View',
+      title: '视图',
+      inspector: true,
       blurb: '各表已保存的视图：来源表、排序、筛选、列与呈现方式。',
       order: 17,
       icon: 'eye',

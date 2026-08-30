@@ -8,7 +8,7 @@ import type { CollectionChrome } from '@biu/type-file-system/ui'
 import { isLegacyDatabasePath, parseAppPath } from '@biu/web-session-view'
 import { pathForCenter, pathForCrumbTarget, type CrumbTarget } from './sidebar-nav.ts'
 import { CollectionBrowser } from './browser.tsx'
-import { DatabaseInspectorBrowse, DatabaseInspectorTab, bindInspectorSnapshot } from './inspector-database.tsx'
+import { DatabaseInspectorBrowse, DatabaseInspectorTab, bindInspectorSnapshot, collectionTabIcon } from './inspector-database.tsx'
 import { DatabaseUiService, getDatabaseUi } from './database-ui.ts'
 import {
   bootLoadCollections,
@@ -195,7 +195,42 @@ export function apply(ctx: Context) {
   const slots = ctx.get('slots') as SlotsService
   const appModules = ctx.get('appModules') as AppModulesService
   const mounted = new Map<string, () => void>()
+  const inspectorOffers = new Map<string, () => void>()
   let liveTables: CollectionInfo[] = []
+
+  function syncInspectorOffers(tables: CollectionInfo[]) {
+    const wanted = tables.filter((row) => row.view?.inspector)
+    const live = new Set(wanted.map((row) => row.path))
+    for (const [path, dispose] of inspectorOffers) {
+      if (live.has(path)) continue
+      dispose()
+      inspectorOffers.delete(path)
+    }
+    for (const table of wanted) {
+      if (inspectorOffers.has(table.path)) continue
+      const path = table.path
+      const slot = slots.place('inspector-panels', DatabaseInspectorBrowse, {
+        key: `fsdb-inspector:${path}`,
+        order: -40 + (table.view?.order ?? 50),
+        props: () => {
+          const current = liveTables.find((item) => item.path === path)
+          return {
+            tabId: `database:${path}`,
+            tabLabel: current?.view?.title ?? current?.label ?? path.replace(/^\//, ''),
+            tabIcon: collectionTabIcon(current?.view?.icon),
+            Tab: DatabaseInspectorTab,
+            seedCollection: path,
+            requiresSession: true,
+            centerKinds: ['session'],
+            repeatable: true,
+          }
+        },
+      })
+      inspectorOffers.set(path, () => {
+        void slot.dispose?.()
+      })
+    }
+  }
 
   slots.place('root-overlays', RegisterErrorBanner, { key: 'fsdb-nav-errors', order: 80 })
   let stopped = false
@@ -206,6 +241,7 @@ export function apply(ctx: Context) {
       .slice()
       .sort((a, b) => (a.view?.order ?? 50) - (b.view?.order ?? 50) || a.path.localeCompare(b.path))
     liveTables = views
+    syncInspectorOffers(views)
     const live = views.length ? new Set([DATA_MODULE_ID]) : new Set<string>()
     for (const [id, dispose] of mounted) {
       if (live.has(id)) continue
@@ -280,6 +316,8 @@ export function apply(ctx: Context) {
     window.clearTimeout(readyTimer)
     for (const dispose of mounted.values()) dispose()
     mounted.clear()
+    for (const dispose of inspectorOffers.values()) dispose()
+    inspectorOffers.clear()
     setNavErrors([])
   })
   ctx.inject(['snapshot'], (inner) => {
@@ -287,19 +325,6 @@ export function apply(ctx: Context) {
     bindInspectorSnapshot({
       subscribe: snapshot.subscribe ?? (() => () => undefined),
       get: () => snapshot.get?.() ?? {},
-    })
-    const databaseBrowse = slots.place('inspector-panels', DatabaseInspectorBrowse, {
-      key: 'fsdb-database-browse',
-      order: -25,
-      props: () => ({
-        tabId: 'database',
-        tabLabel: '数据库',
-        tabIcon: CircleStackIcon,
-        Tab: DatabaseInspectorTab,
-        requiresSession: true,
-        centerKinds: ['session'],
-        repeatable: true,
-      }),
     })
     let lastKey = ''
     const fromSnap = () => {
@@ -321,7 +346,6 @@ export function apply(ctx: Context) {
       window.clearTimeout(debounce)
       offSnap?.()
       off()
-      void databaseBrowse.dispose?.()
     }
   })
   void bootLoadCollections(loadCollections, {

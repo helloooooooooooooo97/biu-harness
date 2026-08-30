@@ -151,11 +151,12 @@ export function tasksCollection(tasks: TasksLike): CollectionSpec {
   return {
     id: 'tasks',
     path: '/tasks',
-    label: 'Task',
+    label: '任务',
     view: {
       moduleId: 'tasks-2',
       route: '/tasks-2',
-      title: 'Task',
+      title: '任务',
+      inspector: true,
       blurb: 'Task table in File System; detail panes host scripts and progress reports.',
       order: 21,
       icon: 'clipboard-document-list',

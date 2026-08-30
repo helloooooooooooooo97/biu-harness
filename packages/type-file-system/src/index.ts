@@ -148,6 +148,8 @@ export type CollectionView = {
   order?: number
   /** 导航图标名（实现侧映射），例如 clipboard-document-list、puzzle-piece、document。 */
   icon?: string
+  /** 登记后出现在 Session 检查器加号里，用 title 作为「添加××」。 */
+  inspector?: boolean
 }
 
 export type CollectionSpec = {

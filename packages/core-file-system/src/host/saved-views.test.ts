@@ -18,7 +18,7 @@ test('viewsCollection lists saved views with source table', async () => {
   ])
   const spec = viewsCollection(store, () => [{ path: '/tasks', id: 'tasks', kind: 'collection', label: 'Task', view: { moduleId: 'tasks-2', route: '/tasks-2', title: 'Task' } }])
   assert.equal(spec.path, '/views')
-  assert.equal(spec.view?.title, 'View')
+  assert.equal(spec.view?.title, '视图')
   const rows = await spec.list()
   assert.equal(rows[0]?.title, '默认视图')
   assert.equal(rows[0]?.table, 'Task')

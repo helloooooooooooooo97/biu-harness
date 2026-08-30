@@ -25,11 +25,12 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
   return {
     id: 'sessions',
     path: '/sessions',
-    label: 'Session',
+    label: '会话',
     view: {
       moduleId: 'sessions-db',
       route: '/db-sessions',
-      title: 'Session',
+      title: '会话',
+      inspector: true,
       blurb: '已有聊天 Session 的只读登记；改标题/置顶/标签会写回会话配置，不替代侧栏聊天。',
       order: 18,
       icon: 'chat-bubble',

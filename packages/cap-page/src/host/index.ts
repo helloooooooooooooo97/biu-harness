@@ -69,11 +69,12 @@ function pagesCollection(now = Date.now()): CollectionSpec {
   return {
     id: 'pages',
     path: '/pages',
-    label: 'Page',
+    label: '页面',
     view: {
       moduleId: 'page',
       route: '/pages',
-      title: 'Page',
+      title: '页面',
+      inspector: true,
       blurb: '每种字段类型各登记一列，假数据用来压测 Database 默认界面。',
       order: 25,
       icon: 'document',
