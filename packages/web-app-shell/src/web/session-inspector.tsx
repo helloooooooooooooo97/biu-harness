@@ -1,5 +1,15 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
-import { PlusIcon, Squares2X2Icon } from '@heroicons/react/16/solid'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import {
+  CheckCircleIcon,
+  DocumentTextIcon,
+  ListBulletIcon,
+  PlusIcon,
+  Squares2X2Icon,
+  TableCellsIcon,
+  TrashIcon,
+  ViewColumnsIcon,
+} from '@heroicons/react/16/solid'
 import { chromeIcon } from './chrome-icon.ts'
 import {
   bindSessionView,
@@ -9,7 +19,33 @@ import {
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import { inspectorTabFromEvent, requestInspectorAction } from './chat-overlay.ts'
+import { getInspectorCaption, getInspectorCaptionVersion, subscribeInspectorCaptions } from './inspector-captions.ts'
 import { inspectorPanelMatches, inspectorViewProps, nextRepeatableTabId, resolveInspectorTab, slotTabId } from './inspector-panels.ts'
+
+function PaneLeafIcon({
+  kind,
+  mode,
+  emoji,
+  Fallback,
+}: {
+  kind?: string
+  mode?: string
+  emoji?: string
+  Fallback?: ComponentType<{ className?: string }>
+}) {
+  if (kind === 'record') {
+    if (emoji) return <span className="fsdb-record-emoji" aria-hidden>{emoji}</span>
+    return <DocumentTextIcon {...chromeIcon} />
+  }
+  if (kind === 'view') {
+    if (mode === 'queue') return <ListBulletIcon {...chromeIcon} />
+    if (mode === 'board') return <ViewColumnsIcon {...chromeIcon} />
+    if (mode === 'cards') return <Squares2X2Icon {...chromeIcon} />
+    return <TableCellsIcon {...chromeIcon} />
+  }
+  if (Fallback) return <Fallback {...chromeIcon} />
+  return <Squares2X2Icon {...chromeIcon} />
+}
 
 export type SessionInspectorProps = {
   open: boolean
@@ -54,6 +90,7 @@ export const SessionInspector = memo(function SessionInspector({
   const sessionId = useSessionView((state) => state.sessionId)
   const focusCallId = useSessionView((state) => state.focusCallId)
   const extras = useSlotEntries(slots, 'inspector-panels')
+  const captionRev = useSyncExternalStore(subscribeInspectorCaptions, getInspectorCaptionVersion, () => 0)
   const extraTabs = useMemo(() => {
     return [...extras]
       .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
@@ -82,6 +119,9 @@ export const SessionInspector = memo(function SessionInspector({
   const [opened, setOpened] = useState(() => readOpened(sessionId))
   const [plusOpen, setPlusOpen] = useState(false)
   const plusRef = useRef<HTMLDivElement>(null)
+  const plusMenuRef = useRef<HTMLDivElement>(null)
+  const [plusPos, setPlusPos] = useState<{ right: number; top: number } | null>(null)
+  const tabsRef = useRef<HTMLDivElement>(null)
   const setTab = useCallback(
     (next: string) => {
       setTabState(next)
@@ -134,9 +174,24 @@ export const SessionInspector = memo(function SessionInspector({
     if (current?.ensureTrajectory) void sessionView.ensureTrajectory()
   }, [open, tab, sessionId, sessionView, extraTabs])
 
+  useLayoutEffect(() => {
+    if (!plusOpen) {
+      setPlusPos(null)
+      return
+    }
+    const box = plusRef.current?.getBoundingClientRect()
+    if (!box) return
+    setPlusPos({
+      right: Math.max(8, window.innerWidth - box.right),
+      top: box.bottom + 4,
+    })
+  }, [plusOpen])
+
   useEffect(() => {
     function onPointer(event: MouseEvent) {
-      if (!plusRef.current?.contains(event.target as Node)) setPlusOpen(false)
+      const target = event.target as Node
+      if (plusRef.current?.contains(target) || plusMenuRef.current?.contains(target)) return
+      setPlusOpen(false)
     }
     window.addEventListener('mousedown', onPointer)
     return () => window.removeEventListener('mousedown', onPointer)
@@ -162,7 +217,10 @@ export const SessionInspector = memo(function SessionInspector({
     }
   }, [onWidthChange])
 
-  if (!open) return null
+  useEffect(() => {
+    const activeTab = tabsRef.current?.querySelector<HTMLElement>('.inspector-tab.is-active, .inspector-crumb-tab.is-active')
+    activeTab?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+  }, [tab])
 
   const headerTabs = opened.flatMap((openedId) => {
     const item = displayTabs.find((tabItem) => tabItem.id === slotTabId(openedId))
@@ -175,20 +233,25 @@ export const SessionInspector = memo(function SessionInspector({
   function pickOffer(item: (typeof extraTabs)[number]) {
     if (item.action) {
       requestInspectorAction(item.action)
-      setPlusOpen(false)
       return
     }
     if (item.repeatable) {
       const instanceId = nextRepeatableTabId(item.id)
       persistOpened([...opened, instanceId])
       setTab(instanceId)
-      setPlusOpen(false)
       return
     }
     persistOpened(opened.includes(item.id) ? opened : [...opened, item.id])
     setTab(item.id)
-    setPlusOpen(false)
   }
+
+  function closeOpenedTab(id: string) {
+    const next = opened.filter((item) => item !== id)
+    persistOpened(next)
+    if (tab === id) setTab(next.at(-1) ?? '')
+  }
+
+  if (!open) return null
 
   return (
     <aside
@@ -210,7 +273,7 @@ export const SessionInspector = memo(function SessionInspector({
       />
 
       <div className="app-side-bar-head">
-        <div className="inspector-tabs" role="tablist" aria-label="检查器分区">
+        <div className="inspector-tabs" ref={tabsRef} role="tablist" aria-label="检查器分区">
           {headerTabs.map((item) => {
             const active = tab === item.id
             const Tab = item.Tab
@@ -255,36 +318,89 @@ export const SessionInspector = memo(function SessionInspector({
           >
             <PlusIcon {...chromeIcon} />
           </button>
-          {plusOpen ? (
-            <div className="inspector-add-menu" role="menu" data-testid="inspector-add-menu">
-              {displayTabs.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`inspector-catalog-item${slotTabId(tab) === item.id ? ' is-active' : ''}`}
-                  role="menuitem"
-                  onClick={() => pickOffer(item)}
-                  data-testid={`inspector-offer-${item.id}`}
-                >
-                  {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
-                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                </button>
-              ))}
-              {toolTabs.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className="inspector-catalog-item"
-                  role="menuitem"
-                  onClick={() => pickOffer(item)}
-                  data-testid={`inspector-offer-${item.id}`}
-                >
-                  {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
-                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
+          {plusOpen && plusPos
+            ? createPortal(
+            <div
+              ref={plusMenuRef}
+              className="inspector-add-menu is-fixed"
+              role="menu"
+              data-testid="inspector-add-menu"
+              data-caption-rev={captionRev}
+              style={{ right: plusPos.right, top: plusPos.top }}
+            >
+              <div className="inspector-add-head">面板</div>
+              {headerTabs.length ? (
+                headerTabs.map((item) => {
+                  const caption = getInspectorCaption(item.id)
+                  return (
+                  <div key={item.id} className={`inspector-add-row${tab === item.id ? ' is-active' : ''}`}>
+                    <button
+                      type="button"
+                      className="inspector-add-row-main"
+                      role="menuitem"
+                      onClick={() => setTab(item.id)}
+                      data-testid={`inspector-offer-${item.id}`}
+                    >
+                      <PaneLeafIcon kind={caption?.kind} mode={caption?.mode} emoji={caption?.emoji} Fallback={item.Icon} />
+                      <span className="min-w-0 flex-1 truncate">{caption?.label || item.label}</span>
+                      <CheckCircleIcon aria-hidden className="size-4 shrink-0 inspector-add-check" />
+                    </button>
+                    {item.repeatable ? (
+                      <button
+                        type="button"
+                        className="inspector-add-trash"
+                        title="从检查器移除"
+                        aria-label="从检查器移除"
+                        data-testid={`inspector-tab-remove-${item.id}`}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          closeOpenedTab(item.id)
+                        }}
+                      >
+                        <TrashIcon {...chromeIcon} />
+                      </button>
+                    ) : null}
+                  </div>
+                  )
+                })
+              ) : (
+                <div className="inspector-add-empty">还没有打开的面板</div>
+              )}
+              <div className="inspector-add-foot">
+                {displayTabs
+                  .filter((item) => item.repeatable || !opened.some((id) => slotTabId(id) === item.id))
+                  .map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="inspector-catalog-item"
+                      role="menuitem"
+                      onClick={() => pickOffer(item)}
+                      data-testid={`inspector-offer-add-${item.id}`}
+                    >
+                      {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
+                      <span className="min-w-0 flex-1 truncate">{item.repeatable ? `添加${item.label}` : item.label}</span>
+                    </button>
+                  ))}
+                {toolTabs.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="inspector-catalog-item"
+                    role="menuitem"
+                    onClick={() => pickOffer(item)}
+                    data-testid={`inspector-offer-${item.id}`}
+                  >
+                    {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
+                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>,
+            document.body,
+          )
+          : null}
         </div>
       </div>
 

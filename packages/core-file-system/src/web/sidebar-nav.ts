@@ -137,6 +137,13 @@ export function buildCrumbs(input: {
   return crumbs
 }
 
+/** 多项则出菜单；只有一项时点这一级回到上一级。 */
+export function crumbButtonAction(crumb: Crumb, parent?: Crumb): 'menu' | CrumbTarget {
+  if (crumb.choices.length > 1) return 'menu'
+  if (parent) return parent.target
+  return { kind: 'root' }
+}
+
 export function parseCenterPath(pathname: string): DataCenter | null {
   const parsed = parseAppPath(pathname, DATABASE)
   if (parsed.kind === 'record') {

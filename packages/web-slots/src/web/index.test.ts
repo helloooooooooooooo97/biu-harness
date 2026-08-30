@@ -46,9 +46,20 @@ test('inject re-open detaches before filling again', async () => {
   assert.equal(ctx.slots.list('stage').length, 1)
 })
 
-test('duplicate key throws', async () => {
+test('duplicate key replaces the previous fill', async () => {
   const ctx = await boot()
   ctx.slots.fill('root', Dummy, { children: { stage: { kind: 'list' } } })
   ctx.slots.fill('stage', Dummy, { key: 'c' })
-  assert.throws(() => ctx.slots.fill('stage', Dummy, { key: 'c' }))
+  ctx.slots.fill('stage', Dummy, { key: 'c' })
+  assert.equal(ctx.slots.list('stage').length, 1)
+})
+
+test('place().dispose unregisters so React remount can place again', async () => {
+  const ctx = await boot()
+  ctx.slots.fill('root', Dummy, { children: { stage: { kind: 'list' } } })
+  const first = ctx.slots.place('stage', Dummy, { key: 'fsdb-pane-script' })
+  assert.equal(ctx.slots.list('stage').length, 1)
+  await first.dispose()
+  ctx.slots.place('stage', Dummy, { key: 'fsdb-pane-script' })
+  assert.equal(ctx.slots.list('stage').length, 1)
 })

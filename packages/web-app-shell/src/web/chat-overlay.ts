@@ -1,7 +1,37 @@
 /** 聊天列窄于此时自动弹出覆盖对话框（px）。不自动收回。 */
 export const CHAT_OVERLAY_ENTER = 420
+export const SIDEBAR_MAX = 280
+export const CENTER_MIN = 768
+export const INSPECTOR_MIN = 240
 const RAIL = 0
-const SIDEBAR = 280
+const SIDEBAR = SIDEBAR_MAX
+
+/** 窄屏时先压左侧栏，再压检查器（不低于 INSPECTOR_MIN），最后才压中间。 */
+export function allocateShellColumns(opts: {
+  viewportWidth: number
+  railWidth?: number
+  leftPane: boolean
+  inspectorOpen: boolean
+  inspectorWidth: number
+}) {
+  const rail = opts.railWidth ?? RAIL
+  const available = Math.max(0, opts.viewportWidth - rail)
+  let left = opts.leftPane ? SIDEBAR_MAX : 0
+  let inspector = opts.inspectorOpen ? Math.max(INSPECTOR_MIN, opts.inspectorWidth) : 0
+  let center = available - left - inspector
+  if (center < CENTER_MIN && left > 0) {
+    const take = Math.min(left, CENTER_MIN - center)
+    left -= take
+    center += take
+  }
+  if (center < CENTER_MIN && inspector > INSPECTOR_MIN) {
+    const take = Math.min(inspector - INSPECTOR_MIN, CENTER_MIN - center)
+    inspector -= take
+    center += take
+  }
+  center = Math.max(0, available - left - inspector)
+  return { left, inspector, center }
+}
 
 export function chatColumnWidth(opts: {
   viewportWidth: number
@@ -9,9 +39,12 @@ export function chatColumnWidth(opts: {
   inspectorWidth: number
   sidebarCollapsed: boolean
 }) {
-  const side = opts.sidebarCollapsed ? 0 : SIDEBAR
-  const inspector = opts.inspectorOpen ? opts.inspectorWidth : 0
-  return Math.max(0, opts.viewportWidth - RAIL - side - inspector)
+  return allocateShellColumns({
+    viewportWidth: opts.viewportWidth,
+    leftPane: !opts.sidebarCollapsed,
+    inspectorOpen: opts.inspectorOpen,
+    inspectorWidth: opts.inspectorWidth,
+  }).center
 }
 
 /** 放大聊天：把检查器收到能给聊天列至少 ENTER 宽度。 */
@@ -22,7 +55,7 @@ export function inspectorWidthForExpandedChat(opts: {
 }) {
   const side = opts.sidebarCollapsed ? 0 : SIDEBAR
   const maxInspector = opts.viewportWidth - RAIL - side - CHAT_OVERLAY_ENTER
-  return Math.min(opts.inspectorWidth, Math.max(240, Math.round(maxInspector)))
+  return Math.min(opts.inspectorWidth, Math.max(INSPECTOR_MIN, Math.round(maxInspector)))
 }
 
 let overlay = false

@@ -35,6 +35,11 @@ export function recordPreviewLabel(row: DbRecord, labelField?: string) {
   return String(row.id)
 }
 
+/** 面包屑用：labelField 若是 id，改走 title/name，避免检查器只显示编号。 */
+export function crumbRecordLabel(row: DbRecord, labelField?: string) {
+  return recordPreviewLabel(row, labelField && labelField !== 'id' ? labelField : undefined)
+}
+
 export function nextPreviewLimit(loaded: number, total: number) {
   if (loaded >= total) return 0
   return Math.min(SIDEBAR_PREVIEW_PAGE, SIDEBAR_PREVIEW_MAX - loaded, total - loaded)

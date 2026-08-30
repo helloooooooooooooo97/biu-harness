@@ -3,6 +3,22 @@ import type { ComponentType } from 'react'
 import type { SlotSpec, FillOptions, SlotEntry, SlotProps } from '@biu/type-slots'
 import { SlotEvent } from '@biu/type-slots'
 
+export function disposeSlot(placed: unknown) {
+  if (typeof placed === 'function') return placed()
+  if (placed && typeof placed === 'object' && typeof (placed as { dispose?: unknown }).dispose === 'function') {
+    return (placed as { dispose: () => unknown }).dispose()
+  }
+}
+
+function withDispose<T>(placed: T) {
+  if (typeof placed === 'function') {
+    const fn = placed as (() => unknown) & { dispose?: () => unknown }
+    if (typeof fn.dispose !== 'function') fn.dispose = () => fn()
+    return fn as T & { dispose: () => unknown }
+  }
+  return placed
+}
+
 export class SlotsService extends Service {
   private declared = new Map<string, SlotSpec>([['root', { kind: 'single' }]])
   private entries = new Map<string, SlotEntry[]>()
@@ -15,19 +31,16 @@ export class SlotsService extends Service {
 
   /** 未打开的缝会先 inject，打开后再 fill。 */
   place(slotName: string, Component: ComponentType<SlotProps>, options: FillOptions = {}) {
-    return this.inject(slotName, () => this.fill(slotName, Component, options))
+    return withDispose(this.inject(slotName, () => this.fill(slotName, Component, options)))
   }
 
   fill(slotName: string, Component: ComponentType<SlotProps>, options: FillOptions = {}) {
     if (!this.declared.has(slotName)) {
       throw new Error(`fill undeclared slot "${slotName}" — use ctx.slots.place`)
     }
-    return this.ctx.effect(() => {
+    return withDispose(this.ctx.effect(() => {
       const id = options.key ?? `${slotName}:${Component.displayName ?? Component.name ?? 'anon'}`
-      const list = this.entries.get(slotName) ?? []
-      if (list.some((item) => item.id === id)) {
-        throw new Error(`slot "${slotName}" already has "${id}"`)
-      }
+      const list = (this.entries.get(slotName) ?? []).filter((item) => item.id !== id)
       const children = Object.keys(options.children ?? {})
       const entry: SlotEntry = {
         id,
@@ -57,16 +70,16 @@ export class SlotsService extends Service {
         }
         this.emit(slotName, SlotEvent.Entries)
       }
-    }, `slots.fill ${slotName}:${options.key ?? Component.name}`)
+    }, `slots.fill ${slotName}:${options.key ?? Component.name}`))
   }
 
   inject(slotName: string, callback: () => (() => void) | void) {
-    return this.ctx.effect(() => {
+    return withDispose(this.ctx.effect(() => {
       let inner: (() => void) | undefined
       const attach = () => {
         detach()
         const result = callback()
-        inner = typeof result === 'function' ? result : undefined
+        inner = () => void disposeSlot(result)
       }
       const detach = () => {
         inner?.()
@@ -80,7 +93,7 @@ export class SlotsService extends Service {
         stopClose()
         detach()
       }
-    }, `slots.inject ${slotName}`)
+    }, `slots.inject ${slotName}`))
   }
 
   specOf(name: string) {

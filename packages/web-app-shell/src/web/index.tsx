@@ -16,6 +16,7 @@ import {
   subscribeOverlayPinned,
   toggleOverlayPinned,
   requestInspectorClose,
+  allocateShellColumns,
 } from './chat-overlay.ts'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
@@ -536,6 +537,26 @@ function Shell(props: SlotProps) {
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   const agentHref = sessionId ? `/s/${sessionId}` : '/'
   const showChatSidebar = activeModule === 'agent' && !sidebarCollapsed
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window === 'undefined' ? 1440 : window.innerWidth,
+  )
+  useEffect(() => {
+    const sync = () => setViewportWidth(window.innerWidth)
+    sync()
+    window.addEventListener('resize', sync)
+    return () => window.removeEventListener('resize', sync)
+  }, [])
+  const leftPane =
+    showChatSidebar ||
+    appRoute.kind === 'collection-view' ||
+    appRoute.kind === 'record' ||
+    (appRoute.kind === 'module' && appRoute.moduleId !== 'tasks')
+  const shellColumns = allocateShellColumns({
+    viewportWidth,
+    leftPane,
+    inspectorOpen: inspectorVisible,
+    inspectorWidth,
+  })
   const onAgentRailClick = useCallback((alreadyActive: boolean) => {
     if (alreadyActive) setSidebarCollapsed((prev) => !prev)
     else setSidebarCollapsed(false)
@@ -666,9 +687,12 @@ function Shell(props: SlotProps) {
         }${railOpen || railPinned ? ' is-rail-open' : ''}`}
       data-testid="app-shell"
       style={
-        inspectorVisible
-          ? ({ ['--inspector-width' as string]: `${inspectorWidth}px` } as CSSProperties)
-          : undefined
+        {
+          ['--sidebar-col' as string]: `${shellColumns.left}px`,
+          ...(inspectorVisible
+            ? { ['--inspector-width' as string]: `${shellColumns.inspector}px` }
+            : {}),
+        } as CSSProperties
       }
     >
       <div className="app-rail-cluster" ref={railClusterRef}>

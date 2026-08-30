@@ -11,7 +11,9 @@ describe('顶栏三级标题', () => {
     expect(trail).not.toContain('ChevronDownIcon')
     expect(trail).toContain("aria-haspopup={canPick ? 'menu' : undefined}")
     expect(trail).toContain('<CrumbItemGlyph kind={crumb.kind}')
-    expect(trail).toContain('<CrumbItemGlyph kind={crumb.kind} icon={choice.icon} mode={choice.mode} emoji={choice.emoji} />')
+    expect(trail).toContain('createPortal')
+    expect(trail).toContain('data-fsdb-crumb-menu')
+    expect(trail).toContain('<CrumbItemGlyph kind={openCrumb.kind} icon={choice.icon} mode={choice.mode} emoji={choice.emoji} />')
     expect(browser).toContain('<CrumbTrail')
   })
 
@@ -25,6 +27,15 @@ describe('顶栏三级标题', () => {
   it('右侧检查器面包屑同样用下拉切换，不靠点回去退', () => {
     expect(inspector).toContain('<CrumbTrail')
     expect(inspector).toContain('onOpenId={setCrumbOpen}')
+    expect(inspector).toContain('onActivate={onActivate}')
     expect(inspector).not.toContain('onMouseEnter')
+  })
+
+  it('右侧检查器面包屑用记录标题而不是 id', () => {
+    expect(inspector).toContain('loadRecords')
+    expect(inspector).toContain('recordHit?.label')
+    expect(inspector).not.toContain('recordLabel: recordId,')
+    expect(browser).toContain('rememberRecords')
+    expect(browser).toContain('crumbRecordLabel')
   })
 })

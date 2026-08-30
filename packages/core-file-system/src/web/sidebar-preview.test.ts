@@ -6,6 +6,7 @@ import {
   normalizeRecordEmoji,
   previewCacheKey,
   recordPreviewLabel,
+  crumbRecordLabel,
   rememberPreviewTotal,
   SIDEBAR_PREVIEW_PAGE,
   tableTotalKey,
@@ -22,6 +23,11 @@ test('record preview prefers label field then title', () => {
   assert.equal(recordPreviewLabel({ id: '1', title: '封面' }, 'title'), '封面')
   assert.equal(recordPreviewLabel({ id: '1', name: '插件' }), '插件')
   assert.equal(recordPreviewLabel({ id: 'abc' }), 'abc')
+})
+
+test('crumb record label skips id field so titles show in inspector', () => {
+  assert.equal(crumbRecordLabel({ id: 'evt-194', title: '打开一条事件' }, 'id'), '打开一条事件')
+  assert.equal(crumbRecordLabel({ id: 'evt-194', name: '周报' }, 'id'), '周报')
 })
 
 test('preview cache includes view query and filters', () => {

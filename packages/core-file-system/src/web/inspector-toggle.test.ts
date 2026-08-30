@@ -45,7 +45,7 @@ test('database can be added to the inspector and browsed by crumbs', () => {
   assert.doesNotMatch(browse, /onMouseEnter/)
   assert.doesNotMatch(browse, /go\(event, \{ kind: 'root' \}\)/)
   assert.match(browse, /embed/)
-  assert.match(browse, /setInspectorDbPath/)
+  assert.match(browse, /biu:inspector-caption/)
   assert.doesNotMatch(browse, /DataSidebar/)
   assert.match(browser, /embed = false/)
 })

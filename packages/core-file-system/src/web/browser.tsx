@@ -67,7 +67,7 @@ import { DataSidebar } from './data-sidebar.tsx'
 import { buildCrumbs, type CrumbTarget } from './sidebar-nav.ts'
 import { CrumbTrail } from './crumb-trail.tsx'
 import { pickDomAttrs, recordPickKind } from './pick-dom.ts'
-import { recordPreviewEmoji } from './sidebar-preview.ts'
+import { recordPreviewEmoji, crumbRecordLabel } from './sidebar-preview.ts'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
 import {
   activeViewStorageKey,
@@ -76,6 +76,8 @@ import {
   isViewStarred,
   loadActiveViewId,
   loadViews,
+  rememberRecords,
+  rememberViews,
   persistStarredViews,
   pushSavedViews,
   subscribeStarredViews,
@@ -521,11 +523,13 @@ export function CollectionBrowser({
   const [filterOpen, setFilterOpen] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
+  const [pageSizeOpen, setPageSizeOpen] = useState(false)
   const [wrapCells, setWrapCells] = useState(!!initialView?.wrap)
   const [truncateCells, setTruncateCells] = useState(initialView?.truncate !== false)
   const [groupBy, setGroupBy] = useState(initialView?.groupBy ?? '')
   const [showTree, setShowTree] = useState(initialView?.tree !== false)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
   const [refreshing, setRefreshing] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [notice, setNotice] = useState('')
@@ -551,6 +555,9 @@ export function CollectionBrowser({
   const filterRef = useRef<HTMLDivElement>(null)
   const configRef = useRef<HTMLDivElement>(null)
   const groupRef = useRef<HTMLDivElement>(null)
+  const pageSizeRef = useRef<HTMLDivElement>(null)
+  const pageSizeMenuRef = useRef<HTMLDivElement>(null)
+  const [pageSizeMenuPos, setPageSizeMenuPos] = useState<{ right: number; bottom: number } | null>(null)
   const searchRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchExpanded = searchOpen || query.length > 0
@@ -600,13 +607,16 @@ export function CollectionBrowser({
       if (!searchRef.current?.contains(target) && !query) setSearchOpen(false)
       if (
         crumbRef.current?.contains(target) ||
+        (target instanceof Element && target.closest('[data-fsdb-crumb-menu]')) ||
         viewRef.current?.contains(target) ||
         modeRef.current?.contains(target) ||
         sortRef.current?.contains(target) ||
         columnRef.current?.contains(target) ||
         filterRef.current?.contains(target) ||
         configRef.current?.contains(target) ||
-        groupRef.current?.contains(target)
+        groupRef.current?.contains(target) ||
+        pageSizeRef.current?.contains(target) ||
+        pageSizeMenuRef.current?.contains(target)
       ) {
         return
       }
@@ -618,16 +628,30 @@ export function CollectionBrowser({
       setFilterOpen(false)
       setConfigOpen(false)
       setGroupOpen(false)
+      setPageSizeOpen(false)
     }
     document.addEventListener('mousedown', onPointer)
     return () => document.removeEventListener('mousedown', onPointer)
   }, [query])
 
+  useLayoutEffect(() => {
+    if (!pageSizeOpen) {
+      setPageSizeMenuPos(null)
+      return
+    }
+    const box = pageSizeRef.current?.getBoundingClientRect()
+    if (!box) return
+    setPageSizeMenuPos({
+      right: Math.max(8, window.innerWidth - box.right),
+      bottom: Math.max(8, window.innerHeight - box.top + 6),
+    })
+  }, [pageSizeOpen])
+
   useEffect(() => {
     if (searchOpen) searchInputRef.current?.focus()
   }, [searchOpen])
 
-  function toggleMenu(which: 'view' | 'mode' | 'sort' | 'columns' | 'filter' | 'config' | 'group') {
+  function toggleMenu(which: 'view' | 'mode' | 'sort' | 'columns' | 'filter' | 'config' | 'group' | 'pageSize') {
     setViewMenuOpen(which === 'view' && !viewMenuOpen)
     setModeMenuOpen(which === 'mode' && !modeMenuOpen)
     setSortMenuOpen(which === 'sort' && !sortMenuOpen)
@@ -635,6 +659,7 @@ export function CollectionBrowser({
     setFilterOpen(which === 'filter' && !filterOpen)
     setConfigOpen(which === 'config' && !configOpen)
     setGroupOpen(which === 'group' && !groupOpen)
+    setPageSizeOpen(which === 'pageSize' && !pageSizeOpen)
   }
 
   const reload = useCallback(async () => {
@@ -829,6 +854,22 @@ export function CollectionBrowser({
   )
 
   const selected = visible.find((item) => item.id === detailId) ?? items.find((item) => item.id === detailId) ?? null
+  useEffect(() => {
+    const rows = items.map((row) => ({
+      id: row.id,
+      label: crumbRecordLabel(row, schema?.labelField),
+      emoji: recordPreviewEmoji(row),
+    }))
+    if (selected && !rows.some((row) => row.id === selected.id)) {
+      rows.push({
+        id: selected.id,
+        label: crumbRecordLabel(selected, schema?.labelField),
+        emoji: recordPreviewEmoji(selected),
+      })
+    }
+    rememberRecords(collectionPath, rows)
+    window.dispatchEvent(new Event('fsdb:crumb-labels'))
+  }, [collectionPath, items, schema?.labelField, selected])
   const filterActive = Object.values(filters).some(Boolean)
   const activeView = views.find((view) => view.id === activeViewId)
   useSyncExternalStore(subscribeStarredViews, getStarredViewsVersion, () => 0)
@@ -906,10 +947,11 @@ export function CollectionBrowser({
   function persistViews(next: SavedView[]) {
     viewsRef.current = next
     setViews(next)
+    rememberViews(collectionPath, next)
+    window.dispatchEvent(new Event('fsdb:change'))
     if (embed) return
     localStorage.setItem(viewsKey(collectionPath), JSON.stringify(next))
     pushSavedViews(collectionPath, next)
-    window.dispatchEvent(new Event('fsdb:change'))
   }
 
   function rememberActiveView(id: string) {
@@ -1193,10 +1235,14 @@ export function CollectionBrowser({
         viewName: activeView?.name,
         views: views.map((view) => ({ id: view.id, name: view.name, mode: view.mode })),
         recordId: selected?.id,
-        recordLabel: selected ? labelOf(selected) : undefined,
-        records: items.map((row) => ({ id: row.id, label: labelOf(row), emoji: recordPreviewEmoji(row) })),
+        recordLabel: selected ? crumbRecordLabel(selected, schema?.labelField) : undefined,
+        records: items.map((row) => ({
+          id: row.id,
+          label: crumbRecordLabel(row, schema?.labelField),
+          emoji: recordPreviewEmoji(row),
+        })),
       }),
-    [activeView?.name, activeViewId, collectionPath, items, routeViewId, selected, tables, title, views],
+    [activeView?.name, activeViewId, collectionPath, items, routeViewId, schema?.labelField, selected, tables, title, views],
   )
   const currentTable = tables.find((item) => item.path === collectionPath)
   const recordKind = recordPickKind(currentTable?.view?.moduleId)
@@ -1339,10 +1385,31 @@ export function CollectionBrowser({
     )
   }
 
-  function GroupHead({ label, count }: { label: string; count: number }) {
+  function GroupHead({ groupKey, label, count }: { groupKey: string; label: string; count: number }) {
+    const folded = Boolean(collapsedGroups[groupKey])
     return (
       <header className="tasks-queue-ghead">
-        {activeGroup ? <FieldGlyph kind={resolveFieldType(activeGroup.field)} /> : null}
+        <button
+          type="button"
+          className="tasks-group-fold"
+          aria-expanded={!folded}
+          aria-label={folded ? '展开分组' : '收起分组'}
+          title={folded ? '展开分组' : '收起分组'}
+          onClick={() => setCollapsedGroups((prev) => ({ ...prev, [groupKey]: !prev[groupKey] }))}
+        >
+          <span className="sidebar-rail-icon sidebar-group-fold" aria-hidden>
+            <span className="sidebar-group-fold-face">
+              {activeGroup ? <FieldGlyph kind={resolveFieldType(activeGroup.field)} /> : <Squares2X2Icon aria-hidden className="size-[14px]" />}
+            </span>
+            <span className="sidebar-group-fold-chevron">
+              {folded ? (
+                <ChevronRightIcon className="size-4 shrink-0 opacity-80" />
+              ) : (
+                <ChevronDownIcon className="size-4 shrink-0 opacity-80" />
+              )}
+            </span>
+          </span>
+        </button>
         <span className="tasks-queue-glabel">{label}</span>
         <span className="tasks-queue-count">{count}</span>
       </header>
@@ -1599,7 +1666,6 @@ export function CollectionBrowser({
               >
                 <Squares2X2Icon aria-hidden className="size-[14px]" />
                 <span className="tasks-viewdd-name">{activeView?.name ?? '未保存'}</span>
-                <ChevronDownIcon aria-hidden className="size-[14px]" />
               </button>
               {viewMenuOpen ? (
                 <div className="tasks-viewdd-menu" role="menu">
@@ -1948,10 +2014,12 @@ export function CollectionBrowser({
                           <Fragment key={group.key || 'unset'}>
                             <tr className="fsdb-group-row">
                               <td colSpan={Math.max(columns.length, 1) + (schema?.actions?.length ? 1 : 0)}>
-                                <GroupHead label={group.label} count={group.rows.length} />
+                                <GroupHead groupKey={group.key || 'unset'} label={group.label} count={group.rows.length} />
                               </td>
                             </tr>
+                            {collapsedGroups[group.key || 'unset'] ? null : (
                             <TableBodyRows rows={group.rows} keyPrefix={`${group.key}:`} />
+                            )}
                           </Fragment>
                         ))
                       ) : (
@@ -1971,12 +2039,14 @@ export function CollectionBrowser({
                   {grouped.length ? (
                     grouped.map((group) => (
                       <section key={group.key || 'unset'} className="tasks-queue-group">
-                        <GroupHead label={group.label} count={group.rows.length} />
+                        <GroupHead groupKey={group.key || 'unset'} label={group.label} count={group.rows.length} />
+                        {collapsedGroups[group.key || 'unset'] ? null : (
                         <div className="fsdb-cards">
                           {group.rows.map((row) => (
                             <MiniCard key={row.id} row={row} />
                           ))}
                         </div>
+                        )}
                       </section>
                     ))
                   ) : (
@@ -2000,12 +2070,14 @@ export function CollectionBrowser({
                   grouping ? (
                     grouped.map((group) => (
                       <section key={group.key || 'unset'} className="tasks-queue-group">
-                        <GroupHead label={group.label} count={group.rows.length} />
+                        <GroupHead groupKey={group.key || 'unset'} label={group.label} count={group.rows.length} />
+                        {collapsedGroups[group.key || 'unset'] ? null : (
                         <ul className="tasks-queue-list">
                           {group.rows.map((row) => (
                             <QueueRow key={row.id} row={row} />
                           ))}
                         </ul>
+                        )}
                       </section>
                     ))
                   ) : (
@@ -2041,24 +2113,52 @@ export function CollectionBrowser({
             ) : null}
           </div>
           <div className="fsdb-pager" data-biu-ignore>
-            <span className="fsdb-pager-meta">
-              {total ? `Count · 共 ${total} 条` : 'Count · 暂无记录'}
+            <span className="fsdb-pager-meta" title={total ? `共 ${total} 条` : '暂无记录'}>
+              <HashtagIcon aria-hidden className="size-[14px]" />
+              <span>{total}</span>
             </span>
             <div className="fsdb-pager-nav">
-              <label className="fsdb-pager-size">
-                <select
-                  value={pageSize}
-                  aria-label="每页条数"
-                  onChange={(event) => setPageSize(normalizePageSize(Number(event.target.value)))}
+              <div className="fsdb-pager-size" ref={pageSizeRef}>
+                <button
+                  type="button"
+                  className={`tasks-icon-btn fsdb-pager-size-btn${pageSizeOpen ? ' is-active' : ''}`}
+                  aria-label={`每页 ${pageSize} 条`}
+                  aria-haspopup="menu"
+                  aria-expanded={pageSizeOpen}
+                  title={`每页 ${pageSize} 条`}
+                  onClick={() => toggleMenu('pageSize')}
                 >
-                  {PAGE_SIZES.map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDownIcon aria-hidden className="size-[12px]" />
-              </label>
+                  <Bars3BottomLeftIcon aria-hidden className="size-[14px]" />
+                  <span>{pageSize}</span>
+                </button>
+                {pageSizeOpen && pageSizeMenuPos
+                  ? createPortal(
+                      <div
+                        ref={pageSizeMenuRef}
+                        className="fsdb-pager-size-menu"
+                        role="menu"
+                        style={{ right: pageSizeMenuPos.right, bottom: pageSizeMenuPos.bottom }}
+                      >
+                        {PAGE_SIZES.map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            className={`fsdb-pager-size-option${size === pageSize ? ' is-active' : ''}`}
+                            role="menuitem"
+                            onClick={() => {
+                              setPageSize(normalizePageSize(size))
+                              setPageSizeOpen(false)
+                            }}
+                          >
+                            {size}
+                            {size === pageSize ? <CheckIcon aria-hidden className="size-[14px]" /> : null}
+                          </button>
+                        ))}
+                      </div>,
+                      document.body,
+                    )
+                  : null}
+              </div>
               <button
                 type="button"
                 className="tasks-icon-btn"
@@ -2240,14 +2340,15 @@ if (typeof document !== 'undefined') {
 .fsdb-page{display:flex;min-width:0;min-height:0;flex:1;flex-direction:row;overflow:hidden;background:var(--dsw-bg);color:var(--dsw-label);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,sans-serif,"Apple Color Emoji","Segoe UI Emoji";font-size:14px;letter-spacing:-.011em}
 .fsdb-right{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
 .fsdb-right .chat-view-header{flex:none}
-.fsdb-crumbs{display:flex;min-width:0;align-items:center;gap:2px}
-.fsdb-crumb{display:inline-flex;min-width:0;align-items:center;gap:2px}
-.fsdb-crumb-sep{flex:none;padding:0 4px;color:var(--dsw-sidebar-fg);opacity:.5;font-size:14px;font-weight:600}
-.fsdb-crumb-btn{display:inline-flex;min-width:0;max-width:180px;align-items:center;gap:6px;height:26px;border:0;border-radius:6px;background:transparent;padding:0 8px;color:var(--dsw-sidebar-fg);font-size:14px;font-weight:600;cursor:pointer}
+.fsdb-crumbs{display:flex;min-width:0;align-items:center;gap:0}
+.fsdb-crumb{display:inline-flex;min-width:0;align-items:center;gap:0}
+.fsdb-crumb-sep{flex:none;padding:0 2px;color:var(--dsw-sidebar-fg);opacity:.5;font-size:14px;font-weight:600}
+.fsdb-crumb-btn{display:inline-flex;min-width:0;max-width:180px;align-items:center;gap:6px;height:26px;border:0;border-radius:6px;background:transparent;padding:0 4px;color:var(--dsw-sidebar-fg);font-size:14px;font-weight:600;cursor:pointer}
 .fsdb-crumb-btn:hover,.fsdb-crumb-btn.is-open{background:var(--dsw-hover);color:var(--dsw-sidebar-fg-active)}
 .fsdb-crumb-btn .chat-view-project-name,.fsdb-crumb-option .chat-view-project-name{font-size:14px;font-weight:600;color:inherit}
 .fsdb-crumb-pick{position:relative;flex:none}
 .fsdb-crumb-menu{position:absolute;left:0;top:calc(100% + 4px);z-index:80;min-width:160px;max-height:240px;overflow:auto;border:1px solid var(--dsw-border);border-radius:8px;background:var(--dsw-surface);padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.16)}
+.fsdb-crumb-menu.is-fixed{position:fixed;z-index:140}
 .fsdb-crumb-option{display:flex;width:100%;min-width:0;align-items:center;gap:6px;border:0;border-radius:6px;background:transparent;padding:6px 8px;color:var(--dsw-sidebar-fg);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
 .fsdb-crumb-option:hover,.fsdb-crumb-option.is-active{background:var(--dsw-hover);color:var(--dsw-sidebar-fg-active)}
 .fsdb-inspector-panel{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden;background:var(--dsw-bg)}
@@ -2257,7 +2358,7 @@ if (typeof document !== 'undefined') {
 .fsdb-inspector-host:not(:empty) + .fsdb-inspector-empty{display:none}
 .fsdb-inspector-panel .fsdb-detail-stage{min-height:0;flex:1}
 .fsdb-right-body{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
-.fsdb-views{display:flex;width:280px;flex:none;flex-direction:column;min-height:0;overflow:hidden}
+.fsdb-views{display:flex;width:var(--sidebar-col,280px);max-width:280px;min-width:0;flex:none;flex-direction:column;min-height:0;overflow:hidden}
 .inspector-database-page{width:100%;min-height:0;flex:1}
 .fsdb-nav-chevron{flex:none;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
 .fsdb-nav-chevron:hover{background:var(--dsw-hover);color:var(--dsw-label)}
@@ -2266,7 +2367,7 @@ if (typeof document !== 'undefined') {
 .fsdb-collection-head.is-inline{padding:0 0 2px}
 .fsdb-collection-name{font-size:14px;font-weight:650;color:var(--dsw-label);line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-collection-head .fsdb-footnote{margin:4px 0 0;font-size:14px;font-weight:400;line-height:1.45;color:var(--dsw-label-3);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
-.fsdb-main{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;gap:10px;padding:12px 14px 14px;overflow:hidden}
+.fsdb-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;gap:10px;padding:12px 24px 16px;overflow:hidden}
 .fsdb-page .tasks-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;min-width:0}
 .fsdb-page .tasks-toolbar-left{display:flex;align-items:center;gap:6px;flex:none;min-width:0}
 .fsdb-page .tasks-toolbar-right{display:flex;align-items:center;gap:2px;flex:none;margin-left:auto}
@@ -2290,18 +2391,22 @@ if (typeof document !== 'undefined') {
 .fsdb-col-item input{margin:0}
 .fsdb-page .tasks-viewdd-wrap,.fsdb-page .tasks-sort-wrap,.fsdb-page .tasks-filter-btn-wrap{position:relative;display:inline-flex}
 .fsdb-page .tasks-viewdd-btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:8px;padding:5px 9px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;font-weight:650;cursor:pointer}
+.fsdb-page .tasks-viewdd-btn:hover,.fsdb-page .tasks-viewdd-btn.is-active{background:var(--dsw-hover)}
 .fsdb-page .tasks-viewdd-name{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-page .tasks-viewdd-menu,.fsdb-page .tasks-sort-menu,.fsdb-page .tasks-filter-menu{position:absolute;top:calc(100% + 6px);z-index:40;min-width:180px;padding:8px;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:4px}
 .fsdb-page .tasks-viewdd-menu{left:0;min-width:230px}
 .fsdb-page .tasks-sort-menu,.fsdb-page .tasks-filter-menu{right:0}
 .fsdb-page .tasks-filter-menu{overflow:visible;min-width:240px}
 .fsdb-page .tasks-viewdd-head,.fsdb-page .tasks-sort-head{font-size:14px;font-weight:600;color:var(--dsw-label-3)}
-.fsdb-page .tasks-viewdd-item{display:flex;align-items:center}
+.fsdb-page .tasks-viewdd-item{display:flex;align-items:stretch;gap:4px}
 .fsdb-page .tasks-viewdd-item-main,.fsdb-page .tasks-sort-item,.fsdb-page .tasks-viewdd-saveas{display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:0;border-radius:7px;padding:6px 8px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;cursor:pointer;text-align:left}
+.fsdb-page .tasks-viewdd-item-main{width:auto;flex:1;min-width:0}
 .fsdb-page .tasks-sort-item.is-active,.fsdb-page .tasks-viewdd-item.is-active .tasks-viewdd-item-main{color:var(--dsw-business);font-weight:650}
-.fsdb-page .tasks-viewdd-item-actions{display:none}
-.fsdb-page .tasks-viewdd-item:hover .tasks-viewdd-item-actions{display:inline-flex}
-.fsdb-page .tasks-viewdd-act{border:0;background:transparent;color:var(--dsw-label-3);cursor:pointer}
+.fsdb-page .tasks-viewdd-item-actions{display:none;align-items:stretch;gap:4px;flex:none}
+.fsdb-page .tasks-viewdd-item:hover .tasks-viewdd-item-actions,.fsdb-page .tasks-viewdd-item:focus-within .tasks-viewdd-item-actions{display:inline-flex}
+.fsdb-page .tasks-viewdd-act{display:inline-flex;align-items:center;justify-content:center;aspect-ratio:1;padding:0;border:0;border-radius:7px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
+.fsdb-page .tasks-viewdd-act:hover{background:var(--dsw-hover);color:var(--dsw-label)}
+.fsdb-page .tasks-viewdd-act.is-danger:hover{background:color-mix(in srgb,var(--dsw-danger) 16%,transparent);color:var(--dsw-danger)}
 .fsdb-page .tasks-viewdd-foot{border-top:1px solid var(--dsw-border);margin-top:4px;padding-top:4px}
 .fsdb-page .tasks-filter-menu-label{display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:600;color:var(--dsw-label-3)}
 .fsdb-page .tasks-filter{width:100%;border:1px solid var(--dsw-border);border-radius:7px;padding:5px 7px;background:var(--dsw-input);color:var(--dsw-label);font:inherit;font-size:14px}
@@ -2361,7 +2466,8 @@ if (typeof document !== 'undefined') {
 .fsdb-page .tasks-icon-btn:disabled{opacity:.4;cursor:default}
 .fsdb-page .tasks-queue{display:flex;flex-direction:column;gap:18px;overflow:auto;padding:2px 0 12px}
 .fsdb-page .tasks-queue-group{display:flex;flex-direction:column;gap:2px}
-.fsdb-page .tasks-queue-ghead{display:flex;align-items:center;gap:6px;padding:4px 8px;color:var(--dsw-label-2);font-size:14px;font-weight:650;letter-spacing:.01em}
+.fsdb-page .tasks-queue-ghead{display:flex;align-items:center;gap:6px;padding:4px 8px;color:var(--dsw-label-2);font-size:14px;font-weight:650;letter-spacing:.01em;cursor:default}
+.fsdb-page .tasks-group-fold{display:grid;width:22px;height:22px;flex:none;place-items:center;border:0;border-radius:6px;padding:0;background:transparent;color:inherit;cursor:pointer}
 .fsdb-page .tasks-queue-glabel{font-weight:650;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-page .tasks-queue-count{margin-left:auto;color:var(--dsw-label-3);font-size:14px;font-weight:600;background:var(--dsw-muted-fill);border-radius:8px;padding:1px 7px}
 .fsdb-page .tasks-queue-list{display:flex;flex-direction:column;margin:0;padding:0;list-style:none;gap:6px}
@@ -2388,14 +2494,18 @@ if (typeof document !== 'undefined') {
 .fsdb-page .fsdb-propchip-v:has(.fsdb-boolbox){overflow:visible;flex:none}
 .fsdb-page .fsdb-propchip .fsdb-pill,.fsdb-page .fsdb-propchip .fsdb-tag{padding:0;background:transparent;max-width:none}
 .fsdb-workspace{display:flex;flex-direction:column;min-width:0;min-height:0;flex:1;overflow:hidden}
-.fsdb-pager{display:flex;align-items:center;gap:4px;flex:none;min-height:32px;padding:2px 4px 0;color:var(--dsw-label-3);font-size:14px;font-weight:400}
-.fsdb-pager-meta{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fsdb-pager-nav{display:inline-flex;align-items:center;gap:0;flex:none;margin-left:auto}
-.fsdb-pager-size{position:relative;display:inline-flex;align-items:center;color:var(--dsw-label-3)}
-.fsdb-pager-size select{-webkit-appearance:none;appearance:none;border:0;border-radius:5px;margin:0;padding:2px 18px 2px 6px;background:transparent;color:inherit;font:inherit;font-size:14px;font-weight:400;cursor:pointer}
-.fsdb-pager-size select:hover{background:var(--dsw-hover);color:var(--dsw-label)}
-.fsdb-pager-size svg{position:absolute;right:4px;pointer-events:none;color:inherit}
-.fsdb-pager .tasks-icon-btn{color:var(--dsw-label-3)}
+.fsdb-pager{display:flex;align-items:center;gap:8px;flex:none;min-height:28px;padding:4px 0 0;color:var(--dsw-label-3);font-size:13px;font-weight:500}
+.fsdb-pager-meta{display:inline-flex;align-items:center;gap:4px;min-width:0;flex:1;overflow:hidden;white-space:nowrap;color:var(--dsw-label-3)}
+.fsdb-pager-meta svg{flex:none}
+.fsdb-pager-nav{display:inline-flex;align-items:center;gap:2px;flex:none;margin-left:auto}
+.fsdb-pager-size{position:relative;display:inline-flex;align-items:center}
+.fsdb-pager-size-btn{gap:4px;width:auto;min-width:0;height:26px;padding:0 6px;border-radius:6px;font-variant-numeric:tabular-nums}
+.fsdb-pager-size-menu{position:fixed;z-index:130;min-width:96px;padding:6px;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:2px}
+.fsdb-pager-size-option{display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:0;border-radius:7px;padding:6px 8px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;cursor:pointer;text-align:left}
+.fsdb-pager-size-option:hover{background:var(--dsw-hover)}
+.fsdb-pager-size-option.is-active{color:var(--dsw-business);font-weight:650}
+.fsdb-pager .tasks-icon-btn{color:var(--dsw-label-3);width:26px;height:26px}
+.fsdb-pager .fsdb-pager-size-btn{width:auto}
 .fsdb-stage{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
 .fsdb-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));grid-auto-flow:row;grid-auto-rows:max-content;grid-template-rows:none;gap:10px;align-content:start;align-items:start;justify-items:stretch;overflow:auto;flex:1;min-width:0;min-height:0;position:relative}
 .fsdb-cards > .tasks-minicard{position:static;grid-row:auto;grid-column:auto;inset:auto}

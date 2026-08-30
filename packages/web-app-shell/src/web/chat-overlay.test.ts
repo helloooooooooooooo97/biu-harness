@@ -3,7 +3,11 @@ import assert from 'node:assert/strict'
 import {
   chatColumnWidth,
   inspectorWidthForExpandedChat,
+  allocateShellColumns,
   CHAT_OVERLAY_ENTER,
+  CENTER_MIN,
+  INSPECTOR_MIN,
+  SIDEBAR_MAX,
   getChatOverlay,
   setChatOverlay,
   getOverlayAutohide,
@@ -21,9 +25,51 @@ import {
 
 test('chat column subtracts rail, sidebar and inspector', () => {
   assert.equal(
-    chatColumnWidth({ viewportWidth: 1440, inspectorOpen: true, inspectorWidth: 800, sidebarCollapsed: false }),
-    1440 - 280 - 800,
+    chatColumnWidth({ viewportWidth: 1600, inspectorOpen: true, inspectorWidth: 320, sidebarCollapsed: false }),
+    1600 - SIDEBAR_MAX - 320,
   )
+})
+
+test('narrow viewport shrinks left pane before inspector, then center last', () => {
+  const wide = allocateShellColumns({
+    viewportWidth: 1600,
+    leftPane: true,
+    inspectorOpen: true,
+    inspectorWidth: 320,
+  })
+  assert.equal(wide.left, SIDEBAR_MAX)
+  assert.equal(wide.inspector, 320)
+  assert.equal(wide.center, 1600 - SIDEBAR_MAX - 320)
+
+  const stealLeft = allocateShellColumns({
+    viewportWidth: SIDEBAR_MAX + CENTER_MIN + 320 - 100,
+    leftPane: true,
+    inspectorOpen: true,
+    inspectorWidth: 320,
+  })
+  assert.equal(stealLeft.left, SIDEBAR_MAX - 100)
+  assert.equal(stealLeft.inspector, 320)
+  assert.equal(stealLeft.center, CENTER_MIN)
+
+  const stealInspector = allocateShellColumns({
+    viewportWidth: CENTER_MIN + INSPECTOR_MIN,
+    leftPane: true,
+    inspectorOpen: true,
+    inspectorWidth: 320,
+  })
+  assert.equal(stealInspector.left, 0)
+  assert.equal(stealInspector.inspector, INSPECTOR_MIN)
+  assert.equal(stealInspector.center, CENTER_MIN)
+
+  const squeezeCenter = allocateShellColumns({
+    viewportWidth: CENTER_MIN + INSPECTOR_MIN - 80,
+    leftPane: true,
+    inspectorOpen: true,
+    inspectorWidth: 320,
+  })
+  assert.equal(squeezeCenter.left, 0)
+  assert.equal(squeezeCenter.inspector, INSPECTOR_MIN)
+  assert.equal(squeezeCenter.center, CENTER_MIN - 80)
 })
 
 test('expanding chat clamps inspector so the column is at least ENTER', () => {

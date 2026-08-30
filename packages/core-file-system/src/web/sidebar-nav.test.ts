@@ -5,6 +5,7 @@ import {
   applySidebarAction,
   assertSidebarInvariants,
   buildCrumbs,
+  crumbButtonAction,
   parseCenterPath,
   pathForCenter,
   pathForCrumbTarget,
@@ -179,6 +180,34 @@ test('记录页面包屑是表 / 视图 / 记录，点表只回到表', () => {
   assert.equal(pathForCrumbTarget(crumbs[1]!.target), '/database/tasks/view/1787983501816')
   assert.ok(!pathForCrumbTarget(crumbs[0]!.target).includes('/record/'))
   assert.ok(!pathForCrumbTarget(crumbs[1]!.target).includes('/record/'))
+})
+
+test('一项时点面包屑回到上一级，多项出菜单', () => {
+  const crumbs = buildCrumbs({
+    collection: '/tasks',
+    collectionLabel: 'Task',
+    tables: [{ path: '/tasks', label: 'Task' }],
+    viewId: 'v1',
+    viewName: '默认视图',
+    views: [{ id: 'v1', name: '默认视图' }],
+    recordId: 'evt-194',
+    recordLabel: '打开一条事件',
+    records: [{ id: 'evt-194', label: '打开一条事件' }],
+  })
+  assert.equal(crumbButtonAction(crumbs[2]!, crumbs[1]!), crumbs[1]!.target)
+  assert.equal(crumbButtonAction(crumbs[1]!, crumbs[0]!), crumbs[0]!.target)
+  const many = buildCrumbs({
+    collection: '/tasks',
+    collectionLabel: 'Task',
+    tables: [{ path: '/tasks', label: 'Task' }],
+    viewId: 'v1',
+    viewName: '默认视图',
+    views: [
+      { id: 'v1', name: '默认视图' },
+      { id: 'v2', name: '看板' },
+    ],
+  })
+  assert.equal(crumbButtonAction(many[1]!, many[0]!), 'menu')
 })
 
 test('压测：随机切换表/视图/记录/展开，路由与展开不串台', () => {

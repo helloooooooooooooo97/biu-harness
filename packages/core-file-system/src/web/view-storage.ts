@@ -8,14 +8,33 @@ export function activeViewStorageKey(collectionPath: string) {
   return `fsdb.activeView:${collectionPath}`
 }
 
+const memoryViews = new Map<string, SavedView[]>()
+
+export function rememberViews(collectionPath: string, views: SavedView[]) {
+  memoryViews.set(collectionPath, views.map((view) => normalizeSavedView(view)))
+}
+
 export function loadViews(collectionPath: string): SavedView[] {
   try {
     const raw = localStorage.getItem(viewsKey(collectionPath))
     const parsed = raw ? (JSON.parse(raw) as SavedView[]) : []
-    return parsed.map((view) => normalizeSavedView(view))
+    if (parsed.length) return parsed.map((view) => normalizeSavedView(view))
   } catch {
-    return []
+    /* ignore */
   }
+  return memoryViews.get(collectionPath) ?? []
+}
+
+export type CrumbRecord = { id: string; label: string; emoji?: string }
+
+const memoryRecords = new Map<string, CrumbRecord[]>()
+
+export function rememberRecords(collectionPath: string, rows: CrumbRecord[]) {
+  memoryRecords.set(collectionPath, rows)
+}
+
+export function loadRecords(collectionPath: string): CrumbRecord[] {
+  return memoryRecords.get(collectionPath) ?? []
 }
 
 export function loadActiveViewId(collectionPath: string, listed: SavedView[]) {
