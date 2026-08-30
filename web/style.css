@@ -1324,27 +1324,24 @@ body {
   display: none;
 }
 
-.sidebar-group-head:hover .sidebar-group-fold-face,
-.sidebar-group-head:focus-within .sidebar-group-fold-face,
-.tasks-queue-ghead:hover .sidebar-group-fold-face,
-.tasks-queue-ghead:focus-within .sidebar-group-fold-face {
+.sidebar-group-fold:hover .sidebar-group-fold-face,
+.sidebar-group-fold:focus-within .sidebar-group-fold-face,
+.sidebar-group-head:focus-within .sidebar-group-fold:focus-within .sidebar-group-fold-face {
   display: none;
 }
 
-.sidebar-group-head:hover .sidebar-group-fold-chevron,
-.sidebar-group-head:focus-within .sidebar-group-fold-chevron,
-.tasks-queue-ghead:hover .sidebar-group-fold-chevron,
-.tasks-queue-ghead:focus-within .sidebar-group-fold-chevron {
+.sidebar-group-fold:hover .sidebar-group-fold-chevron,
+.sidebar-group-fold:focus-within .sidebar-group-fold-chevron {
   display: grid;
 }
 
-.chat-session-row:hover .sidebar-group-fold-face,
-.chat-session-row:focus-within .sidebar-group-fold-face {
+.chat-session-row .sidebar-group-fold:hover .sidebar-group-fold-face,
+.chat-session-row .sidebar-group-fold:focus-within .sidebar-group-fold-face {
   display: none;
 }
 
-.chat-session-row:hover .sidebar-group-fold-chevron,
-.chat-session-row:focus-within .sidebar-group-fold-chevron {
+.chat-session-row .sidebar-group-fold:hover .sidebar-group-fold-chevron,
+.chat-session-row .sidebar-group-fold:focus-within .sidebar-group-fold-chevron {
   display: grid;
 }
 

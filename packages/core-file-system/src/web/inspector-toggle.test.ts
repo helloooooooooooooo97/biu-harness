@@ -13,6 +13,16 @@ test('data sidebar brand sits left with a collapse control on the right', () => 
   assert.match(browser, /onCollapse=\{toggleViewsOpen\}/)
 })
 
+test('table and view rows only expand from the fold column', () => {
+  const sidebar = readFileSync(resolve(import.meta.dirname, './data-sidebar.tsx'), 'utf8')
+  const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
+  assert.match(sidebar, /onClick=\{\(\) => \{\s*onOpenTable\?\.\(table\.path\)/)
+  assert.doesNotMatch(sidebar, /\[table\.path\]: true/)
+  assert.doesNotMatch(sidebar, /setOpenTables\(\(prev\) => \(\{ \.\.\.prev, \[path\]: true \}\)\)/)
+  assert.match(css, /\.sidebar-group-fold:hover \.sidebar-group-fold-chevron/)
+  assert.doesNotMatch(css, /\.chat-session-row:hover \.sidebar-group-fold-chevron/)
+})
+
 test('filesystem header toggles the right inspector, not the left data sidebar', () => {
   assert.match(browser, /data-testid="fsdb-inspector-toggle"/)
   assert.match(browser, /biu:inspector-toggle/)
