@@ -384,10 +384,13 @@ body {
   right: 0;
   bottom: calc(100% + 52px);
   z-index: 21;
-  min-width: 200px;
+  box-sizing: border-box;
+  width: 320px;
+  min-width: 320px;
+  max-width: 320px;
   max-height: 280px;
   overflow: auto;
-  border: 1px solid var(--dsw-border);
+  border: 0;
   border-radius: 8px;
   background: var(--dsw-surface);
   padding: 4px;
