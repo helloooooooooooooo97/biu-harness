@@ -89,7 +89,7 @@ import {
 } from './view-storage.ts'
 import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
-import { mergeCatalogViews } from '../catalog-views.ts'
+import { mergeCatalogViews, stubBuiltinCatalogView, builtinCatalogViewId } from '../catalog-views.ts'
 import { VIEWS_COLLECTION_PATH } from './database-path.ts'
 
 type StatResult = { schema?: CollectionSchema }
@@ -105,6 +105,7 @@ function recordsFingerprint(rows: Array<DbRecord & { path?: string }>) {
 export function CollectionBrowser({
   moduleId,
   collectionPath,
+  recordsPath,
   title,
   blurb,
   chrome,
@@ -123,6 +124,8 @@ export function CollectionBrowser({
 }: {
   moduleId?: string
   collectionPath: string
+  /** 列表数据源；表级 hub 时为 /views，侧栏仍跟 collectionPath。 */
+  recordsPath?: string
   title: string
   blurb: string
   chrome?: CollectionChrome
@@ -141,6 +144,9 @@ export function CollectionBrowser({
   embed?: boolean
 }) {
   ensureFsdbStyle()
+  const dataPath = recordsPath ?? collectionPath
+  const tableHub = dataPath === VIEWS_COLLECTION_PATH && collectionPath !== VIEWS_COLLECTION_PATH
+  const hubView = tableHub ? stubBuiltinCatalogView(builtinCatalogViewId(collectionPath)) : null
   const [stat, setStat] = useState<StatResult | null>(null)
   const [items, setItems] = useState<Array<DbRecord & { path?: string }>>([])
   const [error, setError] = useState('')
@@ -149,7 +155,7 @@ export function CollectionBrowser({
   const [detailBody, setDetailBody] = useState<unknown>(null)
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [busyKey, setBusyKey] = useState<string | null>(null)
-  const initialView = viewForPath(collectionPath, routeViewId)
+  const initialView = hubView ?? viewForPath(collectionPath, routeViewId)
   const [query, setQuery] = useState(initialView?.query ?? '')
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(() => normalizePageSize(initialView?.pageSize))
@@ -162,7 +168,7 @@ export function CollectionBrowser({
   const [columnKeys, setColumnKeys] = useState<string[]>(initialView?.columns ?? [])
   const tablePathsKey = tables.map((table) => `${table.path}\t${table.view?.title ?? table.label ?? ''}`).join('\n')
   const [views, setViews] = useState<SavedView[]>(() => loadViews(collectionPath))
-  const [activeViewId, setActiveViewId] = useState<string | null>(initialView?.id ?? null)
+  const [activeViewId, setActiveViewId] = useState<string | null>(tableHub ? null : (initialView?.id ?? null))
   const catalogLocks = useMemo(() => {
     const current = views.find((view) => view.id === activeViewId)
     if (!current?.builtin) return lockedFilters
@@ -182,7 +188,7 @@ export function CollectionBrowser({
       if (id && row) setDetailRow(row)
       if (!id) setDetailRow(null)
     })
-    if (id) onOpenRecord?.(id, activeViewId)
+    if (id) onOpenRecord?.(id, activeViewId, dataPath)
     else onCloseRecord?.()
   }
   const [hydrated, setHydrated] = useState(false)
@@ -371,9 +377,9 @@ export function CollectionBrowser({
     const gen = ++reloadGen.current
     try {
       const [nextStat, listed] = await Promise.all([
-        readJson<StatResult>(`/api/db/stat?path=${encodeURIComponent(collectionPath)}`),
+        readJson<StatResult>(`/api/db/stat?path=${encodeURIComponent(dataPath)}`),
         listCollection({
-          path: collectionPath,
+          path: dataPath,
           limit: pageSize,
           offset: page * pageSize,
           query: fetchQuery,
@@ -405,7 +411,7 @@ export function CollectionBrowser({
       setError(String(err))
       return false
     }
-  }, [activeViewId, collectionPath, fetchQuery, queryFilters, page, pageSize, sortDir, sortField])
+  }, [activeViewId, collectionPath, dataPath, fetchQuery, queryFilters, page, pageSize, sortDir, sortField])
   const reloadRef = useRef(reload)
   reloadRef.current = reload
   const detailIdRef = useRef<string | null>(null)
@@ -420,7 +426,7 @@ export function CollectionBrowser({
 
   useEffect(() => {
     setPage((prev) => (prev === 0 ? prev : 0))
-  }, [fetchQuery, queryFilters, sortField, sortDir, pageSize, collectionPath])
+  }, [fetchQuery, queryFilters, sortField, sortDir, pageSize, collectionPath, dataPath])
 
   async function refreshNow() {
     if (refreshing) return
@@ -445,11 +451,25 @@ export function CollectionBrowser({
     setStat(null)
     setError('')
     setPage(0)
-    const stored = viewForPath(collectionPath, routeViewId)
+    const stored = tableHub ? hubView : viewForPath(collectionPath, routeViewId)
     const user = loadViews(collectionPath)
     const listed = collectionPath === VIEWS_COLLECTION_PATH ? mergeCatalogViews(tables, user) : user
     rememberViews(collectionPath, listed)
-    if (stored || listed[0]) {
+    if (tableHub && hubView) {
+      setViews(listed)
+      setActiveViewId(null)
+      setMode(hubView.mode)
+      setSortField(hubView.sortField)
+      setSortDir(hubView.sortDir)
+      setFilters(hubView.filters)
+      setColumnKeys(hubView.columns)
+      setGroupBy(hubView.groupBy ?? '')
+      setShowTree(hubView.tree !== false)
+      setWrapCells(!!hubView.wrap)
+      setTruncateCells(hubView.truncate !== false)
+      setQuery(hubView.query ?? '')
+      setFetchQuery(hubView.query ?? '')
+    } else if (stored || listed[0]) {
       const next = (routeViewId && listed.find((item) => item.id === routeViewId)) || stored || listed[0]
       setViews(listed)
       if (next) {
@@ -471,7 +491,7 @@ export function CollectionBrowser({
       setQuery('')
       setFilters({})
     }
-  }, [collectionPath, tablePathsKey])
+  }, [collectionPath, dataPath, tablePathsKey, tableHub])
 
   useEffect(() => {
     let debounce = 0
@@ -492,7 +512,7 @@ export function CollectionBrowser({
       window.clearInterval(timer)
       window.removeEventListener('fsdb:change', onChange)
     }
-  }, [collectionPath, embed])
+  }, [collectionPath, dataPath, embed])
 
   useEffect(() => {
     void reload()
@@ -515,7 +535,7 @@ export function CollectionBrowser({
     }
     if (detailRow?.id === detailId) return
     let cancelled = false
-    void readJson<{ value?: DbRecord }>(`/api/db/read?path=${encodeURIComponent(`${collectionPath}/${detailId}`)}`)
+    void readJson<{ value?: DbRecord }>(`/api/db/read?path=${encodeURIComponent(`${dataPath}/${detailId}`)}`)
       .then((data) => {
         const row = data.value
         if (cancelled || !row?.id) return
@@ -525,7 +545,7 @@ export function CollectionBrowser({
     return () => {
       cancelled = true
     }
-  }, [collectionPath, detailId, detailRow?.id, items])
+  }, [collectionPath, dataPath, detailId, detailRow?.id, items])
 
   useEffect(() => () => window.clearTimeout(noticeTimer.current), [])
 
@@ -664,7 +684,7 @@ export function CollectionBrowser({
       return
     }
     let cancelled = false
-    void readJson<{ value?: unknown }>(`/api/db/content?path=${encodeURIComponent(`${collectionPath}/${detailId}`)}`)
+    void readJson<{ value?: unknown }>(`/api/db/content?path=${encodeURIComponent(`${dataPath}/${detailId}`)}`)
       .then((data) => {
         if (!cancelled) setDetailBody(data.value ?? null)
       })
@@ -674,7 +694,7 @@ export function CollectionBrowser({
     return () => {
       cancelled = true
     }
-  }, [collectionPath, detailId])
+  }, [collectionPath, dataPath, detailId])
 
   useEffect(() => {
     if (embed || !detailId) return
@@ -936,7 +956,7 @@ export function CollectionBrowser({
       await readJson('/api/db/action', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ path: `${collectionPath}/${row.id}`, action: action.id }),
+        body: JSON.stringify({ path: `${dataPath}/${row.id}`, action: action.id }),
       })
       quietUntil.current = 0
       await reload()
@@ -955,7 +975,7 @@ export function CollectionBrowser({
         const data = await readJson<{ value?: unknown }>('/api/db/content', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ path: `${collectionPath}/${row.id}`, value: content[bodyKey] }),
+          body: JSON.stringify({ path: `${dataPath}/${row.id}`, value: content[bodyKey] }),
         })
         setDetailBody(data.value ?? content[bodyKey])
         return
@@ -963,7 +983,7 @@ export function CollectionBrowser({
       const data = await readJson<{ value?: DbRecord }>('/api/db/update', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ path: `${collectionPath}/${row.id}`, content }),
+        body: JSON.stringify({ path: `${dataPath}/${row.id}`, content }),
       })
       const next = data.value
       if (next) {
@@ -984,7 +1004,7 @@ export function CollectionBrowser({
       const data = await readJson<{ value?: DbRecord }>('/api/db/create', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ path: collectionPath, content: {} }),
+        body: JSON.stringify({ path: dataPath, content: {} }),
       })
       quietUntil.current = 0
       await reload()
@@ -992,7 +1012,7 @@ export function CollectionBrowser({
       if (id) {
         setOpenDetailId(id)
         if (data.value) setDetailRow(data.value)
-        onOpenRecord?.(id, activeViewId, collectionPath)
+        onOpenRecord?.(id, activeViewId, dataPath)
       }
     } catch (err) {
       setError(String(err))
@@ -1004,7 +1024,7 @@ export function CollectionBrowser({
       await readJson('/api/db/delete', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ path: `${collectionPath}/${row.id}` }),
+        body: JSON.stringify({ path: `${dataPath}/${row.id}` }),
       })
       onCloseRecord?.()
       quietUntil.current = 0
@@ -1029,7 +1049,7 @@ export function CollectionBrowser({
           label: table.view?.title ?? table.label,
           icon: table.view?.icon,
         })),
-        viewId: routeViewId ?? activeViewId ?? undefined,
+        viewId: tableHub ? undefined : routeViewId ?? activeViewId ?? undefined,
         viewName: activeView?.name,
         views: views.map((view) => ({ id: view.id, name: view.name, mode: view.mode })),
         recordId: selected?.id,
@@ -1040,7 +1060,7 @@ export function CollectionBrowser({
           emoji: recordPreviewEmoji(row),
         })),
       }),
-    [activeView?.name, activeViewId, collectionPath, items, routeViewId, schema?.labelField, selected, tables, title, views],
+    [activeView?.name, activeViewId, collectionPath, items, routeViewId, schema?.labelField, selected, tables, tableHub, title, views],
   )
   const currentTable = tables.find((item) => item.path === collectionPath)
   const recordKind = recordPickKind(currentTable?.view?.moduleId)
@@ -1313,8 +1333,13 @@ export function CollectionBrowser({
       hydratePath.current = ''
       return
     }
-    if (hydratePath.current === collectionPath) return
-    hydratePath.current = collectionPath
+    const hydrateKey = `${collectionPath}\0${dataPath}`
+    if (hydratePath.current === hydrateKey) return
+    hydratePath.current = hydrateKey
+    if (tableHub) {
+      setHydrated(true)
+      return
+    }
     let next = loadViews(collectionPath)
     if (collectionPath === VIEWS_COLLECTION_PATH) next = mergeCatalogViews(tables, next)
     if (!next.length && collectionPath !== VIEWS_COLLECTION_PATH) {
@@ -1343,14 +1368,14 @@ export function CollectionBrowser({
       listed[0]
     if (view) applyView(view)
     setHydrated(true)
-  }, [allColumnKeys, collectionPath, schema, schemaDefaultKeys])
+  }, [allColumnKeys, collectionPath, dataPath, schema, schemaDefaultKeys, tableHub])
 
   useEffect(() => {
     if (!hydrated || !activeViewId) return
     const id = window.setTimeout(() => {
-      if (hydratePath.current !== collectionPath) return
+      if (hydratePath.current !== `${collectionPath}\0${dataPath}`) return
       const current = viewsRef.current.find((view) => view.id === activeViewId)
-      if (!current || current.builtin) return
+      if (!current || current.builtin || tableHub) return
       const next = normalizeSavedView({
         ...current,
         mode,
@@ -1502,7 +1527,7 @@ export function CollectionBrowser({
                 onClick={() => toggleMenu('view')}
               >
                 <Squares2X2Icon aria-hidden className="size-[14px]" />
-                <span className="tasks-viewdd-name">{activeView?.name ?? '未保存'}</span>
+                <span className="tasks-viewdd-name">{tableHub ? title : (activeView?.name ?? '未保存')}</span>
               </button>
               {viewMenuOpen ? (
                 <div className="tasks-viewdd-menu" role="menu">

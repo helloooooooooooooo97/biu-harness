@@ -15,7 +15,7 @@ describe('顶栏三级标题', () => {
     expect(browser).toContain("target.kind === 'view' && target.collection === collectionPath")
     expect(browser).toContain('<CrumbTrail')
     const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
-    expect(page).toMatch(/onOpenView=\{\(\) => \{[\s\S]*go\(\{ collection: currentPath \}, \{ replace: true \}\)/)
+    expect(page).toMatch(/onOpenView=\{\(viewId\) => go\(\{ collection: currentPath, viewId \}\)/)
     expect(trail).toContain('createPortal')
     expect(trail).toContain('data-fsdb-crumb-menu')
     expect(trail).not.toContain('data-testid="crumb-expand"')

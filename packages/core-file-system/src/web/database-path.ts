@@ -28,6 +28,11 @@ export function databaseRecordPath(collection: string, recordId: string): string
 
 export const VIEWS_COLLECTION_PATH = '/views'
 
+/** 表路径且没有 view/record：中间列出该表下的视图，路由仍是 /database/:table。 */
+export function isCollectionHub(collection: string, viewId?: string, recordId?: string | null) {
+  return Boolean(collection) && collection !== VIEWS_COLLECTION_PATH && !viewId && !recordId
+}
+
 export function viewsCatalogHref(sourcePath: string): string {
   const source = normalizeCollectionPath(sourcePath)
   const viewId = builtinCatalogViewId(source || VIEWS_COLLECTION_PATH)

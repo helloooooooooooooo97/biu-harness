@@ -421,13 +421,7 @@ export const DataSidebar = memo(function DataSidebar({
     } catch {
       /* ignore */
     }
-    const listed = viewsFor(path)
-    const view = listed.find((item) => item.id === viewId)
-    if (path !== collectionPath) {
-      onOpenTable?.(path, viewId)
-      return
-    }
-    if (view) onApplyView(view)
+    onOpenTable?.(path, viewId)
   }
 
   function toggleViewPreview(key: string) {
@@ -613,7 +607,7 @@ export const DataSidebar = memo(function DataSidebar({
                           <button
                             type="button"
                             className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit outline-none hover:text-(--dsw-sidebar-fg-active) focus-visible:ring-1 focus-visible:ring-(--dsw-border)"
-                            onClick={() => onOpenTable?.(table.path)}
+                            onClick={() => onOpenTable?.(table.path, undefined, { catalog: true })}
                           >
                             {name}
                           </button>
