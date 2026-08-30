@@ -1213,6 +1213,13 @@ body {
   contain: layout style;
   transition: none;
   color: var(--dsw-sidebar-fg);
+  -webkit-user-drag: none;
+}
+
+.chat-session-row a,
+.chat-session-row img,
+.chat-session-row svg {
+  -webkit-user-drag: none;
 }
 
 .chat-session-row::before {
@@ -1677,6 +1684,7 @@ body {
   line-height: 0;
   /* 侧栏行 hover 时不要跟着父级背景一起重绘 */
   contain: layout paint;
+  -webkit-user-drag: none;
 }
 
 .sidebar-mascot-status {

@@ -10,11 +10,18 @@ describe('sidebar text colors', () => {
     expect(css).toMatch(/--dsw-sidebar-fg-active:\s*#f0efed/)
     expect(css).toMatch(/\.app-side-bar\s*\{[^}]*color:\s*var\(--dsw-sidebar-fg\)/s)
     expect(css).toMatch(/\.chat-session-row\.is-active\s*\{[^}]*color:\s*var\(--dsw-sidebar-fg-active\)/s)
+    expect(css).toMatch(/\.chat-session-row\s*\{[^}]*-webkit-user-drag:\s*none/s)
   })
 
   it('left-aligns the sidebar brand with the list below', () => {
     expect(css).toMatch(/\.app-side-bar-head-brand\s*\{[^}]*justify-content:\s*flex-start/s)
     expect(css).toMatch(/\.app-side-bar-head-brand\s*\{[^}]*padding-left:\s*16px/s)
     expect(css).not.toMatch(/\.app-side-bar-head-brand\s*\{[^}]*justify-content:\s*center/s)
+  })
+
+  it('session rows do not start a native drag ghost', () => {
+    const sidebar = readFileSync(resolve(import.meta.dirname, './chat-sidebar.tsx'), 'utf8')
+    expect(sidebar).toMatch(/draggable=\{false\}/)
+    expect(sidebar).toMatch(/onDragStart=\{\(event\) => event.preventDefault\(\)\}/)
   })
 })

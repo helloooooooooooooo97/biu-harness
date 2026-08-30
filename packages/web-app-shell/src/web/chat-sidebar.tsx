@@ -107,6 +107,8 @@ const SessionRow = memo(function SessionRow({
     >
       <Link
         to={`/s/${item.id}`}
+        draggable={false}
+        onDragStart={(event) => event.preventDefault()}
         className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
       >
         <SidebarMascot
