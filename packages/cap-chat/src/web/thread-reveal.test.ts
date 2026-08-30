@@ -143,15 +143,21 @@ describe('chat scroll memory per session', () => {
     expect(captureChatScroll(parent)).toEqual({ kind: 'bottom' })
   })
 
-  it('restores by aligning that message to the top of the viewport', () => {
+  it('restores by scrolling the turn box to the top, ignoring sticky visual offset', () => {
     const parent = document.createElement('div')
-    Object.defineProperty(parent, 'scrollTop', { value: 500, writable: true, configurable: true })
+    Object.defineProperty(parent, 'scrollTop', { value: 1800, writable: true, configurable: true })
+    const turn = document.createElement('div')
+    turn.dataset.turnAnchor = 'u-3'
+    turn.className = 'chat-turn'
+    Object.defineProperty(turn, 'offsetTop', { value: 640, configurable: true })
+    const sticky = document.createElement('div')
+    sticky.dataset.nodeId = 'u-3'
+    sticky.dataset.chatKind = 'user'
+    sticky.getBoundingClientRect = () => box(0, 40)
+    turn.append(sticky)
+    parent.append(turn)
     parent.getBoundingClientRect = () => box(0, 800)
-    const row = document.createElement('div')
-    row.dataset.nodeId = 'u-3'
-    row.getBoundingClientRect = () => box(120, 80)
-    parent.append(row)
     expect(restoreChatScroll(parent, { kind: 'pin', nodeId: 'u-3' })).toBe(true)
-    expect(parent.scrollTop).toBe(620)
+    expect(parent.scrollTop).toBe(640)
   })
 })

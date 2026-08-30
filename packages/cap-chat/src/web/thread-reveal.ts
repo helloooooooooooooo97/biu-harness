@@ -80,6 +80,23 @@ function nodeSelector(nodeId: string) {
   return `[data-node-id="${escaped}"]`
 }
 
+function turnSelector(nodeId: string) {
+  const escaped =
+    typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(nodeId) : nodeId
+  return `[data-turn-anchor="${escaped}"]`
+}
+
+/** 相对滚动容器的文档坐标；走 offsetTop，不受 sticky 视觉位置干扰。 */
+export function offsetInScroller(el: HTMLElement, scroller: HTMLElement): number {
+  let y = 0
+  let node: HTMLElement | null = el
+  while (node && node !== scroller) {
+    y += node.offsetTop
+    node = node.parentElement
+  }
+  return y
+}
+
 /** 当前贴顶的用户消息：已经顶到视口上沿的最后一条。 */
 export function captureChatScroll(parent: HTMLElement): ChatScrollMemory {
   const distance = parent.scrollHeight - parent.scrollTop - parent.clientHeight
@@ -100,9 +117,10 @@ export function restoreChatScroll(parent: HTMLElement, memory: ChatScrollMemory)
     parent.scrollTop = parent.scrollHeight
     return true
   }
-  const el = parent.querySelector(nodeSelector(memory.nodeId))
+  const turn = parent.querySelector(turnSelector(memory.nodeId))
+  const el = turn instanceof HTMLElement ? turn : parent.querySelector(nodeSelector(memory.nodeId))
   if (!(el instanceof HTMLElement)) return false
-  parent.scrollTop += el.getBoundingClientRect().top - parent.getBoundingClientRect().top
+  parent.scrollTop = offsetInScroller(el, parent)
   return true
 }
 
