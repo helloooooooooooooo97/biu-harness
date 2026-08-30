@@ -179,8 +179,18 @@ export const SessionInspector = memo(function SessionInspector({
       setTab(focusTabId)
       return
     }
-    setTabState((current) => resolveInspectorTab(current, allowedTabs))
-  }, [sessionId, focusCallId, focusTabId, allowedTabs.join('|'), setTab])
+    setTabState((current) => {
+      const next = resolveInspectorTab(current, allowedTabs, opened)
+      if (next !== current) {
+        try {
+          localStorage.setItem(inspectorTabStorageKey(sessionId), next)
+        } catch {
+          /* ignore */
+        }
+      }
+      return next
+    })
+  }, [sessionId, focusCallId, focusTabId, allowedTabs.join('|'), opened, setTab])
 
   useEffect(() => {
     const onTab = (event: Event) => {
@@ -439,9 +449,6 @@ export const SessionInspector = memo(function SessionInspector({
           </div>
         ) : (
           <div className="inspector-empty" data-testid="inspector-catalog">
-            <p className="inspector-empty-kicker">
-              {displayTabs.length || toolTabs.length ? '选择要看的内容' : '这一页没有可展示的面板'}
-            </p>
             {displayTabs.length || toolTabs.length ? (
               <div className="inspector-empty-list">
                 {displayTabs

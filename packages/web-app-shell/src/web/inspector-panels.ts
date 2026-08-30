@@ -66,8 +66,11 @@ export function nextRepeatableTabId(tabId: string) {
   return `${tabId}::${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 }
 
-export function resolveInspectorTab(current: string, allowed: string[]) {
-  if (!current) return ''
-  if (allowed.includes(current) || allowed.includes(slotTabId(current))) return current
-  return ''
+export function resolveInspectorTab(current: string, allowed: string[], opened: string[] = []) {
+  const hanging = opened.filter((id) => allowed.includes(id) || allowed.includes(slotTabId(id)))
+  if (current && hanging.includes(current)) return current
+  const currentSlot = current ? slotTabId(current) : ''
+  const bySlot = currentSlot ? hanging.find((id) => slotTabId(id) === currentSlot) : undefined
+  if (bySlot) return bySlot
+  return hanging[0] ?? ''
 }

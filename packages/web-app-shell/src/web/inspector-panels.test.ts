@@ -36,9 +36,15 @@ test('common tools stay available on every center', () => {
 
 test('inspector does not auto-open the first available tab', () => {
   assert.equal(resolveInspectorTab('', ['script', 'reports']), '')
-  assert.equal(resolveInspectorTab('script', ['script', 'reports']), 'script')
+  assert.equal(resolveInspectorTab('script', ['script', 'reports']), '')
   assert.equal(resolveInspectorTab('gone', ['script', 'reports']), '')
-  assert.equal(resolveInspectorTab('database::a1', ['database']), 'database::a1')
+})
+
+test('inspector selects a hanging tab instead of showing an empty pane', () => {
+  assert.equal(resolveInspectorTab('', ['script', 'reports'], ['reports', 'script']), 'reports')
+  assert.equal(resolveInspectorTab('gone', ['script', 'reports'], ['script']), 'script')
+  assert.equal(resolveInspectorTab('script', ['script', 'reports'], ['script']), 'script')
+  assert.equal(resolveInspectorTab('database::a1', ['database'], ['database::a1']), 'database::a1')
 })
 
 test('legacy untagged panels stay off session and database centers', () => {
