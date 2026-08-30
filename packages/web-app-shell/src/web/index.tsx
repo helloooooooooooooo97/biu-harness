@@ -11,6 +11,7 @@ import {
   setOverlayAutohide,
   subscribeOverlayAutohide,
   requestOverlayAutohide,
+  overlayStillHoldsPointer,
   setOverlayResizing,
   getOverlayPinned,
   subscribeOverlayPinned,
@@ -235,10 +236,20 @@ const AgentMainPanels = memo(function AgentMainPanels({
   const keepVisible = useCallback(() => {
     setOverlayAutohide(false)
   }, [])
-  const hideIfIdle = useCallback(() => {
-    if (!overlay) return
-    requestOverlayAutohide()
-  }, [overlay])
+  const hideIfIdle = useCallback(
+    (event?: { currentTarget: EventTarget; relatedTarget: EventTarget | null; clientX: number; clientY: number }) => {
+      if (!overlay) return
+      const panel = event?.currentTarget ?? null
+      const related = event?.relatedTarget ?? null
+      const x = event?.clientX
+      const y = event?.clientY
+      queueMicrotask(() => {
+        if (overlayStillHoldsPointer(panel, related, x, y)) return
+        requestOverlayAutohide()
+      })
+    },
+    [overlay],
+  )
   useEffect(() => {
     if (!overlay) setOverlayAutohide(false)
   }, [overlay])
@@ -316,10 +327,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
             ['--overlay-chat-height' as string]: `${overlayChatHeight}px`,
             ['--rail-w' as string]: railOpen ? '48px' : '0px',
           } as CSSProperties}
-          onMouseEnter={() => {
-            if (hidden) return
-            keepVisible()
-          }}
+          onMouseEnter={keepVisible}
           onMouseLeave={hideIfIdle}
         >
           <div
@@ -330,7 +338,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
           />
           {header}
           <div className="chat-overlay-thread">{overlayStage}</div>
-          <div className="chat-composer-dock pointer-events-none">{overlayDock}</div>
+          <div className="chat-composer-dock">{overlayDock}</div>
         </div>,
         document.body,
       )

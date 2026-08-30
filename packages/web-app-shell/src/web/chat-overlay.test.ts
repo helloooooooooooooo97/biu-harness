@@ -13,6 +13,7 @@ import {
   getOverlayAutohide,
   setOverlayAutohide,
   requestOverlayAutohide,
+  overlayStillHoldsPointer,
   setOverlayResizing,
   setOverlayPinned,
   clampOverlayChatHeight,
@@ -119,6 +120,16 @@ test('autohide requires leaving and not resizing', () => {
   setOverlayResizing(false)
   requestOverlayAutohide()
   assert.equal(getOverlayAutohide(), true)
+})
+
+test('pointer still inside overlay when relatedTarget or hit is in the panel', () => {
+  const panel = document.createElement('div')
+  panel.setAttribute('data-testid', 'chat-overlay-panel')
+  const child = document.createElement('input')
+  panel.append(child)
+  document.body.append(panel)
+  assert.equal(overlayStillHoldsPointer(panel, child, 0, 0), true)
+  panel.remove()
 })
 
 test('autohide does not fire when overlay is pinned', () => {

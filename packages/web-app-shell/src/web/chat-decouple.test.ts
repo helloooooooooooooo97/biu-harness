@@ -15,4 +15,6 @@ test('overlay chat is off on the agent page and elsewhere until the corner dock 
   assert.doesNotMatch(shell, /放大聊天窗口/)
   const overlayHead = shell.slice(shell.indexOf('const overlayHeader'))
   assert.doesNotMatch(overlayHead.slice(0, 1200), /inspector-toggle/)
+  assert.match(shell, /overlayStillHoldsPointer/)
+  assert.doesNotMatch(shell, /chat-composer-dock pointer-events-none">\{overlayDock\}/)
 })

@@ -867,6 +867,7 @@ body {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  pointer-events: auto;
 }
 
 .chat-overlay-panel.is-autohide {

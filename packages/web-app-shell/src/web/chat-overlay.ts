@@ -140,6 +140,23 @@ export function setOverlayResizing(next: boolean) {
 }
 
 /** 仅在未钉住、未拖高度、且指针已离开时收起。 */
+/** 指针其实还在浮窗里（子节点重绘、composer 穿透）时不要收起。 */
+export function overlayStillHoldsPointer(
+  panel: EventTarget | null,
+  related: EventTarget | null,
+  clientX?: number,
+  clientY?: number,
+) {
+  const root = panel instanceof Element ? panel : null
+  if (!root) return false
+  if (related instanceof Node && root.contains(related)) return true
+  if (typeof clientX === 'number' && typeof clientY === 'number') {
+    const hit = document.elementFromPoint(clientX, clientY)
+    if (hit && (root.contains(hit) || hit.closest('[data-testid="chat-overlay-panel"]'))) return true
+  }
+  return false
+}
+
 export function requestOverlayAutohide() {
   if (!overlay || resizing || pinned) return
   setOverlayAutohide(true)
