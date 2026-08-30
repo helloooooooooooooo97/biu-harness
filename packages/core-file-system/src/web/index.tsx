@@ -8,6 +8,7 @@ import type { CollectionChrome } from '@biu/type-file-system/ui'
 import { isLegacyDatabasePath, parseAppPath } from '@biu/web-session-view'
 import { pathForCenter, pathForCrumbTarget, type CrumbTarget } from './sidebar-nav.ts'
 import { CollectionBrowser } from './browser.tsx'
+import { DatabaseInspectorBrowse, DatabaseInspectorTab, bindInspectorSnapshot } from './inspector-database.tsx'
 import { DatabaseUiService, getDatabaseUi } from './database-ui.ts'
 import {
   bootLoadCollections,
@@ -283,6 +284,23 @@ export function apply(ctx: Context) {
   })
   ctx.inject(['snapshot'], (inner) => {
     const snapshot = inner.get('snapshot') as SnapshotService
+    bindInspectorSnapshot({
+      subscribe: snapshot.subscribe ?? (() => () => undefined),
+      get: () => snapshot.get?.() ?? {},
+    })
+    const databaseBrowse = slots.place('inspector-panels', DatabaseInspectorBrowse, {
+      key: 'fsdb-database-browse',
+      order: -25,
+      props: () => ({
+        tabId: 'database',
+        tabLabel: '数据库',
+        tabIcon: CircleStackIcon,
+        Tab: DatabaseInspectorTab,
+        requiresSession: true,
+        centerKinds: ['session'],
+        repeatable: true,
+      }),
+    })
     let lastKey = ''
     const fromSnap = () => {
       const rows = snapshot.get?.().collections ?? []
@@ -303,6 +321,7 @@ export function apply(ctx: Context) {
       window.clearTimeout(debounce)
       offSnap?.()
       off()
+      void databaseBrowse.dispose?.()
     }
   })
   void bootLoadCollections(loadCollections, {

@@ -263,7 +263,7 @@ const CSS = `
 .fsdb-dlg-ok.is-danger{border-color:var(--dsw-danger);background:var(--dsw-danger);color:var(--dsw-bg)}
 .fsdb-dlg-ok:disabled,.fsdb-dlg-cancel:disabled{opacity:.6;cursor:default}
 .fsdb-save{border:0;border-radius:8px;padding:8px 10px;background:var(--dsw-business);color:#fff;font:inherit;font-size:14px;cursor:pointer}
-.fsdb-empty,.fsdb-muted,.fsdb-meta,.fsdb-footnote{color:var(--dsw-label-2)}
+.fsdb-empty,.fsdb-muted,.fsdb-meta,.fsdb-footnote,.fsdb-inspector-empty{color:var(--dsw-label-2)}
 .fsdb-footnote{margin:0;font-size:14px;font-weight:400}
 .fsdb-tags{display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center}
 .fsdb-tag{display:inline-flex;align-items:center;height:22px;padding:0 6px;border-radius:4px;font-size:14px;font-weight:500;line-height:22px;color:var(--dsw-label);background:rgba(255,255,255,.08);white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis}

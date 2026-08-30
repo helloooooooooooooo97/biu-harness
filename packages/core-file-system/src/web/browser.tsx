@@ -116,6 +116,7 @@ export function CollectionBrowser({
   onOpenRecord,
   onCloseRecord,
   onCrumbTarget,
+  embed = false,
 }: {
   moduleId?: string
   collectionPath: string
@@ -132,6 +133,8 @@ export function CollectionBrowser({
   onOpenRecord?: (recordId: string, viewId?: string | null, collection?: string) => void
   onCloseRecord?: () => void
   onCrumbTarget?: (target: CrumbTarget) => void
+  /** 检查器内页：只有中间舞台，不写侧栏开关/视图存储。 */
+  embed?: boolean
 }) {
   ensureFsdbStyle()
   const [stat, setStat] = useState<StatResult | null>(null)
@@ -239,6 +242,7 @@ export function CollectionBrowser({
   }
 
   useEffect(() => {
+    if (embed) return
     function onToggle(event: Event) {
       const id = (event as CustomEvent<{ id?: string }>).detail?.id
       if (!id || (moduleId && id !== moduleId)) return
@@ -246,9 +250,10 @@ export function CollectionBrowser({
     }
     window.addEventListener('biu:toggle-module-sidebar', onToggle)
     return () => window.removeEventListener('biu:toggle-module-sidebar', onToggle)
-  }, [collectionPath, moduleId])
+  }, [collectionPath, embed, moduleId])
 
   useEffect(() => {
+    if (embed) return
     const sync = (open: boolean) => setInspectorOpen(open)
     const onOpen = () => sync(true)
     const onClose = () => sync(false)
@@ -261,7 +266,7 @@ export function CollectionBrowser({
       window.removeEventListener('biu:inspector-close', onClose)
       window.removeEventListener('biu:inspector-toggle', onToggle)
     }
-  }, [])
+  }, [embed])
 
   useEffect(() => {
     function onPointer(event: MouseEvent) {
@@ -433,7 +438,9 @@ export function CollectionBrowser({
       debounce = window.setTimeout(() => void reloadRef.current(), 120)
     }
     window.addEventListener('fsdb:change', onChange)
-    const timer = window.setInterval(() => {
+    const timer = embed
+      ? 0
+      : window.setInterval(() => {
           if (detailIdRef.current) return
           void reloadRef.current()
         }, 20000)
@@ -442,7 +449,7 @@ export function CollectionBrowser({
       window.clearInterval(timer)
       window.removeEventListener('fsdb:change', onChange)
     }
-  }, [collectionPath])
+  }, [collectionPath, embed])
 
   useEffect(() => {
     void reload()
@@ -619,13 +626,13 @@ export function CollectionBrowser({
   }, [collectionPath, detailId])
 
   useEffect(() => {
-    if (!detailId) return
+    if (embed || !detailId) return
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setDetailId(null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [detailId])
+  }, [detailId, embed])
 
   useEffect(() => {
     if (dlg?.kind !== 'rename') return
@@ -636,14 +643,17 @@ export function CollectionBrowser({
     viewsRef.current = next
     setViews(next)
     rememberViews(collectionPath, next)
-    localStorage.setItem(viewsKey(collectionPath), JSON.stringify(next))
-    pushSavedViews(collectionPath, next)
+    if (!embed) {
+      localStorage.setItem(viewsKey(collectionPath), JSON.stringify(next))
+      pushSavedViews(collectionPath, next)
+    }
     window.dispatchEvent(new Event('fsdb:change'))
     window.dispatchEvent(new Event('fsdb:crumb-labels'))
   }
 
   function rememberActiveView(id: string) {
     setActiveViewId(id)
+    if (embed) return
     try {
       localStorage.setItem(activeViewStorageKey(collectionPath), id)
     } catch {
@@ -1265,9 +1275,10 @@ export function CollectionBrowser({
 
   return (
     <div
-      className="fsdb-page tasks-root"
+      className={`fsdb-page tasks-root${embed ? ' inspector-database-page' : ''}`}
+      data-testid={embed ? 'inspector-database' : undefined}
     >
-      {viewsOpen ? (
+      {!embed && viewsOpen ? (
         <DataSidebar
           tables={tables}
           collectionPath={collectionPath}
@@ -1298,6 +1309,7 @@ export function CollectionBrowser({
         />
       ) : null}
       <div className="fsdb-right">
+        {embed ? null : (
         <header className="chat-view-header" data-biu-ignore>
           <div className="chat-view-header-left">
             <CrumbTrail
@@ -1342,6 +1354,7 @@ export function CollectionBrowser({
             </button>
           </div>
         </header>
+        )}
         <div className="fsdb-right-body">
         {!detailId ? (
         <div className="tasks-main fsdb-main">

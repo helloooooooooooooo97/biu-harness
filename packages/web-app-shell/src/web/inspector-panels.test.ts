@@ -8,6 +8,17 @@ test('inspector only offers session panels when a session is selected', () => {
   assert.equal(inspectorPanelMatches(extra, null), false)
 })
 
+test('session inspector can add a database pane', () => {
+  assert.equal(
+    inspectorPanelMatches({ requiresSession: true, centerKinds: ['session'], repeatable: true }, 's1'),
+    true,
+  )
+  assert.equal(
+    inspectorPanelMatches({ requiresSession: true, centerKinds: ['session'] }, null),
+    false,
+  )
+})
+
 test('page panels never appear in the session inspector', () => {
   assert.equal(inspectorPanelMatches({ centerKinds: ['collection-view', 'record'] }, 's1'), false)
   assert.equal(inspectorPanelMatches({ centerKinds: ['task'] }, 's1'), false)

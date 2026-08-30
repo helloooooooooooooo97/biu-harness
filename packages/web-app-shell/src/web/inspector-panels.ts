@@ -7,7 +7,7 @@ export type InspectorPanelExtra = {
   action?: unknown
 }
 
-/** 右侧检查器只跟当前 Session：页面附加块不进这一栏。 */
+/** 右侧检查器跟当前 Session：页面附加块不进这一栏，但 Session 可以加数据库。 */
 export function inspectorPanelMatches(extra: InspectorPanelExtra, sessionId: string | null): boolean {
   if (!sessionId) return false
   const kinds = Array.isArray(extra.centerKinds)

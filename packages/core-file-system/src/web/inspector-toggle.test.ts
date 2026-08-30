@@ -56,13 +56,20 @@ test('filesystem header toggles the right inspector, not the left data sidebar',
 test('database extras sit after the record detail, not in the inspector', () => {
   const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
   assert.doesNotMatch(page, /biu:inspector-open/)
-  assert.doesNotMatch(page, /slots\.place\('inspector-panels'/)
+  assert.match(page, /slots\.place\('inspector-panels'/)
+  assert.match(page, /DatabaseInspectorBrowse/)
+  assert.match(page, /centerKinds: \['session'\]/)
+  assert.match(page, /repeatable: true/)
   assert.doesNotMatch(page, /RecordPanePanel/)
-  assert.doesNotMatch(page, /fsdb-database-browse/)
   assert.match(detail, /fsdb-detail-extras/)
   assert.match(detail, /data-testid=\{`fsdb-pane-\$\{pane\.id\}`\}/)
-  assert.doesNotMatch(browser, /embed \?/)
+  assert.match(browser, /embed \?/)
   assert.doesNotMatch(browser, /setRecordFocus/)
+})
+
+test('inspector embed does not poll the collection every 20s', () => {
+  assert.match(browser, /const timer = embed/)
+  assert.match(browser, /}, 20000\)/)
 })
 
 test('switching tables does not remount the whole browser', () => {
