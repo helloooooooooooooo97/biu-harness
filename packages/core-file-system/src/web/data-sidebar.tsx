@@ -47,6 +47,7 @@ import {
   toggleStarredView,
 } from './view-storage.ts'
 import { pickDomAttrs, recordPickKind, viewPickId } from './pick-dom.ts'
+import { toggleExpandedViewKey } from './sidebar-nav.ts'
 
 const SIDEBAR_BRAND_GRADIENT =
   'linear-gradient(105deg, color-mix(in srgb, #0066B0 42%, var(--dsw-hover)), color-mix(in srgb, #5B3E90 40%, var(--dsw-hover)) 52%, color-mix(in srgb, #E22726 42%, var(--dsw-hover)))'
@@ -412,7 +413,7 @@ export const DataSidebar = memo(function DataSidebar({
   }
 
   function toggleViewPreview(key: string) {
-    const next = expandedViewKey === key ? null : key
+    const next = toggleExpandedViewKey(expandedViewKey, key)
     if (onExpandedViewKeyChange) onExpandedViewKeyChange(next)
     else setExpandedViewKeyLocal(next)
   }

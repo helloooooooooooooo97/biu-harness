@@ -5,7 +5,8 @@ import { CircleStackIcon } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/type-slots'
 import { DATABASE_CHANNEL, type CollectionInfo, type CollectionView } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
-import { buildAppPath, isLegacyDatabasePath, parseAppPath } from '@biu/web-session-view'
+import { isLegacyDatabasePath, parseAppPath } from '@biu/web-session-view'
+import { pathForCenter } from './sidebar-nav.ts'
 import { CollectionBrowser } from './browser.tsx'
 import { DatabaseUiService } from './database-ui.ts'
 import {
@@ -93,26 +94,11 @@ function CollectionPage(props: SlotProps) {
     next: { collection: string; viewId?: string; recordId?: string | null },
     opts?: { replace?: boolean },
   ) => {
-    if (next.recordId) {
-      navigate(
-        buildAppPath({
-          kind: 'record',
-          moduleId: DATA_MODULE_ID,
-          path: DATA_MODULE_PATH,
-          collection: next.collection,
-          recordId: next.recordId,
-        }),
-        opts,
-      )
-      return
-    }
     navigate(
-      buildAppPath({
-        kind: 'collection-view',
-        moduleId: DATA_MODULE_ID,
-        path: DATA_MODULE_PATH,
+      pathForCenter({
         collection: next.collection,
         viewId: next.viewId,
+        recordId: next.recordId ?? undefined,
       }),
       opts,
     )
