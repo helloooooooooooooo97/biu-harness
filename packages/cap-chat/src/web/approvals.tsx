@@ -24,7 +24,7 @@ function parseAgentMode(value: unknown): AgentMode {
   return value === 'minimal' || value === 'create' ? value : 'standard'
 }
 
-/** 最新一条回复的历史输入占比（0..1），驱动橡皮擦底色。 */
+/** 最新一条回复里，上下文（更早 turn）占发给模型的输入文字的比例（0..1）。 */
 function latestHistRatio(nodes: ChatNode[]): number | null {
   const last = nodes.at(-1)
   if (!last || last.kind !== 'reply') return null
@@ -332,7 +332,7 @@ export function ApprovalsRail(props: SlotProps) {
             className="project-chip project-chip-icon-only relative"
             data-dock-tip={
               histRatio != null
-                ? `清空上下文 · 历史 ${Math.round(histRatio * 100)}%`
+                ? `清空上下文 · 上下文占输入文字 ${Math.round(histRatio * 100)}%`
                 : '清空上下文'
             }
             onClick={() => void clearContext()}
