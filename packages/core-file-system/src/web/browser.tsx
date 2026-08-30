@@ -64,8 +64,8 @@ import {
 } from './fields'
 import { AppDialog, CellSelect, CheckRow, LocalText, TokenMultiSelect } from './controls.tsx'
 import { DataSidebar } from './data-sidebar.tsx'
-import { CrumbItemGlyph } from './nav-glyphs.tsx'
 import { buildCrumbs, type CrumbTarget } from './sidebar-nav.ts'
+import { CrumbTrail } from './crumb-trail.tsx'
 import { pickDomAttrs, recordPickKind } from './pick-dom.ts'
 import { recordPreviewEmoji } from './sidebar-preview.ts'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
@@ -543,7 +543,7 @@ export function CollectionBrowser({
   >(null)
   const [dlgError, setDlgError] = useState('')
   const [crumbOpen, setCrumbOpen] = useState<string | null>(null)
-  const crumbRef = useRef<HTMLDivElement>(null)
+  const crumbRef = useRef<HTMLElement>(null)
   const viewRef = useRef<HTMLDivElement>(null)
   const modeRef = useRef<HTMLDivElement>(null)
   const sortRef = useRef<HTMLDivElement>(null)
@@ -1540,57 +1540,16 @@ export function CollectionBrowser({
         {embed ? null : (
         <header className="chat-view-header" data-biu-ignore>
           <div className="chat-view-header-left">
-            <nav className="fsdb-crumbs" aria-label="位置" ref={crumbRef}>
-              {crumbs.map((crumb, index) => {
-                const canPick = crumb.choices.length > 1
-                const open = crumbOpen === crumb.id
-                const current = crumb.choices.find((item) => item.id === crumb.id)
-                return (
-                <span key={crumb.id} className="fsdb-crumb">
-                  {index ? <span className="fsdb-crumb-sep" aria-hidden>/</span> : null}
-                  <span className="fsdb-crumb-pick">
-                    <button
-                      type="button"
-                      className={`fsdb-crumb-btn${open ? ' is-open' : ''}`}
-                      title={crumb.label}
-                      aria-haspopup={canPick ? 'menu' : undefined}
-                      aria-expanded={canPick ? open : undefined}
-                      onClick={() => {
-                        if (canPick) {
-                          setCrumbOpen((prev) => (prev === crumb.id ? null : crumb.id))
-                          return
-                        }
-                        onCrumbTarget?.(crumb.target)
-                        setCrumbOpen(null)
-                      }}
-                    >
-                      <CrumbItemGlyph kind={crumb.kind} icon={current?.icon} mode={current?.mode} emoji={current?.emoji} />
-                      <span className="chat-view-project-name">{crumb.label}</span>
-                    </button>
-                    {canPick && open ? (
-                      <div className="fsdb-crumb-menu" role="menu">
-                        {crumb.choices.map((choice) => (
-                          <button
-                            key={choice.id}
-                            type="button"
-                            className={`fsdb-crumb-option${choice.id === crumb.id ? ' is-active' : ''}`}
-                            role="menuitem"
-                            onClick={() => {
-                              onCrumbTarget?.(choice.target)
-                              setCrumbOpen(null)
-                            }}
-                          >
-                            <CrumbItemGlyph kind={crumb.kind} icon={choice.icon} mode={choice.mode} emoji={choice.emoji} />
-                            <span className="chat-view-project-name">{choice.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                  </span>
-                </span>
-                )
-              })}
-            </nav>
+            <CrumbTrail
+              crumbs={crumbs}
+              openId={crumbOpen}
+              onOpenId={setCrumbOpen}
+              onPick={(target) => {
+                onCrumbTarget?.(target)
+                setCrumbOpen(null)
+              }}
+              navRef={crumbRef}
+            />
           </div>
           <div className="chat-view-header-right">
             {selected ? <RecordActions row={selected} place="detail" /> : null}
@@ -2283,13 +2242,14 @@ if (typeof document !== 'undefined') {
 .fsdb-right .chat-view-header{flex:none}
 .fsdb-crumbs{display:flex;min-width:0;align-items:center;gap:2px}
 .fsdb-crumb{display:inline-flex;min-width:0;align-items:center;gap:2px}
-.fsdb-crumb-sep{flex:none;padding:0 4px;color:var(--dsw-label-3);font-size:13px}
-.fsdb-crumb-btn{display:inline-flex;min-width:0;max-width:180px;align-items:center;gap:6px;border:0;border-radius:6px;background:transparent;padding:4px 6px;color:var(--dsw-sidebar-fg);cursor:pointer}
+.fsdb-crumb-sep{flex:none;padding:0 4px;color:var(--dsw-sidebar-fg);opacity:.5;font-size:14px;font-weight:600}
+.fsdb-crumb-btn{display:inline-flex;min-width:0;max-width:180px;align-items:center;gap:6px;height:26px;border:0;border-radius:6px;background:transparent;padding:0 8px;color:var(--dsw-sidebar-fg);font-size:14px;font-weight:600;cursor:pointer}
 .fsdb-crumb-btn:hover,.fsdb-crumb-btn.is-open{background:var(--dsw-hover);color:var(--dsw-sidebar-fg-active)}
+.fsdb-crumb-btn .chat-view-project-name,.fsdb-crumb-option .chat-view-project-name{font-size:14px;font-weight:600;color:inherit}
 .fsdb-crumb-pick{position:relative;flex:none}
-.fsdb-crumb-menu{position:absolute;left:0;top:calc(100% + 4px);z-index:20;min-width:160px;max-height:240px;overflow:auto;border:1px solid var(--dsw-border);border-radius:8px;background:var(--dsw-surface);padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.16)}
-.fsdb-crumb-option{display:flex;width:100%;min-width:0;align-items:center;gap:6px;border:0;border-radius:6px;background:transparent;padding:6px 8px;color:var(--dsw-label);font:inherit;font-size:13px;text-align:left;cursor:pointer}
-.fsdb-crumb-option:hover,.fsdb-crumb-option.is-active{background:var(--dsw-hover)}
+.fsdb-crumb-menu{position:absolute;left:0;top:calc(100% + 4px);z-index:80;min-width:160px;max-height:240px;overflow:auto;border:1px solid var(--dsw-border);border-radius:8px;background:var(--dsw-surface);padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.16)}
+.fsdb-crumb-option{display:flex;width:100%;min-width:0;align-items:center;gap:6px;border:0;border-radius:6px;background:transparent;padding:6px 8px;color:var(--dsw-sidebar-fg);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
+.fsdb-crumb-option:hover,.fsdb-crumb-option.is-active{background:var(--dsw-hover);color:var(--dsw-sidebar-fg-active)}
 .fsdb-inspector-panel{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden;background:var(--dsw-bg)}
 .fsdb-inspector-host{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
 .fsdb-inspector-host:empty{display:none}

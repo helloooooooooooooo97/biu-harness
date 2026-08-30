@@ -41,6 +41,8 @@ test('database can be added to the inspector and browsed by crumbs', () => {
   assert.match(browse, /bindInspectorSnapshot/)
   assert.doesNotMatch(browse, /useSnapshot\?:/)
   assert.match(browse, /inspector-crumb-leaf/)
+  assert.match(browse, /CrumbTrail/)
+  assert.doesNotMatch(browse, /onMouseEnter/)
   assert.doesNotMatch(browse, /go\(event, \{ kind: 'root' \}\)/)
   assert.match(browse, /embed/)
   assert.match(browse, /setInspectorDbPath/)

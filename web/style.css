@@ -283,6 +283,7 @@ body {
   justify-content: space-between;
   gap: 8px;
   padding: 0 12px;
+  overflow: visible;
 }
 
 .brand-corner-cluster {
@@ -390,6 +391,7 @@ body {
   align-items: center;
   align-self: stretch;
   gap: 2px;
+  overflow: visible;
 }
 
 .inspector-tab {
@@ -423,8 +425,9 @@ body {
 }
 
 .inspector-crumb-tab {
-  max-width: min(100%, 420px);
+  max-width: min(100%, 100%);
   min-width: 0;
+  overflow: visible;
 }
 
 .inspector-crumb-leaf,
@@ -434,10 +437,15 @@ body {
   max-width: 100%;
   align-items: center;
   gap: 2px;
+  overflow: visible;
 }
 
 .inspector-crumb-full .fsdb-crumb-btn {
   max-width: 140px;
+}
+
+.inspector-crumb-full .fsdb-crumb-menu {
+  z-index: 90;
 }
 
 .inspector-database-rail.fsdb-views {
@@ -621,6 +629,7 @@ body {
 
 .session-inspector {
   border-left: 1px solid var(--dsw-border);
+  overflow: visible;
 }
 
 .app-shell-agent.is-chat-overlay .session-inspector {

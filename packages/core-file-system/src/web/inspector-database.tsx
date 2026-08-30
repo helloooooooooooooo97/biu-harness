@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore, type MouseEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { CircleStackIcon } from '@heroicons/react/16/solid'
 import { useLocation } from 'react-router-dom'
 import type { SlotProps } from '@biu/type-slots'
@@ -6,8 +6,8 @@ import type { CollectionInfo } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import { parseAppPath } from '@biu/web-session-view'
 import { buildCrumbs, pathForCrumbTarget, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
-import { CrumbItemGlyph } from './nav-glyphs.tsx'
 import { CollectionBrowser } from './browser.tsx'
+import { CrumbTrail } from './crumb-trail.tsx'
 import { loadActiveViewId, loadViews } from './view-storage.ts'
 import { databaseRecordPath, databaseViewPath } from './inspector-nav.ts'
 import {
@@ -123,27 +123,25 @@ export function DatabaseInspectorTab({
   const id = paneOf({ paneId })
   const location = useLocation()
   const inspectorPath = useInspectorDbPath(id)
-  const [hover, setHover] = useState(false)
+  const [crumbOpen, setCrumbOpen] = useState<string | null>(null)
+  const crumbRef = useRef<HTMLElement>(null)
   useViewTick()
   useEffect(() => {
     seedInspectorDbPath(id, location.pathname)
   }, [id, location.pathname])
+  useEffect(() => {
+    function onPointer(event: globalThis.MouseEvent) {
+      if (!crumbRef.current?.contains(event.target as Node)) setCrumbOpen(null)
+    }
+    document.addEventListener('mousedown', onPointer)
+    return () => document.removeEventListener('mousedown', onPointer)
+  }, [])
   const collections = useInspectorCollections()
   const tables = useMemo(
     () => collections.filter((row) => row.path && row.path !== '/'),
     [collections],
   )
   const { crumbs } = crumbsForRoute(inspectorPath || location.pathname, tables)
-  const leaf = crumbs.at(-1)
-  const leafChoice = leaf?.choices.find((item) => item.id === leaf.id)
-  const showTrail = hover && crumbs.length > 0
-
-  function go(event: MouseEvent, target: CrumbTarget) {
-    event.preventDefault()
-    event.stopPropagation()
-    onActivate?.()
-    goInspector(id, target)
-  }
 
   return (
     <div
@@ -152,33 +150,25 @@ export function DatabaseInspectorTab({
       aria-selected={Boolean(active)}
       data-testid="inspector-tab-database"
       data-pane={id}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
       onClick={() => onActivate?.()}
     >
-      {showTrail ? (
-        <nav className="inspector-crumb-full" aria-label="数据库位置">
-          {crumbs.map((crumb, index) => {
-            const current = crumb.choices.find((item) => item.id === crumb.id)
-            return (
-              <span key={crumb.id} className="fsdb-crumb">
-                {index ? <span className="fsdb-crumb-sep" aria-hidden>/</span> : null}
-                <button type="button" className="fsdb-crumb-btn" onClick={(event) => go(event, crumb.target)}>
-                  <CrumbItemGlyph kind={crumb.kind} icon={current?.icon} mode={current?.mode} emoji={current?.emoji} />
-                  <span className="chat-view-project-name">{crumb.label}</span>
-                </button>
-              </span>
-            )
-          })}
-        </nav>
+      {crumbs.length ? (
+        <CrumbTrail
+          crumbs={crumbs}
+          openId={crumbOpen}
+          onOpenId={setCrumbOpen}
+          onPick={(target) => {
+            onActivate?.()
+            goInspector(id, target)
+          }}
+          navRef={crumbRef}
+          className="inspector-crumb-full fsdb-crumbs"
+          label="数据库位置"
+        />
       ) : (
         <span className="inspector-crumb-leaf">
-          {leaf ? (
-            <CrumbItemGlyph kind={leaf.kind} icon={leafChoice?.icon} mode={leafChoice?.mode} emoji={leafChoice?.emoji} />
-          ) : (
-            <CircleStackIcon aria-hidden className="chat-view-project-icon" />
-          )}
-          <span className="chat-view-project-name">{leaf?.label ?? '数据'}</span>
+          <CircleStackIcon aria-hidden className="chat-view-project-icon" />
+          <span className="chat-view-project-name">数据</span>
         </span>
       )}
     </div>
