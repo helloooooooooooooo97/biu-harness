@@ -5,8 +5,8 @@ export const SIDEBAR_MAX = 360
 export const SIDEBAR_DEFAULT = 72
 /** 最小宽度约为默认的 2/3；再窄整栏关掉，不留细条。 */
 export const SIDEBAR_MIN = Math.round(SIDEBAR_DEFAULT * (2 / 3))
-/** 比默认宽度更宽才显示文字标签（会话名、「添加聊天」等）。 */
-export const SIDEBAR_LABEL_AT = SIDEBAR_DEFAULT + 1
+/** 往右拉到这个宽度才显示文字标签（会话名、「添加聊天」等）。默认 72 仍是图标轨。 */
+export const SIDEBAR_LABEL_AT = 160
 /** 再往右拉到这个宽度才显示会话 tag（日报、总结、+N 等）。 */
 export const SIDEBAR_TAG_AT = 300
 /** 中间列最窄约为对话内容最大宽 768 的 2/3，好让左右栏先完整显示。 */
