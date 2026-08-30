@@ -19,6 +19,9 @@ import {
   toggleOverlayPinned,
   requestInspectorClose,
   allocateShellColumns,
+  SIDEBAR_LABEL_AT,
+  SIDEBAR_MAX,
+  SIDEBAR_MIN,
 } from './chat-overlay.ts'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
@@ -439,7 +442,54 @@ function Shell(props: SlotProps) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<string>('plugins')
   const [configOpen, setConfigOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('cordis.sidebar.collapsed') === '1'
+    } catch {
+      return false
+    }
+  })
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    try {
+      const n = Number(localStorage.getItem('cordis.sidebar.width'))
+      if (Number.isFinite(n) && n >= SIDEBAR_MIN && n <= SIDEBAR_MAX) return n
+    } catch {
+      /* ignore */
+    }
+    return SIDEBAR_MAX
+  })
+  const lastWideSidebar = useRef(sidebarWidth >= SIDEBAR_LABEL_AT ? sidebarWidth : SIDEBAR_MAX)
+  const persistSidebar = useCallback((width: number, collapsed: boolean) => {
+    const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, Math.round(width)))
+    setSidebarWidth(next)
+    setSidebarCollapsed(collapsed)
+    if (next >= SIDEBAR_LABEL_AT) lastWideSidebar.current = next
+    try {
+      localStorage.setItem('cordis.sidebar.width', String(next))
+      localStorage.setItem('cordis.sidebar.collapsed', collapsed ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }, [])
+  const collapseSidebar = useCallback(() => {
+    setSidebarCollapsed(true)
+    try {
+      localStorage.setItem('cordis.sidebar.collapsed', '1')
+    } catch {
+      /* ignore */
+    }
+  }, [])
+  const expandSidebar = useCallback(
+    () => persistSidebar(Math.max(SIDEBAR_LABEL_AT, lastWideSidebar.current, sidebarWidth), false),
+    [persistSidebar, sidebarWidth],
+  )
+  const onSidebarWidthChange = useCallback(
+    (width: number) => {
+      const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, Math.round(width)))
+      persistSidebar(next, next <= SIDEBAR_MIN)
+    },
+    [persistSidebar],
+  )
   const [railOpen, setRailOpen] = useState(false)
   const [railPinned, setRailPinned] = useState(() => {
     try {
@@ -553,7 +603,9 @@ function Shell(props: SlotProps) {
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   const agentHref = sessionId ? `/s/${sessionId}` : '/'
-  const showChatSidebar = activeModule === 'agent' && !sidebarCollapsed
+  const showChatSidebar = activeModule === 'agent'
+  const sidebarCol = sidebarCollapsed ? SIDEBAR_MIN : sidebarWidth
+  const sidebarNarrow = sidebarCol < SIDEBAR_LABEL_AT
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1440 : window.innerWidth,
   )
@@ -571,14 +623,17 @@ function Shell(props: SlotProps) {
   const shellColumns = allocateShellColumns({
     viewportWidth,
     leftPane,
+    leftWidth: showChatSidebar ? sidebarCol : undefined,
     inspectorOpen: inspectorVisible,
     inspectorWidth,
   })
   const leftHidden = shellColumns.left <= 0
   const onAgentRailClick = useCallback((alreadyActive: boolean) => {
-    if (alreadyActive) setSidebarCollapsed((prev) => !prev)
-    else setSidebarCollapsed(false)
-  }, [])
+    if (alreadyActive) {
+      if (sidebarCollapsed || sidebarWidth < SIDEBAR_LABEL_AT) expandSidebar()
+      else collapseSidebar()
+    } else expandSidebar()
+  }, [collapseSidebar, expandSidebar, sidebarCollapsed, sidebarWidth])
 
   // 工具检查 /debuginspect：打开右侧轨迹 Tab（主区不再切 Debug 页）
   useEffect(() => {
@@ -631,6 +686,18 @@ function Shell(props: SlotProps) {
   const chatHeader = (
     <header className="chat-view-header" data-biu-ignore>
       <div className="chat-view-header-left">
+        {sidebarNarrow ? (
+          <button
+            type="button"
+            className="chat-view-header-expand"
+            title="展开左侧边栏"
+            aria-label="展开左侧边栏"
+            data-testid="header-sidebar-expand"
+            onClick={expandSidebar}
+          >
+            <ChevronDoubleRightIcon {...chromeIcon} />
+          </button>
+        ) : null}
         {project ? (
           <div className="chat-view-project" title={project.path ?? project.name}>
             <FolderGlyph className="chat-view-project-icon" />
@@ -699,7 +766,7 @@ function Shell(props: SlotProps) {
   return (
     <div
       className={`app-shell${activeModule === 'agent'
-          ? ` app-shell-agent${sidebarCollapsed || leftHidden ? ' is-sidebar-collapsed' : ''}${inspectorVisible ? ' is-inspector-open' : ''}${overlayAutohide ? ' is-chat-overlay-autohide' : ''
+          ? ` app-shell-agent${leftHidden ? ' is-sidebar-collapsed' : ''}${sidebarNarrow && !leftHidden ? ' is-sidebar-narrow' : ''}${inspectorVisible ? ' is-inspector-open' : ''}${overlayAutohide ? ' is-chat-overlay-autohide' : ''
           }`
           : ` app-shell-module${inspectorVisible ? ' is-inspector-open' : ''}`
         }${railOpen || railPinned ? ' is-rail-open' : ''}${leftHidden ? ' is-left-hidden' : ''}`}
@@ -741,10 +808,13 @@ function Shell(props: SlotProps) {
 
       <ChatSidebar
         visible={showChatSidebar && !leftHidden}
+        narrow={sidebarNarrow}
         routeSessionId={routeSessionId}
         useSessionView={useSessionView}
         sessionView={sessionView}
-        onCollapse={() => setSidebarCollapsed(true)}
+        onCollapse={collapseSidebar}
+        onExpand={expandSidebar}
+        onWidthChange={onSidebarWidthChange}
       />
 
       <DanceStage sessions={danceSessions} on={dancing} shape={danceShape} />

@@ -8,6 +8,8 @@ import {
   CENTER_MIN,
   INSPECTOR_MIN,
   SIDEBAR_MAX,
+  SIDEBAR_MIN,
+  SIDEBAR_LABEL_AT,
   getChatOverlay,
   setChatOverlay,
   getOverlayThread,
@@ -27,11 +29,24 @@ import {
   requestInspectorAction,
 } from './chat-overlay.ts'
 
-test('chat column subtracts rail, sidebar and inspector', () => {
+test('collapsed chat sidebar still occupies the icon rail', () => {
   assert.equal(
-    chatColumnWidth({ viewportWidth: 1600, inspectorOpen: true, inspectorWidth: 320, sidebarCollapsed: false }),
-    1600 - SIDEBAR_MAX - 320,
+    chatColumnWidth({ viewportWidth: 1600, inspectorOpen: true, inspectorWidth: 320, sidebarCollapsed: true }),
+    1600 - SIDEBAR_MIN - 320,
   )
+})
+
+test('sidebar labels appear only after LABEL_AT', () => {
+  assert.equal(SIDEBAR_LABEL_AT, 160)
+  assert.ok(SIDEBAR_MIN < SIDEBAR_LABEL_AT)
+  const icon = allocateShellColumns({
+    viewportWidth: 1600,
+    leftPane: true,
+    leftWidth: SIDEBAR_MIN,
+    inspectorOpen: false,
+    inspectorWidth: 320,
+  })
+  assert.equal(icon.left, SIDEBAR_MIN)
 })
 
 test('narrow viewport hides the left pane outright, then shrinks inspector, then center', () => {

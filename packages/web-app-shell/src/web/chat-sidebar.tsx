@@ -1,4 +1,4 @@
-import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { isMascotDancing, subscribeMascotDance } from '@biu/web-mascot'
@@ -22,6 +22,7 @@ import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import { chromeIcon, chromeIconClass } from './chrome-icon.ts'
 import {
   ChevronDoubleLeftIcon,
+  ChevronDoubleRightIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   PlusIcon,
@@ -120,7 +121,7 @@ const SessionRow = memo(function SessionRow({
           dancing={dancing}
           title={dancing ? '跳舞中 🎉' : `${identity.shape} · ${identity.color}`}
         />
-        <span className="min-w-0 flex-1 truncate font-medium">
+        <span className="sidebar-label min-w-0 flex-1 truncate font-medium">
           {(item.type ?? 'chat') === 'live' ? (
             <span className="mr-1 text-[9px] font-semibold tracking-wide uppercase">
               live
@@ -163,10 +164,13 @@ const SessionRow = memo(function SessionRow({
 
 export type ChatSidebarProps = {
   visible: boolean
+  narrow?: boolean
   routeSessionId: string | null
   useSessionView: ReturnType<typeof bindSessionView>
   sessionView: SessionViewService
   onCollapse?: () => void
+  onExpand?: () => void
+  onWidthChange?: (width: number) => void
 }
 
 /**
@@ -174,10 +178,13 @@ export type ChatSidebarProps = {
  */
 export const ChatSidebar = memo(function ChatSidebar({
   visible,
+  narrow = false,
   routeSessionId,
   useSessionView,
   sessionView,
   onCollapse,
+  onExpand,
+  onWidthChange,
 }: ChatSidebarProps) {
   const navigate = useNavigate()
   const sessions = useSessionView((state) => state.sessions)
@@ -270,12 +277,48 @@ export const ChatSidebar = memo(function ChatSidebar({
     [sessionView],
   )
 
+  const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
+  useEffect(() => {
+    const onMove = (event: PointerEvent) => {
+      const drag = dragRef.current
+      if (!drag) return
+      onWidthChange?.(drag.startWidth + (event.clientX - drag.startX))
+    }
+    const onUp = () => {
+      dragRef.current = null
+      document.body.style.removeProperty('cursor')
+      document.body.style.removeProperty('user-select')
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+  }, [onWidthChange])
+
   return (
     <aside
-      className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar) ${visible ? 'flex' : 'hidden'
+      className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)${narrow ? ' is-narrow' : ''} ${visible ? 'flex' : 'hidden'
         }`}
       aria-hidden={!visible}
+      data-testid="chat-sidebar"
     >
+      {onWidthChange ? (
+        <div
+          className="sidebar-resize"
+          data-biu-ignore
+          data-testid="sidebar-resize"
+          title="拖动调整宽度"
+          onPointerDown={(event) => {
+            event.preventDefault()
+            const visual = event.currentTarget.parentElement?.getBoundingClientRect().width ?? 0
+            dragRef.current = { startX: event.clientX, startWidth: visual }
+            document.body.style.cursor = 'col-resize'
+            document.body.style.userSelect = 'none'
+          }}
+        />
+      ) : null}
       <div className="app-side-bar-head app-side-bar-head-brand">
         <span
           className="inline-flex min-w-0 max-w-full items-center truncate rounded-md px-2 py-0.5 text-[14px] font-semibold tracking-wide text-white"
@@ -283,16 +326,29 @@ export const ChatSidebar = memo(function ChatSidebar({
         >
           Biu Agent OS
         </span>
-        <button
-          type="button"
-          className="chat-view-header-expand"
-          title="收起左侧边栏"
-          aria-label="收起左侧边栏"
-          data-testid="sidebar-collapse"
-          onClick={onCollapse}
-        >
-          <ChevronDoubleLeftIcon {...chromeIcon} />
-        </button>
+        {narrow ? (
+          <button
+            type="button"
+            className="chat-view-header-expand"
+            title="展开左侧边栏"
+            aria-label="展开左侧边栏"
+            data-testid="sidebar-expand"
+            onClick={onExpand}
+          >
+            <ChevronDoubleRightIcon {...chromeIcon} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="chat-view-header-expand"
+            title="收起左侧边栏"
+            aria-label="收起左侧边栏"
+            data-testid="sidebar-collapse"
+            onClick={onCollapse}
+          >
+            <ChevronDoubleLeftIcon {...chromeIcon} />
+          </button>
+        )}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
         <div className="app-side-actions" role="navigation" aria-label="Chat actions">
@@ -339,7 +395,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                         aria-expanded={!sectionCollapsed}
                         onClick={() => toggleSection(section.kind)}
                       >
-                        <span className="min-w-0 flex-1 truncate tracking-normal">{section.label}</span>
+                        <span className="sidebar-label min-w-0 flex-1 truncate tracking-normal">{section.label}</span>
                       </button>
                       {section.kind !== 'pinned' ? (
                         <div
@@ -434,7 +490,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                       )}
                                     </span>
                                   </span>
-                                  <span className="min-w-0 flex-1 truncate">{group.label}</span>
+                                  <span className="sidebar-label min-w-0 flex-1 truncate">{group.label}</span>
                                   {canAddHere ? (
                                     <button
                                       type="button"

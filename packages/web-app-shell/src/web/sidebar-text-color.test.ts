@@ -16,12 +16,24 @@ describe('sidebar text colors', () => {
   it('left-aligns the sidebar brand with the list below', () => {
     expect(css).toMatch(/\.app-side-bar-head-brand\s*\{[^}]*justify-content:\s*flex-start/s)
     expect(css).toMatch(/\.app-side-bar-head-brand\s*\{[^}]*padding-left:\s*16px/s)
-    expect(css).not.toMatch(/\.app-side-bar-head-brand\s*\{[^}]*justify-content:\s*center/s)
+    expect(css).toMatch(/\.app-side-bar\.is-narrow \.app-side-bar-head-brand\s*\{[^}]*justify-content:\s*center/s)
   })
 
   it('session rows do not start a native drag ghost', () => {
     const sidebar = readFileSync(resolve(import.meta.dirname, './chat-sidebar.tsx'), 'utf8')
     expect(sidebar).toMatch(/draggable=\{false\}/)
     expect(sidebar).toMatch(/onDragStart=\{\(event\) => event.preventDefault\(\)\}/)
+  })
+
+  it('hides labels until the chat sidebar is wide enough', () => {
+    expect(css).toMatch(/\.sidebar-label\s*\{[^}]*font-size:\s*14px/s)
+    expect(css).toMatch(/\.app-side-bar\.is-narrow \.sidebar-label/)
+    expect(css).toMatch(/\.app-side-bar\.is-narrow \.app-side-actions-label/)
+    const sidebar = readFileSync(resolve(import.meta.dirname, './chat-sidebar.tsx'), 'utf8')
+    expect(sidebar).toMatch(/data-testid="sidebar-expand"/)
+    expect(sidebar).toMatch(/data-testid="sidebar-resize"/)
+    const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+    expect(shell).toMatch(/SIDEBAR_LABEL_AT/)
+    expect(shell).toMatch(/data-testid="header-sidebar-expand"/)
   })
 })

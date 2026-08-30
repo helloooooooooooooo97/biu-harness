@@ -1,6 +1,10 @@
 /** 聊天列窄于此时自动弹出覆盖对话框（px）。不自动收回。 */
 export const CHAT_OVERLAY_ENTER = 420
 export const SIDEBAR_MAX = 280
+/** 收成图标轨的宽度；再窄就整栏关掉。 */
+export const SIDEBAR_MIN = 52
+/** 侧栏至少这么宽才显示文字标签（会话名、「添加聊天」等）。 */
+export const SIDEBAR_LABEL_AT = 160
 /** 中间列最窄约为对话内容最大宽 768 的 2/3，好让左右栏先完整显示。 */
 export const CENTER_MIN = 512
 export const INSPECTOR_MIN = 240
@@ -12,12 +16,13 @@ export function allocateShellColumns(opts: {
   viewportWidth: number
   railWidth?: number
   leftPane: boolean
+  leftWidth?: number
   inspectorOpen: boolean
   inspectorWidth: number
 }) {
   const rail = opts.railWidth ?? RAIL
   const available = Math.max(0, opts.viewportWidth - rail)
-  let left = opts.leftPane ? SIDEBAR_MAX : 0
+  let left = opts.leftPane ? Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, opts.leftWidth ?? SIDEBAR_MAX)) : 0
   let inspector = opts.inspectorOpen ? Math.max(INSPECTOR_MIN, opts.inspectorWidth) : 0
   let center = available - left - inspector
   if (center < CENTER_MIN && left > 0) {
@@ -41,7 +46,8 @@ export function chatColumnWidth(opts: {
 }) {
   return allocateShellColumns({
     viewportWidth: opts.viewportWidth,
-    leftPane: !opts.sidebarCollapsed,
+    leftPane: true,
+    leftWidth: opts.sidebarCollapsed ? SIDEBAR_MIN : SIDEBAR_MAX,
     inspectorOpen: opts.inspectorOpen,
     inspectorWidth: opts.inspectorWidth,
   }).center
@@ -53,7 +59,7 @@ export function inspectorWidthForExpandedChat(opts: {
   inspectorWidth: number
   sidebarCollapsed: boolean
 }) {
-  const side = opts.sidebarCollapsed ? 0 : SIDEBAR
+  const side = opts.sidebarCollapsed ? SIDEBAR_MIN : SIDEBAR
   const maxInspector = opts.viewportWidth - RAIL - side - CHAT_OVERLAY_ENTER
   return Math.min(opts.inspectorWidth, Math.max(INSPECTOR_MIN, Math.round(maxInspector)))
 }
@@ -254,7 +260,9 @@ export function toggleChatOverlay() {
     } catch {
       /* ignore */
     }
-    const sidebarCollapsed = Boolean(document.querySelector('.app-shell-agent.is-sidebar-collapsed'))
+    const shell = document.querySelector('[data-testid="app-shell"]')
+    const col = shell ? Number.parseFloat(getComputedStyle(shell).getPropertyValue('--sidebar-col')) : NaN
+    const sidebarCollapsed = !Number.isFinite(col) || col < SIDEBAR_MIN
     requestInspectorWidth(
       inspectorWidthForExpandedChat({
         viewportWidth: window.innerWidth,
