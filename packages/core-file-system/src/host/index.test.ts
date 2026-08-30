@@ -21,9 +21,10 @@ function notesCollection(): CollectionSpec {
         pinned: { type: 'boolean' },
       },
     },
+    records: { update: true },
     list: () => [...rows.values()],
     get: (id) => rows.get(id) ?? null,
-    write: (id, patch) => {
+    update: (id, patch) => {
       const current = rows.get(id)
       if (!current) throw new Error('unknown note')
       const next = { ...current, ...patch, id }
@@ -45,7 +46,7 @@ function notesCollection(): CollectionSpec {
   }
 }
 
-test('root lists registered collections; record read/write follows schema', async () => {
+test('root lists registered collections; record read/update follows schema', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)
   db.register(notesCollection())
@@ -69,10 +70,10 @@ test('root lists registered collections; record read/write follows schema', asyn
   if (read.kind !== 'record') return
   assert.equal(read.value.status, 'open')
 
-  const written = await db.write('/notes/n1', { status: 'done' })
+  const written = await db.update('/notes/n1', { status: 'done' })
   assert.equal(written.value.status, 'done')
-  await assert.rejects(() => db.write('/notes/n1', { pinned: true }), /not writable/)
-  await assert.rejects(() => db.write('/notes/n1', { nope: 1 }), /unknown field/)
+  await assert.rejects(() => db.update('/notes/n1', { pinned: true }), /not writable/)
+  await assert.rejects(() => db.update('/notes/n1', { nope: 1 }), /unknown field/)
 })
 
 test('computed fields come from list and cannot be written', async () => {
@@ -89,7 +90,8 @@ test('computed fields come from list and cannot be written', async () => {
     },
     list: () => [{ id: 'n1', title: 'a', score: 9 }],
     get: () => ({ id: 'n1', title: 'a', score: 9 }),
-    write: (id, patch) => ({ id, title: 'a', score: 9, ...patch }),
+    records: { update: true },
+    update: (id, patch) => ({ id, title: 'a', score: 9, ...patch }),
   })
   const listed = await db.list('/stats')
   assert.equal(listed.kind, 'collection')
@@ -97,7 +99,7 @@ test('computed fields come from list and cannot be written', async () => {
   assert.equal(listed.schema.fields.score?.computed, true)
   assert.equal(listed.schema.fields.score?.writable, false)
   assert.equal(listed.items[0]?.score, 9)
-  await assert.rejects(() => db.write('/stats/n1', { score: 1 }), /not writable/)
+  await assert.rejects(() => db.update('/stats/n1', { score: 1 }), /not writable/)
 })
 
 test('stat returns schema; list can filter by any field', async () => {
@@ -129,11 +131,11 @@ test('every collection schema includes id, title, createdAt and updatedAt', asyn
   assert.equal(stat.schema.fields.content?.type, 'file')
   assert.equal(stat.schema.fields.emoji?.writable, true)
   assert.equal(stat.schema.contentField, 'content')
-  await assert.rejects(() => db.write('/notes/n1', { createdAt: Date.now() }), /not writable/)
-  await assert.rejects(() => db.write('/notes/n1', { id: 'other' }), /not writable/)
+  await assert.rejects(() => db.update('/notes/n1', { createdAt: Date.now() }), /not writable/)
+  await assert.rejects(() => db.update('/notes/n1', { id: 'other' }), /not writable/)
 })
 
-test('write accepts url image and attachment values', async () => {
+test('update accepts url image and attachment values', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)
   const rows = new Map<string, Record<string, unknown>>([
@@ -152,13 +154,14 @@ test('write accepts url image and attachment values', async () => {
     },
     list: () => [...rows.values()] as { id: string }[],
     get: (id) => rows.get(id) as { id: string } | undefined,
-    write: (id, patch) => {
+    records: { update: true },
+    update: (id, patch) => {
       const next = { ...rows.get(id), ...patch, id }
       rows.set(id, next)
       return next as { id: string }
     },
   })
-  const written = await db.write('/media/n1', {
+  const written = await db.update('/media/n1', {
     link: 'https://example.com',
     cover: 'https://example.com/a.png',
     file: { name: 'a.pdf', href: 'https://example.com/a.pdf' },
@@ -166,10 +169,10 @@ test('write accepts url image and attachment values', async () => {
   assert.equal(written.value.link, 'https://example.com')
   assert.equal(written.value.cover, 'https://example.com/a.png')
   assert.equal((written.value.file as { name: string }).name, 'a.pdf')
-  const local = await db.write('/media/n1', { cover: '/page-covers/red.png' })
+  const local = await db.update('/media/n1', { cover: '/page-covers/red.png' })
   assert.equal(local.value.cover, '/page-covers/red.png')
-  await assert.rejects(() => db.write('/media/n1', { link: 'javascript:alert(1)' }), /expected url/)
-  await assert.rejects(() => db.write('/media/n1', { cover: 'javascript:alert(1)' }), /expected image/)
+  await assert.rejects(() => db.update('/media/n1', { link: 'javascript:alert(1)' }), /expected url/)
+  await assert.rejects(() => db.update('/media/n1', { cover: 'javascript:alert(1)' }), /expected image/)
 })
 
 test('content is omitted from list/read and served on its own path', async () => {
@@ -189,7 +192,8 @@ test('content is omitted from list/read and served on its own path', async () =>
     },
     list: () => [...rows.values()] as { id: string }[],
     get: (id) => rows.get(id) as { id: string } | undefined,
-    write: (id, patch) => {
+    records: { update: true },
+    update: (id, patch) => {
       const next = { ...rows.get(id), ...patch, id }
       rows.set(id, next)
       return next as { id: string }
@@ -250,7 +254,7 @@ test('apply registers db_* tools', async () => {
   new HttpStub(ctx)
   await ctx.plugin({ inject: ['tools', 'http'], apply: applyFileSystem })
   const names = ctx.tools.names()
-  for (const name of ['db_list', 'db_read', 'db_write', 'db_create', 'db_delete', 'db_stat', 'db_action', 'db_content']) {
+  for (const name of ['db_list', 'db_read', 'db_update', 'db_create', 'db_delete', 'db_stat', 'db_action', 'db_content']) {
     assert.equal(names.includes(name), true, name)
   }
   const listed = await ctx.tools.invoke('db_list', { path: '/' })

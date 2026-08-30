@@ -130,12 +130,13 @@ export type CollectionSchema = {
   /** 指向本表另一条记录 id 的字段。有则表格可按树展示；不写则按 parentId / parent 或数据里的父子引用推断。 */
   parentField?: string
   actions?: CollectionActionInfo[]
-  /** 记录增删权限，来自登记时的 records。缺省都不能增删。 */
+  /** 记录权限，来自登记时的 records。list/get 始终有；update/create/delete 缺省为 false。 */
   records?: CollectionRecordCaps
 }
 
-/** 登记时显式声明：这张表能不能由 UI / Agent 新建、删除记录。不写则都不能。 */
+/** 登记时显式声明。list / get 是表的基本能力；update / create 是改已有行和新建行，不要再用 write。 */
 export type CollectionRecordCaps = {
+  update?: boolean
   create?: boolean
   delete?: boolean
 }
@@ -166,11 +167,15 @@ export type CollectionSpec = {
   label?: string
   schema: CollectionSchema
   view?: CollectionView
-  /** 记录增删权限。不写则 UI 和 db_create / db_delete 都不能增删。为 true 时必须提供对应实现。 */
+  /**
+   * 记录权限。list / get 始终可用。
+   * update / create / delete 为 true 时必须提供对应实现；不写则不能改、不能新建、不能删。
+   */
   records?: CollectionRecordCaps
   list: () => DbRecord[] | Promise<DbRecord[]>
   get: (id: string) => DbRecord | null | undefined | Promise<DbRecord | null | undefined>
-  write?: (id: string, patch: Record<string, unknown>) => DbRecord | Promise<DbRecord>
+  /** 更新已有记录的可写字段。不要叫 write。 */
+  update?: (id: string, patch: Record<string, unknown>) => DbRecord | Promise<DbRecord>
   create?: (fields?: Record<string, unknown>) => DbRecord | Promise<DbRecord>
   remove?: (id: string) => void | boolean | Promise<void | boolean>
   actions?: CollectionAction[]
@@ -200,7 +205,7 @@ export interface Database {
   register(spec: CollectionSpec): unknown
   list(path: string, filter?: Record<string, unknown>, page?: ListPage): Promise<unknown>
   read(path: string): Promise<unknown>
-  write(path: string, content: unknown): Promise<unknown>
+  update(path: string, content: unknown): Promise<unknown>
   create(path: string, content?: unknown): Promise<unknown>
   remove(path: string): Promise<unknown>
   action(path: string, actionId: string): Promise<unknown>

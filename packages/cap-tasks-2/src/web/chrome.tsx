@@ -98,7 +98,7 @@ async function patchTask(id: string, patch: Record<string, unknown>) {
 }
 
 async function patchRecord(id: string, content: Record<string, unknown>) {
-  const res = await fetch('/api/db/write', {
+  const res = await fetch('/api/db/update', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ path: `/tasks/${id}`, content }),

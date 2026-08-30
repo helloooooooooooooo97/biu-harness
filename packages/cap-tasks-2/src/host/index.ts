@@ -184,10 +184,10 @@ export function tasksCollection(tasks: TasksLike): CollectionSpec {
         parentId: { type: 'string', label: '父任务', writable: true },
       },
     },
-    records: { create: true, delete: true },
+    records: { update: true, create: true, delete: true },
     list: () => recordsWithUsage(tasks.list()),
     get: (id) => recordsWithUsage(tasks.list()).find((row) => row.id === id) ?? null,
-    write: (id, patch) => {
+    update: (id, patch) => {
       const next = tasks.update(id, patch) as TaskRow
       const rows = tasks.list().map((row) => (row.id === id ? { ...row, ...next, id } : row))
       return recordsWithUsage(rows).find((row) => row.id === id) ?? taskRecord(next, (pid) => tasks.get(pid), ZERO_USAGE, false)

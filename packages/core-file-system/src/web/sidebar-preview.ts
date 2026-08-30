@@ -102,7 +102,7 @@ export async function fetchViewTotal(
 
 export async function writeRecordEmoji(path: string, recordId: string, emoji: string) {
   const next = normalizeRecordEmoji(emoji)
-  const body = await readJson<{ value?: DbRecord }>('/api/db/write', {
+  const body = await readJson<{ value?: DbRecord }>('/api/db/update', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ path: `${path}/${recordId}`, content: { emoji: next } }),

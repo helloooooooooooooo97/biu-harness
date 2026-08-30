@@ -941,7 +941,7 @@ export function CollectionBrowser({
         setDetailBody(data.value ?? content[bodyKey])
         return
       }
-      const data = await readJson<{ value?: DbRecord }>('/api/db/write', {
+      const data = await readJson<{ value?: DbRecord }>('/api/db/update', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ path: `${collectionPath}/${row.id}`, content }),

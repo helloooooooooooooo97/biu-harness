@@ -89,7 +89,7 @@ export function viewsCollection(store: SavedViewsStore, tables: () => Collection
       order: 17,
       icon: 'eye',
     },
-    records: { create: false, delete: false },
+    records: { update: true, create: false, delete: false },
     schema: {
       labelField: 'title',
       columns: ['title', 'table', 'mode', 'sortField', 'sortDir', 'query', 'groupBy', 'pageSize'],
@@ -113,6 +113,6 @@ export function viewsCollection(store: SavedViewsStore, tables: () => Collection
     },
     list,
     get: (id) => list().find((row) => row.id === id) ?? null,
-    write: (id, patch) => store.write(id, patch),
+    update: (id, patch) => store.write(id, patch),
   }
 }

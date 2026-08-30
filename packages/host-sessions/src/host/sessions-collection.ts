@@ -35,7 +35,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       order: 18,
       icon: 'chat-bubble',
     },
-    records: { create: false, delete: false },
+    records: { update: true, create: false, delete: false },
     schema: {
       labelField: 'title',
       columns: ['title', 'type', 'pinned', 'tags', 'eventCount', 'project', 'updatedAt'],
@@ -51,7 +51,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
     },
     list,
     get: async (id) => (await list()).find((row) => row.id === id) ?? null,
-    write: async (id, patch) => {
+    update: async (id, patch) => {
       if (typeof patch.title === 'string') await sessions.rename(id, patch.title)
       const config: SessionConfig = {}
       if (typeof patch.pinned === 'boolean') config.pinned = patch.pinned

@@ -38,6 +38,7 @@ function schemaFor(spec: CollectionSpec): CollectionSchema {
     fields,
     actions: (spec.actions ?? []).map(publicAction),
     records: {
+      update: Boolean(spec.records?.update),
       create: Boolean(spec.records?.create),
       delete: Boolean(spec.records?.delete),
     },
@@ -45,8 +46,10 @@ function schemaFor(spec: CollectionSpec): CollectionSchema {
 }
 
 function assertRecordCaps(spec: CollectionSpec) {
+  if (spec.records?.update && !spec.update) throw new Error(`collection ${spec.id}: records.update 为 true 时必须提供 update`)
   if (spec.records?.create && !spec.create) throw new Error(`collection ${spec.id}: records.create 为 true 时必须提供 create`)
   if (spec.records?.delete && !spec.remove) throw new Error(`collection ${spec.id}: records.delete 为 true 时必须提供 remove`)
+  if (spec.update && !spec.records?.update) throw new Error(`collection ${spec.id}: 提供了 update 但未声明 records.update`)
   if (spec.create && !spec.records?.create) throw new Error(`collection ${spec.id}: 提供了 create 但未声明 records.create`)
   if (spec.remove && !spec.records?.delete) throw new Error(`collection ${spec.id}: 提供了 remove 但未声明 records.delete`)
 }
@@ -55,7 +58,7 @@ function collectionCaps(spec: CollectionSpec) {
   return [
     'list',
     'read',
-    spec.write ? 'write' : null,
+    spec.records?.update && spec.update ? 'update' : null,
     spec.records?.create && spec.create ? 'create' : null,
     spec.records?.delete && spec.remove ? 'delete' : null,
     spec.actions?.length ? 'action' : null,
@@ -403,14 +406,14 @@ export class DatabaseService extends Service implements Database {
     return { kind: 'record' as const, path: `${spec.path}/${record.id}`, schema: schemaFor(spec), value: withoutContent(spec, record) }
   }
 
-  async write(path: string, content: unknown) {
+  async update(path: string, content: unknown) {
     const parts = splitPath(path)
-    if (parts.length !== 2) throw new Error(`cannot write: ${normalizeCollectionPath(path)}`)
+    if (parts.length !== 2) throw new Error(`cannot update: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
-    if (!spec.write) throw new Error(`collection not writable: ${spec.path}`)
+    if (!spec.records?.update || !spec.update) throw new Error(`collection cannot update: ${spec.path}`)
     const patch = pickWritablePatch(schemaFor(spec), parseContent(content))
-    const record = await spec.write(parts[1]!, patch)
+    const record = await spec.update(parts[1]!, patch)
     this.bump()
     return { kind: 'record' as const, path: `${spec.path}/${record.id}`, value: withoutContent(spec, record) }
   }
@@ -479,12 +482,12 @@ export class DatabaseService extends Service implements Database {
     if (parts.length !== 2) throw new Error(`cannot write content: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
-    if (!spec.write) throw new Error(`collection not writable: ${spec.path}`)
+    if (!spec.records?.update || !spec.update) throw new Error(`collection cannot update: ${spec.path}`)
     const schema = schemaFor(spec)
     const field = schema.contentField ?? 'content'
     if (!schema.fields[field]) throw new Error(`no content field: ${field}`)
     const patch = pickWritablePatch(schema, { [field]: value })
-    const record = await spec.write(parts[1]!, patch)
+    const record = await spec.update(parts[1]!, patch)
     this.bump()
     return {
       kind: 'content' as const,
@@ -559,17 +562,17 @@ export function apply(ctx: Context) {
     execute: (args) => db.read(String(args.path)),
   })
   ctx.tools.register({
-    name: 'db_write',
-    description: '按 schema 可写字段更新一条记录的元数据，路径为 /<表>/<id>。正文请用 db_content。',
+    name: 'db_update',
+    description: '按 schema 可写字段更新一条已有记录，路径为 /<表>/<id>。新建用 db_create，正文用 db_content。',
     parameters: {
       type: 'object',
       properties: {
         path: { type: 'string' },
-        content: { description: '要写入的字段（对象或 JSON 字符串）' },
+        content: { description: '要更新的字段（对象或 JSON 字符串）' },
       },
       required: ['path', 'content'],
     },
-    execute: (args) => db.write(String(args.path), args.content),
+    execute: (args) => db.update(String(args.path), args.content),
   })
   ctx.tools.register({
     name: 'db_create',
@@ -663,10 +666,10 @@ export function apply(ctx: Context) {
       route.send(400, { error: String(error) })
     }
   })
-  ctx.http.route('POST', '/api/db/write', async (route) => {
+  ctx.http.route('POST', '/api/db/update', async (route) => {
     try {
       const body = (await route.json()) as { path?: string; content?: unknown }
-      route.send(200, await db.write(String(body?.path ?? ''), body?.content))
+      route.send(200, await db.update(String(body?.path ?? ''), body?.content))
     } catch (error) {
       route.send(400, { error: String(error) })
     }

@@ -43,7 +43,7 @@ export function eventsCollection(hub: HubLike): CollectionSpec {
       order: 19,
       icon: 'bolt',
     },
-    records: { create: false, delete: false },
+    records: { update: false, create: false, delete: false },
     schema: {
       labelField: 'title',
       columns: ['title', 'mode', 'ts', 'args'],

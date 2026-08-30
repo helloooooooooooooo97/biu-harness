@@ -25,6 +25,6 @@ test('viewsCollection lists saved views with source table', async () => {
   assert.equal(rows[0]?.tablePath, '/tasks')
   assert.equal(rows[0]?.sortField, 'dueAt')
   assert.equal(rows[0]?.filters, '{"status":"doing"}')
-  const written = await spec.write!(String(rows[0]?.id), { title: 'Doing' })
+  const written = await spec.update!(String(rows[0]?.id), { title: 'Doing' })
   assert.equal(written.title, 'Doing')
 })

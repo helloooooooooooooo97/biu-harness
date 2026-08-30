@@ -115,10 +115,10 @@ function pagesCollection(now = Date.now()): CollectionSpec {
         parentId: { type: 'string', label: '父页面', writable: true },
       },
     },
-    records: { create: true, delete: true },
+    records: { update: true, create: true, delete: true },
     list: () => [...rows.values()],
     get: (id) => rows.get(id) ?? null,
-    write: (id, patch) => {
+    update: (id, patch) => {
       const current = rows.get(id)
       if (!current) throw new Error(`unknown page: ${id}`)
       const next: PageRow = {

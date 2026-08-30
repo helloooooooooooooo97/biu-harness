@@ -10,8 +10,8 @@ test('eventsCollection is a read-only File System table over hub buffer', () => 
   })
   assert.equal(spec.path, '/events')
   assert.equal(spec.view?.moduleId, 'events-db')
-  assert.equal(spec.write, undefined)
-  assert.deepEqual(spec.records, { create: false, delete: false })
+  assert.equal(spec.update, undefined)
+  assert.deepEqual(spec.records, { update: false, create: false, delete: false })
   const rows = spec.list()
   assert.ok(Array.isArray(rows))
   const listed = rows as Array<{ id: string; title: string; args: string }>
