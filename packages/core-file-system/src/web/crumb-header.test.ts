@@ -38,6 +38,8 @@ describe('顶栏三级标题', () => {
     expect(inspector).not.toContain('onMouseEnter')
     expect(css).toContain('.inspector-crumb-tab.is-crumb-open .inspector-crumb-full .fsdb-crumb:not(:last-child)')
     expect(css).not.toContain('.inspector-crumb-tab:hover .inspector-crumb-full .fsdb-crumb:not(:last-child)')
+    expect(trail).toContain("!allowMenu && crumb.kind === 'view'")
+    expect(trail).toContain('<TableGlyph icon={tableIcon} />')
   })
 
   it('右侧检查器面包屑用记录标题而不是 id', () => {

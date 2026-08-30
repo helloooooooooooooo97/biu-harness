@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type MouseEvent, type Ref } from 'react'
 import { createPortal } from 'react-dom'
-import { CrumbItemGlyph } from './nav-glyphs.tsx'
+import { CrumbItemGlyph, TableGlyph } from './nav-glyphs.tsx'
 import { crumbButtonAction, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
 
 export function CrumbTrail({
@@ -28,6 +28,8 @@ export function CrumbTrail({
   const btnRefs = useRef(new Map<string, HTMLButtonElement>())
   const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null)
   const openCrumb = crumbs.find((item) => item.id === openId)
+  const tableCrumb = crumbs.find((item) => item.kind === 'collection')
+  const tableIcon = tableCrumb?.choices.find((item) => item.id === tableCrumb.id)?.icon
 
   useLayoutEffect(() => {
     if (!openId) {
@@ -76,6 +78,7 @@ export function CrumbTrail({
                   onOpenId(null)
                 }}
               >
+                {!allowMenu && crumb.kind === 'view' ? <TableGlyph icon={tableIcon} /> : null}
                 <CrumbItemGlyph kind={crumb.kind} icon={current?.icon} mode={current?.mode} emoji={current?.emoji} />
                 <span className="chat-view-project-name">{crumb.label}</span>
               </button>
