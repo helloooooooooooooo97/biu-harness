@@ -11,6 +11,7 @@ import {
   SIDEBAR_MIN,
   SIDEBAR_DEFAULT,
   SIDEBAR_LABEL_AT,
+  SIDEBAR_TAG_AT,
   getChatOverlay,
   setChatOverlay,
   getOverlayThread,
@@ -52,6 +53,9 @@ test('sidebar labels appear only after LABEL_AT', () => {
   assert.equal(SIDEBAR_DEFAULT, 72)
   assert.equal(SIDEBAR_MIN, Math.round(SIDEBAR_DEFAULT * (2 / 3)))
   assert.equal(SIDEBAR_LABEL_AT, SIDEBAR_DEFAULT + 1)
+  assert.equal(SIDEBAR_TAG_AT, 300)
+  assert.ok(SIDEBAR_LABEL_AT < SIDEBAR_TAG_AT)
+  assert.ok(SIDEBAR_TAG_AT < SIDEBAR_MAX)
   assert.ok(SIDEBAR_DEFAULT < SIDEBAR_LABEL_AT)
   assert.ok(SIDEBAR_MIN < SIDEBAR_DEFAULT)
   const icon = allocateShellColumns({
@@ -125,7 +129,7 @@ test('expanding chat clamps inspector so the column is at least ENTER', () => {
     inspectorWidth: 900,
     sidebarCollapsed: false,
   })
-  assert.equal(next, 1440 - 280 - CHAT_OVERLAY_ENTER)
+  assert.equal(next, 1440 - SIDEBAR_MAX - CHAT_OVERLAY_ENTER)
   assert.ok(
     chatColumnWidth({
       viewportWidth: 1440,

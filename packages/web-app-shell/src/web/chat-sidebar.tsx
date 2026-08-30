@@ -165,6 +165,7 @@ const SessionRow = memo(function SessionRow({
 export type ChatSidebarProps = {
   visible: boolean
   narrow?: boolean
+  showTags?: boolean
   routeSessionId: string | null
   useSessionView: ReturnType<typeof bindSessionView>
   sessionView: SessionViewService
@@ -179,6 +180,7 @@ export type ChatSidebarProps = {
 export const ChatSidebar = memo(function ChatSidebar({
   visible,
   narrow = false,
+  showTags = false,
   routeSessionId,
   useSessionView,
   sessionView,
@@ -299,7 +301,7 @@ export const ChatSidebar = memo(function ChatSidebar({
 
   return (
     <aside
-      className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)${narrow ? ' is-narrow' : ''} ${visible ? 'flex' : 'hidden'
+      className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)${narrow ? ' is-narrow' : ''}${showTags ? ' is-wide' : ''} ${visible ? 'flex' : 'hidden'
         }`}
       aria-hidden={!visible}
       data-testid="chat-sidebar"

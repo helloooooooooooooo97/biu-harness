@@ -22,6 +22,7 @@ import {
   clampSidebarWidth,
   SIDEBAR_DEFAULT,
   SIDEBAR_LABEL_AT,
+  SIDEBAR_TAG_AT,
   SIDEBAR_MAX,
   SIDEBAR_MIN,
 } from './chat-overlay.ts'
@@ -626,6 +627,7 @@ function Shell(props: SlotProps) {
   const showChatSidebar = activeModule === 'agent'
   const sidebarCol = sidebarCollapsed ? 0 : sidebarWidth
   const sidebarNarrow = sidebarCol < SIDEBAR_LABEL_AT
+  const sidebarShowTags = sidebarCol >= SIDEBAR_TAG_AT
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1440 : window.innerWidth,
   )
@@ -829,6 +831,7 @@ function Shell(props: SlotProps) {
       <ChatSidebar
         visible={showChatSidebar && !leftHidden}
         narrow={sidebarNarrow}
+        showTags={sidebarShowTags}
         routeSessionId={routeSessionId}
         useSessionView={useSessionView}
         sessionView={sessionView}

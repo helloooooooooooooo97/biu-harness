@@ -1155,6 +1155,10 @@ body {
   font-size: 14px;
 }
 
+.app-side-bar:not(.is-wide) .sidebar-tag {
+  display: none;
+}
+
 .app-side-bar.is-narrow .sidebar-label,
 .app-side-bar.is-narrow .app-side-actions-label,
 .app-side-bar.is-narrow .sidebar-section-head,
