@@ -30,6 +30,17 @@ describe('composer dock stacking above sticky user', () => {
     expect(composer).toContain('biu:composer-focus')
   })
 
+  it('keeps the dock session mascot clickable while the overlay is autohidden', () => {
+    const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
+    const shell = readFileSync(resolve(root, 'packages/web-app-shell/src/web/index.tsx'), 'utf8')
+    expect(shell).toMatch(/overlayCollapsed = !overlayOpen \|\| hidden/)
+    expect(css).toMatch(
+      /\.chat-overlay-panel\.is-autohide \.dock-agent-stack,\s*\n\.chat-overlay-panel\.is-autohide \.dock-agent-stack \* \{\s*pointer-events:\s*auto/,
+    )
+    expect(css).toMatch(/\.chat-overlay-panel\.is-autohide \.composer-pill/)
+    expect(css).toMatch(/\.chat-overlay-panel\.is-autohide \.chat-dock-toolbar-start > :not\(\.dock-agent-stack\)/)
+  })
+
   it('squares the composer when pick chips are present', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
