@@ -518,8 +518,36 @@ function Shell(props: SlotProps) {
         /* ignore */
       }
     }
+    const persist = (next: boolean) => {
+      setInspectorOpen(next)
+      try {
+        localStorage.setItem('cordis.inspector.open', next ? '1' : '0')
+      } catch {
+        /* ignore */
+      }
+    }
+    const onOpen = () => persist(true)
+    const onClose = () => persist(false)
+    const onToggle = () => {
+      setInspectorOpen((prev) => {
+        const next = !prev
+        try {
+          localStorage.setItem('cordis.inspector.open', next ? '1' : '0')
+        } catch {
+          /* ignore */
+        }
+        if (!next) queueMicrotask(() => requestInspectorClose())
+        return next
+      })
+    }
     window.addEventListener('biu:inspector-open', onOpen)
-    return () => window.removeEventListener('biu:inspector-open', onOpen)
+    window.addEventListener('biu:inspector-close', onClose)
+    window.addEventListener('biu:inspector-toggle', onToggle)
+    return () => {
+      window.removeEventListener('biu:inspector-open', onOpen)
+      window.removeEventListener('biu:inspector-close', onClose)
+      window.removeEventListener('biu:inspector-toggle', onToggle)
+    }
   }, [])
   const appRoute = parseAppPath(location.pathname, pluginModules)
   const centerKind = centerKindFromRoute(appRoute)

@@ -501,6 +501,13 @@ export function CollectionBrowser({
       return true
     }
   })
+  const [inspectorOpen, setInspectorOpen] = useState(() => {
+    try {
+      return localStorage.getItem('cordis.inspector.open') === '1'
+    } catch {
+      return false
+    }
+  })
   const [viewMenuOpen, setViewMenuOpen] = useState(false)
   const [modeMenuOpen, setModeMenuOpen] = useState(false)
   const [sortMenuOpen, setSortMenuOpen] = useState(false)
@@ -561,6 +568,21 @@ export function CollectionBrowser({
     window.addEventListener('biu:toggle-module-sidebar', onToggle)
     return () => window.removeEventListener('biu:toggle-module-sidebar', onToggle)
   }, [collectionPath, moduleId])
+
+  useEffect(() => {
+    const sync = (open: boolean) => setInspectorOpen(open)
+    const onOpen = () => sync(true)
+    const onClose = () => sync(false)
+    const onToggle = () => setInspectorOpen((prev) => !prev)
+    window.addEventListener('biu:inspector-open', onOpen)
+    window.addEventListener('biu:inspector-close', onClose)
+    window.addEventListener('biu:inspector-toggle', onToggle)
+    return () => {
+      window.removeEventListener('biu:inspector-open', onOpen)
+      window.removeEventListener('biu:inspector-close', onClose)
+      window.removeEventListener('biu:inspector-toggle', onToggle)
+    }
+  }, [])
 
   useEffect(() => {
     function onPointer(event: MouseEvent) {
@@ -1497,16 +1519,17 @@ export function CollectionBrowser({
             ) : null}
             <button
               type="button"
-              className={`chat-view-header-expand${viewsOpen ? ' is-active' : ''}`}
-              title={viewsOpen ? '收起左侧边栏' : '展开左侧边栏'}
-              aria-label={viewsOpen ? '收起左侧边栏' : '展开左侧边栏'}
-              aria-pressed={viewsOpen}
-              onClick={toggleViewsOpen}
+              className={`chat-view-header-expand${inspectorOpen ? ' is-active' : ''}`}
+              title={inspectorOpen ? '收起检查器' : '打开检查器'}
+              aria-label={inspectorOpen ? '收起检查器' : '打开检查器'}
+              aria-pressed={inspectorOpen}
+              data-testid="fsdb-inspector-toggle"
+              onClick={() => window.dispatchEvent(new Event('biu:inspector-toggle'))}
             >
-              {viewsOpen ? (
-                <ChevronDoubleLeftIcon aria-hidden className="size-4" />
-              ) : (
+              {inspectorOpen ? (
                 <ChevronDoubleRightIcon aria-hidden className="size-4" />
+              ) : (
+                <ChevronDoubleLeftIcon aria-hidden className="size-4" />
               )}
             </button>
             {selected ? (
