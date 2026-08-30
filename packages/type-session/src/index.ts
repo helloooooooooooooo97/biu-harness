@@ -1,3 +1,5 @@
+import { nameFromSessionMascot } from './session-mascot-name.ts'
+export { nameFromSessionMascot } from './session-mascot-name.ts'
 export const SESSION_FORMAT_VERSION = 1
 
 export type InboxKind = 'wake' | 'inject'
@@ -171,10 +173,14 @@ export function sessionDisplayTitle(record: {
   id: string
   events: SessionEvent[]
   config?: SessionConfig
+  mascot?: SessionMascot
 }): string {
   const named = record.config?.title?.trim()
   if (named) return named.slice(0, 80)
-  return deriveEventTitle(record.events, record.id)
+  const fromChat = deriveEventTitle(record.events, '')
+  if (fromChat) return fromChat
+  if (record.mascot) return nameFromSessionMascot(record.mascot)
+  return record.id.slice(0, 8)
 }
 
 export interface SessionStore {

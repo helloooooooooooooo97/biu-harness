@@ -11,6 +11,7 @@ import {
   type SessionSummary,
   type SessionType,
   type SessionConfig,
+  nameFromSessionMascot,
   normalizeSessionConfig,
   normalizeSessionType,
   sessionDisplayTitle,
@@ -248,7 +249,12 @@ export class SqliteSessionStore implements SessionStore {
         id: row.id,
         version: row.version,
         eventCount: row.event_count,
-        title: row.title || row.id.slice(0, 8),
+        title:
+          row.title && row.title !== row.id.slice(0, 8)
+            ? row.title
+            : mascot
+              ? nameFromSessionMascot(mascot)
+              : row.title || row.id.slice(0, 8),
         updatedAt: row.updated_at,
         type: normalizeSessionType(row.type),
         ...(project ? { project } : {}),

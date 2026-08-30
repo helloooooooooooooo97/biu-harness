@@ -1,6 +1,6 @@
 import type { Context } from 'cordis'
 import { currentSessionId } from '@biu/host-sessions/scope'
-import { normalizeSessionType, type SessionEvent, type SessionType } from '@biu/type-session'
+import { nameFromSessionMascot, normalizeSessionType, type SessionEvent, type SessionType } from '@biu/type-session'
 
 export const LIVE_TOOL_NAMES = [
   'session_list',
@@ -308,7 +308,7 @@ export function apply(ctx: Context) {
       return {
         id: record.id,
         type: normalizeSessionType(record.type),
-        title: record.config?.title ?? record.id.slice(0, 8),
+        title: record.config?.title ?? (record.mascot ? nameFromSessionMascot(record.mascot) : record.id.slice(0, 8)),
         config: record.config ?? null,
         project: record.project ?? null,
       }

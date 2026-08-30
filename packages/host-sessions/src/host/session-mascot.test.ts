@@ -5,6 +5,7 @@ import * as sessionStore from '@biu/host-session-store'
 import * as sessions from './index.ts'
 import { SESSION_FORMAT_VERSION } from './index.ts'
 import { mascotFromSessionId } from './session-mascot.ts'
+import { nameFromSessionMascot } from '@biu/type-session'
 
 test('create persists mascot on the session record', async () => {
   const ctx = new Context()
@@ -21,6 +22,9 @@ test('create persists mascot on the session record', async () => {
   const listed = await ctx.sessions.listSummaries()
   const item = listed.find((row) => row.id === record.id)
   assert.deepEqual(item?.mascot, record.mascot)
+  assert.equal(item?.title, nameFromSessionMascot(record.mascot!))
+  assert.match(item?.title ?? '', /^小/)
+  assert.notEqual(item?.title, record.id.slice(0, 8))
 })
 
 test('legacy sessions get a stable backfilled mascot', async () => {
@@ -37,6 +41,7 @@ test('legacy sessions get a stable backfilled mascot', async () => {
   const listed = await ctx.sessions.listSummaries()
   const item = listed.find((row) => row.id === bare.id)
   assert.deepEqual(item?.mascot, expected)
+  assert.equal(item?.title, nameFromSessionMascot(expected))
   const loaded = await ctx.sessions.require(bare.id)
   assert.deepEqual(loaded.mascot, expected)
 })

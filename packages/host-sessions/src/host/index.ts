@@ -14,6 +14,7 @@ import {
   type SessionType,
   type SessionConfig,
   type MessageSender,
+  nameFromSessionMascot,
   mergeSessionConfig,
   normalizeSessionConfig,
   normalizeSessionType,
@@ -292,9 +293,10 @@ export class SessionsService extends Service {
     const used = await this.collectUsedMascots()
     const mascot = pickSessionMascot(id, used)
     const type = normalizeSessionType(opts.type)
+    const title = opts.title?.trim() || nameFromSessionMascot(mascot)
     const seeded = normalizeSessionConfig({
       ...(opts.config ?? {}),
-      ...(opts.title ? { title: opts.title } : {}),
+      title,
     })
     const record: SessionRecord = {
       id,
@@ -433,6 +435,10 @@ export class SessionsService extends Service {
       ...(source.project ? { project: { ...source.project } } : {}),
       mascot,
       type: normalizeSessionType(source.type),
+      config: normalizeSessionConfig({
+        ...(source.config ?? {}),
+        title: nameFromSessionMascot(mascot),
+      }),
     }
     await this.persist(record)
     return record
@@ -492,6 +498,9 @@ export class SessionsService extends Service {
         next = { ...next, type }
       } else {
         next = { ...next, type }
+      }
+      if (next.mascot && next.title === item.id.slice(0, 8)) {
+        next = { ...next, title: nameFromSessionMascot(next.mascot) }
       }
       out.push(next)
     }

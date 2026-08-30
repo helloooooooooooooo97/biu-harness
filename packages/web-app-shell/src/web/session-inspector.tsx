@@ -380,22 +380,20 @@ export const SessionInspector = memo(function SessionInspector({
                       <span className="min-w-0 flex-1 truncate">{caption?.label || item.label}</span>
                       <CheckCircleIcon aria-hidden className="size-4 shrink-0 inspector-add-check" />
                     </button>
-                    {item.repeatable ? (
-                      <button
-                        type="button"
-                        className="inspector-add-trash"
-                        title="从检查器移除"
-                        aria-label="从检查器移除"
-                        data-testid={`inspector-tab-remove-${item.id}`}
-                        onClick={(event) => {
-                          event.preventDefault()
-                          event.stopPropagation()
-                          closeOpenedTab(item.id)
-                        }}
-                      >
-                        <TrashIcon {...chromeIcon} />
-                      </button>
-                    ) : null}
+                    <button
+                      type="button"
+                      className="inspector-add-trash"
+                      title="从检查器移除"
+                      aria-label="从检查器移除"
+                      data-testid={`inspector-tab-remove-${item.id}`}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        closeOpenedTab(item.id)
+                      }}
+                    >
+                      <TrashIcon {...chromeIcon} />
+                    </button>
                   </div>
                   )
                 })
