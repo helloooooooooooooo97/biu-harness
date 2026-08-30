@@ -61,7 +61,7 @@ test('sqlite session store round-trips and listSummaries skips full reload', asy
   await ctx.sessions.append('sql1', { type: 'turn/end', turn: 1, reason: 'complete' })
   const summaries = await ctx.sessions.listSummaries()
   assert.equal(summaries[0]?.id, 'sql1')
-  assert.match(summaries[0]?.title ?? '', /^小/)
+  assert.match(summaries[0]?.title ?? '', /^[墨栗赤橙金翠青蓝紫玫灰]/)
   assert.notEqual(summaries[0]?.title, 'sql1')
   assert.equal(summaries[0]?.eventCount, 4)
 

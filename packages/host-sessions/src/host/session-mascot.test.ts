@@ -23,7 +23,7 @@ test('create persists mascot on the session record', async () => {
   const item = listed.find((row) => row.id === record.id)
   assert.deepEqual(item?.mascot, record.mascot)
   assert.equal(item?.title, nameFromSessionMascot(record.mascot!))
-  assert.match(item?.title ?? '', /^小/)
+  assert.match(item?.title ?? '', /^[墨栗赤橙金翠青蓝紫玫灰]/)
   assert.notEqual(item?.title, record.id.slice(0, 8))
 })
 

@@ -72,5 +72,5 @@ export function nameFromSessionMascot(mascot: { shape: string; color: string; ey
       ? Math.abs(Math.trunc(mascot.eye)) % MASCOT_EYE_NAME.length
       : 0
   const eye = MASCOT_EYE_NAME[eyeIndex] ?? '爱'
-  return `小${color}${shape}${eye}`
+  return `${color}${shape}${eye}`
 }

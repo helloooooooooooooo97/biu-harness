@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { nameFromSessionMascot, sessionDisplayTitle } from './index.ts'
 
 test('mascot names encode color, shape and eye', () => {
-  assert.equal(nameFromSessionMascot({ shape: 'blob', color: 'blue', eye: 0 }), '小蓝团爱')
-  assert.equal(nameFromSessionMascot({ shape: 'cloud', color: 'cyan', eye: 2 }), '小青云新')
-  assert.match(nameFromSessionMascot({ shape: 'leaf', color: 'red', eye: 1 }), /^小赤叶/)
+  assert.equal(nameFromSessionMascot({ shape: 'blob', color: 'blue', eye: 0 }), '蓝团爱')
+  assert.equal(nameFromSessionMascot({ shape: 'cloud', color: 'cyan', eye: 2 }), '青云新')
+  assert.match(nameFromSessionMascot({ shape: 'leaf', color: 'red', eye: 1 }), /^赤叶/)
 })
 
 test('untitled empty session uses the mascot name, not the id prefix', () => {
@@ -16,6 +16,6 @@ test('untitled empty session uses the mascot name, not the id prefix', () => {
       events: [{ type: 'session/open', version: 1, seq: 0, ts: 1 }],
       mascot: { shape: 'pebble', color: 'orange', eye: 1 },
     }),
-    '小橙石美',
+    '橙石美',
   )
 })
