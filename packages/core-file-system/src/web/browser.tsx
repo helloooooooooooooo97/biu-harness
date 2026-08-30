@@ -11,6 +11,8 @@ import {
   CalendarDaysIcon,
   CheckCircleIcon,
   CheckIcon,
+  ChevronDoubleLeftIcon,
+  ChevronDoubleRightIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -538,19 +540,23 @@ export function CollectionBrowser({
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchExpanded = searchOpen || query.length > 0
 
+  function toggleViewsOpen() {
+    setViewsOpen((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(`fsdb.viewsOpen:${moduleId || collectionPath}`, next ? '1' : '0')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }
+
   useEffect(() => {
     function onToggle(event: Event) {
       const id = (event as CustomEvent<{ id?: string }>).detail?.id
       if (!id || (moduleId && id !== moduleId)) return
-      setViewsOpen((prev) => {
-        const next = !prev
-        try {
-          localStorage.setItem(`fsdb.viewsOpen:${moduleId || collectionPath}`, next ? '1' : '0')
-        } catch {
-          /* ignore */
-        }
-        return next
-      })
+      toggleViewsOpen()
     }
     window.addEventListener('biu:toggle-module-sidebar', onToggle)
     return () => window.removeEventListener('biu:toggle-module-sidebar', onToggle)
@@ -1465,9 +1471,15 @@ export function CollectionBrowser({
       <div className="fsdb-right">
         <header className="chat-view-header" data-biu-ignore>
           <div className="chat-view-header-left">
-            <span className="min-w-0 truncate text-[13px] font-semibold">
-              {selected ? labelOf(selected) : (activeView?.name ?? title)}
-            </span>
+            <div
+              className="chat-view-project"
+              title={selected ? labelOf(selected) : (blurb || title)}
+            >
+              <CircleStackIcon aria-hidden className="chat-view-project-icon" />
+              <span className="chat-view-project-name">
+                {selected ? labelOf(selected) : (activeView?.name ?? title)}
+              </span>
+            </div>
           </div>
           <div className="chat-view-header-right">
             {selected ? <RecordActions row={selected} place="detail" /> : null}
@@ -1483,6 +1495,20 @@ export function CollectionBrowser({
                 <StarIcon aria-hidden className={`size-4${viewStarred ? ' text-[#f5b700]' : ''}`} />
               </button>
             ) : null}
+            <button
+              type="button"
+              className={`chat-view-header-expand${viewsOpen ? ' is-active' : ''}`}
+              title={viewsOpen ? '收起左侧边栏' : '展开左侧边栏'}
+              aria-label={viewsOpen ? '收起左侧边栏' : '展开左侧边栏'}
+              aria-pressed={viewsOpen}
+              onClick={toggleViewsOpen}
+            >
+              {viewsOpen ? (
+                <ChevronDoubleLeftIcon aria-hidden className="size-4" />
+              ) : (
+                <ChevronDoubleRightIcon aria-hidden className="size-4" />
+              )}
+            </button>
             {selected ? (
               <button
                 type="button"
@@ -1499,12 +1525,6 @@ export function CollectionBrowser({
         <div className="fsdb-right-body">
         {!selected ? (
         <div className="tasks-main fsdb-main">
-        {!viewsOpen ? (
-          <div className="fsdb-collection-head is-inline">
-            <div className="fsdb-collection-name">{title}</div>
-            {blurb ? <p className="fsdb-footnote">{blurb}</p> : null}
-          </div>
-        ) : null}
         <div className="tasks-toolbar" data-biu-ignore>
           <div className="tasks-toolbar-left">
             <div className="tasks-viewdd-wrap" ref={viewRef}>
