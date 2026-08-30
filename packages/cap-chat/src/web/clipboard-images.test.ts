@@ -33,4 +33,26 @@ describe('collectClipboardImages', () => {
     expect(images).toHaveLength(1)
     expect(images[0]?.name).toBe('paste.png')
   })
+
+  it('dedups files vs items clones that differ in name and mtime', () => {
+    const fromFiles = png('image.png', 80)
+    const fromItems = new File([new Uint8Array(80)], 'unknown.png', {
+      type: 'image/png',
+      lastModified: 99,
+    })
+    const clipboard = {
+      files: [fromFiles] as unknown as FileList,
+      items: [{ kind: 'file' as const, getAsFile: () => fromItems }],
+    } as unknown as DataTransfer
+    expect(collectClipboardImages(clipboard)).toHaveLength(1)
+  })
+
+  it('falls back to items when files is empty', () => {
+    const shot = png('from-item.png', 32)
+    const clipboard = {
+      files: [] as unknown as FileList,
+      items: [{ kind: 'file' as const, getAsFile: () => shot }],
+    } as unknown as DataTransfer
+    expect(collectClipboardImages(clipboard)).toHaveLength(1)
+  })
 })
