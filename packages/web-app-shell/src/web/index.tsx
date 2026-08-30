@@ -565,6 +565,7 @@ function Shell(props: SlotProps) {
     inspectorOpen: inspectorVisible,
     inspectorWidth,
   })
+  const leftHidden = shellColumns.left <= 0
   const onAgentRailClick = useCallback((alreadyActive: boolean) => {
     if (alreadyActive) setSidebarCollapsed((prev) => !prev)
     else setSidebarCollapsed(false)
@@ -689,10 +690,10 @@ function Shell(props: SlotProps) {
   return (
     <div
       className={`app-shell${activeModule === 'agent'
-          ? ` app-shell-agent${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}${inspectorVisible ? ' is-inspector-open' : ''}${overlayAutohide ? ' is-chat-overlay-autohide' : ''
+          ? ` app-shell-agent${sidebarCollapsed || leftHidden ? ' is-sidebar-collapsed' : ''}${inspectorVisible ? ' is-inspector-open' : ''}${overlayAutohide ? ' is-chat-overlay-autohide' : ''
           }`
           : ` app-shell-module${inspectorVisible ? ' is-inspector-open' : ''}`
-        }${railOpen || railPinned ? ' is-rail-open' : ''}`}
+        }${railOpen || railPinned ? ' is-rail-open' : ''}${leftHidden ? ' is-left-hidden' : ''}`}
       data-testid="app-shell"
       style={
         {
@@ -730,7 +731,7 @@ function Shell(props: SlotProps) {
       </div>
 
       <ChatSidebar
-        visible={showChatSidebar}
+        visible={showChatSidebar && !leftHidden}
         routeSessionId={routeSessionId}
         useSessionView={useSessionView}
         sessionView={sessionView}
@@ -760,7 +761,7 @@ function Shell(props: SlotProps) {
             header={overlayHeader}
             floating={activeModule !== 'agent'}
             showCenter={activeModule === 'agent'}
-            withSidebar={showChatSidebar}
+            withSidebar={showChatSidebar && !leftHidden}
             railOpen={railOpen || railPinned}
           />
         </div>

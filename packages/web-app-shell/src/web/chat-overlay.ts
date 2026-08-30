@@ -6,7 +6,7 @@ export const INSPECTOR_MIN = 240
 const RAIL = 0
 const SIDEBAR = SIDEBAR_MAX
 
-/** 窄屏时先压左侧栏，再压检查器（不低于 INSPECTOR_MIN），最后才压中间。 */
+/** 窄屏时先整栏关掉左侧（不要压成细条），再压检查器（不低于 INSPECTOR_MIN），最后才压中间。 */
 export function allocateShellColumns(opts: {
   viewportWidth: number
   railWidth?: number
@@ -20,9 +20,8 @@ export function allocateShellColumns(opts: {
   let inspector = opts.inspectorOpen ? Math.max(INSPECTOR_MIN, opts.inspectorWidth) : 0
   let center = available - left - inspector
   if (center < CENTER_MIN && left > 0) {
-    const take = Math.min(left, CENTER_MIN - center)
-    left -= take
-    center += take
+    center += left
+    left = 0
   }
   if (center < CENTER_MIN && inspector > INSPECTOR_MIN) {
     const take = Math.min(inspector - INSPECTOR_MIN, CENTER_MIN - center)

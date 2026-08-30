@@ -1045,6 +1045,10 @@ body {
   width: min(var(--dsw-chat-width), calc(100vw - var(--rail-w) - var(--inspector-width, 320px) - 40px));
 }
 
+.app-shell.is-left-hidden .fsdb-views {
+  display: none !important;
+}
+
 /* 侧栏独立合成层：右侧 Markdown 重绘时少拖累左侧 :hover */
 .app-side-bar {
   contain: layout paint style;

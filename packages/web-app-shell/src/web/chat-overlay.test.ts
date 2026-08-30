@@ -31,7 +31,7 @@ test('chat column subtracts rail, sidebar and inspector', () => {
   )
 })
 
-test('narrow viewport shrinks left pane before inspector, then center last', () => {
+test('narrow viewport hides the left pane outright, then shrinks inspector, then center', () => {
   const wide = allocateShellColumns({
     viewportWidth: 1600,
     leftPane: true,
@@ -42,15 +42,15 @@ test('narrow viewport shrinks left pane before inspector, then center last', () 
   assert.equal(wide.inspector, 320)
   assert.equal(wide.center, 1600 - SIDEBAR_MAX - 320)
 
-  const stealLeft = allocateShellColumns({
+  const hideLeft = allocateShellColumns({
     viewportWidth: SIDEBAR_MAX + CENTER_MIN + 320 - 100,
     leftPane: true,
     inspectorOpen: true,
     inspectorWidth: 320,
   })
-  assert.equal(stealLeft.left, SIDEBAR_MAX - 100)
-  assert.equal(stealLeft.inspector, 320)
-  assert.equal(stealLeft.center, CENTER_MIN)
+  assert.equal(hideLeft.left, 0)
+  assert.equal(hideLeft.inspector, 320)
+  assert.equal(hideLeft.center, SIDEBAR_MAX + CENTER_MIN + 320 - 100 - 320)
 
   const stealInspector = allocateShellColumns({
     viewportWidth: CENTER_MIN + INSPECTOR_MIN,

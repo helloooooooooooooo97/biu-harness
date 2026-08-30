@@ -17,4 +17,6 @@ test('overlay chat is off on the agent page and elsewhere until the corner dock 
   assert.doesNotMatch(overlayHead.slice(0, 1200), /inspector-toggle/)
   assert.match(shell, /overlayStillHoldsPointer/)
   assert.doesNotMatch(shell, /chat-composer-dock pointer-events-none">\{overlayDock\}/)
+  assert.match(shell, /is-left-hidden/)
+  assert.match(shell, /leftHidden/)
 })

@@ -2358,7 +2358,7 @@ if (typeof document !== 'undefined') {
 .fsdb-inspector-host:not(:empty) + .fsdb-inspector-empty{display:none}
 .fsdb-inspector-panel .fsdb-detail-stage{min-height:0;flex:1}
 .fsdb-right-body{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
-.fsdb-views{display:flex;width:var(--sidebar-col,280px);max-width:280px;min-width:0;flex:none;flex-direction:column;min-height:0;overflow:hidden}
+.fsdb-views{display:flex;width:var(--sidebar-col,280px);max-width:280px;min-width:0;flex:none;flex-direction:column;min-height:0;overflow:hidden;box-sizing:border-box}
 .inspector-database-page{width:100%;min-height:0;flex:1}
 .fsdb-nav-chevron{flex:none;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
 .fsdb-nav-chevron:hover{background:var(--dsw-hover);color:var(--dsw-label)}
