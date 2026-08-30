@@ -586,7 +586,7 @@ export function CollectionBrowser({
   const parentKey = useMemo(() => parentFieldKey(schema, items), [items, schema])
   const flattenRows = useCallback(
     (rows: DbRecord[]) => {
-      if (!parentKey || !showTree) return rows.map((row) => ({ row, depth: 0, hasKids: false }))
+      if (!parentKey || !showTree) return rows.map((row) => ({ row, depth: 0, hasKids: false, kidCount: 0 }))
       return flattenTree(rows, parentKey, collapsed)
     },
     [collapsed, parentKey, showTree],
@@ -1061,11 +1061,13 @@ export function CollectionBrowser({
     openDetail = true,
     depth = 0,
     hasKids = false,
+    kidCount = 0,
   }: {
     row: DbRecord
     openDetail?: boolean
     depth?: number
     hasKids?: boolean
+    kidCount?: number
   }) {
     const key = schema?.labelField
     const field = key && schema ? schema.fields[key] : undefined
@@ -1103,20 +1105,27 @@ export function CollectionBrowser({
         ) : null}
         <span className="fsdb-title-text">{body}</span>
         {openDetail ? (
-          <button
-            type="button"
-            className="tasks-title-open"
-            data-testid="record-title-open"
-            data-biu-action="open"
-            aria-label="查看详情"
-            title="查看详情"
-            onClick={(event) => {
-              event.stopPropagation()
-              setDetailId(row.id, row)
-            }}
-          >
-            <ArrowsPointingOutIcon aria-hidden className="size-[14px]" />
-          </button>
+          <span className="tasks-title-aside">
+            {tree && kidCount > 0 ? (
+              <span className="sidebar-chat-count tasks-tree-count" title={`${kidCount} 项`}>
+                <span className="sidebar-chat-count-num">{kidCount}</span>
+              </span>
+            ) : null}
+            <button
+              type="button"
+              className="tasks-title-open"
+              data-testid="record-title-open"
+              data-biu-action="open"
+              aria-label="查看详情"
+              title="查看详情"
+              onClick={(event) => {
+                event.stopPropagation()
+                setDetailId(row.id, row)
+              }}
+            >
+              <ArrowsPointingOutIcon aria-hidden className="size-[14px]" />
+            </button>
+          </span>
         ) : null}
       </div>
     )
@@ -1247,12 +1256,12 @@ export function CollectionBrowser({
     }
     return (
       <>
-        {listed.map(({ row, depth, hasKids }) => (
+        {listed.map(({ row, depth, hasKids, kidCount }) => (
           <tr key={`${keyPrefix}${row.id}`} className={row.id === detailId ? 'is-active' : undefined} {...recordPick(row)}>
             {columns.map((col) => (
               <td key={col.key}>
                 {col.key === schema?.labelField ? (
-                  <RecordTitle row={row} depth={depth} hasKids={hasKids} />
+                  <RecordTitle row={row} depth={depth} hasKids={hasKids} kidCount={kidCount} />
                 ) : (
                   <span className="fsdb-cell">{renderCell(row, col.key, col.field)}</span>
                 )}

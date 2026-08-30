@@ -42,7 +42,7 @@ export function parentFieldKey(schema: CollectionSchema | undefined, rows: DbRec
   return null
 }
 
-export type TreeRow = { row: DbRecord; depth: number; hasKids: boolean }
+export type TreeRow = { row: DbRecord; depth: number; hasKids: boolean; kidCount: number }
 
 export function flattenTree(rows: DbRecord[], parentKey: string, collapsed: Record<string, boolean> = {}): TreeRow[] {
   const ids = new Set(rows.map((row) => row.id))
@@ -55,6 +55,15 @@ export function flattenTree(rows: DbRecord[], parentKey: string, collapsed: Reco
     const bucket = children.get(parent)
     if (bucket) bucket.push(row)
     else children.set(parent, [row])
+  }
+  const memo = new Map<string, number>()
+  const kidCountOf = (id: string): number => {
+    const hit = memo.get(id)
+    if (hit != null) return hit
+    const kids = children.get(id) ?? []
+    const total = kids.reduce((sum, child) => sum + 1 + kidCountOf(child.id), 0)
+    memo.set(id, total)
+    return total
   }
   const out: TreeRow[] = []
   const seen = new Set<string>()
@@ -69,7 +78,7 @@ export function flattenTree(rows: DbRecord[], parentKey: string, collapsed: Reco
     for (const row of children.get(parent) ?? []) {
       if (seen.has(row.id)) continue
       seen.add(row.id)
-      out.push({ row, depth, hasKids: hasKids.has(row.id) })
+      out.push({ row, depth, hasKids: hasKids.has(row.id), kidCount: kidCountOf(row.id) })
       if (collapsed[row.id]) skip(row.id)
       else visit(row.id, depth + 1)
     }
@@ -78,7 +87,7 @@ export function flattenTree(rows: DbRecord[], parentKey: string, collapsed: Reco
   for (const row of rows) {
     if (seen.has(row.id)) continue
     seen.add(row.id)
-    out.push({ row, depth: 0, hasKids: hasKids.has(row.id) })
+    out.push({ row, depth: 0, hasKids: hasKids.has(row.id), kidCount: kidCountOf(row.id) })
     if (!collapsed[row.id]) visit(row.id, 1)
   }
   return out

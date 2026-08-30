@@ -39,6 +39,9 @@ test('sidebar records paint detail immediately without reloading the view', () =
 test('table title opens record from the title-side button', () => {
   assert.match(browser, /data-testid="record-title-open"/)
   assert.match(browser, /className="tasks-title-open"/)
+  assert.match(browser, /tasks-title-aside/)
+  assert.match(browser, /tasks-tree-count/)
+  assert.match(browser, /kidCount/)
   assert.match(browser, /tasks-tree-toggle is-empty/)
   assert.doesNotMatch(browser, /recordPick\(row\)\} onClick=\{\(\) => setDetailId\(row\.id\)\}/)
 })

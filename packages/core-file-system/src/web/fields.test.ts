@@ -152,12 +152,12 @@ test('flattenTree keeps sibling order, indents children, and hides collapsed sub
     { id: 'g', title: 'grand', parentId: 'c1' },
   ]
   assert.deepEqual(
-    flattenTree(rows, 'parentId').map((item) => [item.row.id, item.depth, item.hasKids]),
+    flattenTree(rows, 'parentId').map((item) => [item.row.id, item.depth, item.hasKids, item.kidCount]),
     [
-      ['p', 0, true],
-      ['c2', 1, false],
-      ['c1', 1, true],
-      ['g', 2, false],
+      ['p', 0, true, 3],
+      ['c2', 1, false, 0],
+      ['c1', 1, true, 1],
+      ['g', 2, false, 0],
     ],
   )
   assert.deepEqual(
