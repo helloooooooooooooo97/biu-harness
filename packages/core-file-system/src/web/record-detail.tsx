@@ -40,21 +40,23 @@ export function RecordDetail({
               <div className="fsdb-detail-main">
                 <div className="fsdb-detail-title-row">
                 {schema.labelField && schema.fields[schema.labelField]?.writable ? (
-                  <LocalText
-                    as="textarea"
-                    className="fsdb-detail-title-input"
-                    value={draft[schema.labelField] ?? ''}
-                    rows={(draft[schema.labelField] ?? '').length > 48 ? 2 : 1}
-                    onCommit={(raw) => {
-                      const next = raw.trim()
-                      setDraft((prev) => ({ ...prev, [schema.labelField!]: next }))
-                      if (next && next !== String(selected[schema.labelField!] ?? '')) {
-                        void writeOne(selected, schema.labelField!, schema.fields[schema.labelField!]!, next)
-                      }
-                    }}
-                  />
+                  <h1 className="fsdb-detail-title">
+                    <LocalText
+                      as="textarea"
+                      className="fsdb-detail-title-input"
+                      value={draft[schema.labelField] ?? ''}
+                      rows={(draft[schema.labelField] ?? '').length > 48 ? 2 : 1}
+                      onCommit={(raw) => {
+                        const next = raw.trim()
+                        setDraft((prev) => ({ ...prev, [schema.labelField!]: next }))
+                        if (next && next !== String(selected[schema.labelField!] ?? '')) {
+                          void writeOne(selected, schema.labelField!, schema.fields[schema.labelField!]!, next)
+                        }
+                      }}
+                    />
+                  </h1>
                 ) : (
-                  <h2 className="fsdb-detail-title-input">{labelOf(selected)}</h2>
+                  <h1 className="fsdb-detail-title">{labelOf(selected)}</h1>
                 )}
                 {onDelete ? (
                   <button type="button" className="tasks-icon-btn is-danger" title="删除" aria-label="删除记录" onClick={onDelete}>

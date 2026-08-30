@@ -75,6 +75,7 @@ test('filesystem header expands the shared left sidebar and toggles the right in
 
 test('database extras sit after the record detail, not in the inspector', () => {
   const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  const style = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8')
   assert.doesNotMatch(page, /biu:inspector-open/)
   assert.match(page, /slots\.place\('inspector-panels'/)
   assert.match(page, /view\?\.inspector/)
@@ -83,6 +84,10 @@ test('database extras sit after the record detail, not in the inspector', () => 
   assert.doesNotMatch(page, /tabLabel: '数据库'/)
   assert.doesNotMatch(page, /RecordPanePanel/)
   assert.match(detail, /fsdb-detail-extras/)
+  assert.match(detail, /<h1 className="fsdb-detail-title">/)
+  assert.doesNotMatch(detail, /<h2 className="fsdb-detail-title-input">/)
+  assert.match(style, /\.fsdb-page:not\(\.inspector-database-page\) \.fsdb-detail-main\{[^}]*padding-top:80px/)
+  assert.match(style, /\.fsdb-detail-title\{[^}]*font-size:32px/)
   assert.match(detail, /data-testid=\{`fsdb-pane-\$\{pane\.id\}`\}/)
   assert.match(browser, /embed \?/)
   assert.doesNotMatch(browser, /setRecordFocus/)
