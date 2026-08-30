@@ -26,10 +26,12 @@ describe('sidebar text colors', () => {
   })
 
   it('hides labels until the chat sidebar is wide enough', () => {
-    expect(css).toMatch(/\.sidebar-label\s*\{[^}]*font-size:\s*14px/s)
+    expect(css).toMatch(/\.sidebar-label,\s*\.app-side-actions-label,\s*\.sidebar-tag\s*\{[^}]*font-size:\s*14px/s)
+    expect(css).toMatch(/\.sidebar-chat-count-num\s*\{[^}]*font-size:\s*14px/s)
     expect(css).toMatch(/\.app-side-bar\.is-narrow \.sidebar-label/)
     expect(css).toMatch(/\.app-side-bar\.is-narrow \.app-side-actions-label/)
     const sidebar = readFileSync(resolve(import.meta.dirname, './chat-sidebar.tsx'), 'utf8')
+    expect(sidebar).toMatch(/text-\[14px\]/)
     expect(sidebar).toMatch(/data-testid="sidebar-expand"/)
     expect(sidebar).toMatch(/data-testid="sidebar-resize"/)
     const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')

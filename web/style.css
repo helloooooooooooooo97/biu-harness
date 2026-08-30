@@ -1149,7 +1149,9 @@ body {
   width: 7px;
 }
 
-.sidebar-label {
+.sidebar-label,
+.app-side-actions-label,
+.sidebar-tag {
   font-size: 14px;
 }
 
@@ -1158,6 +1160,7 @@ body {
 .app-side-bar.is-narrow .sidebar-section-head,
 .app-side-bar.is-narrow .sidebar-group-head,
 .app-side-bar.is-narrow .sidebar-chat-count,
+.app-side-bar.is-narrow .sidebar-tag,
 .app-side-bar.is-narrow .chat-session-row-delete,
 .app-side-bar.is-narrow .chat-session-row-star,
 .app-side-bar.is-narrow .app-side-bar-head-brand > span:first-child {

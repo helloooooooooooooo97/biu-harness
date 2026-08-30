@@ -30,11 +30,22 @@ import {
   requestInspectorAction,
 } from './chat-overlay.ts'
 
-test('collapsed chat sidebar still occupies the icon rail', () => {
+test('collapsed chat sidebar disappears instead of leaving a thin rail', () => {
   assert.equal(
     chatColumnWidth({ viewportWidth: 1600, inspectorOpen: true, inspectorWidth: 320, sidebarCollapsed: true }),
-    1600 - SIDEBAR_MIN - 320,
+    1600 - 320,
   )
+})
+
+test('sidebar below min width is gone', () => {
+  const gone = allocateShellColumns({
+    viewportWidth: 1600,
+    leftPane: true,
+    leftWidth: SIDEBAR_MIN - 1,
+    inspectorOpen: false,
+    inspectorWidth: 320,
+  })
+  assert.equal(gone.left, 0)
 })
 
 test('sidebar labels appear only after LABEL_AT', () => {

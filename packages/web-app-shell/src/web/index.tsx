@@ -19,6 +19,7 @@ import {
   toggleOverlayPinned,
   requestInspectorClose,
   allocateShellColumns,
+  clampSidebarWidth,
   SIDEBAR_DEFAULT,
   SIDEBAR_LABEL_AT,
   SIDEBAR_MAX,
@@ -461,13 +462,31 @@ function Shell(props: SlotProps) {
   })
   const lastWideSidebar = useRef(sidebarWidth >= SIDEBAR_LABEL_AT ? sidebarWidth : SIDEBAR_MAX)
   const persistSidebar = useCallback((width: number, collapsed: boolean) => {
-    const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, Math.round(width)))
+    if (collapsed) {
+      setSidebarCollapsed(true)
+      try {
+        localStorage.setItem('cordis.sidebar.collapsed', '1')
+      } catch {
+        /* ignore */
+      }
+      return
+    }
+    const next = clampSidebarWidth(width)
+    if (next === 0) {
+      setSidebarCollapsed(true)
+      try {
+        localStorage.setItem('cordis.sidebar.collapsed', '1')
+      } catch {
+        /* ignore */
+      }
+      return
+    }
     setSidebarWidth(next)
-    setSidebarCollapsed(collapsed)
+    setSidebarCollapsed(false)
     if (next >= SIDEBAR_LABEL_AT) lastWideSidebar.current = next
     try {
       localStorage.setItem('cordis.sidebar.width', String(next))
-      localStorage.setItem('cordis.sidebar.collapsed', collapsed ? '1' : '0')
+      localStorage.setItem('cordis.sidebar.collapsed', '0')
     } catch {
       /* ignore */
     }
@@ -486,10 +505,10 @@ function Shell(props: SlotProps) {
   )
   const onSidebarWidthChange = useCallback(
     (width: number) => {
-      const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, Math.round(width)))
-      persistSidebar(next, next <= SIDEBAR_MIN)
+      const next = clampSidebarWidth(width)
+      persistSidebar(next === 0 ? sidebarWidth : next, next === 0)
     },
-    [persistSidebar],
+    [persistSidebar, sidebarWidth],
   )
   const [railOpen, setRailOpen] = useState(false)
   const [railPinned, setRailPinned] = useState(() => {
@@ -605,7 +624,7 @@ function Shell(props: SlotProps) {
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   const agentHref = sessionId ? `/s/${sessionId}` : '/'
   const showChatSidebar = activeModule === 'agent'
-  const sidebarCol = sidebarCollapsed ? SIDEBAR_MIN : sidebarWidth
+  const sidebarCol = sidebarCollapsed ? 0 : sidebarWidth
   const sidebarNarrow = sidebarCol < SIDEBAR_LABEL_AT
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1440 : window.innerWidth,

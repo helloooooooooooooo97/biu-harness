@@ -3,7 +3,7 @@ export const CHAT_OVERLAY_ENTER = 420
 export const SIDEBAR_MAX = 280
 /** 聊天左侧默认宽度：图标轨，不显示会话名。往外拉过这个宽度才出标签。 */
 export const SIDEBAR_DEFAULT = 72
-/** 最小宽度约为默认的 2/3，再窄图标会挤。 */
+/** 最小宽度约为默认的 2/3；再窄整栏关掉，不留细条。 */
 export const SIDEBAR_MIN = Math.round(SIDEBAR_DEFAULT * (2 / 3))
 /** 比默认宽度更宽才显示文字标签（会话名、「添加聊天」等）。 */
 export const SIDEBAR_LABEL_AT = SIDEBAR_DEFAULT + 1
@@ -12,6 +12,13 @@ export const CENTER_MIN = 512
 export const INSPECTOR_MIN = 240
 const RAIL = 0
 const SIDEBAR = SIDEBAR_MAX
+
+/** 低于最小宽度则 0（整栏消失）；否则夹在 [MIN, MAX]。 */
+export function clampSidebarWidth(width: number) {
+  const n = Math.round(Number(width))
+  if (!Number.isFinite(n) || n < SIDEBAR_MIN) return 0
+  return Math.min(SIDEBAR_MAX, n)
+}
 
 /** 窄屏时先整栏关掉左侧（不要压成细条），再压检查器（不低于 INSPECTOR_MIN），最后才压中间。 */
 export function allocateShellColumns(opts: {
@@ -24,7 +31,7 @@ export function allocateShellColumns(opts: {
 }) {
   const rail = opts.railWidth ?? RAIL
   const available = Math.max(0, opts.viewportWidth - rail)
-  let left = opts.leftPane ? Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, opts.leftWidth ?? SIDEBAR_MAX)) : 0
+  let left = opts.leftPane ? clampSidebarWidth(opts.leftWidth ?? SIDEBAR_MAX) : 0
   let inspector = opts.inspectorOpen ? Math.max(INSPECTOR_MIN, opts.inspectorWidth) : 0
   let center = available - left - inspector
   if (center < CENTER_MIN && left > 0) {
@@ -49,7 +56,7 @@ export function chatColumnWidth(opts: {
   return allocateShellColumns({
     viewportWidth: opts.viewportWidth,
     leftPane: true,
-    leftWidth: opts.sidebarCollapsed ? SIDEBAR_MIN : SIDEBAR_MAX,
+    leftWidth: opts.sidebarCollapsed ? 0 : SIDEBAR_MAX,
     inspectorOpen: opts.inspectorOpen,
     inspectorWidth: opts.inspectorWidth,
   }).center
@@ -61,7 +68,7 @@ export function inspectorWidthForExpandedChat(opts: {
   inspectorWidth: number
   sidebarCollapsed: boolean
 }) {
-  const side = opts.sidebarCollapsed ? SIDEBAR_MIN : SIDEBAR
+  const side = opts.sidebarCollapsed ? 0 : SIDEBAR
   const maxInspector = opts.viewportWidth - RAIL - side - CHAT_OVERLAY_ENTER
   return Math.min(opts.inspectorWidth, Math.max(INSPECTOR_MIN, Math.round(maxInspector)))
 }
