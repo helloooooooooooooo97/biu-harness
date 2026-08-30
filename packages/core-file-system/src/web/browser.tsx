@@ -1427,6 +1427,7 @@ export function CollectionBrowser({
               </span>
             ) : null}
           </div>
+          <div className="tasks-toolbar-right">
             <div className={`tasks-search-wrap${searchExpanded ? ' is-open' : ''}`} ref={searchRef}>
               <button
                 type="button"
