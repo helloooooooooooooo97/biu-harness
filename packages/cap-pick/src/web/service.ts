@@ -67,7 +67,6 @@ export class PickService extends Service {
       return
     }
     this.refs = dedupePicks([...this.refs, ...refs])
-    this.picking = false
     this.hover = null
     this.marquee = null
     this.marqueeHits = []
