@@ -188,7 +188,7 @@ export function CollectionBrowser({
   const [hydrated, setHydrated] = useState(false)
   const [viewsOpen, setViewsOpen] = useState(() => {
     try {
-      return localStorage.getItem(`fsdb.viewsOpen:${moduleId || collectionPath}`) !== '0'
+      return localStorage.getItem('cordis.sidebar.collapsed') !== '1'
     } catch {
       return true
     }
@@ -271,6 +271,10 @@ export function CollectionBrowser({
       setViewsOpen(n > 0)
     }
     window.addEventListener('biu:shell-sidebar-width', onWidth)
+    const aside = document.getElementById('shell-module-sidebar')?.closest('[data-testid="module-sidebar"]')
+    if (aside instanceof HTMLElement) {
+      setViewsOpen(!aside.classList.contains('hidden') && aside.getAttribute('aria-hidden') !== 'true')
+    }
     return () => window.removeEventListener('biu:shell-sidebar-width', onWidth)
   }, [embed])
 

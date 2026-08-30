@@ -49,6 +49,8 @@ test('table title opens record from the title-side button', () => {
 })
 
 test('filesystem header expands the shared left sidebar and toggles the right inspector', () => {
+  assert.match(browser, /cordis\.sidebar\.collapsed/)
+  assert.match(browser, /!viewsOpen \?/)
   assert.match(browser, /data-testid="header-sidebar-expand"/)
   assert.match(browser, /biu:expand-shell-sidebar/)
   assert.match(browser, /data-testid="fsdb-inspector-toggle"/)
