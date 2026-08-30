@@ -36,6 +36,7 @@ test('page plugin registers every field type on /pages without a web module', as
   assert.equal(registered[0]?.path, '/pages')
   assert.equal(registered[0]?.view?.route, '/pages')
   assert.equal(registered[0]?.view?.moduleId, 'page')
+  assert.equal(registered[0]?.view?.icon, 'document')
   const types = new Set(Object.values(registered[0]!.schema.fields).map((field) => field.type))
   for (const type of FIELD_TYPES) assert.equal(types.has(type), true, type)
   const listed = await registered[0]!.list()

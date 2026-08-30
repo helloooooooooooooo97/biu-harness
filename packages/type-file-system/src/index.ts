@@ -146,7 +146,7 @@ export type CollectionView = {
   title?: string
   blurb?: string
   order?: number
-  /** 导航图标名（实现侧映射），例如 clipboard-document-list、puzzle-piece。 */
+  /** 导航图标名（实现侧映射），例如 clipboard-document-list、puzzle-piece、document。 */
   icon?: string
 }
 

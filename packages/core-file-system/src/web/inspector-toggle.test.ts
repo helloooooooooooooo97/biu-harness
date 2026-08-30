@@ -78,6 +78,12 @@ test('inspector embed does not poll the collection every 20s', () => {
   assert.match(browser, /}, 20000\)/)
 })
 
+test('page collection uses a document glyph, not the table/database icon', () => {
+  const glyphs = readFileSync(resolve(import.meta.dirname, './nav-glyphs.tsx'), 'utf8')
+  assert.match(glyphs, /name === 'document' \|\| name === 'document-text' \|\| name === 'page'/)
+  assert.match(glyphs, /<DocumentIcon/)
+})
+
 test('inspector no longer listens for add/copy view actions', () => {
   assert.doesNotMatch(browser, /biu:inspector-action/)
   assert.doesNotMatch(browser, /detail === 'add-view'/)

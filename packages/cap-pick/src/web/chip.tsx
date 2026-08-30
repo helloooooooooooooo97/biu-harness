@@ -4,8 +4,8 @@ import {
   StopCircleIcon,
   HashtagIcon,
   Square3Stack3DIcon,
-  TableCellsIcon,
   RectangleStackIcon,
+  DocumentIcon,
   ClipboardDocumentCheckIcon,
   ChatBubbleLeftIcon,
   PuzzlePieceIcon,
@@ -21,7 +21,7 @@ type Glyph = ComponentType<{ className?: string }>
 const KIND_ICONS: Record<string, Glyph> = {
   session: CpuChipIcon,
   task: ClipboardDocumentCheckIcon,
-  page: TableCellsIcon,
+  page: DocumentIcon,
   collection: RectangleStackIcon,
   view: Square3Stack3DIcon,
   plugin: PuzzlePieceIcon,

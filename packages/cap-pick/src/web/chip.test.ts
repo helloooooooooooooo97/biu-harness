@@ -15,6 +15,7 @@ test('chip icons exist on @heroicons/react/16/solid', () => {
     'PuzzlePieceIcon',
     'TagIcon',
     'WrenchScrewdriverIcon',
+    'DocumentIcon',
   ] as const
   for (const name of needed) {
     assert.ok(name in lu, `${name} missing`)

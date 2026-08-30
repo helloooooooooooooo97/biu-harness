@@ -76,7 +76,7 @@ function pagesCollection(now = Date.now()): CollectionSpec {
       title: 'Page',
       blurb: '每种字段类型各登记一列，假数据用来压测 Database 默认界面。',
       order: 25,
-      icon: 'table-cells',
+      icon: 'document',
     },
     schema: {
       labelField: 'title',

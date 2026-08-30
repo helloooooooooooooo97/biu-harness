@@ -10,6 +10,7 @@ import {
   ViewColumnsIcon,
   ClipboardDocumentListIcon,
   ChatBubbleLeftRightIcon,
+  DocumentIcon,
   PuzzlePieceIcon,
   BoltIcon,
   EyeIcon,
@@ -31,6 +32,7 @@ function captionTableIcon(icon?: string) {
   if (name === 'puzzle-piece' || name === 'puzzle') return PuzzlePieceIcon
   if (name === 'clipboard-document-list' || name === 'clipboard') return ClipboardDocumentListIcon
   if (name === 'chat-bubble' || name === 'chat-bubble-left-right') return ChatBubbleLeftRightIcon
+  if (name === 'document' || name === 'document-text' || name === 'page') return DocumentIcon
   if (name === 'bolt') return BoltIcon
   if (name === 'eye') return EyeIcon
   return TableCellsIcon
