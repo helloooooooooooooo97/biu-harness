@@ -83,7 +83,9 @@ export const name = 'page'
 export const inject = ['database', 'fs']
 
 export function apply(ctx: Context) {
-  const store = new PagesStore(ctx.fs as WorkspaceFs)
+  // 页面固定存到工作区根（defaultRoot），不随 Session 绑定项目路径漂移，
+  // 否则工具调用（绑定项目）与 HTTP 请求（无 Session）会落到不同目录。
+  const store = new PagesStore(ctx.fs.workspace as WorkspaceFs)
   ctx.database.register(pagesCollection(store))
   servePageFile(ctx, store)
 }

@@ -34,8 +34,7 @@ export class FsService extends Service {
     return path ? resolve(path) : null
   }
 
-  resolve(rel: string) {
-    const root = this.effectiveRoot()
+  resolveIn(root: string, rel: string) {
     const input = String(rel)
     const full = isAbsolute(input) ? resolve(input) : resolve(root, input)
     const relToRoot = relative(root, full)
@@ -45,25 +44,59 @@ export class FsService extends Service {
     return full
   }
 
-  async read(rel: string) {
-    const path = this.resolve(rel)
+  async readIn(root: string, rel: string) {
+    const path = this.resolveIn(root, rel)
     this.ctx.emit('fs/read', rel)
     return readFile(path, 'utf8')
   }
 
-  async write(rel: string, content: string) {
-    const path = this.resolve(rel)
+  async writeIn(root: string, rel: string, content: string) {
+    const path = this.resolveIn(root, rel)
     await mkdir(dirname(path), { recursive: true })
     this.ctx.emit('fs/write', rel)
     await writeFile(path, content, 'utf8')
     return { ok: true, path: rel }
   }
 
-  async list(rel = '.') {
-    const path = this.resolve(rel)
+  async listIn(root: string, rel = '.') {
+    const path = this.resolveIn(root, rel)
     this.ctx.emit('fs/list', rel)
     return readdir(path)
   }
+
+  resolve(rel: string) {
+    return this.resolveIn(this.effectiveRoot(), rel)
+  }
+
+  async read(rel: string) {
+    return this.readIn(this.effectiveRoot(), rel)
+  }
+
+  async write(rel: string, content: string) {
+    return this.writeIn(this.effectiveRoot(), rel, content)
+  }
+
+  async list(rel = '.') {
+    return this.listIn(this.effectiveRoot(), rel)
+  }
+
+  /** 稳定工作区（defaultRoot，不随 Session 绑定漂移）：供 DB 集合等需要固定落盘的场景使用。 */
+  get workspace(): WorkspaceFs {
+    const root = this.defaultRoot
+    return {
+      resolve: (rel: string) => this.resolveIn(root, rel),
+      read: (rel: string) => this.readIn(root, rel),
+      write: (rel: string, content: string) => this.writeIn(root, rel, content),
+      list: (rel?: string) => this.listIn(root, rel ?? '.'),
+    }
+  }
+}
+
+export type WorkspaceFs = {
+  resolve: (rel: string) => string
+  read: (rel: string) => Promise<string>
+  write: (rel: string, content: string) => Promise<unknown>
+  list: (rel?: string) => Promise<string[]>
 }
 
 export const name = 'fs'
