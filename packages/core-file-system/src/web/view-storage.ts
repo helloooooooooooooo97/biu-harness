@@ -15,6 +15,8 @@ export function rememberViews(collectionPath: string, views: SavedView[]) {
 }
 
 export function loadViews(collectionPath: string): SavedView[] {
+  const remembered = memoryViews.get(collectionPath)
+  if (remembered?.length) return remembered
   try {
     const raw = localStorage.getItem(viewsKey(collectionPath))
     const parsed = raw ? (JSON.parse(raw) as SavedView[]) : []
@@ -22,7 +24,7 @@ export function loadViews(collectionPath: string): SavedView[] {
   } catch {
     /* ignore */
   }
-  return memoryViews.get(collectionPath) ?? []
+  return []
 }
 
 export type CrumbRecord = { id: string; label: string; emoji?: string }

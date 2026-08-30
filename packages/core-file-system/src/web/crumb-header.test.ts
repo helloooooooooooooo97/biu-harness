@@ -42,6 +42,13 @@ describe('顶栏三级标题', () => {
     expect(trail).toContain('<TableGlyph icon={tableIcon} />')
   })
 
+  it('改视图名会先写入缓存再通知检查器面包屑', () => {
+    expect(browser).toMatch(/rememberViews\(collectionPath, next\)[\s\S]*localStorage\.setItem\(viewsKey\(collectionPath\)[\s\S]*fsdb:change/)
+    expect(browser).toContain("window.dispatchEvent(new Event('fsdb:crumb-labels'))")
+    expect(inspector).toContain("window.addEventListener('fsdb:crumb-labels'")
+    expect(inspector).toContain('loadViews(collection)')
+  })
+
   it('右侧检查器面包屑用记录标题而不是 id', () => {
     expect(inspector).toContain('loadRecords')
     expect(inspector).toContain('recordHit?.label')

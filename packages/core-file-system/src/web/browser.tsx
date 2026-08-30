@@ -948,10 +948,12 @@ export function CollectionBrowser({
     viewsRef.current = next
     setViews(next)
     rememberViews(collectionPath, next)
+    if (!embed) {
+      localStorage.setItem(viewsKey(collectionPath), JSON.stringify(next))
+      pushSavedViews(collectionPath, next)
+    }
     window.dispatchEvent(new Event('fsdb:change'))
-    if (embed) return
-    localStorage.setItem(viewsKey(collectionPath), JSON.stringify(next))
-    pushSavedViews(collectionPath, next)
+    window.dispatchEvent(new Event('fsdb:crumb-labels'))
   }
 
   function rememberActiveView(id: string) {
