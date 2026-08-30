@@ -28,6 +28,7 @@ test('table and view rows only expand from the fold column', () => {
 
 test('sidebar records paint detail immediately without reloading the view', () => {
   const sidebar = readFileSync(resolve(import.meta.dirname, './data-sidebar.tsx'), 'utf8')
+  const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
   assert.match(browser, /flushSync\(\(\) => \{\s*setOpenDetailId\(recordId\)/)
   assert.match(browser, /if \(row\) setDetailRow\(row\)/)
   assert.match(browser, /onOpenRecord\?\.\(recordId, view\.id, path\)/)
@@ -36,6 +37,11 @@ test('sidebar records paint detail immediately without reloading the view', () =
   assert.match(browser, /!detailId \?/)
   assert.match(sidebar, /onOpenRecord\?\.\(row\.id, row\)/)
   assert.match(sidebar, /event.stopPropagation\(\)/)
+  assert.match(sidebar, /function RecordEmojiBoard/)
+  assert.match(sidebar, /className="fsdb-emoji-picker is-fixed"/)
+  assert.match(sidebar, /fsdb-record-emoji/)
+  assert.match(css, /\.fsdb-emoji-picker \{[^}]*border:\s*0/s)
+  assert.match(css, /\.fsdb-emoji-picker \{[^}]*background:\s*#191919/s)
 })
 
 test('table title opens record from the title-side button', () => {
