@@ -9,7 +9,7 @@ import {
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import { inspectorTabFromEvent } from './chat-overlay.ts'
-import { inspectorPanelMatches } from './inspector-panels.ts'
+import { inspectorPanelMatches, resolveInspectorTab } from './inspector-panels.ts'
 
 export type SessionInspectorProps = {
   open: boolean
@@ -24,16 +24,6 @@ export type SessionInspectorProps = {
 
 function inspectorTabStorageKey(sid: string | null | undefined) {
   return sid ? `inspector.tab:${sid}` : 'inspector.tab:home'
-}
-
-function inspectorStoredTab(sid: string | null | undefined, allowed: string[]): string | undefined {
-  try {
-    const raw = localStorage.getItem(inspectorTabStorageKey(sid))
-    if (raw && allowed.includes(raw)) return raw
-  } catch {
-    /* ignore */
-  }
-  return undefined
 }
 
 export const SessionInspector = memo(function SessionInspector({
@@ -66,9 +56,8 @@ export const SessionInspector = memo(function SessionInspector({
       })
   }, [centerKind, extras, sessionId])
   const allowedTabs = useMemo(() => extraTabs.map((item) => item.id), [extraTabs])
-  const defaultTab = extraTabs[0]?.id ?? ''
 
-  const [tab, setTabState] = useState(() => inspectorStoredTab(sessionId, allowedTabs) ?? defaultTab)
+  const [tab, setTabState] = useState('')
   const setTab = useCallback(
     (next: string) => {
       setTabState(next)
@@ -89,13 +78,8 @@ export const SessionInspector = memo(function SessionInspector({
       return
     }
     // 无 session 时没有可用的 stored key 旧逻辑会每次 extras 刷新都打回 defaultTab，任务/插件点了等于没点。
-    setTabState((current) => {
-      const stored = inspectorStoredTab(sessionId, allowedTabs)
-      if (stored) return stored
-      if (current && allowedTabs.includes(current)) return current
-      return defaultTab
-    })
-  }, [sessionId, focusCallId, focusTabId, allowedTabs.join('|'), defaultTab, setTab])
+    setTabState((current) => resolveInspectorTab(current, allowedTabs))
+  }, [sessionId, focusCallId, focusTabId, allowedTabs.join('|'), setTab])
 
   useEffect(() => {
     const onTab = (event: Event) => {
@@ -156,35 +140,57 @@ export const SessionInspector = memo(function SessionInspector({
         }}
       />
 
-      <div className="app-side-bar-head">
-        <div className="inspector-tabs" role="tablist" aria-label="检查器分区">
-          {extraTabs.map((item) => {
-            const active = tab === item.id
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                className={`inspector-tab${active ? ' is-active' : ''}`}
-                onClick={() => setTab(item.id)}
-                data-testid={`inspector-tab-${item.id}`}
-              >
-                <span className="inspector-tab-indicator" aria-hidden />
-                {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
-                {item.label}
-              </button>
-            )
-          })}
+      {extraActive ? (
+        <div className="app-side-bar-head">
+          <div className="inspector-tabs" role="tablist" aria-label="检查器分区">
+            {extraTabs.map((item) => {
+              const active = tab === item.id
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={`inspector-tab${active ? ' is-active' : ''}`}
+                  onClick={() => setTab(active ? '' : item.id)}
+                  data-testid={`inspector-tab-${item.id}`}
+                >
+                  <span className="inspector-tab-indicator" aria-hidden />
+                  {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
+                  {item.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {extraActive && ExtraComponent ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid={`inspector-${extraActive.id}`}>
             <ExtraComponent {...(extraActive.entry.props?.() ?? {})} renderSlot={renderSlot} />
           </div>
-        ) : null}
+        ) : (
+          <div className="inspector-catalog" data-testid="inspector-catalog">
+            <p className="inspector-catalog-lead">可打开</p>
+            {extraTabs.length ? (
+              extraTabs.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="inspector-catalog-item"
+                  onClick={() => setTab(item.id)}
+                  data-testid={`inspector-offer-${item.id}`}
+                >
+                  {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                </button>
+              ))
+            ) : (
+              <p className="inspector-catalog-empty">当前中间页没有可打开的内容</p>
+            )}
+          </div>
+        )}
       </div>
     </aside>
   )

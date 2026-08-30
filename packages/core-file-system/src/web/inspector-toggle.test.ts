@@ -15,3 +15,9 @@ test('filesystem header toggles the right inspector, not the left data sidebar',
   assert.doesNotMatch(browser, /收起左侧边栏/)
   assert.doesNotMatch(browser, /展开左侧边栏/)
 })
+
+test('database does not auto-open inspector content; panes follow the current table', () => {
+  const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  assert.doesNotMatch(page, /biu:inspector-open/)
+  assert.match(page, /centerKinds: \['collection-view', 'record'\]/)
+})

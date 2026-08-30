@@ -548,7 +548,7 @@ function Shell(props: SlotProps) {
     () => inspectorExtras.filter((entry) => inspectorPanelMatches(entry.props?.() ?? {}, centerKind, sessionId)).length,
     [centerKind, inspectorExtras, sessionId],
   )
-  const inspectorVisible = inspectorOpen && inspectorTabCount > 0
+  const inspectorVisible = inspectorOpen
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   const agentHref = sessionId ? `/s/${sessionId}` : '/'

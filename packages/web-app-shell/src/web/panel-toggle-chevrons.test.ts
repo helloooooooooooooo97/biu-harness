@@ -11,6 +11,11 @@ describe('panel collapse chevrons follow panel state', () => {
     )
   })
 
+  it('opens the inspector rail even when no tab is selected yet', () => {
+    expect(shell).toMatch(/const inspectorVisible = inspectorOpen/)
+    expect(shell).not.toMatch(/inspectorVisible = inspectorOpen && inspectorTabCount/)
+  })
+
   it('declares inspector persist helpers once (no duplicate onOpen)', () => {
     const persistBlock = shell.match(
       /const persist = \(next: boolean\) => \{[\s\S]*?window\.addEventListener\('biu:inspector-toggle', onToggle\)/,

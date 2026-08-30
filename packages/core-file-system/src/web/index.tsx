@@ -137,7 +137,8 @@ function CollectionPage(props: SlotProps) {
   }, [collectionFromRoute, tables])
 
   useEffect(() => {
-    if (parsed.kind !== 'record' || !slots || !ui) return
+    if (!slots || !ui || !currentPath) return
+    if (parsed.kind !== 'collection-view' && parsed.kind !== 'record') return
     const panes = chrome.panes ?? []
     const placed = panes.map((pane) =>
       slots.place('inspector-panels', RecordPanePanel, {
@@ -147,17 +148,16 @@ function CollectionPage(props: SlotProps) {
           tabId: pane.id,
           tabLabel: pane.label,
           tabIcon: CircleStackIcon,
-          centerKinds: ['record'],
+          centerKinds: ['collection-view', 'record'],
           paneId: pane.id,
           databaseUi: ui,
         }),
       }),
     )
-    if (panes.length) window.dispatchEvent(new Event('biu:inspector-open'))
     return () => {
       for (const item of placed) void item.dispose?.()
     }
-  }, [chrome, parsed.kind, slots, ui])
+  }, [chrome, currentPath, parsed.kind, slots, ui])
 
   if (!currentPath) return null
   const title = row?.view?.title ?? row?.label ?? currentPath.replace(/^\//, '')

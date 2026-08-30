@@ -23,3 +23,9 @@ export function inspectorPanelMatches(
   if (extra.requiresSession && !sessionId) return false
   return true
 }
+
+/** 不自动打开任何分区：只有用户点过、且该项仍可用时才保持。 */
+export function resolveInspectorTab(current: string, allowed: string[]) {
+  if (current && allowed.includes(current)) return current
+  return ''
+}

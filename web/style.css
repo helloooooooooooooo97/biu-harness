@@ -324,6 +324,52 @@ body {
   display: none;
 }
 
+.inspector-catalog {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+}
+
+.inspector-catalog-lead {
+  margin: 0 0 4px;
+  color: var(--dsw-label-3);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.inspector-catalog-item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 8px 10px;
+  color: var(--dsw-sidebar-fg);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inspector-catalog-item:hover {
+  background: var(--dsw-hover);
+  color: var(--dsw-sidebar-fg-active);
+}
+
+.inspector-catalog-empty {
+  margin: 8px 0 0;
+  color: var(--dsw-label-3);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .chat-view-header-left,
 .chat-view-header-right {
   display: flex;
