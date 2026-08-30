@@ -37,6 +37,15 @@ import { UserBubbleEditor } from './user-bubble-editor.tsx'
 import { ToolCard } from './tool-card.tsx'
 import { LiveDispatchTable } from './live-dispatch-table.tsx'
 import { UsageInline } from './usage-inline.tsx'
+import {
+  bumpRevealStart,
+  firstPaintStartIndex,
+  groupNodesIntoTurns,
+  shouldRevealFast,
+  sliceTurnsFrom,
+} from './thread-reveal.ts'
+
+export { groupNodesIntoTurns } from './thread-reveal.ts'
 
 const NEAR_BOTTOM_PX = 96
 /** 提早预取更早消息，避免滑到顶才开始请求 */
@@ -522,26 +531,6 @@ function findReplyForUser(nodes: ChatNode[], userIndex: number): Extract<ChatNod
   return undefined
 }
 
-/** 每个 user 与其后的回复合成一回合，作为 sticky 的包含块，避免多条用户消息叠在顶部。 */
-export function groupNodesIntoTurns(nodes: ChatNode[]): ChatNode[][] {
-  const turns: ChatNode[][] = []
-  let current: ChatNode[] = []
-  for (const node of nodes) {
-    if (node.kind === 'user') {
-      if (current.length) turns.push(current)
-      current = [node]
-      continue
-    }
-    if (!current.length) {
-      turns.push([node])
-      continue
-    }
-    current.push(node)
-  }
-  if (current.length) turns.push(current)
-  return turns
-}
-
 const noopToggleDetails = (_replyId: string) => undefined
 
 function NodeView({
@@ -640,9 +629,8 @@ function NodeView({
 const NodeViewMemo = memo(NodeView)
 
 /**
- * 消息列表：会话内全部挂在 DOM 上（不虚表卸行）。
- * 屏外绘制交给 CSS content-visibility；来回滑不会整行 remount。
- * 导出供回归测试断言「跳回不重新挂载」。
+ * 消息列表：已交给本组件的节点常驻 DOM（不虚表卸行）。
+ * 更早回合由 ChatThread 分帧从上往下补挂；屏外绘制交给 content-visibility。
  */
 export const ChatNodeList = memo(function ChatNodeList({
   nodes,
@@ -772,10 +760,28 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const sessionView = props.sessionView as SessionViewService
   const navigate = useNavigate()
   const nodes = useSessionView((state) => state.nodes)
+  const sessionId = useSessionView((state) => state.sessionId)
+  const turns = useMemo(() => groupNodesIntoTurns(nodes), [nodes])
+  const totalTurns = turns.length
+  const [revealStart, setRevealStart] = useState(() => firstPaintStartIndex(totalTurns))
+  const sessionKeyRef = useRef(sessionId)
+  const prevTotalRef = useRef(totalTurns)
+  if (sessionId !== sessionKeyRef.current) {
+    sessionKeyRef.current = sessionId
+    prevTotalRef.current = totalTurns
+    const next = firstPaintStartIndex(totalTurns)
+    if (next !== revealStart) setRevealStart(next)
+  } else if (prevTotalRef.current === 0 && totalTurns > 0) {
+    prevTotalRef.current = totalTurns
+    const next = firstPaintStartIndex(totalTurns)
+    if (next !== revealStart) setRevealStart(next)
+  } else {
+    prevTotalRef.current = totalTurns
+  }
+  const mountedNodes = useMemo(() => sliceTurnsFrom(nodes, revealStart), [nodes, revealStart])
   const pending = useSessionView((state) => state.pending)
   const agentStatus = useSessionView((state) => state.agentStatus)
   const agentStep = useSessionView((state) => state.agentStep)
-  const sessionId = useSessionView((state) => state.sessionId)
   const sessions = useSessionView((state) => state.sessions)
   const error = useSessionView((state) => state.error)
   const switchingSession = useSessionView((state) => state.switchingSession)
@@ -852,17 +858,47 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     }
   }, [sessionId, scrollEpoch, hasMoreOlder, loadingOlder, sessionView])
 
-  const lastNode = nodes.at(-1)
+  useEffect(() => {
+    if (revealStart <= 0) return
+    const parent = scrollRef.current
+    const fast = parent
+      ? shouldRevealFast({
+          scrollTop: parent.scrollTop,
+          scrollHeight: parent.scrollHeight,
+          clientHeight: parent.clientHeight,
+        })
+      : true
+    const bump = () => setRevealStart((start) => bumpRevealStart(start))
+    if (fast) {
+      const id = requestAnimationFrame(bump)
+      return () => cancelAnimationFrame(id)
+    }
+    if (typeof requestIdleCallback === 'function') {
+      const id = requestIdleCallback(bump, { timeout: 90 })
+      return () => cancelIdleCallback(id)
+    }
+    const t = window.setTimeout(bump, 40)
+    return () => clearTimeout(t)
+  }, [revealStart, totalTurns, sessionId, scrollEpoch])
+
+  const lastNode = mountedNodes.at(-1)
   const stickKey =
     lastNode?.kind === 'reply' && lastNode.streaming
       ? `${lastNode.id}:${Math.floor(lastNode.copyText.length / 96)}:1`
-      : `${nodes.length}:${pending ? 1 : 0}:${error ?? ''}`
+      : `${mountedNodes.length}:${pending ? 1 : 0}:${error ?? ''}`
 
+  const prependHeightRef = useRef(0)
   useLayoutEffect(() => {
-    if (!stickToBottomRef.current || nodes.length === 0) return
     const parent = scrollRef.current
-    if (parent) parent.scrollTop = parent.scrollHeight
-  }, [stickKey, nodes.length])
+    if (!parent) return
+    if (stickToBottomRef.current) {
+      if (mountedNodes.length > 0) parent.scrollTop = parent.scrollHeight
+    } else if (prependHeightRef.current) {
+      const delta = parent.scrollHeight - prependHeightRef.current
+      if (delta) parent.scrollTop += delta
+    }
+    prependHeightRef.current = parent.scrollHeight
+  }, [stickKey, mountedNodes.length, revealStart])
 
   if (nodes.length === 0 && !pending && !error && !switchingSession) {
     const session = sessions.find((item) => item.id === sessionId)
@@ -883,6 +919,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       ref={rootRef}
       className="w-full"
       data-chat-virtual="0"
+      data-chat-reveal-start={revealStart}
       data-switching={switchingSession ? '1' : undefined}
       style={switchingSession ? { opacity: 0.72, transition: 'opacity 120ms ease' } : undefined}
     >
@@ -891,7 +928,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
         <div className="mb-3 text-center text-(length:--dsw-chat-ui-font-size) text-(--dsw-label-3)">加载更早消息…</div>
       ) : null}
       <ChatNodeList
-        nodes={nodes}
+        nodes={mountedNodes}
         onInspect={onInspect}
         onFork={onFork}
         sessions={sessions}
