@@ -39,7 +39,6 @@ import {
   TableCellsIcon,
   TrashIcon,
   ViewColumnsIcon,
-  XMarkIcon,
 } from '@heroicons/react/16/solid'
 import type { CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
 import { asAttachment, asHttpHref, asImageSrc } from '@biu/type-file-system'
@@ -65,6 +64,7 @@ import {
 } from './fields'
 import { AppDialog, CellSelect, CheckRow, LocalText, TokenMultiSelect } from './controls.tsx'
 import { DataSidebar } from './data-sidebar.tsx'
+import { buildCrumbs, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
 import { pickDomAttrs, recordPickKind } from './pick-dom.ts'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
 import {
@@ -152,6 +152,14 @@ function viewForPath(collectionPath: string, routeViewId?: string): SavedView | 
 
 function isListColumn(key: string) {
   return key !== 'description' && key !== 'notes' && key !== 'content' && key !== 'emoji'
+}
+
+function CrumbGlyph({ kind }: { kind: Crumb['kind'] }) {
+  const cls = 'chat-view-project-icon'
+  if (kind === 'record') return <DocumentTextIcon aria-hidden className={cls} />
+  if (kind === 'view') return <Squares2X2Icon aria-hidden className={cls} />
+  if (kind === 'collection') return <TableCellsIcon aria-hidden className={cls} />
+  return <CircleStackIcon aria-hidden className={cls} />
 }
 
 function toDatetimeLocal(value: unknown) {
@@ -452,6 +460,7 @@ export function CollectionBrowser({
   onOpenView,
   onOpenRecord,
   onCloseRecord,
+  onCrumbTarget,
 }: {
   moduleId?: string
   collectionPath: string
@@ -468,6 +477,7 @@ export function CollectionBrowser({
   onOpenView?: (viewId: string) => void
   onOpenRecord?: (recordId: string, viewId?: string | null, collection?: string) => void
   onCloseRecord?: () => void
+  onCrumbTarget?: (target: CrumbTarget) => void
 }) {
   const [stat, setStat] = useState<StatResult | null>(null)
   const [items, setItems] = useState<Array<DbRecord & { path?: string }>>([])
@@ -536,6 +546,8 @@ export function CollectionBrowser({
     | null
   >(null)
   const [dlgError, setDlgError] = useState('')
+  const [crumbOpen, setCrumbOpen] = useState<string | null>(null)
+  const crumbRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<HTMLDivElement>(null)
   const modeRef = useRef<HTMLDivElement>(null)
   const sortRef = useRef<HTMLDivElement>(null)
@@ -589,6 +601,7 @@ export function CollectionBrowser({
       const target = event.target as Node
       if (!searchRef.current?.contains(target) && !query) setSearchOpen(false)
       if (
+        crumbRef.current?.contains(target) ||
         viewRef.current?.contains(target) ||
         modeRef.current?.contains(target) ||
         sortRef.current?.contains(target) ||
@@ -599,6 +612,7 @@ export function CollectionBrowser({
       ) {
         return
       }
+      setCrumbOpen(null)
       setViewMenuOpen(false)
       setModeMenuOpen(false)
       setSortMenuOpen(false)
@@ -1156,6 +1170,21 @@ export function CollectionBrowser({
   }
 
   const labelOf = (row: DbRecord) => String(row[schema?.labelField ?? 'id'] ?? row.id)
+  const crumbs = useMemo(
+    () =>
+      buildCrumbs({
+        collection: collectionPath,
+        collectionLabel: title,
+        tables: tables.map((table) => ({ path: table.path, label: table.view?.title ?? table.label })),
+        viewId: selected ? undefined : routeViewId,
+        viewName: selected ? undefined : activeView?.name,
+        views: views.map((view) => ({ id: view.id, name: view.name })),
+        recordId: selected?.id,
+        recordLabel: selected ? labelOf(selected) : undefined,
+        records: items.map((row) => ({ id: row.id, label: labelOf(row) })),
+      }),
+    [activeView?.name, collectionPath, items, routeViewId, selected, tables, title, views],
+  )
   const currentTable = tables.find((item) => item.path === collectionPath)
   const recordKind = recordPickKind(currentTable?.view?.moduleId)
   const recordPick = (row: DbRecord) => pickDomAttrs(recordKind, row.id, labelOf(row))
@@ -1493,15 +1522,56 @@ export function CollectionBrowser({
       <div className="fsdb-right">
         <header className="chat-view-header" data-biu-ignore>
           <div className="chat-view-header-left">
-            <div
-              className="chat-view-project"
-              title={selected ? labelOf(selected) : (blurb || title)}
-            >
-              <CircleStackIcon aria-hidden className="chat-view-project-icon" />
-              <span className="chat-view-project-name">
-                {selected ? labelOf(selected) : (activeView?.name ?? title)}
-              </span>
-            </div>
+            <nav className="fsdb-crumbs" aria-label="位置" ref={crumbRef}>
+              {crumbs.map((crumb, index) => (
+                <span key={crumb.id} className="fsdb-crumb">
+                  {index ? <span className="fsdb-crumb-sep" aria-hidden>/</span> : null}
+                  <button
+                    type="button"
+                    className="fsdb-crumb-btn"
+                    title={crumb.label}
+                    onClick={() => {
+                      onCrumbTarget?.(crumb.target)
+                      setCrumbOpen(null)
+                    }}
+                  >
+                    <CrumbGlyph kind={crumb.kind} />
+                    <span className="chat-view-project-name">{crumb.label}</span>
+                  </button>
+                  {crumb.choices.length > 1 ? (
+                    <span className="fsdb-crumb-pick">
+                      <button
+                        type="button"
+                        className="chat-view-header-expand"
+                        aria-label={`切换${crumb.label}`}
+                        aria-expanded={crumbOpen === crumb.id}
+                        onClick={() => setCrumbOpen((prev) => (prev === crumb.id ? null : crumb.id))}
+                      >
+                        <ChevronDownIcon aria-hidden className="size-4" />
+                      </button>
+                      {crumbOpen === crumb.id ? (
+                        <div className="fsdb-crumb-menu" role="menu">
+                          {crumb.choices.map((choice) => (
+                            <button
+                              key={choice.id}
+                              type="button"
+                              className={`fsdb-crumb-option${choice.id === crumb.id ? ' is-active' : ''}`}
+                              role="menuitem"
+                              onClick={() => {
+                                onCrumbTarget?.(choice.target)
+                                setCrumbOpen(null)
+                              }}
+                            >
+                              {choice.label}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </span>
+                  ) : null}
+                </span>
+              ))}
+            </nav>
           </div>
           <div className="chat-view-header-right">
             {selected ? <RecordActions row={selected} place="detail" /> : null}
@@ -1532,17 +1602,6 @@ export function CollectionBrowser({
                 <ChevronDoubleLeftIcon aria-hidden className="size-4" />
               )}
             </button>
-            {selected ? (
-              <button
-                type="button"
-                className="chat-view-header-expand"
-                title="返回视图 (Esc)"
-                aria-label="返回视图"
-                onClick={() => setDetailId(null)}
-              >
-                <XMarkIcon aria-hidden className="size-4" />
-              </button>
-            ) : null}
           </div>
         </header>
         <div className="fsdb-right-body">
@@ -2202,6 +2261,15 @@ if (typeof document !== 'undefined') {
 .fsdb-page{display:flex;min-width:0;min-height:0;flex:1;flex-direction:row;overflow:hidden;background:var(--dsw-bg);color:var(--dsw-label);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,sans-serif,"Apple Color Emoji","Segoe UI Emoji";font-size:14px;letter-spacing:-.011em}
 .fsdb-right{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
 .fsdb-right .chat-view-header{flex:none}
+.fsdb-crumbs{display:flex;min-width:0;align-items:center;gap:2px}
+.fsdb-crumb{display:inline-flex;min-width:0;align-items:center;gap:2px}
+.fsdb-crumb-sep{flex:none;padding:0 4px;color:var(--dsw-label-3);font-size:13px}
+.fsdb-crumb-btn{display:inline-flex;min-width:0;max-width:180px;align-items:center;gap:6px;border:0;border-radius:6px;background:transparent;padding:4px 6px;color:var(--dsw-sidebar-fg);cursor:pointer}
+.fsdb-crumb-btn:hover{background:var(--dsw-hover);color:var(--dsw-sidebar-fg-active)}
+.fsdb-crumb-pick{position:relative;flex:none}
+.fsdb-crumb-menu{position:absolute;left:0;top:calc(100% + 4px);z-index:20;min-width:160px;max-height:240px;overflow:auto;border:1px solid var(--dsw-border);border-radius:8px;background:var(--dsw-surface);padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.16)}
+.fsdb-crumb-option{display:block;width:100%;border:0;border-radius:6px;background:transparent;padding:6px 8px;color:var(--dsw-label);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.fsdb-crumb-option:hover,.fsdb-crumb-option.is-active{background:var(--dsw-hover)}
 .fsdb-inspector-panel{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden;background:var(--dsw-bg)}
 .fsdb-inspector-host{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
 .fsdb-inspector-host:empty{display:none}

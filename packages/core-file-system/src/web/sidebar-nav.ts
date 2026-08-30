@@ -41,9 +41,98 @@ export function toggleExpandedViewKey(current: string | null, key: string) {
   return current === key ? null : key
 }
 
+export const DATABASE_ROOT_PATH = '/database'
+
+export type CrumbKind = 'root' | 'collection' | 'view' | 'record'
+
+export type CrumbTarget =
+  | { kind: 'root' }
+  | { kind: 'collection'; collection: string }
+  | { kind: 'view'; collection: string; viewId: string }
+  | { kind: 'record'; collection: string; recordId: string }
+
+export type CrumbChoice = { id: string; label: string; target: CrumbTarget }
+
+export type Crumb = {
+  kind: CrumbKind
+  id: string
+  label: string
+  target: CrumbTarget
+  choices: CrumbChoice[]
+}
+
 export function pathForCenter(center: Pick<DataCenter, 'collection' | 'viewId' | 'recordId'>) {
   if (center.recordId) return databaseRecordPath(center.collection, center.recordId)
   return databaseViewPath(center.collection, center.viewId)
+}
+
+export function pathForCrumbTarget(target: CrumbTarget) {
+  if (target.kind === 'root') return DATABASE_ROOT_PATH
+  if (target.kind === 'collection') return pathForCenter({ collection: target.collection })
+  if (target.kind === 'view') return pathForCenter({ collection: target.collection, viewId: target.viewId })
+  return pathForCenter({ collection: target.collection, recordId: target.recordId })
+}
+
+export function buildCrumbs(input: {
+  collection: string
+  collectionLabel: string
+  tables: Array<{ path: string; label: string }>
+  viewId?: string
+  viewName?: string
+  views?: Array<{ id: string; name: string }>
+  recordId?: string
+  recordLabel?: string
+  records?: Array<{ id: string; label: string }>
+}): Crumb[] {
+  const crumbs: Crumb[] = [
+    {
+      kind: 'root',
+      id: 'database',
+      label: '数据',
+      target: { kind: 'root' },
+      choices: [{ id: 'database', label: '数据', target: { kind: 'root' } }],
+    },
+  ]
+  if (!input.collection) return crumbs
+  crumbs.push({
+    kind: 'collection',
+    id: input.collection,
+    label: input.collectionLabel,
+    target: { kind: 'collection', collection: input.collection },
+    choices: input.tables.map((table) => ({
+      id: table.path,
+      label: table.label,
+      target: { kind: 'collection', collection: table.path },
+    })),
+  })
+  if (input.recordId) {
+    crumbs.push({
+      kind: 'record',
+      id: input.recordId,
+      label: input.recordLabel || input.recordId,
+      target: { kind: 'record', collection: input.collection, recordId: input.recordId },
+      choices: (input.records ?? [{ id: input.recordId, label: input.recordLabel || input.recordId }]).map((row) => ({
+        id: row.id,
+        label: row.label,
+        target: { kind: 'record', collection: input.collection, recordId: row.id },
+      })),
+    })
+    return crumbs
+  }
+  if (input.viewId) {
+    crumbs.push({
+      kind: 'view',
+      id: input.viewId,
+      label: input.viewName || input.viewId,
+      target: { kind: 'view', collection: input.collection, viewId: input.viewId },
+      choices: (input.views ?? [{ id: input.viewId, name: input.viewName || input.viewId }]).map((view) => ({
+        id: view.id,
+        label: view.name,
+        target: { kind: 'view', collection: input.collection, viewId: view.id },
+      })),
+    })
+  }
+  return crumbs
 }
 
 export function parseCenterPath(pathname: string): DataCenter | null {

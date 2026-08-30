@@ -4,8 +4,10 @@ import { parseAppPath } from '@biu/web-session-view'
 import {
   applySidebarAction,
   assertSidebarInvariants,
+  buildCrumbs,
   parseCenterPath,
   pathForCenter,
+  pathForCrumbTarget,
   previewKey,
   starPreviewKey,
   toggleExpandedViewKey,
@@ -127,6 +129,49 @@ test('从记录返回回到上次视图，展开状态仍在', () => {
   assert.equal(closed.viewId, '1787983501816')
   assert.equal(closed.expandedViewKey, previewKey('/tasks', '1787983501816'))
   assert.equal(pathForCenter(closed), '/database/tasks/view/1787983501816')
+})
+
+test('面包屑点上级会清掉后面几级', () => {
+  const crumbs = buildCrumbs({
+    collection: '/tasks',
+    collectionLabel: 'Task',
+    tables: [
+      { path: '/tasks', label: 'Task' },
+      { path: '/pages', label: 'Page' },
+    ],
+    viewId: '1787983501816',
+    viewName: '默认视图',
+    views: [
+      { id: '1787983501816', name: '默认视图' },
+      { id: 'board', name: '看板' },
+    ],
+  })
+  assert.deepEqual(
+    crumbs.map((item) => item.kind),
+    ['root', 'collection', 'view'],
+  )
+  assert.equal(pathForCrumbTarget(crumbs[0]!.target), '/database')
+  assert.equal(pathForCrumbTarget(crumbs[1]!.target), '/database/tasks')
+  assert.equal(pathForCrumbTarget(crumbs[2]!.target), '/database/tasks/view/1787983501816')
+  const pages = crumbs[1]!.choices.find((item) => item.id === '/pages')
+  assert.equal(pathForCrumbTarget(pages!.target), '/database/pages')
+})
+
+test('记录页面包屑第三级是记录，点表只回到表', () => {
+  const crumbs = buildCrumbs({
+    collection: '/tasks',
+    collectionLabel: 'Task',
+    tables: [{ path: '/tasks', label: 'Task' }],
+    recordId: 'task_mtdbgnqj_5022je',
+    recordLabel: '写文档',
+    records: [{ id: 'task_mtdbgnqj_5022je', label: '写文档' }],
+  })
+  assert.deepEqual(
+    crumbs.map((item) => item.kind),
+    ['root', 'collection', 'record'],
+  )
+  assert.equal(pathForCrumbTarget(crumbs[1]!.target), '/database/tasks')
+  assert.ok(!pathForCrumbTarget(crumbs[1]!.target).includes('/record/'))
 })
 
 test('压测：随机切换表/视图/记录/展开，路由与展开不串台', () => {

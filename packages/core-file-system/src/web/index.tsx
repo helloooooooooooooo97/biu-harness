@@ -6,7 +6,7 @@ import type { SlotProps } from '@biu/type-slots'
 import { DATABASE_CHANNEL, type CollectionInfo, type CollectionView } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import { isLegacyDatabasePath, parseAppPath } from '@biu/web-session-view'
-import { pathForCenter } from './sidebar-nav.ts'
+import { pathForCenter, pathForCrumbTarget, type CrumbTarget } from './sidebar-nav.ts'
 import { CollectionBrowser } from './browser.tsx'
 import { DatabaseUiService } from './database-ui.ts'
 import {
@@ -125,7 +125,7 @@ function CollectionPage(props: SlotProps) {
     if (!tables.length) return
     if (parsed.kind === 'module' && parsed.moduleId === DATA_MODULE_ID) {
       const first = tables[0]!
-      go({ collection: first.path, viewId: defaultViewId(first.path) }, { replace: true })
+      go({ collection: first.path }, { replace: true })
     }
   }, [parsed.kind, parsed.moduleId, tables])
 
@@ -183,6 +183,7 @@ function CollectionPage(props: SlotProps) {
       onCloseRecord={() =>
         go({ collection: currentPath, viewId: defaultViewId(currentPath) }, { replace: true })
       }
+      onCrumbTarget={(target: CrumbTarget) => navigate(pathForCrumbTarget(target))}
     />
   )
 }
