@@ -360,8 +360,13 @@ body {
   cursor: pointer;
 }
 
-.brand-corner-mascot-btn.is-active {
-  background: var(--dsw-hover);
+.brand-corner-mascot-btn.is-active,
+.brand-corner-mascot-btn:hover,
+.brand-corner-mascot-btn:focus,
+.brand-corner-mascot-btn:focus-visible {
+  background: transparent;
+  box-shadow: none;
+  outline: none;
 }
 
 .brand-corner-leading .project-chip,
