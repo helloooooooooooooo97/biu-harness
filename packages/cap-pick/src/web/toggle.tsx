@@ -2,9 +2,10 @@ import { CursorArrowRaysIcon } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/type-slots'
 import { getPick, usePickState } from './service.ts'
 
-export function PickToggle(_props: SlotProps) {
+export function PickToggle(props: SlotProps) {
   const pick = getPick()
   const { picking } = usePickState(pick)
+  const placement = String(props.placement ?? 'header')
   return (
     <button
       type="button"
@@ -12,7 +13,7 @@ export function PickToggle(_props: SlotProps) {
       aria-label="选取对象"
       data-dock-tip="选取对象"
       aria-pressed={picking}
-      data-testid="corner-pick-toggle"
+      data-testid={placement === 'corner' ? 'corner-pick-toggle' : 'header-pick-toggle'}
       data-biu-ignore
       onClick={() => pick?.toggle()}
     >

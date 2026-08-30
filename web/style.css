@@ -319,8 +319,7 @@ body {
 }
 
 .brand-corner-mascot-btn.is-active,
-.brand-corner-dock-btn.is-active,
-.brand-corner-leading .project-chip-icon-only.is-active {
+.brand-corner-dock-btn.is-active {
   background: var(--dsw-hover);
 }
 
@@ -358,15 +357,12 @@ body {
 
 .brand-corner-leading .project-chip,
 .brand-corner-leading .project-chip-icon-only {
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--dsw-border);
+  border-radius: 999px;
+  background: #262626;
   color: var(--dsw-sidebar-fg);
-  cursor: pointer;
 }
 
 .brand-agent-menu {
