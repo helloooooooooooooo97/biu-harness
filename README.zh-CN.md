@@ -1,14 +1,14 @@
 <div align="center">
 
 <p>
-  <img src="public/brand-lockup.svg" width="268" height="54" alt="biu harness" />
+  <img src="public/brand-lockup.svg" width="300" height="54" alt="Biu Agent OS" />
 </p>
 
-# biu-harness
+# Biu Agent OS
 
 [English](README.md) · **简体中文**
 
-可插拔、自托管的 Agent Harness。
+可插拔、自托管的 Agent OS。
 
 </div>
 
@@ -19,7 +19,7 @@
   <img alt="node" src="https://img.shields.io/node/v/cordis" />
 </p>
 
-**biu-harness** 是一套把 Agent 当进程、把任务看板当协作总线的本地工作台。每个 Agent 是独立 session（各自拥有工作区、模型、工具集），由看板协调多 Agent 协作。内核基于 Cordis：HTTP、会话、LLM、对话、看板……一律是插件，由一份清单 [`cordis.plugins.json`](cordis.plugins.json) 承载。
+**Biu Agent OS** 是一套把 Agent 当进程、把任务看板当协作总线的本地工作台。每个 Agent 是独立 session（各自拥有工作区、模型、工具集），由看板协调多 Agent 协作。内核基于 Cordis：HTTP、会话、LLM、对话、看板……一律是插件，由一份清单 [`cordis.plugins.json`](cordis.plugins.json) 承载。
 
 ---
 
@@ -221,7 +221,7 @@ biu-harness
 │   └── link-cordis-plugins.mjs
 ├── public/
 │   ├── favicon.svg            # 品牌小人（侧栏同款渐变）
-│   ├── brand-lockup.svg       # README：小人 + biu harness tag
+│   ├── brand-lockup.svg       # README：小人 + Biu Agent OS tag
 │   ├── mascot-blue.svg        # README 吉祥物（BMW M 三色）
 │   ├── mascot-violet.svg
 │   ├── mascot-red.svg
@@ -330,7 +330,7 @@ export CHAT_MODEL=deepseek-chat # 可选
 
 ## 许可
 
-仓库里 **biu-harness 自己写的代码和文档** 使用 [MIT License](LICENSE)：可以学习、修改、分发，**也可以商用**，保留版权声明和许可文本即可。
+仓库里 **Biu Agent OS 自己写的代码和文档** 使用 [MIT License](LICENSE)：可以学习、修改、分发，**也可以商用**，保留版权声明和许可文本即可。
 
 **例外：Grok Bot 机器人。** `public/grok-bot/` 里的几何、动画和角色外形 **不是 MIT**。它们改编自对 Grok Bot.app 的学习向抽取，权利属于 xAI 等权利人。可用于克隆与演示；二次分发、打包上线或当产品吉祥物前，**有商标 / 版权侵权风险**，请自行评估，或替换为自有角色。本项目不授予这部分的任何权利。说明见 [NOTICE.md](NOTICE.md)。
 

@@ -434,7 +434,7 @@ export const DataSidebar = memo(function DataSidebar({
             className="inline-flex min-w-0 max-w-full items-center truncate rounded-md px-2 py-0.5 text-[14px] font-semibold tracking-wide text-white"
             style={{ background: SIDEBAR_BRAND_GRADIENT }}
           >
-            biu harness
+            Biu Agent OS
           </span>
         </span>
       </div>

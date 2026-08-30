@@ -1,14 +1,14 @@
 <div align="center">
 
 <p>
-  <img src="public/brand-lockup.svg" width="268" height="54" alt="biu harness" />
+  <img src="public/brand-lockup.svg" width="300" height="54" alt="Biu Agent OS" />
 </p>
 
-# biu-harness
+# Biu Agent OS
 
 **English** · [简体中文](README.zh-CN.md)
 
-A pluggable, self-hosted agent harness.  
+A pluggable, self-hosted agent OS.  
 
 </div>
 
@@ -19,13 +19,13 @@ A pluggable, self-hosted agent harness.
   <img alt="node" src="https://img.shields.io/node/v/cordis" />
 </p>
 
-**biu-harness** is a local workbench that treats agents as processes and the task board as the bus between them. Agents run as independent sessions — each with its own workspace, model, and tool set — while a board coordinates multi-agent work. The kernel is Cordis: HTTP, sessions, LLM, chat, and the board are all plugins loaded from a single manifest, [`cordis.plugins.json`](cordis.plugins.json).
+**Biu Agent OS** is a local workbench that treats agents as processes and the task board as the bus between them. Agents run as independent sessions — each with its own workspace, model, and tool set — while a board coordinates multi-agent work. The kernel is Cordis: HTTP, sessions, LLM, chat, and the board are all plugins loaded from a single manifest, [`cordis.plugins.json`](cordis.plugins.json).
 
 ---
 
 ## Table of Contents
 
-- [biu-harness](#biu-harness)
+- [Biu Agent OS](#biu-agent-os)
   - [Table of Contents](#table-of-contents)
   - [Design Principles](#design-principles)
     - [1. Everything is a plugin](#1-everything-is-a-plugin)
@@ -229,7 +229,7 @@ biu-harness
 │   └── link-cordis-plugins.mjs
 ├── public/
 │   ├── favicon.svg            # Brand mascot (sidebar gradient)
-│   ├── brand-lockup.svg       # README: mascot + biu harness tag
+│   ├── brand-lockup.svg       # README: mascot + Biu Agent OS tag
 │   ├── mascot-blue.svg        # README mascots (BMW M tricolor)
 │   ├── mascot-violet.svg
 │   ├── mascot-red.svg
@@ -338,7 +338,7 @@ Alternatively: `npm run dev:host` and `npm run dev:web`.
 
 ## License
 
-Code and docs written by biu-harness are under the [MIT License](LICENSE): learn, modify, distribute, and use commercially, provided the copyright notice and license text are retained.
+Code and docs written by Biu Agent OS are under the [MIT License](LICENSE): learn, modify, distribute, and use commercially, provided the copyright notice and license text are retained.
 
 **Exception: the Grok Bot.** `public/grok-bot/` — its geometry, animation, and character design — is **not MIT**. It is adapted from a learning extraction of Grok Bot.app and rights belong to xAI and other holders. It may be used for cloning and demos; before redistributing, shipping, or adopting it as a product mascot, assess the trademark/copyright risk yourself or replace it with your own character. This project grants no rights to this part. See [NOTICE.md](NOTICE.md).
 
