@@ -490,10 +490,11 @@ body {
   width: 16px;
   height: 16px;
   margin: 0;
+  padding: 0;
   border: 0;
-  border-radius: 4px;
-  background: var(--dsw-surface);
-  box-shadow: 0 0 0 1px var(--dsw-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   color: var(--dsw-sidebar-fg);
   opacity: 0;
   pointer-events: none;
@@ -510,12 +511,9 @@ body {
 
 .inspector-crumb-toggle:hover,
 .inspector-crumb-toggle.is-open {
-  background: var(--dsw-hover);
+  background: transparent;
+  box-shadow: none;
   color: var(--dsw-sidebar-fg-active);
-}
-
-.inspector-crumb-toggle.is-open {
-  transform: translateY(-50%) rotate(180deg);
 }
 
 .inspector-crumb-leaf,

@@ -28,7 +28,12 @@ describe('顶栏三级标题', () => {
 
   it('右侧检查器用一个展开按钮控制整条面包屑，悬停不自动变成多项', () => {
     expect(inspector).toContain('data-testid="inspector-crumb-toggle"')
+    expect(inspector).toContain('ChevronRightIcon')
+    expect(inspector).not.toContain('ChevronDownIcon')
     expect(inspector).toContain('allowMenu={trailOpen}')
+    expect(css).toMatch(/\.inspector-crumb-toggle\s*\{[^}]*background:\s*transparent/s)
+    expect(css).toMatch(/\.inspector-crumb-toggle\s*\{[^}]*box-shadow:\s*none/s)
+    expect(css).not.toContain('inspector-crumb-toggle.is-open {\n  transform: translateY(-50%) rotate(180deg);')
     expect(inspector).not.toContain('onMouseEnter')
     expect(css).toContain('.inspector-crumb-tab.is-crumb-open .inspector-crumb-full .fsdb-crumb:not(:last-child)')
     expect(css).not.toContain('.inspector-crumb-tab:hover .inspector-crumb-full .fsdb-crumb:not(:last-child)')
