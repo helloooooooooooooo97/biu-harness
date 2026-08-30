@@ -10,7 +10,8 @@ describe('顶栏三级标题', () => {
   it('中间顶栏点标题出菜单', () => {
     expect(trail).toContain("aria-haspopup={canPick ? 'menu' : undefined}")
     expect(trail).toContain('allowMenu')
-    expect(trail).toContain("crumb.kind === 'collection' ? crumb.choices.length > 0")
+    expect(trail).toContain('icon={crumb.icon ?? current?.icon}')
+    expect(trail).toContain('tableCrumb?.icon')
     expect(browser).toContain("target.kind === 'view' && target.collection === collectionPath")
     expect(browser).toContain('<CrumbTrail')
     const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')

@@ -29,7 +29,7 @@ export function CrumbTrail({
   const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null)
   const openCrumb = crumbs.find((item) => item.id === openId)
   const tableCrumb = crumbs.find((item) => item.kind === 'collection')
-  const tableIcon = tableCrumb?.choices.find((item) => item.id === tableCrumb.id)?.icon
+  const tableIcon = tableCrumb?.icon
 
   useLayoutEffect(() => {
     if (!openId) {
@@ -80,7 +80,7 @@ export function CrumbTrail({
                 }}
               >
                 {!allowMenu && crumb.kind === 'view' ? <TableGlyph icon={tableIcon} /> : null}
-                <CrumbItemGlyph kind={crumb.kind} icon={current?.icon} mode={current?.mode} emoji={current?.emoji} />
+                <CrumbItemGlyph kind={crumb.kind} icon={crumb.icon ?? current?.icon} mode={current?.mode} emoji={current?.emoji} />
                 <span className="chat-view-project-name">{crumb.label}</span>
               </button>
             </span>

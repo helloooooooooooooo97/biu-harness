@@ -67,6 +67,7 @@ export type Crumb = {
   label: string
   target: CrumbTarget
   choices: CrumbChoice[]
+  icon?: string
 }
 
 export function pathForCenter(center: Pick<DataCenter, 'collection' | 'viewId' | 'recordId'>) {
@@ -94,10 +95,12 @@ export function buildCrumbs(input: {
 }): Crumb[] {
   const crumbs: Crumb[] = []
   if (!input.collection) return crumbs
+  const table = input.tables.find((item) => item.path === input.collection)
   crumbs.push({
     kind: 'collection',
     id: input.collection,
     label: input.collectionLabel,
+    icon: table?.icon,
     target: { kind: 'collection', collection: input.collection },
     choices: (input.views ?? []).map((view) => ({
       id: view.id,

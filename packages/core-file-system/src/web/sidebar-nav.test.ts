@@ -154,6 +154,7 @@ test('面包屑点上级会清掉后面几级', () => {
     ['collection', 'view'],
   )
   assert.equal(crumbs[0]!.label, 'Task')
+  assert.equal(crumbs[0]!.icon, 'bolt')
   assert.equal(pathForCrumbTarget(crumbs[0]!.target), '/database/tasks')
   assert.equal(pathForCrumbTarget(crumbs[1]!.target), '/database/tasks/view/1787983501816')
   assert.equal(crumbButtonAction(crumbs[0]!), 'menu')
