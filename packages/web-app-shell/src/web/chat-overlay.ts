@@ -1,7 +1,8 @@
 /** 聊天列窄于此时自动弹出覆盖对话框（px）。不自动收回。 */
 export const CHAT_OVERLAY_ENTER = 420
 export const SIDEBAR_MAX = 280
-export const CENTER_MIN = 768
+/** 中间列最窄约为对话内容最大宽 768 的 2/3，好让左右栏先完整显示。 */
+export const CENTER_MIN = 512
 export const INSPECTOR_MIN = 240
 const RAIL = 0
 const SIDEBAR = SIDEBAR_MAX

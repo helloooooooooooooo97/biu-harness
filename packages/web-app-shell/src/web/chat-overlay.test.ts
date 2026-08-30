@@ -76,6 +76,19 @@ test('narrow viewport hides the left pane outright, then shrinks inspector, then
   assert.equal(squeezeCenter.center, CENTER_MIN - 80)
 })
 
+test('center min is two thirds of the old 768 so side panes stay visible longer', () => {
+  assert.equal(CENTER_MIN, 512)
+  const keepBoth = allocateShellColumns({
+    viewportWidth: SIDEBAR_MAX + 600 + 320,
+    leftPane: true,
+    inspectorOpen: true,
+    inspectorWidth: 320,
+  })
+  assert.equal(keepBoth.left, SIDEBAR_MAX)
+  assert.equal(keepBoth.inspector, 320)
+  assert.equal(keepBoth.center, 600)
+})
+
 test('expanding chat clamps inspector so the column is at least ENTER', () => {
   const next = inspectorWidthForExpandedChat({
     viewportWidth: 1440,

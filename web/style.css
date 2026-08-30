@@ -46,7 +46,7 @@
   --dsw-chat-pad-y: 10px;
   --dsw-chat-reply-pad-x: 12px;
   --dsw-chat-max-width: 768px;
-  --dsw-center-min: 768px;
+  --dsw-center-min: 512px;
   --dsw-sidebar-max: 280px;
   --dsw-inspector-min: 240px;
   --dsw-chat-code-bg: var(--dsw-sidebar);
