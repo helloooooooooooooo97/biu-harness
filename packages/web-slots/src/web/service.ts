@@ -64,6 +64,7 @@ export class SlotsService extends Service {
     return this.ctx.effect(() => {
       let inner: (() => void) | undefined
       const attach = () => {
+        detach()
         const result = callback()
         inner = typeof result === 'function' ? result : undefined
       }

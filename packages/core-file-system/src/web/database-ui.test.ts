@@ -45,3 +45,16 @@ test('record focus and inspector host notify subscribers', () => {
   off()
   assert.equal(ui.getRecordFocus(), null)
 })
+
+test('decorate panes with the same id keep a single pane', () => {
+  const ctx = new Context()
+  const ui = new DatabaseUiService(ctx)
+  const PaneA = () => null
+  const PaneB = () => null
+  ui.decorate('/tasks', { panes: [{ id: 'script', label: '脚本 A', Pane: PaneA }] })
+  ui.decorate('/tasks', { panes: [{ id: 'script', label: '脚本 B', Pane: PaneB }] })
+  const panes = ui.chrome('/tasks').panes ?? []
+  assert.equal(panes.length, 1)
+  assert.equal(panes[0]?.label, '脚本 B')
+  assert.equal(panes[0]?.Pane, PaneB)
+})

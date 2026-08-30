@@ -22,7 +22,13 @@ function mergeChrome(layers: CollectionChrome[]): CollectionChrome {
     if (layer.Action) Action = layer.Action
     if (layer.Title) Title = layer.Title
     if (layer.Content) Content = layer.Content
-    if (layer.panes?.length) panes.push(...layer.panes)
+    if (layer.panes?.length) {
+      for (const pane of layer.panes) {
+        const i = panes.findIndex((item) => item.id === pane.id)
+        if (i >= 0) panes[i] = pane
+        else panes.push(pane)
+      }
+    }
   }
   return { cells, Action, Title, Content, panes: panes.length ? panes : undefined }
 }

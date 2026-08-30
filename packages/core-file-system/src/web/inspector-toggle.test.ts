@@ -28,6 +28,7 @@ test('database does not auto-open inspector content; panes follow the current ta
   const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
   assert.doesNotMatch(page, /biu:inspector-open/)
   assert.match(page, /centerKinds: \['collection-view', 'record'\]/)
+  assert.match(page, /if \(!pane.id \|\| seen.has\(pane.id\)\) continue/)
 })
 
 test('database can be added to the inspector and browsed by crumbs', () => {

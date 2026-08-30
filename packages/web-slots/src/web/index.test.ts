@@ -30,6 +30,22 @@ test('place waits for open; close clears fills', async () => {
   assert.equal(ctx.slots.list('stage').length, 0)
 })
 
+test('inject re-open detaches before filling again', async () => {
+  const ctx = await boot()
+  ctx.slots.place('stage', Dummy, { key: 'c' })
+  const first = await ctx.plugin({
+    inject: ['slots'],
+    apply: (c: Context) => c.slots.fill('root', Dummy, { children: { stage: { kind: 'list' } } }),
+  })
+  assert.equal(ctx.slots.list('stage').length, 1)
+  await first.dispose()
+  await ctx.plugin({
+    inject: ['slots'],
+    apply: (c: Context) => c.slots.fill('root', Dummy, { children: { stage: { kind: 'list' } } }),
+  })
+  assert.equal(ctx.slots.list('stage').length, 1)
+})
+
 test('duplicate key throws', async () => {
   const ctx = await boot()
   ctx.slots.fill('root', Dummy, { children: { stage: { kind: 'list' } } })

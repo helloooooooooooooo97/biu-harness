@@ -139,27 +139,35 @@ function CollectionPage(props: SlotProps) {
     go({ collection: first.path, viewId: defaultViewId(first.path) }, { replace: true })
   }, [collectionFromRoute, tables])
 
+  const paneIds = (chrome.panes ?? []).map((pane) => pane.id).filter(Boolean)
+  const paneKey = [...new Set(paneIds)].join('\0')
+
   useEffect(() => {
     if (!slots || !ui || !currentPath) return
     if (parsed.kind !== 'collection-view' && parsed.kind !== 'record') return
-    const panes = chrome.panes ?? []
-    const placed = panes.map((pane) =>
-      slots.place('inspector-panels', RecordPanePanel, {
-        key: `fsdb-pane-${pane.id}`,
-        order: 20,
-        props: () => ({
-          tabId: pane.id,
-          tabLabel: pane.label,
-          tabIcon: CircleStackIcon,
-          centerKinds: ['collection-view', 'record'],
-          paneId: pane.id,
+    const seen = new Set<string>()
+    const placed = []
+    for (const pane of ui.chrome(currentPath).panes ?? []) {
+      if (!pane.id || seen.has(pane.id)) continue
+      seen.add(pane.id)
+      placed.push(
+        slots.place('inspector-panels', RecordPanePanel, {
+          key: `fsdb-pane-${pane.id}`,
+          order: 20,
+          props: () => ({
+            tabId: pane.id,
+            tabLabel: pane.label,
+            tabIcon: CircleStackIcon,
+            centerKinds: ['collection-view', 'record'],
+            paneId: pane.id,
+          }),
         }),
-      }),
-    )
+      )
+    }
     return () => {
       for (const item of placed) void item.dispose?.()
     }
-  }, [chrome.panes, currentPath, parsed.kind, slots, ui])
+  }, [currentPath, paneKey, parsed.kind, slots, ui])
 
   if (!currentPath) return null
   const title = row?.view?.title ?? row?.label ?? currentPath.replace(/^\//, '')
