@@ -376,7 +376,7 @@ export class SessionViewService extends Service {
           focusCallId: route.view === 'chat' ? undefined : this.value.focusCallId,
         })
       }
-      if (this.wantsTrajectory(route.view)) await this.ensureTrajectory()
+      if (this.wantsTrajectory(route.view)) void this.ensureTrajectory()
       return
     }
     await this.loadMostRecentSession()

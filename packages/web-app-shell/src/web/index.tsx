@@ -215,6 +215,8 @@ const AgentMainPanels = memo(function AgentMainPanels({
   const overlay = floating
   const overlayOpen = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
   const [overlayMounted, setOverlayMounted] = useState(false)
+  const [heldCenter, setHeldCenter] = useState(showCenter)
+  if (showCenter && !heldCenter) setHeldCenter(true)
   useEffect(() => {
     setOverlayMounted(true)
   }, [])
@@ -344,11 +346,17 @@ const AgentMainPanels = memo(function AgentMainPanels({
       )
     : null
 
-  if (!showCenter) return overlayNode
+  const mountCenter = showCenter || (heldCenter && !overlayOpen)
+  if (!mountCenter) return overlayNode
 
   return (
     <>
-      <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+      <div
+        className={`relative min-h-0 w-full flex-1 flex-col overflow-hidden ${showCenter ? 'flex' : 'hidden'}`}
+        aria-hidden={!showCenter}
+        inert={showCenter ? undefined : true}
+        data-testid="agent-center"
+      >
         <div className="absolute inset-0 z-1 flex min-h-0 overflow-hidden">
           <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
             {centerStage}

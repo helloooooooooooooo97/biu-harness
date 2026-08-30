@@ -1,21 +1,38 @@
-import { memo, useMemo } from 'react'
-import { EditorContent, useEditor } from '@tiptap/react'
-import { composerDocExtensions } from './composer-kit.ts'
-import { jsonFromDraft } from './composer-tiptap.ts'
+import { Fragment, memo, useMemo } from 'react'
+import { PickChipLabel, chipLabel, splitPickStream } from '@biu/cap-pick/web'
 
-/** 已发送用户消息：与输入栏同一套 Tiptap 文档，只读。 */
+/** 已发送用户消息：静态渲染，不挂 Tiptap，避免切回聊天时每条消息都新建编辑器。 */
 export const UserBubbleEditor = memo(function UserBubbleEditor({ text }: { text: string }) {
-  const content = useMemo(() => jsonFromDraft(text), [text])
-  const editor = useEditor({
-    immediatelyRender: true,
-    editable: false,
-    extensions: composerDocExtensions(),
-    content,
-    editorProps: {
-      attributes: {
-        class: 'composer-tiptap is-readonly',
-      },
-    },
-  })
-  return <EditorContent editor={editor} />
+  const parts = useMemo(() => splitPickStream(text), [text])
+  return (
+    <div className="composer-tiptap is-readonly">
+      {parts.map((part, index) => {
+        if (part.type === 'pick') {
+          const pick = part.ref
+          return (
+            <span key={`p${index}`} className="composer-inline-chip">
+              <span
+                className="composer-tool-chip is-pick"
+                data-testid="user-pick-chip"
+                title={`${pick.kind} · ${chipLabel(pick)}`}
+              >
+                <PickChipLabel pick={pick} />
+              </span>
+            </span>
+          )
+        }
+        const lines = part.value.split('\n')
+        return (
+          <Fragment key={`t${index}`}>
+            {lines.map((line, lineIndex) => (
+              <Fragment key={lineIndex}>
+                {lineIndex ? <br /> : null}
+                {line}
+              </Fragment>
+            ))}
+          </Fragment>
+        )
+      })}
+    </div>
+  )
 })
