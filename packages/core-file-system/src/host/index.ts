@@ -37,7 +37,30 @@ function schemaFor(spec: CollectionSpec): CollectionSchema {
     contentField,
     fields,
     actions: (spec.actions ?? []).map(publicAction),
+    records: {
+      create: Boolean(spec.records?.create),
+      delete: Boolean(spec.records?.delete),
+    },
   }
+}
+
+function assertRecordCaps(spec: CollectionSpec) {
+  if (spec.records?.create && !spec.create) throw new Error(`collection ${spec.id}: records.create 为 true 时必须提供 create`)
+  if (spec.records?.delete && !spec.remove) throw new Error(`collection ${spec.id}: records.delete 为 true 时必须提供 remove`)
+  if (spec.create && !spec.records?.create) throw new Error(`collection ${spec.id}: 提供了 create 但未声明 records.create`)
+  if (spec.remove && !spec.records?.delete) throw new Error(`collection ${spec.id}: 提供了 remove 但未声明 records.delete`)
+}
+
+function collectionCaps(spec: CollectionSpec) {
+  return [
+    'list',
+    'read',
+    spec.write ? 'write' : null,
+    spec.records?.create && spec.create ? 'create' : null,
+    spec.records?.delete && spec.remove ? 'delete' : null,
+    spec.actions?.length ? 'action' : null,
+    'content',
+  ].filter(Boolean)
 }
 
 function contentKey(spec: CollectionSpec) {
@@ -262,6 +285,7 @@ export class DatabaseService extends Service implements Database {
         throw new Error(`collection path already registered: ${path}`)
       }
       assertViewAvailable(entry, [...this.collections.values()])
+      assertRecordCaps(entry)
       const view = entry.view
       if (view) entry = { ...entry, view: { ...view, route: navPath(view.route) } }
       this.collections.set(entry.id, entry)
@@ -307,7 +331,7 @@ export class DatabaseService extends Service implements Database {
     }
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
-    const caps = ['list', 'read', spec.write ? 'write' : null, spec.actions?.length ? 'action' : null, 'content'].filter(Boolean)
+    const caps = collectionCaps(spec)
     if (parts.length === 1) {
       return { kind: 'collection' as const, path: spec.path, id: spec.id, label: spec.label ?? spec.id, schema: schemaFor(spec), caps }
     }
@@ -389,6 +413,31 @@ export class DatabaseService extends Service implements Database {
     const record = await spec.write(parts[1]!, patch)
     this.bump()
     return { kind: 'record' as const, path: `${spec.path}/${record.id}`, value: withoutContent(spec, record) }
+  }
+
+  async create(path: string, content?: unknown) {
+    const parts = splitPath(path)
+    if (parts.length !== 1) throw new Error(`cannot create: ${normalizeCollectionPath(path)}`)
+    const spec = this.collection(`/${parts[0]}`)
+    if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
+    if (!spec.records?.create || !spec.create) throw new Error(`collection cannot create: ${spec.path}`)
+    const fields = content == null || content === '' ? {} : pickWritablePatch(schemaFor(spec), parseContent(content))
+    const record = await spec.create(fields)
+    this.bump()
+    return { kind: 'record' as const, path: `${spec.path}/${record.id}`, value: withoutContent(spec, record) }
+  }
+
+  async remove(path: string) {
+    const parts = splitPath(path)
+    if (parts.length !== 2) throw new Error(`cannot delete: ${normalizeCollectionPath(path)}`)
+    const spec = this.collection(`/${parts[0]}`)
+    if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
+    if (!spec.records?.delete || !spec.remove) throw new Error(`collection cannot delete: ${spec.path}`)
+    const record = await spec.get(parts[1]!)
+    if (!record) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
+    await spec.remove(parts[1]!)
+    this.bump()
+    return { kind: 'deleted' as const, path: `${spec.path}/${parts[1]}`, id: parts[1] }
   }
 
   async action(path: string, actionId: string) {
@@ -523,6 +572,25 @@ export function apply(ctx: Context) {
     execute: (args) => db.write(String(args.path), args.content),
   })
   ctx.tools.register({
+    name: 'db_create',
+    description: '在已登记且允许新建的表中新增一条记录。路径为 /<表>。能否新建看 db_stat 的 caps 与 schema.records。',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: { type: 'string' },
+        content: { description: '可选，按 schema 可写字段给出初值（对象或 JSON 字符串）' },
+      },
+      required: ['path'],
+    },
+    execute: (args) => db.create(String(args.path), args.content),
+  })
+  ctx.tools.register({
+    name: 'db_delete',
+    description: '删除一条记录，路径为 /<表>/<id>。能否删除看 db_stat 的 caps 与 schema.records；未声明 delete 的表会失败。',
+    parameters: PATH_PARAM,
+    execute: (args) => db.remove(String(args.path)),
+  })
+  ctx.tools.register({
     name: 'db_action',
     description: '对一条记录执行登记方声明的动作，路径为 /<表>/<id>，action 为动作 id（如 start、stop）。',
     parameters: {
@@ -599,6 +667,22 @@ export function apply(ctx: Context) {
     try {
       const body = (await route.json()) as { path?: string; content?: unknown }
       route.send(200, await db.write(String(body?.path ?? ''), body?.content))
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
+  })
+  ctx.http.route('POST', '/api/db/create', async (route) => {
+    try {
+      const body = (await route.json()) as { path?: string; content?: unknown }
+      route.send(200, await db.create(String(body?.path ?? ''), body?.content))
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
+  })
+  ctx.http.route('POST', '/api/db/delete', async (route) => {
+    try {
+      const body = (await route.json()) as { path?: string }
+      route.send(200, await db.remove(String(body?.path ?? '')))
     } catch (error) {
       route.send(400, { error: String(error) })
     }

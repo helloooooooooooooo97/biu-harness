@@ -35,6 +35,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       order: 18,
       icon: 'chat-bubble',
     },
+    records: { create: false, delete: false },
     schema: {
       labelField: 'title',
       columns: ['title', 'type', 'pinned', 'tags', 'eventCount', 'project', 'updatedAt'],

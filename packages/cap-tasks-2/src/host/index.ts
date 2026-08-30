@@ -37,6 +37,8 @@ type TasksLike = {
   list: () => TaskRow[]
   get: (id: string) => TaskRow | undefined
   update: (id: string, patch: Record<string, unknown>) => DbRecord
+  create: (input: Record<string, unknown> & { title: string; creator: Actor }) => TaskRow
+  delete: (id: string) => boolean
 }
 
 const ZERO_USAGE: Usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, totalTokens: 0 }
@@ -182,12 +184,21 @@ export function tasksCollection(tasks: TasksLike): CollectionSpec {
         parentId: { type: 'string', label: '父任务', writable: true },
       },
     },
+    records: { create: true, delete: true },
     list: () => recordsWithUsage(tasks.list()),
     get: (id) => recordsWithUsage(tasks.list()).find((row) => row.id === id) ?? null,
     write: (id, patch) => {
       const next = tasks.update(id, patch) as TaskRow
       const rows = tasks.list().map((row) => (row.id === id ? { ...row, ...next, id } : row))
       return recordsWithUsage(rows).find((row) => row.id === id) ?? taskRecord(next, (pid) => tasks.get(pid), ZERO_USAGE, false)
+    },
+    create: (fields = {}) => {
+      const title = typeof fields.title === 'string' && fields.title.trim() ? fields.title.trim() : '未命名任务'
+      const row = tasks.create({ ...fields, title, creator: { kind: 'user', name: '用户' } })
+      return recordsWithUsage(tasks.list()).find((item) => item.id === row.id) ?? taskRecord(row, (pid) => tasks.get(pid), ZERO_USAGE, false)
+    },
+    remove: (id) => {
+      if (!tasks.delete(id)) throw new Error(`unknown task: ${id}`)
     },
   }
 }

@@ -17,6 +17,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       order: 30,
       icon: "puzzle-piece",
     },
+    records: { create: false, delete: false },
     schema: {
       labelField: "name",
       columns: ["name", "blurb", "running", "tags"],

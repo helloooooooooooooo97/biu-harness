@@ -89,6 +89,7 @@ export function viewsCollection(store: SavedViewsStore, tables: () => Collection
       order: 17,
       icon: 'eye',
     },
+    records: { create: false, delete: false },
     schema: {
       labelField: 'title',
       columns: ['title', 'table', 'mode', 'sortField', 'sortDir', 'query', 'groupBy', 'pageSize'],

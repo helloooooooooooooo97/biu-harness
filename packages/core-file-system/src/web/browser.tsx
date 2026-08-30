@@ -227,6 +227,7 @@ export function CollectionBrowser({
     | { kind: 'rename'; view: SavedView }
     | { kind: 'delete'; view: SavedView }
     | { kind: 'action'; row: DbRecord; action: CollectionActionInfo }
+    | { kind: 'delete-record'; row: DbRecord }
     | null
   >(null)
   const [dlgError, setDlgError] = useState('')
@@ -510,6 +511,8 @@ export function CollectionBrowser({
   useEffect(() => () => window.clearTimeout(noticeTimer.current), [])
 
   const schema = stat?.schema
+  const canCreate = Boolean(schema?.records?.create)
+  const canDelete = Boolean(schema?.records?.delete)
   const bodyKey = contentFieldKey(schema)
   const entries = useMemo(() => fieldEntries(schema), [schema])
   const allColumns = useMemo(
@@ -952,6 +955,42 @@ export function CollectionBrowser({
       await reload()
     } catch (err) {
       quietUntil.current = 0
+      setError(String(err))
+    }
+  }
+
+  async function createRecord() {
+    if (!canCreate) return
+    try {
+      const data = await readJson<{ value?: DbRecord }>('/api/db/create', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ path: collectionPath, content: {} }),
+      })
+      quietUntil.current = 0
+      await reload()
+      const id = data.value?.id
+      if (id) {
+        setOpenDetailId(id)
+        if (data.value) setDetailRow(data.value)
+        onOpenRecord?.(id, activeViewId, collectionPath)
+      }
+    } catch (err) {
+      setError(String(err))
+    }
+  }
+
+  async function executeDeleteRecord(row: DbRecord) {
+    try {
+      await readJson('/api/db/delete', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ path: `${collectionPath}/${row.id}` }),
+      })
+      onCloseRecord?.()
+      quietUntil.current = 0
+      await reload()
+    } catch (err) {
       setError(String(err))
     }
   }
@@ -1407,6 +1446,11 @@ export function CollectionBrowser({
         <div className="tasks-main fsdb-main">
         <div className="tasks-toolbar" data-biu-ignore>
           <div className="tasks-toolbar-left">
+            {canCreate ? (
+              <button type="button" className="tasks-sort-btn" aria-label="新建记录" title="新建" onClick={() => void createRecord()}>
+                <PlusIcon aria-hidden className="size-[14px]" />
+              </button>
+            ) : null}
             <div className="tasks-viewdd-wrap" ref={viewRef}>
               <button
                 type="button"
@@ -1956,6 +2000,7 @@ export function CollectionBrowser({
           setDraft={setDraft}
           writeOne={writeOne}
           writePatch={writePatch}
+          onDelete={canDelete && selected ? () => setDlg({ kind: 'delete-record', row: selected }) : undefined}
         />
       ) : null}
         </div>
@@ -1980,6 +2025,20 @@ export function CollectionBrowser({
           onCancel={() => setDlg(null)}
           onConfirm={applyDeleteView}
           body={<p>确定删除视图「{dlg.view.name}」？删除后不可恢复。</p>}
+        />
+      ) : null}
+      {dlg?.kind === 'delete-record' ? (
+        <AppDialog
+          title="删除记录"
+          confirm="删除"
+          danger
+          onCancel={() => setDlg(null)}
+          onConfirm={() => {
+            const { row } = dlg
+            setDlg(null)
+            void executeDeleteRecord(row)
+          }}
+          body={<p>确定删除「{labelOf(dlg.row)}」？删除后不可恢复。</p>}
         />
       ) : null}
       {dlg?.kind === 'action' ? (

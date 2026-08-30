@@ -1,7 +1,7 @@
 import type { ReactNode, Dispatch, SetStateAction } from 'react'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import type { CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
-import { HashtagIcon } from '@heroicons/react/16/solid'
+import { HashtagIcon, TrashIcon } from '@heroicons/react/16/solid'
 import { contentFieldKey, formatField, resolveFieldType, uniqueValues } from './fields.ts'
 import { LocalText } from './controls.tsx'
 import { FieldEditor, FieldGlyph, FilePreview } from './fsdb-cells.tsx'
@@ -18,6 +18,7 @@ export function RecordDetail({
   setDraft,
   writeOne,
   writePatch,
+  onDelete,
 }: {
   selected: DbRecord
   schema: CollectionSchema
@@ -30,12 +31,14 @@ export function RecordDetail({
   setDraft: Dispatch<SetStateAction<Record<string, string>>>
   writeOne: (row: DbRecord, key: string, field: FieldSpec, raw: string) => Promise<unknown> | void
   writePatch: (row: DbRecord, patch: Record<string, unknown>) => Promise<unknown> | void
+  onDelete?: () => void
 }) {
   return (
 <div className="fsdb-detail-stage">
           <div className="fsdb-detail-screen" role="main" aria-label="记录详情">
             <div className="fsdb-detail-split">
               <div className="fsdb-detail-main">
+                <div className="fsdb-detail-title-row">
                 {schema.labelField && schema.fields[schema.labelField]?.writable ? (
                   <LocalText
                     as="textarea"
@@ -53,6 +56,12 @@ export function RecordDetail({
                 ) : (
                   <h2 className="fsdb-detail-title-input">{labelOf(selected)}</h2>
                 )}
+                {onDelete ? (
+                  <button type="button" className="tasks-icon-btn is-danger" title="删除" aria-label="删除记录" onClick={onDelete}>
+                    <TrashIcon aria-hidden className="size-[14px]" />
+                  </button>
+                ) : null}
+                </div>
                 <div className="fsdb-detail-aside">
                   <div className="fsdb-prop">
                     <span>

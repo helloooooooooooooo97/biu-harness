@@ -115,6 +115,7 @@ function pagesCollection(now = Date.now()): CollectionSpec {
         parentId: { type: 'string', label: '父页面', writable: true },
       },
     },
+    records: { create: true, delete: true },
     list: () => [...rows.values()],
     get: (id) => rows.get(id) ?? null,
     write: (id, patch) => {
@@ -129,6 +130,29 @@ function pagesCollection(now = Date.now()): CollectionSpec {
       }
       rows.set(id, next)
       return next
+    },
+    create: (fields = {}) => {
+      let n = rows.size
+      let id = `p${String(n).padStart(3, '0')}`
+      while (rows.has(id)) {
+        n += 1
+        id = `p${String(n).padStart(3, '0')}`
+      }
+      const ts = Date.now()
+      const row: PageRow = {
+        ...seed(n, ts),
+        ...fields,
+        id,
+        title: typeof fields.title === 'string' && fields.title.trim() ? fields.title.trim() : '未命名页面',
+        score: 0,
+        createdAt: ts,
+        updatedAt: ts,
+      }
+      rows.set(id, row)
+      return row
+    },
+    remove: (id) => {
+      if (!rows.delete(id)) throw new Error(`unknown page: ${id}`)
     },
   }
 }

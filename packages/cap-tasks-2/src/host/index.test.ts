@@ -38,6 +38,12 @@ test('apply registers /tasks on database, not by importing file-system', async (
     update(id: string, patch: Record<string, unknown>) {
       return { id, title: '写方案', status: patch.status ?? 'todo' }
     }
+    create(input: { title: string }) {
+      return { id: 'new', title: input.title, status: 'todo' }
+    }
+    delete() {
+      return true
+    }
   }
   new FakeDb(ctx)
   new FakeTasks(ctx)
@@ -59,4 +65,7 @@ test('apply registers /tasks on database, not by importing file-system', async (
   assert.equal((parent?.usageParts as { aggregate?: boolean } | undefined)?.aggregate, true)
   const written = await registered[0]!.write!('t1', { status: 'doing' })
   assert.equal(written.status, 'doing')
+  assert.deepEqual(registered[0]?.records, { create: true, delete: true })
+  const created = await registered[0]!.create!({ title: '新任务' })
+  assert.equal(created.title, '新任务')
 })

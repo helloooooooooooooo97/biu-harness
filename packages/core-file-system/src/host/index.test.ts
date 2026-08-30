@@ -250,7 +250,7 @@ test('apply registers db_* tools', async () => {
   new HttpStub(ctx)
   await ctx.plugin({ inject: ['tools', 'http'], apply: applyFileSystem })
   const names = ctx.tools.names()
-  for (const name of ['db_list', 'db_read', 'db_write', 'db_stat', 'db_action', 'db_content']) {
+  for (const name of ['db_list', 'db_read', 'db_write', 'db_create', 'db_delete', 'db_stat', 'db_action', 'db_content']) {
     assert.equal(names.includes(name), true, name)
   }
   const listed = await ctx.tools.invoke('db_list', { path: '/' })
@@ -285,4 +285,68 @@ test('registered actions run when when-clause matches', async () => {
   const done = await db.action('/notes/n1', 'pin')
   assert.equal((done.value as unknown as { pinned: boolean }).pinned, true)
   await assert.rejects(() => db.action('/notes/n1', 'pin'), /not available/)
+})
+
+test('create and delete follow records caps declared at register', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  const rows = new Map<string, { id: string; title: string }>()
+  rows.set('n1', { id: 'n1', title: '草稿' })
+  db.register({
+    id: 'notes',
+    path: '/notes',
+    schema: { fields: { title: { type: 'string', writable: true } } },
+    records: { create: true, delete: true },
+    list: () => [...rows.values()],
+    get: (id) => rows.get(id) ?? null,
+    create: (fields = {}) => {
+      const id = `n${rows.size + 1}`
+      const row = { id, title: typeof fields.title === 'string' ? fields.title : '未命名' }
+      rows.set(id, row)
+      return row
+    },
+    remove: (id) => {
+      if (!rows.delete(id)) throw new Error('unknown')
+    },
+  })
+  const stat = await db.stat('/notes')
+  assert.equal(stat.kind, 'collection')
+  if (stat.kind !== 'collection') return
+  assert.equal(stat.schema.records?.create, true)
+  assert.equal(stat.schema.records?.delete, true)
+  assert.equal((stat.caps as string[]).includes('create'), true)
+  assert.equal((stat.caps as string[]).includes('delete'), true)
+  const created = await db.create('/notes', { title: '新笔记' })
+  assert.equal(created.value.title, '新笔记')
+  const listed = await db.list('/notes')
+  if (listed.kind !== 'collection') return
+  assert.equal(listed.items.length, 2)
+  await db.remove(`${created.path}`)
+  const after = await db.list('/notes')
+  if (after.kind !== 'collection') return
+  assert.equal(after.items.length, 1)
+})
+
+test('tables without records.create/delete reject create and delete', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  db.register(notesCollection())
+  const stat = await db.stat('/notes')
+  if (stat.kind !== 'collection') return
+  assert.equal(stat.schema.records?.create, false)
+  assert.equal(stat.schema.records?.delete, false)
+  await assert.rejects(() => db.create('/notes'), /cannot create/)
+  await assert.rejects(() => db.remove('/notes/n1'), /cannot delete/)
+  assert.throws(
+    () =>
+      db.register({
+        id: 'broken',
+        path: '/broken',
+        schema: { fields: {} },
+        records: { create: true },
+        list: () => [],
+        get: () => null,
+      }),
+    /必须提供 create/,
+  )
 })
