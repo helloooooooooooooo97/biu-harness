@@ -917,7 +917,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     const parent = scrollRef.current
     if (!parent) return
     const mem = recalledChatScroll(sessionId)
-    if (sessionId && restoredForRef.current !== sessionId && mem?.kind === 'anchor') {
+    if (sessionId && restoredForRef.current !== sessionId && mem?.kind === 'pin') {
       if (restoreChatScroll(parent, mem)) {
         restoredForRef.current = sessionId
         stickToBottomRef.current = false

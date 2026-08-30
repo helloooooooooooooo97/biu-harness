@@ -37,11 +37,12 @@ export function bumpRevealStart(startIndex: number, batch = CHAT_REVEAL_BATCH): 
 }
 
 export const CHAT_NEAR_BOTTOM_PX = 96
+const PIN_TOP_SLACK_PX = 8
 
-/** 贴底，或某条消息相对视口顶的偏移。切回会话时按这个还原进度条。 */
+/** 贴底，或当时贴在视口顶的那条用户消息。回来滚到它重新贴顶。 */
 export type ChatScrollMemory =
   | { kind: 'bottom' }
-  | { kind: 'anchor'; nodeId: string; offset: number }
+  | { kind: 'pin'; nodeId: string }
 
 const chatScrollBySession = new Map<string, ChatScrollMemory>()
 
@@ -62,7 +63,7 @@ export function turnIndexContaining(nodes: ChatNode[], nodeId: string): number {
   return groupNodesIntoTurns(nodes).findIndex((turn) => turn.some((node) => node.id === nodeId))
 }
 
-/** 回到中间阅读位置时，从那一回合挂到最新；贴底则仍只先挂尾巴。 */
+/** 回到中间阅读位置时，从贴顶那一回合挂到最新；贴底则仍只先挂尾巴。 */
 export function revealStartForMemory(
   nodes: ChatNode[],
   memory: ChatScrollMemory | undefined,
@@ -73,20 +74,25 @@ export function revealStartForMemory(
   return index < 0 ? 0 : index
 }
 
+function nodeSelector(nodeId: string) {
+  const escaped =
+    typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(nodeId) : nodeId
+  return `[data-node-id="${escaped}"]`
+}
+
+/** 当前贴顶的用户消息：已经顶到视口上沿的最后一条。 */
 export function captureChatScroll(parent: HTMLElement): ChatScrollMemory {
   const distance = parent.scrollHeight - parent.scrollTop - parent.clientHeight
   if (distance <= CHAT_NEAR_BOTTOM_PX) return { kind: 'bottom' }
   const parentTop = parent.getBoundingClientRect().top
-  const rows = parent.querySelectorAll<HTMLElement>('[data-node-id]')
-  for (const el of rows) {
-    const id = el.dataset.nodeId
-    if (!id) continue
-    const rect = el.getBoundingClientRect()
-    if (rect.bottom > parentTop + 1) {
-      return { kind: 'anchor', nodeId: id, offset: parentTop - rect.top }
-    }
+  const users = parent.querySelectorAll<HTMLElement>('[data-chat-kind="user"][data-node-id]')
+  let pin: HTMLElement | null = null
+  for (const el of users) {
+    if (el.getBoundingClientRect().top <= parentTop + PIN_TOP_SLACK_PX) pin = el
   }
-  return { kind: 'bottom' }
+  const id = pin?.dataset.nodeId ?? users[0]?.dataset.nodeId
+  if (!id) return { kind: 'bottom' }
+  return { kind: 'pin', nodeId: id }
 }
 
 export function restoreChatScroll(parent: HTMLElement, memory: ChatScrollMemory): boolean {
@@ -94,13 +100,9 @@ export function restoreChatScroll(parent: HTMLElement, memory: ChatScrollMemory)
     parent.scrollTop = parent.scrollHeight
     return true
   }
-  const escaped =
-    typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(memory.nodeId) : memory.nodeId
-  const el = parent.querySelector(`[data-node-id="${escaped}"]`)
+  const el = parent.querySelector(nodeSelector(memory.nodeId))
   if (!(el instanceof HTMLElement)) return false
-  const parentTop = parent.getBoundingClientRect().top
-  const top = el.getBoundingClientRect().top
-  parent.scrollTop += top - parentTop + memory.offset
+  parent.scrollTop += el.getBoundingClientRect().top - parent.getBoundingClientRect().top
   return true
 }
 

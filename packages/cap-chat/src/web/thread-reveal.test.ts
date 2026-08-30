@@ -100,33 +100,39 @@ function box(top: number, height: number): DOMRect {
 
 describe('chat scroll memory per session', () => {
   it('keeps an independent reading position for each session', () => {
-    rememberChatScroll('s-a', { kind: 'anchor', nodeId: 'u-3', offset: 24 })
+    rememberChatScroll('s-a', { kind: 'pin', nodeId: 'u-3' })
     rememberChatScroll('s-b', { kind: 'bottom' })
-    expect(recalledChatScroll('s-a')).toEqual({ kind: 'anchor', nodeId: 'u-3', offset: 24 })
+    expect(recalledChatScroll('s-a')).toEqual({ kind: 'pin', nodeId: 'u-3' })
     expect(recalledChatScroll('s-b')).toEqual({ kind: 'bottom' })
   })
 
-  it('mounts from the remembered turn instead of only the tail', () => {
+  it('mounts from the pinned turn instead of only the tail', () => {
     const nodes = longThread()
     expect(turnIndexContaining(nodes, 'u-3')).toBe(3)
-    expect(revealStartForMemory(nodes, { kind: 'anchor', nodeId: 'u-3', offset: 12 }, 10)).toBe(3)
+    expect(revealStartForMemory(nodes, { kind: 'pin', nodeId: 'u-3' }, 10)).toBe(3)
     expect(revealStartForMemory(nodes, { kind: 'bottom' }, 10)).toBe(10 - CHAT_FIRST_PAINT_TURNS)
   })
 
-  it('captures the first visible node when not pinned to the bottom', () => {
+  it('captures the user message currently stuck to the top', () => {
     const parent = document.createElement('div')
     Object.defineProperty(parent, 'scrollHeight', { value: 4000, configurable: true })
     Object.defineProperty(parent, 'scrollTop', { value: 1200, writable: true, configurable: true })
     Object.defineProperty(parent, 'clientHeight', { value: 800, configurable: true })
     parent.getBoundingClientRect = () => box(0, 800)
-    const above = document.createElement('div')
-    above.dataset.nodeId = 'u-2'
-    above.getBoundingClientRect = () => box(-80, 40)
-    const visible = document.createElement('div')
-    visible.dataset.nodeId = 'u-3'
-    visible.getBoundingClientRect = () => box(40, 80)
-    parent.append(above, visible)
-    expect(captureChatScroll(parent)).toEqual({ kind: 'anchor', nodeId: 'u-3', offset: -40 })
+    const passed = document.createElement('div')
+    passed.dataset.nodeId = 'u-2'
+    passed.dataset.chatKind = 'user'
+    passed.getBoundingClientRect = () => box(-80, 40)
+    const sticky = document.createElement('div')
+    sticky.dataset.nodeId = 'u-3'
+    sticky.dataset.chatKind = 'user'
+    sticky.getBoundingClientRect = () => box(0, 40)
+    const later = document.createElement('div')
+    later.dataset.nodeId = 'u-4'
+    later.dataset.chatKind = 'user'
+    later.getBoundingClientRect = () => box(200, 40)
+    parent.append(passed, sticky, later)
+    expect(captureChatScroll(parent)).toEqual({ kind: 'pin', nodeId: 'u-3' })
   })
 
   it('captures bottom when close to the latest messages', () => {
@@ -137,7 +143,7 @@ describe('chat scroll memory per session', () => {
     expect(captureChatScroll(parent)).toEqual({ kind: 'bottom' })
   })
 
-  it('restores the saved offset onto the same node', () => {
+  it('restores by aligning that message to the top of the viewport', () => {
     const parent = document.createElement('div')
     Object.defineProperty(parent, 'scrollTop', { value: 500, writable: true, configurable: true })
     parent.getBoundingClientRect = () => box(0, 800)
@@ -145,7 +151,7 @@ describe('chat scroll memory per session', () => {
     row.dataset.nodeId = 'u-3'
     row.getBoundingClientRect = () => box(120, 80)
     parent.append(row)
-    expect(restoreChatScroll(parent, { kind: 'anchor', nodeId: 'u-3', offset: -40 })).toBe(true)
-    expect(parent.scrollTop).toBe(500 + 120 + -40)
+    expect(restoreChatScroll(parent, { kind: 'pin', nodeId: 'u-3' })).toBe(true)
+    expect(parent.scrollTop).toBe(620)
   })
 })
