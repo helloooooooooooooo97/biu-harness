@@ -46,6 +46,7 @@ import {
   type AppModulesService,
 } from '@biu/web-app-modules'
 import { ChatSidebar } from './chat-sidebar.tsx'
+import { ShellSidebarFrame } from './shell-sidebar-frame.tsx'
 import { ChatSessionTitle } from './chat-session-title.tsx'
 import { BrandCornerMascot, DanceStage } from '@biu/web-mascot'
 import { SessionInspector } from './session-inspector.tsx'
@@ -662,7 +663,7 @@ function Shell(props: SlotProps) {
   const shellColumns = allocateShellColumns({
     viewportWidth,
     leftPane,
-    leftWidth: showChatSidebar ? sidebarCol : undefined,
+    leftWidth: leftPane ? sidebarCol : undefined,
     inspectorOpen: inspectorVisible,
     inspectorWidth,
   })
@@ -672,6 +673,25 @@ function Shell(props: SlotProps) {
       if (sidebarCollapsed || sidebarWidth < SIDEBAR_LABEL_AT) expandSidebar()
       else collapseSidebar()
     } else expandSidebar()
+  }, [collapseSidebar, expandSidebar, sidebarCollapsed, sidebarWidth])
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('biu:shell-sidebar-width', { detail: sidebarCol }))
+  }, [sidebarCol])
+  useEffect(() => {
+    const toggle = () => {
+      if (sidebarCollapsed || sidebarWidth < SIDEBAR_LABEL_AT) expandSidebar()
+      else collapseSidebar()
+    }
+    const onCollapse = () => collapseSidebar()
+    const onExpand = () => expandSidebar()
+    window.addEventListener('biu:toggle-shell-sidebar', toggle)
+    window.addEventListener('biu:collapse-shell-sidebar', onCollapse)
+    window.addEventListener('biu:expand-shell-sidebar', onExpand)
+    return () => {
+      window.removeEventListener('biu:toggle-shell-sidebar', toggle)
+      window.removeEventListener('biu:collapse-shell-sidebar', onCollapse)
+      window.removeEventListener('biu:expand-shell-sidebar', onExpand)
+    }
   }, [collapseSidebar, expandSidebar, sidebarCollapsed, sidebarWidth])
 
   // 工具检查 /debuginspect：打开右侧轨迹 Tab（主区不再切 Debug 页）
@@ -804,8 +824,8 @@ function Shell(props: SlotProps) {
 
   return (
     <div
-      className={`app-shell${activeModule === 'agent'
-          ? ` app-shell-agent${leftHidden ? ' is-sidebar-collapsed' : ''}${sidebarNarrow && !leftHidden ? ' is-sidebar-narrow' : ''}${inspectorVisible ? ' is-inspector-open' : ''}${overlayAutohide ? ' is-chat-overlay-autohide' : ''
+      className={`app-shell${leftPane
+          ? ` app-shell-agent${leftHidden ? ' is-sidebar-collapsed' : ''}${sidebarNarrow && !leftHidden ? ' is-sidebar-narrow' : ''}${inspectorVisible ? ' is-inspector-open' : ''}${activeModule === 'agent' && overlayAutohide ? ' is-chat-overlay-autohide' : ''
           }`
           : ` app-shell-module${inspectorVisible ? ' is-inspector-open' : ''}`
         }${railOpen || railPinned ? ' is-rail-open' : ''}${leftHidden ? ' is-left-hidden' : ''}`}
@@ -845,17 +865,34 @@ function Shell(props: SlotProps) {
         </div>
       </div>
 
-      <ChatSidebar
-        visible={showChatSidebar && !leftHidden}
-        narrow={sidebarNarrow}
-        showTags={sidebarShowTags}
-        routeSessionId={routeSessionId}
-        useSessionView={useSessionView}
-        sessionView={sessionView}
-        onCollapse={collapseSidebar}
-        onExpand={expandSidebar}
-        onWidthChange={onSidebarWidthChange}
-      />
+      {showChatSidebar ? (
+        <ChatSidebar
+          visible={!leftHidden}
+          narrow={sidebarNarrow}
+          showTags={sidebarShowTags}
+          routeSessionId={routeSessionId}
+          useSessionView={useSessionView}
+          sessionView={sessionView}
+          onCollapse={collapseSidebar}
+          onExpand={expandSidebar}
+          onWidthChange={onSidebarWidthChange}
+        />
+      ) : leftPane ? (
+        <ShellSidebarFrame
+          visible={!leftHidden}
+          narrow={sidebarNarrow}
+          showTags={sidebarShowTags}
+          onCollapse={collapseSidebar}
+          onExpand={expandSidebar}
+          onWidthChange={onSidebarWidthChange}
+          testId="module-sidebar"
+        >
+          <div
+            id="shell-module-sidebar"
+            className="app-side-bar-module-slot min-h-0 flex min-w-0 flex-1 flex-col overflow-hidden"
+          />
+        </ShellSidebarFrame>
+      ) : null}
 
       <DanceStage sessions={danceSessions} on={dancing} shape={danceShape} />
       <BrandCornerMascot
@@ -878,7 +915,7 @@ function Shell(props: SlotProps) {
             header={overlayHeader}
             floating={activeModule !== 'agent'}
             showCenter={activeModule === 'agent'}
-            withSidebar={showChatSidebar && !leftHidden}
+            withSidebar={leftPane && !leftHidden}
             railOpen={railOpen || railPinned}
           />
         </div>

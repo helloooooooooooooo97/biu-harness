@@ -1,4 +1,5 @@
-import { memo, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { createPortal } from 'react-dom'
 import {
   ChevronDoubleLeftIcon,
   ChevronDownIcon,
@@ -375,29 +376,14 @@ export const DataSidebar = memo(function DataSidebar({
     onOpenRecord?.(path, view, recordId, row)
   }
 
-  return (
-    <aside
-      className="app-side-bar fsdb-views flex min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)"
-      aria-label="数据"
-    >
-      <div className="app-side-bar-head app-side-bar-head-brand">
-        <span
-          className="inline-flex min-w-0 max-w-full items-center truncate rounded-md px-2 py-0.5 text-[14px] font-semibold tracking-wide text-white"
-          style={{ background: SIDEBAR_BRAND_GRADIENT }}
-        >
-          Biu Agent OS
-        </span>
-        <button
-          type="button"
-          className="chat-view-header-expand"
-          title="收起左侧边栏"
-          aria-label="收起左侧边栏"
-          data-testid="sidebar-collapse"
-          onClick={onCollapse}
-        >
-          <ChevronDoubleLeftIcon aria-hidden className="size-4" />
-        </button>
-      </div>
+  const [shellSlot, setShellSlot] = useState<HTMLElement | null>(() =>
+    typeof document === 'undefined' ? null : document.getElementById('shell-module-sidebar'),
+  )
+  useLayoutEffect(() => {
+    setShellSlot(document.getElementById('shell-module-sidebar'))
+  }, [])
+
+  const body = (
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
         <div className="app-side-actions" role="navigation" aria-label="视图操作" data-biu-ignore>
           <button type="button" className="app-side-actions-item" title="添加视图" onClick={onAddView}>
@@ -665,6 +651,41 @@ export const DataSidebar = memo(function DataSidebar({
           </section>
         </div>
       </div>
+  )
+
+  if (shellSlot) {
+    return createPortal(
+      <div className="fsdb-views flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" aria-label="数据">
+        {body}
+      </div>,
+      shellSlot,
+    )
+  }
+
+  return (
+    <aside
+      className="app-side-bar fsdb-views flex min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)"
+      aria-label="数据"
+    >
+      <div className="app-side-bar-head app-side-bar-head-brand">
+        <span
+          className="inline-flex min-w-0 max-w-full items-center truncate rounded-md px-2 py-0.5 text-[14px] font-semibold tracking-wide text-white"
+          style={{ background: SIDEBAR_BRAND_GRADIENT }}
+        >
+          Biu Agent OS
+        </span>
+        <button
+          type="button"
+          className="chat-view-header-expand"
+          title="收起左侧边栏"
+          aria-label="收起左侧边栏"
+          data-testid="sidebar-collapse"
+          onClick={onCollapse}
+        >
+          <ChevronDoubleLeftIcon aria-hidden className="size-4" />
+        </button>
+      </div>
+      {body}
     </aside>
   )
 })

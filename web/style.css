@@ -1116,8 +1116,13 @@ body {
   width: min(var(--dsw-chat-width), calc(100vw - var(--rail-w) - var(--inspector-width, 320px) - 40px));
 }
 
-.app-shell.is-left-hidden .fsdb-views {
-  display: none !important;
+.app-side-bar-module-slot {
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* 侧栏独立合成层：右侧 Markdown 重绘时少拖累左侧 :hover */

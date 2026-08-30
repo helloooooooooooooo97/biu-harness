@@ -12,6 +12,8 @@ test('data sidebar brand sits left with a collapse control on the right', () => 
   assert.match(sidebar, /data-testid="sidebar-collapse"/)
   assert.doesNotMatch(sidebar, /SidebarBrandMascot/)
   assert.match(browser, /onCollapse=\{toggleViewsOpen\}/)
+  assert.match(browser, /biu:toggle-shell-sidebar/)
+  assert.match(sidebar, /shell-module-sidebar/)
 })
 
 test('table and view rows only expand from the fold column', () => {
@@ -46,15 +48,15 @@ test('table title opens record from the title-side button', () => {
   assert.doesNotMatch(browser, /recordPick\(row\)\} onClick=\{\(\) => setDetailId\(row\.id\)\}/)
 })
 
-test('filesystem header toggles the right inspector, not the left data sidebar', () => {
+test('filesystem header expands the shared left sidebar and toggles the right inspector', () => {
+  assert.match(browser, /data-testid="header-sidebar-expand"/)
+  assert.match(browser, /biu:expand-shell-sidebar/)
   assert.match(browser, /data-testid="fsdb-inspector-toggle"/)
   assert.match(browser, /biu:inspector-toggle/)
   assert.match(
     browser,
     /inspectorOpen \?\s*\(\s*<ChevronDoubleRightIcon[\s\S]*:\s*\(\s*<ChevronDoubleLeftIcon/,
   )
-  assert.doesNotMatch(browser, /收起左侧边栏/)
-  assert.doesNotMatch(browser, /展开左侧边栏/)
 })
 
 test('database extras sit after the record detail, not in the inspector', () => {

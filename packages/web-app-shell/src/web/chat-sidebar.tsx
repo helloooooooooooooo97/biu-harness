@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { isMascotDancing, subscribeMascotDance } from '@biu/web-mascot'
@@ -20,9 +20,8 @@ import { SidebarMascot } from '@biu/web-mascot'
 import { resolveSessionMascot } from '@biu/web-mascot'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import { chromeIcon, chromeIconClass } from './chrome-icon.ts'
+import { ShellSidebarFrame } from './shell-sidebar-frame.tsx'
 import {
-  ChevronDoubleLeftIcon,
-  ChevronDoubleRightIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   PlusIcon,
@@ -34,9 +33,6 @@ import {
   FolderMinusIcon,
   BookmarkSlashIcon,
 } from '@heroicons/react/16/solid'
-
-const SIDEBAR_BRAND_GRADIENT =
-  'linear-gradient(105deg, color-mix(in srgb, #0066B0 42%, var(--dsw-hover)), color-mix(in srgb, #5B3E90 40%, var(--dsw-hover)) 52%, color-mix(in srgb, #E22726 42%, var(--dsw-hover)))'
 
 /** 项目/标签分组视图的持久化 key。 */
 const GROUP_BY_KEY = 'cordis.sidebar.groupBy'
@@ -279,79 +275,16 @@ export const ChatSidebar = memo(function ChatSidebar({
     [sessionView],
   )
 
-  const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
-  useEffect(() => {
-    const onMove = (event: PointerEvent) => {
-      const drag = dragRef.current
-      if (!drag) return
-      onWidthChange?.(drag.startWidth + (event.clientX - drag.startX))
-    }
-    const onUp = () => {
-      dragRef.current = null
-      document.body.style.removeProperty('cursor')
-      document.body.style.removeProperty('user-select')
-    }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    return () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-    }
-  }, [onWidthChange])
-
   return (
-    <aside
-      className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)${narrow ? ' is-narrow' : ''}${showTags ? ' is-wide' : ''} ${visible ? 'flex' : 'hidden'
-        }`}
-      aria-hidden={!visible}
-      data-testid="chat-sidebar"
+    <ShellSidebarFrame
+      visible={visible}
+      narrow={narrow}
+      showTags={showTags}
+      onCollapse={onCollapse}
+      onExpand={onExpand}
+      onWidthChange={onWidthChange}
+      testId="chat-sidebar"
     >
-      {onWidthChange ? (
-        <div
-          className="sidebar-resize"
-          data-biu-ignore
-          data-testid="sidebar-resize"
-          title="拖动调整宽度"
-          onPointerDown={(event) => {
-            event.preventDefault()
-            const visual = event.currentTarget.parentElement?.getBoundingClientRect().width ?? 0
-            dragRef.current = { startX: event.clientX, startWidth: visual }
-            document.body.style.cursor = 'col-resize'
-            document.body.style.userSelect = 'none'
-          }}
-        />
-      ) : null}
-      <div className="app-side-bar-head app-side-bar-head-brand">
-        <span
-          className="inline-flex min-w-0 max-w-full items-center truncate rounded-md px-2 py-0.5 text-[14px] font-semibold tracking-wide text-white"
-          style={{ background: SIDEBAR_BRAND_GRADIENT }}
-        >
-          Biu Agent OS
-        </span>
-        {narrow ? (
-          <button
-            type="button"
-            className="chat-view-header-expand"
-            title="展开左侧边栏"
-            aria-label="展开左侧边栏"
-            data-testid="sidebar-expand"
-            onClick={onExpand}
-          >
-            <ChevronDoubleRightIcon {...chromeIcon} />
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="chat-view-header-expand"
-            title="收起左侧边栏"
-            aria-label="收起左侧边栏"
-            data-testid="sidebar-collapse"
-            onClick={onCollapse}
-          >
-            <ChevronDoubleLeftIcon {...chromeIcon} />
-          </button>
-        )}
-      </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
         <div className="app-side-actions" role="navigation" aria-label="Chat actions">
           <button
@@ -581,6 +514,6 @@ export const ChatSidebar = memo(function ChatSidebar({
           document.body,
         )
         : null}
-    </aside>
+    </ShellSidebarFrame>
   )
 })

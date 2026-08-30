@@ -248,6 +248,10 @@ export function CollectionBrowser({
   const searchExpanded = searchOpen || query.length > 0
 
   function toggleViewsOpen() {
+    if (typeof document !== 'undefined' && document.getElementById('shell-module-sidebar')) {
+      window.dispatchEvent(new Event('biu:toggle-shell-sidebar'))
+      return
+    }
     setViewsOpen((prev) => {
       const next = !prev
       try {
@@ -258,6 +262,17 @@ export function CollectionBrowser({
       return next
     })
   }
+
+  useEffect(() => {
+    if (embed) return
+    function onWidth(event: Event) {
+      const n = (event as CustomEvent<number>).detail
+      if (typeof n !== 'number' || !Number.isFinite(n)) return
+      setViewsOpen(n > 0)
+    }
+    window.addEventListener('biu:shell-sidebar-width', onWidth)
+    return () => window.removeEventListener('biu:shell-sidebar-width', onWidth)
+  }, [embed])
 
   useEffect(() => {
     if (embed) return
@@ -1373,7 +1388,7 @@ export function CollectionBrowser({
       className={`fsdb-page tasks-root${embed ? ' inspector-database-page' : ''}`}
       data-testid={embed ? 'inspector-database' : undefined}
     >
-      {!embed && viewsOpen ? (
+      {!embed ? (
         <DataSidebar
           tables={tables}
           collectionPath={collectionPath}
@@ -1407,6 +1422,18 @@ export function CollectionBrowser({
         {embed ? null : (
         <header className="chat-view-header" data-biu-ignore>
           <div className="chat-view-header-left">
+            {!viewsOpen ? (
+              <button
+                type="button"
+                className="chat-view-header-expand"
+                title="展开左侧边栏"
+                aria-label="展开左侧边栏"
+                data-testid="header-sidebar-expand"
+                onClick={() => window.dispatchEvent(new Event('biu:expand-shell-sidebar'))}
+              >
+                <ChevronDoubleRightIcon aria-hidden className="size-4" />
+              </button>
+            ) : null}
             <CrumbTrail
               crumbs={crumbs}
               openId={crumbOpen}
