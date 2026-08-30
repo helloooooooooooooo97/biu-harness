@@ -204,7 +204,6 @@ export function DatabaseInspectorBrowse(_props: SlotProps) {
   return (
     <CollectionBrowser
       embed
-      key={currentPath}
       moduleId="database"
       collectionPath={currentPath}
       title={title}

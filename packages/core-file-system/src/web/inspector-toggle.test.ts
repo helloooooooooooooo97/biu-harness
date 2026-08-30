@@ -46,6 +46,18 @@ test('database can be added to the inspector and browsed by crumbs', () => {
   assert.match(browser, /embed = false/)
 })
 
+test('switching tables does not remount the whole browser', () => {
+  const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  assert.doesNotMatch(page, /key=\{currentPath\}/)
+  const browse = readFileSync(resolve(import.meta.dirname, './inspector-database.tsx'), 'utf8')
+  assert.doesNotMatch(browse, /key=\{currentPath\}/)
+})
+
+test('inspector embed does not poll the collection every 20s', () => {
+  assert.match(browser, /const timer = embed/)
+  assert.match(browser, /}, 20000\)/)
+})
+
 test('inspector no longer listens for add/copy view actions', () => {
   assert.doesNotMatch(browser, /biu:inspector-action/)
   assert.doesNotMatch(browser, /detail === 'add-view'/)

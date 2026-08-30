@@ -527,25 +527,19 @@ export const DataSidebar = memo(function DataSidebar({
                     <div key={table.path} className="min-w-0">
                       <div className="sidebar-group-head mb-0.5">
                         <div
-                          role="button"
-                          tabIndex={0}
-                          className="flex min-h-8 min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-md text-left text-[14px] font-medium tracking-normal text-inherit outline-none hover:text-(--dsw-sidebar-fg-active) focus-visible:ring-1 focus-visible:ring-(--dsw-border)"
+                          className="flex min-h-8 min-w-0 flex-1 items-center gap-1.5 rounded-md text-left text-[14px] font-medium tracking-normal text-inherit"
                           title={name}
                           aria-expanded={open}
                           {...pickDomAttrs('collection', table.path, name)}
-                          onClick={() => {
-                            setOpenTables((prev) => ({ ...prev, [table.path]: !open }))
-                            if (!listed.length) onOpenTable?.(table.path)
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter' || event.key === ' ') {
-                              event.preventDefault()
-                              setOpenTables((prev) => ({ ...prev, [table.path]: !open }))
-                            }
-                          }}
                         >
-                          <span className="grid size-6 shrink-0 place-items-center" aria-hidden>
-                            <span className="sidebar-rail-icon sidebar-group-fold">
+                          <button
+                            type="button"
+                            className="grid size-6 shrink-0 place-items-center border-0 bg-transparent p-0 text-inherit"
+                            title={open ? '收起视图' : '展开视图'}
+                            aria-label={open ? '收起视图' : '展开视图'}
+                            onClick={() => setOpenTables((prev) => ({ ...prev, [table.path]: !open }))}
+                          >
+                            <span className="sidebar-rail-icon sidebar-group-fold" aria-hidden>
                               <span className="sidebar-group-fold-face">
                                 <TableGlyph icon={table.view?.icon} />
                               </span>
@@ -557,8 +551,17 @@ export const DataSidebar = memo(function DataSidebar({
                                 )}
                               </span>
                             </span>
-                          </span>
-                          <span className="min-w-0 flex-1 truncate">{name}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit outline-none hover:text-(--dsw-sidebar-fg-active) focus-visible:ring-1 focus-visible:ring-(--dsw-border)"
+                            onClick={() => {
+                              setOpenTables((prev) => ({ ...prev, [table.path]: true }))
+                              onOpenTable?.(table.path)
+                            }}
+                          >
+                            {name}
+                          </button>
                         </div>
                         <ChatCount count={listed.length} />
                       </div>

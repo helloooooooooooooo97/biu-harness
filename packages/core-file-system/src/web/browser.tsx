@@ -701,6 +701,10 @@ export function CollectionBrowser({
     hydratePath.current = ''
     setCollapsed({})
     hydratedDetail.current = ''
+    setItems([])
+    setStat(null)
+    setError('')
+    setPage(0)
     const stored = viewForPath(collectionPath, routeViewId)
     if (stored) {
       setViews(loadViews(collectionPath))
@@ -731,16 +735,18 @@ export function CollectionBrowser({
       debounce = window.setTimeout(() => void reloadRef.current(), 120)
     }
     window.addEventListener('fsdb:change', onChange)
-    const timer = window.setInterval(() => {
-      if (detailIdRef.current) return
-      void reloadRef.current()
-    }, 20000)
+    const timer = embed
+      ? 0
+      : window.setInterval(() => {
+          if (detailIdRef.current) return
+          void reloadRef.current()
+        }, 20000)
     return () => {
       window.clearTimeout(debounce)
-      window.clearInterval(timer)
+      if (timer) window.clearInterval(timer)
       window.removeEventListener('fsdb:change', onChange)
     }
-  }, [collectionPath])
+  }, [collectionPath, embed])
 
   useEffect(() => {
     void reload()
@@ -965,9 +971,9 @@ export function CollectionBrowser({
 
   useEffect(() => {
     if (!routeViewId) return
-    const view = viewsRef.current.find((item) => item.id === routeViewId) ?? views.find((item) => item.id === routeViewId)
+    const view = viewsRef.current.find((item) => item.id === routeViewId)
     if (view) applyView(view)
-  }, [collectionPath, routeViewId, views])
+  }, [collectionPath, routeViewId])
 
   function commitView(view: SavedView) {
     persistViews([...views, view])

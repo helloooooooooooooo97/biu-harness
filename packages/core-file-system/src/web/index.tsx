@@ -157,13 +157,12 @@ function CollectionPage(props: SlotProps) {
     return () => {
       for (const item of placed) void item.dispose?.()
     }
-  }, [chrome, currentPath, parsed.kind, slots, ui])
+  }, [chrome.panes, currentPath, parsed.kind, slots, ui])
 
   if (!currentPath) return null
   const title = row?.view?.title ?? row?.label ?? currentPath.replace(/^\//, '')
   return (
     <CollectionBrowser
-      key={currentPath}
       moduleId={DATA_MODULE_ID}
       collectionPath={currentPath}
       title={title}

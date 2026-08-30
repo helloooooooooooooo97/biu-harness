@@ -6,6 +6,13 @@ import { boxFromPoints, resolvePickAtPoint, resolvePicksInRect } from './resolve
 
 const DRAG_PX = 6
 
+const PICK_NAV_GUARD =
+  '[data-biu-ignore], .app-side-bar, .app-rail, .session-inspector, .brand-corner-cluster, [data-testid="inspector-toggle"], [data-testid="fsdb-inspector-toggle"]'
+
+function ignorePickCapture(target: Element) {
+  return Boolean(target.closest(PICK_NAV_GUARD))
+}
+
 function hoverBox(el: HTMLElement) {
   const box = el.getBoundingClientRect()
   return { top: box.top, left: box.left, width: box.width, height: box.height }
@@ -49,7 +56,7 @@ export function PickOverlay(props: SlotProps) {
     const onDown = (event: PointerEvent) => {
       if (event.button !== 0) return
       const target = event.target
-      if (target instanceof Element && target.closest('[data-biu-ignore]')) return
+      if (target instanceof Element && ignorePickCapture(target)) return
       event.preventDefault()
       drag = { x: event.clientX, y: event.clientY, boxed: false }
     }
@@ -69,7 +76,7 @@ export function PickOverlay(props: SlotProps) {
 
     const onClick = (event: MouseEvent) => {
       const target = event.target
-      if (target instanceof Element && target.closest('[data-biu-ignore]')) return
+      if (target instanceof Element && ignorePickCapture(target)) return
       event.preventDefault()
       event.stopPropagation()
     }
