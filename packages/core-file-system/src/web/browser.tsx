@@ -2334,6 +2334,23 @@ export function CollectionBrowser({
                     </div>
                   )
                 })() : null}
+                {chrome?.panes?.length ? (
+                  <div className="fsdb-detail-extras">
+                    {chrome.panes.map((pane) => {
+                      const Pane = pane.Pane
+                      const count = pane.badge?.(selected)
+                      return (
+                        <section key={pane.id} className="fsdb-detail-extra" data-testid={`fsdb-pane-${pane.id}`}>
+                          <h3 className="fsdb-detail-extra-title">
+                            {pane.label}
+                            {count ? <span className="fsdb-detail-extra-count">{count}</span> : null}
+                          </h3>
+                          <Pane record={selected} />
+                        </section>
+                      )
+                    })}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -2595,6 +2612,9 @@ if (typeof document !== 'undefined') {
 .fsdb-detail-title-input{width:100%;margin:0;border:0;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;font-weight:700;line-height:1.35;outline:none;padding:0;resize:none}
 .fsdb-detail-id{font-size:14px;font-weight:400;color:var(--dsw-label-2);font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-detail-doc{width:100%;min-height:180px;border:0;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;line-height:1.65;outline:none;resize:none;padding:8px 0 0;margin:0}
+.fsdb-detail-extras{display:flex;flex-direction:column;gap:20px;margin-top:8px;padding-top:16px;border-top:1px solid var(--dsw-border)}
+.fsdb-detail-extra-title{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:14px;font-weight:700;color:var(--dsw-label)}
+.fsdb-detail-extra-count{font-size:11px;font-weight:700;color:var(--dsw-label-3)}
 .fsdb-fields{display:flex;flex-direction:column;gap:8px}
 .fsdb-field{display:flex;flex-direction:column;gap:4px;color:var(--dsw-label-3);font-size:14px}
 .fsdb-field em{font-style:normal;color:var(--dsw-label);font-size:14px}

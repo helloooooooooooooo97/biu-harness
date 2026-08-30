@@ -52,37 +52,19 @@ test('filesystem header toggles the right inspector, not the left data sidebar',
   assert.doesNotMatch(browser, /展开左侧边栏/)
 })
 
-test('database does not auto-open inspector content; panes follow the current table', () => {
+test('database extras sit after the record detail, not in the inspector', () => {
   const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
   assert.doesNotMatch(page, /biu:inspector-open/)
-  assert.match(page, /centerKinds: \['collection-view', 'record'\]/)
-  assert.match(page, /if \(!pane.id \|\| seen.has\(pane.id\)\) continue/)
-})
-
-test('database can be added to the inspector and browsed by crumbs', () => {
-  const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
-  assert.match(page, /fsdb-database-browse/)
-  assert.match(page, /tabLabel: '数据库'/)
-  assert.match(page, /Tab: DatabaseInspectorTab/)
-  assert.match(page, /repeatable: true/)
-  const browse = readFileSync(resolve(import.meta.dirname, './inspector-database.tsx'), 'utf8')
-  assert.match(browse, /bindInspectorSnapshot/)
-  assert.doesNotMatch(browse, /useSnapshot\?:/)
-  assert.match(browse, /inspector-crumb-leaf/)
-  assert.match(browse, /CrumbTrail/)
-  assert.doesNotMatch(browse, /onMouseEnter/)
-  assert.doesNotMatch(browse, /go\(event, \{ kind: 'root' \}\)/)
-  assert.match(browse, /embed/)
-  assert.match(browse, /biu:inspector-caption/)
-  assert.doesNotMatch(browse, /DataSidebar/)
-  assert.match(browser, /embed = false/)
+  assert.doesNotMatch(page, /slots\.place\('inspector-panels'/)
+  assert.doesNotMatch(page, /RecordPanePanel/)
+  assert.doesNotMatch(page, /fsdb-database-browse/)
+  assert.match(browser, /fsdb-detail-extras/)
+  assert.match(browser, /data-testid=\{`fsdb-pane-\$\{pane\.id\}`\}/)
 })
 
 test('switching tables does not remount the whole browser', () => {
   const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
   assert.doesNotMatch(page, /key=\{currentPath\}/)
-  const browse = readFileSync(resolve(import.meta.dirname, './inspector-database.tsx'), 'utf8')
-  assert.doesNotMatch(browse, /key=\{currentPath\}/)
 })
 
 test('inspector embed does not poll the collection every 20s', () => {

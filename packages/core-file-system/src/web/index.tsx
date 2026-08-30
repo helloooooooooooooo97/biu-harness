@@ -14,7 +14,6 @@ import {
   collectionNavKey,
 } from './nav-boot.ts'
 import { loadActiveViewId, loadViews, pushAllSavedViews } from './view-storage.ts'
-import { DatabaseInspectorBrowse, DatabaseInspectorTab, bindInspectorSnapshot } from './inspector-database.tsx'
 
 type SlotsService = {
   place: (slot: string, view: unknown, opts: { key: string; order?: number; props?: () => Record<string, unknown> }) => { dispose?: () => unknown }
@@ -71,11 +70,8 @@ function defaultViewId(collectionPath: string) {
   return loadActiveViewId(collectionPath, loadViews(collectionPath)) ?? undefined
 }
 
-let fileSystemSlots: SlotsService | undefined
-
 function CollectionPage(props: SlotProps) {
   const tables = (props.tables as CollectionInfo[] | undefined) ?? []
-  const slots = fileSystemSlots
   const ui = getDatabaseUi()
   const location = useLocation()
   const navigate = useNavigate()
@@ -139,36 +135,6 @@ function CollectionPage(props: SlotProps) {
     go({ collection: first.path, viewId: defaultViewId(first.path) }, { replace: true })
   }, [collectionFromRoute, tables])
 
-  const paneIds = (chrome.panes ?? []).map((pane) => pane.id).filter(Boolean)
-  const paneKey = [...new Set(paneIds)].join('\0')
-
-  useEffect(() => {
-    if (!slots || !ui || !currentPath) return
-    if (parsed.kind !== 'collection-view' && parsed.kind !== 'record') return
-    const seen = new Set<string>()
-    const placed = []
-    for (const pane of ui.chrome(currentPath).panes ?? []) {
-      if (!pane.id || seen.has(pane.id)) continue
-      seen.add(pane.id)
-      placed.push(
-        slots.place('inspector-panels', RecordPanePanel, {
-          key: `fsdb-pane-${pane.id}`,
-          order: 20,
-          props: () => ({
-            tabId: pane.id,
-            tabLabel: pane.label,
-            tabIcon: CircleStackIcon,
-            centerKinds: ['collection-view', 'record'],
-            paneId: pane.id,
-          }),
-        }),
-      )
-    }
-    return () => {
-      for (const item of placed) void item.dispose?.()
-    }
-  }, [currentPath, paneKey, parsed.kind, slots, ui])
-
   if (!currentPath) return null
   const title = row?.view?.title ?? row?.label ?? currentPath.replace(/^\//, '')
   return (
@@ -193,27 +159,6 @@ function CollectionPage(props: SlotProps) {
       }
       onCrumbTarget={(target: CrumbTarget) => navigate(pathForCrumbTarget(target))}
     />
-  )
-}
-
-function RecordPanePanel(props: SlotProps) {
-  const ui = getDatabaseUi()
-  const paneId = String(props.paneId ?? '')
-  const focus = useSyncExternalStore(
-    (fn) => (ui ? ui.subscribe(fn) : () => undefined),
-    () => ui?.getRecordFocus() ?? null,
-    () => null,
-  )
-  const pane = focus ? ui?.chrome(focus.path).panes?.find((item) => item.id === paneId) : undefined
-  const record = focus?.record
-  if (!pane || !record) {
-    return <p className="fsdb-inspector-empty">打开一条记录</p>
-  }
-  const Pane = pane.Pane
-  return (
-    <div className="fsdb-inspector-panel" data-testid={`fsdb-pane-${paneId}`}>
-      <Pane record={record} />
-    </div>
   )
 }
 
@@ -260,7 +205,6 @@ export const inject = ['slots', 'appModules']
 export function apply(ctx: Context) {
   new DatabaseUiService(ctx)
   const slots = ctx.get('slots') as SlotsService
-  fileSystemSlots = slots
   const appModules = ctx.get('appModules') as AppModulesService
   const mounted = new Map<string, () => void>()
   let liveTables: CollectionInfo[] = []
@@ -352,22 +296,6 @@ export function apply(ctx: Context) {
   })
   ctx.inject(['snapshot'], (inner) => {
     const snapshot = inner.get('snapshot') as SnapshotService
-    bindInspectorSnapshot({
-      subscribe: snapshot.subscribe ?? (() => () => undefined),
-      get: () => snapshot.get?.() ?? {},
-    })
-    const databaseBrowse = slots.place('inspector-panels', DatabaseInspectorBrowse, {
-      key: 'fsdb-database-browse',
-      order: -25,
-      props: () => ({
-        tabId: 'database',
-        tabLabel: '数据库',
-        tabIcon: CircleStackIcon,
-        Tab: DatabaseInspectorTab,
-        common: true,
-        repeatable: true,
-      }),
-    })
     let lastKey = ''
     const fromSnap = () => {
       const rows = snapshot.get?.().collections ?? []
@@ -388,7 +316,6 @@ export function apply(ctx: Context) {
       window.clearTimeout(debounce)
       offSnap?.()
       off()
-      void databaseBrowse.dispose?.()
     }
   })
   void bootLoadCollections(loadCollections, {

@@ -2,36 +2,17 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { inspectorPanelMatches, inspectorViewProps, resolveInspectorTab } from './inspector-panels.ts'
 
-test('session-only panels stay on chat and hide on database/task', () => {
+test('inspector only offers session panels when a session is selected', () => {
   const extra = { centerKinds: ['session'], requiresSession: true }
-  assert.equal(inspectorPanelMatches(extra, 'session', 's1'), true)
-  assert.equal(inspectorPanelMatches(extra, 'session', null), false)
-  assert.equal(inspectorPanelMatches(extra, 'record', 's1'), false)
-  assert.equal(inspectorPanelMatches(extra, 'collection-view', 's1'), false)
-  assert.equal(inspectorPanelMatches(extra, 'task', 's1'), false)
+  assert.equal(inspectorPanelMatches(extra, 's1'), true)
+  assert.equal(inspectorPanelMatches(extra, null), false)
 })
 
-test('record panes are offered on the table and the record, not on chat', () => {
-  const extra = { centerKinds: ['collection-view', 'record'] }
-  assert.equal(inspectorPanelMatches(extra, 'record', null), true)
-  assert.equal(inspectorPanelMatches(extra, 'collection-view', null), true)
-  assert.equal(inspectorPanelMatches(extra, 'session', 's1'), false)
-})
-
-test('task inspector only appears on the tasks module', () => {
-  const extra = { centerKinds: ['task'] }
-  assert.equal(inspectorPanelMatches(extra, 'task', null), true)
-  assert.equal(inspectorPanelMatches(extra, 'session', 's1'), false)
-  assert.equal(inspectorPanelMatches(extra, 'record', null), false)
-})
-
-test('common tools stay available on every center', () => {
-  const extra = { common: true, action: 'add-view' }
-  assert.equal(inspectorPanelMatches(extra, 'collection-view', null), true)
-  assert.equal(inspectorPanelMatches(extra, 'record', null), true)
-  assert.equal(inspectorPanelMatches(extra, 'session', 's1'), true)
-  assert.equal(inspectorPanelMatches(extra, 'session', null), true)
-  assert.equal(inspectorPanelMatches(extra, 'module', null), true)
+test('page panels never appear in the session inspector', () => {
+  assert.equal(inspectorPanelMatches({ centerKinds: ['collection-view', 'record'] }, 's1'), false)
+  assert.equal(inspectorPanelMatches({ centerKinds: ['task'] }, 's1'), false)
+  assert.equal(inspectorPanelMatches({ common: true, action: 'add-view' }, 's1'), false)
+  assert.equal(inspectorPanelMatches({ common: true }, 's1'), false)
 })
 
 test('inspector does not auto-open the first available tab', () => {
@@ -47,11 +28,10 @@ test('inspector selects a hanging tab instead of showing an empty pane', () => {
   assert.equal(resolveInspectorTab('database::a1', ['database'], ['database::a1']), 'database::a1')
 })
 
-test('legacy untagged panels stay off session and database centers', () => {
-  assert.equal(inspectorPanelMatches({}, 'session', 's1'), false)
-  assert.equal(inspectorPanelMatches({}, 'record', null), false)
-  assert.equal(inspectorPanelMatches({ requiresSession: true }, 'session', 's1'), true)
-  assert.equal(inspectorPanelMatches({ requiresSession: true }, 'task', 's1'), false)
+test('legacy untagged panels stay out of the inspector', () => {
+  assert.equal(inspectorPanelMatches({}, 's1'), false)
+  assert.equal(inspectorPanelMatches({ requiresSession: true }, null), false)
+  assert.equal(inspectorPanelMatches({ requiresSession: true }, 's1'), true)
 })
 
 test('inspector view props drop tab chrome and databaseUi', () => {

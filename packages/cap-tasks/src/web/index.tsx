@@ -3673,14 +3673,6 @@ function TasksModulePage(props: SlotProps) {
   )
 }
 
-function TasksInspectorPanel(props: SlotProps) {
-  return (
-    <div className="tasks-inspector-panel">
-      <TasksWorkspace compact tasksView={props.tasksView as TasksViewService | undefined} />
-    </div>
-  )
-}
-
 function formatClock(iso?: string) {
   if (!iso) return 'waiting…'
   const date = new Date(iso)
@@ -3705,7 +3697,6 @@ export const name = 'tasks-ui'
 export const inject = ['slots', 'appModules', 'snapshot']
 
 const tasksModuleProps = { moduleId: 'tasks' }
-const tasksInspectorProps = { tabId: 'tasks', tabLabel: '任务', tabIcon: ClipboardDocumentListIcon, centerKinds: ['task'] }
 
 type AppModulesService = {
   register: (mod: {
@@ -3742,11 +3733,6 @@ export function apply(ctx: Context) {
     key: 'tasks-module',
     order: 20,
     props: () => ({ ...tasksModuleProps, tasksView }),
-  })
-  slots.place('inspector-panels', TasksInspectorPanel, {
-    key: 'tasks-inspector',
-    order: 10,
-    props: () => ({ ...tasksInspectorProps, tasksView }),
   })
   slots.place('demos', ClockBadge, {
     key: 'clock',

@@ -7,27 +7,15 @@ export type InspectorPanelExtra = {
   action?: unknown
 }
 
-export function inspectorPanelMatches(
-  extra: InspectorPanelExtra,
-  centerKind: InspectorCenterKind,
-  sessionId: string | null,
-): boolean {
-  if (extra.common) {
-    if (extra.requiresSession && !sessionId) return false
-    return true
-  }
+/** 右侧检查器只跟当前 Session：页面附加块不进这一栏。 */
+export function inspectorPanelMatches(extra: InspectorPanelExtra, sessionId: string | null): boolean {
+  if (!sessionId) return false
   const kinds = Array.isArray(extra.centerKinds)
     ? extra.centerKinds.filter((item): item is InspectorCenterKind => typeof item === 'string')
     : []
-  if (kinds.length) {
-    if (!kinds.includes(centerKind)) return false
-  } else if (extra.requiresSession) {
-    if (centerKind !== 'session') return false
-  } else if (centerKind === 'session' || centerKind === 'collection-view' || centerKind === 'record') {
-    return false
-  }
-  if (extra.requiresSession && !sessionId) return false
-  return true
+  if (kinds.length) return kinds.includes('session')
+  if (extra.common) return false
+  return Boolean(extra.requiresSession)
 }
 
 /** 检查器槽位上的元数据不要摊到 React 组件 props 上（Cordis 服务一碰 $$typeof 就会炸）。 */

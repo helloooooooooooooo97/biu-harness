@@ -26,7 +26,7 @@ import type { SlotProps } from '@biu/web-slots'
 import { bindSnapshot, type SnapshotService } from '@biu/web-snapshot'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
-import { centerKindFromRoute, parseAppPath } from '@biu/web-session-view'
+import { parseAppPath } from '@biu/web-session-view'
 import {
   isMascotDancing,
   mascotDanceShape,
@@ -549,7 +549,6 @@ function Shell(props: SlotProps) {
     }
   }, [])
   const appRoute = parseAppPath(location.pathname, pluginModules)
-  const centerKind = centerKindFromRoute(appRoute)
   const inspectorVisible = inspectorOpen
   // 侧栏高亮跟 URL，不跟 store：点一下立刻亮，不等 load 完成
   const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
@@ -788,7 +787,6 @@ function Shell(props: SlotProps) {
         sessionView={sessionView}
         slots={slots}
         renderSlot={props.renderSlot}
-        centerKind={centerKind}
       />
 
       <SessionConfigDialog

@@ -18,7 +18,6 @@ import {
 import { chromeIcon } from './chrome-icon.ts'
 import {
   bindSessionView,
-  type InspectorCenterKind,
   type SessionViewService,
 } from '@biu/web-session-view'
 import { useSlotEntries } from '@biu/web-slots'
@@ -72,7 +71,6 @@ export type SessionInspectorProps = {
   sessionView: SessionViewService
   slots: SlotsService
   renderSlot: (name: string) => ReactNode
-  centerKind: InspectorCenterKind
 }
 
 function inspectorTabStorageKey(sid: string | null | undefined) {
@@ -102,7 +100,6 @@ export const SessionInspector = memo(function SessionInspector({
   sessionView,
   slots,
   renderSlot,
-  centerKind,
 }: SessionInspectorProps) {
   const sessionId = useSessionView((state) => state.sessionId)
   const focusCallId = useSessionView((state) => state.focusCallId)
@@ -113,7 +110,7 @@ export const SessionInspector = memo(function SessionInspector({
       .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
       .flatMap((entry) => {
         const extra = entry.props?.() ?? {}
-        if (!inspectorPanelMatches(extra, centerKind, sessionId)) return []
+        if (!inspectorPanelMatches(extra, sessionId)) return []
         return [{
           entry,
           id: String(extra.tabId ?? entry.id),
@@ -127,7 +124,7 @@ export const SessionInspector = memo(function SessionInspector({
           action: typeof extra.action === 'string' ? extra.action : '',
         }]
       })
-  }, [centerKind, extras, sessionId])
+  }, [extras, sessionId])
   const allowedTabs = useMemo(() => extraTabs.map((item) => item.id), [extraTabs])
   const displayTabs = extraTabs.filter((item) => !item.action)
   const toolTabs = extraTabs.filter((item) => item.action)
