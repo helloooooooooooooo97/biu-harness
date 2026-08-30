@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { aggregateTurns, compactToSteps, splitTrendData, turnToTrendData } from './usage-panel.tsx'
 import type { UsageTrendPoint } from '@biu/web-session-view'
 
@@ -106,5 +108,14 @@ describe('turnToTrendData', () => {
       { x: 1, value: 0 },
       { x: 2, value: 0 },
     ])
+  })
+})
+
+describe('inspector usage panel', () => {
+  it('fetches trend by session id when sessionView is omitted', () => {
+    const src = readFileSync(resolve(import.meta.dirname, './usage-panel.tsx'), 'utf8')
+    expect(src).toContain('async function loadUsageTrend')
+    expect(src).toContain('sessionView?.fetchUsageTrend')
+    expect(src).toContain('sessionView?: SessionViewService')
   })
 })

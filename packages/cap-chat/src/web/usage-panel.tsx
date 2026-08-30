@@ -9,13 +9,40 @@ import { pickDomAttrs } from '@biu/cap-pick/web'
 
 export interface UsagePanelProps {
   useSessionView: <T>(selector: (state: unknown) => T) => T
-  sessionView: SessionViewService
+  sessionView?: SessionViewService
 }
 
 const IN = '#4d8de0'
 const OUT = '#9aa0a8'
 const CACHE = '#4caf7d'
 const COMPACT = '#e2a938'
+
+async function loadUsageTrend(sessionId: string): Promise<UsageTrend> {
+  const res = await fetch(`/api/sessions/${sessionId}/usage-trend`)
+  if (!res.ok) throw new Error(`加载 usage 趋势失败：${res.status}`)
+  const body = (await res.json()) as { points?: UsageTrendPoint[]; compactions?: number[] }
+  return {
+    points: Array.isArray(body.points) ? body.points : [],
+    compactions: Array.isArray(body.compactions) ? body.compactions : [],
+  }
+}
+
+async function loadEventDetail(sessionId: string, seq: number): Promise<SessionEvent | null> {
+  const res = await fetch(`/api/sessions/${sessionId}/events/${seq}`)
+  if (!res.ok) throw new Error(`加载事件失败：${res.status}`)
+  const body = (await res.json()) as { event?: SessionEvent }
+  return body.event ?? null
+}
+
+async function loadEventRequest(sessionId: string, seq: number): Promise<{ messages: DerivedMessage[]; toolsTokens: number }> {
+  const res = await fetch(`/api/sessions/${sessionId}/events/${seq}/request`)
+  if (!res.ok) throw new Error(`加载 request 失败：${res.status}`)
+  const body = (await res.json()) as { messages?: DerivedMessage[]; toolsTokens?: number }
+  return {
+    messages: Array.isArray(body.messages) ? body.messages : [],
+    toolsTokens: typeof body.toolsTokens === 'number' ? body.toolsTokens : 0,
+  }
+}
 
 /** 把 usage 点序列转成 Input/Output/Cache 三个数据集（不做降采样）。 */
 export function splitTrendData(
@@ -300,11 +327,19 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
     setDetailLoading(true)
     void (async () => {
       try {
-        const ev = await sessionView.fetchEventDetail(detailSeq)
+        const ev = sessionView
+          ? await sessionView.fetchEventDetail(detailSeq)
+          : sessionId
+            ? await loadEventDetail(sessionId, detailSeq)
+            : null
         if (cancelled) return
         setDetailEvent(ev)
         if (ev?.type === 'assistant/message') {
-          const req = await sessionView.fetchEventRequest(detailSeq)
+          const req = sessionView
+            ? await sessionView.fetchEventRequest(detailSeq)
+            : sessionId
+              ? await loadEventRequest(sessionId, detailSeq)
+              : { messages: [], toolsTokens: 0 }
           if (!cancelled) setDetailRequest(req)
         }
       } finally {
@@ -314,7 +349,7 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
     return () => {
       cancelled = true
     }
-  }, [detailSeq, sessionView])
+  }, [detailSeq, sessionId, sessionView])
 
   const pointsRef = trend?.points ?? []
   const onStepClick = (x: number) => {
@@ -479,7 +514,7 @@ export function UsagePanel({ useSessionView, sessionView }: UsagePanelProps) {
 /** 打开面板时一次性拉全量 usage 趋势（含压缩点），失败或切换会话清空。 */
 function useUsageTrend(
   useSessionView: UsagePanelProps['useSessionView'],
-  sessionView: SessionViewService,
+  sessionView: SessionViewService | undefined,
 ): [UsageTrend | null, (t: UsageTrend | null) => void] {
   const sessionTop = useSessionView((s) => (s as { sessionId?: string }).sessionId)
   const [trend, setTrend] = useState<UsageTrend | null>(null)
@@ -488,8 +523,10 @@ function useUsageTrend(
     let cancelled = false
     setTrend(null)
     if (!sessionTop) return
-    void sessionView
-      .fetchUsageTrend()
+    const load = sessionView?.fetchUsageTrend
+      ? sessionView.fetchUsageTrend()
+      : loadUsageTrend(sessionTop)
+    void load
       .then((t) => {
         if (!cancelled) setTrend(t)
       })

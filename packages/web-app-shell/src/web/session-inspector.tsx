@@ -438,9 +438,41 @@ export const SessionInspector = memo(function SessionInspector({
             <ExtraComponent {...inspectorViewProps((extraActive.entry.props?.() ?? {}) as Record<string, unknown>)} paneId={extraActive.id} renderSlot={renderSlot} />
           </div>
         ) : (
-          <p className="inspector-catalog-empty" data-testid="inspector-catalog">
-            点右上角加号，选择要展示的内容
-          </p>
+          <div className="inspector-empty" data-testid="inspector-catalog">
+            <p className="inspector-empty-kicker">
+              {displayTabs.length || toolTabs.length ? '选择要看的内容' : '这一页没有可展示的面板'}
+            </p>
+            {displayTabs.length || toolTabs.length ? (
+              <div className="inspector-empty-list">
+                {displayTabs
+                  .filter((item) => item.repeatable || !opened.some((id) => slotTabId(id) === item.id))
+                  .map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="inspector-empty-item"
+                      onClick={() => pickOffer(item)}
+                      data-testid={`inspector-empty-${item.id}`}
+                    >
+                      {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
+                      <span className="min-w-0 flex-1 truncate">{item.repeatable ? `添加${item.label}` : item.label}</span>
+                    </button>
+                  ))}
+                {toolTabs.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="inspector-empty-item"
+                    onClick={() => pickOffer(item)}
+                    data-testid={`inspector-empty-${item.id}`}
+                  >
+                    {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
+                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         )}
       </div>
     </aside>
