@@ -1323,6 +1323,8 @@ export function CollectionBrowser({
           <button
             type="button"
             className="tasks-title-open"
+            data-testid="record-title-open"
+            data-biu-action="open"
             aria-label="查看详情"
             title="查看详情"
             onClick={(event) => {
@@ -1465,7 +1467,7 @@ export function CollectionBrowser({
     return (
       <>
         {listed.map(({ row, depth, hasKids }) => (
-          <tr key={`${keyPrefix}${row.id}`} className={row.id === detailId ? 'is-active' : undefined} {...recordPick(row)} onClick={() => setDetailId(row.id)}>
+          <tr key={`${keyPrefix}${row.id}`} className={row.id === detailId ? 'is-active' : undefined} {...recordPick(row)}>
             {columns.map((col) => (
               <td key={col.key}>
                 {col.key === schema?.labelField ? (

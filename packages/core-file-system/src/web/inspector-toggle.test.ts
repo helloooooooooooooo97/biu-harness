@@ -23,6 +23,12 @@ test('table and view rows only expand from the fold column', () => {
   assert.doesNotMatch(css, /\.chat-session-row:hover \.sidebar-group-fold-chevron/)
 })
 
+test('table view opens a record only from the title-side button', () => {
+  assert.match(browser, /data-testid="record-title-open"/)
+  assert.match(browser, /className="tasks-title-open"/)
+  assert.doesNotMatch(browser, /recordPick\(row\)\} onClick=\{\(\) => setDetailId\(row\.id\)\}/)
+})
+
 test('filesystem header toggles the right inspector, not the left data sidebar', () => {
   assert.match(browser, /data-testid="fsdb-inspector-toggle"/)
   assert.match(browser, /biu:inspector-toggle/)
