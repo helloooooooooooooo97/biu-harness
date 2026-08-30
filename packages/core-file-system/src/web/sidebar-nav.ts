@@ -84,15 +84,7 @@ export function buildCrumbs(input: {
   recordLabel?: string
   records?: Array<{ id: string; label: string }>
 }): Crumb[] {
-  const crumbs: Crumb[] = [
-    {
-      kind: 'root',
-      id: 'database',
-      label: '数据',
-      target: { kind: 'root' },
-      choices: [{ id: 'database', label: '数据', target: { kind: 'root' } }],
-    },
-  ]
+  const crumbs: Crumb[] = []
   if (!input.collection) return crumbs
   crumbs.push({
     kind: 'collection',
@@ -105,20 +97,6 @@ export function buildCrumbs(input: {
       target: { kind: 'collection', collection: table.path },
     })),
   })
-  if (input.recordId) {
-    crumbs.push({
-      kind: 'record',
-      id: input.recordId,
-      label: input.recordLabel || input.recordId,
-      target: { kind: 'record', collection: input.collection, recordId: input.recordId },
-      choices: (input.records ?? [{ id: input.recordId, label: input.recordLabel || input.recordId }]).map((row) => ({
-        id: row.id,
-        label: row.label,
-        target: { kind: 'record', collection: input.collection, recordId: row.id },
-      })),
-    })
-    return crumbs
-  }
   if (input.viewId) {
     crumbs.push({
       kind: 'view',
@@ -129,6 +107,19 @@ export function buildCrumbs(input: {
         id: view.id,
         label: view.name,
         target: { kind: 'view', collection: input.collection, viewId: view.id },
+      })),
+    })
+  }
+  if (input.recordId) {
+    crumbs.push({
+      kind: 'record',
+      id: input.recordId,
+      label: input.recordLabel || input.recordId,
+      target: { kind: 'record', collection: input.collection, recordId: input.recordId },
+      choices: (input.records ?? [{ id: input.recordId, label: input.recordLabel || input.recordId }]).map((row) => ({
+        id: row.id,
+        label: row.label,
+        target: { kind: 'record', collection: input.collection, recordId: row.id },
       })),
     })
   }

@@ -148,29 +148,34 @@ test('面包屑点上级会清掉后面几级', () => {
   })
   assert.deepEqual(
     crumbs.map((item) => item.kind),
-    ['root', 'collection', 'view'],
+    ['collection', 'view'],
   )
-  assert.equal(pathForCrumbTarget(crumbs[0]!.target), '/database')
-  assert.equal(pathForCrumbTarget(crumbs[1]!.target), '/database/tasks')
-  assert.equal(pathForCrumbTarget(crumbs[2]!.target), '/database/tasks/view/1787983501816')
-  const pages = crumbs[1]!.choices.find((item) => item.id === '/pages')
+  assert.equal(crumbs[0]!.label, 'Task')
+  assert.equal(pathForCrumbTarget(crumbs[0]!.target), '/database/tasks')
+  assert.equal(pathForCrumbTarget(crumbs[1]!.target), '/database/tasks/view/1787983501816')
+  const pages = crumbs[0]!.choices.find((item) => item.id === '/pages')
   assert.equal(pathForCrumbTarget(pages!.target), '/database/pages')
 })
 
-test('记录页面包屑第三级是记录，点表只回到表', () => {
+test('记录页面包屑是表 / 视图 / 记录，点表只回到表', () => {
   const crumbs = buildCrumbs({
     collection: '/tasks',
     collectionLabel: 'Task',
     tables: [{ path: '/tasks', label: 'Task' }],
+    viewId: '1787983501816',
+    viewName: '默认视图',
+    views: [{ id: '1787983501816', name: '默认视图' }],
     recordId: 'task_mtdbgnqj_5022je',
     recordLabel: '写文档',
     records: [{ id: 'task_mtdbgnqj_5022je', label: '写文档' }],
   })
   assert.deepEqual(
     crumbs.map((item) => item.kind),
-    ['root', 'collection', 'record'],
+    ['collection', 'view', 'record'],
   )
-  assert.equal(pathForCrumbTarget(crumbs[1]!.target), '/database/tasks')
+  assert.equal(pathForCrumbTarget(crumbs[0]!.target), '/database/tasks')
+  assert.equal(pathForCrumbTarget(crumbs[1]!.target), '/database/tasks/view/1787983501816')
+  assert.ok(!pathForCrumbTarget(crumbs[0]!.target).includes('/record/'))
   assert.ok(!pathForCrumbTarget(crumbs[1]!.target).includes('/record/'))
 })
 
