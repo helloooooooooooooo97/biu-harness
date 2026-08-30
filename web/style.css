@@ -365,9 +365,34 @@ body {
 
 .inspector-catalog-empty {
   margin: 8px 0 0;
+  padding: 12px;
   color: var(--dsw-label-3);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.inspector-add {
+  position: relative;
+  flex: none;
+}
+
+.inspector-add-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  min-width: 180px;
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid var(--dsw-border);
+  border-radius: 8px;
+  background: var(--dsw-surface);
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.inspector-catalog-item.is-active {
+  background: var(--dsw-hover);
 }
 
 .chat-view-header-left,

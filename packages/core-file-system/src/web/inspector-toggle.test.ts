@@ -22,6 +22,15 @@ test('database does not auto-open inspector content; panes follow the current ta
   assert.match(page, /centerKinds: \['collection-view', 'record'\]/)
 })
 
+test('database can be added to the inspector and browsed by crumbs', () => {
+  const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  assert.match(page, /fsdb-database-browse/)
+  assert.match(page, /tabLabel: '数据库'/)
+  const browse = readFileSync(resolve(import.meta.dirname, './inspector-database.tsx'), 'utf8')
+  assert.match(browse, /data-testid="inspector-database"/)
+  assert.match(browse, /aria-label="数据库位置"/)
+})
+
 test('common inspector actions add or copy a view', () => {
   const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf8')
   assert.match(browser, /biu:inspector-action/)

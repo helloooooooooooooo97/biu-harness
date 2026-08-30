@@ -14,6 +14,8 @@ import {
   collectionNavKey,
 } from './nav-boot.ts'
 import { loadActiveViewId, loadViews, pushAllSavedViews } from './view-storage.ts'
+import { bindSnapshot } from '@biu/web-snapshot'
+import { DatabaseInspectorBrowse } from './inspector-database.tsx'
 
 type SlotsService = {
   place: (slot: string, view: unknown, opts: { key: string; order?: number; props?: () => Record<string, unknown> }) => { dispose?: () => unknown }
@@ -345,6 +347,17 @@ export function apply(ctx: Context) {
   })
   ctx.inject(['snapshot'], (inner) => {
     const snapshot = inner.get('snapshot') as SnapshotService
+    const databaseBrowse = slots.place('inspector-panels', DatabaseInspectorBrowse, {
+      key: 'fsdb-database-browse',
+      order: -25,
+      props: () => ({
+        tabId: 'database',
+        tabLabel: '数据库',
+        tabIcon: CircleStackIcon,
+        common: true,
+        useSnapshot: bindSnapshot(snapshot),
+      }),
+    })
     let lastKey = ''
     const fromSnap = () => {
       const rows = snapshot.get?.().collections ?? []
@@ -365,6 +378,7 @@ export function apply(ctx: Context) {
       window.clearTimeout(debounce)
       offSnap?.()
       off()
+      void databaseBrowse.dispose?.()
     }
   })
   void bootLoadCollections(loadCollections, {

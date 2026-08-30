@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
-import { Squares2X2Icon } from '@heroicons/react/16/solid'
+import { PlusIcon, Squares2X2Icon } from '@heroicons/react/16/solid'
 import { chromeIcon } from './chrome-icon.ts'
 import {
   bindSessionView,
@@ -24,6 +24,21 @@ export type SessionInspectorProps = {
 
 function inspectorTabStorageKey(sid: string | null | undefined) {
   return sid ? `inspector.tab:${sid}` : 'inspector.tab:home'
+}
+
+function inspectorOpenedKey(sid: string | null | undefined) {
+  return sid ? `inspector.opened:${sid}` : 'inspector.opened:home'
+}
+
+function readOpened(sid: string | null | undefined): string[] {
+  try {
+    const raw = localStorage.getItem(inspectorOpenedKey(sid))
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
+  } catch {
+    return []
+  }
 }
 
 export const SessionInspector = memo(function SessionInspector({
@@ -58,8 +73,13 @@ export const SessionInspector = memo(function SessionInspector({
       })
   }, [centerKind, extras, sessionId])
   const allowedTabs = useMemo(() => extraTabs.map((item) => item.id), [extraTabs])
+  const displayTabs = extraTabs.filter((item) => !item.action)
+  const toolTabs = extraTabs.filter((item) => item.action)
 
   const [tab, setTabState] = useState('')
+  const [opened, setOpened] = useState(() => readOpened(sessionId))
+  const [plusOpen, setPlusOpen] = useState(false)
+  const plusRef = useRef<HTMLDivElement>(null)
   const setTab = useCallback(
     (next: string) => {
       setTabState(next)
@@ -71,32 +91,54 @@ export const SessionInspector = memo(function SessionInspector({
     },
     [sessionId],
   )
+  const persistOpened = useCallback(
+    (next: string[]) => {
+      setOpened(next)
+      try {
+        localStorage.setItem(inspectorOpenedKey(sessionId), JSON.stringify(next))
+      } catch {
+        /* ignore */
+      }
+    },
+    [sessionId],
+  )
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
   const focusTabId = extraTabs.find((item) => item.focusOnCall)?.id
   useEffect(() => {
     if (focusCallId && focusTabId) {
+      persistOpened(opened.includes(focusTabId) ? opened : [...opened, focusTabId])
       setTab(focusTabId)
       return
     }
-    // 无 session 时没有可用的 stored key 旧逻辑会每次 extras 刷新都打回 defaultTab，任务/插件点了等于没点。
     setTabState((current) => resolveInspectorTab(current, allowedTabs))
   }, [sessionId, focusCallId, focusTabId, allowedTabs.join('|'), setTab])
 
   useEffect(() => {
     const onTab = (event: Event) => {
       const next = inspectorTabFromEvent(event)
-      if (next && allowedTabs.includes(next)) setTab(next)
+      if (next && allowedTabs.includes(next)) {
+        persistOpened(opened.includes(next) ? opened : [...opened, next])
+        setTab(next)
+      }
     }
     window.addEventListener('biu:inspector-tab', onTab)
     return () => window.removeEventListener('biu:inspector-tab', onTab)
-  }, [allowedTabs.join('|'), setTab])
+  }, [allowedTabs.join('|'), opened, persistOpened, setTab])
 
   useEffect(() => {
     if (!open) return
     const current = extraTabs.find((item) => item.id === tab)
     if (current?.ensureTrajectory) void sessionView.ensureTrajectory()
   }, [open, tab, sessionId, sessionView, extraTabs])
+
+  useEffect(() => {
+    function onPointer(event: MouseEvent) {
+      if (!plusRef.current?.contains(event.target as Node)) setPlusOpen(false)
+    }
+    window.addEventListener('mousedown', onPointer)
+    return () => window.removeEventListener('mousedown', onPointer)
+  }, [])
 
   useEffect(() => {
     const onMove = (event: PointerEvent) => {
@@ -120,17 +162,19 @@ export const SessionInspector = memo(function SessionInspector({
 
   if (!open) return null
 
-  const extraActive = extraTabs.find((item) => item.id === tab && !item.action)
+  const headerTabs = displayTabs.filter((item) => opened.includes(item.id))
+  const extraActive = displayTabs.find((item) => item.id === tab)
   const ExtraComponent = extraActive?.entry.Component
-  const commonTabs = extraTabs.filter((item) => item.common)
-  const pageTabs = extraTabs.filter((item) => !item.common)
 
   function pickOffer(item: (typeof extraTabs)[number]) {
     if (item.action) {
       requestInspectorAction(item.action)
+      setPlusOpen(false)
       return
     }
+    persistOpened(opened.includes(item.id) ? opened : [...opened, item.id])
     setTab(item.id)
+    setPlusOpen(false)
   }
 
   return (
@@ -152,30 +196,71 @@ export const SessionInspector = memo(function SessionInspector({
         }}
       />
 
-      {extraActive ? (
-        <div className="app-side-bar-head">
-          <div className="inspector-tabs" role="tablist" aria-label="检查器分区">
-            {extraTabs.map((item) => {
-              const active = tab === item.id
-              return (
+      <div className="app-side-bar-head">
+        <div className="inspector-tabs" role="tablist" aria-label="检查器分区">
+          {headerTabs.map((item) => {
+            const active = tab === item.id
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                className={`inspector-tab${active ? ' is-active' : ''}`}
+                onClick={() => setTab(item.id)}
+                data-testid={`inspector-tab-${item.id}`}
+              >
+                <span className="inspector-tab-indicator" aria-hidden />
+                {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
+                {item.label}
+              </button>
+            )
+          })}
+        </div>
+        <div className="inspector-add" ref={plusRef}>
+          <button
+            type="button"
+            className={`chat-view-header-expand${plusOpen ? ' is-active' : ''}`}
+            title="添加"
+            aria-label="添加可展示的内容"
+            aria-expanded={plusOpen}
+            data-testid="inspector-add"
+            onClick={() => setPlusOpen((prev) => !prev)}
+          >
+            <PlusIcon {...chromeIcon} />
+          </button>
+          {plusOpen ? (
+            <div className="inspector-add-menu" role="menu" data-testid="inspector-add-menu">
+              {displayTabs.map((item) => (
                 <button
                   key={item.id}
                   type="button"
-                  role="tab"
-                  aria-selected={active}
-                  className={`inspector-tab${active ? ' is-active' : ''}`}
-                  onClick={() => setTab(active ? '' : item.id)}
-                  data-testid={`inspector-tab-${item.id}`}
+                  className={`inspector-catalog-item${item.id === tab ? ' is-active' : ''}`}
+                  role="menuitem"
+                  onClick={() => pickOffer(item)}
+                  data-testid={`inspector-offer-${item.id}`}
                 >
-                  <span className="inspector-tab-indicator" aria-hidden />
                   {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
-                  {item.label}
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
                 </button>
-              )
-            })}
-          </div>
+              ))}
+              {toolTabs.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="inspector-catalog-item"
+                  role="menuitem"
+                  onClick={() => pickOffer(item)}
+                  data-testid={`inspector-offer-${item.id}`}
+                >
+                  {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {extraActive && ExtraComponent ? (
@@ -183,38 +268,9 @@ export const SessionInspector = memo(function SessionInspector({
             <ExtraComponent {...(extraActive.entry.props?.() ?? {})} renderSlot={renderSlot} />
           </div>
         ) : (
-          <div className="inspector-catalog" data-testid="inspector-catalog">
-            <p className="inspector-catalog-lead">工具</p>
-            {commonTabs.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className="inspector-catalog-item"
-                onClick={() => pickOffer(item)}
-                data-testid={`inspector-offer-${item.id}`}
-              >
-                {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
-              </button>
-            ))}
-            {pageTabs.length ? (
-              <>
-                <p className="inspector-catalog-lead">此页</p>
-                {pageTabs.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="inspector-catalog-item"
-                    onClick={() => pickOffer(item)}
-                    data-testid={`inspector-offer-${item.id}`}
-                  >
-                    {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
-                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                  </button>
-                ))}
-              </>
-            ) : null}
-          </div>
+          <p className="inspector-catalog-empty" data-testid="inspector-catalog">
+            点右上角加号，选择要展示的内容
+          </p>
         )}
       </div>
     </aside>

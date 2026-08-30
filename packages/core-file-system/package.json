@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@biu/type-file-system": "0.1.0",
-    "@biu/web-session-view": "0.1.0"
+    "@biu/web-session-view": "0.1.0",
+    "@biu/web-snapshot": "0.1.0"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8",
