@@ -73,10 +73,11 @@ describe('composer dock stacking above sticky user', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     expect(css).toMatch(/\.composer-inline-chip\s*\{[^}]*align-items:\s*center/s)
     expect(css).toMatch(/\.composer-inline-chip\s*\{[^}]*vertical-align:\s*middle/s)
+    expect(css).toMatch(/\.composer-inline-chip\s*\{[^}]*line-height:\s*1/s)
     expect(css).toMatch(/\.composer-tool-chip\.is-pick,\s*\n\.user-pick-chip\s*\{[^}]*line-height:\s*1/s)
     expect(css).toMatch(/\.pick-kind-icon\s*\{[^}]*display:\s*block/s)
     expect(css).toMatch(
-      /\.composer-pill\.is-expanded \.composer-tiptap p,\s*\n\.composer-pill\.has-chips \.composer-tiptap p,\s*\n\.composer-tiptap\.is-readonly p \{\s*line-height:\s*2/,
+      /\.composer-pill\.has-chips \.composer-tiptap p,\s*\n\.composer-tiptap\.is-readonly p \{\s*line-height:\s*1\.45/,
     )
   })
 
