@@ -282,7 +282,7 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
   const { collection, viewId, recordId } = crumbsForRoute(pathname, tables)
   const currentPath = collection
   const sourceFilter = viewsCatalogSource(search)
-  const lockedFilters =
+  const lockedFilters: Record<string, string> =
     currentPath === VIEWS_COLLECTION_PATH && sourceFilter ? { tablePath: sourceFilter } : {}
   const table = tables.find((item) => item.path === currentPath)
   const title = table ? tableLabel(table) : '数据'
@@ -309,8 +309,8 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
       routeRecordId={recordId ?? null}
       routeViewId={viewId}
       onOpenTable={(path, nextViewId, opts) => {
-        if (opts?.catalog && path !== VIEWS_COLLECTION_PATH) {
-          setInspectorDbPath(id, viewsCatalogHref(path, defaultViewId(VIEWS_COLLECTION_PATH)))
+        if (opts?.catalog) {
+          setInspectorDbPath(id, viewsCatalogHref(path))
           return
         }
         setInspectorDbPath(id, databaseViewPath(path, nextViewId ?? defaultViewId(path)))
@@ -320,7 +320,7 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
         setInspectorDbPath(id, databaseRecordPath(nextCollection ?? currentPath, recordIdNext))
       }}
       onCloseRecord={() => {
-        setInspectorDbPath(id, databaseViewPath(currentPath, defaultViewId(currentPath)))
+        setInspectorDbPath(id, databaseViewPath(currentPath, defaultViewId(currentPath, viewId)))
       }}
       onCrumbTarget={(target) => goInspector(id, target)}
     />

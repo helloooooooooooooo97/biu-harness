@@ -13,7 +13,10 @@ test('view and record helpers match the database URL scheme', () => {
 })
 
 test('collection header opens the views catalog filtered by that table', () => {
-  assert.equal(viewsCatalogHref('/events'), '/database/views?source=%2Fevents')
+  assert.equal(
+    viewsCatalogHref('/events'),
+    `/database/views/view/${encodeURIComponent('builtin:/events')}?source=%2Fevents`,
+  )
   assert.equal(viewsCatalogSource('?source=%2Fevents'), '/events')
-  assert.equal(viewsCatalogHref('/views'), '/database/views')
+  assert.equal(viewsCatalogHref('/views'), `/database/views/view/${encodeURIComponent('builtin:/views')}`)
 })

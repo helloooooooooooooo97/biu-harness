@@ -10,6 +10,8 @@ import {
   TrashIcon,
 } from '@heroicons/react/16/solid'
 import type { CollectionInfo, DbRecord } from '@biu/type-file-system'
+import { mergeCatalogViews } from '../catalog-views.ts'
+import { VIEWS_COLLECTION_PATH } from './database-path.ts'
 import type { SavedView } from './saved-view.ts'
 import {
   fetchViewPreview,
@@ -270,7 +272,7 @@ export const DataSidebar = memo(function DataSidebar({
   title: string
   views: SavedView[]
   activeViewId: string | null
-  onOpenTable?: (path: string, viewId?: string) => void
+  onOpenTable?: (path: string, viewId?: string, opts?: { catalog?: boolean }) => void
   onApplyView: (view: SavedView) => void
   onRenameView: (view: SavedView) => void
   onDeleteView: (view: SavedView) => void
@@ -302,7 +304,9 @@ export const DataSidebar = memo(function DataSidebar({
   usePreviewTotalsVersion()
 
   function viewsFor(path: string) {
-    return path === collectionPath ? views : loadViews(path)
+    const listed = path === collectionPath ? views : loadViews(path)
+    if (path === VIEWS_COLLECTION_PATH) return mergeCatalogViews(tables, listed)
+    return listed
   }
 
   const starredRows = starredViews.flatMap((item) => {
@@ -325,7 +329,7 @@ export const DataSidebar = memo(function DataSidebar({
       }
     }
     return jobs
-  }, [dataOpen, favOpen, listedTables, openTables, starredRows, views, collectionPath])
+  }, [dataOpen, favOpen, listedTables, openTables, starredRows, tables, views, collectionPath])
 
   const countJobKey = countJobs.map((job) => viewTotalKey(job.path, job.view)).join('|')
   useEffect(() => {
@@ -608,7 +612,7 @@ export const DataSidebar = memo(function DataSidebar({
                                   </button>
                                 </div>
                                 <ChatCount count={getPreviewTotal(viewTotalKey(table.path, view))} />
-                                {table.path === collectionPath ? (
+                                {table.path === collectionPath && !view.builtin ? (
                                   <>
                                     <button
                                       type="button"

@@ -14,6 +14,8 @@ export type SavedView = {
   truncate?: boolean
   query?: string
   pageSize?: number
+  /** 系统按表登记生成的目录视图，不能改筛选、不能删改名。 */
+  builtin?: boolean
 }
 
 const MODES: ViewMode[] = ['queue', 'table', 'cards', 'board']
@@ -32,6 +34,7 @@ export function normalizeSavedView(view: SavedView): SavedView {
     truncate: view.truncate !== false,
     query: view.query ?? '',
     pageSize: normalizePageSize(view.pageSize),
+    builtin: Boolean(view.builtin),
   }
 }
 

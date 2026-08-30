@@ -89,6 +89,8 @@ import {
 } from './view-storage.ts'
 import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
+import { mergeCatalogViews } from '../catalog-views.ts'
+import { VIEWS_COLLECTION_PATH } from './database-path.ts'
 
 type StatResult = { schema?: CollectionSchema }
 
@@ -157,16 +159,22 @@ export function CollectionBrowser({
   const [sortField, setSortField] = useState(initialView?.sortField ?? 'id')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialView?.sortDir ?? 'asc')
   const [filters, setFilters] = useState<Record<string, string>>(initialView?.filters ?? {})
-  const queryFilters = useMemo(() => ({ ...filters, ...lockedFilters }), [filters, lockedFilters])
-  const lockedFilterKeys = Object.keys(lockedFilters)
-  const lockedSource = lockedFilters.tablePath ?? ''
+  const [columnKeys, setColumnKeys] = useState<string[]>(initialView?.columns ?? [])
+  const tablePathsKey = tables.map((table) => `${table.path}\t${table.view?.title ?? table.label ?? ''}`).join('\n')
+  const [views, setViews] = useState<SavedView[]>(() => loadViews(collectionPath))
+  const [activeViewId, setActiveViewId] = useState<string | null>(initialView?.id ?? null)
+  const catalogLocks = useMemo(() => {
+    const current = views.find((view) => view.id === activeViewId)
+    if (!current?.builtin) return lockedFilters
+    return { ...current.filters, ...lockedFilters }
+  }, [activeViewId, lockedFilters, views])
+  const queryFilters = useMemo(() => ({ ...filters, ...catalogLocks }), [catalogLocks, filters])
+  const lockedFilterKeys = Object.keys(catalogLocks)
+  const lockedSource = catalogLocks.tablePath ?? ''
   useEffect(() => {
     if (!lockedSource) return
     setMode('table')
   }, [lockedSource])
-  const [columnKeys, setColumnKeys] = useState<string[]>(initialView?.columns ?? [])
-  const [views, setViews] = useState<SavedView[]>(() => loadViews(collectionPath))
-  const [activeViewId, setActiveViewId] = useState<string | null>(initialView?.id ?? null)
   const detailId = openDetailId
   const setDetailId = (id: string | null, row?: DbRecord | null) => {
     flushSync(() => {
@@ -418,26 +426,32 @@ export function CollectionBrowser({
     setError('')
     setPage(0)
     const stored = viewForPath(collectionPath, routeViewId)
-    if (stored) {
-      setViews(loadViews(collectionPath))
-      setActiveViewId(stored.id)
-      setMode(stored.mode)
-      setSortField(stored.sortField)
-      setSortDir(stored.sortDir)
-      setFilters(stored.filters)
-      setColumnKeys(stored.columns)
-      setGroupBy(stored.groupBy ?? '')
-      setShowTree(stored.tree !== false)
-      setWrapCells(!!stored.wrap)
-      setTruncateCells(stored.truncate !== false)
-      setQuery(stored.query ?? '')
+    const user = loadViews(collectionPath)
+    const listed = collectionPath === VIEWS_COLLECTION_PATH ? mergeCatalogViews(tables, user) : user
+    rememberViews(collectionPath, listed)
+    if (stored || listed[0]) {
+      const next = (routeViewId && listed.find((item) => item.id === routeViewId)) || stored || listed[0]
+      setViews(listed)
+      if (next) {
+        setActiveViewId(next.id)
+        setMode(next.mode)
+        setSortField(next.sortField)
+        setSortDir(next.sortDir)
+        setFilters(next.filters)
+        setColumnKeys(next.columns)
+        setGroupBy(next.groupBy ?? '')
+        setShowTree(next.tree !== false)
+        setWrapCells(!!next.wrap)
+        setTruncateCells(next.truncate !== false)
+        setQuery(next.query ?? '')
+      }
     } else {
       setViews([])
       setActiveViewId(null)
       setQuery('')
       setFilters({})
     }
-  }, [collectionPath])
+  }, [collectionPath, tablePathsKey])
 
   useEffect(() => {
     let debounce = 0
@@ -655,12 +669,14 @@ export function CollectionBrowser({
   }, [dlg])
 
   function persistViews(next: SavedView[]) {
-    viewsRef.current = next
-    setViews(next)
-    rememberViews(collectionPath, next)
+    const listed = collectionPath === VIEWS_COLLECTION_PATH ? mergeCatalogViews(tables, next) : next
+    const stored = listed.filter((view) => !view.builtin)
+    viewsRef.current = listed
+    setViews(listed)
+    rememberViews(collectionPath, listed)
     if (!embed) {
-      localStorage.setItem(viewsKey(collectionPath), JSON.stringify(next))
-      pushSavedViews(collectionPath, next)
+      localStorage.setItem(viewsKey(collectionPath), JSON.stringify(stored))
+      pushSavedViews(collectionPath, stored)
     }
     window.dispatchEvent(new Event('fsdb:change'))
     window.dispatchEvent(new Event('fsdb:crumb-labels'))
@@ -762,14 +778,14 @@ export function CollectionBrowser({
   function copyView(source?: SavedView) {
     commitView(
       source
-        ? { ...source, id: `${Date.now()}`, name: uniqueViewName(`${source.name} 副本`) }
+        ? { ...source, id: `${Date.now()}`, name: uniqueViewName(`${source.name} 副本`), builtin: false }
         : {
             id: `${Date.now()}`,
             name: uniqueViewName(`${activeView?.name ?? title} 副本`),
             mode,
             sortField,
             sortDir,
-            filters,
+            filters: { ...queryFilters },
             columns: columnKeys,
             groupBy,
             tree: showTree,
@@ -782,6 +798,8 @@ export function CollectionBrowser({
 
   function patchActiveView(patch: Partial<SavedView>) {
     if (!activeViewId) return
+    const current = views.find((view) => view.id === activeViewId)
+    if (current?.builtin) return
     persistViews(views.map((view) => (view.id === activeViewId ? { ...view, ...patch } : view)))
   }
 
@@ -797,6 +815,10 @@ export function CollectionBrowser({
 
   function applyRename(name?: string) {
     if (!dlg || dlg.kind !== 'rename') return
+    if (dlg.view.builtin) {
+      setDlg(null)
+      return
+    }
     const next = (name ?? '').trim()
     if (!next) {
       setDlgError('请填写名称')
@@ -812,6 +834,10 @@ export function CollectionBrowser({
 
   function applyDeleteView() {
     if (!dlg || dlg.kind !== 'delete') return
+    if (dlg.view.builtin) {
+      setDlg(null)
+      return
+    }
     const removedId = dlg.view.id
     const remaining = views.filter((item) => item.id !== removedId)
     setDlg(null)
@@ -843,6 +869,7 @@ export function CollectionBrowser({
     if (!pinned.length) return
     setColumnKeys(pinned)
     if (!activeViewId) return
+    if (views.find((view) => view.id === activeViewId)?.builtin) return
     persistViews(views.map((view) => (view.id === activeViewId ? { ...view, columns: pinned } : view)))
   }
 
@@ -1218,7 +1245,8 @@ export function CollectionBrowser({
     if (hydratePath.current === collectionPath) return
     hydratePath.current = collectionPath
     let next = loadViews(collectionPath)
-    if (!next.length) {
+    if (collectionPath === VIEWS_COLLECTION_PATH) next = mergeCatalogViews(tables, next)
+    if (!next.length && collectionPath !== VIEWS_COLLECTION_PATH) {
       next = [
         normalizeSavedView({
           id: `${Date.now()}`,
@@ -1237,11 +1265,12 @@ export function CollectionBrowser({
       ]
     }
     persistViews(next)
+    const listed = viewsRef.current
     const view =
-      next.find((item) => item.id === routeViewId) ??
-      next.find((item) => item.id === loadActiveViewId(collectionPath, next)) ??
-      next[0]
-    applyView(view)
+      listed.find((item) => item.id === routeViewId) ??
+      listed.find((item) => item.id === loadActiveViewId(collectionPath, listed)) ??
+      listed[0]
+    if (view) applyView(view)
     setHydrated(true)
   }, [allColumnKeys, collectionPath, schema, schemaDefaultKeys])
 
@@ -1250,7 +1279,7 @@ export function CollectionBrowser({
     const id = window.setTimeout(() => {
       if (hydratePath.current !== collectionPath) return
       const current = viewsRef.current.find((view) => view.id === activeViewId)
-      if (!current) return
+      if (!current || current.builtin) return
       const next = normalizeSavedView({
         ...current,
         mode,
@@ -1396,6 +1425,7 @@ export function CollectionBrowser({
                         <span className="tasks-viewdd-item-name">{view.name}</span>
                         {view.id === activeViewId ? <CheckCircleIcon aria-hidden className="size-[14px] tasks-viewdd-check" /> : null}
                       </button>
+                      {view.builtin ? null : (
                       <span className="tasks-viewdd-item-actions">
                         <button type="button" className="tasks-viewdd-act" title="重命名" onClick={() => renameView(view)}>
                           <PencilSquareIcon aria-hidden className="size-[14px]" />
@@ -1404,6 +1434,7 @@ export function CollectionBrowser({
                           <TrashIcon aria-hidden className="size-[14px]" />
                         </button>
                       </span>
+                      )}
                     </div>
                   ))}
                   <div className="tasks-viewdd-foot">
@@ -1598,6 +1629,7 @@ export function CollectionBrowser({
                 </div>
               ) : null}
             </div>
+            {activeView?.builtin ? null : (
             <div className="tasks-filter-btn-wrap" ref={filterRef}>
               <button
                 type="button"
@@ -1650,6 +1682,7 @@ export function CollectionBrowser({
                 </div>
               ) : null}
             </div>
+            )}
             {mode === 'table' ? (
             <div className="tasks-filter-btn-wrap" ref={configRef}>
               <button

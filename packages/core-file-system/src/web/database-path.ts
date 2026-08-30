@@ -1,4 +1,5 @@
 import { buildAppPath, type AppRoute } from '@biu/web-session-view'
+import { builtinCatalogViewId } from '../catalog-views.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
 export const DATA_MODULE_ID = 'database'
@@ -27,9 +28,10 @@ export function databaseRecordPath(collection: string, recordId: string): string
 
 export const VIEWS_COLLECTION_PATH = '/views'
 
-export function viewsCatalogHref(sourcePath: string, viewId?: string): string {
-  const base = databaseViewPath(VIEWS_COLLECTION_PATH, viewId)
+export function viewsCatalogHref(sourcePath: string): string {
   const source = normalizeCollectionPath(sourcePath)
+  const viewId = builtinCatalogViewId(source || VIEWS_COLLECTION_PATH)
+  const base = databaseViewPath(VIEWS_COLLECTION_PATH, viewId)
   if (!source || source === VIEWS_COLLECTION_PATH) return base
   return `${base}?source=${encodeURIComponent(source)}`
 }

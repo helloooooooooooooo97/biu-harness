@@ -124,10 +124,8 @@ function CollectionPage(props: SlotProps) {
   }, [collectionFromRoute, tables])
 
   const sourceFilter = useMemo(() => viewsCatalogSource(location.search), [location.search])
-  const lockedFilters = useMemo(
-    () => (currentPath === VIEWS_COLLECTION_PATH && sourceFilter ? { tablePath: sourceFilter } : {}),
-    [currentPath, sourceFilter],
-  )
+  const lockedFilters: Record<string, string> =
+    currentPath === VIEWS_COLLECTION_PATH && sourceFilter ? { tablePath: sourceFilter } : {}
   if (!currentPath) return null
   const title = row?.view?.title ?? row?.label ?? currentPath.replace(/^\//, '')
   return (
@@ -144,8 +142,8 @@ function CollectionPage(props: SlotProps) {
       expandedViewKey={expandedViewKey}
       onExpandedViewKeyChange={setExpandedViewKey}
       onOpenTable={(path, viewId, opts) => {
-        if (opts?.catalog && path !== VIEWS_COLLECTION_PATH) {
-          navigate(viewsCatalogHref(path, defaultViewId(VIEWS_COLLECTION_PATH)))
+        if (opts?.catalog) {
+          navigate(viewsCatalogHref(path))
           return
         }
         go({ collection: path, viewId: viewId ?? defaultViewId(path) })
@@ -155,7 +153,7 @@ function CollectionPage(props: SlotProps) {
         go({ collection: collection ?? currentPath, recordId })
       }
       onCloseRecord={() =>
-        go({ collection: currentPath, viewId: defaultViewId(currentPath) }, { replace: true })
+        go({ collection: currentPath, viewId: defaultViewId(currentPath, viewFromRoute) }, { replace: true })
       }
       onCrumbTarget={(target: CrumbTarget) => navigate(pathForCrumbTarget(target))}
     />

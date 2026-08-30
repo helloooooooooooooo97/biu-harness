@@ -1,3 +1,5 @@
+import { builtinCatalogViewId, stubBuiltinCatalogView } from '../catalog-views.ts'
+import { VIEWS_COLLECTION_PATH } from './database-path.ts'
 import { normalizeSavedView, type SavedView } from './saved-view.ts'
 
 export function viewsKey(collectionPath: string) {
@@ -52,13 +54,15 @@ export function loadActiveViewId(collectionPath: string, listed: SavedView[]) {
 export function viewForPath(collectionPath: string, routeViewId?: string): SavedView | null {
   const listed = loadViews(collectionPath)
   const preferred =
-    (routeViewId ? listed.find((item) => item.id === routeViewId) : undefined) ??
+    (routeViewId ? listed.find((item) => item.id === routeViewId) ?? stubBuiltinCatalogView(routeViewId) : undefined) ??
     listed.find((item) => item.id === loadActiveViewId(collectionPath, listed)) ??
+    (collectionPath === VIEWS_COLLECTION_PATH ? stubBuiltinCatalogView(builtinCatalogViewId(VIEWS_COLLECTION_PATH)) : undefined) ??
     listed[0]
   return preferred ? normalizeSavedView(preferred) : null
 }
 
 export function defaultViewId(collectionPath: string, routeViewId?: string) {
+  if (!routeViewId && collectionPath === VIEWS_COLLECTION_PATH) return builtinCatalogViewId(VIEWS_COLLECTION_PATH)
   return viewForPath(collectionPath, routeViewId)?.id
 }
 
