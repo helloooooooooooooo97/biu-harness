@@ -1736,7 +1736,7 @@ body {
   height: 100%;
   min-width: 0;
   min-height: 0;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .app-activity-bar {
@@ -1749,6 +1749,14 @@ body {
   overflow: visible;
   background: var(--dsw-sidebar);
   border-right: 1px solid var(--dsw-border);
+  transform: translateX(-100%);
+  pointer-events: none;
+  transition: transform .16s ease;
+}
+
+.app-shell.is-rail-open .app-activity-bar {
+  transform: none;
+  pointer-events: auto;
 }
 
 .app-activity-brand {
