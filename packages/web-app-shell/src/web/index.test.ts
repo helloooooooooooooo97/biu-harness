@@ -28,10 +28,10 @@ test('declares generic module slots, not plugin ids', async () => {
   assert.equal(ctx.slots.specOf('channels'), undefined)
   assert.equal(ctx.slots.specOf('dashboard'), undefined)
   assert.equal(ctx.slots.list('root').length, 1)
-  const addView = ctx.slots.list('inspector-panels').find((item) => item.id === 'common-add-view')
-  assert.equal(addView?.props?.().common, true)
-  assert.equal(addView?.props?.().action, 'add-view')
-  assert.equal(addView?.props?.().tabLabel, '添加视图')
+  assert.equal(
+    ctx.slots.list('inspector-panels').some((item) => item.id === 'common-add-view' || item.id === 'common-copy-view'),
+    false,
+  )
 })
 
 test('refresh does not send unfinished plugin routes home', () => {

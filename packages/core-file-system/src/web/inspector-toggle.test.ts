@@ -39,9 +39,8 @@ test('database can be added to the inspector and browsed by crumbs', () => {
   assert.match(browse, /aria-label="数据库位置"/)
 })
 
-test('common inspector actions add or copy a view', () => {
-  const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf8')
-  assert.match(browser, /biu:inspector-action/)
-  assert.match(browser, /add-view/)
-  assert.match(browser, /copy-view/)
+test('inspector no longer listens for add/copy view actions', () => {
+  assert.doesNotMatch(browser, /biu:inspector-action/)
+  assert.doesNotMatch(browser, /detail === 'add-view'/)
+  assert.doesNotMatch(browser, /detail === 'copy-view'/)
 })

@@ -337,8 +337,8 @@ body {
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px;
+  gap: 1px;
+  padding: 8px;
 }
 
 .inspector-catalog-lead {
@@ -350,14 +350,18 @@ body {
 }
 
 .inspector-catalog-item {
+  position: relative;
+  isolation: isolate;
   display: flex;
+  width: 100%;
   min-width: 0;
+  min-height: 32px;
   align-items: center;
   gap: 8px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
-  padding: 8px 10px;
+  padding: 0 8px;
   color: var(--dsw-sidebar-fg);
   font: inherit;
   font-size: 14px;
@@ -366,9 +370,27 @@ body {
   cursor: pointer;
 }
 
+.inspector-catalog-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: transparent;
+}
+
+.inspector-catalog-item > * {
+  position: relative;
+  z-index: 1;
+}
+
 .inspector-catalog-item:hover {
-  background: var(--dsw-hover);
   color: var(--dsw-sidebar-fg-active);
+}
+
+.inspector-catalog-item:hover::before {
+  background: var(--dsw-hover);
 }
 
 .inspector-catalog-empty {
@@ -400,6 +422,10 @@ body {
 }
 
 .inspector-catalog-item.is-active {
+  color: var(--dsw-sidebar-fg-active);
+}
+
+.inspector-catalog-item.is-active::before {
   background: var(--dsw-hover);
 }
 

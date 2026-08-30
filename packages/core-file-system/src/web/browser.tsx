@@ -1017,16 +1017,6 @@ export function CollectionBrowser({
     )
   }
 
-  useEffect(() => {
-    const onAction = (event: Event) => {
-      const detail = (event as CustomEvent<string>).detail
-      if (detail === 'add-view') addEmptyView()
-      if (detail === 'copy-view') copyView()
-    }
-    window.addEventListener('biu:inspector-action', onAction)
-    return () => window.removeEventListener('biu:inspector-action', onAction)
-  })
-
   function patchActiveView(patch: Partial<SavedView>) {
     if (!activeViewId) return
     persistViews(views.map((view) => (view.id === activeViewId ? { ...view, ...patch } : view)))

@@ -22,7 +22,6 @@ import { bindSnapshot, type SnapshotService } from '@biu/web-snapshot'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
 import { centerKindFromRoute, parseAppPath } from '@biu/web-session-view'
-import { placeCommonInspectorTools } from './inspector-common.tsx'
 import {
   isMascotDancing,
   mascotDanceShape,
@@ -843,5 +842,4 @@ export function apply(ctx: Context) {
     },
     props: () => shellProps,
   })
-  placeCommonInspectorTools(ctx.slots as SlotsService)
 }
