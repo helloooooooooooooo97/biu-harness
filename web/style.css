@@ -47,6 +47,7 @@
   --dsw-chat-reply-pad-x: 12px;
   --dsw-chat-max-width: 768px;
   --dsw-center-min: 512px;
+  --dsw-sidebar-min: 160px;
   --dsw-sidebar-max: 360px;
   --dsw-inspector-min: 240px;
   --dsw-chat-code-bg: var(--dsw-sidebar);
@@ -1126,7 +1127,7 @@ body {
   backface-visibility: hidden;
   color: var(--dsw-sidebar-fg);
   position: relative;
-  min-width: 0;
+  min-width: var(--dsw-sidebar-min);
   width: 100%;
   max-width: var(--dsw-sidebar-max);
 }

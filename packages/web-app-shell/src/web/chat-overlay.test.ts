@@ -49,21 +49,21 @@ test('sidebar below min width is gone', () => {
   assert.equal(gone.left, 0)
 })
 
-test('sidebar labels appear only after LABEL_AT', () => {
-  assert.equal(SIDEBAR_DEFAULT, 72)
-  assert.equal(SIDEBAR_MIN, Math.round(SIDEBAR_DEFAULT * (2 / 3)))
-  assert.equal(SIDEBAR_LABEL_AT, SIDEBAR_MAX)
+test('sidebar stays a normal pane at min width, never an icon rail', () => {
+  assert.equal(SIDEBAR_MIN, 160)
+  assert.equal(SIDEBAR_DEFAULT, 240)
+  assert.equal(SIDEBAR_LABEL_AT, SIDEBAR_MIN)
   assert.equal(SIDEBAR_TAG_AT, SIDEBAR_MAX)
-  assert.ok(SIDEBAR_DEFAULT < SIDEBAR_LABEL_AT)
-  assert.ok(SIDEBAR_MIN < SIDEBAR_DEFAULT)
-  const icon = allocateShellColumns({
+  assert.ok(SIDEBAR_MIN <= SIDEBAR_DEFAULT)
+  assert.ok(SIDEBAR_DEFAULT < SIDEBAR_MAX)
+  const atMin = allocateShellColumns({
     viewportWidth: 1600,
     leftPane: true,
     leftWidth: SIDEBAR_MIN,
     inspectorOpen: false,
     inspectorWidth: 320,
   })
-  assert.equal(icon.left, SIDEBAR_MIN)
+  assert.equal(atMin.left, SIDEBAR_MIN)
 })
 
 test('narrow viewport hides the left pane outright, then shrinks inspector, then center', () => {
