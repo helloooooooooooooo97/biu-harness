@@ -412,7 +412,9 @@ export const DataSidebar = memo(function DataSidebar({
   }
 
   function toggleViewPreview(key: string) {
-    setExpandedViewKey((prev) => (prev === key ? null : key))
+    const next = expandedViewKey === key ? null : key
+    if (onExpandedViewKeyChange) onExpandedViewKeyChange(next)
+    else setExpandedViewKeyLocal(next)
   }
 
   function openRecord(path: string, view: SavedView, recordId: string) {
