@@ -99,11 +99,11 @@ export function buildCrumbs(input: {
     id: input.collection,
     label: input.collectionLabel,
     target: { kind: 'collection', collection: input.collection },
-    choices: input.tables.map((table) => ({
-      id: table.path,
-      label: table.label,
-      icon: table.icon,
-      target: { kind: 'collection', collection: table.path },
+    choices: (input.views ?? []).map((view) => ({
+      id: view.id,
+      label: view.name,
+      mode: view.mode,
+      target: { kind: 'view', collection: input.collection, viewId: view.id },
     })),
   })
   if (input.viewId) {
@@ -144,8 +144,9 @@ export function crumbLabelAction(crumb: Crumb, parent?: Crumb): CrumbTarget {
   return { kind: 'root' }
 }
 
-/** 多项则出菜单；只有一项时点这一级回到上一级。 */
+/** 表级列出该表全部视图（一项也出菜单）。其它级多项出菜单，一项回到上一级。 */
 export function crumbButtonAction(crumb: Crumb, parent?: Crumb): 'menu' | CrumbTarget {
+  if (crumb.kind === 'collection' && crumb.choices.length > 0) return 'menu'
   if (crumb.choices.length > 1) return 'menu'
   return crumbLabelAction(crumb, parent)
 }

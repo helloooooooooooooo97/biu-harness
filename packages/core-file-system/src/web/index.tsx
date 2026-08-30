@@ -148,7 +148,9 @@ function CollectionPage(props: SlotProps) {
         }
         go({ collection: path, viewId: viewId ?? defaultViewId(path) })
       }}
-      onOpenView={(viewId) => go({ collection: currentPath, viewId })}
+      onOpenView={() => {
+        if (viewFromRoute || recordFromRoute) go({ collection: currentPath }, { replace: true })
+      }}
       onOpenRecord={(recordId, _viewId, collection) =>
         go({ collection: collection ?? currentPath, recordId })
       }
