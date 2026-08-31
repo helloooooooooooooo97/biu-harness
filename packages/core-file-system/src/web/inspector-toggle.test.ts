@@ -132,7 +132,7 @@ test('database extras sit after the record detail, not in the inspector', () => 
   assert.match(detail, /<h1 className="fsdb-detail-title">/)
   assert.doesNotMatch(detail, /<h2 className="fsdb-detail-title-input">/)
   assert.match(style, /\.fsdb-page:not\(\.inspector-database-page\) \.fsdb-detail-main\{[^}]*padding:80px 24px 24px/)
-  assert.match(style, /\.fsdb-page:not\(\.inspector-database-page\) \.fsdb-main\{[^}]*padding:80px 24px/)
+  assert.match(style, /\.fsdb-main > \.fsdb-detail-title\{[^}]*flex:none/)
   assert.match(style, /\.fsdb-detail-main\{[^}]*padding:20px 24px 24px/)
   assert.match(style, /\.fsdb-main\{[^}]*padding:20px 24px 16px/)
   assert.match(style, /\.fsdb-main\{[^}]*max-width:var\(--dsw-chat-max-width\)/)
