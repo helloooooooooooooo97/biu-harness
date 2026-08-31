@@ -3,6 +3,17 @@ const React = globalThis.React
 export const name = 'store-hello-web'
 export const inject = ['slots']
 
+function HelloDockIcon(props) {
+  const className = props && props.className ? String(props.className) : 'size-5'
+  return React.createElement(
+    'svg',
+    { viewBox: '0 0 16 16', fill: 'currentColor', className, 'aria-hidden': true },
+    React.createElement('path', {
+      d: 'M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM5.75 6.5a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Zm4.5 0a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM8 12.25a3.25 3.25 0 0 1-2.94-1.75.75.75 0 1 1 1.28-.78 1.75 1.75 0 0 0 3.32 0 .75.75 0 1 1 1.28.78A3.25 3.25 0 0 1 8 12.25Z',
+    }),
+  )
+}
+
 function AppIcon() {
   return React.createElement(
     'div',
@@ -162,5 +173,6 @@ export function apply(ctx) {
   ctx.slots.place('plugin-store-extras', HelloBanner, {
     key: 'store-hello-banner',
     order: 10,
+    props: () => ({ Icon: HelloDockIcon }),
   })
 }

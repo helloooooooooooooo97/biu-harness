@@ -3,7 +3,7 @@ import type { Context } from 'cordis'
 import { useSlotEntries, type SlotsService } from '@biu/web-slots'
 import type { SlotProps } from '@biu/type-slots'
 
-import { XMarkIcon, MinusIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon, PuzzlePieceIcon } from '@heroicons/react/16/solid'
+import { XMarkIcon, MinusIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon, PuzzlePieceIcon, Bars2Icon } from '@heroicons/react/16/solid'
 import type { DatabaseUi } from '@biu/type-file-system/ui'
 import type { DockService } from '@biu/core-dock'
 import { pluginsChrome } from './chrome.tsx'
@@ -157,8 +157,8 @@ function PluginAppWindow({
 
   const startDrag = (event: ReactPointerEvent) => {
     if (fullscreen) return
-    if ((event.target as HTMLElement).closest('button')) return
     event.preventDefault()
+    event.stopPropagation()
     bringFront()
     dragRef.current = { px: event.clientX, py: event.clientY, x: geom.x, y: geom.y }
   }
@@ -219,12 +219,23 @@ function PluginAppWindow({
         onPointerLeave={closeControlsSoon}
       >
         <nav
-          className={`absolute top-2 left-1.5 flex cursor-grab flex-col gap-0.5 rounded-lg bg-white/10 p-0.5 shadow-[0_1px_2px_rgba(15,15,15,.04)] backdrop-blur-sm transition-opacity duration-150 active:cursor-grabbing ${
+          className={`absolute top-2 left-1.5 flex flex-col gap-0.5 rounded-lg bg-white/10 p-0.5 shadow-[0_1px_2px_rgba(15,15,15,.04)] backdrop-blur-sm transition-opacity duration-150 ${
             controlsOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
           }`}
           aria-label={`${title} 窗口`}
+        >
+        <button
+          type="button"
+          className="flex size-6 cursor-grab items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800 active:cursor-grabbing"
+          title="移动窗口"
+          aria-label={`移动 ${title}`}
+          data-plugin-move
+          data-testid={`plugin-window-move-${extraId}`}
+          disabled={fullscreen}
           onPointerDown={startDrag}
         >
+          <Bars2Icon className="size-3.5" />
+        </button>
         <button
           type="button"
           className="flex size-6 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800"

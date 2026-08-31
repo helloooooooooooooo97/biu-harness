@@ -9,6 +9,23 @@ const CELL = 20
 const FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", sans-serif'
 
+function GomokuDockIcon(props) {
+  const className = props && props.className ? String(props.className) : 'size-5'
+  return React.createElement(
+    'svg',
+    { viewBox: '0 0 16 16', fill: 'currentColor', className, 'aria-hidden': true },
+    React.createElement('circle', { cx: '6', cy: '6', r: '3' }),
+    React.createElement('circle', {
+      cx: '10.25',
+      cy: '10.25',
+      r: '2.6',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: '1.5',
+    }),
+  )
+}
+
 function initBoard() {
   return Array.from({ length: SIZE }, () => Array(SIZE).fill(0))
 }
@@ -293,5 +310,9 @@ function GomokuCard() {
 }
 
 export function apply(ctx) {
-  ctx.slots.place('plugin-store-extras', GomokuCard, { key: 'store-gomoku', order: 10 })
+  ctx.slots.place('plugin-store-extras', GomokuCard, {
+    key: 'store-gomoku',
+    order: 10,
+    props: () => ({ Icon: GomokuDockIcon }),
+  })
 }
