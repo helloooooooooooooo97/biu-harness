@@ -17,7 +17,7 @@ describe('composer dock stacking above sticky user', () => {
 
     expect(css).toMatch(/\.chat-stage\s*\{[^}]*isolation:\s*isolate/s)
     expect(css).toMatch(/\.chat-composer-dock\s*\{[^}]*z-index:\s*20/s)
-    expect(thread).toMatch(/sticky top-0 z-\[1\]/)
+    expect(thread).toMatch(/sticky top-0 z-1/)
     expect(shell).toContain('chat-composer-dock')
     expect(shell).not.toMatch(/bottom-0 z-\[2\]/)
   })
@@ -25,7 +25,8 @@ describe('composer dock stacking above sticky user', () => {
   it('compose-only overlay hides the reply thread until send', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
-    expect(css).toMatch(/\.chat-overlay-panel\.is-compose-only \.chat-overlay-thread/)
+    expect(css).toMatch(/\.chat-overlay-panel \{/)
+    expect(css).not.toMatch(/\.chat-overlay-panel\.is-compose-only \.chat-overlay-thread/)
     expect(composer).toContain('revealOverlayThread')
     expect(composer).toContain('biu:composer-focus')
   })
@@ -34,17 +35,18 @@ describe('composer dock stacking above sticky user', () => {
     const approvals = readFileSync(resolve(root, 'packages/cap-chat/src/web/approvals.tsx'), 'utf8')
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const shell = readFileSync(resolve(root, 'packages/web-app-shell/src/web/index.tsx'), 'utf8')
+    const overlayWin = readFileSync(resolve(root, 'packages/web-app-shell/src/web/overlay-window.tsx'), 'utf8')
     expect(approvals).toContain('dock-session-mascot')
     expect(approvals).not.toContain('BrandAgentMenu')
     expect(approvals).not.toContain('setSessionPickerOpen')
     expect(shell).not.toMatch(/hit\.closest\('\.dock-agent-stack'\)/)
-    expect(shell).toMatch(/overlayCollapsed = !overlayOpen \|\| hidden/)
-    expect(css).toMatch(/\.chat-overlay-panel\.is-autohide \{\s*[^}]*overflow:\s*visible/)
-    expect(css).toMatch(
-      /\.chat-overlay-panel\.is-autohide \.dock-agent-stack,\s*\n\.chat-overlay-panel\.is-autohide \.dock-agent-stack \* \{\s*pointer-events:\s*auto/,
-    )
-    expect(css).toMatch(/\.chat-overlay-panel\.is-autohide \.composer-pill/)
-    expect(css).toMatch(/\.chat-overlay-panel\.is-autohide \.chat-dock-toolbar-start > :not\(\.dock-agent-stack\)/)
+    expect(shell).toContain('OverlayChatWindow')
+    expect(overlayWin).toContain('chat-overlay-drag')
+    expect(overlayWin).toContain("key: 'se'")
+    expect(overlayWin).toContain('chat-overlay-resize-')
+    expect(css).toMatch(/\.chat-overlay-panel \{/)
+    expect(css).not.toMatch(/\.chat-overlay-panel\.is-autohide/)
+    expect(css).toMatch(/\.composer-pill/)
   })
 
   it('squares the composer when pick chips are present', () => {

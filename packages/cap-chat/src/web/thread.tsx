@@ -28,8 +28,7 @@ import {
 } from '@biu/web-session-view'
 import { SidebarMascot } from '@biu/web-mascot'
 import { StaticMascotMark } from '@biu/web-mascot'
-import { DEFAULT_SESSION_MASCOT, resolveSessionMascot } from '@biu/web-mascot'
-import type { SessionMascotIdentity } from '@biu/web-mascot'
+import { resolveSessionMascot } from '@biu/web-mascot'
 import type { SlotProps } from '@biu/type-slots'
 import { parsePicks, pickDomAttrs, pickPreview } from '@biu/cap-pick/web'
 import { MarkdownBody } from './markdown.tsx'
@@ -717,34 +716,6 @@ export const ChatNodeList = memo(function ChatNodeList({
   )
 })
 
-function EmptyHero({
-  identity,
-  busy,
-  sessionId,
-}: {
-  identity: SessionMascotIdentity
-  busy: boolean
-  sessionId?: string
-}) {
-  return (
-    <div className="chat-empty-hero">
-      <div className="chat-empty-hero-inner">
-        <div className="chat-empty-hero-mascot">
-          <div className="chat-empty-hero-glow" aria-hidden />
-          <SidebarMascot
-            size={112}
-            sessionId={sessionId}
-            identity={identity}
-            busy={busy}
-            title={`${identity.shape} · ${identity.color}`}
-          />
-        </div>
-        <h2 className="chat-empty-hero-title">Need a hand?</h2>
-      </div>
-    </div>
-  )
-}
-
 function StatusRow({
   agentStatus,
   agentStep,
@@ -946,17 +917,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   }, [stickKey, mountedNodes.length, revealStart, sessionId])
 
   if (nodes.length === 0 && !pending && !error && !switchingSession) {
-    const session = sessions.find((item) => item.id === sessionId)
-    const identity = sessionId
-      ? resolveSessionMascot(sessionId, session?.mascot)
-      : DEFAULT_SESSION_MASCOT
-    return (
-      <EmptyHero
-        identity={identity}
-        busy={agentStatus === 'running'}
-        sessionId={sessionId ?? undefined}
-      />
-    )
+    return <div className="w-full" data-testid="chat-empty" />
   }
 
   return (

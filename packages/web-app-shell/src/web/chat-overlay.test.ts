@@ -24,7 +24,11 @@ import {
   setOverlayResizing,
   setOverlayPinned,
   clampOverlayChatHeight,
+  clampOverlayWinGeom,
+  defaultOverlayWinGeom,
   OVERLAY_CHAT_HEIGHT_MIN,
+  OVERLAY_WIN_MIN_H,
+  OVERLAY_WIN_MIN_W,
   inspectorTabFromEvent,
   inspectorActionFromEvent,
   requestInspectorTab,
@@ -164,6 +168,16 @@ test('autohide resets when overlay closes', () => {
   assert.equal(getOverlayAutohide(), true)
   setChatOverlay(false)
   assert.equal(getOverlayAutohide(), false)
+})
+
+test('overlay window geom clamps and sits above the dock by default', () => {
+  const def = defaultOverlayWinGeom(1280, 800)
+  assert.ok(def.w >= OVERLAY_WIN_MIN_W)
+  assert.ok(def.h >= OVERLAY_WIN_MIN_H)
+  assert.ok(def.y + def.h <= 800 - 80)
+  const tiny = clampOverlayWinGeom({ x: -400, y: -20, w: 10, h: 10 }, 1280, 800)
+  assert.equal(tiny.w, OVERLAY_WIN_MIN_W)
+  assert.equal(tiny.h, OVERLAY_WIN_MIN_H)
 })
 
 test('overlay chat height clamps', () => {

@@ -291,6 +291,63 @@ export function toggleChatOverlay() {
 export const OVERLAY_CHAT_HEIGHT_MIN = 96
 export const OVERLAY_CHAT_HEIGHT_DEFAULT = 200
 
+export type OverlayWinGeom = { x: number; y: number; w: number; h: number }
+
+export const OVERLAY_WIN_MIN_W = 320
+export const OVERLAY_WIN_MIN_H = 280
+export const OVERLAY_WIN_DEFAULT_W = 420
+export const OVERLAY_WIN_DEFAULT_H = 520
+const OVERLAY_WIN_GEOM_KEY = 'cordis.overlay.geom'
+const OVERLAY_DOCK_CLEARANCE = 88
+
+export function defaultOverlayWinGeom(vw = 1280, vh = 800): OverlayWinGeom {
+  const w = Math.min(OVERLAY_WIN_DEFAULT_W, Math.max(OVERLAY_WIN_MIN_W, vw - 40))
+  const h = Math.min(OVERLAY_WIN_DEFAULT_H, Math.max(OVERLAY_WIN_MIN_H, vh - OVERLAY_DOCK_CLEARANCE - 24))
+  return {
+    w,
+    h,
+    x: Math.round((vw - w) / 2),
+    y: Math.max(12, Math.round(vh - h - OVERLAY_DOCK_CLEARANCE)),
+  }
+}
+
+export function clampOverlayWinGeom(geom: OverlayWinGeom, vw = 1280, vh = 800): OverlayWinGeom {
+  const w = Math.min(vw - 24, Math.max(OVERLAY_WIN_MIN_W, Math.round(geom.w)))
+  const h = Math.min(vh - 24, Math.max(OVERLAY_WIN_MIN_H, Math.round(geom.h)))
+  const x = Math.min(vw - 48, Math.max(12 - (w - 48), Math.round(geom.x)))
+  const y = Math.min(vh - 48, Math.max(12, Math.round(geom.y)))
+  return { x, y, w, h }
+}
+
+export function readOverlayWinGeom(): OverlayWinGeom {
+  const vw = typeof window === 'undefined' ? 1280 : window.innerWidth
+  const vh = typeof window === 'undefined' ? 800 : window.innerHeight
+  const fallback = defaultOverlayWinGeom(vw, vh)
+  try {
+    const raw = localStorage.getItem(OVERLAY_WIN_GEOM_KEY)
+    if (!raw) return fallback
+    const parsed = JSON.parse(raw) as Partial<OverlayWinGeom>
+    if (![parsed.x, parsed.y, parsed.w, parsed.h].every((n) => typeof n === 'number' && Number.isFinite(n))) {
+      return fallback
+    }
+    return clampOverlayWinGeom(parsed as OverlayWinGeom, vw, vh)
+  } catch {
+    return fallback
+  }
+}
+
+export function writeOverlayWinGeom(geom: OverlayWinGeom): void {
+  try {
+    localStorage.setItem(OVERLAY_WIN_GEOM_KEY, JSON.stringify(geom))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function requestOverlayFocus() {
+  window.dispatchEvent(new Event('biu:overlay-focus'))
+}
+
 export function clampOverlayChatHeight(height: number, maxHeight = 800) {
   const max = Math.max(OVERLAY_CHAT_HEIGHT_MIN, Math.round(maxHeight))
   if (!Number.isFinite(height)) return OVERLAY_CHAT_HEIGHT_DEFAULT
