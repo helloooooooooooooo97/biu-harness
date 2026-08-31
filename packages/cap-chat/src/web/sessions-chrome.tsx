@@ -1,5 +1,6 @@
 import { SidebarMascot, resolveSessionMascot } from '@biu/web-mascot'
-import type { CollectionChrome } from '@biu/type-file-system/ui'
+import { MASCOT_COLOR_NAME, MASCOT_EYE_NAME, MASCOT_SHAPE_NAME } from '@biu/type-session'
+import type { CollectionChrome, FsCellProps } from '@biu/type-file-system/ui'
 import type { DbRecord } from '@biu/type-file-system'
 
 function sessionMascot(record: DbRecord) {
@@ -24,8 +25,30 @@ function SessionTitle({ record, label }: { record: DbRecord; label: string }) {
   )
 }
 
+function MascotShapeCell({ value }: FsCellProps) {
+  const key = String(value ?? '')
+  return <span>{MASCOT_SHAPE_NAME[key] ?? key}</span>
+}
+
+function MascotColorCell({ value }: FsCellProps) {
+  const key = String(value ?? '')
+  return <span>{MASCOT_COLOR_NAME[key] ?? key}</span>
+}
+
+function MascotEyeCell({ value }: FsCellProps) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return <span>—</span>
+  const name = MASCOT_EYE_NAME[Math.abs(Math.trunc(n)) % MASCOT_EYE_NAME.length]
+  return <span>{name}</span>
+}
+
 export const sessionsChrome: CollectionChrome = {
   Title: SessionTitle,
+  cells: {
+    mascotShape: MascotShapeCell,
+    mascotColor: MascotColorCell,
+    mascotEye: MascotEyeCell,
+  },
 }
 
 if (typeof document !== 'undefined') {

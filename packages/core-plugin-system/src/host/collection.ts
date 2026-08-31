@@ -95,7 +95,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       order: 30,
       icon: 'puzzle-piece',
     },
-    records: { update: false, create: false, delete: false },
+    records: { update: false, create: false, delete: true },
     schema: {
       labelField: 'name',
       columns: [
@@ -138,6 +138,9 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
     },
     list,
     get: find,
+    remove: async (id) => {
+      await store.uninstall(id)
+    },
     actions: [
       {
         id: 'start',
