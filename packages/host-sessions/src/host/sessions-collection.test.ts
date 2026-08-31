@@ -13,6 +13,7 @@ test('sessionsCollection maps summaries and writes title/pinned/tags', async () 
         title: 'hello',
         updatedAt: 100,
         type: 'chat',
+        mascot: { shape: 'pebble', color: 'orange', eye: 1 },
         config: { pinned: false, tags: ['a'] },
       },
     ],
@@ -28,6 +29,7 @@ test('sessionsCollection maps summaries and writes title/pinned/tags', async () 
   const rows = await spec.list()
   assert.equal(rows[0]?.id, 's1')
   assert.equal(rows[0]?.title, 'hello')
+  assert.deepEqual(rows[0]?.mascot, { shape: 'pebble', color: 'orange', eye: 1 })
   assert.deepEqual(rows[0]?.tags, ['a'])
   await spec.update?.('s1', { title: 'renamed', pinned: true, tags: ['b', 'c'] })
   assert.deepEqual(calls, [

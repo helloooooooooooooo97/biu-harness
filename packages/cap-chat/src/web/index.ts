@@ -13,6 +13,8 @@ import { UsagePanel } from './usage-panel.tsx'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
 import type { PickService } from '@biu/cap-pick/web'
 import { getChatOverlay, subscribeChatOverlay, setChatOverlay, closeChatOverlay, requestOverlayFocus } from '@biu/web-app-shell/chat-overlay'
+import type { DatabaseUi } from '@biu/type-file-system/ui'
+import { sessionsChrome } from './sessions-chrome.tsx'
 
 export const name = 'chat-ui'
 export const inject = ['slots', 'sessionView', 'projectView', 'dock']
@@ -104,4 +106,8 @@ export function apply(ctx: Context) {
       ctx.dock.patch('composer', { running: open, focused: open, minimized: false })
     }),
   )
+  ctx.inject(['databaseUi'], (inner) => {
+    const ui = inner.get('databaseUi') as DatabaseUi
+    return ui.decorate('/sessions', sessionsChrome).dispose
+  })
 }
