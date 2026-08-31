@@ -302,13 +302,29 @@ export const OVERLAY_CHAT_HEIGHT_MIN = 96
 export const OVERLAY_CHAT_HEIGHT_DEFAULT = 200
 
 export type OverlayWinGeom = { x: number; y: number; w: number; h: number }
+export type OverlayLayout = 'free' | 'center' | 'left' | 'right' | 'bottom'
+export type OverlayWinState = OverlayWinGeom & { layout: OverlayLayout }
 
 export const OVERLAY_WIN_MIN_W = 320
 export const OVERLAY_WIN_MIN_H = 280
 export const OVERLAY_WIN_DEFAULT_W = 420
 export const OVERLAY_WIN_DEFAULT_H = 520
+export const OVERLAY_DOCK_CLEARANCE = 80
 const OVERLAY_WIN_GEOM_KEY = 'cordis.overlay.geom'
-const OVERLAY_DOCK_CLEARANCE = 80
+const OVERLAY_MARGIN = 12
+
+export const OVERLAY_LAYOUTS: Array<{ id: OverlayLayout; label: string }> = [
+  { id: 'center', label: '居中' },
+  { id: 'left', label: '靠左' },
+  { id: 'right', label: '靠右' },
+  { id: 'bottom', label: '靠底' },
+]
+
+export function parseOverlayLayout(value: unknown): OverlayLayout {
+  return value === 'center' || value === 'left' || value === 'right' || value === 'bottom' || value === 'free'
+    ? value
+    : 'free'
+}
 
 export function defaultOverlayWinGeom(vw = 1280, vh = 800): OverlayWinGeom {
   const w = Math.min(OVERLAY_WIN_DEFAULT_W, Math.max(OVERLAY_WIN_MIN_W, vw - 40))
@@ -317,7 +333,7 @@ export function defaultOverlayWinGeom(vw = 1280, vh = 800): OverlayWinGeom {
     w,
     h,
     x: Math.round((vw - w) / 2),
-    y: Math.max(12, Math.round(vh - h - OVERLAY_DOCK_CLEARANCE)),
+    y: Math.max(OVERLAY_MARGIN, Math.round(vh - h - OVERLAY_DOCK_CLEARANCE)),
   }
 }
 
@@ -325,33 +341,86 @@ export function clampOverlayWinGeom(geom: OverlayWinGeom, vw = 1280, vh = 800): 
   const w = Math.min(vw - 24, Math.max(OVERLAY_WIN_MIN_W, Math.round(geom.w)))
   const h = Math.min(vh - 24, Math.max(OVERLAY_WIN_MIN_H, Math.round(geom.h)))
   const x = Math.min(vw - 48, Math.max(12 - (w - 48), Math.round(geom.x)))
-  const y = Math.min(vh - 48, Math.max(12, Math.round(geom.y)))
+  const y = Math.min(vh - 48, Math.max(OVERLAY_MARGIN, Math.round(geom.y)))
   return { x, y, w, h }
 }
 
-export function readOverlayWinGeom(): OverlayWinGeom {
+export function overlayLayoutGeom(
+  layout: OverlayLayout,
+  prev: OverlayWinGeom,
+  vw = 1280,
+  vh = 800,
+): OverlayWinGeom {
+  const maxW = Math.max(OVERLAY_WIN_MIN_W, vw - OVERLAY_MARGIN * 2)
+  const maxH = Math.max(OVERLAY_WIN_MIN_H, vh - OVERLAY_DOCK_CLEARANCE - OVERLAY_MARGIN)
+  const w = Math.min(Math.max(prev.w, OVERLAY_WIN_MIN_W), maxW)
+  const h = Math.min(Math.max(prev.h, OVERLAY_WIN_MIN_H), maxH)
+  if (layout === 'center') {
+    return clampOverlayWinGeom(
+      {
+        w,
+        h,
+        x: Math.round((vw - w) / 2),
+        y: Math.round(Math.max(OVERLAY_MARGIN, (vh - OVERLAY_DOCK_CLEARANCE - h) / 2)),
+      },
+      vw,
+      vh,
+    )
+  }
+  if (layout === 'left') {
+    return clampOverlayWinGeom({ x: OVERLAY_MARGIN, y: OVERLAY_MARGIN, w, h: maxH }, vw, vh)
+  }
+  if (layout === 'right') {
+    return clampOverlayWinGeom({ x: vw - w - OVERLAY_MARGIN, y: OVERLAY_MARGIN, w, h: maxH }, vw, vh)
+  }
+  if (layout === 'bottom') {
+    return clampOverlayWinGeom(
+      { x: OVERLAY_MARGIN, y: vh - OVERLAY_DOCK_CLEARANCE - h, w: maxW, h },
+      vw,
+      vh,
+    )
+  }
+  return clampOverlayWinGeom(prev, vw, vh)
+}
+
+export function readOverlayWinState(): OverlayWinState {
   const vw = typeof window === 'undefined' ? 1280 : window.innerWidth
   const vh = typeof window === 'undefined' ? 800 : window.innerHeight
-  const fallback = defaultOverlayWinGeom(vw, vh)
+  const fallback = { ...defaultOverlayWinGeom(vw, vh), layout: 'free' as const }
   try {
     const raw = localStorage.getItem(OVERLAY_WIN_GEOM_KEY)
     if (!raw) return fallback
-    const parsed = JSON.parse(raw) as Partial<OverlayWinGeom>
-    if (![parsed.x, parsed.y, parsed.w, parsed.h].every((n) => typeof n === 'number' && Number.isFinite(n))) {
-      return fallback
+    const parsed = JSON.parse(raw) as Partial<OverlayWinState>
+    const layout = parseOverlayLayout(parsed.layout)
+    const prev = {
+      x: Number(parsed.x),
+      y: Number(parsed.y),
+      w: Number(parsed.w),
+      h: Number(parsed.h),
     }
-    return clampOverlayWinGeom(parsed as OverlayWinGeom, vw, vh)
+    if (![prev.x, prev.y, prev.w, prev.h].every((n) => Number.isFinite(n))) return fallback
+    const geom = layout === 'free' ? clampOverlayWinGeom(prev, vw, vh) : overlayLayoutGeom(layout, prev, vw, vh)
+    return { ...geom, layout }
   } catch {
     return fallback
   }
 }
 
-export function writeOverlayWinGeom(geom: OverlayWinGeom): void {
+export function readOverlayWinGeom(): OverlayWinGeom {
+  const { layout: _layout, ...geom } = readOverlayWinState()
+  return geom
+}
+
+export function writeOverlayWinState(state: OverlayWinState): void {
   try {
-    localStorage.setItem(OVERLAY_WIN_GEOM_KEY, JSON.stringify(geom))
+    localStorage.setItem(OVERLAY_WIN_GEOM_KEY, JSON.stringify(state))
   } catch {
     /* ignore */
   }
+}
+
+export function writeOverlayWinGeom(geom: OverlayWinGeom, layout: OverlayLayout = 'free'): void {
+  writeOverlayWinState({ ...geom, layout })
 }
 
 export function requestOverlayFocus() {

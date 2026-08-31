@@ -1093,6 +1093,43 @@ body {
   flex: none;
 }
 
+.chat-overlay-layout {
+  position: absolute;
+  top: 6px;
+  right: 36px;
+  z-index: 12;
+}
+
+.chat-overlay-layout-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 7.5rem;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--dsw-surface);
+  box-shadow: var(--dsw-shadow-lv2);
+}
+
+.chat-overlay-layout-menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-sidebar-fg);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-overlay-layout-menu button:hover,
+.chat-overlay-layout-menu button.is-active {
+  background: var(--dsw-hover);
+  color: var(--dsw-sidebar-fg-active);
+}
+
 .chat-overlay-drag:active {
   cursor: grabbing;
 }

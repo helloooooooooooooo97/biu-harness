@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { Squares2X2Icon } from '@heroicons/react/16/solid'
 import {
   clampOverlayWinGeom,
-  readOverlayWinGeom,
-  writeOverlayWinGeom,
   closeChatOverlay,
+  overlayLayoutGeom,
+  readOverlayWinState,
+  writeOverlayWinState,
+  OVERLAY_LAYOUTS,
+  type OverlayLayout,
   type OverlayWinGeom,
 } from './chat-overlay.ts'
 
@@ -20,17 +24,32 @@ export function OverlayChatWindow({
   thread: ReactNode
   dock: ReactNode
 }) {
-  const [geom, setGeom] = useState<OverlayWinGeom>(() => readOverlayWinGeom())
+  const initial = readOverlayWinState()
+  const [geom, setGeom] = useState<OverlayWinGeom>(initial)
+  const [layout, setLayout] = useState<OverlayLayout>(initial.layout)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [z, setZ] = useState(overlayZ)
   const boxRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ px: number; py: number; x: number; y: number } | null>(null)
   const resizeRef = useRef<(OverlayWinGeom & ResizeEdge & { px: number; py: number }) | null>(null)
   const geomRef = useRef(geom)
+  const layoutRef = useRef(layout)
   geomRef.current = geom
+  layoutRef.current = layout
 
   const bringFront = useCallback(() => {
     overlayZ += 1
     setZ(overlayZ)
+  }, [])
+
+  const apply = useCallback((next: OverlayWinGeom, nextLayout: OverlayLayout, persist = true) => {
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const geom = nextLayout === 'free' ? clampOverlayWinGeom(next, vw, vh) : overlayLayoutGeom(nextLayout, next, vw, vh)
+    setGeom(geom)
+    setLayout(nextLayout)
+    if (persist) writeOverlayWinState({ ...geom, layout: nextLayout })
+    return geom
   }, [])
 
   useEffect(() => {
@@ -55,18 +74,15 @@ export function OverlayChatWindow({
 
   useEffect(() => {
     const onMove = (event: PointerEvent) => {
-      const drag = dragRef.current
-      if (drag) {
-        setGeom(
-          clampOverlayWinGeom(
-            {
-              ...geomRef.current,
-              x: drag.x + event.clientX - drag.px,
-              y: drag.y + event.clientY - drag.py,
-            },
-            window.innerWidth,
-            window.innerHeight,
-          ),
+      if (dragRef.current) {
+        apply(
+          {
+            ...geomRef.current,
+            x: dragRef.current.x + event.clientX - dragRef.current.px,
+            y: dragRef.current.y + event.clientY - dragRef.current.py,
+          },
+          'free',
+          false,
         )
         return
       }
@@ -85,27 +101,46 @@ export function OverlayChatWindow({
         h = resize.h - dy
         y = resize.y + dy
       }
-      setGeom(clampOverlayWinGeom({ x, y, w, h }, window.innerWidth, window.innerHeight))
+      apply({ x, y, w, h }, 'free', false)
     }
     const onUp = () => {
-      if (dragRef.current || resizeRef.current) writeOverlayWinGeom(geomRef.current)
+      if (dragRef.current || resizeRef.current) {
+        writeOverlayWinState({ ...geomRef.current, layout: layoutRef.current })
+      }
       dragRef.current = null
       resizeRef.current = null
+    }
+    const onResize = () => {
+      apply(geomRef.current, layoutRef.current)
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onUp)
+    window.addEventListener('resize', onResize)
     return () => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
+      window.removeEventListener('resize', onResize)
     }
-  }, [])
+  }, [apply])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onDown = (event: PointerEvent) => {
+      const target = event.target
+      if (target instanceof Element && target.closest('[data-testid="chat-overlay-layout"]')) return
+      setMenuOpen(false)
+    }
+    window.addEventListener('pointerdown', onDown)
+    return () => window.removeEventListener('pointerdown', onDown)
+  }, [menuOpen])
 
   const startDrag = (event: ReactPointerEvent) => {
     if ((event.target as HTMLElement).closest('button, input, textarea, [contenteditable="true"]')) return
     event.preventDefault()
     bringFront()
+    setMenuOpen(false)
     dragRef.current = { px: event.clientX, py: event.clientY, x: geom.x, y: geom.y }
   }
 
@@ -113,6 +148,7 @@ export function OverlayChatWindow({
     event.preventDefault()
     event.stopPropagation()
     bringFront()
+    setMenuOpen(false)
     const el = boxRef.current
     const r = el?.getBoundingClientRect()
     resizeRef.current = {
@@ -142,10 +178,45 @@ export function OverlayChatWindow({
       ref={boxRef}
       className="chat-overlay-panel"
       data-testid="chat-overlay-panel"
+      data-overlay-layout={layout}
       data-biu-ignore
       style={{ top: geom.y, left: geom.x, width: geom.w, height: geom.h, zIndex: z }}
       onPointerDown={bringFront}
     >
+      <div className="chat-overlay-layout" data-testid="chat-overlay-layout">
+        <button
+          type="button"
+          className={`chat-view-header-expand${menuOpen ? ' is-active' : ''}`}
+          title="窗口布局"
+          aria-label="窗口布局"
+          aria-expanded={menuOpen}
+          data-testid="chat-overlay-layout-toggle"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <Squares2X2Icon className="size-4 shrink-0" />
+        </button>
+        {menuOpen ? (
+          <div className="chat-overlay-layout-menu" role="menu" data-testid="chat-overlay-layout-menu">
+            {OVERLAY_LAYOUTS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="menuitem"
+                className={layout === item.id ? 'is-active' : undefined}
+                data-testid={`chat-overlay-layout-${item.id}`}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={() => {
+                  apply(geomRef.current, item.id)
+                  setMenuOpen(false)
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
       <div className="chat-overlay-drag" data-testid="chat-overlay-drag" onPointerDown={startDrag}>
         {header}
       </div>

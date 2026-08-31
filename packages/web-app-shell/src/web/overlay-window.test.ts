@@ -18,6 +18,11 @@ afterEach(() => {
   root = null
   host = null
   setChatOverlay(false)
+  try {
+    localStorage.removeItem('cordis.overlay.geom')
+  } catch {
+    /* ignore */
+  }
 })
 
 test('clicking the overlay close button actually closes the overlay', () => {
@@ -47,4 +52,34 @@ test('clicking the overlay close button actually closes the overlay', () => {
   })
   assert.equal(getChatOverlay(), false)
   closeChatOverlay()
+})
+
+test('layout button docks the overlay to the right', () => {
+  host = document.createElement('div')
+  document.body.append(host)
+  root = createRoot(host)
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 })
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
+  act(() => {
+    root!.render(
+      createElement(OverlayChatWindow, {
+        header: createElement('div'),
+        thread: createElement('div'),
+        dock: createElement('div'),
+      }),
+    )
+  })
+  const toggle = document.querySelector('[data-testid="chat-overlay-layout-toggle"]')
+  assert.ok(toggle)
+  act(() => {
+    toggle!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  const right = document.querySelector('[data-testid="chat-overlay-layout-right"]')
+  assert.ok(right)
+  act(() => {
+    right!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  const panel = document.querySelector('[data-testid="chat-overlay-panel"]') as HTMLElement
+  assert.equal(panel.getAttribute('data-overlay-layout'), 'right')
+  assert.ok(Number.parseFloat(panel.style.left) > 700)
 })
