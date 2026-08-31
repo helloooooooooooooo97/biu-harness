@@ -109,7 +109,13 @@ export function OsDock(props: SlotProps) {
         hideSoon(event)
       }}
     >
-      <div className="os-dock-edge" aria-hidden />
+      <div
+        className="os-dock-edge"
+        aria-hidden
+        onPointerEnter={show}
+        onPointerDown={show}
+        onMouseEnter={show}
+      />
       <div className="os-dock-peek" aria-hidden />
       <div className="os-dock-shelf">
         <div className="os-dock-shelf-row">

@@ -259,12 +259,12 @@ body {
 
 .os-dock {
   position: fixed;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: 0;
   z-index: 90;
-  width: 0;
+  width: auto;
   height: 0;
-  transform: translateX(-50%);
   pointer-events: none;
 }
 
