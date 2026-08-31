@@ -8,7 +8,7 @@ import {
   Cog6ToothIcon,
   DocumentIcon,
   PuzzlePieceIcon,
-  QueueListIcon,
+  MapIcon,
   SignalIcon,
 } from '@heroicons/react/16/solid'
 import type { AppModule } from '@biu/web-app-modules'
@@ -20,7 +20,7 @@ const INSPECTOR_DOCK_TOOLS = [
   { id: 'inspector:sessions', title: '会话', tabId: 'database:/sessions', order: 41, Icon: ChatBubbleLeftRightIcon },
   { id: 'inspector:tasks', title: '任务', tabId: 'database:/tasks', order: 42, Icon: ClipboardDocumentListIcon },
   { id: 'inspector:plugins', title: '插件', tabId: 'database:/plugins', order: 43, Icon: PuzzlePieceIcon },
-  { id: 'inspector:traj', title: '轨迹', tabId: 'traj', order: 44, Icon: QueueListIcon },
+  { id: 'inspector:traj', title: '轨迹', tabId: 'traj', order: 44, Icon: MapIcon },
   { id: 'inspector:usage', title: '用量', tabId: 'usage', order: 45, Icon: SignalIcon },
 ] as const
 

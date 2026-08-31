@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import type { Context } from 'cordis'
-import { SignalIcon, QueueListIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/react/16/solid'
+import { SignalIcon, MapIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/react/16/solid'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import type { SlotProps } from '@biu/web-slots'
 import { ApprovalsRail } from './approvals.tsx'
@@ -63,7 +63,7 @@ export function apply(ctx: Context) {
       ...slotProps,
       tabId: 'traj',
       tabLabel: '轨迹',
-      tabIcon: QueueListIcon,
+      tabIcon: MapIcon,
       ensureTrajectory: true,
       focusOnCall: true,
       requiresSession: true,
