@@ -1094,9 +1094,7 @@ body {
 }
 
 .chat-overlay-layout {
-  position: absolute;
-  top: 6px;
-  right: 36px;
+  position: relative;
   z-index: 12;
 }
 
@@ -1142,7 +1140,24 @@ body {
 }
 
 .chat-overlay-panel .chat-view-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   padding-inline: 4px;
+}
+
+.chat-overlay-panel .chat-view-header-left {
+  justify-self: start;
+}
+
+.chat-overlay-panel .chat-view-session-title-wrap {
+  position: static;
+  left: auto;
+  max-width: min(220px, 100%);
+  transform: none;
+}
+
+.chat-overlay-panel .chat-view-header-right {
+  justify-self: end;
 }
 
 .chat-overlay-panel .chat-stage {

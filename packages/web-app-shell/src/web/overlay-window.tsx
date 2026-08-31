@@ -20,7 +20,7 @@ export function OverlayChatWindow({
   thread,
   dock,
 }: {
-  header: ReactNode
+  header: ReactNode | ((layoutTools: ReactNode) => ReactNode)
   thread: ReactNode
   dock: ReactNode
 }) {
@@ -101,7 +101,7 @@ export function OverlayChatWindow({
         h = resize.h - dy
         y = resize.y + dy
       }
-      apply({ x, y, w, h }, 'free', false)
+      apply({ x, y, w, h }, layoutRef.current, false)
     }
     const onUp = () => {
       if (dragRef.current || resizeRef.current) {
@@ -162,6 +162,43 @@ export function OverlayChatWindow({
     }
   }
 
+  const layoutTools = (
+    <div className="chat-overlay-layout" data-testid="chat-overlay-layout">
+      <button
+        type="button"
+        className={`chat-view-header-expand${menuOpen ? ' is-active' : ''}`}
+        title="窗口布局"
+        aria-label="窗口布局"
+        aria-expanded={menuOpen}
+        data-testid="chat-overlay-layout-toggle"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        <Squares2X2Icon className="size-4 shrink-0" />
+      </button>
+      {menuOpen ? (
+        <div className="chat-overlay-layout-menu" role="menu" data-testid="chat-overlay-layout-menu">
+          {OVERLAY_LAYOUTS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="menuitem"
+              className={layout === item.id ? 'is-active' : undefined}
+              data-testid={`chat-overlay-layout-${item.id}`}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={() => {
+                apply(geomRef.current, item.id)
+                setMenuOpen(false)
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+
   const handles: Array<{ key: string; className: string; edge: ResizeEdge }> = [
     { key: 'n', className: 'absolute inset-x-8 top-0 h-1.5 cursor-n-resize', edge: { north: true } },
     { key: 's', className: 'absolute inset-x-2 bottom-0 h-1.5 cursor-s-resize', edge: { south: true } },
@@ -183,42 +220,13 @@ export function OverlayChatWindow({
       style={{ top: geom.y, left: geom.x, width: geom.w, height: geom.h, zIndex: z }}
       onPointerDown={bringFront}
     >
-      <div className="chat-overlay-layout" data-testid="chat-overlay-layout">
-        <button
-          type="button"
-          className={`chat-view-header-expand${menuOpen ? ' is-active' : ''}`}
-          title="窗口布局"
-          aria-label="窗口布局"
-          aria-expanded={menuOpen}
-          data-testid="chat-overlay-layout-toggle"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          <Squares2X2Icon className="size-4 shrink-0" />
-        </button>
-        {menuOpen ? (
-          <div className="chat-overlay-layout-menu" role="menu" data-testid="chat-overlay-layout-menu">
-            {OVERLAY_LAYOUTS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                role="menuitem"
-                className={layout === item.id ? 'is-active' : undefined}
-                data-testid={`chat-overlay-layout-${item.id}`}
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={() => {
-                  apply(geomRef.current, item.id)
-                  setMenuOpen(false)
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
       <div className="chat-overlay-drag" data-testid="chat-overlay-drag" onPointerDown={startDrag}>
-        {header}
+        {typeof header === 'function' ? header(layoutTools) : (
+          <>
+            {header}
+            {layoutTools}
+          </>
+        )}
       </div>
       <div className="chat-overlay-thread">{thread}</div>
       <div className="chat-composer-dock">{dock}</div>

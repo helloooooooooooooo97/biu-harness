@@ -302,7 +302,7 @@ export const OVERLAY_CHAT_HEIGHT_MIN = 96
 export const OVERLAY_CHAT_HEIGHT_DEFAULT = 200
 
 export type OverlayWinGeom = { x: number; y: number; w: number; h: number }
-export type OverlayLayout = 'free' | 'center' | 'left' | 'right' | 'bottom'
+export type OverlayLayout = 'free' | 'right' | 'bottom'
 export type OverlayWinState = OverlayWinGeom & { layout: OverlayLayout }
 
 export const OVERLAY_WIN_MIN_W = 320
@@ -314,16 +314,14 @@ const OVERLAY_WIN_GEOM_KEY = 'cordis.overlay.geom'
 const OVERLAY_MARGIN = 12
 
 export const OVERLAY_LAYOUTS: Array<{ id: OverlayLayout; label: string }> = [
-  { id: 'center', label: '居中' },
-  { id: 'left', label: '靠左' },
-  { id: 'right', label: '靠右' },
-  { id: 'bottom', label: '靠底' },
+  { id: 'bottom', label: '底部居中' },
+  { id: 'right', label: '右侧居中' },
+  { id: 'free', label: '自由布局' },
 ]
 
 export function parseOverlayLayout(value: unknown): OverlayLayout {
-  return value === 'center' || value === 'left' || value === 'right' || value === 'bottom' || value === 'free'
-    ? value
-    : 'free'
+  if (value === 'right' || value === 'bottom' || value === 'free') return value
+  return 'free'
 }
 
 export function defaultOverlayWinGeom(vw = 1280, vh = 800): OverlayWinGeom {
@@ -355,27 +353,27 @@ export function overlayLayoutGeom(
   const maxH = Math.max(OVERLAY_WIN_MIN_H, vh - OVERLAY_DOCK_CLEARANCE - OVERLAY_MARGIN)
   const w = Math.min(Math.max(prev.w, OVERLAY_WIN_MIN_W), maxW)
   const h = Math.min(Math.max(prev.h, OVERLAY_WIN_MIN_H), maxH)
-  if (layout === 'center') {
+  if (layout === 'bottom') {
     return clampOverlayWinGeom(
       {
         w,
         h,
         x: Math.round((vw - w) / 2),
-        y: Math.round(Math.max(OVERLAY_MARGIN, (vh - OVERLAY_DOCK_CLEARANCE - h) / 2)),
+        y: vh - OVERLAY_DOCK_CLEARANCE - h,
       },
       vw,
       vh,
     )
   }
-  if (layout === 'left') {
-    return clampOverlayWinGeom({ x: OVERLAY_MARGIN, y: OVERLAY_MARGIN, w, h: maxH }, vw, vh)
-  }
   if (layout === 'right') {
-    return clampOverlayWinGeom({ x: vw - w - OVERLAY_MARGIN, y: OVERLAY_MARGIN, w, h: maxH }, vw, vh)
-  }
-  if (layout === 'bottom') {
+    const avail = vh - OVERLAY_DOCK_CLEARANCE
     return clampOverlayWinGeom(
-      { x: OVERLAY_MARGIN, y: vh - OVERLAY_DOCK_CLEARANCE - h, w: maxW, h },
+      {
+        w,
+        h,
+        x: vw - w - OVERLAY_MARGIN,
+        y: Math.round(Math.max(OVERLAY_MARGIN, (avail - h) / 2)),
+      },
       vw,
       vh,
     )

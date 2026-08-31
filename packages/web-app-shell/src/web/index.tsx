@@ -115,7 +115,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
   showCenter,
 }: {
   renderSlot: SlotProps['renderSlot']
-  header: ReactNode
+  header: ReactNode | ((layoutTools: ReactNode) => ReactNode)
   floating: boolean
   showCenter: boolean
 }) {
@@ -257,7 +257,12 @@ function Shell(props: SlotProps) {
     () => mascotDanceShape(),
     () => 'circle' as const,
   )
-  const project = useSessionView((state) => state.project)
+  const project = useSessionView((state) => {
+    if (state.project?.name) return state.project
+    const id = state.sessionId
+    if (!id) return undefined
+    return state.sessions.find((item) => item.id === id)?.project
+  })
   const focusCallId = useSessionView((state) => state.focusCallId)
   const routeView = useSessionView((state) => state.view)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -560,7 +565,7 @@ function Shell(props: SlotProps) {
     </header>
   )
 
-  const overlayHeader = (
+  const overlayHeader = (layoutTools: ReactNode) => (
     <header className="chat-view-header" data-biu-ignore>
       <div className="chat-view-header-left">
         {project ? (
@@ -572,6 +577,7 @@ function Shell(props: SlotProps) {
       </div>
       <ChatSessionTitle useSessionView={useSessionView} sessionView={sessionView} />
       <div className="chat-view-header-right">
+        {layoutTools}
         <button
           type="button"
           className="chat-view-header-expand"
