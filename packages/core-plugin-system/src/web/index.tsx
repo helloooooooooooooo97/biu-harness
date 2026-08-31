@@ -182,7 +182,7 @@ function PluginAppWindow({
   }
 
   const style = fullscreen
-    ? { top: 16, left: 16, width: 'calc(100vw - 32px)', height: 'calc(100vh - 32px)', zIndex: z + 8 }
+    ? { top: 0, left: 0, width: '100vw', height: '100vh', zIndex: z + 8 }
     : { top: geom.y, left: geom.x, width: geom.w, height: geom.h, zIndex: z }
 
   const handles: Array<{ key: string; className: string; edge: ResizeEdge }> = [
