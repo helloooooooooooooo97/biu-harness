@@ -557,16 +557,18 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   useEffect(() => {
     if (!editor || !sessionId) return
     const draft = readDraftMap()[sessionId]
-    pick?.clear()
+    const keep = pick?.refs.slice() ?? []
+    if (!pick?.picking) pick?.clear()
     pickKeysRef.current = new Set()
     if (typeof draft === 'string' && draft) {
       editor.commands.setContent(jsonFromDraft(draft))
       const { refs } = serializeComposer(editor)
       if (refs.length) pick?.addMany(refs)
-      pickKeysRef.current = collectPickKeys(editor)
     } else {
       editor.commands.clearContent()
     }
+    if (keep.length && !pick?.picking) pick?.addMany(keep)
+    pickKeysRef.current = collectPickKeys(editor)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, editor])
 

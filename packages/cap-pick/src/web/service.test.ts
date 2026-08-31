@@ -43,7 +43,7 @@ test('adding a pick while picking stays in pick mode so you can select again', (
   assert.equal(pick.refs.length, 2)
 })
 
-test('adding a pick notifies the overlay to open', () => {
+test('picking an object opens the chat overlay, including the same object again', () => {
   const ctx = new Context()
   const pick = new PickService(ctx)
   let attached = 0
@@ -51,29 +51,17 @@ test('adding a pick notifies the overlay to open', () => {
     attached += 1
   }
   window.addEventListener('biu:pick-attached', onAttached)
+  pick.add({ kind: 'page', id: 'p1', label: '页面', route: '/pages' })
+  assert.equal(attached, 0)
   pick.enter()
   pick.add({ kind: 'page', id: 'p1', label: '页面', route: '/pages' })
-  pick.add({ kind: 'page', id: 'p1', label: '页面', route: '/pages' })
-  window.removeEventListener('biu:pick-attached', onAttached)
-  assert.equal(attached, 1)
-})
-
-test('a new pick notifies once; the same pick does not notify again', () => {
-  const ctx = new Context()
-  const pick = new PickService(ctx)
-  let attached = 0
-  const onAttached = () => {
-    attached += 1
-  }
-  window.addEventListener('biu:pick-attached', onAttached)
-  pick.enter()
   pick.add({ kind: 'page', id: 'p1', label: '页面', route: '/pages' })
   pick.add({ kind: 'page', id: 'p2', label: '另一页', route: '/pages' })
   window.removeEventListener('biu:pick-attached', onAttached)
-  assert.equal(attached, 2)
+  assert.equal(attached, 3)
 })
 
-test('after overlay closes, more picks do not open the chat again', () => {
+test('after overlay closes, picks do not open the chat until pick mode is on again', () => {
   const ctx = new Context()
   const pick = new PickService(ctx)
   let attached = 0
@@ -87,8 +75,11 @@ test('after overlay closes, more picks do not open the chat again', () => {
   window.dispatchEvent(new Event('biu:overlay-closed'))
   assert.equal(pick.picking, false)
   pick.add({ kind: 'page', id: 'p2', label: '另一页', route: '/pages' })
-  window.removeEventListener('biu:pick-attached', onAttached)
   assert.equal(attached, 1)
+  pick.enter()
+  pick.add({ kind: 'page', id: 'p1', label: '页面', route: '/pages' })
+  window.removeEventListener('biu:pick-attached', onAttached)
+  assert.equal(attached, 2)
   assert.equal(pick.refs.length, 2)
 })
 

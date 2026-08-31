@@ -171,7 +171,7 @@ test('pick opens a compose-only overlay; send reveals the thread', () => {
   assert.equal(getOverlayThread(), false)
 })
 
-test('closeChatOverlay notifies even if the overlay was already closed', () => {
+test('closeChatOverlay is a no-op when already closed', () => {
   setChatOverlay(false)
   let closed = 0
   const onClosed = () => {
@@ -181,7 +181,7 @@ test('closeChatOverlay notifies even if the overlay was already closed', () => {
   closeChatOverlay()
   window.removeEventListener('biu:overlay-closed', onClosed)
   assert.equal(getChatOverlay(), false)
-  assert.equal(closed, 1)
+  assert.equal(closed, 0)
 })
 
 test('closing the overlay notifies pick to exit', () => {

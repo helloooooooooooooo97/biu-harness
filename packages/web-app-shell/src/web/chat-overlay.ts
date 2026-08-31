@@ -128,9 +128,7 @@ function notifyOverlayClosed() {
   window.dispatchEvent(new Event('biu:overlay-closed'))
 }
 
-/** 关掉浮窗并退出选取。已经关着也会再通知一次。 */
 export function closeChatOverlay() {
-  notifyOverlayClosed()
   setChatOverlay(false)
 }
 

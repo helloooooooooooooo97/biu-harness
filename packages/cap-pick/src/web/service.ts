@@ -72,13 +72,13 @@ export class PickService extends Service {
       this.bump()
       return
     }
-    const before = this.refs.length
     this.refs = dedupePicks([...this.refs, ...refs])
     this.hover = null
     this.marquee = null
     this.marqueeHits = []
     this.bump()
-    if (this.picking && this.refs.length > before && typeof window !== 'undefined') {
+    // 选取模式下点一次对象就打开聊天窗；关窗后 picking=false，草稿同步不会再弹窗。
+    if (this.picking && typeof window !== 'undefined') {
       window.dispatchEvent(new Event('biu:pick-attached'))
     }
   }
