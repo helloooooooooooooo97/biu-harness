@@ -176,6 +176,17 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
   return String(value)
 }
 
+/** 列表 / 卡片 / 看板：没有实际内容的属性不渲染（表格单元格仍可显示空位）。 */
+export function fieldHasValue(field: FieldSpec | undefined, value: unknown): boolean {
+  if (value == null) return false
+  if (typeof value === 'string' && !value.trim()) return false
+  if (Array.isArray(value) && asStringList(value).length === 0) return false
+  if (!field) return true
+  const kind = resolveFieldType(field)
+  if (kind === 'boolean') return value === true || value === 'true'
+  return formatField(field, value) !== '—'
+}
+
 export function contentFieldKey(schema: CollectionSchema | undefined) {
   if (!schema) return null
   const preferred = schema.contentField ?? 'content'

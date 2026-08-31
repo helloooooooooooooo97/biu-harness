@@ -46,6 +46,7 @@ import {
   parentFieldKey,
   resolveFieldType,
   uniqueValues,
+  fieldHasValue,
   type ViewMode,
 } from './fields.ts'
 import { AppDialog, CellSelect, CheckRow, LocalText } from './controls.tsx'
@@ -1199,7 +1200,9 @@ export function CollectionBrowser({
 
   function RecordProperties({ row, omit }: { row: DbRecord; omit?: string }) {
     const hide = omit ?? activeGroup?.key
-    const cols = hide ? propColumns.filter((item) => item.key !== hide) : propColumns
+    const cols = (hide ? propColumns.filter((item) => item.key !== hide) : propColumns).filter((item) =>
+      fieldHasValue(item.field, row[item.key]),
+    )
     if (!cols.length) return null
     return (
       <div className="fsdb-proplist">

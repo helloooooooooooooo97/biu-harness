@@ -1,7 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import type { CollectionSchema } from '@biu/type-file-system'
-import { defaultColumnKeys, pinLabelColumn, contentFieldKey, flattenTree, formatField, groupField, groupRecords, matchActionWhen, matchesFilters, parentFieldKey, resolveFieldType, sortRows } from './fields'
+import { defaultColumnKeys, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, matchActionWhen, matchesFilters, parentFieldKey, resolveFieldType, sortRows } from './fields'
 
 const schema: CollectionSchema = {
   labelField: 'title',
@@ -22,6 +22,23 @@ test('resolveFieldType maps legacy aliases', () => {
   assert.equal(resolveFieldType({ type: 'string', format: 'url' }), 'url')
   assert.equal(resolveFieldType({ type: 'image' }), 'image')
   assert.equal(resolveFieldType({ type: 'attachment' }), 'attachment')
+})
+
+test('fieldHasValue hides missing list/card/board chips', () => {
+  assert.equal(fieldHasValue({ type: 'string' }, ''), false)
+  assert.equal(fieldHasValue({ type: 'string' }, '   '), false)
+  assert.equal(fieldHasValue({ type: 'string' }, null), false)
+  assert.equal(fieldHasValue({ type: 'string' }, 'hello'), true)
+  assert.equal(fieldHasValue({ type: 'select', enum: ['todo'] }, ''), false)
+  assert.equal(fieldHasValue({ type: 'select', enum: ['todo'] }, 'todo'), true)
+  assert.equal(fieldHasValue({ type: 'multi-select' }, []), false)
+  assert.equal(fieldHasValue({ type: 'multi-select' }, ['a']), true)
+  assert.equal(fieldHasValue({ type: 'boolean' }, false), false)
+  assert.equal(fieldHasValue({ type: 'boolean' }, true), true)
+  assert.equal(fieldHasValue({ type: 'number' }, 0), true)
+  assert.equal(fieldHasValue({ type: 'datetime' }, 0), false)
+  assert.equal(fieldHasValue({ type: 'url' }, 'javascript:alert(1)'), false)
+  assert.equal(fieldHasValue({ type: 'url' }, 'https://example.com'), true)
 })
 
 test('formatField renders datetime bytes tags and media', () => {
