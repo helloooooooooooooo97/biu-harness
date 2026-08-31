@@ -232,6 +232,7 @@ export function CollectionBrowser({
   const [refreshing, setRefreshing] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [notice, setNotice] = useState('')
+  const [pickedIds, setPickedIds] = useState<string[]>([])
   const noticeTimer = useRef<number>(0)
   const quietUntil = useRef(0)
   const reloadGen = useRef(0)
@@ -243,6 +244,7 @@ export function CollectionBrowser({
     | { kind: 'delete'; view: SavedView }
     | { kind: 'action'; row: DbRecord; action: CollectionActionInfo }
     | { kind: 'delete-record'; row: DbRecord }
+    | { kind: 'delete-records'; ids: string[] }
     | null
   >(null)
   const [dlgError, setDlgError] = useState('')
@@ -553,6 +555,9 @@ export function CollectionBrowser({
   const schema = stat?.schema
   const canCreate = Boolean(schema?.records?.create)
   const canDelete = Boolean(schema?.records?.delete)
+  useEffect(() => {
+    setPickedIds([])
+  }, [collectionPath])
   const bodyKey = contentFieldKey(schema)
   const entries = useMemo(() => fieldEntries(schema), [schema])
   const allColumns = useMemo(
@@ -631,6 +636,12 @@ export function CollectionBrowser({
     },
     [collapsed, parentKey, showTree],
   )
+  const pickableIds = useMemo(() => {
+    const rows = grouping ? grouped.flatMap((group) => group.rows) : visible
+    return flattenRows(rows).map((item) => item.row.id)
+  }, [flattenRows, grouped, grouping, visible])
+  const tableColSpan =
+    Math.max(columns.length, 1) + (schema?.actions?.length ? 1 : 0) + (canDelete ? 1 : 0)
 
   const selected =
     (detailId &&
@@ -1048,6 +1059,26 @@ export function CollectionBrowser({
     }
   }
 
+  async function executeDeleteRecords(ids: string[]) {
+    try {
+      for (const id of ids) {
+        await readJson('/api/db/delete', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ path: `${dataPath}/${id}` }),
+        })
+      }
+      if (detailId && ids.includes(detailId)) onCloseRecord?.()
+      setPickedIds([])
+      quietUntil.current = 0
+      await reload()
+    } catch (err) {
+      setError(String(err))
+      quietUntil.current = 0
+      await reload()
+    }
+  }
+
   async function writeOne(row: DbRecord, key: string, field: FieldSpec, raw: string) {
     await writePatch(row, { [key]: parseFieldValue(field, raw) })
   }
@@ -1280,10 +1311,42 @@ export function CollectionBrowser({
     )
   }
 
+  function togglePicked(ids: string[], on: boolean) {
+    setPickedIds((prev) => {
+      if (on) {
+        const next = new Set(prev)
+        for (const id of ids) next.add(id)
+        return [...next]
+      }
+      return prev.filter((id) => !ids.includes(id))
+    })
+  }
+
+  function RowCheck({ id, ids }: { id?: string; ids?: string[] }) {
+    if (!canDelete) return null
+    const list = id ? [id] : (ids ?? [])
+    const on = list.length > 0 && list.every((item) => pickedIds.includes(item))
+    return (
+      <label
+        className="fsdb-row-check"
+        onClick={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <input
+          type="checkbox"
+          checked={on}
+          aria-label={id ? '选择记录' : '全选'}
+          onChange={() => togglePicked(list, !on)}
+        />
+      </label>
+    )
+  }
+
   function QueueRow({ row }: { row: DbRecord }) {
     return (
       <li className={`tasks-queue-item${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
         <div className="tasks-queue-item-body">
+          <RowCheck id={row.id} />
           <button type="button" className="tasks-queue-item-main" data-biu-action="open" onClick={() => openRow(row)}>
             <span className="tasks-queue-item-title">
               <RecordTitle row={row} openDetail={false} />
@@ -1300,6 +1363,7 @@ export function CollectionBrowser({
     return (
       <div className={`tasks-minicard${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
         <div className="tasks-minicard-title">
+          <RowCheck id={row.id} />
           <button type="button" className="tasks-minicard-open" data-biu-action="open" onClick={() => openRow(row)}>
             <span className="tasks-minicard-titletext">
               <RecordTitle row={row} openDetail={false} />
@@ -1316,7 +1380,7 @@ export function CollectionBrowser({
 
   function TableBodyRows({ rows, keyPrefix = '' }: { rows: DbRecord[]; keyPrefix?: string }) {
     const listed = flattenRows(rows)
-    const span = Math.max(columns.length, 1) + (schema?.actions?.length ? 1 : 0)
+    const span = tableColSpan
     if (!listed.length) {
       return (
         <tr>
@@ -1330,6 +1394,11 @@ export function CollectionBrowser({
       <>
         {listed.map(({ row, depth, hasKids, kidCount }) => (
           <tr key={`${keyPrefix}${row.id}`} className={row.id === detailId ? 'is-active' : undefined} {...recordPick(row)}>
+            {canDelete ? (
+              <td className="fsdb-row-check-cell">
+                <RowCheck id={row.id} />
+              </td>
+            ) : null}
             {columns.map((col) => (
               <td key={col.key}>
                 {col.key === schema?.labelField ? (
@@ -1877,6 +1946,18 @@ export function CollectionBrowser({
                 </span>
               ) : null}
             </div>
+            {canDelete && pickedIds.length ? (
+                <button
+                  type="button"
+                  className="tasks-icon-btn is-danger"
+                  data-testid="fsdb-bulk-delete"
+                  aria-label="删除选中"
+                  title={`删除选中的 ${pickedIds.length} 条`}
+                  onClick={() => setDlg({ kind: 'delete-records', ids: pickedIds })}
+                >
+                  <TrashGlyph aria-hidden className="size-[14px]" />
+                </button>
+              ) : null}
             {canCreate ? (
               <button
                 type="button"
@@ -1901,6 +1982,11 @@ export function CollectionBrowser({
                 <table className={`tasks-table${wrapCells ? ' is-wrap' : ''}${truncateCells ? ' is-truncate' : ''}`}>
             <thead>
               <tr>
+                {canDelete ? (
+                  <th className="fsdb-row-check-cell">
+                    <RowCheck ids={pickableIds} />
+                  </th>
+                ) : null}
                 {columns.map((col) => (
                   <th key={col.key}>
                     <span className="tasks-th">
@@ -1918,7 +2004,7 @@ export function CollectionBrowser({
                         grouped.map((group) => (
                           <Fragment key={group.key || 'unset'}>
                             <tr className="fsdb-group-row">
-                              <td colSpan={Math.max(columns.length, 1) + (schema?.actions?.length ? 1 : 0)}>
+                              <td colSpan={tableColSpan}>
                                 <GroupHead groupKey={group.key || 'unset'} label={group.label} count={group.rows.length} />
                               </td>
                             </tr>
@@ -2138,6 +2224,20 @@ export function CollectionBrowser({
             void executeDeleteRecord(row)
           }}
           body={<p>确定删除「{labelOf(dlg.row)}」？删除后不可恢复。</p>}
+        />
+      ) : null}
+      {dlg?.kind === 'delete-records' ? (
+        <AppDialog
+          title="删除记录"
+          confirm="删除"
+          danger
+          onCancel={() => setDlg(null)}
+          onConfirm={() => {
+            const { ids } = dlg
+            setDlg(null)
+            void executeDeleteRecords(ids)
+          }}
+          body={<p>确定删除选中的 {dlg.ids.length} 条记录？删除后不可恢复。</p>}
         />
       ) : null}
       {dlg?.kind === 'action' ? (

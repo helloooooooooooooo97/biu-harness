@@ -10,6 +10,8 @@ test('session table titles include the session mascot', () => {
   assert.match(chrome, /SidebarMascot/)
   assert.match(chrome, /resolveSessionMascot/)
   assert.match(chrome, /className="sessions-title"/)
+  assert.equal(typeof sessionsChrome.cells?.mascotShape, 'function')
+  assert.equal(typeof sessionsChrome.cells?.mascotEye, 'function')
   const index = readFileSync(resolve(import.meta.dirname, './index.ts'), 'utf8')
   assert.match(index, /decorate\('\/sessions', sessionsChrome\)/)
 })

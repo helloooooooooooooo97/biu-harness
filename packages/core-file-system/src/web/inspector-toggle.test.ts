@@ -87,6 +87,13 @@ test('table title opens record from the title-side button', () => {
   assert.doesNotMatch(browser, /recordPick\(row\)\} onClick=\{\(\) => setDetailId\(row\.id\)\}/)
 })
 
+test('deletable tables can pick rows and bulk-delete next to refresh', () => {
+  assert.match(browser, /data-testid="fsdb-bulk-delete"/)
+  assert.match(browser, /kind: 'delete-records'/)
+  assert.match(browser, /className="fsdb-row-check"/)
+  assert.match(browser, /const canDelete = Boolean\(schema\?\.records\?\.delete\)/)
+})
+
 test('create record sits at the right of the toolbar with a blue label', () => {
   assert.match(browser, /className="fsdb-create-btn"/)
   assert.match(browser, /新建记录/)

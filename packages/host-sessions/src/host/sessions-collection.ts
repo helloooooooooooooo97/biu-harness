@@ -1,13 +1,17 @@
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
-import type { SessionConfig, SessionSummary } from '@biu/type-session'
+import { nameFromSessionMascot, type SessionConfig, type SessionSummary } from '@biu/type-session'
+import { GROK_COLORS, GROK_SHAPES, ensureSessionMascot, isSessionMascot, mascotFromSessionId } from './session-mascot.ts'
 
 type SessionsLike = {
   listSummaries: () => Promise<SessionSummary[]>
   rename: (id: string, title: string) => Promise<unknown>
   patchConfig: (id: string, patch: SessionConfig) => Promise<unknown>
+  delete: (id: string) => Promise<boolean>
 }
 
 function asRecord(row: SessionSummary): DbRecord {
+  const mascot =
+    row.mascot && isSessionMascot(row.mascot) ? ensureSessionMascot(row.id, row.mascot) : mascotFromSessionId(row.id)
   return {
     id: row.id,
     title: row.title,
@@ -17,7 +21,11 @@ function asRecord(row: SessionSummary): DbRecord {
     eventCount: row.eventCount,
     project: row.project?.name ?? '',
     updatedAt: row.updatedAt,
-    ...(row.mascot ? { mascot: row.mascot } : {}),
+    mascot,
+    mascotName: nameFromSessionMascot(mascot),
+    mascotShape: mascot.shape,
+    mascotColor: mascot.color,
+    mascotEye: mascot.eye,
   }
 }
 
@@ -32,11 +40,11 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       route: '/db-sessions',
       title: '会话',
       inspector: true,
-      blurb: '已有聊天 Session 的只读登记；改标题/置顶/标签会写回会话配置，不替代侧栏聊天。',
+      blurb: '会话元数据可改、可删；聊天记录本身不能从这张表改。',
       order: 18,
       icon: 'chat-bubble',
     },
-    records: { update: true, create: false, delete: false },
+    records: { update: true, create: false, delete: true },
     schema: {
       labelField: 'title',
       columns: ['title', 'type', 'pinned', 'tags', 'eventCount', 'project', 'updatedAt'],
@@ -48,6 +56,10 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         eventCount: { type: 'number', label: '事件数', computed: true, sortable: true },
         project: { type: 'string', label: '项目' },
         updatedAt: { type: 'datetime', label: '更新时间', sortable: true },
+        mascotName: { type: 'string', label: '形象', computed: true },
+        mascotShape: { type: 'select', label: '外形', enum: [...GROK_SHAPES], computed: true },
+        mascotColor: { type: 'select', label: '颜色', enum: [...GROK_COLORS], computed: true },
+        mascotEye: { type: 'number', label: '眼睛', computed: true },
       },
     },
     list,
@@ -61,6 +73,9 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       const next = (await list()).find((row) => row.id === id)
       if (!next) throw new Error(`unknown session: ${id}`)
       return next
+    },
+    remove: async (id) => {
+      if (!(await sessions.delete(id))) throw new Error(`unknown session: ${id}`)
     },
   }
 }
