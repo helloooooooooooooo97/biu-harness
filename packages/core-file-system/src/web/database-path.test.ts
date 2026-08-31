@@ -1,7 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { parseAppPath } from '@biu/web-session-view'
-import { DATA_MODULE, databaseRecordPath, databaseViewPath, isCollectionHub, isSystemCollection, sortDataCollections, viewsCatalogHref, viewsCatalogSource } from './database-path.ts'
+import { DATA_MODULE, databaseAllViewPath, databaseRecordPath, databaseViewPath, isCollectionHub, isSystemCollection, sortDataCollections, viewsCatalogHref, viewsCatalogSource } from './database-path.ts'
 
 const plugins = [DATA_MODULE]
 
@@ -12,6 +12,31 @@ test('view and record helpers match the database URL scheme', () => {
   assert.equal(parseAppPath(databaseViewPath('/pages', 'default'), plugins).kind, 'collection-view')
   assert.equal(parseAppPath(databaseViewPath('/sessions'), plugins).kind, 'collection-view')
   assert.equal(parseAppPath(databaseRecordPath('/pages', 'rec-1'), plugins).kind, 'record')
+})
+
+test('dock collection shortcuts open the builtin 全部xx view', () => {
+  assert.equal(
+    databaseAllViewPath('/sessions'),
+    `/database/sessions/view/${encodeURIComponent('builtin-all:/sessions')}`,
+  )
+  assert.equal(
+    databaseAllViewPath('/tasks'),
+    `/database/tasks/view/${encodeURIComponent('builtin-all:/tasks')}`,
+  )
+  assert.equal(
+    databaseAllViewPath('/pages'),
+    `/database/pages/view/${encodeURIComponent('builtin-all:/pages')}`,
+  )
+  assert.equal(
+    databaseAllViewPath('/plugins'),
+    `/database/plugins/view/${encodeURIComponent('builtin-all:/plugins')}`,
+  )
+  const parsed = parseAppPath(databaseAllViewPath('/sessions'), plugins)
+  assert.equal(parsed.kind, 'collection-view')
+  if (parsed.kind === 'collection-view') {
+    assert.equal(parsed.collection, '/sessions')
+    assert.equal(parsed.viewId, 'builtin-all:/sessions')
+  }
 })
 
 test('table path without view or record is a collection hub', () => {

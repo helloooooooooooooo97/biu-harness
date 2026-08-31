@@ -22,7 +22,7 @@ import {
   collectionNavKey,
 } from './nav-boot.ts'
 import { defaultViewId, pushAllSavedViews } from './view-storage.ts'
-import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, VIEWS_COLLECTION_PATH, databaseViewPath, isCollectionHub, sortDataCollections, viewsCatalogSource } from './database-path.ts'
+import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, VIEWS_COLLECTION_PATH, databaseAllViewPath, isCollectionHub, sortDataCollections, viewsCatalogSource } from './database-path.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
 type SlotsService = {
@@ -94,7 +94,7 @@ function DatabaseDockTools({
         order: item.order,
         Icon: () => <Icon className="size-5" />,
         onOpen: () => {
-          navigate(databaseViewPath(item.path))
+          navigate(databaseAllViewPath(item.path))
         },
       })
     })

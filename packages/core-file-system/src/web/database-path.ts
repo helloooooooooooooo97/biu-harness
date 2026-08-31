@@ -1,5 +1,5 @@
 import { buildAppPath, type AppRoute } from '@biu/web-session-view'
-import { builtinCatalogViewId } from '../catalog-views.ts'
+import { builtinAllViewId, builtinCatalogViewId } from '../catalog-views.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
 export const DATA_MODULE_ID = 'database'
@@ -15,6 +15,11 @@ export function databaseViewPath(collection: string, viewId?: string): string {
     collection,
     viewId,
   })
+}
+
+/** 内置「全部 xx」视图，码头会话/任务/页面/插件直接进这里。 */
+export function databaseAllViewPath(collection: string): string {
+  return databaseViewPath(collection, builtinAllViewId(collection))
 }
 
 export function databaseRecordPath(collection: string, recordId: string): string {
