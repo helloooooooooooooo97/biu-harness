@@ -31,4 +31,7 @@ test('list and detail share the chat column max width with side padding', () => 
   assert.match(css, /\.fsdb-cards\{[^}]*align-items:stretch/)
   assert.match(css, /\.fsdb-cards\{[^}]*grid-auto-rows:auto/)
   assert.match(css, /\.fsdb-cards > \.tasks-minicard\{[^}]*height:100%/)
+  assert.match(css, /\.tasks-viewdd-menu\{[^}]*min-width:320px/)
+  assert.match(css, /\.tasks-viewdd-item-actions\{[^}]*visibility:hidden/)
+  assert.match(css, /\.tasks-viewdd-act\{[^}]*width:26px/)
 })
