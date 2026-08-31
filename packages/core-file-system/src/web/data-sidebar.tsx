@@ -11,7 +11,7 @@ import {
 } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import type { CollectionInfo, DbRecord } from '@biu/type-file-system'
-import { mergeCatalogViews, mergeTableViews } from '../catalog-views.ts'
+import { builtinAllViewId, mergeCatalogViews, mergeTableViews } from '../catalog-views.ts'
 import { VIEWS_COLLECTION_PATH, isSystemCollection, sortDataCollections } from './database-path.ts'
 import type { SavedView } from './saved-view.ts'
 import {
@@ -338,7 +338,7 @@ export const DataSidebar = memo(function DataSidebar({
   title: string
   views: SavedView[]
   activeViewId: string | null
-  onOpenTable?: (path: string, viewId?: string, opts?: { catalog?: boolean }) => void
+  onOpenTable?: (path: string, viewId?: string) => void
   onApplyView: (view: SavedView) => void
   onRenameView: (view: SavedView) => void
   onDeleteView: (view: SavedView) => void
@@ -365,7 +365,8 @@ export const DataSidebar = memo(function DataSidebar({
       return true
     }
   })
-  const [dataOpen, setDataOpen] = useState(true)
+  const [userOpen, setUserOpen] = useState(true)
+  const [systemOpen, setSystemOpen] = useState(true)
   const [expandedViewKeyLocal, setExpandedViewKeyLocal] = useState<string | null>(null)
   const expandedViewKey = expandedViewKeyProp !== undefined ? expandedViewKeyProp : expandedViewKeyLocal
   const setExpandedViewKey = onExpandedViewKeyChange ?? setExpandedViewKeyLocal
@@ -390,15 +391,22 @@ export const DataSidebar = memo(function DataSidebar({
     if (favOpen) {
       for (const { table, view } of starredRows) jobs.push({ path: table.path, view })
     }
-    if (dataOpen) {
-      for (const table of listedTables) {
+    if (userOpen) {
+      for (const table of userTables) {
+        if (openTables[table.path]) {
+          for (const view of viewsFor(table.path)) jobs.push({ path: table.path, view })
+        }
+      }
+    }
+    if (systemOpen) {
+      for (const table of systemTables) {
         if (openTables[table.path]) {
           for (const view of viewsFor(table.path)) jobs.push({ path: table.path, view })
         }
       }
     }
     return jobs
-  }, [dataOpen, favOpen, listedTables, openTables, starredRows, tables, views, collectionPath])
+  }, [userOpen, systemOpen, favOpen, userTables, systemTables, listedTables, openTables, starredRows, tables, views, collectionPath])
 
   const countJobKey = countJobs.map((job) => viewTotalKey(job.path, job.view)).join('|')
   useEffect(() => {
@@ -476,7 +484,7 @@ export const DataSidebar = memo(function DataSidebar({
               <button
                 type="button"
                 className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit outline-none hover:text-(--dsw-sidebar-fg-active) focus-visible:ring-1 focus-visible:ring-(--dsw-border)"
-                onClick={() => onOpenTable?.(table.path, undefined, { catalog: true })}
+                onClick={() => onOpenTable?.(table.path, builtinAllViewId(table.path))}
               >
                 {name}
               </button>
@@ -716,15 +724,15 @@ export const DataSidebar = memo(function DataSidebar({
                 <button
                   type="button"
                   className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider"
-                  aria-expanded={dataOpen}
-                  onClick={() => setDataOpen((prev) => !prev)}
+                  aria-expanded={userOpen}
+                  onClick={() => setUserOpen((prev) => !prev)}
                 >
                   <span className="min-w-0 flex-1 truncate tracking-normal">用户数据</span>
                 </button>
               </div>
               <ChatCount count={userTables.length} />
             </div>
-            {dataOpen ? (
+            {userOpen ? (
               <div className="min-w-0 space-y-1.5 pt-0.5" data-testid="sidebar-user-collections">
                 {userTables.length ? renderTableRows(userTables) : (
                   <div className="px-1 py-1 text-[12px] text-(--dsw-label-3)">还没有可改的表</div>
@@ -740,16 +748,16 @@ export const DataSidebar = memo(function DataSidebar({
                   <button
                     type="button"
                     className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider"
-                    aria-expanded={dataOpen}
+                    aria-expanded={systemOpen}
                     title="系统运行时记下的数据"
-                    onClick={() => setDataOpen((prev) => !prev)}
+                    onClick={() => setSystemOpen((prev) => !prev)}
                   >
                     <span className="min-w-0 flex-1 truncate tracking-normal">系统数据</span>
                   </button>
                 </div>
                 <ChatCount count={systemTables.length} />
               </div>
-              {dataOpen ? (
+              {systemOpen ? (
                 <div className="min-w-0 space-y-1.5 pt-0.5" data-testid="sidebar-system-collections">
                   {renderTableRows(systemTables)}
                 </div>

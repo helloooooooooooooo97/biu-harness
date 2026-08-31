@@ -8,8 +8,8 @@ import { buildCrumbs, pathForCrumbTarget, type Crumb, type CrumbTarget } from '.
 import { CollectionBrowser } from './browser.tsx'
 import { CrumbTrail } from './crumb-trail.tsx'
 import { defaultViewId, loadRecords, loadViews, viewForPath } from './view-storage.ts'
-import { mergeCatalogViews, mergeTableViews } from '../catalog-views.ts'
-import { DATA_MODULE, DATA_MODULE_ID, VIEWS_COLLECTION_PATH, databaseRecordPath, databaseViewPath, isCollectionHub, viewsCatalogSource } from './database-path.ts'
+import { builtinAllViewId, mergeCatalogViews, mergeTableViews } from '../catalog-views.ts'
+import { DATA_MODULE, DATA_MODULE_ID, VIEWS_COLLECTION_PATH, databaseAllViewPath, databaseRecordPath, databaseViewPath, viewsCatalogSource } from './database-path.ts'
 import {
   getInspectorDbPath,
   setInspectorDbPath,
@@ -137,9 +137,8 @@ function crumbsForRoute(
       : mergeTableViews(table ?? (collection ? { path: collection } : undefined), stored)
   const urlViewId = parsed.kind === 'collection-view' ? parsed.viewId : undefined
   const recordId = parsed.kind === 'record' ? parsed.recordId : undefined
-  const tableHub = isCollectionHub(collection, urlViewId, recordId)
-  const resolvedView = collection && !tableHub ? viewForPath(collection, urlViewId) : null
-  const activeViewId = tableHub ? undefined : resolvedView?.id ?? urlViewId
+  const resolvedView = collection ? viewForPath(collection, urlViewId) : null
+  const activeViewId = resolvedView?.id ?? urlViewId
   const records = collection ? loadRecords(collection) : []
   const recordHit = recordId ? records.find((row) => row.id === recordId) : undefined
   const crumbs = buildCrumbs({
@@ -288,19 +287,14 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
   const { collection, viewId, recordId } = crumbsForRoute(pathname, tables)
   const currentPath = collection
   const sourceFilter = viewsCatalogSource(search)
-  const tableHub = isCollectionHub(currentPath, viewId, recordId)
-  const recordsPath = tableHub ? VIEWS_COLLECTION_PATH : currentPath
-  const lockedFilters: Record<string, string> = tableHub
-    ? { tablePath: currentPath }
-    : currentPath === VIEWS_COLLECTION_PATH && sourceFilter
-      ? { tablePath: sourceFilter }
-      : {}
+  const lockedFilters: Record<string, string> =
+    currentPath === VIEWS_COLLECTION_PATH && sourceFilter ? { tablePath: sourceFilter } : {}
   const table = tables.find((item) => item.path === currentPath)
   const title = table ? tableLabel(table) : '数据'
   const chrome = useSyncExternalStore(
     (fn) => (ui ? ui.subscribe(fn) : () => undefined),
-    () => (recordsPath ? ui?.chrome(recordsPath) ?? EMPTY_CHROME : EMPTY_CHROME),
-    () => (recordsPath ? ui?.chrome(recordsPath) ?? EMPTY_CHROME : EMPTY_CHROME),
+    () => (currentPath ? ui?.chrome(currentPath) ?? EMPTY_CHROME : EMPTY_CHROME),
+    () => (currentPath ? ui?.chrome(currentPath) ?? EMPTY_CHROME : EMPTY_CHROME),
   )
 
   if (!currentPath) {
@@ -312,7 +306,6 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
       embed
       moduleId={DATA_MODULE_ID}
       collectionPath={currentPath}
-      recordsPath={recordsPath}
       title={title}
       blurb={table?.view?.blurb ?? ''}
       chrome={chrome}
@@ -320,20 +313,18 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
       lockedFilters={lockedFilters}
       routeRecordId={recordId ?? null}
       routeViewId={viewId}
-      onOpenTable={(path, nextViewId, opts) => {
-        if (opts?.catalog) {
-          setInspectorDbPath(id, databaseViewPath(path))
-          return
-        }
-        setInspectorDbPath(id, databaseViewPath(path, nextViewId))
+      onOpenTable={(path, nextViewId) => {
+        setInspectorDbPath(id, databaseViewPath(path, nextViewId ?? builtinAllViewId(path)))
       }}
       onOpenView={(nextViewId) => setInspectorDbPath(id, databaseViewPath(currentPath, nextViewId))}
       onOpenRecord={(recordIdNext, _viewId, nextCollection) => {
         setInspectorDbPath(id, databaseRecordPath(nextCollection ?? currentPath, recordIdNext))
       }}
       onCloseRecord={() => {
-        if (viewId) setInspectorDbPath(id, databaseViewPath(currentPath, viewId))
-        else setInspectorDbPath(id, databaseViewPath(currentPath))
+        setInspectorDbPath(
+          id,
+          viewId ? databaseViewPath(currentPath, viewId) : databaseAllViewPath(currentPath),
+        )
       }}
       onCrumbTarget={(target) => goInspector(id, target)}
     />

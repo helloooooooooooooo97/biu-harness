@@ -1,7 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { parseAppPath } from '@biu/web-session-view'
-import { DATA_MODULE, databaseAllViewPath, databaseRecordPath, databaseViewPath, isCollectionHub, isSystemCollection, sortDataCollections, viewsCatalogHref, viewsCatalogSource } from './database-path.ts'
+import { DATA_MODULE, databaseAllViewPath, databaseRecordPath, databaseViewPath, isSystemCollection, sortDataCollections, viewsCatalogHref, viewsCatalogSource } from './database-path.ts'
 
 const plugins = [DATA_MODULE]
 
@@ -39,12 +39,13 @@ test('dock collection shortcuts open the builtin 全部xx view', () => {
   }
 })
 
-test('table path without view or record is a collection hub', () => {
-  assert.equal(isCollectionHub('/tasks'), true)
-  assert.equal(isCollectionHub('/tasks', undefined, null), true)
-  assert.equal(isCollectionHub('/tasks', 'v1'), false)
-  assert.equal(isCollectionHub('/tasks', undefined, 'rec-1'), false)
-  assert.equal(isCollectionHub('/views'), false)
+test('table path without view still parses as a collection-view URL', () => {
+  const parsed = parseAppPath(databaseViewPath('/tasks'), plugins)
+  assert.equal(parsed.kind, 'collection-view')
+  if (parsed.kind === 'collection-view') {
+    assert.equal(parsed.collection, '/tasks')
+    assert.equal(parsed.viewId, undefined)
+  }
 })
 
 test('views catalog href is filtered by table source', () => {

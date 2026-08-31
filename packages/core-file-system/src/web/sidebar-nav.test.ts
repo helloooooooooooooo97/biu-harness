@@ -2,6 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { parseAppPath } from '@biu/web-session-view'
 import { DATA_MODULE } from './database-path.ts'
+import { builtinAllViewId } from '../catalog-views.ts'
 import {
   applySidebarAction,
   assertSidebarInvariants,
@@ -155,7 +156,7 @@ test('面包屑点上级会清掉后面几级', () => {
   )
   assert.equal(crumbs[0]!.label, 'Task')
   assert.equal(crumbs[0]!.icon, 'bolt')
-  assert.equal(pathForCrumbTarget(crumbs[0]!.target), '/database/tasks')
+  assert.equal(pathForCrumbTarget(crumbs[0]!.target), `/database/tasks/view/${encodeURIComponent(builtinAllViewId('/tasks'))}`)
   assert.equal(pathForCrumbTarget(crumbs[1]!.target), '/database/tasks/view/1787983501816')
   assert.equal(crumbButtonAction(crumbs[0]!), 'menu')
   const board = crumbs[1]!.choices.find((item) => item.id === 'board')
@@ -163,11 +164,11 @@ test('面包屑点上级会清掉后面几级', () => {
   assert.equal(board?.mode, 'board')
   assert.equal(pathForCrumbTarget(board!.target), '/database/tasks/view/board')
   assert.equal(crumbs[0]!.choices.find((item) => item.id === '/pages')?.label, 'Page')
-  assert.equal(pathForCrumbTarget(crumbs[0]!.choices.find((item) => item.id === '/pages')!.target), '/database/pages')
+  assert.equal(pathForCrumbTarget(crumbs[0]!.choices.find((item) => item.id === '/pages')!.target), `/database/pages/view/${encodeURIComponent(builtinAllViewId('/pages'))}`)
   assert.ok(!crumbs[0]!.choices.some((item) => item.id === 'board'))
 })
 
-test('记录页面包屑是表 / 视图 / 记录，点表只回到表', () => {
+test('记录页面包屑是表 / 视图 / 记录，点表回到全部视图', () => {
   const crumbs = buildCrumbs({
     collection: '/tasks',
     collectionLabel: 'Task',
@@ -183,7 +184,7 @@ test('记录页面包屑是表 / 视图 / 记录，点表只回到表', () => {
     crumbs.map((item) => item.kind),
     ['collection', 'view', 'record'],
   )
-  assert.equal(pathForCrumbTarget(crumbs[0]!.target), '/database/tasks')
+  assert.equal(pathForCrumbTarget(crumbs[0]!.target), `/database/tasks/view/${encodeURIComponent(builtinAllViewId('/tasks'))}`)
   assert.equal(pathForCrumbTarget(crumbs[1]!.target), '/database/tasks/view/1787983501816')
   assert.ok(!pathForCrumbTarget(crumbs[0]!.target).includes('/record/'))
   assert.ok(!pathForCrumbTarget(crumbs[1]!.target).includes('/record/'))

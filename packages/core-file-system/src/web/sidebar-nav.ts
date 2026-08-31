@@ -1,5 +1,6 @@
 /** 侧栏展开/收起与数据路由切换的纯逻辑，UI 和压测共用。 */
 import { parseAppPath } from '@biu/web-session-view'
+import { builtinAllViewId } from '../catalog-views.ts'
 import { DATA_MODULE, databaseRecordPath, databaseViewPath } from './database-path.ts'
 import type { ViewMode } from './fields.ts'
 
@@ -77,7 +78,9 @@ export function pathForCenter(center: Pick<DataCenter, 'collection' | 'viewId' |
 
 export function pathForCrumbTarget(target: CrumbTarget) {
   if (target.kind === 'root') return DATABASE_ROOT_PATH
-  if (target.kind === 'collection') return pathForCenter({ collection: target.collection })
+  if (target.kind === 'collection') {
+    return pathForCenter({ collection: target.collection, viewId: builtinAllViewId(target.collection) })
+  }
   if (target.kind === 'view') return pathForCenter({ collection: target.collection, viewId: target.viewId })
   return pathForCenter({ collection: target.collection, recordId: target.recordId })
 }

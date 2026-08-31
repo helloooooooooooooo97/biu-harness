@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const trail = readFileSync(resolve(import.meta.dirname, './crumb-trail.tsx'), 'utf8')
 const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf8')
+const nav = readFileSync(resolve(import.meta.dirname, './sidebar-nav.ts'), 'utf8')
 const style = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8')
 
 describe('顶栏三级标题', () => {
@@ -12,7 +13,8 @@ describe('顶栏三级标题', () => {
     expect(trail).toContain('allowMenu')
     expect(trail).toContain('icon={crumb.icon ?? current?.icon}')
     expect(trail).toContain('tableCrumb?.icon')
-    expect(browser).toContain("target.kind === 'collection'")
+    expect(nav).toContain('builtinAllViewId(target.collection)')
+    expect(browser).not.toContain('{ catalog: true }')
     expect(trail).not.toContain("crumb.kind === 'collection' && index < crumbs.length - 1")
     expect(trail).toContain('crumbButtonAction(crumb')
     expect(browser).toContain('<CrumbTrail')

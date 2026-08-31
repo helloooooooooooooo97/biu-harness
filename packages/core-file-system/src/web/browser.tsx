@@ -92,7 +92,7 @@ import {
 } from './view-storage.ts'
 import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
-import { mergeCatalogViews, mergeTableViews, stubBuiltinCatalogView, builtinCatalogViewId, catalogRowOpenTarget } from '../catalog-views.ts'
+import { mergeCatalogViews, mergeTableViews, catalogRowOpenTarget } from '../catalog-views.ts'
 import { VIEWS_COLLECTION_PATH } from './database-path.ts'
 
 type StatResult = { schema?: CollectionSchema }
@@ -108,7 +108,6 @@ function recordsFingerprint(rows: Array<DbRecord & { path?: string }>) {
 export function CollectionBrowser({
   moduleId,
   collectionPath,
-  recordsPath,
   title,
   blurb,
   chrome,
@@ -127,13 +126,11 @@ export function CollectionBrowser({
 }: {
   moduleId?: string
   collectionPath: string
-  /** 列表数据源；表级 hub 时为 /views，侧栏仍跟 collectionPath。 */
-  recordsPath?: string
   title: string
   blurb: string
   chrome?: CollectionChrome
   tables?: CollectionInfo[]
-  onOpenTable?: (path: string, viewId?: string, opts?: { catalog?: boolean }) => void
+  onOpenTable?: (path: string, viewId?: string) => void
   lockedFilters?: Record<string, string>
   routeRecordId?: string | null
   routeViewId?: string
@@ -147,9 +144,7 @@ export function CollectionBrowser({
   embed?: boolean
 }) {
   ensureFsdbStyle()
-  const dataPath = recordsPath ?? collectionPath
-  const tableHub = dataPath === VIEWS_COLLECTION_PATH && collectionPath !== VIEWS_COLLECTION_PATH
-  const hubView = tableHub ? stubBuiltinCatalogView(builtinCatalogViewId(collectionPath)) : null
+  const dataPath = collectionPath
   const [stat, setStat] = useState<StatResult | null>(null)
   const [items, setItems] = useState<Array<DbRecord & { path?: string }>>([])
   const [error, setError] = useState('')
@@ -158,7 +153,7 @@ export function CollectionBrowser({
   const [detailBody, setDetailBody] = useState<unknown>(null)
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [busyKey, setBusyKey] = useState<string | null>(null)
-  const initialView = hubView ?? viewForPath(collectionPath, routeViewId)
+  const initialView = viewForPath(collectionPath, routeViewId)
   const [query, setQuery] = useState(initialView?.query ?? '')
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(() => normalizePageSize(initialView?.pageSize))
@@ -171,7 +166,7 @@ export function CollectionBrowser({
   const [columnKeys, setColumnKeys] = useState<string[]>(initialView?.columns ?? [])
   const tablePathsKey = tables.map((table) => `${table.path}\t${table.view?.title ?? table.label ?? ''}`).join('\n')
   const [views, setViews] = useState<SavedView[]>(() => loadViews(collectionPath))
-  const [activeViewId, setActiveViewId] = useState<string | null>(tableHub ? null : (initialView?.id ?? null))
+  const [activeViewId, setActiveViewId] = useState<string | null>(initialView?.id ?? null)
   const catalogLocks = useMemo(() => {
     const current = views.find((view) => view.id === activeViewId)
     if (!current?.builtin) return lockedFilters
@@ -464,7 +459,7 @@ export function CollectionBrowser({
     setStat(null)
     setError('')
     setPage(0)
-    const stored = tableHub ? hubView : viewForPath(collectionPath, routeViewId)
+    const stored = viewForPath(collectionPath, routeViewId)
     const user = loadViews(collectionPath)
     const listed =
       collectionPath === VIEWS_COLLECTION_PATH
@@ -474,21 +469,7 @@ export function CollectionBrowser({
             user,
           )
     rememberViews(collectionPath, listed)
-    if (tableHub && hubView) {
-      setViews(listed)
-      setActiveViewId(null)
-      setMode(hubView.mode)
-      setSortField(hubView.sortField)
-      setSortDir(hubView.sortDir)
-      setFilters(hubView.filters)
-      setColumnKeys(hubView.columns)
-      setGroupBy(hubView.groupBy ?? '')
-      setShowTree(hubView.tree !== false)
-      setWrapCells(!!hubView.wrap)
-      setTruncateCells(hubView.truncate !== false)
-      setQuery(hubView.query ?? '')
-      setFetchQuery(hubView.query ?? '')
-    } else if (stored || listed[0]) {
+    if (stored || listed[0]) {
       const next = (routeViewId && listed.find((item) => item.id === routeViewId)) || stored || listed[0]
       setViews(listed)
       if (next) {
@@ -510,7 +491,7 @@ export function CollectionBrowser({
       setQuery('')
       setFilters({})
     }
-  }, [collectionPath, dataPath, tablePathsKey, tableHub])
+  }, [collectionPath, dataPath, tablePathsKey])
 
   useEffect(() => {
     let debounce = 0
@@ -1081,7 +1062,7 @@ export function CollectionBrowser({
           label: table.view?.title ?? table.label,
           icon: table.view?.icon,
         })),
-        viewId: tableHub ? undefined : routeViewId ?? activeViewId ?? undefined,
+        viewId: routeViewId ?? activeViewId ?? undefined,
         viewName: activeView?.name,
         views: views.map((view) => ({ id: view.id, name: view.name, mode: view.mode })),
         recordId: selected?.id,
@@ -1092,7 +1073,7 @@ export function CollectionBrowser({
           emoji: recordPreviewEmoji(row),
         })),
       }),
-    [activeView?.name, activeViewId, collectionPath, items, routeViewId, schema?.labelField, selected, tables, tableHub, title, views],
+    [activeView?.name, activeViewId, collectionPath, items, routeViewId, schema?.labelField, selected, tables, title, views],
   )
   const currentTable = tables.find((item) => item.path === collectionPath)
   const recordKind = recordPickKind(currentTable?.view?.moduleId)
@@ -1370,10 +1351,6 @@ export function CollectionBrowser({
     const hydrateKey = `${collectionPath}\0${dataPath}`
     if (hydratePath.current === hydrateKey) return
     hydratePath.current = hydrateKey
-    if (tableHub) {
-      setHydrated(true)
-      return
-    }
     persistViews(loadViews(collectionPath))
     const listed = viewsRef.current
     const view =
@@ -1382,14 +1359,14 @@ export function CollectionBrowser({
       listed[0]
     if (view) applyView(view)
     setHydrated(true)
-  }, [allColumnKeys, collectionPath, dataPath, schema, schemaDefaultKeys, tableHub])
+  }, [allColumnKeys, collectionPath, dataPath, schema, schemaDefaultKeys])
 
   useEffect(() => {
     if (!hydrated || !activeViewId) return
     const id = window.setTimeout(() => {
       if (hydratePath.current !== `${collectionPath}\0${dataPath}`) return
       const current = viewsRef.current.find((view) => view.id === activeViewId)
-      if (!current || tableHub) return
+      if (!current) return
       const next = normalizeSavedView({
         ...current,
         mode,
@@ -1487,17 +1464,12 @@ export function CollectionBrowser({
               openId={crumbOpen}
               onOpenId={setCrumbOpen}
               canCreateView
-              canCreateRecord={canCreate && !tableHub}
+              canCreateRecord={canCreate}
               onCreate={(kind) => {
                 if (kind === 'record') void createRecord()
                 else addEmptyView()
               }}
               onPick={(target) => {
-                if (target.kind === 'collection') {
-                  onOpenTable?.(target.collection, undefined, { catalog: true })
-                  setCrumbOpen(null)
-                  return
-                }
                 if (target.kind === 'view' && target.collection === collectionPath) {
                   const view = views.find((item) => item.id === target.viewId)
                   if (view) selectView(view)
@@ -1557,7 +1529,7 @@ export function CollectionBrowser({
                 onClick={() => toggleMenu('view')}
               >
                 <Squares2X2Icon aria-hidden className="size-[14px]" />
-                <span className="tasks-viewdd-name">{tableHub ? title : (activeView?.name ?? '未保存')}</span>
+                <span className="tasks-viewdd-name">{activeView?.name ?? '未保存'}</span>
               </button>
               {viewMenuOpen ? (
                 <div className="tasks-viewdd-menu" role="menu">

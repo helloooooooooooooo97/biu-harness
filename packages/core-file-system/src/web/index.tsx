@@ -22,7 +22,8 @@ import {
   collectionNavKey,
 } from './nav-boot.ts'
 import { defaultViewId, pushAllSavedViews } from './view-storage.ts'
-import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, VIEWS_COLLECTION_PATH, databaseAllViewPath, isCollectionHub, sortDataCollections, viewsCatalogSource } from './database-path.ts'
+import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, VIEWS_COLLECTION_PATH, databaseAllViewPath, sortDataCollections, viewsCatalogSource } from './database-path.ts'
+import { builtinAllViewId } from '../catalog-views.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
 type SlotsService = {
@@ -123,12 +124,10 @@ function CollectionPage(props: SlotProps) {
   const recordFromRoute = parsed.kind === 'record' ? parsed.recordId : null
   const currentPath = collectionFromRoute || orderedTables[0]?.path || ''
   const row = orderedTables.find((item) => item.path === currentPath)
-  const tableHub = isCollectionHub(currentPath, viewFromRoute, recordFromRoute)
-  const recordsPath = tableHub ? VIEWS_COLLECTION_PATH : currentPath
   const chrome = useSyncExternalStore(
     (fn) => (ui ? ui.subscribe(fn) : () => undefined),
-    () => ui?.chrome(recordsPath) ?? EMPTY_CHROME,
-    () => ui?.chrome(recordsPath) ?? EMPTY_CHROME,
+    () => ui?.chrome(currentPath) ?? EMPTY_CHROME,
+    () => ui?.chrome(currentPath) ?? EMPTY_CHROME,
   )
 
   const go = (
@@ -167,8 +166,14 @@ function CollectionPage(props: SlotProps) {
     if (!orderedTables.length) return
     if (!dataHome) return
     const first = orderedTables[0]!
-    go({ collection: first.path }, { replace: true })
+    go({ collection: first.path, viewId: builtinAllViewId(first.path) }, { replace: true })
   }, [dataHome, orderedTables])
+
+  useEffect(() => {
+    if (parsed.kind !== 'collection-view' || parsed.viewId || recordFromRoute) return
+    if (!parsed.collection) return
+    go({ collection: parsed.collection, viewId: builtinAllViewId(parsed.collection) }, { replace: true })
+  }, [parsed, recordFromRoute])
 
   useEffect(() => {
     if (!orderedTables.length || !collectionFromRoute) return
@@ -178,11 +183,8 @@ function CollectionPage(props: SlotProps) {
   }, [collectionFromRoute, orderedTables])
 
   const sourceFilter = useMemo(() => viewsCatalogSource(location.search), [location.search])
-  const lockedFilters: Record<string, string> = tableHub
-    ? { tablePath: currentPath }
-    : currentPath === VIEWS_COLLECTION_PATH && sourceFilter
-      ? { tablePath: sourceFilter }
-      : {}
+  const lockedFilters: Record<string, string> =
+    currentPath === VIEWS_COLLECTION_PATH && sourceFilter ? { tablePath: sourceFilter } : {}
   if (!currentPath) return null
   const title = row?.view?.title ?? row?.label ?? currentPath.replace(/^\//, '')
   return (
@@ -191,7 +193,6 @@ function CollectionPage(props: SlotProps) {
       <CollectionBrowser
       moduleId={DATA_MODULE_ID}
       collectionPath={currentPath}
-      recordsPath={recordsPath}
       title={title}
       blurb={row?.view?.blurb ?? ''}
       chrome={chrome}
@@ -201,19 +202,13 @@ function CollectionPage(props: SlotProps) {
       routeViewId={viewFromRoute}
       expandedViewKey={expandedViewKey}
       onExpandedViewKeyChange={setExpandedViewKey}
-      onOpenTable={(path, viewId, opts) => {
-        if (opts?.catalog) {
-          go({ collection: path })
-          return
-        }
-        go({ collection: path, viewId })
-      }}
+      onOpenTable={(path, viewId) => go({ collection: path, viewId: viewId ?? builtinAllViewId(path) })}
       onOpenView={(viewId) => go({ collection: currentPath, viewId })}
       onOpenRecord={(recordId, _viewId, collection) =>
         go({ collection: collection ?? currentPath, recordId })
       }
       onCloseRecord={() =>
-        go({ collection: currentPath }, { replace: true })
+        go({ collection: currentPath, viewId: defaultViewId(currentPath) }, { replace: true })
       }
       onCrumbTarget={(target: CrumbTarget) => navigate(pathForCrumbTarget(target))}
     />
