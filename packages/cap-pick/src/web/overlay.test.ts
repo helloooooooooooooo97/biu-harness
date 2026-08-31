@@ -43,3 +43,7 @@ test('Command/Ctrl+Q toggles pick mode', () => {
   assert.match(overlay, /event.metaKey \|\| event.ctrlKey/)
   assert.match(overlay, /key === 'q'/)
 })
+
+test('pick highlight uses the visible clipped box, not the raw layout box', () => {
+  assert.match(overlay, /visiblePickBox/)
+})
