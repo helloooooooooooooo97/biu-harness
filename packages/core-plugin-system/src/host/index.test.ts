@@ -137,6 +137,7 @@ test('web-only plugin opens without host.js', async () => {
     await store.initSandbox({
       id: 'store-banner',
       name: 'Banner',
+      shell: { width: 360, height: 240 },
       webJs: `export const name = 'store-banner-web'\nexport const inject = ['slots']\nexport function apply() {}\n`,
     })
     await assert.rejects(() => store.pack('store-empty'), /sandbox not found/)

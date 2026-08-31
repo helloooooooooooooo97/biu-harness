@@ -30,6 +30,22 @@ function dim(value: unknown, fallback: number, min: number, max: number) {
   return Math.min(max, Math.max(min, Math.round(n)))
 }
 
+/** 是否在 manifest 里显式写了内容区宽高（缺省不算声明）。 */
+export function declaredStoreShell(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const rec = value as Record<string, unknown>
+  const width = Number(rec.width ?? rec.w)
+  const height = Number(rec.height ?? rec.h)
+  return Number.isFinite(width) && Number.isFinite(height)
+}
+
+export function requireDeclaredShell(value: unknown, hasWeb: boolean, where: string) {
+  if (!hasWeb) return
+  if (!declaredStoreShell(value)) {
+    throw new Error(`${where}: web plugins must set shell.width and shell.height (content pixels, excluding the title bar)`)
+  }
+}
+
 /** manifest.shell：width/height 是内容区像素，不含标题栏。缺省 480×360。 */
 export function parseStoreShell(value: unknown): StoreShell {
   const d = defaultStoreShell()
