@@ -28,7 +28,8 @@ describe('sidebar text colors', () => {
     expect(css).toMatch(/filter:\s*blur\(42px\)/)
     expect(css).toMatch(/\.app-side-bar-brand-title\s*\{[^}]*border:\s*1px solid transparent/s)
     expect(css).toMatch(/\.app-side-bar-brand-title\s*\{[^}]*border-box/s)
-    expect(css).toMatch(/\.app-side-bar-brand-title\s*\{[^}]*drop-shadow/s)
+    expect(css).toMatch(/\.app-side-bar-brand-title::after/)
+    expect(css).toMatch(/\.app-side-bar-brand-title\s*\{[^}]*box-shadow:/s)
     expect(css).toMatch(/\.app-side-bar-brand-title\s*\{[^}]*color:\s*var\(--dsw-sidebar-fg-active\)/s)
   })
 

@@ -66,7 +66,9 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
         />
       ) : null}
       <div className="app-side-bar-head app-side-bar-head-brand">
-        <span className="app-side-bar-brand-title">Biu Agent OS</span>
+        <span className="app-side-bar-brand-title">
+          <span className="app-side-bar-brand-title-text">Biu Agent OS</span>
+        </span>
         {narrow ? (
           <button
             type="button"

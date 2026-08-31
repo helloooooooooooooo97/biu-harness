@@ -723,7 +723,9 @@ export const DataSidebar = memo(function DataSidebar({
       aria-label="数据"
     >
       <div className="app-side-bar-head app-side-bar-head-brand">
-        <span className="app-side-bar-brand-title">Biu Agent OS</span>
+        <span className="app-side-bar-brand-title">
+          <span className="app-side-bar-brand-title-text">Biu Agent OS</span>
+        </span>
         <button
           type="button"
           className="chat-view-header-expand"

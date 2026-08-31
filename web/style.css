@@ -340,7 +340,7 @@ body {
     radial-gradient(ellipse 52% 68% at 48% 22%, color-mix(in srgb, #5B3E90 50%, transparent), transparent 74%),
     radial-gradient(ellipse 48% 64% at 82% 46%, color-mix(in srgb, #E22726 38%, transparent), transparent 72%);
   filter: blur(42px);
-  opacity: 0.5;
+  opacity: 0.38;
 }
 
 .app-side-bar.is-narrow:has(.app-side-bar-head-brand)::before {
@@ -350,14 +350,13 @@ body {
 
 .app-side-bar-brand-title {
   position: relative;
+  isolation: isolate;
   display: inline-flex;
   min-width: 0;
   max-width: 100%;
   align-items: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding: 3px 9px;
+  overflow: visible;
+  padding: 4px 10px;
   border: 1px solid transparent;
   border-radius: 8px;
   font-size: 14px;
@@ -367,21 +366,33 @@ body {
   background:
     linear-gradient(
       105deg,
-      color-mix(in srgb, #0066B0 16%, var(--dsw-sidebar)),
-      color-mix(in srgb, #5B3E90 14%, var(--dsw-sidebar)) 52%,
-      color-mix(in srgb, #E22726 12%, var(--dsw-sidebar))
+      color-mix(in srgb, #0066B0 34%, var(--dsw-sidebar)),
+      color-mix(in srgb, #5B3E90 30%, var(--dsw-sidebar)) 52%,
+      color-mix(in srgb, #E22726 26%, var(--dsw-sidebar))
     ) padding-box,
-    linear-gradient(
-      105deg,
-      color-mix(in srgb, #0066B0 72%, transparent),
-      color-mix(in srgb, #5B3E90 68%, transparent) 52%,
-      color-mix(in srgb, #E22726 58%, transparent)
-    ) border-box;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 10%, transparent);
-  filter:
-    drop-shadow(0 0 8px color-mix(in srgb, #0066B0 32%, transparent))
-    drop-shadow(0 0 16px color-mix(in srgb, #5B3E90 26%, transparent))
-    drop-shadow(0 0 22px color-mix(in srgb, #E22726 14%, transparent));
+    linear-gradient(105deg, #4aa3e8, #a078dc 52%, #ee6d6a) border-box;
+  box-shadow:
+    0 0 18px color-mix(in srgb, #0066B0 50%, transparent),
+    0 0 32px color-mix(in srgb, #5B3E90 42%, transparent),
+    0 0 40px color-mix(in srgb, #E22726 22%, transparent);
+}
+
+.app-side-bar-brand-title::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  border-radius: 11px;
+  background: linear-gradient(105deg, #0066B0, #5B3E90 52%, #E22726);
+  filter: blur(10px);
+  opacity: 0.55;
+}
+
+.app-side-bar-brand-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-side-bar-head-brand .chat-view-header-expand {
