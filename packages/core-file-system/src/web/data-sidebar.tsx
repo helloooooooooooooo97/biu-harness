@@ -341,7 +341,7 @@ export const DataSidebar = memo(function DataSidebar({
   onApplyView: (view: SavedView) => void
   onRenameView: (view: SavedView) => void
   onDeleteView: (view: SavedView) => void
-  onAddView: () => void
+  onAddView: (path?: string) => void
   onCopyView: () => void
   onOpenRecord?: (path: string, view: SavedView, recordId: string, row?: DbRecord) => void
   expandedViewKey?: string | null
@@ -611,6 +611,20 @@ export const DataSidebar = memo(function DataSidebar({
                             onClick={() => onOpenTable?.(table.path, undefined, { catalog: true })}
                           >
                             {name}
+                          </button>
+                          <button
+                            type="button"
+                            className="sidebar-add"
+                            title={`在 ${name} 下添加视图`}
+                            aria-label={`在 ${name} 下添加视图`}
+                            data-testid={`sidebar-add-view-${table.path}`}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setOpenTables((prev) => ({ ...prev, [table.path]: true }))
+                              onAddView(table.path)
+                            }}
+                          >
+                            <PlusIcon className="size-4 shrink-0" />
                           </button>
                         </div>
                         <ChatCount count={listed.length} />

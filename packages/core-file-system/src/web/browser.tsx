@@ -717,24 +717,28 @@ export function CollectionBrowser({
     setDlgError('')
   }, [dlg])
 
-  function persistViews(next: SavedView[]) {
+  function persistViewsFor(path: string, next: SavedView[]) {
+    const table = tables.find((item) => item.path === path) ?? { path, label: path.replace(/^\//, '') }
     const listed =
-      collectionPath === VIEWS_COLLECTION_PATH
+      path === VIEWS_COLLECTION_PATH
         ? mergeCatalogViews(tables, next)
-        : mergeTableViews(
-            tables.find((table) => table.path === collectionPath) ?? { path: collectionPath, label: title },
-            next,
-          )
+        : mergeTableViews(table, next)
     const stored = listed.filter((view) => !view.builtin)
-    viewsRef.current = listed
-    setViews(listed)
-    rememberViews(collectionPath, listed)
+    rememberViews(path, listed)
     if (!embed) {
-      localStorage.setItem(viewsKey(collectionPath), JSON.stringify(stored))
-      pushSavedViews(collectionPath, stored)
+      localStorage.setItem(viewsKey(path), JSON.stringify(stored))
+      pushSavedViews(path, stored)
+    }
+    if (path === collectionPath) {
+      viewsRef.current = listed
+      setViews(listed)
     }
     window.dispatchEvent(new Event('fsdb:change'))
     window.dispatchEvent(new Event('fsdb:crumb-labels'))
+  }
+
+  function persistViews(next: SavedView[]) {
+    persistViewsFor(collectionPath, next)
   }
 
   function rememberActiveView(id: string) {
@@ -805,29 +809,42 @@ export function CollectionBrowser({
     selectView(view)
   }
 
-  function uniqueViewName(base: string) {
-    const names = new Set(views.map((item) => item.name))
+  function uniqueViewName(base: string, listed: SavedView[] = views) {
+    const names = new Set(listed.map((item) => item.name))
     if (!names.has(base)) return base
     let n = 2
     while (names.has(`${base} ${n}`)) n += 1
     return `${base} ${n}`
   }
 
-  function addEmptyView() {
-    commitView({
+  function addEmptyView(path = collectionPath) {
+    const target = path || collectionPath
+    const listed = target === collectionPath ? views : loadViews(target)
+    const view: SavedView = {
       id: `${Date.now()}`,
-      name: uniqueViewName('新视图'),
+      name: uniqueViewName('新视图', listed),
       mode: 'table',
-      sortField: allColumns[0]?.key ?? 'id',
+      sortField: target === collectionPath ? (allColumns[0]?.key ?? 'id') : 'id',
       sortDir: 'asc',
       filters: {},
-      columns: [...schemaDefaultKeys],
+      columns: target === collectionPath ? [...schemaDefaultKeys] : [],
       groupBy: '',
       tree: true,
       wrap: false,
       truncate: true,
       query: '',
-    })
+    }
+    persistViewsFor(target, [...listed.filter((item) => !item.builtin), view])
+    if (target === collectionPath) {
+      selectView(view)
+      return
+    }
+    try {
+      localStorage.setItem(activeViewStorageKey(target), view.id)
+    } catch {
+      /* ignore */
+    }
+    onOpenTable?.(target, view.id)
   }
 
   function copyView(source?: SavedView) {
