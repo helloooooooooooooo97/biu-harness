@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useSyncExternalStore, type ReactNode } from 'react'
 import type { SlotProps } from '@biu/type-slots'
 import type { DockApp, DockService } from './service.ts'
 
@@ -6,6 +6,10 @@ function DockTile({ app, dock }: { app: DockApp; dock: DockService }) {
   const Tile = app.Tile as (() => ReactNode) | undefined
   const Icon = app.Icon as (() => ReactNode) | undefined
   const activate = () => {
+    if (app.kind === 'module') {
+      app.onOpen?.()
+      return
+    }
     if (app.minimized || !app.running) dock.open(app.id)
     else if (app.kind === 'composer' || app.kind === 'tool') dock.open(app.id)
     else dock.focus(app.id)
@@ -43,8 +47,11 @@ function DockTile({ app, dock }: { app: DockApp; dock: DockService }) {
 
 export function OsDock(props: SlotProps) {
   const dock = props.dock as DockService
-  const [apps, setApps] = useState(() => dock.list())
-  useEffect(() => dock.subscribe(() => setApps(dock.list())), [dock])
+  const apps = useSyncExternalStore(
+    (listener) => dock.subscribe(listener),
+    () => dock.list(),
+    () => dock.list(),
+  )
   const pinned = apps.filter((app) => app.group === 'pinned')
   const running = apps.filter((app) => app.group === 'running')
   if (!apps.length) return null

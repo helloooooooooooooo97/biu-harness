@@ -2,7 +2,7 @@ import { Service, type Context } from 'cordis'
 
 export type DockGroup = 'pinned' | 'running'
 
-export type DockKind = 'session' | 'tool' | 'composer' | 'plugin'
+export type DockKind = 'session' | 'tool' | 'composer' | 'plugin' | 'module'
 
 export type DockApp = {
   id: string
@@ -49,6 +49,8 @@ export class DockService extends Service {
   private readonly apps = new Map<string, DockApp>()
   private readonly listeners = new Set<Listener>()
   private focusedId: string | null = null
+
+  private cached: DockApp[] = []
 
   constructor(ctx: Context) {
     super(ctx, 'dock')
@@ -133,10 +135,7 @@ export class DockService extends Service {
   }
 
   list(): DockApp[] {
-    return [...this.apps.values()].sort((a, b) => {
-      if (a.group !== b.group) return a.group === 'pinned' ? -1 : 1
-      return a.order - b.order || a.id.localeCompare(b.id)
-    })
+    return this.cached
   }
 
   snapshot(): DockSnapshot {
@@ -150,7 +149,15 @@ export class DockService extends Service {
     }
   }
 
+  private rebuild(): DockApp[] {
+    return [...this.apps.values()].sort((a, b) => {
+      if (a.group !== b.group) return a.group === 'pinned' ? -1 : 1
+      return a.order - b.order || a.id.localeCompare(b.id)
+    })
+  }
+
   private emit(): void {
+    this.cached = this.rebuild()
     for (const listener of this.listeners) listener()
   }
 }

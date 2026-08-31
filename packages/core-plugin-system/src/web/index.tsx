@@ -323,6 +323,11 @@ function PluginExtrasLayer(props: SlotProps) {
       const title = listing?.name ?? entry.id
       const dockId = `plugin:${entry.id}`
       live.add(dockId)
+      const extraProps = entry.props?.() ?? {}
+      const ExtraIcon = extraProps.Icon as ((props: { className?: string }) => ReactNode) | undefined
+      const Icon = ExtraIcon
+        ? () => <ExtraIcon className="size-5" />
+        : () => <PuzzlePieceIcon className="size-5" aria-hidden />
       dock.register({
         id: dockId,
         title,
@@ -330,7 +335,7 @@ function PluginExtrasLayer(props: SlotProps) {
         kind: 'plugin',
         pinned: false,
         order: 100 + entry.order,
-        Icon: () => <PuzzlePieceIcon className="size-5" />,
+        Icon,
         onOpen: () => {
           setMinimized((cur) => {
             const next = { ...cur }

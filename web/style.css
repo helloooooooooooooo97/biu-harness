@@ -167,25 +167,13 @@ body {
   background: radial-gradient(ellipse at center, rgba(242, 241, 237, 0.14), transparent 70%);
 }
 
-@property --rail-w {
-  syntax: "<length>";
-  inherits: true;
-  initial-value: 0px;
-}
-
-/* App shell — VS Code-like activity bar + optional side bar */
+/* App shell — sidebar + main, modules live on the OS dock */
 .app-shell {
   display: grid;
   height: 100vh;
   overflow: hidden;
   background: var(--dsw-bg);
   color: var(--dsw-label);
-  --rail-w: 0px;
-  transition: --rail-w .16s ease;
-}
-
-.app-shell.is-rail-open {
-  --rail-w: 48px;
 }
 
 .chat-view-header {
@@ -339,6 +327,48 @@ body {
   background: #f0efed;
   transform: translateX(-50%);
   pointer-events: none;
+}
+
+.os-dock-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  z-index: 1;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ff3e51;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.os-dock-update-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 64px;
+  z-index: 91;
+  transform: translateX(-50%);
+  max-width: min(280px, calc(100vw - 32px));
+  padding: 7px 10px;
+  border: 1px solid var(--dsw-border);
+  border-radius: 8px;
+  background: var(--dsw-sidebar);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  color: var(--dsw-label);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.os-dock-item.is-focused .os-dock-tile {
+  color: #fff;
 }
 
 .os-dock .brand-corner-cluster {
@@ -850,19 +880,19 @@ body {
 }
 
 .app-shell-agent {
-  grid-template-columns: var(--rail-w) var(--sidebar-col, var(--dsw-sidebar-max)) minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-col, var(--dsw-sidebar-max)) minmax(0, 1fr);
 }
 
 .app-shell-agent.is-sidebar-collapsed {
-  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .app-shell-agent.is-inspector-open {
-  grid-template-columns: var(--rail-w) var(--sidebar-col, var(--dsw-sidebar-max)) minmax(0, 1fr) var(--inspector-width, 320px);
+  grid-template-columns: var(--sidebar-col, var(--dsw-sidebar-max)) minmax(0, 1fr) var(--inspector-width, 320px);
 }
 
 .app-shell-agent.is-sidebar-collapsed.is-inspector-open {
-  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--inspector-width, 320px);
+  grid-template-columns: minmax(0, 1fr) var(--inspector-width, 320px);
 }
 
 .session-inspector {
@@ -1071,16 +1101,16 @@ body {
 }
 
 .app-shell-module {
-  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .app-shell-module.is-inspector-open {
-  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--inspector-width, 320px);
+  grid-template-columns: minmax(0, 1fr) var(--inspector-width, 320px);
 }
 
 .app-shell-module.is-inspector-open .chat-overlay-panel {
   right: var(--inspector-width, 320px);
-  width: min(var(--dsw-chat-width), calc(100vw - var(--rail-w) - var(--inspector-width, 320px) - 40px));
+  width: min(var(--dsw-chat-width), calc(100vw - var(--inspector-width, 320px) - 40px));
 }
 
 .app-side-bar-module-slot {
@@ -1675,67 +1705,6 @@ body {
   color: var(--dsw-sidebar-fg-active);
 }
 
-.app-rail-cluster {
-  position: relative;
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  align-self: stretch;
-}
-
-.app-rail-hotzone {
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 60;
-  width: 20px;
-  background: transparent;
-}
-
-.app-rail-hover {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.app-activity-bar {
-  display: flex;
-  width: 48px;
-  height: 100vh;
-  min-height: 0;
-  flex-direction: column;
-  align-items: stretch;
-  overflow: visible;
-  background: var(--dsw-sidebar);
-  border-right: 1px solid var(--dsw-border);
-  transform: translateX(-100%);
-  pointer-events: none;
-  transition: transform .16s ease;
-}
-
-.app-shell.is-rail-open .app-activity-bar {
-  transform: none;
-  pointer-events: auto;
-}
-
-.app-activity-brand {
-  display: grid;
-  height: 52px;
-  place-items: center;
-  color: var(--dsw-label);
-  overflow: visible;
-}
-
-.app-activity-brand svg {
-  display: block;
-  overflow: visible;
-}
-
 .sidebar-mascot {
   position: relative;
   flex-shrink: 0;
@@ -1793,28 +1762,6 @@ body {
   }
 }
 
-.app-activity-brand:hover {
-  color: var(--dsw-business);
-}
-
-.app-activity-list {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-  padding-top: 8px;
-}
-
-.app-activity-footer {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  overflow: visible;
-  gap: 0;
-  padding-bottom: 8px;
-}
-
 .app-activity-item {
   position: relative;
   display: grid;
@@ -1836,10 +1783,6 @@ body {
   color: var(--dsw-label);
 }
 
-.app-activity-pin.is-active {
-  color: var(--dsw-sidebar-fg-active);
-}
-
 .app-activity-indicator {
   position: absolute;
   top: 6px;
@@ -1852,48 +1795,6 @@ body {
 
 .app-activity-item.is-active .app-activity-indicator {
   background: var(--dsw-business);
-}
-
-.app-activity-update.is-busy {
-  opacity: 0.55;
-  cursor: wait;
-}
-
-.app-activity-update-toast {
-  position: fixed;
-  left: 56px;
-  bottom: 52px;
-  z-index: 80;
-  max-width: min(280px, calc(100vw - 72px));
-  padding: 7px 10px;
-  border: 1px solid var(--dsw-border);
-  border-radius: 8px;
-  background: var(--dsw-sidebar);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  color: var(--dsw-label);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.4;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.app-activity-badge {
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  z-index: 1;
-  min-width: 14px;
-  height: 14px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: #ff3e51;
-  color: #fff;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 14px;
-  text-align: center;
-  pointer-events: none;
 }
 
 .sr-only {

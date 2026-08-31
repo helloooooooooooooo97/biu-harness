@@ -38,10 +38,10 @@ test('declares generic module slots, not plugin ids', async () => {
 })
 
 test('update button does not download when already current', () => {
-  const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
-  assert.match(shell, /相对于主分支暂时无最新提交版本/)
-  assert.match(shell, /if \(behind <= 0\)/)
-  assert.match(shell, /app-activity-update-toast/)
+  const nav = readFileSync(resolve(import.meta.dirname, './shell-dock-nav.tsx'), 'utf8')
+  assert.match(nav, /相对于主分支暂时无最新提交版本/)
+  assert.match(nav, /if \(behind <= 0\)/)
+  assert.match(nav, /os-dock-update-toast/)
 })
 
 test('refresh does not send unfinished plugin routes home', () => {

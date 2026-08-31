@@ -52,7 +52,7 @@ export function navConflict(view: CollectionView, title: string, modules: AppMod
   const pathHit = modules.find((item) => item.id !== selfId && normalizeCollectionPath(item.path) === route)
   if (pathHit) return `路由重复：${route} 已被「${pathHit.label}」占用，请换一个路由再登记`
   const nameHit = modules.find((item) => item.id !== selfId && item.label === title)
-  if (nameHit) return `名称重复：最左导航已有「${title}」，请换一个名字`
+  if (nameHit) return `名称重复：导航已有「${title}」，请换一个名字`
   return null
 }
 
@@ -278,7 +278,7 @@ export function apply(ctx: Context) {
     }
     const nameHit = occupied.find((item) => item.id !== DATA_MODULE_ID && item.label === DATA_MODULE.label)
     if (nameHit) {
-      errors.push(`名称重复：最左导航已有「${DATA_MODULE.label}」`)
+      errors.push(`名称重复：导航已有「${DATA_MODULE.label}」`)
       setNavErrors(errors)
       return
     }

@@ -13,7 +13,7 @@ import {
   SIDEBAR_MAX,
   SIDEBAR_MIN,
 } from './chat-overlay.ts'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import type { Context } from 'cordis'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSnapshot, type SnapshotService } from '@biu/web-snapshot'
@@ -29,7 +29,6 @@ import {
   bindAppModules,
   bindAppModulesNavReady,
   moduleIdFromPath,
-  type AppModule,
   type AppModulesService,
 } from '@biu/web-app-modules'
 import { ChatSidebar } from './chat-sidebar.tsx'
@@ -41,168 +40,19 @@ import { SessionInspector } from './session-inspector.tsx'
 import { SessionConfigDialog } from '@biu/web-session-view/dialog'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import { OverlayChatWindow } from './overlay-window.tsx'
+import { ShellDockNav } from './shell-dock-nav.tsx'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import { chromeIcon } from './chrome-icon.ts'
 import {
-  ArrowDownTrayIcon,
-  ChatBubbleLeftIcon,
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
-  Cog6ToothIcon,
   AdjustmentsHorizontalIcon,
-  MapPinIcon,
   XMarkIcon,
 } from '@heroicons/react/16/solid'
 
 export const name = 'shell'
 export const inject = ['slots', 'dock', 'snapshot', 'sessionView', 'projectView', 'appModules']
-
-function ModuleIcon({ module }: { module: AppModule }) {
-  if (module.Icon) {
-    const Icon = module.Icon
-    return <Icon {...chromeIcon} />
-  }
-  return <ChatBubbleLeftIcon {...chromeIcon} aria-hidden />
-}
-
-function ModuleRail({
-  active,
-  agentHref,
-  modules,
-  pinned,
-  onTogglePin,
-  onSettings,
-}: {
-  active: string
-  agentHref: string
-  modules: AppModule[]
-  pinned: boolean
-  onTogglePin: () => void
-  onSettings: () => void
-}) {
-  return (
-    <nav className="app-activity-bar" aria-label="Activity bar" data-biu-ignore>
-      <div className="app-activity-list">
-        {modules.map((module) => {
-          const to = module.id === 'agent' ? agentHref : module.path
-          const isActive = module.id === active
-          return (
-            <Link
-              key={module.id}
-              to={to}
-              className={`app-activity-item${isActive ? ' is-active' : ''}`}
-              title={module.label}
-              aria-label={module.label}
-              aria-current={isActive ? 'page' : undefined}
-              onClick={
-                isActive
-                  ? (event) => {
-                      event.preventDefault()
-                    }
-                  : undefined
-              }
-            >
-              <span className="app-activity-indicator" aria-hidden />
-              <ModuleIcon module={module} />
-              <span className="sr-only">{module.label}</span>
-            </Link>
-          )
-        })}
-      </div>
-      <div className="app-activity-footer">
-        <button
-          type="button"
-          className={`app-activity-item app-activity-pin${pinned ? ' is-active' : ''}`}
-          title={pinned ? '取消固定左侧导航' : '固定左侧导航'}
-          aria-label={pinned ? '取消固定左侧导航' : '固定左侧导航'}
-          aria-pressed={pinned}
-          data-testid="activity-rail-pin"
-          onClick={onTogglePin}
-        >
-          <MapPinIcon {...chromeIcon} />
-        </button>
-        <UpdateButton />
-        <button
-          type="button"
-          className="app-activity-item app-activity-settings"
-          title="Settings"
-          aria-label="Settings"
-          onClick={onSettings}
-        >
-          <Cog6ToothIcon {...chromeIcon} />
-        </button>
-      </div>
-    </nav>
-  )
-}
-
-function UpdateButton() {
-  const [behind, setBehind] = useState(0)
-  const [busy, setBusy] = useState(false)
-  const [hint, setHint] = useState<string | undefined>()
-
-  useEffect(() => {
-    void fetch('/api/update')
-      .then((res) => res.json() as Promise<{ behind?: number }>)
-      .then((data) => setBehind(Math.max(0, Number(data.behind) || 0)))
-      .catch(() => { })
-  }, [])
-
-  useEffect(() => {
-    if (!hint || behind > 0 || busy) return
-    const timer = window.setTimeout(() => setHint(undefined), 3200)
-    return () => window.clearTimeout(timer)
-  }, [hint, behind, busy])
-
-  const download = useCallback(async () => {
-    if (busy) return
-    if (behind <= 0) {
-      setHint('相对于主分支暂时无最新提交版本')
-      return
-    }
-    setBusy(true)
-    setHint(undefined)
-    try {
-      const res = await fetch('/api/update', { method: 'POST' })
-      const data = (await res.json()) as { error?: string; restarting?: boolean }
-      if (!res.ok) throw new Error(data.error || '更新失败')
-      setBehind(0)
-      setHint('正在重启…')
-    } catch (error) {
-      setBusy(false)
-      setHint(String(error))
-    }
-  }, [busy, behind])
-
-  const idle = behind <= 0 && !busy
-  const label = hint ?? (behind > 0 ? `下载更新 · 落后 ${behind}` : '下载更新')
-  const badge = behind > 99 ? '99+' : String(behind)
-
-  return (
-    <button
-      type="button"
-      className={`app-activity-item app-activity-update${busy ? ' is-busy' : ''}${idle ? ' is-idle' : ''}`}
-      title={label}
-      aria-label={label}
-      aria-disabled={idle}
-      disabled={busy}
-      onClick={() => void download()}
-    >
-      <ArrowDownTrayIcon {...chromeIcon} />
-      {behind > 0 && !busy ? (
-        <span className="app-activity-badge" aria-hidden>
-          {badge}
-        </span>
-      ) : null}
-      {hint && idle ? (
-        <span className="app-activity-update-toast" role="status">
-          {hint}
-        </span>
-      ) : null}
-    </button>
-  )
-}
 
 function ShellDockPins({
   dock,
@@ -246,8 +96,6 @@ const AgentMainPanels = memo(function AgentMainPanels({
   renderSlot: SlotProps['renderSlot']
   header: ReactNode
   floating: boolean
-  withSidebar: boolean
-  railOpen: boolean
   showCenter: boolean
 }) {
   const overlay = floating
@@ -378,7 +226,7 @@ function Shell(props: SlotProps) {
   const modules = useAppModules()
   const navReady = useAppModulesNavReady ? useAppModulesNavReady() : true
   const pluginModules = modules.filter((item) => item.id !== 'agent')
-  const railModules = navReady ? modules : []
+  const railModules = navReady ? modules : modules.filter((item) => item.id === 'agent')
   const sessionId = useSessionView((state) => state.sessionId)
   const danceSessions = useSessionView((state) => state.sessions)
   const dancing = useSyncExternalStore(
@@ -463,34 +311,7 @@ function Shell(props: SlotProps) {
     },
     [persistSidebar, sidebarWidth],
   )
-  const [railOpen, setRailOpen] = useState(false)
-  const [railPinned, setRailPinned] = useState(() => {
-    try {
-      return localStorage.getItem('cordis.rail.pinned') === '1'
-    } catch {
-      return false
-    }
-  })
-  const railClusterRef = useRef<HTMLDivElement>(null)
-  const openRail = useCallback(() => setRailOpen(true), [])
-  const closeRail = useCallback((event: { relatedTarget: EventTarget | null }) => {
-    if (railPinned) return
-    const next = event.relatedTarget
-    if (next instanceof Node && railClusterRef.current?.contains(next)) return
-    setRailOpen(false)
-  }, [railPinned])
-  const toggleRailPin = useCallback(() => {
-    setRailPinned((prev) => {
-      const next = !prev
-      try {
-        localStorage.setItem('cordis.rail.pinned', next ? '1' : '0')
-      } catch {
-        /* ignore */
-      }
-      if (next) setRailOpen(true)
-      return next
-    })
-  }, [])
+  const openSettings = useCallback(() => setSettingsOpen(true), [])
   const [inspectorOpen, setInspectorOpen] = useState(() => {
     try {
       return localStorage.getItem('cordis.inspector.open') === '1'
@@ -753,7 +574,7 @@ function Shell(props: SlotProps) {
           ? ` app-shell-agent${leftHidden ? ' is-sidebar-collapsed' : ''}${sidebarNarrow && !leftHidden ? ' is-sidebar-narrow' : ''}${inspectorVisible ? ' is-inspector-open' : ''
           }`
           : ` app-shell-module${inspectorVisible ? ' is-inspector-open' : ''}`
-        }${railOpen || railPinned ? ' is-rail-open' : ''}${leftHidden ? ' is-left-hidden' : ''}`}
+        }${leftHidden ? ' is-left-hidden' : ''}`}
       data-testid="app-shell"
       style={
         {
@@ -764,31 +585,6 @@ function Shell(props: SlotProps) {
         } as CSSProperties
       }
     >
-      <div className="app-rail-cluster" ref={railClusterRef}>
-        <div
-          className="app-rail-hotzone"
-          aria-hidden
-          onMouseEnter={openRail}
-          onMouseLeave={closeRail}
-        />
-        <div
-          className="app-rail-hover"
-          onMouseEnter={openRail}
-          onMouseLeave={closeRail}
-          onFocusCapture={openRail}
-          onBlurCapture={(event) => closeRail(event)}
-        >
-          <ModuleRail
-            active={activeModule}
-            agentHref={agentHref}
-            modules={railModules}
-            pinned={railPinned}
-            onTogglePin={toggleRailPin}
-            onSettings={() => setSettingsOpen(true)}
-          />
-        </div>
-      </div>
-
       {showChatSidebar ? (
         <ChatSidebar
           visible={!leftHidden}
@@ -820,6 +616,13 @@ function Shell(props: SlotProps) {
 
       <DanceStage sessions={danceSessions} on={dancing} shape={danceShape} />
       <ShellDockPins dock={dock} agents={danceSessions} activeId={sessionId} sessionView={sessionView} />
+      <ShellDockNav
+        dock={dock}
+        modules={railModules}
+        activeId={activeModule}
+        agentHref={agentHref}
+        onSettings={openSettings}
+      />
 
       <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
         <div
@@ -831,8 +634,6 @@ function Shell(props: SlotProps) {
             header={overlayHeader}
             floating={activeModule !== 'agent'}
             showCenter={activeModule === 'agent'}
-            withSidebar={leftPane && !leftHidden}
-            railOpen={railOpen || railPinned}
           />
         </div>
         <PluginModuleStage

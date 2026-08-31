@@ -147,7 +147,7 @@ export type CollectionAction = CollectionActionInfo & {
   run: (id: string, record: DbRecord) => unknown | Promise<unknown>
 }
 
-/** 登记方自己选定的前端导航：路由、图标、显示名。Core-File System 按此在最左导航栏挂入口，不代为生成路由。 */
+/** 登记方自己选定的前端导航：路由、图标、显示名。Core-File System 按此在 Dock 挂入口，不代为生成路由。 */
 export type CollectionView = {
   moduleId: string
   /** 调用方选定的前端路由，例如 /tasks；不得与已有导航冲突。 */

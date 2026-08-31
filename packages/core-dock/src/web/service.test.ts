@@ -47,4 +47,23 @@ describe('DockService', () => {
     svc.close('plugin:x')
     expect(svc.list()).toEqual([])
   })
+
+  it('module tiles keep onOpen without marking running', () => {
+    const svc = dock()
+    let opened = 0
+    svc.register({
+      id: 'module:agent',
+      title: 'Agent',
+      kind: 'module',
+      Icon: () => null,
+      onOpen: () => {
+        opened += 1
+      },
+    })
+    expect(svc.list()[0]?.kind).toBe('module')
+    expect(svc.list()[0]?.running).toBe(false)
+    svc.list()[0]?.onOpen?.()
+    expect(opened).toBe(1)
+    expect(svc.list()[0]?.running).toBe(false)
+  })
 })

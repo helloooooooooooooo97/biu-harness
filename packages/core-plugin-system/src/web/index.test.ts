@@ -83,4 +83,6 @@ test('plugin window hover controls sit on the right without a title bar', async 
   assert.doesNotMatch(src, /bg-\[#ff5f57\]/)
   assert.doesNotMatch(src, /bottom-4 left-1\/2/)
   assert.match(src, /dock\.register/)
+  assert.match(src, /PuzzlePieceIcon/)
+  assert.match(src, /ExtraIcon/)
 })

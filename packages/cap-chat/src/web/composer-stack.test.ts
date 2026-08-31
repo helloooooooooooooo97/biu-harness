@@ -66,7 +66,7 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/--dsw-pick:\s*#2383e2/)
     expect(css).toMatch(/--dsw-pick-fill:\s*rgba\(35,\s*131,\s*226,\s*0\.18\)/)
     expect(css).toMatch(/--dsw-pick-stroke:\s*rgba\(35,\s*131,\s*226/)
-    expect(css).toMatch(/\.app-activity-bar[\s\S]*background:\s*var\(--dsw-bg\)/)
+    expect(css).toMatch(/\.os-dock-shelf[\s\S]*background:\s*#202020/)
     expect(css).toMatch(/\.pick-overlay-box[\s\S]*background:\s*var\(--dsw-pick-fill\)/)
     expect(css).toMatch(/\.pick-overlay-marquee[\s\S]*background:\s*var\(--dsw-pick-fill\)/)
   })

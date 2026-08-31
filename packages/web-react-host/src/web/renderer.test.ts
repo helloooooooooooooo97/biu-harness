@@ -11,7 +11,7 @@ import * as projectView from '@biu/web-project-view'
 import * as shell from '@biu/web-app-shell'
 import { renderRoot } from './renderer.tsx'
 
-test('list sorts by order; shell renders activity bar', async () => {
+test('list sorts by order; shell has no activity bar', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
   await ctx.plugin(dock)
@@ -21,6 +21,6 @@ test('list sorts by order; shell renders activity bar', async () => {
   await ctx.plugin(snapshot)
   await ctx.plugin(shell)
   const html = renderToStaticMarkup(renderRoot(ctx.slots, ctx.appModules))
-  assert.match(html, /Activity bar/)
-  assert.match(html, /Agent/)
+  assert.doesNotMatch(html, /Activity bar/)
+  assert.match(html, /data-testid="app-shell"/)
 })

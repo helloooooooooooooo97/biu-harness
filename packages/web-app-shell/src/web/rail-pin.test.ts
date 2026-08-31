@@ -3,16 +3,19 @@ import { resolve } from 'node:path'
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 
-const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
-
-test('activity bar pin docks the nav rail, not the session sidebar', () => {
-  assert.match(shell, /data-testid="activity-rail-pin"/)
-  assert.match(shell, /固定左侧导航/)
-  assert.match(shell, /cordis\.rail\.pinned/)
-  assert.doesNotMatch(shell, /onAgentRailClick/)
-  assert.doesNotMatch(shell, /biu:toggle-module-sidebar/)
+test('activity bar is gone; modules register on the os dock', () => {
+  const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  const nav = readFileSync(resolve(import.meta.dirname, './shell-dock-nav.tsx'), 'utf8')
   const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
-  assert.match(css, /\.app-activity-bar\s*\{[^}]*transform:\s*translateX\(-100%\)/s)
-  assert.match(css, /\.app-shell\.is-rail-open \.app-activity-bar\s*\{[^}]*transform:\s*none/s)
-  assert.match(css, /\.app-rail-hover\s*\{[^}]*overflow:\s*hidden/s)
+  assert.doesNotMatch(shell, /data-testid="activity-rail-pin"/)
+  assert.doesNotMatch(shell, /固定左侧导航/)
+  assert.doesNotMatch(shell, /cordis\.rail\.pinned/)
+  assert.doesNotMatch(shell, /app-activity-bar/)
+  assert.match(shell, /ShellDockNav/)
+  assert.match(nav, /kind: 'module'/)
+  assert.match(nav, /PuzzlePieceIcon/)
+  assert.match(nav, /id: `module:\$\{mod\.id\}`/)
+  assert.doesNotMatch(css, /\.app-activity-bar\s*\{/)
+  assert.doesNotMatch(css, /\.app-rail-hover\s*\{/)
+  assert.match(css, /\.os-dock-shelf\s*\{[^}]*background:\s*#202020/s)
 })
