@@ -5,6 +5,7 @@ import {
   ListBulletIcon,
   PlusIcon,
   Squares2X2Icon,
+  XMarkIcon,
   TableCellsIcon,
   ViewColumnsIcon,
   ClipboardDocumentListIcon,
@@ -15,7 +16,6 @@ import {
   EyeIcon,
 } from '@heroicons/react/16/solid'
 import { chromeIcon } from './chrome-icon.ts'
-import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import {
   bindSessionView,
   type SessionViewService,
@@ -324,9 +324,10 @@ export const SessionInspector = memo(function SessionInspector({
               return (
                 <Tab
                   key={item.id}
+                  {...inspectorViewProps(raw)}
                   active={active}
                   onActivate={() => setTab(item.id)}
-                  {...inspectorViewProps(raw)}
+                  onClose={() => closeOpenedTab(item.id)}
                   paneId={item.id}
                 />
               )
@@ -401,9 +402,9 @@ export const SessionInspector = memo(function SessionInspector({
                     </button>
                     <button
                       type="button"
-                      className="inspector-add-trash"
-                      title="从检查器移除"
-                      aria-label="从检查器移除"
+                      className="inspector-add-close"
+                      title="关闭"
+                      aria-label="关闭此栏"
                       data-testid={`inspector-tab-remove-${item.id}`}
                       onClick={(event) => {
                         event.preventDefault()
@@ -411,7 +412,7 @@ export const SessionInspector = memo(function SessionInspector({
                         closeOpenedTab(item.id)
                       }}
                     >
-                      <TrashGlyph {...chromeIcon} />
+                      <XMarkIcon {...chromeIcon} />
                     </button>
                   </div>
                 )
