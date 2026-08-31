@@ -17,6 +17,7 @@ function asRecord(row: SessionSummary): DbRecord {
     eventCount: row.eventCount,
     project: row.project?.name ?? '',
     updatedAt: row.updatedAt,
+    ...(row.mascot ? { mascot: row.mascot } : {}),
   }
 }
 
