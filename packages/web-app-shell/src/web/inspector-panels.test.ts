@@ -14,10 +14,6 @@ test('session inspector can add a database pane', () => {
     true,
   )
   assert.equal(
-    inspectorPanelMatches({ requiresSession: true, centerKinds: ['session'], repeatable: true }, null),
-    true,
-  )
-  assert.equal(
     inspectorPanelMatches({ requiresSession: true, centerKinds: ['session'] }, null),
     false,
   )

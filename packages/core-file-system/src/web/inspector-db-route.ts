@@ -45,17 +45,12 @@ export function inspectorCollectionTabId(collection: string) {
   return `database:${collection}`
 }
 
-function nextInspectorPaneId(tabId: string) {
-  return `${tabId}::${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
-}
-
-/** 右侧检查器加一栏数据库并打开这条记录，中间主界面不动。 */
+/** 右侧检查器打开这条记录，中间主界面不动。 */
 export function showRecordInInspector(collection: string, recordId: string) {
-  const paneId = nextInspectorPaneId(inspectorCollectionTabId(collection))
-  setInspectorDbPath(paneId, databaseRecordPath(collection, recordId))
+  const tabId = inspectorCollectionTabId(collection)
+  setInspectorDbPath(tabId, databaseRecordPath(collection, recordId))
   window.dispatchEvent(new Event('biu:inspector-open'))
-  window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: paneId }))
-  return paneId
+  window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: tabId }))
 }
 
 export function seedInspectorDbPath(paneId: string, pathname?: string) {

@@ -47,10 +47,9 @@ test('showRecordInInspector opens the inspector on this record', async () => {
   const opened = new Promise<void>((resolve) => {
     window.addEventListener('biu:inspector-open', () => resolve(), { once: true })
   })
-  const paneId = showRecordInInspector('/pages', 'p1')
+  showRecordInInspector('/pages', 'p1')
   await opened
-  assert.match(paneId, /^database:\/pages::/)
-  assert.equal(getInspectorDbPath(paneId), '/database/pages/record/p1')
-  assert.deepEqual(tabs, [paneId])
+  assert.equal(getInspectorDbPath('database:/pages'), '/database/pages/record/p1')
+  assert.deepEqual(tabs, ['database:/pages'])
   window.removeEventListener('biu:inspector-tab', onTab)
 })
