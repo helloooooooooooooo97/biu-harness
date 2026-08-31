@@ -44,6 +44,11 @@ export function apply(ctx: Context) {
       ctx.dock.patch('pick', { running: pick.picking, focused: pick.picking })
     }),
   )
+  ctx.effect(() =>
+    ctx.dock.subscribe(() => {
+      if (!ctx.dock.list().some((app) => app.id === 'pick') && pick.picking) pick.exit()
+    }),
+  )
 }
 
 declare module 'cordis' {

@@ -1,7 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { parseAppPath } from '@biu/web-session-view'
-import { DATA_MODULE, databaseRecordPath, databaseViewPath, isCollectionHub, viewsCatalogHref, viewsCatalogSource } from './database-path.ts'
+import { DATA_MODULE, databaseRecordPath, databaseViewPath, isCollectionHub, isSystemCollection, sortDataCollections, viewsCatalogHref, viewsCatalogSource } from './database-path.ts'
 
 const plugins = [DATA_MODULE]
 
@@ -29,4 +29,26 @@ test('views catalog href is filtered by table source', () => {
   )
   assert.equal(viewsCatalogSource('?source=%2Fevents'), '/events')
   assert.equal(viewsCatalogHref('/views'), `/database/views/view/${encodeURIComponent('builtin:/views')}`)
+})
+
+test('views and events are system collections; user tables sort first', () => {
+  assert.equal(isSystemCollection('/views'), true)
+  assert.equal(isSystemCollection('/events'), true)
+  assert.equal(isSystemCollection('/sessions'), false)
+  const { user, system } = sortDataCollections([
+    { path: '/events' },
+    { path: '/plugins' },
+    { path: '/views' },
+    { path: '/sessions' },
+    { path: '/pages' },
+    { path: '/tasks' },
+  ])
+  assert.deepEqual(
+    user.map((item) => item.path),
+    ['/sessions', '/tasks', '/pages', '/plugins'],
+  )
+  assert.deepEqual(
+    system.map((item) => item.path),
+    ['/views', '/events'],
+  )
 })

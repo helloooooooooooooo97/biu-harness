@@ -218,8 +218,8 @@ function PluginAppWindow({
       <div
         className={
           fullscreen
-            ? 'pointer-events-auto absolute top-0 right-0 z-20 h-40 w-14'
-            : 'pointer-events-auto absolute top-0 left-full z-20 h-full w-12'
+            ? 'pointer-events-auto absolute inset-y-0 right-0 z-20 flex w-16 items-center justify-end pr-2'
+            : 'pointer-events-auto absolute inset-y-0 left-full z-20 flex w-16 items-center'
         }
         data-testid={`plugin-window-controls-${extraId}`}
         data-controls-place={fullscreen ? 'inside' : 'outside'}
@@ -227,14 +227,14 @@ function PluginAppWindow({
         onPointerLeave={closeControlsSoon}
       >
         <nav
-          className={`absolute flex flex-col gap-0.5 rounded-lg bg-white/10 p-0.5 shadow-[0_1px_2px_rgba(15,15,15,.04)] backdrop-blur-sm transition-opacity duration-150 ${
-            fullscreen ? 'top-2 right-2' : 'top-2 left-1.5'
+          className={`relative flex flex-col gap-1 rounded-lg bg-white/10 p-1 shadow-[0_1px_2px_rgba(15,15,15,.04)] backdrop-blur-sm transition-opacity duration-150 ${
+            fullscreen ? '' : 'ml-1.5'
           } ${controlsOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
           aria-label={`${title} 窗口`}
         >
         <button
           type="button"
-          className="flex size-6 cursor-grab items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800 active:cursor-grabbing"
+          className="flex size-8 cursor-grab items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800 active:cursor-grabbing"
           title="移动窗口"
           aria-label={`移动 ${title}`}
           data-plugin-move
@@ -242,29 +242,29 @@ function PluginAppWindow({
           disabled={fullscreen}
           onPointerDown={startDrag}
         >
-          <Bars2Icon className="size-3.5" />
+          <Bars2Icon className="size-5" />
         </button>
         <button
           type="button"
-          className="flex size-6 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800"
+          className="flex size-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800"
           title="关闭"
           aria-label={`关闭 ${title}`}
           onClick={onClose}
         >
-          <XMarkIcon className="size-3.5" />
+          <XMarkIcon className="size-5" />
         </button>
         <button
           type="button"
-          className="flex size-6 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800"
+          className="flex size-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800"
           title="最小化"
           aria-label={`最小化 ${title}`}
           onClick={onMinimize}
         >
-          <MinusIcon className="size-3.5" />
+          <MinusIcon className="size-5" />
         </button>
         <button
           type="button"
-          className={`flex size-6 items-center justify-center rounded-md border-0 bg-transparent p-0 transition-colors ${
+          className={`flex size-8 items-center justify-center rounded-md border-0 bg-transparent p-0 transition-colors ${
             shell.resizable
               ? 'cursor-pointer text-neutral-500 hover:bg-black/5 hover:text-neutral-800'
               : 'cursor-not-allowed text-neutral-400/50'
@@ -276,7 +276,7 @@ function PluginAppWindow({
           disabled={!shell.resizable}
           onClick={shell.resizable ? onToggleFullscreen : undefined}
         >
-          {fullscreen ? <ArrowsPointingInIcon className="size-3.5" /> : <ArrowsPointingOutIcon className="size-3.5" />}
+          {fullscreen ? <ArrowsPointingInIcon className="size-5" /> : <ArrowsPointingOutIcon className="size-5" />}
         </button>
         </nav>
       </div>

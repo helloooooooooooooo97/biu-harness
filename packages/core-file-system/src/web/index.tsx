@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type ComponentType } from 'react'
 import type { Context } from 'cordis'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { CircleStackIcon } from '@heroicons/react/16/solid'
+import {
+  ChatBubbleLeftRightIcon,
+  CircleStackIcon,
+  ClipboardDocumentListIcon,
+  DocumentIcon,
+  PuzzlePieceIcon,
+} from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/type-slots'
+import type { DockService } from '@biu/core-dock'
 import { DATABASE_CHANNEL, type CollectionInfo, type CollectionView } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import { isLegacyDatabasePath, parseAppPath } from '@biu/web-session-view'
@@ -15,7 +22,7 @@ import {
   collectionNavKey,
 } from './nav-boot.ts'
 import { defaultViewId, pushAllSavedViews } from './view-storage.ts'
-import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, VIEWS_COLLECTION_PATH, isCollectionHub, viewsCatalogSource } from './database-path.ts'
+import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, VIEWS_COLLECTION_PATH, databaseViewPath, isCollectionHub, sortDataCollections, viewsCatalogSource } from './database-path.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
 type SlotsService = {
@@ -58,8 +65,53 @@ export function navConflict(view: CollectionView, title: string, modules: AppMod
 
 const EMPTY_CHROME: CollectionChrome = {}
 
+const DATA_DOCK_TOOLS = [
+  { path: '/sessions', title: '会话', order: 40, Icon: ChatBubbleLeftRightIcon },
+  { path: '/tasks', title: '任务', order: 41, Icon: ClipboardDocumentListIcon },
+  { path: '/pages', title: '页面', order: 42, Icon: DocumentIcon },
+  { path: '/plugins', title: '插件', order: 43, Icon: PuzzlePieceIcon },
+] as const
+
+function DatabaseDockTools({
+  dock,
+  tables,
+}: {
+  dock: DockService | undefined
+  tables: CollectionInfo[]
+}) {
+  const navigate = useNavigate()
+  const key = tables.map((item) => item.path).join('|')
+  useEffect(() => {
+    if (!dock) return
+    const live = new Set(tables.map((item) => item.path))
+    const offs = DATA_DOCK_TOOLS.filter((item) => live.has(item.path)).map((item) => {
+      const Icon = item.Icon
+      return dock.register({
+        id: `data:${item.path}`,
+        title: item.title,
+        kind: 'tool',
+        group: 'tools',
+        order: item.order,
+        Icon: () => <Icon className="size-5" />,
+        onOpen: () => {
+          navigate(databaseViewPath(item.path))
+        },
+      })
+    })
+    return () => {
+      for (const off of offs) off()
+    }
+  }, [dock, key, navigate, tables])
+  return null
+}
+
 function CollectionPage(props: SlotProps) {
   const tables = (props.tables as CollectionInfo[] | undefined) ?? []
+  const orderedTables = useMemo(() => {
+    const { user, system } = sortDataCollections(tables)
+    return [...user, ...system]
+  }, [tables])
+  const dock = props.dock as DockService | undefined
   const ui = getDatabaseUi()
   const location = useLocation()
   const navigate = useNavigate()
@@ -69,8 +121,8 @@ function CollectionPage(props: SlotProps) {
     parsed.kind === 'collection-view' || parsed.kind === 'record' ? parsed.collection : ''
   const viewFromRoute = parsed.kind === 'collection-view' ? parsed.viewId : undefined
   const recordFromRoute = parsed.kind === 'record' ? parsed.recordId : null
-  const currentPath = collectionFromRoute || tables[0]?.path || ''
-  const row = tables.find((item) => item.path === currentPath)
+  const currentPath = collectionFromRoute || orderedTables[0]?.path || ''
+  const row = orderedTables.find((item) => item.path === currentPath)
   const tableHub = isCollectionHub(currentPath, viewFromRoute, recordFromRoute)
   const recordsPath = tableHub ? VIEWS_COLLECTION_PATH : currentPath
   const chrome = useSyncExternalStore(
@@ -112,18 +164,18 @@ function CollectionPage(props: SlotProps) {
 
   const dataHome = parsed.kind === 'module' && parsed.moduleId === DATA_MODULE_ID
   useEffect(() => {
-    if (!tables.length) return
+    if (!orderedTables.length) return
     if (!dataHome) return
-    const first = tables[0]!
+    const first = orderedTables[0]!
     go({ collection: first.path }, { replace: true })
-  }, [dataHome, tables])
+  }, [dataHome, orderedTables])
 
   useEffect(() => {
-    if (!tables.length || !collectionFromRoute) return
-    if (tables.some((item) => item.path === collectionFromRoute)) return
-    const first = tables[0]!
+    if (!orderedTables.length || !collectionFromRoute) return
+    if (orderedTables.some((item) => item.path === collectionFromRoute)) return
+    const first = orderedTables[0]!
     go({ collection: first.path, viewId: defaultViewId(first.path) }, { replace: true })
-  }, [collectionFromRoute, tables])
+  }, [collectionFromRoute, orderedTables])
 
   const sourceFilter = useMemo(() => viewsCatalogSource(location.search), [location.search])
   const lockedFilters: Record<string, string> = tableHub
@@ -134,14 +186,16 @@ function CollectionPage(props: SlotProps) {
   if (!currentPath) return null
   const title = row?.view?.title ?? row?.label ?? currentPath.replace(/^\//, '')
   return (
-    <CollectionBrowser
+    <>
+      <DatabaseDockTools dock={dock} tables={orderedTables} />
+      <CollectionBrowser
       moduleId={DATA_MODULE_ID}
       collectionPath={currentPath}
       recordsPath={recordsPath}
       title={title}
       blurb={row?.view?.blurb ?? ''}
       chrome={chrome}
-      tables={tables}
+      tables={orderedTables}
       lockedFilters={lockedFilters}
       routeRecordId={recordFromRoute}
       routeViewId={viewFromRoute}
@@ -163,6 +217,7 @@ function CollectionPage(props: SlotProps) {
       }
       onCrumbTarget={(target: CrumbTarget) => navigate(pathForCrumbTarget(target))}
     />
+    </>
   )
 }
 
@@ -204,7 +259,7 @@ function RegisterErrorBanner() {
 }
 
 export const name = 'core-file-system-ui'
-export const inject = ['slots', 'appModules']
+export const inject = ['slots', 'appModules', 'dock']
 
 export function apply(ctx: Context) {
   new DatabaseUiService(ctx)
@@ -299,6 +354,7 @@ export function apply(ctx: Context) {
           props: () => ({
             moduleId: DATA_MODULE_ID,
             tables: liveTables,
+            dock: ctx.dock,
           }),
         })
         mounted.set(DATA_MODULE_ID, () => {

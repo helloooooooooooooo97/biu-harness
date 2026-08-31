@@ -27,6 +27,7 @@ export type DockApp = {
   running: boolean
   focused: boolean
   minimized: boolean
+  visible: boolean
   Tile?: () => unknown
   Icon?: () => unknown
   onOpen?: () => void
@@ -40,6 +41,7 @@ export type DockAppInput = {
   group?: DockGroup
   kind?: DockKind
   pinned?: boolean
+  visible?: boolean
   Tile?: () => unknown
   Icon?: () => unknown
   onOpen?: () => void
@@ -83,6 +85,7 @@ export class DockService extends Service {
       running: existing?.running ?? false,
       focused: existing?.focused ?? false,
       minimized: existing?.minimized ?? false,
+      visible: input.visible ?? existing?.visible ?? true,
       Tile: input.Tile ?? existing?.Tile,
       Icon: input.Icon ?? existing?.Icon,
       onOpen: input.onOpen ?? existing?.onOpen,
@@ -165,10 +168,12 @@ export class DockService extends Service {
   }
 
   private rebuild(): DockApp[] {
-    return [...this.apps.values()].sort((a, b) => {
-      if (a.group !== b.group) return GROUP_RANK[a.group] - GROUP_RANK[b.group]
-      return a.order - b.order || a.id.localeCompare(b.id)
-    })
+    return [...this.apps.values()]
+      .filter((app) => app.visible !== false)
+      .sort((a, b) => {
+        if (a.group !== b.group) return GROUP_RANK[a.group] - GROUP_RANK[b.group]
+        return a.order - b.order || a.id.localeCompare(b.id)
+      })
   }
 
   private emit(): void {

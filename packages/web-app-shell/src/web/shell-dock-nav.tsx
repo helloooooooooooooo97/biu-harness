@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/16/solid'
 import type { AppModule } from '@biu/web-app-modules'
 import type { DockService } from '@biu/core-dock'
+import { setChatOverlay } from './chat-overlay.ts'
 
 function DockModuleIcon({ module }: { module: AppModule }) {
   if (module.Icon) {
@@ -136,6 +137,13 @@ export function ShellDockNav({
       })
     }
   }, [dock, moduleKey, activeId, modules])
+
+  useEffect(() => {
+    const showTools = activeId !== 'agent'
+    dock.patch('composer', { visible: showTools })
+    dock.patch('pick', { visible: showTools })
+    if (!showTools) setChatOverlay(false)
+  }, [dock, activeId])
 
   useEffect(() => {
     const Icon = () => <Cog6ToothIcon className="size-5" />

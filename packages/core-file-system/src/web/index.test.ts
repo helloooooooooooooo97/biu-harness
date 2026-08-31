@@ -1,5 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { apply, name, navConflict } from './index.tsx'
 import { DATA_MODULE_ID } from './database-path.ts'
 
@@ -19,4 +21,11 @@ test('navConflict flags duplicate route and display name against existing module
   assert.match(navConflict({ moduleId: 'x', route: '/tasks' }, 'X', modules, 'x') ?? '', /路由重复/)
   assert.match(navConflict({ moduleId: 'x', route: '/other' }, 'Tasks', modules, 'x') ?? '', /名称重复/)
   assert.equal(navConflict({ moduleId: 'tasks', route: '/tasks' }, 'Tasks', modules, 'tasks'), null)
+})
+
+test('database page registers collection shortcuts on the dock tools group', () => {
+  const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  assert.match(page, /DATA_DOCK_TOOLS/)
+  assert.match(page, /data:\$\{item\.path\}/)
+  assert.match(page, /group: 'tools'/)
 })

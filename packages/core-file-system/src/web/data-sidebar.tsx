@@ -12,7 +12,7 @@ import {
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import type { CollectionInfo, DbRecord } from '@biu/type-file-system'
 import { mergeCatalogViews, mergeTableViews } from '../catalog-views.ts'
-import { VIEWS_COLLECTION_PATH } from './database-path.ts'
+import { VIEWS_COLLECTION_PATH, isSystemCollection, sortDataCollections } from './database-path.ts'
 import type { SavedView } from './saved-view.ts'
 import {
   fetchViewPreview,
@@ -348,10 +348,12 @@ export const DataSidebar = memo(function DataSidebar({
   onExpandedViewKeyChange?: (key: string | null) => void
   onCollapse?: () => void
 }) {
-  const listedTables = useMemo(
-    () => (tables.length ? tables : [{ path: collectionPath, label: title, view: { title } } as CollectionInfo]),
-    [collectionPath, tables, title],
-  )
+  const listedTables = useMemo(() => {
+    const raw = tables.length ? tables : ([{ path: collectionPath, label: title, view: { title } }] as CollectionInfo[])
+    const { user, system } = sortDataCollections(raw)
+    return [...user, ...system]
+  }, [collectionPath, tables, title])
+  const { user: userTables, system: systemTables } = useMemo(() => sortDataCollections(listedTables), [listedTables])
   const [openTables, setOpenTables] = useState<Record<string, boolean>>(() => ({ [collectionPath]: true }))
   useSyncExternalStore(subscribeStarredViews, getStarredViewsVersion, () => 0)
   const starredViews = getStarredViews()
@@ -435,6 +437,163 @@ export const DataSidebar = memo(function DataSidebar({
     onOpenRecord?.(path, view, recordId, row)
   }
 
+  function renderTableRows(rows: CollectionInfo[], mutate: boolean) {
+    return rows.map((table) => {
+      const name = table.view?.title ?? table.label
+      const open = openTables[table.path] ?? false
+      const listed = viewsFor(table.path)
+      const system = isSystemCollection(table.path)
+      return (
+        <div key={table.path} className="min-w-0" data-collection-kind={system ? 'system' : 'user'}>
+          <div className="sidebar-group-head mb-0.5">
+            <div
+              className="flex min-h-8 min-w-0 flex-1 items-center gap-1.5 rounded-md text-left text-[14px] font-medium tracking-normal text-inherit"
+              title={system ? `${name} · 系统运行记录，不能改` : name}
+              aria-expanded={open}
+              {...pickDomAttrs('collection', table.path, name)}
+            >
+              <button
+                type="button"
+                className="grid size-6 shrink-0 place-items-center border-0 bg-transparent p-0 text-inherit"
+                title={open ? '收起视图' : '展开视图'}
+                aria-label={open ? '收起视图' : '展开视图'}
+                onClick={() => setOpenTables((prev) => ({ ...prev, [table.path]: !open }))}
+              >
+                <span className="sidebar-rail-icon sidebar-group-fold" aria-hidden>
+                  <span className="sidebar-group-fold-face">
+                    <TableGlyph icon={table.view?.icon} />
+                  </span>
+                  <span className="sidebar-group-fold-chevron">
+                    {open ? (
+                      <ChevronDownIcon className="size-4 shrink-0 opacity-80" />
+                    ) : (
+                      <ChevronRightIcon className="size-4 shrink-0 opacity-80" />
+                    )}
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit outline-none hover:text-(--dsw-sidebar-fg-active) focus-visible:ring-1 focus-visible:ring-(--dsw-border)"
+                onClick={() => onOpenTable?.(table.path, undefined, { catalog: true })}
+              >
+                {name}
+              </button>
+              {mutate && !system ? (
+                <button
+                  type="button"
+                  className="sidebar-add"
+                  title={`在 ${name} 下添加视图`}
+                  aria-label={`在 ${name} 下添加视图`}
+                  data-testid={`sidebar-add-view-${table.path}`}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setOpenTables((prev) => ({ ...prev, [table.path]: true }))
+                    onAddView(table.path)
+                  }}
+                >
+                  <PlusIcon className="size-4 shrink-0" />
+                </button>
+              ) : system ? (
+                <span className="fsdb-collection-kind" title="系统数据，只读">
+                  系统
+                </span>
+              ) : null}
+            </div>
+            <ChatCount count={listed.length} />
+          </div>
+          <div className={`sidebar-session-list min-w-0 ${open ? '' : 'hidden'}`} aria-hidden={!open}>
+            {listed.map((view) => {
+              const starred = isViewStarred(starredViews, table.path, view.id)
+              const active = table.path === collectionPath && view.id === activeViewId
+              const previewKey = `${table.path}:${view.id}`
+              const expanded = expandedViewKey === previewKey
+              return (
+                <div key={view.id} className="min-w-0">
+                  <div
+                    className={`chat-session-row group${active ? ' is-active' : ''}${starred ? ' is-pinned' : ''}`}
+                    {...pickDomAttrs('view', viewPickId(table.path, view.id), view.name)}
+                  >
+                    <div className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5">
+                      <button
+                        type="button"
+                        className="grid size-6 shrink-0 place-items-center border-0 bg-transparent p-0 text-inherit"
+                        title={expanded ? '收起记录' : '展开记录'}
+                        aria-expanded={expanded}
+                        onClick={() => toggleViewPreview(previewKey)}
+                      >
+                        <span className="sidebar-rail-icon sidebar-group-fold">
+                          <span className="sidebar-group-fold-face">
+                            <ViewModeGlyph mode={view.mode} />
+                          </span>
+                          <span className="sidebar-group-fold-chevron">
+                            {expanded ? (
+                              <ChevronDownIcon className="size-4 shrink-0 opacity-80" />
+                            ) : (
+                              <ChevronRightIcon className="size-4 shrink-0 opacity-80" />
+                            )}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit"
+                        onClick={() => openView(table.path, view.id)}
+                      >
+                        {view.name}
+                      </button>
+                    </div>
+                    <ChatCount count={getPreviewTotal(viewTotalKey(table.path, view))} />
+                    {mutate && table.path === collectionPath && !view.builtin ? (
+                      <>
+                        <button
+                          type="button"
+                          className="chat-session-row-delete"
+                          title="重命名"
+                          aria-label={`重命名 ${view.name}`}
+                          onClick={() => onRenameView(view)}
+                        >
+                          <PencilSquareIcon className="size-4 shrink-0" />
+                        </button>
+                        <button
+                          type="button"
+                          className="chat-session-row-delete"
+                          title="删除"
+                          aria-label={`删除 ${view.name}`}
+                          onClick={() => onDeleteView(view)}
+                        >
+                          <TrashGlyph className="size-4 shrink-0" />
+                        </button>
+                      </>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={`chat-session-row-star${starred ? ' is-on' : ''}`}
+                      aria-pressed={starred}
+                      aria-label={starred ? `取消收藏 ${view.name}` : `收藏 ${view.name}`}
+                      title={starred ? '取消收藏' : '收藏'}
+                      onClick={() => toggleStar(table.path, view.id)}
+                    >
+                      <StarIcon className={`size-4 shrink-0${starred ? ' text-[#f5b700]' : ''}`} />
+                    </button>
+                  </div>
+                  <ViewRecordPreview
+                    path={table.path}
+                    view={view}
+                    open={expanded}
+                    recordKind={recordPickKind(table.view?.moduleId)}
+                    tableIcon={table.view?.icon}
+                    onOpenRecord={(id, row) => openRecord(table.path, view, id, row)}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )
+    })
+  }
+
   const [shellSlot, setShellSlot] = useState<HTMLElement | null>(() =>
     typeof document === 'undefined' ? null : document.getElementById('shell-module-sidebar'),
   )
@@ -444,20 +603,22 @@ export const DataSidebar = memo(function DataSidebar({
 
   const body = (
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
-        <div className="app-side-actions" role="navigation" aria-label="视图操作" data-biu-ignore>
-          <button type="button" className="app-side-actions-item" title="添加视图" onClick={onAddView}>
-            <span className="app-side-actions-icon" aria-hidden>
-              <PlusIcon className="size-4 shrink-0" />
-            </span>
-            <span className="app-side-actions-label">添加视图</span>
-          </button>
-          <button type="button" className="app-side-actions-item" title="拷贝视图" onClick={onCopyView}>
-            <span className="app-side-actions-icon" aria-hidden>
-              <Square2StackIcon className="size-4 shrink-0" />
-            </span>
-            <span className="app-side-actions-label">拷贝视图</span>
-          </button>
-        </div>
+        {isSystemCollection(collectionPath) ? null : (
+          <div className="app-side-actions" role="navigation" aria-label="视图操作" data-biu-ignore>
+            <button type="button" className="app-side-actions-item" title="添加视图" onClick={onAddView}>
+              <span className="app-side-actions-icon" aria-hidden>
+                <PlusIcon className="size-4 shrink-0" />
+              </span>
+              <span className="app-side-actions-label">添加视图</span>
+            </button>
+            <button type="button" className="app-side-actions-item" title="拷贝视图" onClick={onCopyView}>
+              <span className="app-side-actions-icon" aria-hidden>
+                <Square2StackIcon className="size-4 shrink-0" />
+              </span>
+              <span className="app-side-actions-label">拷贝视图</span>
+            </button>
+          </div>
+        )}
 
         <div className="mt-2 space-y-1.5">
           {starredRows.length ? (
@@ -565,163 +726,43 @@ export const DataSidebar = memo(function DataSidebar({
                   aria-expanded={dataOpen}
                   onClick={() => setDataOpen((prev) => !prev)}
                 >
-                  <span className="min-w-0 flex-1 truncate tracking-normal">数据</span>
+                  <span className="min-w-0 flex-1 truncate tracking-normal">用户数据</span>
                 </button>
               </div>
-              <ChatCount count={listedTables.length} />
+              <ChatCount count={userTables.length} />
             </div>
             {dataOpen ? (
-              <div className="min-w-0 space-y-1.5 pt-0.5">
-                {listedTables.map((table) => {
-                  const name = table.view?.title ?? table.label
-                  const open = openTables[table.path] ?? false
-                  const listed = viewsFor(table.path)
-                  return (
-                    <div key={table.path} className="min-w-0">
-                      <div className="sidebar-group-head mb-0.5">
-                        <div
-                          className="flex min-h-8 min-w-0 flex-1 items-center gap-1.5 rounded-md text-left text-[14px] font-medium tracking-normal text-inherit"
-                          title={name}
-                          aria-expanded={open}
-                          {...pickDomAttrs('collection', table.path, name)}
-                        >
-                          <button
-                            type="button"
-                            className="grid size-6 shrink-0 place-items-center border-0 bg-transparent p-0 text-inherit"
-                            title={open ? '收起视图' : '展开视图'}
-                            aria-label={open ? '收起视图' : '展开视图'}
-                            onClick={() => setOpenTables((prev) => ({ ...prev, [table.path]: !open }))}
-                          >
-                            <span className="sidebar-rail-icon sidebar-group-fold" aria-hidden>
-                              <span className="sidebar-group-fold-face">
-                                <TableGlyph icon={table.view?.icon} />
-                              </span>
-                              <span className="sidebar-group-fold-chevron">
-                                {open ? (
-                                  <ChevronDownIcon className="size-4 shrink-0 opacity-80" />
-                                ) : (
-                                  <ChevronRightIcon className="size-4 shrink-0 opacity-80" />
-                                )}
-                              </span>
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit outline-none hover:text-(--dsw-sidebar-fg-active) focus-visible:ring-1 focus-visible:ring-(--dsw-border)"
-                            onClick={() => onOpenTable?.(table.path, undefined, { catalog: true })}
-                          >
-                            {name}
-                          </button>
-                          <button
-                            type="button"
-                            className="sidebar-add"
-                            title={`在 ${name} 下添加视图`}
-                            aria-label={`在 ${name} 下添加视图`}
-                            data-testid={`sidebar-add-view-${table.path}`}
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              setOpenTables((prev) => ({ ...prev, [table.path]: true }))
-                              onAddView(table.path)
-                            }}
-                          >
-                            <PlusIcon className="size-4 shrink-0" />
-                          </button>
-                        </div>
-                        <ChatCount count={listed.length} />
-                      </div>
-                      <div className={`sidebar-session-list min-w-0 ${open ? '' : 'hidden'}`} aria-hidden={!open}>
-                        {listed.map((view) => {
-                          const starred = isViewStarred(starredViews, table.path, view.id)
-                          const active = table.path === collectionPath && view.id === activeViewId
-                          const previewKey = `${table.path}:${view.id}`
-                          const expanded = expandedViewKey === previewKey
-                          return (
-                            <div key={view.id} className="min-w-0">
-                              <div
-                                className={`chat-session-row group${active ? ' is-active' : ''}${starred ? ' is-pinned' : ''}`}
-                                {...pickDomAttrs('view', viewPickId(table.path, view.id), view.name)}
-                              >
-                                <div className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5">
-                                  <button
-                                    type="button"
-                                    className="grid size-6 shrink-0 place-items-center border-0 bg-transparent p-0 text-inherit"
-                                    title={expanded ? '收起记录' : '展开记录'}
-                                    aria-expanded={expanded}
-                                    onClick={() => toggleViewPreview(previewKey)}
-                                  >
-                                    <span className="sidebar-rail-icon sidebar-group-fold">
-                                      <span className="sidebar-group-fold-face">
-                                        <ViewModeGlyph mode={view.mode} />
-                                      </span>
-                                      <span className="sidebar-group-fold-chevron">
-                                        {expanded ? (
-                                          <ChevronDownIcon className="size-4 shrink-0 opacity-80" />
-                                        ) : (
-                                          <ChevronRightIcon className="size-4 shrink-0 opacity-80" />
-                                        )}
-                                      </span>
-                                    </span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit"
-                                    onClick={() => openView(table.path, view.id)}
-                                  >
-                                    {view.name}
-                                  </button>
-                                </div>
-                                <ChatCount count={getPreviewTotal(viewTotalKey(table.path, view))} />
-                                {table.path === collectionPath && !view.builtin ? (
-                                  <>
-                                    <button
-                                      type="button"
-                                      className="chat-session-row-delete"
-                                      title="重命名"
-                                      aria-label={`重命名 ${view.name}`}
-                                      onClick={() => onRenameView(view)}
-                                    >
-                                      <PencilSquareIcon className="size-4 shrink-0" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="chat-session-row-delete"
-                                      title="删除"
-                                      aria-label={`删除 ${view.name}`}
-                                      onClick={() => onDeleteView(view)}
-                                    >
-                                      <TrashGlyph className="size-4 shrink-0" />
-                                    </button>
-                                  </>
-                                ) : null}
-                                <button
-                                  type="button"
-                                  className={`chat-session-row-star${starred ? ' is-on' : ''}`}
-                                  aria-pressed={starred}
-                                  aria-label={starred ? `取消收藏 ${view.name}` : `收藏 ${view.name}`}
-                                  title={starred ? '取消收藏' : '收藏'}
-                                  onClick={() => toggleStar(table.path, view.id)}
-                                >
-                                  <StarIcon className={`size-4 shrink-0${starred ? ' text-[#f5b700]' : ''}`} />
-                                </button>
-                              </div>
-                              <ViewRecordPreview
-                                path={table.path}
-                                view={view}
-                                open={expanded}
-                                recordKind={recordPickKind(table.view?.moduleId)}
-                                tableIcon={table.view?.icon}
-                                onOpenRecord={(id, row) => openRecord(table.path, view, id, row)}
-                              />
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                })}
+              <div className="min-w-0 space-y-1.5 pt-0.5" data-testid="sidebar-user-collections">
+                {userTables.length ? renderTableRows(userTables, true) : (
+                  <div className="px-1 py-1 text-[12px] text-(--dsw-label-3)">还没有可改的表</div>
+                )}
               </div>
             ) : null}
           </section>
+
+          {systemTables.length ? (
+            <section className="min-w-0">
+              <div className="sidebar-section-head min-w-0">
+                <div className="flex min-h-8 min-w-0 flex-1 items-center">
+                  <button
+                    type="button"
+                    className="flex h-full min-w-0 flex-1 items-center gap-2 text-left text-[12px] font-bold tracking-wider"
+                    aria-expanded={dataOpen}
+                    title="系统运行时记下的数据，不能改"
+                    onClick={() => setDataOpen((prev) => !prev)}
+                  >
+                    <span className="min-w-0 flex-1 truncate tracking-normal">系统数据</span>
+                  </button>
+                </div>
+                <ChatCount count={systemTables.length} />
+              </div>
+              {dataOpen ? (
+                <div className="min-w-0 space-y-1.5 pt-0.5" data-testid="sidebar-system-collections">
+                  {renderTableRows(systemTables, false)}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
         </div>
       </div>
   )

@@ -50,6 +50,16 @@ describe('DockService', () => {
     expect(svc.list()).toEqual([])
   })
 
+  it('hides tiles with visible false', () => {
+    const svc = dock()
+    svc.register({ id: 'composer', title: 'Composer', kind: 'composer' })
+    svc.register({ id: 'pick', title: '选取', kind: 'tool' })
+    expect(svc.list().map((app) => app.id)).toEqual(['composer', 'pick'])
+    svc.patch('composer', { visible: false })
+    svc.patch('pick', { visible: false })
+    expect(svc.list()).toEqual([])
+  })
+
   it('module tiles keep onOpen without marking running', () => {
     const svc = dock()
     let opened = 0
