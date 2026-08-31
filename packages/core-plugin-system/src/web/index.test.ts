@@ -64,3 +64,12 @@ test('plugin window sizes from manifest.shell instead of measuring DOM', async (
   const create = await readFile(resolve(import.meta.dirname, '../host/plugin-create.ts'), 'utf8')
   assert.match(create, /manifest\.shell/)
 })
+
+test('plugin window chrome uses #202020 and disables zoom when not resizable', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const { resolve } = await import('node:path')
+  const src = await readFile(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  assert.match(src, /bg-\[#202020\]/)
+  assert.match(src, /disabled=\{!shell\.resizable\}/)
+  assert.match(src, /cursor-not-allowed/)
+})

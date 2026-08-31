@@ -193,7 +193,7 @@ function PluginAppWindow({
       onPointerDown={bringFront}
     >
       <header
-        className={`flex h-8 shrink-0 items-center gap-3 bg-transparent px-3 opacity-0 transition-opacity duration-150 group-hover/win:opacity-100 ${fullscreen ? '' : 'cursor-grab active:cursor-grabbing'}`}
+        className={`flex h-8 shrink-0 items-center gap-3 bg-[#202020] px-3 ${fullscreen ? '' : 'cursor-grab active:cursor-grabbing'}`}
         onPointerDown={startDrag}
       >
         <div className="group/traffic flex items-center gap-1.75">
@@ -221,14 +221,23 @@ function PluginAppWindow({
           </button>
           <button
             type="button"
-            className="relative size-3 cursor-pointer rounded-full border-0 bg-[#28c840] p-0 shadow-[inset_0_0_0_.5px_rgba(0,0,0,.28)]"
-            title={fullscreen ? '还原' : '全屏'}
-            aria-label={fullscreen ? `还原 ${title}` : `全屏 ${title}`}
-            onClick={onToggleFullscreen}
+            className={`relative size-3 rounded-full border-0 p-0 shadow-[inset_0_0_0_.5px_rgba(0,0,0,.28)] ${
+              shell.resizable
+                ? 'cursor-pointer bg-[#28c840]'
+                : 'cursor-not-allowed bg-[#3a3a3c]'
+            }`}
+            title={shell.resizable ? (fullscreen ? '还原' : '全屏') : '固定尺寸，不能放大'}
+            aria-label={
+              shell.resizable ? (fullscreen ? `还原 ${title}` : `全屏 ${title}`) : `${title} 固定尺寸，不能放大`
+            }
+            disabled={!shell.resizable}
+            onClick={shell.resizable ? onToggleFullscreen : undefined}
           >
-            <span className="pointer-events-none absolute inset-0 hidden items-center justify-center text-[7px] leading-none font-bold text-[#0b5f18] group-hover/traffic:flex">
-              {fullscreen ? '↘' : '↗'}
-            </span>
+            {shell.resizable ? (
+              <span className="pointer-events-none absolute inset-0 hidden items-center justify-center text-[7px] leading-none font-bold text-[#0b5f18] group-hover/traffic:flex">
+                {fullscreen ? '↘' : '↗'}
+              </span>
+            ) : null}
           </button>
         </div>
         <div className="min-w-0 flex-1 truncate text-center text-[12px] font-medium tracking-tight text-white/70">
@@ -310,7 +319,7 @@ function PluginExtrasLayer(props: SlotProps) {
             title={title}
             pluginId={pluginId}
             shell={shell}
-            fullscreen={fullscreenId === entry.id}
+            fullscreen={Boolean(shell.resizable) && fullscreenId === entry.id}
             onClose={() => {
               setMinimized((cur) => {
                 const next = { ...cur }
@@ -324,7 +333,10 @@ function PluginExtrasLayer(props: SlotProps) {
               if (fullscreenId === entry.id) setFullscreenId(null)
               setMinimized((cur) => ({ ...cur, [entry.id]: true }))
             }}
-            onToggleFullscreen={() => setFullscreenId((cur) => (cur === entry.id ? null : entry.id))}
+            onToggleFullscreen={() => {
+              if (!shell.resizable) return
+              setFullscreenId((cur) => (cur === entry.id ? null : entry.id))
+            }}
           >
             <Component renderSlot={() => null} />
           </PluginAppWindow>
