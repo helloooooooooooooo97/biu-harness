@@ -122,3 +122,11 @@ export function stubBuiltinCatalogView(id: string): SavedView | null {
     builtin: true,
   })
 }
+
+/** /views 表里的一行：打开时应跳到该视图对应表，而不是看视图记录自己的属性。 */
+export function catalogRowOpenTarget(row: { tablePath?: unknown; viewId?: unknown }) {
+  const collection = normalizeCollectionPath(String(row.tablePath ?? ''))
+  const viewId = String(row.viewId ?? '').trim()
+  if (!collection || collection === '/' || !viewId) return null
+  return { collection, viewId }
+}

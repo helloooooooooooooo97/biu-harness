@@ -90,7 +90,7 @@ import {
 } from './view-storage.ts'
 import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
-import { mergeCatalogViews, mergeTableViews, stubBuiltinCatalogView, builtinCatalogViewId } from '../catalog-views.ts'
+import { mergeCatalogViews, mergeTableViews, stubBuiltinCatalogView, builtinCatalogViewId, catalogRowOpenTarget } from '../catalog-views.ts'
 import { VIEWS_COLLECTION_PATH } from './database-path.ts'
 
 type StatResult = { schema?: CollectionSchema }
@@ -191,6 +191,16 @@ export function CollectionBrowser({
     })
     if (id) onOpenRecord?.(id, activeViewId, dataPath)
     else onCloseRecord?.()
+  }
+  const openRow = (row: DbRecord) => {
+    if (dataPath === VIEWS_COLLECTION_PATH) {
+      const target = catalogRowOpenTarget(row)
+      if (target) {
+        onOpenTable?.(target.collection, target.viewId)
+        return
+      }
+    }
+    setDetailId(row.id, row)
   }
   const [hydrated, setHydrated] = useState(false)
   const [viewsOpen, setViewsOpen] = useState(() => {
@@ -1173,7 +1183,7 @@ export function CollectionBrowser({
               title="查看详情"
               onClick={(event) => {
                 event.stopPropagation()
-                setDetailId(row.id, row)
+                openRow(row)
               }}
             >
               <ArrowsPointingOutIcon aria-hidden className="size-[14px]" />
@@ -1267,7 +1277,7 @@ export function CollectionBrowser({
     return (
       <li className={`tasks-queue-item${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
         <div className="tasks-queue-item-body">
-          <button type="button" className="tasks-queue-item-main" data-biu-action="open" onClick={() => setDetailId(row.id, row)}>
+          <button type="button" className="tasks-queue-item-main" data-biu-action="open" onClick={() => openRow(row)}>
             <span className="tasks-queue-item-title">
               <RecordTitle row={row} openDetail={false} />
             </span>
@@ -1283,7 +1293,7 @@ export function CollectionBrowser({
     return (
       <div className={`tasks-minicard${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
         <div className="tasks-minicard-title">
-          <button type="button" className="tasks-minicard-open" data-biu-action="open" onClick={() => setDetailId(row.id, row)}>
+          <button type="button" className="tasks-minicard-open" data-biu-action="open" onClick={() => openRow(row)}>
             <span className="tasks-minicard-titletext">
               <RecordTitle row={row} openDetail={false} />
             </span>

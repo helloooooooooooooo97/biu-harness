@@ -60,6 +60,9 @@ test('table title opens record from the title-side button', () => {
   assert.match(browser, /tasks-tree-count/)
   assert.match(browser, /kidCount/)
   assert.match(browser, /tasks-tree-toggle is-empty/)
+  assert.match(browser, /openRow\(row\)/)
+  assert.match(browser, /catalogRowOpenTarget/)
+  assert.match(browser, /onOpenTable\?\.\(target\.collection, target\.viewId\)/)
   assert.doesNotMatch(browser, /recordPick\(row\)\} onClick=\{\(\) => setDetailId\(row\.id\)\}/)
 })
 

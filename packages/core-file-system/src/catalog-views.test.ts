@@ -10,6 +10,7 @@ import {
   mergeTableViews,
   stubBuiltinAllView,
   stubBuiltinCatalogView,
+  catalogRowOpenTarget,
 } from './catalog-views.ts'
 
 test('each registered table gets a builtin catalog view', () => {
@@ -59,4 +60,13 @@ test('every registered table gets a read-only 全部xx view', () => {
   assert.equal(merged.filter((view) => view.id === builtinAllViewId('/sessions')).length, 1)
   assert.equal(merged.some((view) => view.id === 'mine'), true)
   assert.equal(stubBuiltinAllView('builtin-all:/pages')?.name, '全部pages')
+})
+
+test('catalog view rows open the source table view instead of a record pane', () => {
+  assert.deepEqual(catalogRowOpenTarget({ tablePath: '/plugins', viewId: builtinAllViewId('/plugins') }), {
+    collection: '/plugins',
+    viewId: builtinAllViewId('/plugins'),
+  })
+  assert.equal(catalogRowOpenTarget({ tablePath: '', viewId: 'x' }), null)
+  assert.equal(catalogRowOpenTarget({ tablePath: '/events' }), null)
 })
