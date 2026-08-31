@@ -58,7 +58,7 @@ export class SnapshotService extends Service {
 
   /**
    * 订阅某类 WS 推送消息（如 'tasks'、'session'、'agent'……）。
-   * 供其他插件（如 cap-tasks）注册自己的业务处理器，避免在 snapshot 总线里硬编码各业务分支。
+   * 供其他插件（如 core-task-system）注册自己的业务处理器，避免在 snapshot 总线里硬编码各业务分支。
    * 返回取消订阅函数。
    */
   onMessage = (type: string, handler: (payload: unknown) => void) => {
@@ -203,7 +203,7 @@ export class SnapshotService extends Service {
             view?.setInbox(detail.inbox, detail.sessionId)
           }
         }
-        // 通用总线：把消息转发给外部通过 onMessage 注册的处理器（如 cap-tasks 的 tasks/view-switch）
+        // 通用总线：把消息转发给外部通过 onMessage 注册的处理器（如 core-task-system 的 tasks/view-switch）
         this.dispatch(parsed.type, parsed.payload)
       }
       ws.onclose = () => {

@@ -1,4 +1,3 @@
-import type { Context } from 'cordis'
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
 
 type Actor = {
@@ -33,7 +32,7 @@ type TaskRow = DbRecord & {
   nextTriggerAt?: number | null
 }
 
-type TasksLike = {
+export type TasksLike = {
   list: () => TaskRow[]
   get: (id: string) => TaskRow | undefined
   update: (id: string, patch: Record<string, unknown>) => DbRecord
@@ -155,8 +154,8 @@ export function tasksCollection(tasks: TasksLike): CollectionSpec {
     path: '/tasks',
     label: '任务',
     view: {
-      moduleId: 'tasks-2',
-      route: '/tasks-2',
+      moduleId: 'tasks',
+      route: '/tasks',
       title: '任务',
       inspector: true,
       blurb: 'Task table in File System; detail panes host scripts and progress reports.',
@@ -201,11 +200,4 @@ export function tasksCollection(tasks: TasksLike): CollectionSpec {
       if (!tasks.delete(id)) throw new Error(`unknown task: ${id}`)
     },
   }
-}
-
-export const name = 'tasks-2'
-export const inject = ['database', 'tasks']
-
-export function apply(ctx: Context) {
-  ctx.database.register(tasksCollection(ctx.get('tasks') as TasksLike))
 }

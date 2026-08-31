@@ -16,7 +16,7 @@ test('each registered table gets a builtin catalog view', () => {
   const tables = [
     { id: 'views', path: '/views', kind: 'collection' as const, label: '视图', view: { moduleId: 'views-db', route: '/db-views', title: '视图' } },
     { id: 'pages', path: '/pages', kind: 'collection' as const, label: '页面', view: { moduleId: 'page', route: '/pages', title: '页面' } },
-    { id: 'tasks', path: '/tasks', kind: 'collection' as const, label: '任务', view: { moduleId: 'tasks-2', route: '/tasks-2', title: '任务' } },
+    { id: 'tasks', path: '/tasks', kind: 'collection' as const, label: '任务', view: { moduleId: 'tasks', route: '/tasks', title: '任务' } },
   ]
   const listed = builtinCatalogViews(tables)
   assert.equal(listed.length, 3)

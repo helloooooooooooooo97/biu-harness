@@ -176,7 +176,7 @@ flowchart TB
 
   HostLoad --> Kernel["@biu/host-*<br/>会话 · 工具 · loop · HTTP/WS"]
   WebLoad --> Shell["@biu/web-*<br/>插槽 · 投影 · 检查器框"]
-  Caps --> Cap["@biu/cap-*<br/>./host 与 ./web 分入口"]
+  Caps --> Cap["@biu/core-* / @biu/cap-*<br/>./host 与 ./web 分入口"]
   Kernel --- Cap
   Shell --- Cap
 ```
@@ -269,15 +269,18 @@ biu-harness
     ├── web-ui-hub/
     ├── web-mascot/            # 共享库，不进 json
     │
+    ├── core-file-system/      # 登记表 + db_* 工具 + File System UI
+    ├── core-plugin-system/    # 已安装插件、安装卸载、File System 入口
+    ├── core-task-system/      # 任务数据、心跳、派工 / 汇报 + 任务表
+    │
     ├── cap-chat/              # 对话 + 轨迹 / 用量
-    ├── cap-tasks/             # 看板 + 心跳 + 派工 / 汇报
     ├── cap-dashboard/
     ├── cap-channels/
     ├── cap-logger/
     └── cap-mascot-easter-egg/
 ```
 
-每个 `host-*` / `web-*` / `cap-*` 源码在 `src/host/` 和（或）`src/web/`。`cap-*` 的 `package.json` 必须分开 `exports["./host"]` 与 `exports["./web"]`。
+每个 `host-*` / `web-*` / `core-*` / `cap-*` 源码在 `src/host/` 和（或）`src/web/`。`core-*` / `cap-*` 的 `package.json` 必须分开 `exports["./host"]` 与 `exports["./web"]`。
 
 ---
 

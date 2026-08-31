@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { Service, type Context } from 'cordis'
 import { currentSessionId } from '@biu/host-sessions/scope'
 import { startTaskClock } from './clock.ts'
+import { tasksCollection } from './collection.ts'
 
 type DatabaseSync = import('node:sqlite').DatabaseSync
 type SQLInputValue = import('node:sqlite').SQLInputValue
@@ -1516,8 +1517,9 @@ export class TasksService extends Service {
   }
 }
 
-export const name = 'tasks'
+export const name = 'core-task-system'
 export const inject = ['http', 'hub', 'tools', 'sessions']
+export { tasksCollection } from './collection.ts'
 
 export function apply(ctx: Context) {
   startTaskClock(ctx)
@@ -1557,7 +1559,7 @@ export function apply(ctx: Context) {
     id: 'tasks',
     title: '任务',
     subtitle: '',
-    plugin: 'tasks',
+    plugin: 'core-task-system',
     kind: 'tasks',
   })
 
@@ -2460,6 +2462,10 @@ export function apply(ctx: Context) {
     } catch {
       /* ignore */
     }
+  })
+
+  ctx.inject(['database'], (inner) => {
+    inner.database.register(tasksCollection(tasks))
   })
 }
 

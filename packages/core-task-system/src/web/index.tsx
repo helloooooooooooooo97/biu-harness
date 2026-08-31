@@ -2,7 +2,7 @@ import type { Context } from 'cordis'
 import type { DatabaseUi } from '@biu/type-file-system/ui'
 import { tasksChrome } from './chrome.tsx'
 
-export const name = 'tasks-2-ui'
+export const name = 'core-task-system-ui'
 export const inject = ['databaseUi']
 
 export function apply(ctx: Context) {
@@ -11,7 +11,7 @@ export function apply(ctx: Context) {
 }
 
 if (typeof document !== 'undefined') {
-  const id = 'biu-tasks-2-ui-style'
+  const id = 'biu-task-system-ui-style'
   const style = document.getElementById(id) ?? document.createElement('style')
   style.id = id
   style.textContent = `

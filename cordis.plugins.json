@@ -76,15 +76,6 @@
       "enabled": true
     },
     {
-      "id": "tasks",
-      "name": "Task",
-      "layer": "capability",
-      "blurb": "@biu/cap-tasks。任务数据、工具与心跳；界面在 Task 表。",
-      "package": "@biu/cap-tasks/host",
-      "togglable": true,
-      "enabled": true
-    },
-    {
       "id": "core-file-system",
       "name": "Core-File System",
       "layer": "capability",
@@ -105,12 +96,12 @@
       "enabled": true
     },
     {
-      "id": "tasks-2",
-      "name": "Task",
+      "id": "core-task-system",
+      "name": "Core-Task System",
       "layer": "capability",
-      "blurb": "@biu/cap-tasks-2。把任务表登记进 File System，详情含脚本与进度汇报。",
-      "package": "@biu/cap-tasks-2/host",
-      "web": "@biu/cap-tasks-2/web",
+      "blurb": "@biu/core-task-system。任务数据、工具与心跳；任务表登记进 File System，详情含脚本与进度汇报。",
+      "package": "@biu/core-task-system/host",
+      "web": "@biu/core-task-system/web",
       "togglable": true,
       "enabled": true
     },

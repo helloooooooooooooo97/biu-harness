@@ -1,9 +1,9 @@
 {
-  "name": "@biu/cap-tasks-2",
+  "name": "@biu/core-task-system",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "任务2号：把任务表登记进 File System，前端 decorate 对齐原任务面板",
+  "description": "Core-Task System：任务数据、心跳、派工/汇报，并把任务表登记进 File System",
   "exports": {
     "./host": "./src/host/index.ts",
     "./web": "./src/web/index.tsx"

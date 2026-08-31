@@ -184,7 +184,7 @@ flowchart TB
 
   HostLoad --> Kernel["@biu/host-*<br/>sessions · tools · loop · HTTP/WS"]
   WebLoad --> Shell["@biu/web-*<br/>slots · projection · inspector frame"]
-  Caps --> Cap["@biu/cap-*<br/>separate ./host and ./web entries"]
+  Caps --> Cap["@biu/core-* / @biu/cap-*<br/>separate ./host and ./web entries"]
   Kernel --- Cap
   Shell --- Cap
 ```
@@ -277,15 +277,18 @@ biu-harness
     ├── web-ui-hub/
     ├── web-mascot/            # Shared lib; not in json
     │
+    ├── core-file-system/      # Collections + db_* tools + File System UI
+    ├── core-plugin-system/    # Installed plugins, install/uninstall, File System entry
+    ├── core-task-system/      # Task data, heartbeat, dispatch / report + Task table
+    │
     ├── cap-chat/              # Chat + trajectory / usage
-    ├── cap-tasks/             # Board + heartbeat + dispatch / report
     ├── cap-dashboard/
     ├── cap-channels/
     ├── cap-logger/
     └── cap-mascot-easter-egg/
 ```
 
-Each `host-*` / `web-*` / `cap-*` source lives under `src/host/` and/or `src/web/`. A `cap-*` package must split `exports["./host"]` and `exports["./web"]` in its `package.json`.
+Each `host-*` / `web-*` / `core-*` / `cap-*` source lives under `src/host/` and/or `src/web/`. A `core-*` / `cap-*` package must split `exports["./host"]` and `exports["./web"]` in its `package.json`.
 
 ---
 

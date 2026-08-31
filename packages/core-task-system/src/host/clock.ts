@@ -19,7 +19,7 @@ export function startTaskClock(ctx: Context) {
     id: 'clock',
     title: '心跳',
     subtitle: '定时器在任务包 ctx.effect 里',
-    plugin: 'tasks',
+    plugin: 'core-task-system',
     kind: 'clock',
   })
   ctx.effect(() => {
@@ -32,5 +32,5 @@ export function startTaskClock(ctx: Context) {
     tick()
     const timer = setInterval(tick, 1000)
     return () => clearInterval(timer)
-  }, 'tasks.clock.interval')
+  }, 'core-task-system.clock.interval')
 }

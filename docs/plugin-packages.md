@@ -12,15 +12,16 @@
 |---|---|---|
 | `host` | `host/index.ts` | 内核（`host-http` / `host-sessions` / `host-tools` …），按数组顺序 `await plugin` |
 | `web` | `web/main.tsx` ← `virtual:cordis-web-runtime` | 壳（`web-slots` / `web-app-shell` / `web-ui-hub` …） |
-| `plugins` | `@biu/host-hub` + `@biu/web-ui-hub` | 可热插拔能力；json 的 `web` 字段指向 `@biu/cap-*/web` |
+| `plugins` | `@biu/host-hub` + `@biu/web-ui-hub` | 可热插拔能力；json 的 `web` 字段指向 `@biu/cap-*/web` 或 `@biu/core-*/web` |
 
 ## `packages/` 前缀
 
-`ls packages` 按字母分成四类：
+`ls packages` 按字母分成五类：
 
 - **`type-*`**：会被很多包直接 `import` 的契约（纯类型 + 纯函数）。例如 `@biu/type-session`、`@biu/type-agent-loop`、`@biu/type-http`、`@biu/type-slots`。不是插件，不进 json。`currentSessionId` / `runWithSession` 是 ALS 运行时，在 `@biu/host-sessions/scope`。
 - **`host-*`**：host 内核插件（无浏览器入口）。源码在 `src/host/`。
 - **`web-*`**：web 内核插件；`web-mascot` 是共享库，不必进 json。源码在 `src/web/`。
+- **`core-*`**：基础能力（File System / Plugin System / Task System），同一目录，**`exports` 必须把 `./host` 与 `./web` 分开**。json 写 `"package": "@biu/core-file-system/host", "web": "@biu/core-file-system/web"`。
 - **`cap-*`**：能力插件，同一目录，**`exports` 必须把 `./host` 与 `./web` 分开**（禁止一个入口同时带 Node + React）。json 写 `"package": "@biu/cap-chat/host", "web": "@biu/cap-chat/web"`。
 
 json 里的 `id` 仍用短名 `chat` / `http`。命令行缝是 `host-shell`，应用壳是 `web-app-shell`。
