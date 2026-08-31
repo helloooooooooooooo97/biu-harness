@@ -11,7 +11,7 @@ import {
   TrashIcon,
 } from '@heroicons/react/16/solid'
 import type { CollectionInfo, DbRecord } from '@biu/type-file-system'
-import { mergeCatalogViews } from '../catalog-views.ts'
+import { mergeCatalogViews, mergeTableViews } from '../catalog-views.ts'
 import { VIEWS_COLLECTION_PATH } from './database-path.ts'
 import type { SavedView } from './saved-view.ts'
 import {
@@ -371,7 +371,8 @@ export const DataSidebar = memo(function DataSidebar({
   function viewsFor(path: string) {
     const listed = path === collectionPath ? views : loadViews(path)
     if (path === VIEWS_COLLECTION_PATH) return mergeCatalogViews(tables, listed)
-    return listed
+    const table = listedTables.find((row) => row.path === path) ?? { path, label: path.replace(/^\//, '') }
+    return mergeTableViews(table, listed)
   }
 
   const starredRows = starredViews.flatMap((item) => {

@@ -89,7 +89,7 @@ import {
 } from './view-storage.ts'
 import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
-import { mergeCatalogViews, stubBuiltinCatalogView, builtinCatalogViewId } from '../catalog-views.ts'
+import { mergeCatalogViews, mergeTableViews, stubBuiltinCatalogView, builtinCatalogViewId } from '../catalog-views.ts'
 import { VIEWS_COLLECTION_PATH } from './database-path.ts'
 
 type StatResult = { schema?: CollectionSchema }
@@ -453,7 +453,13 @@ export function CollectionBrowser({
     setPage(0)
     const stored = tableHub ? hubView : viewForPath(collectionPath, routeViewId)
     const user = loadViews(collectionPath)
-    const listed = collectionPath === VIEWS_COLLECTION_PATH ? mergeCatalogViews(tables, user) : user
+    const listed =
+      collectionPath === VIEWS_COLLECTION_PATH
+        ? mergeCatalogViews(tables, user)
+        : mergeTableViews(
+            tables.find((table) => table.path === collectionPath) ?? { path: collectionPath, label: title },
+            user,
+          )
     rememberViews(collectionPath, listed)
     if (tableHub && hubView) {
       setViews(listed)
@@ -711,7 +717,13 @@ export function CollectionBrowser({
   }, [dlg])
 
   function persistViews(next: SavedView[]) {
-    const listed = collectionPath === VIEWS_COLLECTION_PATH ? mergeCatalogViews(tables, next) : next
+    const listed =
+      collectionPath === VIEWS_COLLECTION_PATH
+        ? mergeCatalogViews(tables, next)
+        : mergeTableViews(
+            tables.find((table) => table.path === collectionPath) ?? { path: collectionPath, label: title },
+            next,
+          )
     const stored = listed.filter((view) => !view.builtin)
     viewsRef.current = listed
     setViews(listed)
@@ -883,27 +895,11 @@ export function CollectionBrowser({
     const removedId = dlg.view.id
     const remaining = views.filter((item) => item.id !== removedId)
     setDlg(null)
-    if (!remaining.length) {
-      const fallback = normalizeSavedView({
-        id: `${Date.now()}`,
-        name: '默认视图',
-        mode: 'table',
-        sortField: schemaDefaultKeys[0] ?? 'id',
-        sortDir: 'asc',
-        filters: {},
-        columns: [...schemaDefaultKeys],
-        groupBy: '',
-        tree: true,
-        wrap: false,
-        truncate: true,
-        query: '',
-      })
-      persistViews([fallback])
-      selectView(fallback)
-      return
-    }
     persistViews(remaining)
-    if (activeViewId === removedId) selectView(remaining[0])
+    if (activeViewId === removedId) {
+      const next = viewsRef.current[0]
+      if (next) selectView(next)
+    }
   }
 
   function setVisibleColumns(next: string[]) {
@@ -1340,27 +1336,7 @@ export function CollectionBrowser({
       setHydrated(true)
       return
     }
-    let next = loadViews(collectionPath)
-    if (collectionPath === VIEWS_COLLECTION_PATH) next = mergeCatalogViews(tables, next)
-    if (!next.length && collectionPath !== VIEWS_COLLECTION_PATH) {
-      next = [
-        normalizeSavedView({
-          id: `${Date.now()}`,
-          name: '默认视图',
-          mode: 'table',
-          sortField: schemaDefaultKeys[0] ?? 'id',
-          sortDir: 'asc',
-          filters: {},
-          columns: [...schemaDefaultKeys],
-          groupBy: '',
-          tree: true,
-          wrap: false,
-          truncate: true,
-          query: '',
-        }),
-      ]
-    }
-    persistViews(next)
+    persistViews(loadViews(collectionPath))
     const listed = viewsRef.current
     const view =
       listed.find((item) => item.id === routeViewId) ??

@@ -1,4 +1,5 @@
 import type { CollectionInfo, CollectionSpec, DbRecord } from '@biu/type-file-system'
+import { builtinAllView, isReadOnlyViewId } from '../catalog-views.ts'
 import type { SavedView } from '../web/saved-view.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
@@ -9,25 +10,52 @@ export class SavedViewsStore {
 
   replace(collectionPath: string, views: StoredView[]) {
     const path = normalizeCollectionPath(collectionPath)
-    this.byPath.set(path, views.map((view) => ({ ...view, id: String(view.id), name: String(view.name || view.id) })))
+    this.byPath.set(
+      path,
+      views
+        .filter((view) => !view.builtin && !isReadOnlyViewId(String(view.id)))
+        .map((view) => ({ ...view, id: String(view.id), name: String(view.name || view.id) })),
+    )
   }
 
   rows(tables: CollectionInfo[]): DbRecord[] {
-    const labels = new Map(tables.map((item) => [item.path, item.view?.title ?? item.label]))
+    const labels = new Map(tables.map((item) => [normalizeCollectionPath(item.path), item.view?.title ?? item.label]))
     const out: DbRecord[] = []
+    const seen = new Set<string>()
+    const emit = (path: string, tableName: string, view: StoredView) => {
+      const rec = asRecord(path, tableName, view)
+      if (seen.has(rec.id)) return
+      seen.add(rec.id)
+      out.push(rec)
+    }
+    for (const table of tables) {
+      const path = normalizeCollectionPath(table.path)
+      if (!path || path === '/') continue
+      const label = String(labels.get(path) ?? table.label ?? path)
+      const all = builtinAllView({ path, label, view: table.view })
+      emit(path, label, all)
+      for (const view of this.byPath.get(path) ?? []) {
+        if (view.builtin || isReadOnlyViewId(view.id)) continue
+        emit(path, label, view)
+      }
+    }
     for (const [path, views] of this.byPath) {
+      if (tables.some((table) => normalizeCollectionPath(table.path) === path)) continue
       for (const view of views) {
-        out.push(asRecord(path, labels.get(path) ?? path, view))
+        if (view.builtin || isReadOnlyViewId(view.id)) continue
+        emit(path, labels.get(path) ?? path, view)
       }
     }
     return out.sort((a, b) => String(a.table).localeCompare(String(b.table)) || String(a.title).localeCompare(String(b.title)))
   }
 
   write(id: string, patch: Record<string, unknown>): DbRecord {
+    if (isReadOnlyViewId(viewIdOfRow(id))) throw new Error('builtin view is read-only')
     for (const [path, views] of this.byPath) {
       const idx = views.findIndex((view) => rowId(path, view.id) === id)
       if (idx < 0) continue
       const cur = views[idx]!
+      if (cur.builtin || isReadOnlyViewId(cur.id)) throw new Error('builtin view is read-only')
       const next: StoredView = {
         ...cur,
         ...(typeof patch.title === 'string' ? { name: patch.title } : {}),
@@ -50,6 +78,11 @@ export class SavedViewsStore {
 
 function rowId(path: string, viewId: string) {
   return `${path.replace(/^\//, '')}::${viewId}`
+}
+
+function viewIdOfRow(id: string) {
+  const cut = id.indexOf('::')
+  return cut >= 0 ? id.slice(cut + 2) : id
 }
 
 function asRecord(path: string, tableName: string, view: StoredView): DbRecord {

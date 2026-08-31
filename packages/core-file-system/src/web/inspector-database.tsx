@@ -8,6 +8,7 @@ import { buildCrumbs, pathForCrumbTarget, type Crumb, type CrumbTarget } from '.
 import { CollectionBrowser } from './browser.tsx'
 import { CrumbTrail } from './crumb-trail.tsx'
 import { defaultViewId, loadRecords, loadViews, viewForPath } from './view-storage.ts'
+import { mergeCatalogViews, mergeTableViews } from '../catalog-views.ts'
 import { DATA_MODULE, DATA_MODULE_ID, VIEWS_COLLECTION_PATH, databaseRecordPath, databaseViewPath, isCollectionHub, viewsCatalogSource } from './database-path.ts'
 import {
   getInspectorDbPath,
@@ -129,7 +130,11 @@ function crumbsForRoute(
   const parsed = parseAppPath(pathname, [DATA_MODULE])
   const collection = parsed.kind === 'collection-view' || parsed.kind === 'record' ? parsed.collection : ''
   const table = tables.find((item) => item.path === collection)
-  const views = collection ? loadViews(collection) : []
+  const stored = collection ? loadViews(collection) : []
+  const views =
+    collection === VIEWS_COLLECTION_PATH
+      ? mergeCatalogViews(tables, stored)
+      : mergeTableViews(table ?? (collection ? { path: collection } : undefined), stored)
   const urlViewId = parsed.kind === 'collection-view' ? parsed.viewId : undefined
   const recordId = parsed.kind === 'record' ? parsed.recordId : undefined
   const tableHub = isCollectionHub(collection, urlViewId, recordId)

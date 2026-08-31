@@ -14,7 +14,7 @@ export type SavedView = {
   truncate?: boolean
   query?: string
   pageSize?: number
-  /** 系统按表登记生成的目录视图，不能改筛选、不能删改名。 */
+  /** 系统内置视图（全部 xx / 目录），不能改筛选、不能删改名。 */
   builtin?: boolean
 }
 

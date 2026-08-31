@@ -1,6 +1,16 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { builtinCatalogViewId, builtinCatalogViews, mergeCatalogViews, stubBuiltinCatalogView } from './catalog-views.ts'
+import {
+  builtinAllView,
+  builtinAllViewId,
+  builtinCatalogViewId,
+  builtinCatalogViews,
+  isBuiltinCatalogViewId,
+  mergeCatalogViews,
+  mergeTableViews,
+  stubBuiltinAllView,
+  stubBuiltinCatalogView,
+} from './catalog-views.ts'
 
 test('each registered table gets a builtin catalog view', () => {
   const tables = [
@@ -18,7 +28,9 @@ test('each registered table gets a builtin catalog view', () => {
     { id: builtinCatalogViewId('/pages'), name: '旧的', mode: 'table', sortField: 'id', sortDir: 'asc', filters: {}, columns: [] },
     { id: 'user-1', name: '周报', mode: 'table', sortField: 'id', sortDir: 'asc', filters: {}, columns: [] },
   ])
-  assert.equal(merged.filter((view) => view.builtin).length, 3)
+  assert.equal(merged[0]?.id, builtinAllViewId('/views'))
+  assert.equal(merged[0]?.name, '全部视图')
+  assert.equal(merged.filter((view) => view.builtin).length, 4)
   assert.equal(merged.some((view) => view.id === 'user-1'), true)
   assert.equal(merged.filter((view) => view.id === builtinCatalogViewId('/pages')).length, 1)
 })
@@ -28,4 +40,23 @@ test('stub builtin catalog view from route id', () => {
   assert.equal(stub?.builtin, true)
   assert.deepEqual(stub?.filters, { tablePath: '/drawings' })
   assert.equal(stubBuiltinCatalogView('user-1'), null)
+  assert.equal(isBuiltinCatalogViewId('builtin-all:/sessions'), false)
+  assert.equal(stubBuiltinCatalogView('builtin-all:/sessions'), null)
+})
+
+test('every registered table gets a read-only 全部xx view', () => {
+  const sessions = { id: 'sessions', path: '/sessions', kind: 'collection' as const, label: '会话', view: { title: '会话' } }
+  const all = builtinAllView(sessions)
+  assert.equal(all.id, builtinAllViewId('/sessions'))
+  assert.equal(all.name, '全部会话')
+  assert.deepEqual(all.filters, {})
+  assert.equal(all.builtin, true)
+  const merged = mergeTableViews(sessions, [
+    { id: builtinAllViewId('/sessions'), name: '假的', mode: 'table', sortField: 'id', sortDir: 'asc', filters: {}, columns: [] },
+    { id: 'mine', name: '置顶', mode: 'table', sortField: 'id', sortDir: 'asc', filters: {}, columns: [] },
+  ])
+  assert.equal(merged[0]?.name, '全部会话')
+  assert.equal(merged.filter((view) => view.id === builtinAllViewId('/sessions')).length, 1)
+  assert.equal(merged.some((view) => view.id === 'mine'), true)
+  assert.equal(stubBuiltinAllView('builtin-all:/pages')?.name, '全部pages')
 })
