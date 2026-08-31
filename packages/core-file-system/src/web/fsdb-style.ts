@@ -252,7 +252,7 @@ const CSS = `
 .fsdb-prop-val .fsdb-tags{display:flex;flex-wrap:nowrap}
 .fsdb-detail-title-row{display:flex;align-items:flex-start;gap:12px;min-width:0}
 .fsdb-detail-title-icon-wrap{position:relative;flex:none;margin-top:2px}
-.fsdb-detail-title-icon{display:grid;place-items:center;width:36px;height:36px;margin:0;border:0;border-radius:10px;padding:0;background:transparent;color:var(--dsw-label-2);font-size:28px;line-height:1}
+.fsdb-detail-title-icon{display:grid;place-items:center;width:36px;height:36px;margin:0;border:0;border-radius:10px;padding:0;background:transparent;color:var(--dsw-label-2);font-size:28px;line-height:1;overflow:visible}
 button.fsdb-detail-title-icon{cursor:pointer}
 button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-label)}
 .fsdb-detail-title-icon .fsdb-record-emoji{font-size:28px;line-height:1}

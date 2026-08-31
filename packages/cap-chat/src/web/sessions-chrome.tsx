@@ -24,6 +24,11 @@ function sessionMascot(record: DbRecord) {
   }
 }
 
+function SessionIcon({ record }: { record: DbRecord }) {
+  const identity = resolveSessionMascot(String(record.id), sessionMascot(record))
+  return <SidebarMascot size={32} sessionId={String(record.id)} identity={identity} animate={false} title="" />
+}
+
 function SessionTitle({ record, label }: { record: DbRecord; label: string }) {
   const identity = resolveSessionMascot(String(record.id), sessionMascot(record))
   return (
@@ -109,6 +114,7 @@ function SessionTranscript({ record }: FsContentProps) {
 
 export const sessionsChrome: CollectionChrome = {
   Title: SessionTitle,
+  Icon: SessionIcon,
   Content: SessionTranscript,
   cells: {
     mascotShape: MascotShapeCell,
