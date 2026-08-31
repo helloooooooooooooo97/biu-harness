@@ -120,13 +120,6 @@ export function PickOverlay(_props: SlotProps) {
     return () => window.removeEventListener('keydown', onHotkey)
   }, [pick])
 
-  useEffect(() => {
-    if (!pick) return
-    const onClosed = () => pick.exit()
-    window.addEventListener('biu:overlay-closed', onClosed)
-    return () => window.removeEventListener('biu:overlay-closed', onClosed)
-  }, [pick])
-
   if (!picking) return null
   return (
     <>

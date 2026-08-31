@@ -27,8 +27,7 @@ test('close button inside the chat overlay is not captured while picking', async
   panel.remove()
 })
 
-test('closing the chat overlay exits pick mode', () => {
-  assert.match(overlay, /biu:overlay-closed/)
+test('Escape exits pick mode', () => {
   assert.match(overlay, /pick.exit\(\)/)
 })
 

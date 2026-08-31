@@ -5,7 +5,7 @@ const ID = 'data-biu-id'
 const ACTION = 'data-biu-action'
 const LABEL = 'data-biu-label'
 
-export function isPickIgnored(node: Element | null) {
+function isPickIgnored(node: Element | null) {
   return Boolean(node?.closest('[data-biu-ignore]'))
 }
 
@@ -62,7 +62,7 @@ export function resolvePickAtPoint(x: number, y: number, route: string) {
   return null
 }
 
-export type ClientBox = { left: number; top: number; width: number; height: number }
+type ClientBox = { left: number; top: number; width: number; height: number }
 
 export function boxFromPoints(ax: number, ay: number, bx: number, by: number): ClientBox {
   const left = Math.min(ax, bx)
@@ -70,7 +70,7 @@ export function boxFromPoints(ax: number, ay: number, bx: number, by: number): C
   return { left, top, width: Math.abs(bx - ax), height: Math.abs(by - ay) }
 }
 
-export function boxesOverlap(a: ClientBox, b: ClientBox) {
+function boxesOverlap(a: ClientBox, b: ClientBox) {
   return a.left < b.left + b.width && a.left + a.width > b.left && a.top < b.top + b.height && a.top + a.height > b.top
 }
 
