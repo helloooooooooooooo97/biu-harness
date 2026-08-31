@@ -43,8 +43,8 @@ const CSS = `
 .fsdb-page .tasks-toolbar-left{display:flex;align-items:center;gap:6px;flex:none;min-width:0}
 .fsdb-locked-filter{display:inline-flex;align-items:center;height:26px;padding:0 8px;border-radius:8px;background:color-mix(in srgb,var(--dsw-business) 12%,transparent);color:var(--dsw-business);font-size:13px;font-weight:650;cursor:default}
 .fsdb-page .tasks-toolbar-right{display:flex;align-items:center;gap:2px;flex:none;margin-left:auto}
-.fsdb-page .fsdb-create-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:26px;margin-left:8px;padding:0 10px;border:0;border-radius:8px;background:#4B90F6;color:#fff;cursor:pointer;font:inherit;font-size:14px;font-weight:600;white-space:nowrap}
-.fsdb-page .fsdb-create-btn:hover{background:color-mix(in srgb,#4B90F6 88%,#000)}
+.fsdb-page .fsdb-create-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:26px;margin-left:8px;padding:0 10px;border:0;border-radius:4px;background:#4F7FDE;color:#fff;cursor:pointer;font:inherit;font-size:14px;font-weight:600;white-space:nowrap}
+.fsdb-page .fsdb-create-btn:hover{background:color-mix(in srgb,#4F7FDE 88%,#000)}
 .fsdb-page .tasks-search-wrap{display:inline-flex;align-items:center;gap:0;flex:none;min-width:0;padding:0;border:0;border-radius:8px;background:transparent;color:var(--dsw-label-2)}
 .fsdb-page .tasks-search-wrap.is-open{flex:0 1 168px;gap:2px}
 .fsdb-page .tasks-search{flex:1;border:0;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;outline:none;min-width:0;padding:4px 4px 4px 0}
