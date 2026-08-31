@@ -1,0 +1,21 @@
+{
+  "name": "@biu/core-dock",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "集中化 Dock：钉住应用与运行中插件的注册与底栏",
+  "exports": {
+    ".": "./src/web/index.ts"
+  },
+  "biu": {
+    "runtime": "web"
+  },
+  "peerDependencies": {
+    "cordis": "4.0.0-rc.8",
+    "react": "^19.1.1"
+  },
+  "dependencies": {
+    "@biu/type-slots": "0.1.0",
+    "@biu/web-slots": "0.1.0"
+  }
+}

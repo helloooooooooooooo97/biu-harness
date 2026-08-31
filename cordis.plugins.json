@@ -25,6 +25,7 @@
   ],
   "web": [
     { "id": "slots", "package": "@biu/web-slots", "togglable": false, "enabled": true },
+    { "id": "dock", "package": "@biu/core-dock", "togglable": false, "enabled": true },
     { "id": "app-modules", "package": "@biu/web-app-modules", "togglable": false, "enabled": true },
     { "id": "session-view", "package": "@biu/web-session-view", "togglable": false, "enabled": true },
     { "id": "project-view", "package": "@biu/web-project-view", "togglable": false, "enabled": true },

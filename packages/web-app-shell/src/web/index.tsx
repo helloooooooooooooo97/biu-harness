@@ -49,6 +49,7 @@ import { ChatSidebar } from './chat-sidebar.tsx'
 import { ShellSidebarFrame } from './shell-sidebar-frame.tsx'
 import { ChatSessionTitle } from './chat-session-title.tsx'
 import { BrandCornerMascot, DanceStage } from '@biu/web-mascot'
+import type { DockService } from '@biu/core-dock'
 import { SessionInspector } from './session-inspector.tsx'
 import { SessionConfigDialog } from '@biu/web-session-view/dialog'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
@@ -66,7 +67,7 @@ import {
 } from '@heroicons/react/16/solid'
 
 export const name = 'shell'
-export const inject = ['slots', 'snapshot', 'sessionView', 'projectView', 'appModules']
+export const inject = ['slots', 'dock', 'snapshot', 'sessionView', 'projectView', 'appModules']
 
 function ModuleIcon({ module }: { module: AppModule }) {
   if (module.Icon) {
@@ -212,6 +213,38 @@ function UpdateButton() {
       ) : null}
     </button>
   )
+}
+
+function ShellDockPins({
+  dock,
+  agents,
+  activeId,
+  sessionView,
+}: {
+  dock: DockService
+  agents: Parameters<typeof BrandCornerMascot>[0]['agents']
+  activeId: string | null | undefined
+  sessionView: SessionViewService
+}) {
+  useEffect(() => {
+    const Tile = () => (
+      <BrandCornerMascot
+        agents={agents}
+        activeId={activeId}
+        onSelect={(id) => {
+          void sessionView.load(id, { view: 'chat' })
+        }}
+      />
+    )
+    return dock.register({
+      id: 'session',
+      title: 'Session',
+      kind: 'session',
+      order: 10,
+      Tile,
+    })
+  }, [dock, agents, activeId, sessionView])
+  return null
 }
 
 /** 主区固定聊天；轨迹改在右侧检查器。悬浮形态可挂到任意页面最顶层。 */
@@ -433,6 +466,7 @@ function Shell(props: SlotProps) {
   const sessionView = props.sessionView as SessionViewService
   const projectView = props.projectView as ProjectViewService
   const slots = props.slots as SlotsService
+  const dock = props.dock as DockService
   const navigate = useNavigate()
   const location = useLocation()
   const modules = useAppModules()
@@ -882,14 +916,7 @@ function Shell(props: SlotProps) {
       ) : null}
 
       <DanceStage sessions={danceSessions} on={dancing} shape={danceShape} />
-      <BrandCornerMascot
-        agents={danceSessions}
-        activeId={sessionId}
-        leading={props.renderSlot('corner-tools')}
-        onSelect={(id) => {
-          void sessionView.load(id, { view: 'chat' })
-        }}
-      />
+      <ShellDockPins dock={dock} agents={danceSessions} activeId={sessionId} sessionView={sessionView} />
 
       <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
         <div
@@ -1004,6 +1031,7 @@ export function apply(ctx: Context) {
     projectView: ctx.projectView as ProjectViewService,
     useProjectView: bindProjectView(ctx.projectView as ProjectViewService),
     slots: ctx.slots as SlotsService,
+    dock: ctx.dock as DockService,
     appModules: ctx.appModules as AppModulesService,
   }
   ctx.slots.fill('root', Shell, {

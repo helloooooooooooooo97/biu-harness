@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { Context } from 'cordis'
 import * as slots from '@biu/web-slots'
+import * as dock from '@biu/core-dock'
 import * as appModules from '@biu/web-app-modules'
 import * as snapshot from '@biu/web-snapshot'
 import * as sessionView from '@biu/web-session-view'
@@ -13,6 +14,7 @@ import * as shell from './index.tsx'
 test('declares generic module slots, not plugin ids', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
+  await ctx.plugin(dock)
   await ctx.plugin(appModules)
   await ctx.plugin(sessionView)
   await ctx.plugin(projectView)

@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import type { Context } from 'cordis'
-import { SignalIcon, QueueListIcon } from '@heroicons/react/16/solid'
+import { SignalIcon, QueueListIcon, ChatBubbleLeftIcon } from '@heroicons/react/16/solid'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import type { SlotProps } from '@biu/web-slots'
 import { ApprovalsRail } from './approvals.tsx'
@@ -12,9 +12,10 @@ import { TrajectoryView } from './trajectory.tsx'
 import { UsagePanel } from './usage-panel.tsx'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
 import type { PickService } from '@biu/cap-pick/web'
+import { getChatOverlay, subscribeChatOverlay, toggleChatOverlay } from '@biu/web-app-shell/chat-overlay'
 
 export const name = 'chat-ui'
-export const inject = ['slots', 'sessionView', 'projectView']
+export const inject = ['slots', 'sessionView', 'projectView', 'dock']
 
 function InspectorTrajectory(props: SlotProps) {
   return createElement(
@@ -81,4 +82,18 @@ export function apply(ctx: Context) {
       centerKinds: ['session'],
     }),
   })
+  ctx.dock.register({
+    id: 'composer',
+    title: '对话',
+    kind: 'composer',
+    order: 30,
+    Icon: () => createElement(ChatBubbleLeftIcon, { className: 'size-5' }),
+    onOpen: () => toggleChatOverlay(),
+  })
+  ctx.effect(() =>
+    subscribeChatOverlay(() => {
+      const open = getChatOverlay()
+      ctx.dock.patch('composer', { running: open, focused: open, minimized: false })
+    }),
+  )
 }

@@ -2,6 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { Context } from 'cordis'
 import * as slots from '@biu/web-slots'
+import * as dock from '@biu/core-dock'
 import * as appModules from '@biu/web-app-modules'
 import * as snapshot from '@biu/web-snapshot'
 import * as sessionView from '@biu/web-session-view'
@@ -34,6 +35,7 @@ test('store plugin web urls are runtime modules', () => {
 test('ui-hub mounts configured ui packages including chat', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
+  await ctx.plugin(dock)
   await ctx.plugin(appModules)
   await ctx.plugin(sessionView)
   await ctx.plugin(projectView)

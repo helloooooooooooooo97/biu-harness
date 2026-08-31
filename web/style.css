@@ -42,7 +42,7 @@
   --dsw-chat-chip-font-size: 12px;
   --dsw-chat-gap: 12px;
   /* 与输入栏 pb-4 + .composer-pill-row 对齐，检查器底栏下沿贴胶囊上沿 */
-  --brand-corner-clearance: calc(1rem + 44px);
+  --brand-corner-clearance: calc(1rem + 72px);
   --dsw-chat-gap-turn: 24px;
   --dsw-chat-pad-x: 12px;
   --dsw-chat-pad-y: 10px;
@@ -360,6 +360,80 @@ body {
 .app-side-bar-head-brand .chat-view-header-expand {
   position: absolute;
   right: 8px;
+}
+
+.os-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  z-index: 90;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.os-dock-shelf {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: auto;
+  padding: 8px 14px 10px;
+  border-radius: 20px;
+  background: rgba(32, 32, 32, 0.78);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(18px);
+}
+
+.os-dock-sep {
+  width: 1px;
+  height: 28px;
+  margin: 0 4px 8px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.os-dock-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+.os-dock-tile {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: #f0efed;
+}
+
+.os-dock-fallback {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #3a3a3c;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.os-dock-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: #f0efed;
+}
+
+.os-dock .brand-corner-cluster {
+  position: static;
+  right: auto;
+  bottom: auto;
 }
 
 .brand-corner-cluster {

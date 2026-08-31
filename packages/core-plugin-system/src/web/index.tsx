@@ -3,8 +3,9 @@ import type { Context } from 'cordis'
 import { useSlotEntries, type SlotsService } from '@biu/web-slots'
 import type { SlotProps } from '@biu/type-slots'
 
-import { XMarkIcon, MinusIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon } from '@heroicons/react/16/solid'
+import { XMarkIcon, MinusIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon, PuzzlePieceIcon } from '@heroicons/react/16/solid'
 import type { DatabaseUi } from '@biu/type-file-system/ui'
+import type { DockService } from '@biu/core-dock'
 import { pluginsChrome } from './chrome.tsx'
 import {
   WIN_CHROME_H,
@@ -17,7 +18,7 @@ import {
 } from '../shell.ts'
 
 export const name = 'core-plugin-system-ui'
-export const inject = ['slots', 'databaseUi']
+export const inject = ['slots', 'databaseUi', 'dock']
 
 type StoreListing = { id: string; name: string; shell?: StoreShell }
 
@@ -275,6 +276,7 @@ function PluginAppWindow({
 
 function PluginExtrasLayer(props: SlotProps) {
   const slots = props.slots as SlotsService
+  const dock = props.dock as DockService
   const extras = useSlotEntries(slots, 'plugin-store-extras')
   const [listings, setListings] = useState<StoreListing[]>([])
   const [minimized, setMinimized] = useState<Record<string, boolean>>({})
@@ -312,9 +314,47 @@ function PluginExtrasLayer(props: SlotProps) {
     }
   }
 
-  if (extras.length === 0) return null
   const sorted = [...extras].sort((a, b) => a.order - b.order)
-  const hidden = sorted.filter((entry) => minimized[entry.id])
+
+  useEffect(() => {
+    const live = new Set<string>()
+    for (const entry of sorted) {
+      const listing = resolveListing(entry.id, listings)
+      const title = listing?.name ?? entry.id
+      const dockId = `plugin:${entry.id}`
+      live.add(dockId)
+      dock.register({
+        id: dockId,
+        title,
+        group: 'running',
+        kind: 'plugin',
+        pinned: false,
+        order: 100 + entry.order,
+        Icon: () => <PuzzlePieceIcon className="size-5" />,
+        onOpen: () => {
+          setMinimized((cur) => {
+            const next = { ...cur }
+            delete next[entry.id]
+            return next
+          })
+        },
+        onClose: () => {
+          const listingNow = resolveListing(entry.id, listings)
+          void closePlugin(listingNow?.id ?? entry.id)
+        },
+      })
+      dock.patch(dockId, {
+        running: true,
+        minimized: Boolean(minimized[entry.id]),
+        title,
+      })
+    }
+    for (const app of dock.list()) {
+      if (app.kind === 'plugin' && !live.has(app.id)) dock.unregister(app.id)
+    }
+  }, [dock, listings, minimized, sorted.map((entry) => entry.id).join('|')])
+
+  if (extras.length === 0) return null
   return (
     <div className="pointer-events-none fixed inset-0 z-20" data-testid="plugin-store-extras">
       {sorted.map((entry) => {
@@ -344,6 +384,7 @@ function PluginExtrasLayer(props: SlotProps) {
             onMinimize={() => {
               if (fullscreenId === entry.id) setFullscreenId(null)
               setMinimized((cur) => ({ ...cur, [entry.id]: true }))
+              dock.minimize(`plugin:${entry.id}`)
             }}
             onToggleFullscreen={() => {
               if (!shell.resizable) return
@@ -354,31 +395,6 @@ function PluginExtrasLayer(props: SlotProps) {
           </PluginAppWindow>
         )
       })}
-      {hidden.length ? (
-        <div className="pointer-events-auto absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2">
-          {hidden.map((entry) => {
-            const listing = resolveListing(entry.id, listings)
-            const title = listing?.name ?? entry.id
-            return (
-              <button
-                key={entry.id}
-                type="button"
-                className="rounded-lg border border-white/10 bg-[#3a3a3c] px-3 py-1.5 text-[11px] font-medium text-white/85 shadow-[0_8px_24px_rgba(0,0,0,.35)]"
-                title={`还原 ${title}`}
-                onClick={() =>
-                  setMinimized((cur) => {
-                    const next = { ...cur }
-                    delete next[entry.id]
-                    return next
-                  })
-                }
-              >
-                {title}
-              </button>
-            )
-          })}
-        </div>
-      ) : null}
     </div>
   )
 }
@@ -391,7 +407,7 @@ export function apply(ctx: Context) {
   slots.place('root-overlays', PluginExtrasLayer, {
     key: 'plugin-store-extras-layer',
     order: 20,
-    props: () => ({ slots }),
+    props: () => ({ slots, dock: ctx.dock }),
     children: {
       'plugin-store-extras': { kind: 'list' },
     },

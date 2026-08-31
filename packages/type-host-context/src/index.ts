@@ -24,6 +24,7 @@ import type { SessionViewService } from '@biu/web-session-view'
 import type { ProjectViewService } from '@biu/web-project-view'
 import type { AppModulesService } from '@biu/web-app-modules'
 import type { SlotsService } from '@biu/web-slots'
+import type { DockService } from '@biu/core-dock'
 
 export type { Method, PageSpec, RouteContext, RouteHandler } from '@biu/type-http'
 
@@ -49,6 +50,7 @@ declare module 'cordis' {
     lsp: LspService
     subagents: SubagentsService
     slots: SlotsService
+    dock: DockService
     snapshot: SnapshotService
     sessionView: SessionViewService
     projectView: ProjectViewService

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { Context } from 'cordis'
 import '@biu/type-host-context'
 import * as slots from '@biu/web-slots'
+import * as dock from '@biu/core-dock'
 import * as appModules from '@biu/web-app-modules'
 import * as snapshot from '@biu/web-snapshot'
 import * as sessionView from '@biu/web-session-view'
@@ -13,6 +14,7 @@ import * as shell from '@biu/web-app-shell'
 test('one plugin fills thread, trajectory, composer and approvals dock', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
+  await ctx.plugin(dock)
   await ctx.plugin(appModules)
   await ctx.plugin(sessionView)
   await ctx.plugin(projectView)
@@ -26,6 +28,7 @@ test('one plugin fills thread, trajectory, composer and approvals dock', async (
   assert.equal(ctx.slots.list('project').length, 0)
   assert.equal(ctx.slots.list('dock').some((item) => item.id === 'approvals'), true)
   assert.equal(ctx.slots.list('dock').some((item) => item.id === 'chat-live-hud'), true)
+  assert.equal(ctx.dock.list().some((item) => item.id === 'composer'), true)
   assert.equal(ctx.slots.list('models').length, 0)
   const traj = ctx.slots.list('inspector-panels').find((item) => item.id === 'chat-traj')
   const usage = ctx.slots.list('inspector-panels').find((item) => item.id === 'chat-usage')
