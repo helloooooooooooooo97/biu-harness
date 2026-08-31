@@ -1,4 +1,4 @@
-import type { ReactNode, Dispatch, SetStateAction } from 'react'
+import { useState, type ReactNode, type Dispatch, type SetStateAction } from 'react'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import type { CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
 import { HashtagIcon } from '@heroicons/react/16/solid'
@@ -6,6 +6,70 @@ import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { contentFieldKey, formatField, resolveFieldType, uniqueValues } from './fields.ts'
 import { LocalText } from './controls.tsx'
 import { FieldEditor, FieldGlyph, FilePreview } from './fsdb-cells.tsx'
+import { RecordEmojiBoard } from './data-sidebar.tsx'
+import { TableGlyph } from './nav-glyphs.tsx'
+import { normalizeRecordEmoji, recordPreviewEmoji } from './sidebar-preview.ts'
+
+function DetailTitleIcon({
+  emoji,
+  tableIcon,
+  label,
+  onChange,
+}: {
+  emoji: string
+  tableIcon?: string
+  label: string
+  onChange: (next: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState(emoji)
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+  return (
+    <span className="fsdb-detail-title-icon-wrap">
+      <button
+        type="button"
+        className="fsdb-detail-title-icon"
+        title={emoji ? '更换图标' : '设置图标'}
+        aria-label={emoji ? `更换 ${label} 的图标` : `设置 ${label} 的图标`}
+        onClick={(event) => {
+          const btn = event.currentTarget
+          setOpen((prev) => {
+            if (prev) {
+              setAnchor(null)
+              return false
+            }
+            setDraft(emoji)
+            setAnchor(btn)
+            return true
+          })
+        }}
+      >
+        {emoji ? <span className="fsdb-record-emoji">{emoji}</span> : <TableGlyph icon={tableIcon} className="size-8" />}
+      </button>
+      {open && anchor ? (
+        <RecordEmojiBoard
+          anchor={anchor}
+          draft={draft}
+          onDraft={setDraft}
+          onPick={(next) => {
+            onChange(normalizeRecordEmoji(next))
+            setOpen(false)
+            setAnchor(null)
+          }}
+          onClear={() => {
+            onChange('')
+            setOpen(false)
+            setAnchor(null)
+          }}
+          onClose={() => {
+            setOpen(false)
+            setAnchor(null)
+          }}
+        />
+      ) : null}
+    </span>
+  )
+}
 
 export function RecordDetail({
   selected,
@@ -19,6 +83,7 @@ export function RecordDetail({
   setDraft,
   writeOne,
   writePatch,
+  tableIcon,
   onDelete,
 }: {
   selected: DbRecord
@@ -32,6 +97,7 @@ export function RecordDetail({
   setDraft: Dispatch<SetStateAction<Record<string, string>>>
   writeOne: (row: DbRecord, key: string, field: FieldSpec, raw: string) => Promise<unknown> | void
   writePatch: (row: DbRecord, patch: Record<string, unknown>) => Promise<unknown> | void
+  tableIcon?: string
   onDelete?: () => void
 }) {
   return (
@@ -40,6 +106,16 @@ export function RecordDetail({
             <div className="fsdb-detail-split">
               <div className="fsdb-detail-main">
                 <div className="fsdb-detail-title-row">
+                <DetailTitleIcon
+                  emoji={recordPreviewEmoji(selected)}
+                  tableIcon={tableIcon}
+                  label={labelOf(selected)}
+                  onChange={(next) => {
+                    void Promise.resolve(writePatch(selected, { emoji: next })).then(() => {
+                      window.dispatchEvent(new Event('fsdb:change'))
+                    })
+                  }}
+                />
                 {schema.labelField && schema.fields[schema.labelField]?.writable ? (
                   <h1 className="fsdb-detail-title">
                     <LocalText

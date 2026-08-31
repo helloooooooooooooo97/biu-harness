@@ -49,7 +49,7 @@ const SIDEBAR_BRAND_GRADIENT =
 
 const RECORD_EMOJI_PRESETS = ['⭐', '🔥', '✅', '📌', '💡', '🎯', '📦', '🧩', '📄', '⚡']
 
-function RecordEmojiBoard({
+export function RecordEmojiBoard({
   anchor,
   draft,
   onDraft,

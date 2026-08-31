@@ -72,6 +72,7 @@ import {
 } from './fsdb-cells.tsx'
 import { ensureFsdbStyle } from './fsdb-style.ts'
 import { RecordDetail } from './record-detail.tsx'
+import { TableGlyph } from './nav-glyphs.tsx'
 import {
   activeViewStorageKey,
   getStarredViews,
@@ -1013,6 +1014,7 @@ export function CollectionBrowser({
       const next = data.value
       if (next) {
         setItems((prev) => prev.map((item) => (item.id === next.id ? { ...item, ...next } : item)))
+        setDetailRow((prev) => (prev?.id === next.id ? { ...prev, ...next } : prev))
         return
       }
       quietUntil.current = 0
@@ -1604,7 +1606,12 @@ export function CollectionBrowser({
         <div className="fsdb-right-body">
         {!detailId ? (
         <div className="tasks-main fsdb-main">
-        <h1 className="fsdb-detail-title">{title}</h1>
+        <div className="fsdb-detail-title-row">
+          <span className="fsdb-detail-title-icon" aria-hidden>
+            <TableGlyph icon={currentTable?.view?.icon} className="size-8" />
+          </span>
+          <h1 className="fsdb-detail-title">{title}</h1>
+        </div>
         <div className="tasks-toolbar" data-biu-ignore>
           <div className="tasks-toolbar-left">
             <div className="tasks-viewdd-wrap" ref={viewRef}>
@@ -2185,6 +2192,7 @@ export function CollectionBrowser({
           setDraft={setDraft}
           writeOne={writeOne}
           writePatch={writePatch}
+          tableIcon={currentTable?.view?.icon}
           onDelete={canDelete && selected ? () => setDlg({ kind: 'delete-record', row: selected }) : undefined}
         />
       ) : null}
