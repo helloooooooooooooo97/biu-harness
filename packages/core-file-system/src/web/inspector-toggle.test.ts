@@ -213,3 +213,13 @@ test('database inspector tab has a close control beside crumb expand', () => {
   assert.match(tab, /inspector-crumb-actions/)
   assert.match(tab, /data-testid="inspector-crumb-toggle"/)
 })
+
+test('collection header has a layout config control next to the star', () => {
+  assert.match(browser, /data-testid="fsdb-layout-toggle"/)
+  assert.match(browser, /data-testid="fsdb-layout-menu"/)
+  assert.match(browser, /data-testid="fsdb-layout-max"/)
+  assert.match(browser, /data-testid="fsdb-layout-full"/)
+  assert.match(browser, /AdjustmentsHorizontalIcon/)
+  assert.match(browser, /persistPageWidth\('full'\)/)
+  assert.match(browser, /is-full-width/)
+})

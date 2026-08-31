@@ -36,6 +36,7 @@ const CSS = `
 .fsdb-collection-name{font-size:14px;font-weight:650;color:var(--dsw-label);line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-collection-head .fsdb-footnote{margin:4px 0 0;font-size:14px;font-weight:400;line-height:1.45;color:var(--dsw-label-3);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
 .fsdb-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;gap:10px;padding:20px 24px 16px;overflow:hidden}
+.fsdb-page.is-full-width .fsdb-main,.fsdb-page.is-full-width .fsdb-detail-main{max-width:none}
 .fsdb-page:not(.inspector-database-page) .fsdb-main{padding-bottom:var(--brand-corner-clearance,60px)}
 .inspector-database-page .fsdb-main{padding-bottom:0}
 .fsdb-main > .fsdb-detail-title-row{flex:none}
@@ -43,6 +44,11 @@ const CSS = `
 .fsdb-page .tasks-toolbar-left{display:flex;align-items:center;gap:6px;flex:none;min-width:0}
 .fsdb-locked-filter{display:inline-flex;align-items:center;height:26px;padding:0 8px;border-radius:8px;background:color-mix(in srgb,var(--dsw-business) 12%,transparent);color:var(--dsw-business);font-size:13px;font-weight:650;cursor:default}
 .fsdb-page .tasks-toolbar-right{display:flex;align-items:center;gap:2px;flex:none;margin-left:auto}
+.fsdb-layout-wrap{position:relative;display:inline-flex}
+.fsdb-layout-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:40;display:flex;gap:2px;padding:4px;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.fsdb-layout-opt{display:grid;place-items:center;width:32px;height:26px;border:0;border-radius:7px;background:transparent;color:var(--dsw-label-2);cursor:pointer}
+.fsdb-layout-opt:hover{background:var(--dsw-hover);color:var(--dsw-label)}
+.fsdb-layout-opt.is-active{color:var(--dsw-business);background:color-mix(in srgb,var(--dsw-business) 10%,var(--dsw-input))}
 .fsdb-create-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:26px;margin-left:8px;padding:0 10px;border:0;border-radius:4px;background:var(--dsw-pick,#2383e2);color:#fff;cursor:pointer;font:inherit;font-size:14px;font-weight:600;white-space:nowrap}
 .fsdb-create-btn:hover{background:var(--dsw-pick,#2383e2);filter:brightness(.92)}
 .fsdb-page .tasks-search-wrap{display:inline-flex;align-items:center;gap:0;flex:none;min-width:0;padding:0;border:0;border-radius:8px;background:transparent;color:var(--dsw-label-2)}

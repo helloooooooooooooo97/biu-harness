@@ -5,6 +5,7 @@ import {
   ArrowPathIcon,
   ArrowUpIcon,
   ArrowsPointingOutIcon,
+  ArrowsPointingInIcon,
   ArrowsUpDownIcon,
   AdjustmentsHorizontalIcon,
   Bars3BottomLeftIcon,
@@ -91,6 +92,12 @@ import {
   viewsKey,
   withViewDisplay,
 } from './view-storage.ts'
+import {
+  getPageWidth,
+  getPageWidthVersion,
+  persistPageWidth,
+  subscribePageWidth,
+} from './page-width.ts'
 import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 import { mergeCatalogViews, mergeTableViews, catalogRowOpenTarget } from '../catalog-views.ts'
@@ -224,6 +231,7 @@ export function CollectionBrowser({
   const [configOpen, setConfigOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
   const [pageSizeOpen, setPageSizeOpen] = useState(false)
+  const [layoutOpen, setLayoutOpen] = useState(false)
   const [wrapCells, setWrapCells] = useState(!!initialView?.wrap)
   const [truncateCells, setTruncateCells] = useState(initialView?.truncate !== false)
   const [groupBy, setGroupBy] = useState(initialView?.groupBy ?? '')
@@ -259,6 +267,7 @@ export function CollectionBrowser({
   const configRef = useRef<HTMLDivElement>(null)
   const groupRef = useRef<HTMLDivElement>(null)
   const pageSizeRef = useRef<HTMLDivElement>(null)
+  const layoutRef = useRef<HTMLDivElement>(null)
   const pageSizeMenuRef = useRef<HTMLDivElement>(null)
   const [pageSizeMenuPos, setPageSizeMenuPos] = useState<{ right: number; bottom: number } | null>(null)
   const searchRef = useRef<HTMLDivElement>(null)
@@ -338,7 +347,8 @@ export function CollectionBrowser({
         configRef.current?.contains(target) ||
         groupRef.current?.contains(target) ||
         pageSizeRef.current?.contains(target) ||
-        pageSizeMenuRef.current?.contains(target)
+        pageSizeMenuRef.current?.contains(target) ||
+        layoutRef.current?.contains(target)
       ) {
         return
       }
@@ -351,6 +361,7 @@ export function CollectionBrowser({
       setConfigOpen(false)
       setGroupOpen(false)
       setPageSizeOpen(false)
+      setLayoutOpen(false)
     }
     document.addEventListener('mousedown', onPointer)
     return () => document.removeEventListener('mousedown', onPointer)
@@ -373,7 +384,7 @@ export function CollectionBrowser({
     if (searchOpen) searchInputRef.current?.focus()
   }, [searchOpen])
 
-  function toggleMenu(which: 'view' | 'mode' | 'sort' | 'columns' | 'filter' | 'config' | 'group' | 'pageSize') {
+  function toggleMenu(which: 'view' | 'mode' | 'sort' | 'columns' | 'filter' | 'config' | 'group' | 'pageSize' | 'layout') {
     setViewMenuOpen(which === 'view' && !viewMenuOpen)
     setModeMenuOpen(which === 'mode' && !modeMenuOpen)
     setSortMenuOpen(which === 'sort' && !sortMenuOpen)
@@ -382,6 +393,7 @@ export function CollectionBrowser({
     setConfigOpen(which === 'config' && !configOpen)
     setGroupOpen(which === 'group' && !groupOpen)
     setPageSizeOpen(which === 'pageSize' && !pageSizeOpen)
+    setLayoutOpen(which === 'layout' && !layoutOpen)
   }
 
   const reload = useCallback(async () => {
@@ -667,7 +679,9 @@ export function CollectionBrowser({
   const filterActive = Object.values(filters).some(Boolean)
   const activeView = views.find((view) => view.id === activeViewId)
   useSyncExternalStore(subscribeStarredViews, getStarredViewsVersion, () => 0)
+  useSyncExternalStore(subscribePageWidth, getPageWidthVersion, () => 0)
   const viewStarred = Boolean(activeViewId && isViewStarred(getStarredViews(), collectionPath, activeViewId))
+  const pageWidth = getPageWidth()
 
   useEffect(() => {
     hydratedDetail.current = ''
@@ -1499,7 +1513,7 @@ export function CollectionBrowser({
 
   return (
     <div
-      className={`fsdb-page tasks-root${embed ? ' inspector-database-page' : ''}`}
+      className={`fsdb-page tasks-root${embed ? ' inspector-database-page' : ''}${pageWidth === 'full' ? ' is-full-width' : ''}`}
       data-testid={embed ? 'inspector-database' : undefined}
     >
       {!embed ? (
@@ -1585,6 +1599,48 @@ export function CollectionBrowser({
                 <StarIcon aria-hidden className={`size-4${viewStarred ? ' text-[#f5b700]' : ''}`} />
               </button>
             ) : null}
+            <div className="fsdb-layout-wrap" ref={layoutRef}>
+              <button
+                type="button"
+                className={`chat-view-header-expand${layoutOpen ? ' is-active' : ''}`}
+                title="配置"
+                aria-label="配置"
+                aria-haspopup="menu"
+                aria-expanded={layoutOpen}
+                data-testid="fsdb-layout-toggle"
+                onClick={() => toggleMenu('layout')}
+              >
+                <AdjustmentsHorizontalIcon aria-hidden className="size-4" />
+              </button>
+              {layoutOpen ? (
+                <div className="fsdb-layout-menu" role="menu" data-testid="fsdb-layout-menu">
+                  <button
+                    type="button"
+                    role="menuitemradio"
+                    className={`fsdb-layout-opt${pageWidth === 'max' ? ' is-active' : ''}`}
+                    title="最大宽度"
+                    aria-label="最大宽度"
+                    aria-checked={pageWidth === 'max'}
+                    data-testid="fsdb-layout-max"
+                    onClick={() => persistPageWidth('max')}
+                  >
+                    <ArrowsPointingInIcon aria-hidden className="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitemradio"
+                    className={`fsdb-layout-opt${pageWidth === 'full' ? ' is-active' : ''}`}
+                    title="全宽"
+                    aria-label="全宽"
+                    aria-checked={pageWidth === 'full'}
+                    data-testid="fsdb-layout-full"
+                    onClick={() => persistPageWidth('full')}
+                  >
+                    <ArrowsPointingOutIcon aria-hidden className="size-4" />
+                  </button>
+                </div>
+              ) : null}
+            </div>
             <button
               type="button"
               className={`chat-view-header-expand${inspectorOpen ? ' is-active' : ''}`}
