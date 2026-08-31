@@ -189,7 +189,7 @@ flowchart TB
   Shell --- Cap
 ```
 
-- **The shell only knows slots.** `composer`, `inspector-panels`, `app-modules`, and Settings panels are `place`d by capabilities. Dashboard / Tasks / Channels in the activity bar are cap-registered modules.
+- **The shell only knows slots.** `composer`, `inspector-panels`, `app-modules`, and Settings panels are `place`d by capabilities. File System and similar pages are cap-registered modules.
 - **The agent loop is replaceable.** The `agents` handle stays; the factory can be swapped.
 - **Approval sits on the pipeline.** Sensitive tools enter a `hold` state; the approval UI docks without merging into shell logic.
 
@@ -282,8 +282,6 @@ biu-harness
     ├── core-task-system/      # Task data, heartbeat, dispatch / report + Task table
     │
     ├── cap-chat/              # Chat + trajectory / usage
-    ├── cap-dashboard/
-    ├── cap-channels/
     ├── cap-logger/
     └── cap-mascot-easter-egg/
 ```
