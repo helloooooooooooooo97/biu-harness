@@ -10,7 +10,7 @@ function canOpenCrumbMenu(crumb: Crumb) {
 
 function createKindOf(crumb: Crumb): 'view' | 'record' | null {
   if (crumb.kind === 'record') return 'record'
-  if (crumb.kind === 'collection' || crumb.kind === 'view') return 'view'
+  if (crumb.kind === 'view') return 'view'
   return null
 }
 
@@ -83,8 +83,13 @@ function CrumbMenu({
         {filtered.map((choice) => {
           const viewId = crumbs.find((item) => item.kind === 'view')?.id
           const active =
-            choice.target.kind === 'view' ? choice.target.viewId === viewId : choice.id === crumb.id
-          const glyphKind = choice.target.kind === 'view' ? 'view' : crumb.kind
+            choice.target.kind === 'view'
+              ? choice.target.viewId === viewId
+              : choice.target.kind === 'collection'
+                ? choice.target.collection === crumb.id
+                : choice.id === crumb.id
+          const glyphKind =
+            choice.target.kind === 'view' ? 'view' : choice.target.kind === 'collection' ? 'collection' : crumb.kind
           return (
             <button
               key={choice.id}
@@ -194,6 +199,11 @@ export function CrumbTrail({
                   event.stopPropagation()
                   onActivate?.()
                   if (!allowMenu) {
+                    onOpenId(null)
+                    return
+                  }
+                  if (crumb.kind === 'collection' && index < crumbs.length - 1) {
+                    onPick(crumb.target)
                     onOpenId(null)
                     return
                   }

@@ -102,12 +102,14 @@ export function buildCrumbs(input: {
     label: input.collectionLabel,
     icon: table?.icon,
     target: { kind: 'collection', collection: input.collection },
-    choices: (input.views ?? []).map((view) => ({
-      id: view.id,
-      label: view.name,
-      mode: view.mode,
-      target: { kind: 'view', collection: input.collection, viewId: view.id },
-    })),
+    choices: input.tables
+      .filter((item) => item.path && item.path !== '/')
+      .map((item) => ({
+        id: item.path,
+        label: item.label,
+        icon: item.icon,
+        target: { kind: 'collection', collection: item.path },
+      })),
   })
   if (input.viewId) {
     crumbs.push({

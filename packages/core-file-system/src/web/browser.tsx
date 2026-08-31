@@ -1474,6 +1474,11 @@ export function CollectionBrowser({
                 else addEmptyView()
               }}
               onPick={(target) => {
+                if (target.kind === 'collection') {
+                  onOpenTable?.(target.collection, undefined, { catalog: true })
+                  setCrumbOpen(null)
+                  return
+                }
                 if (target.kind === 'view' && target.collection === collectionPath) {
                   const view = views.find((item) => item.id === target.viewId)
                   if (view) selectView(view)
