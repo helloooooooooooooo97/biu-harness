@@ -369,7 +369,7 @@ export const SessionInspector = memo(function SessionInspector({
               style={{ right: plusPos.right, top: plusPos.top }}
             >
               {sessionId && sessionIdentity ? (
-                <div className="inspector-add-owner" data-testid="inspector-add-owner">
+                <div className={`inspector-add-owner${headerTabs.length ? ' has-open' : ''}`} data-testid="inspector-add-owner">
                   <SidebarMascot
                     size={22}
                     sessionId={sessionId}

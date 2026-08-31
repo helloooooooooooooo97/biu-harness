@@ -41,7 +41,8 @@ test('plus menu can add another database tab', () => {
   assert.match(inspector, /PaneLeafIcon/)
   assert.match(inspector, /createPortal/)
   assert.match(inspector, /inspector-add-menu is-fixed/)
-  assert.match(css, /\.inspector-add-owner\s*\{[^}]*border-bottom:\s*1px solid var\(--dsw-border\)/s)
+  assert.match(css, /\.inspector-add-owner\.has-open\s*\{[^}]*border-bottom:\s*1px solid var\(--dsw-border\)/s)
+  assert.match(inspector, /inspector-add-owner\$\{headerTabs\.length \? ' has-open' : ''\}/)
   assert.doesNotMatch(inspector, /添加\$\{item\.label\}/)
 })
 
