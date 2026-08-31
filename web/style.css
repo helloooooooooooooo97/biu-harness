@@ -42,7 +42,7 @@
   --dsw-chat-chip-font-size: 12px;
   --dsw-chat-gap: 12px;
   /* 与输入栏 pb-4 + .composer-pill-row 对齐，检查器底栏下沿贴胶囊上沿 */
-  --brand-corner-clearance: calc(1rem + 56px);
+  --brand-corner-clearance: 1.25rem;
   --dsw-chat-gap-turn: 24px;
   --dsw-chat-pad-x: 12px;
   --dsw-chat-pad-y: 10px;
@@ -260,22 +260,69 @@ body {
 .os-dock {
   position: fixed;
   left: 50%;
-  bottom: 12px;
+  bottom: 0;
   z-index: 90;
+  width: 0;
+  height: 0;
   transform: translateX(-50%);
   pointer-events: none;
 }
 
+.os-dock-edge {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 90;
+  height: 10px;
+  pointer-events: auto;
+}
+
+.os-dock-peek {
+  position: fixed;
+  left: 50%;
+  bottom: 6px;
+  z-index: 91;
+  width: 72px;
+  height: 5px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #3a3a3c;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+  opacity: 1;
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+.os-dock.is-open .os-dock-peek {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+  pointer-events: none;
+}
+
 .os-dock-shelf {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  z-index: 92;
   display: flex;
   align-items: flex-end;
   gap: 6px;
-  pointer-events: auto;
   padding: 4px 10px 8px;
   border-radius: 16px;
   background: #202020;
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(18px);
+  transform: translateX(-50%) translateY(calc(100% + 20px));
+  pointer-events: none;
+  opacity: 0;
+  transition: transform .2s ease, opacity .16s ease;
+}
+
+.os-dock.is-open .os-dock-shelf {
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+  opacity: 1;
 }
 
 .os-dock-sep {
@@ -350,7 +397,7 @@ body {
 .os-dock-update-toast {
   position: fixed;
   left: 50%;
-  bottom: 64px;
+  bottom: 22px;
   z-index: 91;
   transform: translateX(-50%);
   max-width: min(280px, calc(100vw - 32px));

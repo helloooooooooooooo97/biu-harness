@@ -1,6 +1,8 @@
-import { useSyncExternalStore, type ReactNode } from 'react'
+import { useCallback, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import type { SlotProps } from '@biu/type-slots'
 import type { DockApp, DockService } from './service.ts'
+
+const HIDE_MS = 280
 
 function DockTile({ app, dock }: { app: DockApp; dock: DockService }) {
   const Tile = app.Tile as (() => ReactNode) | undefined
@@ -54,9 +56,32 @@ export function OsDock(props: SlotProps) {
   )
   const pinned = apps.filter((app) => app.group === 'pinned')
   const running = apps.filter((app) => app.group === 'running')
+  const [open, setOpen] = useState(false)
+  const hideTimer = useRef(0)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const show = useCallback(() => {
+    window.clearTimeout(hideTimer.current)
+    setOpen(true)
+  }, [])
+  const hideSoon = useCallback((event?: { relatedTarget: EventTarget | null }) => {
+    const next = event?.relatedTarget
+    if (next instanceof Node && rootRef.current?.contains(next)) return
+    window.clearTimeout(hideTimer.current)
+    hideTimer.current = window.setTimeout(() => setOpen(false), HIDE_MS)
+  }, [])
   if (!apps.length) return null
   return (
-    <div className="os-dock" data-os-dock>
+    <div
+      ref={rootRef}
+      className={`os-dock${open ? ' is-open' : ''}`}
+      data-os-dock
+      onMouseEnter={show}
+      onMouseLeave={(event) => hideSoon(event)}
+      onFocusCapture={show}
+      onBlurCapture={(event) => hideSoon(event)}
+    >
+      <div className="os-dock-edge" aria-hidden />
+      <div className="os-dock-peek" aria-hidden />
       <div className="os-dock-shelf">
         {pinned.map((app) => (
           <DockTile key={app.id} app={app} dock={dock} />
