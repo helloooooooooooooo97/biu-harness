@@ -5,7 +5,7 @@ import * as slots from '@biu/web-slots'
 import * as dock from '@biu/core-dock'
 import * as pickUi from './index.tsx'
 
-test('places header toggle, overlay and a dock pick tile', async () => {
+test('places overlay and a dock pick tile, not a header toggle', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
   await ctx.plugin(dock)
@@ -17,7 +17,7 @@ test('places header toggle, overlay and a dock pick tile', async () => {
   })
   await ctx.plugin(pickUi)
   assert.ok(ctx.pick)
-  assert.equal(ctx.slots.list('header-tools').some((item) => item.id === 'pick-toggle'), true)
+  assert.equal(ctx.slots.list('header-tools').some((item) => item.id === 'pick-toggle'), false)
   assert.equal(ctx.slots.list('root-overlays').some((item) => item.id === 'pick-overlay'), true)
   assert.equal(ctx.dock.list().some((item) => item.id === 'pick'), true)
 })
