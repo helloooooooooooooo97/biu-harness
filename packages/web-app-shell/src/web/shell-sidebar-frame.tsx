@@ -2,9 +2,6 @@ import { memo, useEffect, useRef, type ReactNode } from 'react'
 import { ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from '@heroicons/react/16/solid'
 import { chromeIcon } from './chrome-icon.ts'
 
-export const SIDEBAR_BRAND_GRADIENT =
-  'linear-gradient(105deg, color-mix(in srgb, #0066B0 42%, var(--dsw-hover)), color-mix(in srgb, #5B3E90 40%, var(--dsw-hover)) 52%, color-mix(in srgb, #E22726 42%, var(--dsw-hover)))'
-
 export type ShellSidebarFrameProps = {
   visible: boolean
   narrow?: boolean
@@ -69,12 +66,7 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
         />
       ) : null}
       <div className="app-side-bar-head app-side-bar-head-brand">
-        <span
-          className="inline-flex min-w-0 max-w-full items-center truncate rounded-md px-2 py-0.5 text-[14px] font-semibold tracking-wide text-white"
-          style={{ background: SIDEBAR_BRAND_GRADIENT }}
-        >
-          Biu Agent OS
-        </span>
+        <span className="app-side-bar-brand-title">Biu Agent OS</span>
         {narrow ? (
           <button
             type="button"

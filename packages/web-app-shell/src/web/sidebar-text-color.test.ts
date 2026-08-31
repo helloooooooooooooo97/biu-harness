@@ -19,6 +19,16 @@ describe('sidebar text colors', () => {
     expect(css).toMatch(/\.app-side-bar\.is-narrow \.app-side-bar-head-brand\s*\{[^}]*justify-content:\s*center/s)
   })
 
+  it('bleeds the brand wash into the sidebar instead of a hard chip', () => {
+    const frame = readFileSync(resolve(import.meta.dirname, './shell-sidebar-frame.tsx'), 'utf8')
+    expect(frame).toMatch(/app-side-bar-brand-title/)
+    expect(frame).not.toMatch(/SIDEBAR_BRAND_GRADIENT/)
+    expect(frame).not.toMatch(/rounded-md/)
+    expect(css).toMatch(/\.app-side-bar:has\(\.app-side-bar-head-brand\)::before/)
+    expect(css).toMatch(/filter:\s*blur\(42px\)/)
+    expect(css).toMatch(/\.app-side-bar-brand-title\s*\{[^}]*color:\s*var\(--dsw-sidebar-fg-active\)/s)
+  })
+
   it('session rows do not start a native drag ghost', () => {
     const sidebar = readFileSync(resolve(import.meta.dirname, './chat-sidebar.tsx'), 'utf8')
     expect(sidebar).toMatch(/draggable=\{false\}/)

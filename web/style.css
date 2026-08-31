@@ -325,6 +325,42 @@ body {
   padding-right: 8px;
 }
 
+/* 品牌色像光晕渗进侧栏顶，不要胶囊硬边 */
+.app-side-bar:has(.app-side-bar-head-brand)::before {
+  content: '';
+  position: absolute;
+  left: 6%;
+  top: -40px;
+  z-index: 0;
+  width: 88%;
+  height: 148px;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 58% 72% at 18% 42%, color-mix(in srgb, #0066B0 58%, transparent), transparent 72%),
+    radial-gradient(ellipse 52% 68% at 48% 22%, color-mix(in srgb, #5B3E90 50%, transparent), transparent 74%),
+    radial-gradient(ellipse 48% 64% at 82% 46%, color-mix(in srgb, #E22726 38%, transparent), transparent 72%);
+  filter: blur(42px);
+  opacity: 0.5;
+}
+
+.app-side-bar.is-narrow:has(.app-side-bar-head-brand)::before {
+  height: 120px;
+  opacity: 0.32;
+}
+
+.app-side-bar-brand-title {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--dsw-sidebar-fg-active);
+  text-shadow: 0 0 32px color-mix(in srgb, #5B3E90 28%, transparent);
+}
+
 .app-side-bar-head-brand .chat-view-header-expand {
   position: absolute;
   right: 8px;

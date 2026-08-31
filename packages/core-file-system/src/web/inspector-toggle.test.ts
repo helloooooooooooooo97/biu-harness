@@ -9,6 +9,8 @@ const detail = readFileSync(resolve(import.meta.dirname, './record-detail.tsx'),
 test('data sidebar brand sits left with a collapse control on the right', () => {
   const sidebar = readFileSync(resolve(import.meta.dirname, './data-sidebar.tsx'), 'utf8')
   assert.match(sidebar, /app-side-bar-head-brand/)
+  assert.match(sidebar, /app-side-bar-brand-title/)
+  assert.doesNotMatch(sidebar, /SIDEBAR_BRAND_GRADIENT/)
   assert.match(sidebar, /data-testid="sidebar-collapse"/)
   assert.doesNotMatch(sidebar, /SidebarBrandMascot/)
   assert.match(browser, /onCollapse=\{toggleViewsOpen\}/)
