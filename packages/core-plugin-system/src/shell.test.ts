@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { WIN_CHROME_H, centeredGeom, parseStoreShell, windowOuterSize } from './shell.ts'
+import { WIN_CHROME_H, centeredGeom, declaredStoreShell, parseStoreShell, windowOuterSize } from './shell.ts'
 
 test('parseStoreShell defaults and clamps declared content size', () => {
   const d = parseStoreShell(undefined)
@@ -32,4 +32,11 @@ test('centeredGeom keeps the window on screen', () => {
   assert.equal(geom.h, 400 + WIN_CHROME_H)
   assert.ok(geom.x >= 16)
   assert.ok(geom.y >= 16)
+})
+
+test('declaredStoreShell is true only when width and height are set', () => {
+  assert.equal(declaredStoreShell(undefined), false)
+  assert.equal(declaredStoreShell({}), false)
+  assert.equal(declaredStoreShell({ width: 640 }), false)
+  assert.equal(declaredStoreShell({ width: 640, height: 480 }), true)
 })

@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { Context } from 'cordis'
 import type { PluginStoreService } from './store.ts'
-import { parseStoreShell, type StoreShell } from '../shell.ts'
+import { declaredStoreShell, parseStoreShell, requireDeclaredShell, type StoreShell } from '../shell.ts'
 
 export type PluginCreateInput = {
   id: string
@@ -25,7 +25,7 @@ export type StoreManifestFields = {
   author: string
   authorUrl: string
   createdAt: number
-  shell: StoreShell
+  shell?: StoreShell
 }
 
 export function parseTags(value: unknown): string[] {
@@ -51,7 +51,9 @@ export function buildStoreManifest(
     author: String(input.author ?? existing?.author ?? '').trim(),
     authorUrl: String(input.authorUrl ?? existing?.authorUrl ?? '').trim(),
     createdAt: Number.isFinite(createdAt) && createdAt > 0 ? createdAt : now,
-    shell: parseStoreShell(input.shell ?? existing?.shell),
+    ...(declaredStoreShell(input.shell ?? existing?.shell)
+      ? { shell: parseStoreShell(input.shell ?? existing?.shell) }
+      : {}),
   }
 }
 
@@ -137,7 +139,7 @@ export async function readSandboxManifest(dir: string) {
 const CONTRACT = [
   '契约：id 与 export const name 相同。禁止 import npm / react / @biu/*。不要改 packages/ 或 cordis.plugins.json。',
   'host 与 web 按需，至少一侧。Web：ctx.slots.place("plugin-store-extras", Comp, { key })。运行窗口会给 extras 套 macOS 窗口框（关/缩/全屏），key 尽量用插件 id。',
-  '有 UI 时在 manifest.shell 声明内容区像素：{ width, height, minWidth?, minHeight?, resizable? }。窗口按这个尺寸打开，插件根节点铺满窗口，不要用 100vw 或测量 DOM 撑开外壳。缺省 480×360。',
+  '有 web 时必须显式写 shell.width 与 shell.height（内容区像素，不含标题栏）。可选 minWidth / minHeight / resizable。禁止省略让窗口猜尺寸。插件根节点铺满窗口，不要用 100vw。',
 ].join(' ')
 
 const PLUGIN_CREATE_DESCRIPTION = [
@@ -155,7 +157,7 @@ const PLUGIN_SANDBOX_DESCRIPTION = [
 
 const PLUGIN_PACK_DESCRIPTION = [
   '把 .plugin-dev/<id>/ 沙箱打包进 .plugin/<id>/（manifest.json + bundle 后的 host.js / web.js）。',
-  '入口：host.ts|tsx|js 与 web.tsx|ts|js，至少要有一个。已打开的插件会重新挂上。',
+  '入口：host.ts|tsx|js 与 web.tsx|ts|js，至少要有一个。有 web 时 manifest.shell 必须已写 width/height，否则拒绝打包。已打开的插件会重新挂上。',
 ].join(' ')
 
 function createArgs(args: Record<string, unknown>): PluginCreateInput {
@@ -188,14 +190,15 @@ const ID_NAME_BLURB = {
   authorUrl: { type: 'string', description: '作者主页 / 仓库链接' },
   shell: {
     type: 'object',
-    description: '运行窗口内容区尺寸（像素，不含标题栏）。缺省 480×360。',
+    description: '有 web 时必填。运行窗口内容区像素（不含标题栏）。必须给 width 和 height。',
     properties: {
-      width: { type: 'number', description: '内容区宽' },
-      height: { type: 'number', description: '内容区高' },
+      width: { type: 'number', description: '内容区宽，必填' },
+      height: { type: 'number', description: '内容区高，必填' },
       minWidth: { type: 'number' },
       minHeight: { type: 'number' },
       resizable: { type: 'boolean', description: 'false 则锁死尺寸，适合固定画布' },
     },
+    required: ['width', 'height'],
   },
 }
 
@@ -254,4 +257,4 @@ export function registerPluginCreate(ctx: Context, store: PluginStoreService) {
   })
 }
 
-export { HOST_ENTRIES, WEB_ENTRIES }
+export { HOST_ENTRIES, WEB_ENTRIES, requireDeclaredShell, declaredStoreShell }

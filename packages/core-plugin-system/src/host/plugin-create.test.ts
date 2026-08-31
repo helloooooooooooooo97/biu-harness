@@ -88,6 +88,54 @@ test('create writes manifest.shell from input', async () => {
   }
 })
 
+test('create with web rejects missing shell size', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'plugin-shell-required-'))
+  try {
+    const ctx = new Context()
+    stubHub(ctx)
+    const store = new PluginStoreService(
+      ctx,
+      join(dir, '.plugin'),
+      join(dir, 'store.json'),
+      join(dir, '.plugin-dev'),
+    ).open()
+    await assert.rejects(
+      () =>
+        store.create({
+          id: 'store-game',
+          name: 'Game',
+          webJs: `export const name = 'store-game'\nexport function apply() {}`,
+        }),
+      /shell\.width and shell\.height/,
+    )
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('pack with web rejects sandbox manifest without shell size', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'plugin-pack-shell-'))
+  try {
+    const ctx = new Context()
+    stubHub(ctx)
+    const store = new PluginStoreService(
+      ctx,
+      join(dir, '.plugin'),
+      join(dir, 'store.json'),
+      join(dir, '.plugin-dev'),
+    ).open()
+    await store.initSandbox({ id: 'store-ui', name: 'UI' })
+    const sandbox = join(dir, '.plugin-dev', 'store-ui')
+    await writeFile(
+      join(sandbox, 'web.tsx'),
+      `export const name = 'store-ui'\nexport function apply() {}\n`,
+    )
+    await assert.rejects(() => store.pack('store-ui'), /shell\.width and shell\.height/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
 test('initSandbox writes source; pack bundles into .plugin/<id>/', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'plugin-create-'))
   try {

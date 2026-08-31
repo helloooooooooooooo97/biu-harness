@@ -11,13 +11,12 @@ import {
   findEntry,
   HOST_ENTRIES,
   parseStoreManifest,
-  readSandboxManifest,
   registerPluginCreate,
   WEB_ENTRIES,
   type PluginCreateInput,
   type StoreManifestFields,
 } from './plugin-create.ts'
-import type { StoreShell } from '../shell.ts'
+import { parseStoreShell, requireDeclaredShell, type StoreShell } from '../shell.ts'
 
 export type StoreListing = {
   id: string
@@ -212,6 +211,7 @@ export class PluginStoreService extends Service {
     const hostJs = String(input.hostJs ?? '').trim()
     const webSrc = input.webJs != null ? String(input.webJs).trim() : ''
     if (!hostJs && !webSrc) throw new Error('plugin_create needs hostJs and/or webJs')
+    requireDeclaredShell(input.shell, Boolean(webSrc), 'plugin_create')
     this.invalidateList()
     const dest = this.pluginPath(id)
     mkdirSync(dest, { recursive: true })
@@ -234,11 +234,13 @@ export class PluginStoreService extends Service {
     if (!name) throw new Error('plugin name required')
     const dest = this.sandboxPath(id)
     mkdirSync(dest, { recursive: true })
+    const hostJs = String(input.hostJs ?? '').trim()
+    const webSrc = input.webJs != null ? String(input.webJs).trim() : ''
+    const hasWeb = Boolean(webSrc) || Boolean(findEntry(dest, WEB_ENTRIES))
+    requireDeclaredShell(input.shell, hasWeb, 'plugin_sandbox')
     const existing = existsSync(join(dest, 'manifest.json')) ? await readManifest(dest).catch(() => undefined) : undefined
     const manifest = buildStoreManifest(input, existing)
     await writeFile(join(dest, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
-    const hostJs = String(input.hostJs ?? '').trim()
-    const webSrc = input.webJs != null ? String(input.webJs).trim() : ''
     if (hostJs) await writeFile(join(dest, 'host.ts'), hostJs.endsWith('\n') ? hostJs : `${hostJs}\n`)
     if (webSrc) await writeFile(join(dest, 'web.tsx'), webSrc.endsWith('\n') ? webSrc : `${webSrc}\n`)
     return { id, sandboxPath: dest }
@@ -249,10 +251,16 @@ export class PluginStoreService extends Service {
     if (!isSafeId(id)) throw new Error(`invalid plugin id: ${id}`)
     const sandbox = this.sandboxPath(id)
     if (!existsSync(join(sandbox, 'manifest.json'))) throw new Error(`sandbox not found: ${sandbox}`)
-    const manifest = await readSandboxManifest(sandbox)
+    const raw = JSON.parse(await readFile(join(sandbox, 'manifest.json'), 'utf8')) as unknown
+    const manifest = parseStoreManifest(raw)
     const hostEntry = findEntry(sandbox, HOST_ENTRIES)
     const webEntry = findEntry(sandbox, WEB_ENTRIES)
     if (!hostEntry && !webEntry) throw new Error('sandbox needs host.ts/js or web.tsx/ts/js')
+    requireDeclaredShell(
+      raw && typeof raw === 'object' ? (raw as { shell?: unknown }).shell : undefined,
+      Boolean(webEntry),
+      'plugin_pack',
+    )
     this.invalidateList()
     const dest = this.pluginPath(manifest.id)
     mkdirSync(dest, { recursive: true })
@@ -292,6 +300,7 @@ export class PluginStoreService extends Service {
         lastRunAt: this.state.lastRunAt[manifest.id] ?? null,
         hasHost: stats.hasHost,
         hasWeb: stats.hasWeb,
+        shell: parseStoreShell(manifest.shell),
       })
     }
     this.listCache = items
