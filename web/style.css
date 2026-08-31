@@ -640,7 +640,7 @@ body {
   max-width: none;
   min-width: max-content;
   overflow: visible;
-  padding-right: 18px;
+  padding-right: 4px;
 }
 
 .inspector-crumb-tab .inspector-crumb-full .fsdb-crumb:not(:last-child) {
@@ -659,10 +659,15 @@ body {
   display: inline;
 }
 
-.inspector-crumb-toggle {
-  position: absolute;
-  right: 2px;
-  top: 50%;
+.inspector-crumb-actions {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  margin-left: 2px;
+}
+
+.inspector-crumb-toggle,
+.inspector-crumb-close {
   z-index: 4;
   display: grid;
   place-items: center;
@@ -671,26 +676,29 @@ body {
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 0;
+  border-radius: 4px;
   background: transparent;
   box-shadow: none;
   color: var(--dsw-sidebar-fg);
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-50%);
   cursor: pointer;
 }
 
 .inspector-crumb-tab:hover .inspector-crumb-toggle,
+.inspector-crumb-tab:hover .inspector-crumb-close,
 .inspector-crumb-tab.is-crumb-open .inspector-crumb-toggle,
-.inspector-crumb-tab:focus-within .inspector-crumb-toggle {
+.inspector-crumb-tab.is-crumb-open .inspector-crumb-close,
+.inspector-crumb-tab:focus-within .inspector-crumb-toggle,
+.inspector-crumb-tab:focus-within .inspector-crumb-close {
   opacity: 1;
   pointer-events: auto;
 }
 
 .inspector-crumb-toggle:hover,
-.inspector-crumb-toggle.is-open {
-  background: transparent;
+.inspector-crumb-toggle.is-open,
+.inspector-crumb-close:hover {
+  background: var(--dsw-hover);
   box-shadow: none;
   color: var(--dsw-sidebar-fg-active);
 }
@@ -939,7 +947,7 @@ body {
   color: inherit;
 }
 
-.inspector-add-trash {
+.inspector-add-close {
   display: inline-flex;
   align-items: center;
   justify-content: center;

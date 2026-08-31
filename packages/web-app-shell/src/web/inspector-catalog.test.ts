@@ -35,7 +35,9 @@ test('plus menu can add another database tab', () => {
   assert.match(inspector, /paneId=\{item.id\}/)
   assert.match(inspector, /paneId=\{extraActive.id\}/)
   assert.doesNotMatch(inspector, /displayTabs.find\(\(item\) => item.id === tab\)/)
-  assert.match(inspector, /inspector-add-trash/)
+  assert.match(inspector, /inspector-add-close/)
+  assert.match(inspector, /XMarkIcon/)
+  assert.match(inspector, /onClose=\{\(\) => closeOpenedTab\(item.id\)\}/)
   assert.match(inspector, /closeOpenedTab/)
   assert.match(inspector, /inspector-tab-remove-\$\{item.id\}/)
   assert.doesNotMatch(inspector, /item\.repeatable \? \(/)
@@ -46,6 +48,8 @@ test('plus menu can add another database tab', () => {
   assert.match(css, /\.inspector-add-owner\.has-open\s*\{[^}]*border-bottom:\s*1px solid var\(--dsw-border\)/s)
   assert.match(inspector, /inspector-add-owner\$\{headerTabs\.length \? ' has-open' : ''\}/)
   assert.doesNotMatch(inspector, /添加\$\{item\.label\}/)
+  assert.match(css, /\.inspector-crumb-close/)
+  assert.match(css, /\.inspector-add-close/)
 })
 
 test('inspector header tabs sit on the same vertical center as the main header', () => {

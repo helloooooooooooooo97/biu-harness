@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentType } from 'react'
-import { ChevronLeftIcon, ChevronRightIcon, CircleStackIcon } from '@heroicons/react/16/solid'
+import { ChevronLeftIcon, ChevronRightIcon, CircleStackIcon, XMarkIcon } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/type-slots'
 import type { CollectionInfo } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
@@ -162,11 +162,13 @@ function goInspector(paneId: string, target: CrumbTarget) {
 export function DatabaseInspectorTab({
   active,
   onActivate,
+  onClose,
   paneId,
   seedCollection,
 }: {
   active?: boolean
   onActivate?: () => void
+  onClose?: () => void
   paneId?: string
   seedCollection?: string
 }) {
@@ -243,31 +245,49 @@ export function DatabaseInspectorTab({
           <span className="chat-view-project-name">数据</span>
         </span>
       )}
-      {crumbs.length > 1 ? (
-        <button
-          type="button"
-          className={`inspector-crumb-toggle${trailOpen ? ' is-open' : ''}`}
-          title={trailOpen ? '收起面包屑' : '展开面包屑'}
-          aria-label={trailOpen ? '收起面包屑' : '展开面包屑'}
-          aria-expanded={trailOpen}
-          data-testid="inspector-crumb-toggle"
-          onClick={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            onActivate?.()
-            setTrailOpen((open) => {
-              if (open) setCrumbOpen(null)
-              return !open
-            })
-          }}
-        >
-          {trailOpen ? (
-            <ChevronLeftIcon aria-hidden className="size-3" />
-          ) : (
-            <ChevronRightIcon aria-hidden className="size-3" />
-          )}
-        </button>
-      ) : null}
+      <span className="inspector-crumb-actions">
+        {crumbs.length > 1 ? (
+          <button
+            type="button"
+            className={`inspector-crumb-toggle${trailOpen ? ' is-open' : ''}`}
+            title={trailOpen ? '收起面包屑' : '展开面包屑'}
+            aria-label={trailOpen ? '收起面包屑' : '展开面包屑'}
+            aria-expanded={trailOpen}
+            data-testid="inspector-crumb-toggle"
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              onActivate?.()
+              setTrailOpen((open) => {
+                if (open) setCrumbOpen(null)
+                return !open
+              })
+            }}
+          >
+            {trailOpen ? (
+              <ChevronLeftIcon aria-hidden className="size-3" />
+            ) : (
+              <ChevronRightIcon aria-hidden className="size-3" />
+            )}
+          </button>
+        ) : null}
+        {onClose ? (
+          <button
+            type="button"
+            className="inspector-crumb-close"
+            title="关闭"
+            aria-label="关闭此栏"
+            data-testid="inspector-tab-close"
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              onClose()
+            }}
+          >
+            <XMarkIcon aria-hidden className="size-3" />
+          </button>
+        ) : null}
+      </span>
     </div>
   )
 }
