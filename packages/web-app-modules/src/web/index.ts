@@ -6,7 +6,7 @@ function normalizePath(pathname: string) {
   return pathname.replace(/\/+$/, '') || '/'
 }
 
-/** 壳只内置 Agent。其它页面（Dashboard / Tasks / Channels…）由插件 register。 */
+/** 壳只内置 Agent。其它页面由插件 register。 */
 export type AppModule = {
   id: string
   label: string

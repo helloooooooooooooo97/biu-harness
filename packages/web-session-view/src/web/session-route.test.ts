@@ -11,9 +11,8 @@ import {
 import type { AppModule } from '@biu/web-app-modules'
 
 const plugins: AppModule[] = [
-  { id: 'dashboard', label: 'Dashboard', path: '/dashboard' },
   { id: 'tasks', label: 'Tasks', path: '/tasks' },
-  { id: 'channels', label: '频道', path: '/channels' },
+  { id: 'extra', label: 'Extra', path: '/extra' },
   { id: 'database', label: '数据', path: '/database' },
 ]
 
@@ -25,17 +24,12 @@ test('parseAppPath covers home, session, and registered plugin modules', () => {
     sessionId: 'abc',
     view: 'debug',
   })
-  assert.deepEqual(parseAppPath('/dashboard', plugins), {
+  assert.deepEqual(parseAppPath('/extra', plugins), {
     kind: 'module',
-    moduleId: 'dashboard',
-    path: '/dashboard',
+    moduleId: 'extra',
+    path: '/extra',
   })
   assert.deepEqual(parseAppPath('/tasks', plugins), { kind: 'module', moduleId: 'tasks', path: '/tasks' })
-  assert.deepEqual(parseAppPath('/channels', plugins), {
-    kind: 'module',
-    moduleId: 'channels',
-    path: '/channels',
-  })
   assert.deepEqual(parseAppPath('/unknown'), { kind: 'home' })
   assert.deepEqual(parseAppPath('/tasks'), { kind: 'home' })
   assert.deepEqual(parseAppPath('/database', plugins), { kind: 'module', moduleId: 'database', path: '/database' })
@@ -96,10 +90,9 @@ test('database nested routes identify view vs record without touching /s/:id', (
 
 test('isKnownAppPath only accepts builtins plus registered plugin paths', () => {
   assert.equal(isKnownAppPath('/'), true)
-  assert.equal(isKnownAppPath('/dashboard'), false)
-  assert.equal(isKnownAppPath('/dashboard', plugins), true)
+  assert.equal(isKnownAppPath('/extra'), false)
+  assert.equal(isKnownAppPath('/extra', plugins), true)
   assert.equal(isKnownAppPath('/tasks', plugins), true)
-  assert.equal(isKnownAppPath('/channels', plugins), true)
   assert.equal(isKnownAppPath('/workspace'), false)
   assert.equal(isKnownAppPath('/s/abc'), true)
   assert.equal(isKnownAppPath('/unknown'), false)
@@ -111,7 +104,7 @@ test('buildAppPath round-trips with parseAppPath', () => {
     { kind: 'home' as const },
     { kind: 'session' as const, sessionId: 's1', view: 'chat' as const },
     { kind: 'session' as const, sessionId: 's1', view: 'debug' as const },
-    { kind: 'module' as const, moduleId: 'dashboard' as const, path: '/dashboard' },
+    { kind: 'module' as const, moduleId: 'extra' as const, path: '/extra' },
     { kind: 'module' as const, moduleId: 'tasks' as const, path: '/tasks' },
     {
       kind: 'collection-view' as const,
@@ -137,7 +130,7 @@ test('centerKindFromRoute follows the center pane', () => {
   assert.equal(centerKindFromRoute({ kind: 'home' }), 'session')
   assert.equal(centerKindFromRoute({ kind: 'session', sessionId: 'a', view: 'chat' }), 'session')
   assert.equal(centerKindFromRoute({ kind: 'module', moduleId: 'tasks', path: '/tasks' }), 'task')
-  assert.equal(centerKindFromRoute({ kind: 'module', moduleId: 'dashboard', path: '/dashboard' }), 'module')
+  assert.equal(centerKindFromRoute({ kind: 'module', moduleId: 'extra', path: '/extra' }), 'module')
   assert.equal(
     centerKindFromRoute({
       kind: 'collection-view',

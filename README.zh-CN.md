@@ -181,7 +181,7 @@ flowchart TB
   Shell --- Cap
 ```
 
-- **壳只依赖插槽。** `composer`、`inspector-panels`、`app-modules`、Settings 各栏由能力自己 `place`。Activity Bar 里的 Dashboard / Tasks / Channels 都是 cap 注册的模块。
+- **壳只依赖插槽。** `composer`、`inspector-panels`、`app-modules`、Settings 各栏由能力自己 `place`。File System 等页面是 cap 注册的模块。
 - **Agent loop 可替换。** `agents` 句柄不变，factory 可换。
 - **审批位于管线上。** 敏感 tool 进入 hold 状态，审批 UI 停靠在 dock，不并入壳逻辑。
 
@@ -274,8 +274,6 @@ biu-harness
     ├── core-task-system/      # 任务数据、心跳、派工 / 汇报 + 任务表
     │
     ├── cap-chat/              # 对话 + 轨迹 / 用量
-    ├── cap-dashboard/
-    ├── cap-channels/
     ├── cap-logger/
     └── cap-mascot-easter-egg/
 ```
