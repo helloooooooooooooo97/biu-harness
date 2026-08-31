@@ -151,6 +151,14 @@ test('overlay starts closed', () => {
   setChatOverlay(false)
 })
 
+test('pick-attached only opens; closing stays closed even if chips remain', () => {
+  setChatOverlay(false)
+  window.dispatchEvent(new Event('biu:pick-attached'))
+  assert.equal(getChatOverlay(), true)
+  closeChatOverlay()
+  assert.equal(getChatOverlay(), false)
+})
+
 test('pick opens a compose-only overlay; send reveals the thread', () => {
   setChatOverlay(false)
   openOverlayComposer({ revealThread: false })

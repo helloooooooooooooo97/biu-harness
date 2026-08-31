@@ -72,12 +72,15 @@ export class PickService extends Service {
       this.bump()
       return
     }
+    const before = this.refs.length
     this.refs = dedupePicks([...this.refs, ...refs])
     this.hover = null
     this.marquee = null
     this.marqueeHits = []
     this.bump()
-    if (typeof window !== 'undefined') window.dispatchEvent(new Event('biu:pick-attached'))
+    if (this.refs.length > before && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('biu:pick-attached'))
+    }
   }
 
   removeLast() {
