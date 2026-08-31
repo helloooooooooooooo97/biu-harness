@@ -274,7 +274,7 @@ body {
   right: 0;
   bottom: 0;
   z-index: 90;
-  height: 10px;
+  height: 14px;
   pointer-events: auto;
 }
 
@@ -300,16 +300,21 @@ body {
   pointer-events: none;
 }
 
+.os-dock.is-open .os-dock-edge {
+  height: 28px;
+}
+
 .os-dock-shelf {
   position: fixed;
   left: 50%;
-  bottom: 12px;
+  bottom: 0;
   z-index: 92;
   display: flex;
-  align-items: flex-end;
-  gap: 6px;
-  padding: 4px 10px 8px;
-  border-radius: 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 8px 14px 0;
+  border-radius: 20px 20px 0 0;
   background: rgba(255, 255, 255, 0.1);
   box-shadow: 0 1px 2px rgba(15, 15, 15, 0.04), 0 10px 32px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(16px) saturate(1.2);
@@ -320,6 +325,20 @@ body {
   transition: transform .2s ease, opacity .16s ease;
 }
 
+.os-dock-shelf-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding-bottom: 10px;
+}
+
+.os-dock-below {
+  width: 100%;
+  height: 16px;
+  flex: none;
+  pointer-events: auto;
+}
+
 .os-dock.is-open .os-dock-shelf {
   transform: translateX(-50%) translateY(0);
   pointer-events: auto;
@@ -328,8 +347,8 @@ body {
 
 .os-dock-sep {
   width: 1px;
-  height: 22px;
-  margin: 0 2px 6px;
+  height: 28px;
+  margin: 0 4px 8px;
   background: rgba(255, 255, 255, 0.18);
 }
 
@@ -351,7 +370,7 @@ body {
 .os-dock-item:hover,
 .os-dock-item:focus-visible {
   z-index: 2;
-  transform: translateY(-4px) scale(1.24);
+  transform: translateY(-4px) scale(1.18);
 }
 
 .os-dock-item:active {
@@ -373,19 +392,24 @@ body {
 .os-dock-tile {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
   color: #f0efed;
+}
+
+.os-dock-tile svg {
+  width: 26px !important;
+  height: 26px !important;
 }
 
 .os-dock-fallback {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   background: #3a3a3c;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -450,8 +474,8 @@ body {
 }
 
 .os-dock .brand-corner-mascot-btn {
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
 }
 
 .brand-corner-cluster {

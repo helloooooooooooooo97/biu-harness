@@ -79,6 +79,10 @@ export function OsDock(props: SlotProps) {
     window.clearTimeout(hideTimer.current)
     hideTimer.current = window.setTimeout(() => {
       if (pointerOver.current) return
+      if (typeof y === 'number' && y >= window.innerHeight - 32) {
+        pointerOver.current = true
+        return
+      }
       if (typeof x === 'number' && typeof y === 'number') {
         const hit = document.elementFromPoint(x, y)
         if (hit?.closest('[data-os-dock]')) {
@@ -108,14 +112,17 @@ export function OsDock(props: SlotProps) {
       <div className="os-dock-edge" aria-hidden />
       <div className="os-dock-peek" aria-hidden />
       <div className="os-dock-shelf">
-        {sections.map((section, index) => (
-          <Fragment key={section.group}>
-            {index > 0 ? <span className="os-dock-sep" aria-hidden /> : null}
-            {section.apps.map((app) => (
-              <DockTile key={app.id} app={app} dock={dock} />
-            ))}
-          </Fragment>
-        ))}
+        <div className="os-dock-shelf-row">
+          {sections.map((section, index) => (
+            <Fragment key={section.group}>
+              {index > 0 ? <span className="os-dock-sep" aria-hidden /> : null}
+              {section.apps.map((app) => (
+                <DockTile key={app.id} app={app} dock={dock} />
+              ))}
+            </Fragment>
+          ))}
+        </div>
+        <div className="os-dock-below" aria-hidden />
       </div>
     </div>
   )
