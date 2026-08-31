@@ -1990,12 +1990,6 @@ body {
   gap: 4px;
 }
 
-.dock-agent-stack .brand-agent-menu {
-  left: 0;
-  right: auto;
-  bottom: calc(100% + 8px);
-}
-
 .dock-session-mascot,
 .dock-worker-mascot {
   display: inline-flex;

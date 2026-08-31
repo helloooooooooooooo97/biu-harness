@@ -30,17 +30,16 @@ describe('composer dock stacking above sticky user', () => {
     expect(composer).toContain('biu:composer-focus')
   })
 
-  it('opens the dock agent menu on hover without waking the overlay', () => {
+  it('wakes the overlay composer on dock mascot hover, without an agent list', () => {
     const approvals = readFileSync(resolve(root, 'packages/cap-chat/src/web/approvals.tsx'), 'utf8')
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const shell = readFileSync(resolve(root, 'packages/web-app-shell/src/web/index.tsx'), 'utf8')
-    expect(approvals).toMatch(/onMouseEnter=\{\(\) => \{\s*setSessionPickerOpen\(true\)/)
-    expect(approvals).toMatch(/onMouseLeave=\{\(event\) => \{/)
-    expect(approvals).toContain("void sessionView.load(id, { view: 'chat' })")
-    expect(approvals).not.toContain('shouldNavigateToSession')
-    expect(shell).toMatch(/hit\.closest\('\.dock-agent-stack'\)/)
-    expect(css).toMatch(/\.chat-overlay-panel\.is-autohide \{\s*[^}]*overflow:\s*visible/)
+    expect(approvals).toContain('dock-session-mascot')
+    expect(approvals).not.toContain('BrandAgentMenu')
+    expect(approvals).not.toContain('setSessionPickerOpen')
+    expect(shell).not.toMatch(/hit\.closest\('\.dock-agent-stack'\)/)
     expect(shell).toMatch(/overlayCollapsed = !overlayOpen \|\| hidden/)
+    expect(css).toMatch(/\.chat-overlay-panel\.is-autohide \{\s*[^}]*overflow:\s*visible/)
     expect(css).toMatch(
       /\.chat-overlay-panel\.is-autohide \.dock-agent-stack,\s*\n\.chat-overlay-panel\.is-autohide \.dock-agent-stack \* \{\s*pointer-events:\s*auto/,
     )

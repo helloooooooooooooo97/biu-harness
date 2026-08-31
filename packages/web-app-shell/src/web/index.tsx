@@ -254,9 +254,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
     }
   })
   heightRef.current = overlayChatHeight
-  const keepVisible = useCallback((event?: { target?: EventTarget | null }) => {
-    const hit = event?.target
-    if (hit instanceof Element && hit.closest('.dock-agent-stack')) return
+  const keepVisible = useCallback(() => {
     setOverlayAutohide(false)
   }, [])
   const hideIfIdle = useCallback(
@@ -352,7 +350,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
             ['--overlay-chat-height' as string]: `${overlayChatHeight}px`,
             ['--rail-w' as string]: railOpen ? '48px' : '0px',
           } as CSSProperties}
-          onMouseEnter={(event) => keepVisible(event)}
+          onMouseEnter={keepVisible}
           onMouseLeave={hideIfIdle}
         >
           <div
