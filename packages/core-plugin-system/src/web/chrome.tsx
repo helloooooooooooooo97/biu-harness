@@ -1,4 +1,4 @@
-import { PlayIcon, StopIcon } from '@heroicons/react/16/solid'
+import { ArchiveBoxArrowDownIcon, PlayIcon, StopIcon } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { asHttpHref } from '@biu/type-file-system'
 import type { CollectionChrome, FsActionProps, FsCellProps } from '@biu/type-file-system/ui'
@@ -8,6 +8,12 @@ function PluginTitle({ record, label }: { record: DbRecord; label: string }) {
   return (
     <span className="inline-flex min-w-0 items-center gap-1.5">
       <span className="truncate font-medium">{label}</span>
+      {record.sandbox ? (
+        <span className="shrink-0 rounded px-1 text-[10px] font-semibold tracking-wide text-(--dsw-label-3)">沙箱</span>
+      ) : null}
+      {record.installed ? (
+        <span className="shrink-0 rounded px-1 text-[10px] font-semibold tracking-wide text-(--dsw-label-3)">已装</span>
+      ) : null}
       {record.hasHost ? (
         <span className="shrink-0 rounded px-1 text-[10px] font-semibold tracking-wide text-(--dsw-label-3)">Host</span>
       ) : null}
@@ -58,6 +64,8 @@ function PluginAction({ action, busy, run }: FsActionProps) {
       <StopIcon aria-hidden className="size-[14px]" />
     ) : action.id === 'uninstall' ? (
       <TrashGlyph aria-hidden className="size-[14px]" />
+    ) : action.id === 'pack' ? (
+      <ArchiveBoxArrowDownIcon aria-hidden className="size-[14px]" />
     ) : null
   return (
     <button

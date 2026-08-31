@@ -38,7 +38,6 @@ test('views and events are system collections; user tables sort first', () => {
   const { user, system } = sortDataCollections([
     { path: '/events' },
     { path: '/plugins' },
-    { path: '/plugin-sandboxes' },
     { path: '/views' },
     { path: '/sessions' },
     { path: '/pages' },
@@ -46,7 +45,7 @@ test('views and events are system collections; user tables sort first', () => {
   ])
   assert.deepEqual(
     user.map((item) => item.path),
-    ['/sessions', '/tasks', '/pages', '/plugins', '/plugin-sandboxes'],
+    ['/sessions', '/tasks', '/pages', '/plugins'],
   )
   assert.deepEqual(
     system.map((item) => item.path),

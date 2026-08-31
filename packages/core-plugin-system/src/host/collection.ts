@@ -1,9 +1,22 @@
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
 import type { PluginStoreService, StoreListing } from './store.ts'
 
-function asPluginRecord(row: StoreListing): DbRecord {
+type SandboxListing = Awaited<ReturnType<PluginStoreService['listSandboxes']>>[number]
+
+function omitEmpty(row: DbRecord): DbRecord {
+  const next: DbRecord = { id: row.id }
+  for (const [key, value] of Object.entries(row)) {
+    if (key === 'id') continue
+    if (value == null || value === '' || value === false) continue
+    if (Array.isArray(value) && value.length === 0) continue
+    next[key] = value
+  }
+  return next
+}
+
+function asInstalledRecord(row: StoreListing): DbRecord {
   const shell = row.shell
-  return {
+  return omitEmpty({
     id: row.id,
     name: row.name,
     title: row.name,
@@ -11,6 +24,7 @@ function asPluginRecord(row: StoreListing): DbRecord {
     tags: row.tags,
     author: row.author,
     authorUrl: row.authorUrl,
+    installed: true,
     enabled: row.enabled,
     running: row.running,
     bytes: row.bytes,
@@ -24,11 +38,49 @@ function asPluginRecord(row: StoreListing): DbRecord {
     shellMinWidth: shell.minWidth,
     shellMinHeight: shell.minHeight,
     shellResizable: shell.resizable,
+  })
+}
+
+function asSandboxRecord(row: SandboxListing): DbRecord {
+  return omitEmpty({
+    id: row.id,
+    name: row.name,
+    title: row.name,
+    blurb: row.blurb,
+    tags: row.tags,
+    author: row.author,
+    authorUrl: row.authorUrl,
+    sandbox: true,
+    hasHost: row.hasHost,
+    hasWeb: row.hasWeb,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  })
+}
+
+function mergeLifecycle(installed: StoreListing | undefined, sandbox: SandboxListing | undefined): DbRecord {
+  if (installed && sandbox) {
+    return omitEmpty({
+      ...asInstalledRecord(installed),
+      sandbox: true,
+      updatedAt: Math.max(installed.updatedAt, sandbox.updatedAt),
+    })
   }
+  if (installed) return asInstalledRecord(installed)
+  if (sandbox) return asSandboxRecord(sandbox)
+  throw new Error('empty plugin row')
 }
 
 export function pluginsCollection(store: PluginStoreService): CollectionSpec {
-  const list = async () => (await store.list()).map(asPluginRecord)
+  const list = async () => {
+    const [installed, sandboxes] = await Promise.all([store.list(), store.listSandboxes()])
+    const ids = new Set([...installed.map((row) => row.id), ...sandboxes.map((row) => row.id)])
+    const byInstalled = new Map(installed.map((row) => [row.id, row]))
+    const bySandbox = new Map(sandboxes.map((row) => [row.id, row]))
+    return [...ids]
+      .sort()
+      .map((id) => mergeLifecycle(byInstalled.get(id), bySandbox.get(id)))
+  }
   const find = async (id: string) => (await list()).find((row) => row.id === id) ?? null
   return {
     id: 'plugins',
@@ -39,7 +91,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       route: '/plugins',
       title: '插件',
       inspector: true,
-      blurb: '已安装到 .plugin 的商店插件：运行状态、体积、外壳尺寸和作者。',
+      blurb: '.plugin 已安装与 .plugin-dev 沙箱同一张表：没有的字段留空。',
       order: 30,
       icon: 'puzzle-piece',
     },
@@ -49,6 +101,8 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       columns: [
         'name',
         'blurb',
+        'installed',
+        'sandbox',
         'running',
         'enabled',
         'tags',
@@ -62,6 +116,8 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       fields: {
         name: { type: 'string', label: '名称' },
         blurb: { type: 'string', label: '简介' },
+        installed: { type: 'boolean', label: '已安装' },
+        sandbox: { type: 'boolean', label: '沙箱' },
         enabled: { type: 'boolean', label: '已打开' },
         running: { type: 'boolean', label: '运行中' },
         tags: { type: 'multi-select', label: '标签' },
@@ -86,7 +142,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       {
         id: 'start',
         label: '运行',
-        when: { running: false },
+        when: { installed: true, running: false },
         run: async (id) => {
           await store.openPlugin(id)
         },
@@ -94,77 +150,27 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       {
         id: 'stop',
         label: '停止',
-        when: { running: true },
+        when: { installed: true, running: true },
         run: async (id) => {
           await store.close(id)
+        },
+      },
+      {
+        id: 'pack',
+        label: '打包安装',
+        when: { sandbox: true },
+        run: async (id) => {
+          await store.pack(id)
         },
       },
       {
         id: 'uninstall',
         label: '卸载',
         tone: 'danger',
-        confirm: '确定卸载这个插件？代码会被删掉。',
+        confirm: '确定卸载这个插件？已安装的代码会被删掉。',
+        when: { installed: true },
         run: async (id) => {
           await store.uninstall(id)
-        },
-      },
-    ],
-  }
-}
-
-export function pluginSandboxesCollection(store: PluginStoreService): CollectionSpec {
-  const list = async () =>
-    (await store.listSandboxes()).map((row) => ({
-      id: row.id,
-      name: row.name,
-      title: row.name,
-      blurb: row.blurb,
-      tags: row.tags,
-      author: row.author,
-      authorUrl: row.authorUrl,
-      hasHost: row.hasHost,
-      hasWeb: row.hasWeb,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    }))
-  const find = async (id: string) => (await list()).find((row) => row.id === id) ?? null
-  return {
-    id: 'plugin-sandboxes',
-    path: '/plugin-sandboxes',
-    label: '插件沙箱',
-    view: {
-      moduleId: 'plugin-sandboxes',
-      route: '/plugin-sandboxes',
-      title: '插件沙箱',
-      inspector: true,
-      blurb: '.plugin-dev 里的开发沙箱：源码还没打包进已安装插件。',
-      order: 31,
-      icon: 'puzzle-piece',
-    },
-    records: { update: false, create: false, delete: false },
-    schema: {
-      labelField: 'name',
-      columns: ['name', 'blurb', 'tags', 'author', 'hasHost', 'hasWeb', 'updatedAt'],
-      fields: {
-        name: { type: 'string', label: '名称' },
-        blurb: { type: 'string', label: '简介' },
-        tags: { type: 'multi-select', label: '标签' },
-        author: { type: 'string', label: '作者' },
-        authorUrl: { type: 'url', label: '作者链接' },
-        hasHost: { type: 'boolean', label: 'Host' },
-        hasWeb: { type: 'boolean', label: 'Web' },
-        createdAt: { type: 'datetime', label: '创建时间' },
-        updatedAt: { type: 'datetime', label: '更新时间' },
-      },
-    },
-    list,
-    get: find,
-    actions: [
-      {
-        id: 'pack',
-        label: '打包安装',
-        run: async (id) => {
-          await store.pack(id)
         },
       },
     ],
