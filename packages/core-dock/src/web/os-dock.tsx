@@ -59,15 +59,31 @@ export function OsDock(props: SlotProps) {
   const [open, setOpen] = useState(false)
   const hideTimer = useRef(0)
   const rootRef = useRef<HTMLDivElement>(null)
+  const pointerOver = useRef(false)
   const show = useCallback(() => {
+    pointerOver.current = true
     window.clearTimeout(hideTimer.current)
     setOpen(true)
   }, [])
-  const hideSoon = useCallback((event?: { relatedTarget: EventTarget | null }) => {
-    const next = event?.relatedTarget
-    if (next instanceof Node && rootRef.current?.contains(next)) return
+  const hideSoon = useCallback((event?: { relatedTarget: EventTarget | null; clientX?: number; clientY?: number }) => {
+    const related = event?.relatedTarget
+    if (related instanceof Node && rootRef.current?.contains(related)) return
+    if (related instanceof Element && related.closest('[data-os-dock]')) return
+    pointerOver.current = false
+    const x = event?.clientX
+    const y = event?.clientY
     window.clearTimeout(hideTimer.current)
-    hideTimer.current = window.setTimeout(() => setOpen(false), HIDE_MS)
+    hideTimer.current = window.setTimeout(() => {
+      if (pointerOver.current) return
+      if (typeof x === 'number' && typeof y === 'number') {
+        const hit = document.elementFromPoint(x, y)
+        if (hit?.closest('[data-os-dock]')) {
+          pointerOver.current = true
+          return
+        }
+      }
+      setOpen(false)
+    }, HIDE_MS)
   }, [])
   if (!apps.length) return null
   return (
@@ -75,10 +91,15 @@ export function OsDock(props: SlotProps) {
       ref={rootRef}
       className={`os-dock${open ? ' is-open' : ''}`}
       data-os-dock
+      onPointerEnter={show}
+      onPointerDown={show}
       onMouseEnter={show}
       onMouseLeave={(event) => hideSoon(event)}
       onFocusCapture={show}
-      onBlurCapture={(event) => hideSoon(event)}
+      onBlurCapture={(event) => {
+        if (pointerOver.current) return
+        hideSoon(event)
+      }}
     >
       <div className="os-dock-edge" aria-hidden />
       <div className="os-dock-peek" aria-hidden />
