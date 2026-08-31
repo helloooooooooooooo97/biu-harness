@@ -87,6 +87,9 @@ function PluginAppWindow({
     leaveTimer.current = window.setTimeout(() => setControlsOpen(false), 160)
   }
   useEffect(() => () => window.clearTimeout(leaveTimer.current), [])
+  useEffect(() => {
+    if (fullscreen) setControlsOpen(false)
+  }, [fullscreen])
 
   useEffect(() => {
     if (userSized || fullscreen) return
@@ -206,22 +209,27 @@ function PluginAppWindow({
       data-fullscreen={fullscreen || undefined}
       data-controls={controlsOpen ? 'open' : undefined}
       onPointerDown={bringFront}
-      onPointerEnter={openControls}
-      onPointerLeave={closeControlsSoon}
+      onPointerEnter={fullscreen ? undefined : openControls}
+      onPointerLeave={fullscreen ? undefined : closeControlsSoon}
     >
       <div className="plugin-store-window-body relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent">
         {children}
       </div>
       <div
-        className="pointer-events-auto absolute top-0 left-full z-20 h-full w-12"
+        className={
+          fullscreen
+            ? 'pointer-events-auto absolute top-0 right-0 z-20 h-40 w-14'
+            : 'pointer-events-auto absolute top-0 left-full z-20 h-full w-12'
+        }
         data-testid={`plugin-window-controls-${extraId}`}
+        data-controls-place={fullscreen ? 'inside' : 'outside'}
         onPointerEnter={openControls}
         onPointerLeave={closeControlsSoon}
       >
         <nav
-          className={`absolute top-2 left-1.5 flex flex-col gap-0.5 rounded-lg bg-white/10 p-0.5 shadow-[0_1px_2px_rgba(15,15,15,.04)] backdrop-blur-sm transition-opacity duration-150 ${
-            controlsOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-          }`}
+          className={`absolute flex flex-col gap-0.5 rounded-lg bg-white/10 p-0.5 shadow-[0_1px_2px_rgba(15,15,15,.04)] backdrop-blur-sm transition-opacity duration-150 ${
+            fullscreen ? 'top-2 right-2' : 'top-2 left-1.5'
+          } ${controlsOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
           aria-label={`${title} 窗口`}
         >
         <button
