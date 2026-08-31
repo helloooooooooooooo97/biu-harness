@@ -18,4 +18,6 @@ test('os dock auto-hides behind a peek bar and opens on hover', () => {
   assert.match(css, /\.os-dock-shelf\s*\{[^}]*translateY\(calc\(100% \+ 20px\)\)/s)
   assert.match(css, /\.os-dock\.is-open \.os-dock-shelf\s*\{[^}]*translateY\(0\)/s)
   assert.match(css, /\.os-dock\.is-open \.os-dock-peek\s*\{[^}]*opacity:\s*0/s)
+  assert.match(css, /\.os-dock-item:hover/)
+  assert.match(css, /scale\(1\.24\)/)
 })

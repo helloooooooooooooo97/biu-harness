@@ -344,6 +344,30 @@ body {
   padding: 0;
   color: inherit;
   cursor: pointer;
+  transform-origin: 50% 100%;
+  transition: transform .18s cubic-bezier(.22, 1.2, .36, 1);
+}
+
+.os-dock-item:hover,
+.os-dock-item:focus-visible {
+  z-index: 2;
+  transform: translateY(-4px) scale(1.24);
+}
+
+.os-dock-item:active {
+  transform: translateY(-2px) scale(1.1);
+  transition-duration: .08s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os-dock-item {
+    transition: none;
+  }
+  .os-dock-item:hover,
+  .os-dock-item:focus-visible,
+  .os-dock-item:active {
+    transform: none;
+  }
 }
 
 .os-dock-tile {
