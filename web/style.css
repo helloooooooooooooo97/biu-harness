@@ -1437,9 +1437,19 @@ body {
 }
 
 .chat-session-row a,
+.chat-session-row button,
 .chat-session-row img,
 .chat-session-row svg {
   -webkit-user-drag: none;
+}
+
+.chat-session-row > button {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
 .chat-session-row::before {

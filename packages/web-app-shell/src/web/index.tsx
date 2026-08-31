@@ -64,9 +64,6 @@ function DockSessionMascot({
 }) {
   const agents = useSessionView((state) => state.sessions)
   const activeId = useSessionView((state) => state.sessionId)
-  const location = useLocation()
-  const appRoute = parseAppPath(location.pathname)
-  const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
   return (
     <BrandCornerMascot
       agents={agents}
@@ -75,7 +72,7 @@ function DockSessionMascot({
         <ChatSidebar
           variant="popover"
           visible
-          routeSessionId={routeSessionId}
+          routeSessionId={activeId}
           useSessionView={useSessionView}
           sessionView={sessionView}
           onActivate={close}

@@ -20,6 +20,7 @@ import { SidebarMascot } from '@biu/web-mascot'
 import { resolveSessionMascot } from '@biu/web-mascot'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import { chromeIcon, chromeIconClass } from './chrome-icon.ts'
+import { openOverlayComposer } from './chat-overlay.ts'
 import { ShellSidebarFrame } from './shell-sidebar-frame.tsx'
 import {
   ChevronDownIcon,
@@ -78,6 +79,9 @@ function ChatCount({ count }: { count: number }) {
   )
 }
 
+const sessionRowMainClass =
+  'flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5'
+
 const SessionRow = memo(function SessionRow({
   item,
   active,
@@ -85,7 +89,7 @@ const SessionRow = memo(function SessionRow({
   dancing,
   onDelete,
   onPin,
-  onActivate,
+  onOpen,
 }: {
   item: SessionListItem
   active: boolean
@@ -93,10 +97,32 @@ const SessionRow = memo(function SessionRow({
   dancing: boolean
   onDelete: (item: SessionListItem) => void
   onPin: (item: SessionListItem) => void
-  onActivate?: () => void
+  onOpen?: (item: SessionListItem) => void
 }) {
   const identity = resolveSessionMascot(item.id, item.mascot)
   const pinned = Boolean(item.pinned)
+  const inner = (
+    <>
+      <SidebarMascot
+        size={20}
+        sessionId={item.id}
+        identity={identity}
+        busy={busy}
+        animate={false}
+        dancing={dancing}
+        title={dancing ? '跳舞中 🎉' : `${identity.shape} · ${identity.color}`}
+      />
+      <span className="sidebar-label min-w-0 flex-1 truncate font-medium">
+        {(item.type ?? 'chat') === 'live' ? (
+          <span className="mr-1 text-[9px] font-semibold tracking-wide uppercase">
+            live
+          </span>
+        ) : null}
+        {item.title}
+      </span>
+      <SessionTagBadges tags={item.tags} />
+    </>
+  )
   return (
     <div
       className={`chat-session-row group${active ? ' is-active' : ''}${pinned ? ' is-pinned' : ''}`}
@@ -104,32 +130,26 @@ const SessionRow = memo(function SessionRow({
       data-biu-id={item.id}
       data-biu-label={item.title}
     >
-      <Link
-        to={`/s/${item.id}`}
-        draggable={false}
-        onDragStart={(event) => event.preventDefault()}
-        onClick={() => onActivate?.()}
-        className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5"
-      >
-        <SidebarMascot
-          size={20}
-          sessionId={item.id}
-          identity={identity}
-          busy={busy}
-          animate={false}
-          dancing={dancing}
-          title={dancing ? '跳舞中 🎉' : `${identity.shape} · ${identity.color}`}
-        />
-        <span className="sidebar-label min-w-0 flex-1 truncate font-medium">
-          {(item.type ?? 'chat') === 'live' ? (
-            <span className="mr-1 text-[9px] font-semibold tracking-wide uppercase">
-              live
-            </span>
-          ) : null}
-          {item.title}
-        </span>
-        <SessionTagBadges tags={item.tags} />
-      </Link>
+      {onOpen ? (
+        <button
+          type="button"
+          draggable={false}
+          onDragStart={(event) => event.preventDefault()}
+          onClick={() => onOpen(item)}
+          className={sessionRowMainClass}
+        >
+          {inner}
+        </button>
+      ) : (
+        <Link
+          to={`/s/${item.id}`}
+          draggable={false}
+          onDragStart={(event) => event.preventDefault()}
+          className={sessionRowMainClass}
+        >
+          {inner}
+        </Link>
+      )}
       <button
         type="button"
         className="chat-session-row-delete"
@@ -252,14 +272,29 @@ export const ChatSidebar = memo(function ChatSidebar({
     expandProjectGroup(group.key)
   }, [routeSessionId, sections, expandProjectGroup])
 
+  const highlightId = variant === 'popover' ? sessionId : routeSessionId
+
   const createChat = useCallback(
     (opts: { type?: 'chat' | 'live'; projectPath?: string } = {}) => {
       void sessionView.newSession(opts).then((id) => {
         onActivate?.()
+        if (variant === 'popover') {
+          openOverlayComposer({ revealThread: true })
+          return
+        }
         navigate(`/s/${id}`)
       })
     },
-    [navigate, onActivate, sessionView],
+    [navigate, onActivate, sessionView, variant],
+  )
+
+  const openSession = useCallback(
+    (item: SessionListItem) => {
+      void sessionView.load(item.id, { view: 'chat' })
+      openOverlayComposer({ revealThread: true })
+      onActivate?.()
+    },
+    [onActivate, sessionView],
   )
 
   const requestDeleteChat = useCallback((item: SessionListItem) => {
@@ -272,11 +307,12 @@ export const ChatSidebar = memo(function ChatSidebar({
     setPendingDelete(null)
     const wasActive = item.id === sessionId
     void sessionView.deleteSession(item.id).then(() => {
+      if (variant === 'popover') return
       if (!wasActive) return
       const next = sessionView.get().sessionId
       navigate(next ? `/s/${next}` : '/')
     })
-  }, [navigate, pendingDelete, sessionId, sessionView])
+  }, [navigate, pendingDelete, sessionId, sessionView, variant])
 
   const pinChat = useCallback(
     (item: SessionListItem) => {
@@ -376,12 +412,12 @@ export const ChatSidebar = memo(function ChatSidebar({
                           <SessionRow
                             key={`pinned:${item.id}`}
                             item={item}
-                            active={item.id === routeSessionId}
-                            busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
+                            active={item.id === highlightId}
+                            busy={Boolean(busySessions[item.id]) || (item.id === highlightId && agentBusy)}
                             dancing={dancing}
                             onDelete={requestDeleteChat}
                             onPin={pinChat}
-                            onActivate={onActivate}
+                            onOpen={variant === 'popover' ? openSession : undefined}
                           />
                         ))
                         : section.groups?.map((group) => {
@@ -453,12 +489,12 @@ export const ChatSidebar = memo(function ChatSidebar({
                                   <SessionRow
                                     key={`${group.key}:${item.id}`}
                                     item={item}
-                                    active={item.id === routeSessionId}
-                                    busy={Boolean(busySessions[item.id]) || (item.id === routeSessionId && agentBusy)}
+                                    active={item.id === highlightId}
+                                    busy={Boolean(busySessions[item.id]) || (item.id === highlightId && agentBusy)}
                                     dancing={dancing}
                                     onDelete={requestDeleteChat}
                                     onPin={pinChat}
-                                    onActivate={onActivate}
+                                    onOpen={variant === 'popover' ? openSession : undefined}
                                   />
                                 ))}
                               </div>
