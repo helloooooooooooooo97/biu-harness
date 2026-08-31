@@ -3,6 +3,7 @@ import type { Context } from 'cordis'
 import { useSlotEntries, type SlotsService } from '@biu/web-slots'
 import type { SlotProps } from '@biu/type-slots'
 
+import { XMarkIcon, MinusIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon } from '@heroicons/react/16/solid'
 import type { DatabaseUi } from '@biu/type-file-system/ui'
 import { pluginsChrome } from './chrome.tsx'
 import {
@@ -182,7 +183,7 @@ function PluginAppWindow({
   return (
     <section
       ref={boxRef}
-      className="group/win pointer-events-auto fixed flex min-h-0 min-w-0 flex-col overflow-hidden bg-transparent text-(--dsw-label)"
+      className="group/win pointer-events-auto fixed flex min-h-0 min-w-0 flex-col overflow-visible bg-transparent text-(--dsw-label)"
       style={style}
       data-testid={`plugin-app-window-${extraId}`}
       data-plugin-id={pluginId}
@@ -192,62 +193,49 @@ function PluginAppWindow({
       data-fullscreen={fullscreen || undefined}
       onPointerDown={bringFront}
     >
-      <header
-        className={`flex h-8 shrink-0 items-center gap-3 bg-[#202020] px-3 ${fullscreen ? '' : 'cursor-grab active:cursor-grabbing'}`}
-        onPointerDown={startDrag}
-      >
-        <div className="group/traffic flex items-center gap-1.75">
-          <button
-            type="button"
-            className="relative size-3 cursor-pointer rounded-full border-0 bg-[#ff5f57] p-0 shadow-[inset_0_0_0_.5px_rgba(0,0,0,.28)]"
-            title="关闭"
-            aria-label={`关闭 ${title}`}
-            onClick={onClose}
-          >
-            <span className="pointer-events-none absolute inset-0 hidden items-center justify-center text-[8px] leading-none font-bold text-[#4d0000] group-hover/traffic:flex">
-              ×
-            </span>
-          </button>
-          <button
-            type="button"
-            className="relative size-3 cursor-pointer rounded-full border-0 bg-[#febc2e] p-0 shadow-[inset_0_0_0_.5px_rgba(0,0,0,.28)]"
-            title="最小化"
-            aria-label={`最小化 ${title}`}
-            onClick={onMinimize}
-          >
-            <span className="pointer-events-none absolute inset-0 hidden items-center justify-center text-[9px] leading-none font-bold text-[#985700] group-hover/traffic:flex">
-              −
-            </span>
-          </button>
-          <button
-            type="button"
-            className={`relative size-3 rounded-full border-0 p-0 shadow-[inset_0_0_0_.5px_rgba(0,0,0,.28)] ${
-              shell.resizable
-                ? 'cursor-pointer bg-[#28c840]'
-                : 'cursor-not-allowed bg-[#3a3a3c]'
-            }`}
-            title={shell.resizable ? (fullscreen ? '还原' : '全屏') : '固定尺寸，不能放大'}
-            aria-label={
-              shell.resizable ? (fullscreen ? `还原 ${title}` : `全屏 ${title}`) : `${title} 固定尺寸，不能放大`
-            }
-            disabled={!shell.resizable}
-            onClick={shell.resizable ? onToggleFullscreen : undefined}
-          >
-            {shell.resizable ? (
-              <span className="pointer-events-none absolute inset-0 hidden items-center justify-center text-[7px] leading-none font-bold text-[#0b5f18] group-hover/traffic:flex">
-                {fullscreen ? '↘' : '↗'}
-              </span>
-            ) : null}
-          </button>
-        </div>
-        <div className="min-w-0 flex-1 truncate text-center text-[12px] font-medium tracking-tight text-white/70">
-          {title}
-        </div>
-        <span className="w-13 shrink-0" aria-hidden />
-      </header>
-      <div className="plugin-store-window-body flex min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent">
+      <div className="plugin-store-window-body relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent">
         {children}
       </div>
+      <nav
+        className="pointer-events-none absolute top-2 left-full z-20 ml-1.5 flex cursor-grab flex-col gap-0.5 rounded-lg bg-white/55 p-0.5 opacity-0 shadow-[0_1px_2px_rgba(15,15,15,.06)] backdrop-blur-md transition-opacity duration-150 group-hover/win:pointer-events-auto group-hover/win:opacity-100 active:cursor-grabbing"
+        aria-label={`${title} 窗口`}
+        onPointerDown={startDrag}
+      >
+        <button
+          type="button"
+          className="flex size-6 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800"
+          title="关闭"
+          aria-label={`关闭 ${title}`}
+          onClick={onClose}
+        >
+          <XMarkIcon className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          className="flex size-6 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800"
+          title="最小化"
+          aria-label={`最小化 ${title}`}
+          onClick={onMinimize}
+        >
+          <MinusIcon className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          className={`flex size-6 items-center justify-center rounded-md border-0 bg-transparent p-0 transition-colors ${
+            shell.resizable
+              ? 'cursor-pointer text-neutral-500 hover:bg-black/5 hover:text-neutral-800'
+              : 'cursor-not-allowed text-neutral-400/50'
+          }`}
+          title={shell.resizable ? (fullscreen ? '还原' : '全屏') : '固定尺寸，不能放大'}
+          aria-label={
+            shell.resizable ? (fullscreen ? `还原 ${title}` : `全屏 ${title}`) : `${title} 固定尺寸，不能放大`
+          }
+          disabled={!shell.resizable}
+          onClick={shell.resizable ? onToggleFullscreen : undefined}
+        >
+          {fullscreen ? <ArrowsPointingInIcon className="size-3.5" /> : <ArrowsPointingOutIcon className="size-3.5" />}
+        </button>
+      </nav>
       {fullscreen || !shell.resizable
         ? null
         : handles.map((item) => (

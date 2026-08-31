@@ -1,4 +1,4 @@
-export const WIN_CHROME_H = 32
+export const WIN_CHROME_H = 0
 export const WIN_DEFAULT_W = 480
 export const WIN_DEFAULT_H = 360
 export const WIN_ABS_MIN = 80
@@ -42,11 +42,11 @@ export function declaredStoreShell(value: unknown): boolean {
 export function requireDeclaredShell(value: unknown, hasWeb: boolean, where: string) {
   if (!hasWeb) return
   if (!declaredStoreShell(value)) {
-    throw new Error(`${where}: web plugins must set shell.width and shell.height (content pixels, excluding the title bar)`)
+    throw new Error(`${where}: web plugins must set shell.width and shell.height (content pixels)`)
   }
 }
 
-/** manifest.shell：width/height 是内容区像素，不含标题栏。缺省 480×360。 */
+/** manifest.shell：width/height 是内容区像素。缺省 480×360。 */
 export function parseStoreShell(value: unknown): StoreShell {
   const d = defaultStoreShell()
   if (!value || typeof value !== 'object' || Array.isArray(value)) return d

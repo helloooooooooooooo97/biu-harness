@@ -139,7 +139,7 @@ export async function readSandboxManifest(dir: string) {
 const CONTRACT = [
   '契约：id 与 export const name 相同。禁止 import npm / react / @biu/*。不要改 packages/ 或 cordis.plugins.json。',
   'host 与 web 按需，至少一侧。Web：ctx.slots.place("plugin-store-extras", Comp, { key })。运行窗口会给 extras 套 macOS 窗口框（关/缩/全屏），key 尽量用插件 id。',
-  '有 web 时必须显式写 shell.width 与 shell.height（内容区像素，不含标题栏）。可选 minWidth / minHeight / resizable。禁止省略让窗口猜尺寸。插件根节点铺满窗口，不要用 100vw。',
+  '有 web 时必须显式写 shell.width 与 shell.height（内容区像素）。可选 minWidth / minHeight / resizable。禁止省略让窗口猜尺寸。插件根节点铺满窗口，不要用 100vw。',
 ].join(' ')
 
 const PLUGIN_CREATE_DESCRIPTION = [
@@ -190,7 +190,7 @@ const ID_NAME_BLURB = {
   authorUrl: { type: 'string', description: '作者主页 / 仓库链接' },
   shell: {
     type: 'object',
-    description: '有 web 时必填。运行窗口内容区像素（不含标题栏）。必须给 width 和 height。',
+    description: '有 web 时必填。运行窗口内容区像素。必须给 width 和 height。',
     properties: {
       width: { type: 'number', description: '内容区宽，必填' },
       height: { type: 'number', description: '内容区高，必填' },

@@ -65,11 +65,15 @@ test('plugin window sizes from manifest.shell instead of measuring DOM', async (
   assert.match(create, /manifest\.shell/)
 })
 
-test('plugin window chrome uses #202020 and disables zoom when not resizable', async () => {
+test('plugin window hover controls sit on the right without a title bar', async () => {
   const { readFile } = await import('node:fs/promises')
   const { resolve } = await import('node:path')
   const src = await readFile(resolve(import.meta.dirname, './index.tsx'), 'utf8')
-  assert.match(src, /bg-\[#202020\]/)
+  assert.match(src, /group-hover\/win:opacity-100/)
+  assert.match(src, /absolute top-2 left-full/)
+  assert.match(src, /flex-col/)
+  assert.match(src, /bg-white\/55/)
   assert.match(src, /disabled=\{!shell\.resizable\}/)
-  assert.match(src, /cursor-not-allowed/)
+  assert.doesNotMatch(src, /bg-\[#202020\]/)
+  assert.doesNotMatch(src, /bg-\[#ff5f57\]/)
 })
