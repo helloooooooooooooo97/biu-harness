@@ -26,9 +26,9 @@ import {
   type ChatStepStat,
   type TrajectoryUsage,
 } from '@biu/web-session-view'
-import { SidebarMascot } from '@biu/web-mascot'
-import { StaticMascotMark } from '@biu/web-mascot'
-import { resolveSessionMascot } from '@biu/web-mascot'
+import { SidebarMascot } from '@biu/public-mascot'
+import { StaticMascotMark } from '@biu/public-mascot'
+import { resolveSessionMascot } from '@biu/public-mascot'
 import type { SlotProps } from '@biu/type-slots'
 import { parsePicks, pickDomAttrs, pickPreview } from '@biu/cap-pick/web'
 import { MarkdownBody } from './markdown.tsx'

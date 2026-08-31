@@ -14,4 +14,4 @@
 二次分发、公开部署或商用前，请自行确认版权与商标要求；有侵权风险。
 上游说明：仅供学习参考。
 
-更细的包内说明见 [`packages/web-mascot/src/web/NOTICE.md`](packages/web-mascot/src/web/NOTICE.md)。
+更细的包内说明见 [`packages/public-mascot/src/web/NOTICE.md`](packages/public-mascot/src/web/NOTICE.md)。

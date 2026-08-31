@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { SidebarMascot, resolveSessionMascot } from '@biu/web-mascot'
+import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { MASCOT_COLOR_NAME, MASCOT_EYE_NAME, MASCOT_SHAPE_NAME } from '@biu/type-session'
 import type { CollectionChrome, FsCellProps, FsContentProps } from '@biu/type-file-system/ui'
 import type { DbRecord } from '@biu/type-file-system'

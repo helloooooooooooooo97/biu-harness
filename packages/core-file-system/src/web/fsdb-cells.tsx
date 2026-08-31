@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { BoolBox } from '@biu/public-ui'
 import {
   ArchiveBoxArrowDownIcon,
   ArrowPathIcon,
@@ -125,9 +126,9 @@ export function BoolCell({
   onToggle?: () => void
 }) {
   const mark = (
-    <span className={`fsdb-boolbox${on ? ' is-on' : ''}${writable ? '' : ' is-locked'}`}>
+    <BoolBox on={on} locked={!writable}>
       {on ? <CheckIcon aria-hidden className="size-3" /> : null}
-    </span>
+    </BoolBox>
   )
   if (!writable || !onToggle) {
     return (

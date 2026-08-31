@@ -199,7 +199,7 @@ flowchart TB
 | `web` | `web/main.tsx` | No (shell) |
 | `plugins` | hub + ui-hub | Yes |
 
-Adding a capability: create `packages/cap-<id>`, split `exports` into `./host` and `./web`, append to the `plugins` table, restart. `type-*` and `web-mascot` stay out of the table. Details: [docs/plugin-packages.md](docs/plugin-packages.md).
+Adding a capability: create `packages/cap-<id>`, split `exports` into `./host` and `./web`, append to the `plugins` table, restart. `type-*` and `public-*` stay out of the table. Details: [docs/plugin-packages.md](docs/plugin-packages.md).
 
 ---
 
@@ -275,7 +275,8 @@ biu-harness
     ├── web-event-log/         # Settings → Events
     ├── web-routes-panel/      # Settings → Routes
     ├── web-ui-hub/
-    ├── web-mascot/            # Shared lib; not in json
+    ├── public-mascot/         # Shared mascot UI; not in json
+    ├── public-ui/             # Shared chrome bits; not in json
     │
     ├── core-file-system/      # Collections + db_* tools + File System UI
     ├── core-plugin-system/    # Installed plugins, install/uninstall, File System entry

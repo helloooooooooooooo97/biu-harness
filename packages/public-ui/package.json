@@ -1,11 +1,11 @@
 {
-  "name": "@biu/web-mascot",
+  "name": "@biu/public-ui",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Mascot 共享 UI（非插件；壳与 chat 共用）",
+  "description": "跨插件共享 UI 零件（public：不是 Cordis 插件）",
   "exports": {
-    ".": "./src/web/index.ts"
+    ".": "./src/index.ts"
   },
   "peerDependencies": {
     "react": "^19.1.1"

@@ -32,6 +32,7 @@ export default defineConfig({
       ['packages/cap-*/src/host/**', 'node'],
       ['packages/core-*/src/host/**', 'node'],
       ['packages/type-*/**', 'node'],
+      ['packages/public-*/**/*.test.ts', 'node'],
     ],
   },
 })

@@ -14,6 +14,6 @@
   },
   "dependencies": {
     "@biu/type-file-system": "0.1.0",
-    "@biu/web-mascot": "0.1.0"
+    "@biu/public-mascot": "0.1.0"
   }
 }

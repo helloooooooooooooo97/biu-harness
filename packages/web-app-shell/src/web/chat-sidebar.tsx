@@ -1,7 +1,8 @@
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
-import { isMascotDancing, subscribeMascotDance } from '@biu/web-mascot'
+import { isMascotDancing, subscribeMascotDance } from '@biu/public-mascot'
+import { ChatCount } from '@biu/public-ui'
 import {
   bindSessionView,
   type SessionListItem,
@@ -16,8 +17,8 @@ import {
   type SidebarSectionKind,
 } from '@biu/web-session-view'
 import { useSidebarCollapseStore } from '@biu/web-session-view'
-import { SidebarMascot } from '@biu/web-mascot'
-import { resolveSessionMascot } from '@biu/web-mascot'
+import { SidebarMascot } from '@biu/public-mascot'
+import { resolveSessionMascot } from '@biu/public-mascot'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import { chromeIcon, chromeIconClass } from './chrome-icon.ts'
 import { openOverlayComposer } from './chat-overlay.ts'
@@ -67,14 +68,6 @@ function SessionTagBadges({ tags }: { tags?: string[] }) {
           +{extra}
         </span>
       ) : null}
-    </span>
-  )
-}
-
-function ChatCount({ count }: { count: number }) {
-  return (
-    <span className="sidebar-chat-count">
-      <span className="sidebar-chat-count-num">{count}</span>
     </span>
   )
 }

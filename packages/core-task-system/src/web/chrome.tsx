@@ -12,7 +12,7 @@ import {
   UserIcon,
   XMarkIcon,
 } from '@heroicons/react/16/solid'
-import { SidebarMascot, resolveSessionMascot } from '@biu/web-mascot'
+import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import type { DbRecord } from '@biu/type-file-system'
 import type { CollectionChrome, FsCellProps } from '@biu/type-file-system/ui'
 import { ReportsPane, ScriptPane } from './detail-panes.tsx'

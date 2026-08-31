@@ -6,7 +6,7 @@ import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { contentFieldKey, formatField, resolveFieldType, uniqueValues } from './fields.ts'
 import { LocalText } from './controls.tsx'
 import { FieldEditor, FieldGlyph, FilePreview } from './fsdb-cells.tsx'
-import { RecordEmojiBoard } from './data-sidebar.tsx'
+import { RecordEmojiBoard } from '@biu/public-ui'
 import { TableGlyph } from './nav-glyphs.tsx'
 import { normalizeRecordEmoji, recordPreviewEmoji } from './sidebar-preview.ts'
 

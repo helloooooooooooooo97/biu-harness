@@ -191,7 +191,7 @@ flowchart TB
 | `web` | `web/main.tsx` | 否（壳） |
 | `plugins` | hub + ui-hub | 是 |
 
-加能力：`packages/cap-<id>`，`exports` 分开 `./host` 与 `./web`，写入 `plugins` 表后重启。`type-*`、`web-mascot` 不要进表。细则：[docs/plugin-packages.md](docs/plugin-packages.md)。
+加能力：`packages/cap-<id>`，`exports` 分开 `./host` 与 `./web`，写入 `plugins` 表后重启。`type-*`、`public-*` 不要进表。细则：[docs/plugin-packages.md](docs/plugin-packages.md)。
 
 ---
 
@@ -267,7 +267,8 @@ biu-harness
     ├── web-event-log/         # Settings → Events
     ├── web-routes-panel/      # Settings → Routes
     ├── web-ui-hub/
-    ├── web-mascot/            # 共享库，不进 json
+    ├── public-mascot/         # 共享吉祥物 UI，不进 json
+    ├── public-ui/             # 共享零件（折叠/计数/菜单），不进 json
     │
     ├── core-file-system/      # 登记表 + db_* 工具 + File System UI
     ├── core-plugin-system/    # 已安装插件、安装卸载、File System 入口

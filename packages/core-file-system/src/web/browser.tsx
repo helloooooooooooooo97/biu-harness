@@ -34,6 +34,7 @@ import {
 import type { CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
+import { BoolBox, ChatCount } from '@biu/public-ui'
 import {
   contentFieldKey,
   defaultColumnKeys,
@@ -1223,9 +1224,7 @@ export function CollectionBrowser({
             ) : null}
             <span className="tasks-title-zoom">
               {tree && kidCount > 0 ? (
-                <span className="sidebar-chat-count tasks-tree-count" title={`${kidCount} 项`}>
-                  <span className="sidebar-chat-count-num">{kidCount}</span>
-                </span>
+                <ChatCount count={kidCount} className="tasks-tree-count" title={`${kidCount} 项`} />
               ) : null}
               <button
                 type="button"
@@ -1355,9 +1354,7 @@ export function CollectionBrowser({
         }}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <span className={`fsdb-boolbox${on ? ' is-on' : ''}`}>
-          {on ? <CheckIcon aria-hidden className="size-3" /> : null}
-        </span>
+        <BoolBox on={on}>{on ? <CheckIcon aria-hidden className="size-3" /> : null}</BoolBox>
       </button>
     )
   }

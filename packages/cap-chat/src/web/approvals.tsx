@@ -11,7 +11,7 @@ import {
 } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type ChatNode, type DispatchedTaskRow, type SessionViewService } from '@biu/web-session-view'
-import { SidebarMascot, resolveSessionMascot } from '@biu/web-mascot'
+import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { SessionProjectPanel } from './project-panel.tsx'
 import { ChatLiveMetrics } from './live-hud.tsx'
 

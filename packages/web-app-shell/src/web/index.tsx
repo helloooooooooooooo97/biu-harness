@@ -25,7 +25,7 @@ import {
   isMascotDancing,
   mascotDanceShape,
   subscribeMascotDance,
-} from '@biu/web-mascot'
+} from '@biu/public-mascot'
 import {
   bindAppModules,
   bindAppModulesNavReady,
@@ -35,7 +35,7 @@ import {
 import { ChatSidebar } from './chat-sidebar.tsx'
 import { ShellSidebarFrame } from './shell-sidebar-frame.tsx'
 import { ChatSessionTitle } from './chat-session-title.tsx'
-import { BrandCornerMascot, DanceStage } from '@biu/web-mascot'
+import { BrandCornerMascot, DanceStage } from '@biu/public-mascot'
 import type { DockService } from '@biu/core-dock'
 import { SessionInspector } from './session-inspector.tsx'
 import { SessionConfigDialog } from '@biu/web-session-view/dialog'

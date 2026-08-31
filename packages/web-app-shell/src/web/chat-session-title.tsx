@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
-import { BrandCornerMascot } from '@biu/web-mascot'
+import { BrandCornerMascot } from '@biu/public-mascot'
 import { ChatSidebar } from './chat-sidebar.tsx'
 
 export const ChatSessionTitle = memo(function ChatSessionTitle({
