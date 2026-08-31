@@ -32,3 +32,7 @@ test('list and detail share the chat column max width with side padding', () => 
   assert.match(css, /\.fsdb-cards\{[^}]*grid-auto-rows:auto/)
   assert.match(css, /\.fsdb-cards > \.tasks-minicard\{[^}]*height:100%/)
 })
+
+test('usage figures in collection cells match the table font size', () => {
+  assert.match(css, /\.fsdb-page \.traj-usage,\.fsdb-page \.traj-usage-empty\{[^}]*font-size:14px/)
+})
