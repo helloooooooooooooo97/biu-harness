@@ -5,10 +5,10 @@ import { boxFromPoints, resolvePickAtPoint, resolvePicksInRect } from './resolve
 
 const DRAG_PX = 6
 
-const PICK_NAV_GUARD =
-  '[data-biu-ignore], .app-side-bar, .brand-corner-cluster, [data-os-dock], [data-testid="inspector-toggle"], [data-testid="fsdb-inspector-toggle"]'
+export const PICK_NAV_GUARD =
+  '[data-biu-ignore], .app-side-bar, .brand-corner-cluster, [data-os-dock], [data-testid="inspector-toggle"], [data-testid="fsdb-inspector-toggle"], [data-testid="chat-overlay-panel"]'
 
-function ignorePickCapture(target: Element) {
+export function ignorePickCapture(target: Element) {
   return Boolean(target.closest(PICK_NAV_GUARD))
 }
 
@@ -115,6 +115,13 @@ export function PickOverlay(_props: SlotProps) {
     }
     window.addEventListener('keydown', onHotkey)
     return () => window.removeEventListener('keydown', onHotkey)
+  }, [pick])
+
+  useEffect(() => {
+    if (!pick) return
+    const onClosed = () => pick.exit()
+    window.addEventListener('biu:overlay-closed', onClosed)
+    return () => window.removeEventListener('biu:overlay-closed', onClosed)
   }, [pick])
 
   if (!picking) return null

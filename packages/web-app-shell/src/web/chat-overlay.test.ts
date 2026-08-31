@@ -162,6 +162,18 @@ test('pick opens a compose-only overlay; send reveals the thread', () => {
   assert.equal(getOverlayThread(), false)
 })
 
+test('closing the overlay notifies pick to exit', () => {
+  setChatOverlay(true)
+  let closed = 0
+  const onClosed = () => {
+    closed += 1
+  }
+  window.addEventListener('biu:overlay-closed', onClosed)
+  setChatOverlay(false)
+  window.removeEventListener('biu:overlay-closed', onClosed)
+  assert.equal(closed, 1)
+})
+
 test('autohide resets when overlay closes', () => {
   setChatOverlay(true)
   setOverlayAutohide(true)

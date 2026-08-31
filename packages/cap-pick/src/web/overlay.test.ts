@@ -5,13 +5,31 @@ import assert from 'node:assert/strict'
 
 const overlay = readFileSync(resolve(import.meta.dirname, './overlay.tsx'), 'utf8')
 
-test('pick capture does not eat sidebar, dock, or inspector chrome clicks', () => {
+test('pick capture does not eat sidebar, dock, inspector, or chat overlay clicks', () => {
   assert.match(overlay, /function ignorePickCapture/)
   assert.match(overlay, /\.app-side-bar/)
   assert.match(overlay, /data-os-dock/)
   assert.match(overlay, /data-biu-ignore/)
+  assert.match(overlay, /chat-overlay-panel/)
   assert.doesNotMatch(overlay, /\.app-rail/)
   assert.doesNotMatch(overlay, /\.session-inspector/)
+})
+
+test('close button inside the chat overlay is not captured while picking', async () => {
+  const { ignorePickCapture } = await import('./overlay.tsx')
+  const panel = document.createElement('div')
+  panel.setAttribute('data-testid', 'chat-overlay-panel')
+  const close = document.createElement('button')
+  close.setAttribute('data-testid', 'chat-overlay-close')
+  panel.append(close)
+  document.body.append(panel)
+  assert.equal(ignorePickCapture(close), true)
+  panel.remove()
+})
+
+test('closing the chat overlay exits pick mode', () => {
+  assert.match(overlay, /biu:overlay-closed/)
+  assert.match(overlay, /pick.exit\(\)/)
 })
 
 test('Command/Ctrl+Q toggles pick mode', () => {

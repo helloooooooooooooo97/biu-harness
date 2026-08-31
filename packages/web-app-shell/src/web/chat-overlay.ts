@@ -118,6 +118,7 @@ export function setChatOverlay(next: boolean) {
   if (!next) {
     setOverlayAutohide(false)
     setOverlayThread(false)
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('biu:overlay-closed'))
   }
   emit()
 }

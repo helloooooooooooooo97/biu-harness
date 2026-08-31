@@ -127,6 +127,7 @@ export function OverlayChatWindow({
       ref={boxRef}
       className="chat-overlay-panel"
       data-testid="chat-overlay-panel"
+      data-biu-ignore
       style={{ top: geom.y, left: geom.x, width: geom.w, height: geom.h, zIndex: z }}
       onPointerDown={bringFront}
     >

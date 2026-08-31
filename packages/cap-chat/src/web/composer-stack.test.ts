@@ -42,6 +42,7 @@ describe('composer dock stacking above sticky user', () => {
     expect(shell).not.toMatch(/hit\.closest\('\.dock-agent-stack'\)/)
     expect(shell).toContain('OverlayChatWindow')
     expect(overlayWin).toContain('chat-overlay-drag')
+    expect(overlayWin).toContain('data-biu-ignore')
     expect(overlayWin).toContain("key: 'se'")
     expect(overlayWin).toContain('chat-overlay-resize-')
     expect(css).toMatch(/\.chat-overlay-panel \{/)
