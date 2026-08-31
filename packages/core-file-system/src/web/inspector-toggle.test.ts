@@ -90,7 +90,9 @@ test('table title opens record from the title-side button', () => {
 test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.match(browser, /data-testid="fsdb-bulk-delete"/)
   assert.match(browser, /kind: 'delete-records'/)
-  assert.match(browser, /className="fsdb-row-check"/)
+  assert.match(browser, /className=\{\`fsdb-boolbtn fsdb-row-check\$\{on \? ' is-on' : ''\}\`\}/)
+  assert.match(browser, /fsdb-boolbox/)
+  assert.doesNotMatch(browser, /type="checkbox"/)
   assert.match(browser, /const canDelete = Boolean\(schema\?\.records\?\.delete\)/)
 })
 
@@ -106,6 +108,8 @@ test('create record sits at the right of the toolbar with a blue label', () => {
   assert.match(css, /\.fsdb-create-btn\{[^}]*border-radius:4px/)
   assert.match(css, /\.fsdb-create-btn\{[^}]*background:var\(--dsw-pick/)
   assert.match(css, /\.fsdb-boolbox\.is-on\{[^}]*background:var\(--dsw-pick/)
+  assert.match(css, /\.fsdb-row-check\{[^}]*opacity:0/)
+  assert.match(css, /tr:hover \.fsdb-row-check/)
   assert.match(browser, /persistViewDisplay/)
   assert.match(browser, /withViewDisplay/)
   assert.doesNotMatch(browser, /if \(current\?\.builtin\) return/)

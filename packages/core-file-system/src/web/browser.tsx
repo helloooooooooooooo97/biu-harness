@@ -1343,18 +1343,22 @@ export function CollectionBrowser({
     const list = id ? [id] : (ids ?? [])
     const on = list.length > 0 && list.every((item) => pickedIds.includes(item))
     return (
-      <label
-        className="fsdb-row-check"
-        onClick={(event) => event.stopPropagation()}
+      <button
+        type="button"
+        className={`fsdb-boolbtn fsdb-row-check${on ? ' is-on' : ''}`}
+        aria-pressed={on}
+        aria-label={id ? (on ? '取消选择记录' : '选择记录') : on ? '取消全选' : '全选'}
+        title={id ? (on ? '取消选择' : '选择') : on ? '取消全选' : '全选'}
+        onClick={(event) => {
+          event.stopPropagation()
+          togglePicked(list, !on)
+        }}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <input
-          type="checkbox"
-          checked={on}
-          aria-label={id ? '选择记录' : '全选'}
-          onChange={() => togglePicked(list, !on)}
-        />
-      </label>
+        <span className={`fsdb-boolbox${on ? ' is-on' : ''}`}>
+          {on ? <CheckIcon aria-hidden className="size-3" /> : null}
+        </span>
+      </button>
     )
   }
 
