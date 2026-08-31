@@ -108,9 +108,6 @@ const AgentMainPanels = memo(function AgentMainPanels({
   useEffect(() => {
     setOverlayMounted(true)
   }, [])
-  useEffect(() => {
-    if (overlay) setChatOverlay(true)
-  }, [overlay])
   const stageRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!overlay) return

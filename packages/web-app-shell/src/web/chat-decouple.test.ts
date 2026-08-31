@@ -12,6 +12,7 @@ test('overlay chat is a resident floating window off the agent page', () => {
   assert.match(shell, /chat-overlay-close/)
   assert.match(shell, /closeChatOverlay\(\)/)
   assert.match(shell, /onPointerDown/)
+  assert.doesNotMatch(shell, /if \(overlay\) setChatOverlay\(true\)/)
   assert.doesNotMatch(shell, /overlayCollapsed/)
   assert.doesNotMatch(shell, /is-compose-only/)
   assert.doesNotMatch(shell, /is-autohide/)

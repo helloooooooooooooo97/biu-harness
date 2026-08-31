@@ -3,6 +3,7 @@ import {
   clampOverlayWinGeom,
   readOverlayWinGeom,
   writeOverlayWinGeom,
+  closeChatOverlay,
   type OverlayWinGeom,
 } from './chat-overlay.ts'
 
@@ -37,6 +38,20 @@ export function OverlayChatWindow({
     window.addEventListener('biu:overlay-focus', onFocus)
     return () => window.removeEventListener('biu:overlay-focus', onFocus)
   }, [bringFront])
+
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el) return
+    const onClose = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Element) || !target.closest('[data-testid="chat-overlay-close"]')) return
+      event.preventDefault()
+      event.stopPropagation()
+      closeChatOverlay()
+    }
+    el.addEventListener('pointerdown', onClose, true)
+    return () => el.removeEventListener('pointerdown', onClose, true)
+  }, [])
 
   useEffect(() => {
     const onMove = (event: PointerEvent) => {
