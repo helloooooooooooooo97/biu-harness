@@ -3,7 +3,6 @@ import type { SlotsService } from '@biu/web-slots'
 import { CursorArrowRaysIcon } from '@heroicons/react/16/solid'
 import { PickService } from './service.ts'
 import { PickOverlay } from './overlay.tsx'
-import { PickToggle } from './toggle.tsx'
 
 export { PickService, usePickState } from './service.ts'
 export { formatPicks, formatPick, parsePicks, splitPickStream, dedupePicks, chipLabel, pickKey, pickPreview, pickDomAttrs, type PickRef } from './types.ts'
@@ -20,10 +19,6 @@ function PickDockIcon() {
 export function apply(ctx: Context) {
   const pick = new PickService(ctx)
   const slots = ctx.slots as SlotsService
-  slots.place('header-tools', PickToggle, {
-    key: 'pick-toggle',
-    order: 10,
-  })
   slots.place('root-overlays', PickOverlay, {
     key: 'pick-overlay',
     order: 10,
