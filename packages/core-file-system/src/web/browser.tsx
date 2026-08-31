@@ -1535,6 +1535,7 @@ export function CollectionBrowser({
         <div className="fsdb-right-body">
         {!detailId ? (
         <div className="tasks-main fsdb-main">
+        <h1 className="fsdb-detail-title">{title}</h1>
         <div className="tasks-toolbar" data-biu-ignore>
           <div className="tasks-toolbar-left">
             <div className="tasks-viewdd-wrap" ref={viewRef}>
