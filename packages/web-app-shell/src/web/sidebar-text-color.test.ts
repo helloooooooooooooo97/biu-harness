@@ -19,13 +19,16 @@ describe('sidebar text colors', () => {
     expect(css).toMatch(/\.app-side-bar\.is-narrow \.app-side-bar-head-brand\s*\{[^}]*justify-content:\s*center/s)
   })
 
-  it('bleeds the brand wash into the sidebar instead of a hard chip', () => {
+  it('draws a fused brand chip with a soft gradient edge', () => {
     const frame = readFileSync(resolve(import.meta.dirname, './shell-sidebar-frame.tsx'), 'utf8')
     expect(frame).toMatch(/app-side-bar-brand-title/)
     expect(frame).not.toMatch(/SIDEBAR_BRAND_GRADIENT/)
     expect(frame).not.toMatch(/rounded-md/)
     expect(css).toMatch(/\.app-side-bar:has\(\.app-side-bar-head-brand\)::before/)
     expect(css).toMatch(/filter:\s*blur\(42px\)/)
+    expect(css).toMatch(/\.app-side-bar-brand-title\s*\{[^}]*border:\s*1px solid transparent/s)
+    expect(css).toMatch(/\.app-side-bar-brand-title\s*\{[^}]*border-box/s)
+    expect(css).toMatch(/\.app-side-bar-brand-title\s*\{[^}]*drop-shadow/s)
     expect(css).toMatch(/\.app-side-bar-brand-title\s*\{[^}]*color:\s*var\(--dsw-sidebar-fg-active\)/s)
   })
 

@@ -349,16 +349,39 @@ body {
 }
 
 .app-side-bar-brand-title {
+  position: relative;
+  display: inline-flex;
   min-width: 0;
   max-width: 100%;
+  align-items: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--dsw-sidebar-fg-active);
-  text-shadow: 0 0 32px color-mix(in srgb, #5B3E90 28%, transparent);
+  background:
+    linear-gradient(
+      105deg,
+      color-mix(in srgb, #0066B0 16%, var(--dsw-sidebar)),
+      color-mix(in srgb, #5B3E90 14%, var(--dsw-sidebar)) 52%,
+      color-mix(in srgb, #E22726 12%, var(--dsw-sidebar))
+    ) padding-box,
+    linear-gradient(
+      105deg,
+      color-mix(in srgb, #0066B0 72%, transparent),
+      color-mix(in srgb, #5B3E90 68%, transparent) 52%,
+      color-mix(in srgb, #E22726 58%, transparent)
+    ) border-box;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 10%, transparent);
+  filter:
+    drop-shadow(0 0 8px color-mix(in srgb, #0066B0 32%, transparent))
+    drop-shadow(0 0 16px color-mix(in srgb, #5B3E90 26%, transparent))
+    drop-shadow(0 0 22px color-mix(in srgb, #E22726 14%, transparent));
 }
 
 .app-side-bar-head-brand .chat-view-header-expand {
