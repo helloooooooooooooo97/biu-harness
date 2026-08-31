@@ -31,7 +31,7 @@ export const EVENTS_COLLECTION_PATH = '/events'
 
 const USER_COLLECTION_ORDER = ['/sessions', '/tasks', '/pages', '/plugins'] as const
 
-/** 视图、事件由系统自己记下，侧栏标成系统数据，不能当用户表改。 */
+/** 视图、事件由系统自己记下，侧栏归在系统数据。 */
 export function isSystemCollection(path: string) {
   const normalized = normalizeCollectionPath(path)
   return normalized === VIEWS_COLLECTION_PATH || normalized === EVENTS_COLLECTION_PATH

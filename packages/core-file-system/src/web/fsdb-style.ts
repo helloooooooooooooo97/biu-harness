@@ -33,7 +33,6 @@ const CSS = `
 .fsdb-views .chat-session-row-main{border:0;background:transparent;color:inherit;cursor:default}
 .fsdb-views .chat-session-row-main button{cursor:default}
 .fsdb-views .chat-session-row-delete,.fsdb-views .chat-session-row-star{cursor:pointer}
-.fsdb-collection-kind{flex:none;margin-left:2px;border-radius:4px;padding:0 5px;background:color-mix(in srgb,var(--dsw-label) 8%,transparent);color:var(--dsw-label-3);font-size:10px;font-weight:700;letter-spacing:.04em;line-height:18px}
 .fsdb-collection-name{font-size:14px;font-weight:650;color:var(--dsw-label);line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-collection-head .fsdb-footnote{margin:4px 0 0;font-size:14px;font-weight:400;line-height:1.45;color:var(--dsw-label-3);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
 .fsdb-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;gap:10px;padding:12px 24px 16px;overflow:hidden}
