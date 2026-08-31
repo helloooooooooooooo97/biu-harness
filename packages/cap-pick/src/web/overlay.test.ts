@@ -36,6 +36,10 @@ test('Escape blurs the focused control so the UA focus ring does not linger', ()
   assert.match(overlay, /active.blur\(\)/)
 })
 
+test('pointerup does not attach picks after pick mode has exited', () => {
+  assert.match(overlay, /if \(!pick.picking\) return/)
+})
+
 test('Command/Ctrl+Q toggles pick mode', () => {
   assert.match(overlay, /event.metaKey \|\| event.ctrlKey/)
   assert.match(overlay, /key === 'q'/)

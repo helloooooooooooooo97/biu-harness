@@ -78,7 +78,7 @@ export class PickService extends Service {
     this.marquee = null
     this.marqueeHits = []
     this.bump()
-    if (this.refs.length > before && typeof window !== 'undefined') {
+    if (this.picking && this.refs.length > before && typeof window !== 'undefined') {
       window.dispatchEvent(new Event('biu:pick-attached'))
     }
   }

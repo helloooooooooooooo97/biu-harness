@@ -65,6 +65,7 @@ export function PickOverlay(_props: SlotProps) {
       if (!drag) return
       const started = drag
       drag = null
+      if (!pick.picking) return
       if (started.boxed) {
         const box = boxFromPoints(started.x, started.y, event.clientX, event.clientY)
         pick.addMany(resolvePicksInRect(box, route()).map((hit) => hit.ref))

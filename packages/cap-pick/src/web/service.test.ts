@@ -51,6 +51,7 @@ test('adding a pick notifies the overlay to open', () => {
     attached += 1
   }
   window.addEventListener('biu:pick-attached', onAttached)
+  pick.enter()
   pick.add({ kind: 'page', id: 'p1', label: '页面', route: '/pages' })
   pick.add({ kind: 'page', id: 'p1', label: '页面', route: '/pages' })
   window.removeEventListener('biu:pick-attached', onAttached)
@@ -65,10 +66,30 @@ test('a new pick notifies once; the same pick does not notify again', () => {
     attached += 1
   }
   window.addEventListener('biu:pick-attached', onAttached)
+  pick.enter()
   pick.add({ kind: 'page', id: 'p1', label: '页面', route: '/pages' })
   pick.add({ kind: 'page', id: 'p2', label: '另一页', route: '/pages' })
   window.removeEventListener('biu:pick-attached', onAttached)
   assert.equal(attached, 2)
+})
+
+test('after overlay closes, more picks do not open the chat again', () => {
+  const ctx = new Context()
+  const pick = new PickService(ctx)
+  let attached = 0
+  const onAttached = () => {
+    attached += 1
+  }
+  window.addEventListener('biu:pick-attached', onAttached)
+  pick.enter()
+  pick.add({ kind: 'page', id: 'p1', label: '页面', route: '/pages' })
+  assert.equal(attached, 1)
+  window.dispatchEvent(new Event('biu:overlay-closed'))
+  assert.equal(pick.picking, false)
+  pick.add({ kind: 'page', id: 'p2', label: '另一页', route: '/pages' })
+  window.removeEventListener('biu:pick-attached', onAttached)
+  assert.equal(attached, 1)
+  assert.equal(pick.refs.length, 2)
 })
 
 test('overlay-closed on window exits pick mode and keeps chips', () => {
