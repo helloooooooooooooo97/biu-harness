@@ -31,12 +31,15 @@ describe('composer dock stacking above sticky user', () => {
     expect(composer).toContain('biu:composer-focus')
   })
 
-  it('wakes the overlay composer on dock mascot hover, without an agent list', () => {
+  it('puts the session mascot after the header name, with the dock session picker', () => {
     const approvals = readFileSync(resolve(root, 'packages/cap-chat/src/web/approvals.tsx'), 'utf8')
+    const title = readFileSync(resolve(root, 'packages/web-app-shell/src/web/chat-session-title.tsx'), 'utf8')
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const shell = readFileSync(resolve(root, 'packages/web-app-shell/src/web/index.tsx'), 'utf8')
     const overlayWin = readFileSync(resolve(root, 'packages/web-app-shell/src/web/overlay-window.tsx'), 'utf8')
-    expect(approvals).toContain('dock-session-mascot')
+    expect(title).toContain('BrandCornerMascot')
+    expect(title).toContain('variant="popover"')
+    expect(approvals).not.toContain('dock-session-mascot')
     expect(approvals).not.toContain('BrandAgentMenu')
     expect(approvals).not.toContain('setSessionPickerOpen')
     expect(shell).not.toMatch(/hit\.closest\('\.dock-agent-stack'\)/)

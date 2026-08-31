@@ -191,12 +191,37 @@ body {
 .chat-view-session-title-wrap {
   position: absolute;
   left: 50%;
-  z-index: 1;
+  z-index: 12;
   display: flex;
-  max-width: min(420px, calc(100% - 220px));
+  max-width: min(480px, calc(100% - 220px));
   min-width: 0;
+  align-items: center;
+  gap: 2px;
   transform: translateX(-50%);
   pointer-events: none;
+}
+
+.chat-view-session-title-wrap .brand-corner-cluster {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  z-index: 2;
+  flex: none;
+  pointer-events: auto;
+}
+
+.chat-view-session-title-wrap .brand-corner-mascot-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+}
+
+.chat-view-session-title-wrap .brand-agent-menu {
+  top: calc(100% + 6px);
+  right: auto;
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .chat-view-session-title {
@@ -1032,19 +1057,26 @@ body {
 }
 
 .app-shell-agent {
-  grid-template-columns: var(--sidebar-col, var(--dsw-sidebar-max)) minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-col, 0px) minmax(0, 1fr) var(--inspector-width, 0px);
+  transition: grid-template-columns 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.app-shell-agent.is-sidebar-collapsed {
-  grid-template-columns: minmax(0, 1fr);
+.app-shell-agent.is-resizing {
+  transition: none;
 }
 
-.app-shell-agent.is-inspector-open {
-  grid-template-columns: var(--sidebar-col, var(--dsw-sidebar-max)) minmax(0, 1fr) var(--inspector-width, 320px);
+@media (prefers-reduced-motion: reduce) {
+  .app-shell-agent,
+  .app-shell-module {
+    transition: none;
+  }
 }
 
-.app-shell-agent.is-sidebar-collapsed.is-inspector-open {
-  grid-template-columns: minmax(0, 1fr) var(--inspector-width, 320px);
+.app-side-bar.is-closed,
+.session-inspector.is-closed {
+  overflow: hidden;
+  border-color: transparent;
+  pointer-events: none;
 }
 
 .session-inspector {
@@ -1305,11 +1337,12 @@ body {
 }
 
 .app-shell-module {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) var(--inspector-width, 0px);
+  transition: grid-template-columns 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.app-shell-module.is-inspector-open {
-  grid-template-columns: minmax(0, 1fr) var(--inspector-width, 320px);
+.app-shell-module.is-resizing {
+  transition: none;
 }
 
 .app-shell-module.is-inspector-open .chat-overlay-panel {

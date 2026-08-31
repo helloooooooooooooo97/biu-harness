@@ -351,6 +351,24 @@ function Shell(props: SlotProps) {
     }
     return 320
   })
+  const [columnResizing, setColumnResizing] = useState(false)
+  useEffect(() => {
+    const onDown = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      if (!target.closest('.sidebar-resize, .inspector-resize')) return
+      setColumnResizing(true)
+    }
+    const onUp = () => setColumnResizing(false)
+    window.addEventListener('pointerdown', onDown)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+  }, [])
   const toggleInspector = useCallback(() => {
     setInspectorOpen((prev) => {
       const next = !prev
@@ -600,16 +618,14 @@ function Shell(props: SlotProps) {
     <div
       className={`app-shell${leftPane
           ? ` app-shell-agent${leftHidden ? ' is-sidebar-collapsed' : ''}${sidebarNarrow && !leftHidden ? ' is-sidebar-narrow' : ''}${inspectorVisible ? ' is-inspector-open' : ''
-          }`
-          : ` app-shell-module${inspectorVisible ? ' is-inspector-open' : ''}`
+          }${columnResizing ? ' is-resizing' : ''}`
+          : ` app-shell-module${inspectorVisible ? ' is-inspector-open' : ''}${columnResizing ? ' is-resizing' : ''}`
         }${leftHidden ? ' is-left-hidden' : ''}`}
       data-testid="app-shell"
       style={
         {
           ['--sidebar-col' as string]: `${shellColumns.left}px`,
-          ...(inspectorVisible
-            ? { ['--inspector-width' as string]: `${shellColumns.inspector}px` }
-            : {}),
+          ['--inspector-width' as string]: `${shellColumns.inspector}px`,
         } as CSSProperties
       }
     >

@@ -141,11 +141,6 @@ export function ApprovalsRail(props: SlotProps) {
   const sessionView = props.sessionView as SessionViewService
   const sessionId = useSessionView((state) => state.sessionId)
   const sessions = useSessionView((state) => state.sessions)
-  const agentStatus = useSessionView((state) => state.agentStatus)
-  const currentSession = sessions.find((item) => item.id === sessionId)
-  const sessionIdentity = sessionId
-    ? resolveSessionMascot(sessionId, currentSession?.mascot)
-    : null
   const dispatchedTasksByTurn = useSessionView((state) => state.dispatchedTasksByTurn)
   const workerAgents = useMemo(
     () => activeWorkerAgents(dispatchedTasksByTurn, sessionId),
@@ -153,9 +148,6 @@ export function ApprovalsRail(props: SlotProps) {
   )
   const visibleWorkers = workerAgents.slice(0, DOCK_WORKER_CAP)
   const hiddenWorkerCount = Math.max(0, workerAgents.length - visibleWorkers.length)
-  const mainAgentName = sessionIdentity
-    ? dockAgentLabel(currentSession?.title, sessionIdentity.shape)
-    : ''
   const approvals = useSessionView((state) => state.approvals)
   const approvalMode = useSessionView((state) => state.approvalMode)
   const nodes = useSessionView((state) => state.nodes)
@@ -320,24 +312,8 @@ export function ApprovalsRail(props: SlotProps) {
             ) : null}
             <PaintBrushIcon className="size-4 relative z-1" aria-hidden />
           </button>
-          {sessionId && sessionIdentity ? (
+            {visibleWorkers.length ? (
             <span className="dock-agent-stack" data-testid="dock-agent-stack">
-              <span
-                className="dock-session-mascot"
-                data-testid="dock-session-mascot"
-                data-dock-tip={mainAgentName}
-                title={mainAgentName}
-                aria-label={mainAgentName || undefined}
-              >
-                <SidebarMascot
-                  size={28}
-                  sessionId={sessionId}
-                  identity={sessionIdentity}
-                  busy={agentStatus === 'running' || Boolean(currentSession?.busy)}
-                  animate={false}
-                  title=""
-                />
-              </span>
               {visibleWorkers.map((worker, index) => {
                 const identity = resolveSessionMascot(worker.sessionId, worker.mascot)
                 const listed = sessions.find((item) => item.id === worker.sessionId)
