@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { SlotProps } from '@biu/type-slots'
 import { getPick, usePickState } from './service.ts'
-import { boxFromPoints, resolvePickAtPoint, resolvePicksInRect } from './resolve.ts'
+import { boxFromPoints, resolvePickAtPoint, resolvePicksInRect, visiblePickBox } from './resolve.ts'
 
 const DRAG_PX = 6
 
@@ -15,7 +15,7 @@ export function ignorePickCapture(target: EventTarget | null, event?: Event) {
 }
 
 function hoverBox(el: HTMLElement) {
-  const box = el.getBoundingClientRect()
+  const box = visiblePickBox(el) ?? el.getBoundingClientRect()
   return { top: box.top, left: box.left, width: box.width, height: box.height }
 }
 

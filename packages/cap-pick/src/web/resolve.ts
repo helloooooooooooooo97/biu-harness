@@ -79,6 +79,41 @@ function boxOf(el: Element): ClientBox {
   return { left: r.left, top: r.top, width: r.width, height: r.height }
 }
 
+function intersectBoxes(a: ClientBox, b: ClientBox): ClientBox | null {
+  const left = Math.max(a.left, b.left)
+  const top = Math.max(a.top, b.top)
+  const width = Math.min(a.left + a.width, b.left + b.width) - left
+  const height = Math.min(a.top + a.height, b.top + b.height) - top
+  if (width <= 0 || height <= 0) return null
+  return { left, top, width, height }
+}
+
+function axisClips(computed: string, inline: string) {
+  const value = computed && computed !== 'visible' ? computed : inline
+  return Boolean(value && value !== 'visible')
+}
+
+function clipsOverflow(node: HTMLElement) {
+  const style = getComputedStyle(node)
+  return (
+    axisClips(style.overflowX, node.style.overflowX || node.style.overflow) ||
+    axisClips(style.overflowY, node.style.overflowY || node.style.overflow)
+  )
+}
+
+/** 框选只看露在本栏里的那一块。宽表格行的布局盒会伸进检查器，不能拿来当命中。 */
+export function visiblePickBox(el: Element): ClientBox | null {
+  let box: ClientBox | null = boxOf(el)
+  let node: Element | null = el.parentElement
+  while (box && node && node !== document.documentElement) {
+    if (node instanceof HTMLElement && clipsOverflow(node)) {
+      box = intersectBoxes(box, boxOf(node))
+    }
+    node = node.parentElement
+  }
+  return box
+}
+
 /**
  * 框选：命中所有带 kind+id 的对象节点（不采内部 action）。
  * 点选仍走 resolvePickFromNode，可以打到按钮上的 action。
@@ -89,7 +124,8 @@ export function resolvePicksInRect(box: ClientBox, route: string, root: ParentNo
   const hits: { el: HTMLElement; ref: PickRef }[] = []
   for (const node of Array.from(nodes)) {
     if (!(node instanceof HTMLElement) || isPickIgnored(node)) continue
-    if (!boxesOverlap(box, boxOf(node))) continue
+    const vis = visiblePickBox(node)
+    if (!vis || !boxesOverlap(box, vis)) continue
     const hit = resolvePickFromNode(node, route)
     if (!hit) continue
     const key = `${hit.ref.kind}:${hit.ref.id}`

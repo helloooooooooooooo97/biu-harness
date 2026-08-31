@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { resolvePickFromNode, resolvePickAtPoint, resolvePicksInRect } from './resolve.ts'
+import { resolvePickFromNode, resolvePickAtPoint, resolvePicksInRect, visiblePickBox } from './resolve.ts'
 import { formatPicks, parsePicks, splitPickStream, chipLabel, dedupePicks } from './types.ts'
 
 test('splitPickStream keeps text and chips in order', () => {
@@ -145,6 +145,33 @@ test('marquee skips ignored subtrees and inner action buttons', () => {
   assert.equal(hits[0]?.ref.action, undefined)
   card.remove()
   ignored.remove()
+})
+
+test('marquee in the inspector does not take center-pane rows at the same height', () => {
+  const center = document.createElement('div')
+  center.style.overflow = 'hidden'
+  const row = document.createElement('div')
+  row.setAttribute('data-biu-kind', 'task')
+  row.setAttribute('data-biu-id', 'center-row')
+  center.append(row)
+  const inspector = document.createElement('div')
+  inspector.setAttribute('data-biu-kind', 'task')
+  inspector.setAttribute('data-biu-id', 'inspector-row')
+  document.body.append(center, inspector)
+  stubBox(center, 80, 0, 120, 80)
+  stubBox(row, 80, 10, 400, 20)
+  stubBox(inspector, 220, 10, 80, 20)
+  const hits = resolvePicksInRect({ left: 220, top: 8, width: 60, height: 24 }, '/tasks')
+  assert.deepEqual(
+    hits.map((item) => item.ref.id),
+    ['inspector-row'],
+  )
+  const vis = visiblePickBox(row)
+  assert.ok(vis)
+  assert.equal(vis.left, 80)
+  assert.equal(vis.width, 120)
+  center.remove()
+  inspector.remove()
 })
 
 test('dedupePicks keeps one chip per kind+id', () => {
