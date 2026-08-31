@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import type { Context } from 'cordis'
-import { SignalIcon, QueueListIcon, ChatBubbleLeftIcon } from '@heroicons/react/16/solid'
+import { SignalIcon, QueueListIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/react/16/solid'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import type { SlotProps } from '@biu/web-slots'
 import { ApprovalsRail } from './approvals.tsx'
@@ -86,8 +86,9 @@ export function apply(ctx: Context) {
     id: 'composer',
     title: '对话',
     kind: 'composer',
+    group: 'tools',
     order: 30,
-    Icon: () => createElement(ChatBubbleLeftIcon, { className: 'size-5' }),
+    Icon: () => createElement(ChatBubbleBottomCenterTextIcon, { className: 'size-5' }),
     onOpen: () => {
       if (getChatOverlay()) {
         setChatOverlay(false)

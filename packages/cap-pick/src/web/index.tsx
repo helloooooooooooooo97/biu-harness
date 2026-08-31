@@ -34,7 +34,8 @@ export function apply(ctx: Context) {
     id: 'pick',
     title: '选取',
     kind: 'tool',
-    order: 20,
+    group: 'tools',
+    order: 31,
     Icon: PickDockIcon,
     onOpen: () => pick.toggle(),
   })

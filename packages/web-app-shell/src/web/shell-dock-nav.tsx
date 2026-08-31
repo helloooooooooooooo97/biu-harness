@@ -75,6 +75,7 @@ function ShellDockUpdate({ dock }: { dock: DockService }) {
       id: 'update',
       title: label,
       kind: 'tool',
+      group: 'tray',
       order: 201,
       Icon,
       onOpen: () => {
@@ -114,6 +115,7 @@ export function ShellDockNav({
         id: `module:${mod.id}`,
         title: mod.label,
         kind: 'module',
+        group: 'places',
         order: 11 + (mod.order ?? 0),
         Icon,
         onOpen: () => {
@@ -141,6 +143,7 @@ export function ShellDockNav({
       id: 'settings',
       title: 'Settings',
       kind: 'tool',
+      group: 'tray',
       order: 200,
       Icon,
       onOpen: onSettings,

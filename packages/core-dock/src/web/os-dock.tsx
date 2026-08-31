@@ -1,6 +1,8 @@
-import { useCallback, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { Fragment, useCallback, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import type { SlotProps } from '@biu/type-slots'
-import type { DockApp, DockService } from './service.ts'
+import type { DockApp, DockGroup, DockService } from './service.ts'
+
+const DOCK_GROUPS: DockGroup[] = ['places', 'tools', 'tray']
 
 const HIDE_MS = 280
 
@@ -54,8 +56,10 @@ export function OsDock(props: SlotProps) {
     () => dock.list(),
     () => dock.list(),
   )
-  const pinned = apps.filter((app) => app.group === 'pinned')
-  const running = apps.filter((app) => app.group === 'running')
+  const sections = DOCK_GROUPS.map((group) => ({
+    group,
+    apps: apps.filter((app) => app.group === group),
+  })).filter((section) => section.apps.length)
   const [open, setOpen] = useState(false)
   const hideTimer = useRef(0)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -104,12 +108,13 @@ export function OsDock(props: SlotProps) {
       <div className="os-dock-edge" aria-hidden />
       <div className="os-dock-peek" aria-hidden />
       <div className="os-dock-shelf">
-        {pinned.map((app) => (
-          <DockTile key={app.id} app={app} dock={dock} />
-        ))}
-        {running.length ? <span className="os-dock-sep" aria-hidden /> : null}
-        {running.map((app) => (
-          <DockTile key={app.id} app={app} dock={dock} />
+        {sections.map((section, index) => (
+          <Fragment key={section.group}>
+            {index > 0 ? <span className="os-dock-sep" aria-hidden /> : null}
+            {section.apps.map((app) => (
+              <DockTile key={app.id} app={app} dock={dock} />
+            ))}
+          </Fragment>
         ))}
       </div>
     </div>

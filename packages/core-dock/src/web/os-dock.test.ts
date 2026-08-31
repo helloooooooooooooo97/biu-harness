@@ -6,6 +6,7 @@ import assert from 'node:assert/strict'
 test('os dock auto-hides behind a peek bar and opens on hover', () => {
   const src = readFileSync(resolve(import.meta.dirname, './os-dock.tsx'), 'utf8')
   const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
+  assert.match(src, /places.*tools.*tray/s)
   assert.match(src, /os-dock-peek/)
   assert.match(src, /os-dock-edge/)
   assert.match(src, /is-open/)

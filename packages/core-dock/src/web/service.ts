@@ -1,8 +1,21 @@
 import { Service, type Context } from 'cordis'
 
-export type DockGroup = 'pinned' | 'running'
+export type DockGroup = 'places' | 'tools' | 'tray'
 
 export type DockKind = 'session' | 'tool' | 'composer' | 'plugin' | 'module'
+
+const GROUP_RANK: Record<DockGroup, number> = {
+  places: 0,
+  tools: 1,
+  tray: 2,
+}
+
+function defaultGroup(kind: DockKind, pinned: boolean): DockGroup {
+  if (!pinned || kind === 'plugin') return 'tray'
+  if (kind === 'session' || kind === 'module') return 'places'
+  if (kind === 'composer') return 'tools'
+  return 'tools'
+}
 
 export type DockApp = {
   id: string
@@ -41,8 +54,10 @@ type Listener = () => void
 
 const DEFAULT_ORDER: Record<string, number> = {
   session: 10,
-  pick: 20,
   composer: 30,
+  pick: 31,
+  settings: 200,
+  update: 201,
 }
 
 export class DockService extends Service {
@@ -61,10 +76,10 @@ export class DockService extends Service {
     const next: DockApp = {
       id: input.id,
       title: input.title,
-      order: input.order ?? existing?.order ?? DEFAULT_ORDER[input.id] ?? 100,
-      group: input.group ?? existing?.group ?? (input.pinned === false ? 'running' : 'pinned'),
+      order: input.order ?? existing?.order ?? DEFAULT_ORDER[input.id] ?? (input.kind === 'plugin' || existing?.kind === 'plugin' ? 300 : 100),
       kind: input.kind ?? existing?.kind ?? 'tool',
       pinned: input.pinned ?? existing?.pinned ?? true,
+      group: input.group ?? existing?.group ?? defaultGroup(input.kind ?? existing?.kind ?? 'tool', input.pinned ?? existing?.pinned ?? true),
       running: existing?.running ?? false,
       focused: existing?.focused ?? false,
       minimized: existing?.minimized ?? false,
@@ -151,7 +166,7 @@ export class DockService extends Service {
 
   private rebuild(): DockApp[] {
     return [...this.apps.values()].sort((a, b) => {
-      if (a.group !== b.group) return a.group === 'pinned' ? -1 : 1
+      if (a.group !== b.group) return GROUP_RANK[a.group] - GROUP_RANK[b.group]
       return a.order - b.order || a.id.localeCompare(b.id)
     })
   }

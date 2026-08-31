@@ -79,6 +79,7 @@ function ShellDockPins({
       id: 'session',
       title: 'Session',
       kind: 'session',
+      group: 'places',
       order: 10,
       Tile,
     })

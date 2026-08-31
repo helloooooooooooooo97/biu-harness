@@ -350,10 +350,10 @@ function PluginExtrasLayer(props: SlotProps) {
       dock.register({
         id: dockId,
         title,
-        group: 'running',
+        group: 'tray',
         kind: 'plugin',
         pinned: false,
-        order: 100 + entry.order,
+        order: 300 + entry.order,
         Icon,
         onOpen: () => {
           setMinimized((cur) => {

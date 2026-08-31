@@ -7,13 +7,15 @@ function dock() {
 }
 
 describe('DockService', () => {
-  it('keeps pinned apps on the left and running plugins after the separator', () => {
+  it('orders dock as places, tools, then tray', () => {
     const svc = dock()
-    svc.register({ id: 'composer', title: 'Composer', order: 30, kind: 'composer' })
-    svc.register({ id: 'session', title: 'Session', order: 10, kind: 'session' })
-    svc.register({ id: 'pick', title: '选取', order: 20, kind: 'tool' })
-    svc.register({ id: 'plugin:notes', title: 'Notes', group: 'running', kind: 'plugin', pinned: false })
-    expect(svc.list().map((app) => app.id)).toEqual(['session', 'pick', 'composer', 'plugin:notes'])
+    svc.register({ id: 'composer', title: 'Composer', kind: 'composer' })
+    svc.register({ id: 'session', title: 'Session', kind: 'session' })
+    svc.register({ id: 'pick', title: '选取', kind: 'tool' })
+    svc.register({ id: 'settings', title: 'Settings', kind: 'tool', group: 'tray' })
+    svc.register({ id: 'plugin:notes', title: 'Notes', group: 'tray', kind: 'plugin', pinned: false })
+    expect(svc.list().map((app) => app.id)).toEqual(['session', 'composer', 'pick', 'settings', 'plugin:notes'])
+    expect(svc.list().map((app) => app.group)).toEqual(['places', 'tools', 'tools', 'tray', 'tray'])
   })
 
   it('open focuses an app and close keeps pinned tiles', () => {
@@ -43,7 +45,7 @@ describe('DockService', () => {
 
   it('close removes unpinned plugin tiles', () => {
     const svc = dock()
-    svc.register({ id: 'plugin:x', title: 'X', pinned: false, group: 'running', kind: 'plugin' })
+    svc.register({ id: 'plugin:x', title: 'X', pinned: false, group: 'tray', kind: 'plugin' })
     svc.close('plugin:x')
     expect(svc.list()).toEqual([])
   })
