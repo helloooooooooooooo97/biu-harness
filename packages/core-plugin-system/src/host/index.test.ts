@@ -142,6 +142,8 @@ test('web-only plugin opens without host.js', async () => {
     })
     await assert.rejects(() => store.pack('store-empty'), /sandbox not found/)
     await store.pack('store-banner')
+    const sandboxes = await store.listSandboxes()
+    assert.equal(sandboxes.find((row) => row.id === 'store-banner')?.hasWeb, true)
     await store.openPlugin('store-banner')
     assert.equal(forks.get('store-banner')?.web, '/api/plugin-store/files/store-banner/web.js')
     await assert.rejects(() => store.readInstalledFile('store-banner', 'host.js'))

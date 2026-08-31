@@ -273,6 +273,42 @@ export class PluginStoreService extends Service {
     return { id: manifest.id, sandboxPath: sandbox, pluginPath: dest }
   }
 
+  async listSandboxes() {
+    const names = existsSync(this.sandboxDir) ? await readdir(this.sandboxDir) : []
+    const items: Array<{
+      id: string
+      name: string
+      blurb: string
+      tags: string[]
+      author: string
+      authorUrl: string
+      hasHost: boolean
+      hasWeb: boolean
+      createdAt: number
+      updatedAt: number
+    }> = []
+    for (const name of names.sort()) {
+      const dir = join(this.sandboxDir, name)
+      if (!(await stat(dir)).isDirectory()) continue
+      if (!existsSync(join(dir, 'manifest.json'))) continue
+      const manifest = await readManifest(dir)
+      const stats = await pluginDirStats(dir)
+      items.push({
+        id: manifest.id,
+        name: manifest.name,
+        blurb: manifest.blurb,
+        tags: manifest.tags,
+        author: manifest.author,
+        authorUrl: manifest.authorUrl,
+        hasHost: Boolean(findEntry(dir, HOST_ENTRIES)),
+        hasWeb: Boolean(findEntry(dir, WEB_ENTRIES)),
+        createdAt: manifest.createdAt || stats.createdAt,
+        updatedAt: stats.updatedAt,
+      })
+    }
+    return items
+  }
+
   async list(): Promise<StoreListing[]> {
     if (this.listCache) return this.listCache
     const names = existsSync(this.pluginDir) ? await readdir(this.pluginDir) : []

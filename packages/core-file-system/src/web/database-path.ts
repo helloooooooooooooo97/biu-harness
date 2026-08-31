@@ -29,7 +29,7 @@ export function databaseRecordPath(collection: string, recordId: string): string
 export const VIEWS_COLLECTION_PATH = '/views'
 export const EVENTS_COLLECTION_PATH = '/events'
 
-const USER_COLLECTION_ORDER = ['/sessions', '/tasks', '/pages', '/plugins'] as const
+const USER_COLLECTION_ORDER = ['/sessions', '/tasks', '/pages', '/plugins', '/plugin-sandboxes'] as const
 
 /** 视图、事件由系统自己记下，侧栏归在系统数据。 */
 export function isSystemCollection(path: string) {
