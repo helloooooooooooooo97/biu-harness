@@ -23,12 +23,10 @@ export function apply(ctx: Context) {
   slots.place('header-tools', PickToggle, {
     key: 'pick-toggle',
     order: 10,
-    props: () => ({ placement: 'header' }),
   })
   slots.place('root-overlays', PickOverlay, {
     key: 'pick-overlay',
     order: 10,
-    props: () => ({}),
   })
   ctx.dock.register({
     id: 'pick',

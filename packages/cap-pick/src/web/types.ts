@@ -10,7 +10,7 @@ export function pickKey(ref: PickRef) {
   return `${ref.kind}:${ref.id}:${ref.action ?? ''}`
 }
 
-export function objectKey(ref: PickRef) {
+function objectKey(ref: PickRef) {
   return `${ref.kind}:${ref.id}`
 }
 
@@ -80,10 +80,10 @@ export function formatPick(ref: PickRef) {
 /** 按原文顺序拆成文字段和 pick 块，供输入框混排还原。 */
 export function splitPickStream(text: string): Array<{ type: 'text'; value: string } | { type: 'pick'; ref: PickRef }> {
   const parts: Array<{ type: 'text'; value: string } | { type: 'pick'; ref: PickRef }> = []
-  const re = /<pick\b([^>]*)\/>/gi
+  PICK_TAG.lastIndex = 0
   let last = 0
   let match: RegExpExecArray | null
-  while ((match = re.exec(text))) {
+  while ((match = PICK_TAG.exec(text))) {
     if (match.index > last) parts.push({ type: 'text', value: text.slice(last, match.index) })
     const ref = parsePickAttrs(match[1] ?? '')
     if (ref) parts.push({ type: 'pick', ref })
