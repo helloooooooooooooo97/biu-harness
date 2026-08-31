@@ -110,6 +110,8 @@ test('create record sits at the right of the toolbar with a blue label', () => {
   assert.match(browser, /withViewDisplay/)
   assert.doesNotMatch(browser, /if \(current\?\.builtin\) return/)
   assert.match(css, /\.tasks-table\.is-wrap\{[^}]*white-space:normal/)
+  assert.match(css, /\.tasks-table th,\.fsdb-page \.tasks-table\.is-wrap th\{[^}]*white-space:nowrap/)
+  assert.match(css, /\.tasks-th\{[^}]*white-space:nowrap/)
 })
 
 test('filesystem header expands the shared left sidebar and toggles the right inspector', () => {
