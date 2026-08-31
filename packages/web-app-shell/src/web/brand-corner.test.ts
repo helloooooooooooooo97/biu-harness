@@ -4,13 +4,15 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 
 const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+const title = readFileSync(resolve(import.meta.dirname, './chat-session-title.tsx'), 'utf8')
 const chat = readFileSync(resolve(import.meta.dirname, './chat-sidebar.tsx'), 'utf8')
 const frame = readFileSync(resolve(import.meta.dirname, './shell-sidebar-frame.tsx'), 'utf8')
+const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
 
 test('brand mascot lives at the corner; sidebar head is title plus collapse', () => {
-  assert.match(shell, /BrandCornerMascot/)
-  assert.match(shell, /variant="popover"/)
   assert.match(shell, /DockSessionMascot/)
+  assert.match(title, /BrandCornerMascot/)
+  assert.match(title, /variant="popover"/)
   assert.match(frame, /data-testid="sidebar-collapse"/)
   assert.match(frame, /app-side-bar-head-brand/)
   assert.match(frame, /Biu Agent OS/)
@@ -29,7 +31,6 @@ test('brand mascot lives at the corner; sidebar head is title plus collapse', ()
   assert.doesNotMatch(mascot, /brand-corner-dock/)
   assert.doesNotMatch(mascot, /brand-corner-chat-overlay/)
   assert.doesNotMatch(mascot, /onToggleOverlay/)
-  assert.match(shell, /<BrandCornerMascot/)
   assert.match(shell, /ShellDockPins/)
   assert.doesNotMatch(shell, /activeModule === 'agent' \? null : \(/)
   assert.doesNotMatch(shell, /activeModule !== 'agent' &&/)
@@ -37,7 +38,6 @@ test('brand mascot lives at the corner; sidebar head is title plus collapse', ()
   assert.doesNotMatch(shell, /props.renderSlot\('corner-tools'\)/)
   assert.doesNotMatch(shell, /leading=\{activeModule === 'agent' \? null/)
   assert.doesNotMatch(shell, /onToggleOverlay/)
-  const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
   assert.match(css, /\.brand-corner-mascot-btn\.is-active[\s\S]*?background:\s*transparent/)
   assert.match(css, /--brand-corner-clearance:\s*1\.25rem/)
   assert.match(css, /\.session-inspector\s*\{[^}]*padding-bottom:\s*var\(--brand-corner-clearance\)/s)
@@ -53,4 +53,15 @@ test('brand mascot lives at the corner; sidebar head is title plus collapse', ()
   assert.match(css, /\.os-dock\s*\{/)
   assert.match(css, /\.os-dock-shelf-row\s*\{[^}]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.1\)/s)
   assert.match(css, /\.os-dock-shelf-row\s*\{[^}]*backdrop-filter:\s*blur/s)
+})
+
+test('shell columns keep three tracks so sidebar and inspector can animate', () => {
+  assert.match(css, /\.app-shell-agent\s*\{[^}]*transition:\s*grid-template-columns/s)
+  assert.match(css, /\.app-shell-module\s*\{[^}]*transition:\s*grid-template-columns/s)
+  assert.match(
+    css,
+    /\.app-shell-agent\s*\{[^}]*grid-template-columns:\s*var\(--sidebar-col, 0px\) minmax\(0, 1fr\) var\(--inspector-width, 0px\)/s,
+  )
+  assert.doesNotMatch(css, /\.app-shell-agent\.is-sidebar-collapsed\s*\{/)
+  assert.match(frame, /is-closed flex/)
 })

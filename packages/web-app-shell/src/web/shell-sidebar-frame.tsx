@@ -49,8 +49,9 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
 
   return (
     <aside
-      className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)${narrow ? ' is-narrow' : ''}${showTags ? ' is-wide' : ''} ${visible ? 'flex' : 'hidden'}`}
+      className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)${narrow ? ' is-narrow' : ''}${showTags ? ' is-wide' : ''}${visible ? ' flex' : ' is-closed flex'}`}
       aria-hidden={!visible}
+      inert={!visible || undefined}
       data-testid={testId}
     >
       {onWidthChange ? (

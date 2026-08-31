@@ -1,5 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
+import { BrandCornerMascot } from '@biu/web-mascot'
+import { ChatSidebar } from './chat-sidebar.tsx'
 
 export const ChatSessionTitle = memo(function ChatSessionTitle({
   useSessionView,
@@ -9,6 +11,7 @@ export const ChatSessionTitle = memo(function ChatSessionTitle({
   sessionView: SessionViewService
 }) {
   const sessionId = useSessionView((state) => state.sessionId)
+  const sessions = useSessionView((state) => state.sessions)
   const title = useSessionView((state) => {
     const id = state.sessionId
     if (!id) return ''
@@ -57,6 +60,21 @@ export const ChatSessionTitle = memo(function ChatSessionTitle({
           event.preventDefault()
           ;(event.target as HTMLInputElement).blur()
         }}
+      />
+      <BrandCornerMascot
+        agents={sessions}
+        activeId={sessionId}
+        size={22}
+        menu={(close) => (
+          <ChatSidebar
+            variant="popover"
+            visible
+            routeSessionId={sessionId}
+            useSessionView={useSessionView}
+            sessionView={sessionView}
+            onActivate={close}
+          />
+        )}
       />
     </div>
   )

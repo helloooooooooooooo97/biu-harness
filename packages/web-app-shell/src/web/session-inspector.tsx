@@ -292,13 +292,13 @@ export const SessionInspector = memo(function SessionInspector({
     if (tab === id) setTab(next.at(-1) ?? '')
   }
 
-  if (!open) return null
-
   return (
     <aside
-      className="session-inspector relative flex min-h-0 min-w-0 flex-col bg-(--dsw-bg) text-(--dsw-label)"
+      className={`session-inspector relative flex min-h-0 min-w-0 flex-col bg-(--dsw-bg) text-(--dsw-label)${open ? '' : ' is-closed'}`}
       data-testid="session-inspector"
       aria-label="会话检查器"
+      aria-hidden={!open}
+      inert={!open || undefined}
     >
       <div
         className="inspector-resize"

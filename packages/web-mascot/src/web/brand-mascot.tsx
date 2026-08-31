@@ -90,12 +90,14 @@ export function BrandCornerMascot({
   onSelect,
   leading,
   menu,
+  size = 36,
 }: {
   agents?: CornerAgent[]
   activeId?: string | null
   onSelect?: (id: string) => void
   leading?: ReactNode
   menu?: ReactNode | ((close: () => void) => ReactNode)
+  size?: number
 }) {
   const [agentsOpen, setAgentsOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -150,7 +152,7 @@ export function BrandCornerMascot({
           onClick={() => setAgentsOpen((prev) => !prev)}
         >
           {identity && current ? (
-            <SidebarMascot size={36} sessionId={current.id} identity={identity} animate={false} title="" />
+            <SidebarMascot size={size} sessionId={current.id} identity={identity} animate={false} title="" />
           ) : (
             <BrandMascot className="size-9" />
           )}
