@@ -71,9 +71,21 @@ function PluginAppWindow({
   const [geom, setGeom] = useState<WinGeom>(() => centeredGeom(shell, viewport(), extraId))
   const [userSized, setUserSized] = useState(false)
   const [z, setZ] = useState(() => ++pluginWindowZ)
+  const [controlsOpen, setControlsOpen] = useState(false)
   const boxRef = useRef<HTMLElement>(null)
   const dragRef = useRef<{ px: number; py: number; x: number; y: number } | null>(null)
   const resizeRef = useRef<ResizeSession | null>(null)
+  const leaveTimer = useRef(0)
+
+  const openControls = () => {
+    window.clearTimeout(leaveTimer.current)
+    setControlsOpen(true)
+  }
+  const closeControlsSoon = () => {
+    window.clearTimeout(leaveTimer.current)
+    leaveTimer.current = window.setTimeout(() => setControlsOpen(false), 160)
+  }
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), [])
 
   useEffect(() => {
     if (userSized || fullscreen) return
@@ -191,16 +203,27 @@ function PluginAppWindow({
       data-shell-height={shell.height}
       data-shell-resizable={shell.resizable ? '1' : '0'}
       data-fullscreen={fullscreen || undefined}
+      data-controls={controlsOpen ? 'open' : undefined}
       onPointerDown={bringFront}
+      onPointerEnter={openControls}
+      onPointerLeave={closeControlsSoon}
     >
       <div className="plugin-store-window-body relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent">
         {children}
       </div>
-      <nav
-        className="pointer-events-none absolute top-2 left-full z-20 ml-1.5 flex cursor-grab flex-col gap-0.5 rounded-lg bg-white/55 p-0.5 opacity-0 shadow-[0_1px_2px_rgba(15,15,15,.06)] backdrop-blur-md transition-opacity duration-150 group-hover/win:pointer-events-auto group-hover/win:opacity-100 active:cursor-grabbing"
-        aria-label={`${title} 窗口`}
-        onPointerDown={startDrag}
+      <div
+        className="pointer-events-auto absolute top-0 left-full z-20 h-full w-12"
+        data-testid={`plugin-window-controls-${extraId}`}
+        onPointerEnter={openControls}
+        onPointerLeave={closeControlsSoon}
       >
+        <nav
+          className={`absolute top-2 left-1.5 flex cursor-grab flex-col gap-0.5 rounded-lg bg-white/10 p-0.5 shadow-[0_1px_2px_rgba(15,15,15,.04)] backdrop-blur-sm transition-opacity duration-150 active:cursor-grabbing ${
+            controlsOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+          aria-label={`${title} 窗口`}
+          onPointerDown={startDrag}
+        >
         <button
           type="button"
           className="flex size-6 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800"
@@ -235,7 +258,8 @@ function PluginAppWindow({
         >
           {fullscreen ? <ArrowsPointingInIcon className="size-3.5" /> : <ArrowsPointingOutIcon className="size-3.5" />}
         </button>
-      </nav>
+        </nav>
+      </div>
       {fullscreen || !shell.resizable
         ? null
         : handles.map((item) => (
