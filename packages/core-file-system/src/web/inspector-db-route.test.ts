@@ -5,6 +5,7 @@ import {
   isInspectorDatabasePath,
   seedInspectorDbPath,
   setInspectorDbPath,
+  showRecordInInspector,
 } from './inspector-db-route.ts'
 
 test('inspector database path does not overwrite after first seed', () => {
@@ -34,4 +35,21 @@ test('each inspector database pane keeps its own path', () => {
   assert.equal(getInspectorDbPath('database::b'), '/database/tasks')
   seedInspectorDbPath('database::a', '/database/events')
   assert.equal(getInspectorDbPath('database::a'), '/database/pages')
+})
+
+test('showRecordInInspector opens the inspector on this record', async () => {
+  const tabs: string[] = []
+  const onTab = (event: Event) => {
+    const detail = (event as CustomEvent).detail
+    if (typeof detail === 'string') tabs.push(detail)
+  }
+  window.addEventListener('biu:inspector-tab', onTab)
+  const opened = new Promise<void>((resolve) => {
+    window.addEventListener('biu:inspector-open', () => resolve(), { once: true })
+  })
+  showRecordInInspector('/pages', 'p1')
+  await opened
+  assert.equal(getInspectorDbPath('database:/pages'), '/database/pages/record/p1')
+  assert.deepEqual(tabs, ['database:/pages'])
+  window.removeEventListener('biu:inspector-tab', onTab)
 })

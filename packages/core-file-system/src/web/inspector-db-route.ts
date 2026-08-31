@@ -1,6 +1,6 @@
 /** 检查器里每个数据库 Tab 有自己的路径，不改中间主界面。 */
 
-import { DATA_MODULE_PATH } from './database-path.ts'
+import { DATA_MODULE_PATH, databaseRecordPath } from './database-path.ts'
 
 const DEFAULT_PANE = 'database'
 const listeners = new Set<() => void>()
@@ -39,6 +39,18 @@ export function setInspectorDbPath(paneId: string, next?: string) {
   if (!stored) paths.delete(id)
   else paths.set(id, stored)
   bump()
+}
+
+export function inspectorCollectionTabId(collection: string) {
+  return `database:${collection}`
+}
+
+/** 右侧检查器打开这条记录，中间主界面不动。 */
+export function showRecordInInspector(collection: string, recordId: string) {
+  const tabId = inspectorCollectionTabId(collection)
+  setInspectorDbPath(tabId, databaseRecordPath(collection, recordId))
+  window.dispatchEvent(new Event('biu:inspector-open'))
+  window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: tabId }))
 }
 
 export function seedInspectorDbPath(paneId: string, pathname?: string) {

@@ -122,11 +122,12 @@ const CSS = `
 .fsdb-page .tasks-tree-toggle.is-empty:hover{background:transparent}
 .fsdb-page .fsdb-title-text{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .fsdb-page .tasks-table.is-wrap .fsdb-title-text{white-space:normal}
-.fsdb-page .tasks-title-aside{position:relative;flex:none;display:grid;place-items:center;width:24px;height:24px}
-.fsdb-page .tasks-title-aside .tasks-tree-count,.fsdb-page .tasks-title-aside .tasks-title-open{grid-area:1/1}
+.fsdb-page .tasks-title-aside{position:relative;flex:none;display:inline-flex;align-items:center}
+.fsdb-page .tasks-title-zoom{position:relative;display:grid;place-items:center;width:24px;height:24px}
+.fsdb-page .tasks-title-zoom .tasks-tree-count,.fsdb-page .tasks-title-zoom .tasks-title-open{grid-area:1/1}
 .fsdb-page .tasks-title-open{flex:none;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--dsw-label-3);border-radius:6px;cursor:pointer;padding:0;opacity:0;z-index:1}
 .fsdb-page .tasks-title-cell:hover .tasks-title-open,.fsdb-page .tasks-title-open:focus-visible{opacity:1}
-.fsdb-page .tasks-title-cell:hover .tasks-tree-count,.fsdb-page .tasks-title-aside:has(.tasks-title-open:focus-visible) .tasks-tree-count{opacity:0}
+.fsdb-page .tasks-title-cell:hover .tasks-tree-count,.fsdb-page .tasks-title-zoom:has(.tasks-title-open:focus-visible) .tasks-tree-count{opacity:0}
 .fsdb-page .tasks-title-open:hover{opacity:1;color:var(--dsw-label);background:var(--dsw-hover)}
 .fsdb-page .tasks-tree-count{pointer-events:none}
 .fsdb-page .tasks-table.is-truncate:not(.is-wrap) .fsdb-cell{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

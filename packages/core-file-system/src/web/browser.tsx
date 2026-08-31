@@ -94,6 +94,7 @@ import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 import { mergeCatalogViews, mergeTableViews, catalogRowOpenTarget } from '../catalog-views.ts'
 import { VIEWS_COLLECTION_PATH } from './database-path.ts'
+import { showRecordInInspector } from './inspector-db-route.ts'
 
 type StatResult = { schema?: CollectionSchema }
 
@@ -1158,25 +1159,42 @@ export function CollectionBrowser({
         <span className="fsdb-title-text">{body}</span>
         {openDetail ? (
           <span className="tasks-title-aside">
-            {tree && kidCount > 0 ? (
-              <span className="sidebar-chat-count tasks-tree-count" title={`${kidCount} 项`}>
-                <span className="sidebar-chat-count-num">{kidCount}</span>
-              </span>
+            {!embed ? (
+              <button
+                type="button"
+                className="tasks-title-open"
+                data-testid="record-title-split"
+                aria-label="在右侧打开"
+                title="在右侧打开"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  showRecordInInspector(collectionPath, row.id)
+                }}
+              >
+                <ViewColumnsIcon aria-hidden className="size-[14px]" />
+              </button>
             ) : null}
-            <button
-              type="button"
-              className="tasks-title-open"
-              data-testid="record-title-open"
-              data-biu-action="open"
-              aria-label="查看详情"
-              title="查看详情"
-              onClick={(event) => {
-                event.stopPropagation()
-                openRow(row)
-              }}
-            >
-              <ArrowsPointingOutIcon aria-hidden className="size-[14px]" />
-            </button>
+            <span className="tasks-title-zoom">
+              {tree && kidCount > 0 ? (
+                <span className="sidebar-chat-count tasks-tree-count" title={`${kidCount} 项`}>
+                  <span className="sidebar-chat-count-num">{kidCount}</span>
+                </span>
+              ) : null}
+              <button
+                type="button"
+                className="tasks-title-open"
+                data-testid="record-title-open"
+                data-biu-action="open"
+                aria-label="查看详情"
+                title="查看详情"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  openRow(row)
+                }}
+              >
+                <ArrowsPointingOutIcon aria-hidden className="size-[14px]" />
+              </button>
+            </span>
           </span>
         ) : null}
       </div>
