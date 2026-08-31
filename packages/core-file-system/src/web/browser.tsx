@@ -1877,6 +1877,7 @@ export function CollectionBrowser({
               <button
                 type="button"
                 className="fsdb-create-btn"
+                style={{ backgroundColor: '#4F7FDE' }}
                 aria-label="新建记录"
                 title="新建"
                 onClick={() => void createRecord()}

@@ -74,9 +74,11 @@ test('create record sits at the right of the toolbar with a blue label', () => {
     browser,
     /className="tasks-toolbar-left"[\s\S]*?aria-label="新建记录"[\s\S]*?className="tasks-toolbar-right"/,
   )
+  assert.match(browser, /backgroundColor: '#4F7FDE'/)
   const css = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8')
   assert.match(css, /\.fsdb-create-btn\{[^}]*border-radius:4px/)
   assert.match(css, /\.fsdb-create-btn\{[^}]*background:#4F7FDE/)
+  assert.doesNotMatch(css, /#637CDA/)
 })
 
 test('filesystem header expands the shared left sidebar and toggles the right inspector', () => {
