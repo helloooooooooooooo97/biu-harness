@@ -6,7 +6,10 @@ import { sessionsChrome } from './sessions-chrome.tsx'
 
 test('session table titles include the session mascot', () => {
   assert.equal(typeof sessionsChrome.Title, 'function')
+  assert.equal(typeof sessionsChrome.Icon, 'function')
   const chrome = readFileSync(resolve(import.meta.dirname, './sessions-chrome.tsx'), 'utf8')
+  assert.match(chrome, /function SessionIcon/)
+  assert.match(chrome, /size=\{32\}/)
   assert.match(chrome, /SidebarMascot/)
   assert.match(chrome, /resolveSessionMascot/)
   assert.match(chrome, /className="sessions-title"/)

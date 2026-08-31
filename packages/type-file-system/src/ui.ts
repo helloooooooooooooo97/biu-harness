@@ -32,8 +32,8 @@ export type FsDetailPane = {
 export type CollectionChrome = {
   cells?: Partial<Record<string, ComponentType<FsCellProps>>>
   Action?: ComponentType<FsActionProps>
-  /** 标题列（labelField）在卡片/队列里也可换成自定义节点 */
-  Title?: ComponentType<{ record: DbRecord; label: string }>
+  /** 详情标题左侧图标。不传则用集合 glyph / 记录 emoji。 */
+  Icon?: ComponentType<{ record: DbRecord }>
   /** 正文。不传则把 content 当文件默认渲染。结构由登记方自己解析。 */
   Content?: ComponentType<FsContentProps>
   /** 详情弹窗额外分区（概况之外）。旧任务详情的脚本/进度汇报走这里。 */

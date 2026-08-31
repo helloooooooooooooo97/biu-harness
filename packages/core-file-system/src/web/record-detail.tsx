@@ -14,11 +14,15 @@ function DetailTitleIcon({
   emoji,
   tableIcon,
   label,
+  record,
+  Icon,
   onChange,
 }: {
   emoji: string
   tableIcon?: string
   label: string
+  record: DbRecord
+  Icon?: CollectionChrome['Icon']
   onChange: (next: string) => void
 }) {
   const [open, setOpen] = useState(false)
@@ -44,7 +48,13 @@ function DetailTitleIcon({
           })
         }}
       >
-        {emoji ? <span className="fsdb-record-emoji">{emoji}</span> : <TableGlyph icon={tableIcon} className="size-8" />}
+        {emoji ? (
+          <span className="fsdb-record-emoji">{emoji}</span>
+        ) : Icon ? (
+          <Icon record={record} />
+        ) : (
+          <TableGlyph icon={tableIcon} className="size-8" />
+        )}
       </button>
       {open && anchor ? (
         <RecordEmojiBoard
@@ -110,6 +120,8 @@ export function RecordDetail({
                   emoji={recordPreviewEmoji(selected)}
                   tableIcon={tableIcon}
                   label={labelOf(selected)}
+                  record={selected}
+                  Icon={chrome?.Icon}
                   onChange={(next) => {
                     void Promise.resolve(writePatch(selected, { emoji: next })).then(() => {
                       window.dispatchEvent(new Event('fsdb:change'))
