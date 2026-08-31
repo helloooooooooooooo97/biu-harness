@@ -10,5 +10,12 @@
   ],
   "author": "cordis",
   "authorUrl": "",
-  "createdAt": 1787998752911
+  "createdAt": 1787998752911,
+  "shell": {
+    "width": 396,
+    "height": 560,
+    "minWidth": 396,
+    "minHeight": 560,
+    "resizable": false
+  }
 }
