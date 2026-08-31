@@ -38,7 +38,7 @@ const CSS = `
 .fsdb-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;gap:10px;padding:20px 24px 16px;overflow:hidden}
 .fsdb-page:not(.inspector-database-page) .fsdb-main{padding-bottom:var(--brand-corner-clearance,60px)}
 .inspector-database-page .fsdb-main{padding-bottom:0}
-.fsdb-main > .fsdb-detail-title{flex:none}
+.fsdb-main > .fsdb-detail-title-row{flex:none}
 .fsdb-page .tasks-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;min-width:0}
 .fsdb-page .tasks-toolbar-left{display:flex;align-items:center;gap:6px;flex:none;min-width:0}
 .fsdb-locked-filter{display:inline-flex;align-items:center;height:26px;padding:0 8px;border-radius:8px;background:color-mix(in srgb,var(--dsw-business) 12%,transparent);color:var(--dsw-business);font-size:13px;font-weight:650;cursor:default}
@@ -240,7 +240,12 @@ const CSS = `
 .fsdb-prop-val .fsdb-plain-input:focus{text-overflow:clip}
 .fsdb-prop-val .fsdb-link{display:block;overflow-wrap:normal}
 .fsdb-prop-val .fsdb-tags{display:flex;flex-wrap:nowrap}
-.fsdb-detail-title-row{display:flex;align-items:flex-start;gap:8px;min-width:0}
+.fsdb-detail-title-row{display:flex;align-items:flex-start;gap:12px;min-width:0}
+.fsdb-detail-title-icon-wrap{position:relative;flex:none;margin-top:2px}
+.fsdb-detail-title-icon{display:grid;place-items:center;width:36px;height:36px;margin:0;border:0;border-radius:10px;padding:0;background:transparent;color:var(--dsw-label-2);font-size:28px;line-height:1}
+button.fsdb-detail-title-icon{cursor:pointer}
+button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-label)}
+.fsdb-detail-title-icon .fsdb-record-emoji{font-size:28px;line-height:1}
 .fsdb-detail-title{flex:1;min-width:0;margin:0;color:var(--dsw-label);font-size:32px;font-weight:700;line-height:1.2}
 .fsdb-detail-title-input{display:block;width:100%;margin:0;border:0;background:transparent;color:inherit;font:inherit;font-size:inherit;font-weight:inherit;line-height:inherit;outline:none;padding:0;resize:none}
 .fsdb-detail-title-row .fsdb-detail-title-input{flex:none}
