@@ -407,8 +407,7 @@ body {
   color: #f0efed;
 }
 
-.os-dock-item > .os-dock-tile > svg,
-.os-dock-tile .brand-corner-mascot-btn svg {
+.os-dock-item > .os-dock-tile > svg {
   width: 22px !important;
   height: 22px !important;
 }
