@@ -52,6 +52,7 @@ import {
   Cog6ToothIcon,
   AdjustmentsHorizontalIcon,
   MapPinIcon,
+  XMarkIcon,
 } from '@heroicons/react/16/solid'
 
 export const name = 'shell'
@@ -294,7 +295,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
   )
 
   const overlayNode =
-    overlay && overlayMounted
+    overlay && overlayMounted && overlayOpen
       ? createPortal(
         <OverlayChatWindow
           header={header}
@@ -731,7 +732,18 @@ function Shell(props: SlotProps) {
         ) : null}
       </div>
       <ChatSessionTitle useSessionView={useSessionView} sessionView={sessionView} />
-      <div className="chat-view-header-right" />
+      <div className="chat-view-header-right">
+        <button
+          type="button"
+          className="chat-view-header-expand"
+          title="关闭聊天窗口"
+          aria-label="关闭聊天窗口"
+          data-testid="chat-overlay-close"
+          onClick={() => setChatOverlay(false)}
+        >
+          <XMarkIcon {...chromeIcon} />
+        </button>
+      </div>
     </header>
   )
 

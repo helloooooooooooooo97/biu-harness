@@ -89,6 +89,10 @@ export function apply(ctx: Context) {
     order: 30,
     Icon: () => createElement(ChatBubbleLeftIcon, { className: 'size-5' }),
     onOpen: () => {
+      if (getChatOverlay()) {
+        setChatOverlay(false)
+        return
+      }
       setChatOverlay(true)
       requestOverlayFocus()
     },
