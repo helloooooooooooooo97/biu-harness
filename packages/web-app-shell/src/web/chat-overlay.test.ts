@@ -27,7 +27,12 @@ import {
   clampOverlayChatHeight,
   clampOverlayWinGeom,
   defaultOverlayWinGeom,
+  overlayLayoutGeom,
+  parseOverlayLayout,
+  readOverlayWinState,
+  writeOverlayWinState,
   OVERLAY_CHAT_HEIGHT_MIN,
+  OVERLAY_DOCK_CLEARANCE,
   OVERLAY_WIN_MIN_H,
   OVERLAY_WIN_MIN_W,
   inspectorTabFromEvent,
@@ -208,10 +213,38 @@ test('overlay window geom clamps and sits above the dock by default', () => {
   const def = defaultOverlayWinGeom(1280, 800)
   assert.ok(def.w >= OVERLAY_WIN_MIN_W)
   assert.ok(def.h >= OVERLAY_WIN_MIN_H)
-  assert.ok(def.y + def.h <= 800 - 80)
+  assert.ok(def.y + def.h <= 800 - OVERLAY_DOCK_CLEARANCE)
   const tiny = clampOverlayWinGeom({ x: -400, y: -20, w: 10, h: 10 }, 1280, 800)
   assert.equal(tiny.w, OVERLAY_WIN_MIN_W)
   assert.equal(tiny.h, OVERLAY_WIN_MIN_H)
+})
+
+test('layout presets pin the overlay to the viewport', () => {
+  const prev = { x: 100, y: 80, w: 420, h: 400 }
+  const center = overlayLayoutGeom('center', prev, 1280, 800)
+  assert.equal(center.x, Math.round((1280 - 420) / 2))
+  const left = overlayLayoutGeom('left', prev, 1280, 800)
+  assert.equal(left.x, 12)
+  assert.equal(left.y, 12)
+  const right = overlayLayoutGeom('right', prev, 1280, 800)
+  assert.equal(right.x, 1280 - 420 - 12)
+  const bottom = overlayLayoutGeom('bottom', prev, 1280, 800)
+  assert.equal(bottom.x, 12)
+  assert.equal(bottom.w, 1280 - 24)
+  assert.ok(bottom.y + bottom.h <= 800 - OVERLAY_DOCK_CLEARANCE + 1)
+})
+
+test('saved layout recomputes when the viewport changes', () => {
+  writeOverlayWinState({ x: 12, y: 12, w: 420, h: 500, layout: 'right' })
+  const original = { innerWidth: window.innerWidth, innerHeight: window.innerHeight }
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1600 })
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 900 })
+  const state = readOverlayWinState()
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: original.innerWidth })
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: original.innerHeight })
+  assert.equal(state.layout, 'right')
+  assert.equal(state.x, 1600 - state.w - 12)
+  assert.equal(parseOverlayLayout('nope'), 'free')
 })
 
 test('overlay chat height clamps', () => {
