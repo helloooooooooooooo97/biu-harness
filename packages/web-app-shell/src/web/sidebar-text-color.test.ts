@@ -25,7 +25,7 @@ describe('sidebar text colors', () => {
     expect(frame).not.toMatch(/SIDEBAR_BRAND_GRADIENT/)
     expect(frame).not.toMatch(/rounded-md/)
     expect(css).toMatch(/\.app-side-bar:has\(\.app-side-bar-head-brand\)::before/)
-    expect(css).toMatch(/filter:\s*blur\(42px\)/)
+    expect(css).toMatch(/filter:\s*blur\(48px\)/)
     expect(css).toMatch(/\.app-side-bar-brand-title\s*\{[^}]*border:\s*1px solid transparent/s)
     expect(css).toMatch(/\.app-side-bar-brand-title\s*\{[^}]*border-box/s)
     expect(css).toMatch(/\.app-side-bar-brand-title::after/)

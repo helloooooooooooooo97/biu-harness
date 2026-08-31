@@ -325,27 +325,27 @@ body {
   padding-right: 8px;
 }
 
-/* 品牌色像光晕渗进侧栏顶，不要胶囊硬边 */
+/* 品牌色像薄雾渗进栏顶；牌子有轮廓，但边是晕开的 */
 .app-side-bar:has(.app-side-bar-head-brand)::before {
   content: '';
   position: absolute;
-  left: 6%;
-  top: -40px;
+  left: 8%;
+  top: -36px;
   z-index: 0;
-  width: 88%;
-  height: 148px;
+  width: 78%;
+  height: 120px;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 58% 72% at 18% 42%, color-mix(in srgb, #0066B0 58%, transparent), transparent 72%),
-    radial-gradient(ellipse 52% 68% at 48% 22%, color-mix(in srgb, #5B3E90 50%, transparent), transparent 74%),
-    radial-gradient(ellipse 48% 64% at 82% 46%, color-mix(in srgb, #E22726 38%, transparent), transparent 72%);
-  filter: blur(42px);
-  opacity: 0.38;
+    radial-gradient(ellipse 58% 72% at 18% 42%, color-mix(in srgb, #0066B0 42%, transparent), transparent 74%),
+    radial-gradient(ellipse 52% 68% at 48% 22%, color-mix(in srgb, #5B3E90 36%, transparent), transparent 76%),
+    radial-gradient(ellipse 48% 64% at 82% 46%, color-mix(in srgb, #E22726 22%, transparent), transparent 74%);
+  filter: blur(48px);
+  opacity: 0.28;
 }
 
 .app-side-bar.is-narrow:has(.app-side-bar-head-brand)::before {
-  height: 120px;
-  opacity: 0.32;
+  height: 96px;
+  opacity: 0.18;
 }
 
 .app-side-bar-brand-title {
@@ -356,9 +356,9 @@ body {
   max-width: 100%;
   align-items: center;
   overflow: visible;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 7px;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -366,26 +366,33 @@ body {
   background:
     linear-gradient(
       105deg,
-      color-mix(in srgb, #0066B0 34%, var(--dsw-sidebar)),
-      color-mix(in srgb, #5B3E90 30%, var(--dsw-sidebar)) 52%,
-      color-mix(in srgb, #E22726 26%, var(--dsw-sidebar))
+      color-mix(in srgb, #0066B0 14%, var(--dsw-sidebar)),
+      color-mix(in srgb, #5B3E90 12%, var(--dsw-sidebar)) 52%,
+      color-mix(in srgb, #E22726 10%, var(--dsw-sidebar))
     ) padding-box,
-    linear-gradient(105deg, #4aa3e8, #a078dc 52%, #ee6d6a) border-box;
-  box-shadow:
-    0 0 18px color-mix(in srgb, #0066B0 50%, transparent),
-    0 0 32px color-mix(in srgb, #5B3E90 42%, transparent),
-    0 0 40px color-mix(in srgb, #E22726 22%, transparent);
+    linear-gradient(
+      105deg,
+      color-mix(in srgb, #0066B0 38%, var(--dsw-sidebar)),
+      color-mix(in srgb, #5B3E90 34%, var(--dsw-sidebar)) 52%,
+      color-mix(in srgb, #E22726 28%, var(--dsw-sidebar))
+    ) border-box;
+  box-shadow: 0 0 16px color-mix(in srgb, #5B3E90 18%, transparent);
 }
 
 .app-side-bar-brand-title::after {
   content: '';
   position: absolute;
-  inset: -4px;
+  inset: -3px;
   z-index: -1;
-  border-radius: 11px;
-  background: linear-gradient(105deg, #0066B0, #5B3E90 52%, #E22726);
-  filter: blur(10px);
-  opacity: 0.55;
+  border-radius: 10px;
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, #0066B0 40%, transparent),
+    color-mix(in srgb, #5B3E90 36%, transparent) 52%,
+    color-mix(in srgb, #E22726 24%, transparent)
+  );
+  filter: blur(12px);
+  opacity: 0.22;
 }
 
 .app-side-bar-brand-title-text {
