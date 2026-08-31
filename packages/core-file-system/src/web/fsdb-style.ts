@@ -147,8 +147,8 @@ const CSS = `
 .fsdb-page .tasks-table.is-wrap.is-truncate .fsdb-cell{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .fsdb-page .tasks-table th{padding:6px 6px;color:var(--dsw-label-2);font-size:14px;font-weight:600;position:sticky;top:0;background:var(--dsw-surface);z-index:1;white-space:nowrap}
 .fsdb-row-check-cell{width:28px;padding:6px 4px !important}
-.fsdb-row-check{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;flex:none;cursor:pointer}
-.fsdb-row-check input{margin:0;accent-color:var(--dsw-pick,#2383e2);cursor:pointer}
+.fsdb-row-check{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;flex:none;opacity:0;pointer-events:none}
+.tasks-table tbody tr:hover .fsdb-row-check,.tasks-table thead tr:hover .fsdb-row-check,.tasks-queue-item:hover .fsdb-row-check,.tasks-minicard:hover .fsdb-row-check,.fsdb-row-check.is-on,.fsdb-row-check:focus-visible{opacity:1;pointer-events:auto}
 .fsdb-page .tasks-th{display:inline-flex;align-items:center;gap:5px;font-weight:600;white-space:nowrap;flex-wrap:nowrap}
 .fsdb-page .tasks-table tr{cursor:default}
 .fsdb-page .tasks-table tr:hover td{background:color-mix(in srgb,var(--dsw-hover) 55%,transparent)}
