@@ -79,6 +79,38 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * 全局细滚动条：与聊天页 .chat-stage 同一套（固定窄轨 + 内边距让 thumb 更细）。
+ * 上下（纵向）width:10px；横向一并变细，避免侧栏/弹层仍用系统粗条。
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--dsw-label-3) 55%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--dsw-label-3) 55%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  min-height: 32px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--dsw-label-2) 70%, transparent);
+  background-clip: padding-box;
+}
+
 .toggle {
   position: relative;
   flex: 0 0 auto;
@@ -3519,44 +3551,9 @@ body {
   max-width: var(--dsw-chat-max-width);
 }
 
-/*
- * 自定义更细的滚动条（用户诉求：thumb 过宽的原生默认滚动条不好看，希望更细/精致）：
- * chat 主滚动容器此前用的是浏览器原生默认滚动条，宽度取决于系统/浏览器默认
- * （macOS overlay scrollbar 滚动时显示偏粗）。这里改为固定窄宽的自定义滚动条，
- * 横向很细、颜色与暗色 UI 统一，hover/滚动时显现，不改变布局与交互。
- */
+/* 对话主列：预留 gutter，避免细滚动条出现时挤布局（样式走全局 * 规则） */
 .chat-stage {
   scrollbar-gutter: stable;
-  /* 非 WebKit（如 Firefox）细滚动条：细而窄、颜色与暗色 UI 对齐，避免默认粗条 */
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--dsw-label-3) 55%, transparent) transparent;
-}
-
-.chat-stage::-webkit-scrollbar {
-  width: 10px;
-}
-
-.chat-stage::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 999px;
-}
-
-.chat-stage::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--dsw-label-3) 55%, transparent);
-  border-radius: 999px;
-  /* 内边距产生“窄条间隙”，视觉更细，不随 scrollHeight 变粗 */
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-.chat-stage::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--dsw-label-2) 70%, transparent);
-  background-clip: padding-box;
-}
-
-/* 滚动时可滚动才显现；内容不满一屏时完全隐藏，避免空轨道 */
-.chat-stage::-webkit-scrollbar-thumb {
-  min-height: 32px;
 }
 
 /* 底部输入栏 + dock 悬浮控件：叠在对话内容之上 */
