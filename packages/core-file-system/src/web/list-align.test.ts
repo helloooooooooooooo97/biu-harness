@@ -14,6 +14,7 @@ test('list and detail share the chat column max width with side padding', () => 
   assert.match(css, /\.fsdb-detail-main\{[^}]*margin-inline:auto/)
   assert.match(css, /\.fsdb-detail-main\{[^}]*padding:20px 24px 24px/)
   assert.doesNotMatch(css, /\.fsdb-main\{[^}]*max-width:none/)
+  assert.match(css, /\.fsdb-page\.is-full-width \.fsdb-main,\.fsdb-page\.is-full-width \.fsdb-detail-main\{[^}]*max-width:none/)
   assert.match(css, /\.tasks-queue-item-body\{[^}]*flex-wrap:nowrap/)
   assert.match(css, /\.tasks-queue-item-main\{[^}]*flex:1 1 12rem/)
   assert.match(css, /\.tasks-queue-item-main\{[^}]*width:auto/)

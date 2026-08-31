@@ -194,3 +194,13 @@ test('inspector no longer listens for add/copy view actions', () => {
   assert.doesNotMatch(browser, /detail === 'add-view'/)
   assert.doesNotMatch(browser, /detail === 'copy-view'/)
 })
+
+test('collection header has a layout config control next to the star', () => {
+  assert.match(browser, /data-testid="fsdb-layout-toggle"/)
+  assert.match(browser, /data-testid="fsdb-layout-menu"/)
+  assert.match(browser, /data-testid="fsdb-layout-max"/)
+  assert.match(browser, /data-testid="fsdb-layout-full"/)
+  assert.match(browser, /AdjustmentsHorizontalIcon/)
+  assert.match(browser, /persistPageWidth\('full'\)/)
+  assert.match(browser, /is-full-width/)
+})
