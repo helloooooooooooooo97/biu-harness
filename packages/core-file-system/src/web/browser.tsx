@@ -28,11 +28,11 @@ import {
   Squares2X2Icon,
   StarIcon,
   TableCellsIcon,
-  TrashIcon,
   ViewColumnsIcon,
 } from '@heroicons/react/16/solid'
 import type { CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
+import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import {
   contentFieldKey,
   defaultColumnKeys,
@@ -1562,7 +1562,7 @@ export function CollectionBrowser({
                           <PencilSquareIcon aria-hidden className="size-[14px]" />
                         </button>
                         <button type="button" className="tasks-viewdd-act is-danger" title="删除" onClick={() => deleteView(view)}>
-                          <TrashIcon aria-hidden className="size-[14px]" />
+                          <TrashGlyph aria-hidden className="size-[14px]" />
                         </button>
                       </span>
                       )}

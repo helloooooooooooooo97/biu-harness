@@ -15,6 +15,7 @@
   "dependencies": {
     "@biu/type-file-system": "0.1.0",
     "@biu/type-slots": "0.1.0",
-    "@biu/web-slots": "0.1.0"
+    "@biu/web-slots": "0.1.0",
+    "@biu/web-session-view": "0.1.0"
   }
 }

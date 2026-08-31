@@ -18,10 +18,10 @@ import {
   RectangleStackIcon,
   StopIcon,
   TableCellsIcon,
-  TrashIcon,
   Squares2X2Icon,
   ViewColumnsIcon,
 } from '@heroicons/react/16/solid'
+import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import type { CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
 import { asAttachment, asHttpHref, asImageSrc } from '@biu/type-file-system'
 import {
@@ -38,7 +38,7 @@ export function actionIcon(id: string) {
   const cls = 'size-[14px]'
   if (id === 'start' || id === 'play' || id === 'run' || id === 'open') return <PlayIcon aria-hidden className={cls} />
   if (id === 'stop' || id === 'close' || id === 'pause') return <StopIcon aria-hidden className={cls} />
-  if (id === 'uninstall' || id === 'delete' || id === 'remove') return <TrashIcon aria-hidden className={cls} />
+  if (id === 'uninstall' || id === 'delete' || id === 'remove') return <TrashGlyph aria-hidden className={cls} />
   if (id === 'edit' || id === 'rename') return <PencilSquareIcon aria-hidden className={cls} />
   if (id === 'refresh') return <ArrowPathIcon aria-hidden className={cls} />
   return null

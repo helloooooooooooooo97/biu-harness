@@ -8,8 +8,8 @@ import {
   PlusIcon,
   Square2StackIcon,
   StarIcon,
-  TrashIcon,
 } from '@heroicons/react/16/solid'
+import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import type { CollectionInfo, DbRecord } from '@biu/type-file-system'
 import { mergeCatalogViews, mergeTableViews } from '../catalog-views.ts'
 import { VIEWS_COLLECTION_PATH } from './database-path.ts'
@@ -689,7 +689,7 @@ export const DataSidebar = memo(function DataSidebar({
                                       aria-label={`删除 ${view.name}`}
                                       onClick={() => onDeleteView(view)}
                                     >
-                                      <TrashIcon className="size-4 shrink-0" />
+                                      <TrashGlyph className="size-4 shrink-0" />
                                     </button>
                                   </>
                                 ) : null}

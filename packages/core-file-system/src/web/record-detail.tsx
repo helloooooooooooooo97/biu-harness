@@ -1,7 +1,8 @@
 import type { ReactNode, Dispatch, SetStateAction } from 'react'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import type { CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
-import { HashtagIcon, TrashIcon } from '@heroicons/react/16/solid'
+import { HashtagIcon } from '@heroicons/react/16/solid'
+import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { contentFieldKey, formatField, resolveFieldType, uniqueValues } from './fields.ts'
 import { LocalText } from './controls.tsx'
 import { FieldEditor, FieldGlyph, FilePreview } from './fsdb-cells.tsx'
@@ -60,7 +61,7 @@ export function RecordDetail({
                 )}
                 {onDelete ? (
                   <button type="button" className="tasks-icon-btn is-danger" title="删除" aria-label="删除记录" onClick={onDelete}>
-                    <TrashIcon aria-hidden className="size-[14px]" />
+                    <TrashGlyph aria-hidden className="size-[14px]" />
                   </button>
                 ) : null}
                 </div>

@@ -1,4 +1,5 @@
-import { PlayIcon, StopIcon, TrashIcon } from '@heroicons/react/16/solid'
+import { PlayIcon, StopIcon } from '@heroicons/react/16/solid'
+import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { asHttpHref } from '@biu/type-file-system'
 import type { CollectionChrome, FsActionProps, FsCellProps } from '@biu/type-file-system/ui'
 import type { DbRecord } from '@biu/type-file-system'
@@ -56,7 +57,7 @@ function PluginAction({ action, busy, run }: FsActionProps) {
     ) : action.id === 'stop' ? (
       <StopIcon aria-hidden className="size-[14px]" />
     ) : action.id === 'uninstall' ? (
-      <TrashIcon aria-hidden className="size-[14px]" />
+      <TrashGlyph aria-hidden className="size-[14px]" />
     ) : null
   return (
     <button

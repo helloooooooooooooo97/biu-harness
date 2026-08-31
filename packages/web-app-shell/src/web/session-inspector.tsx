@@ -6,7 +6,6 @@ import {
   PlusIcon,
   Squares2X2Icon,
   TableCellsIcon,
-  TrashIcon,
   ViewColumnsIcon,
   ClipboardDocumentListIcon,
   ChatBubbleLeftRightIcon,
@@ -16,6 +15,7 @@ import {
   EyeIcon,
 } from '@heroicons/react/16/solid'
 import { chromeIcon } from './chrome-icon.ts'
+import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import {
   bindSessionView,
   type SessionViewService,
@@ -392,7 +392,7 @@ export const SessionInspector = memo(function SessionInspector({
                         closeOpenedTab(item.id)
                       }}
                     >
-                      <TrashIcon {...chromeIcon} />
+                      <TrashGlyph {...chromeIcon} />
                     </button>
                   </div>
                   )

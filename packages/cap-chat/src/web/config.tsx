@@ -7,7 +7,8 @@
  * 3. 一处保存，不再拆成三块互相抢焦点
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CheckIcon, ChevronDownIcon, ArrowPathIcon, PlusIcon, MagnifyingGlassIcon, TrashIcon, SignalSlashIcon, XMarkIcon } from '@heroicons/react/16/solid'
+import { CheckIcon, ChevronDownIcon, ArrowPathIcon, PlusIcon, MagnifyingGlassIcon, SignalSlashIcon, XMarkIcon } from '@heroicons/react/16/solid'
+import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 
 type ChatProvider = 'deepseek' | 'openai' | 'anthropic'
 
@@ -570,7 +571,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
               void onRemoveConnection(ep.id)
             }}
           >
-            <TrashIcon className="size-3" />
+            <TrashGlyph className="size-3" />
           </button>
         ) : null}
       </div>
@@ -1068,7 +1069,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                                     }
                                   }}
                                 >
-                                  <TrashIcon className="size-3" />
+                                  <TrashGlyph className="size-3" />
                                 </span>
                               ) : selected ? (
                                 <CheckIcon className="size-3.5 shrink-0" />
@@ -1112,7 +1113,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                     className="inline-flex self-start items-center gap-1 text-[11px] text-(--dsw-danger,#b42318) hover:underline"
                     onClick={() => void onRemoveConnection(active.id)}
                   >
-                    <TrashIcon className="size-3" />
+                    <TrashGlyph className="size-3" />
                     删除此连接
                   </button>
                 ) : null}

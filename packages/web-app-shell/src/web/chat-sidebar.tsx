@@ -27,12 +27,12 @@ import {
   PlusIcon,
   SignalIcon,
   StarIcon,
-  TrashIcon,
   FolderIcon,
   TagIcon,
   FolderMinusIcon,
   BookmarkSlashIcon,
 } from '@heroicons/react/16/solid'
+import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 
 /** 项目/标签分组视图的持久化 key。 */
 const GROUP_BY_KEY = 'cordis.sidebar.groupBy'
@@ -138,7 +138,7 @@ const SessionRow = memo(function SessionRow({
           onDelete(item)
         }}
       >
-        <TrashIcon {...chromeIcon} />
+        <TrashGlyph {...chromeIcon} />
       </button>
       <button
         type="button"
