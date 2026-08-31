@@ -24,7 +24,7 @@ const CSS = `
 .fsdb-crumb-create:hover{background:var(--dsw-hover);color:var(--dsw-sidebar-fg-active)}
 .fsdb-crumb-option{display:flex;width:100%;min-width:0;align-items:center;gap:6px;border:0;border-radius:6px;background:transparent;padding:6px 8px;color:var(--dsw-sidebar-fg);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
 .fsdb-crumb-option:hover,.fsdb-crumb-option.is-active{background:var(--dsw-hover);color:var(--dsw-sidebar-fg-active)}
-.fsdb-right-body{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
+.fsdb-right-body{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:auto}
 .fsdb-views{display:flex;width:100%;max-width:none;min-width:0;flex:1;flex-direction:column;min-height:0;overflow:hidden;box-sizing:border-box}
 .fsdb-page>.fsdb-views{width:var(--sidebar-col,var(--dsw-sidebar-min,160px));max-width:var(--dsw-sidebar-max,360px);flex:none}
 .fsdb-nav-chevron{flex:none;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
@@ -113,8 +113,8 @@ const CSS = `
 .fsdb-file{display:inline-flex;align-items:center;gap:6px;min-width:0;color:inherit;text-underline-offset:2px}
 .fsdb-file:hover{text-decoration:underline}
 .fsdb-file-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
-.fsdb-fileview{min-width:0;flex:none;height:auto;min-height:240px;max-height:none;overflow:visible}
-.fsdb-fileview-pre{margin:0;padding:10px 12px;border-radius:8px;background:var(--dsw-input);color:var(--dsw-label);font:inherit;font-size:14px;font-family:var(--font-mono);white-space:pre-wrap;overflow:visible;height:auto;min-height:240px;max-height:none}
+.fsdb-fileview{min-width:0;flex:none;height:auto;min-height:0;max-height:none;overflow:visible}
+.fsdb-fileview-pre{margin:0;padding:10px 12px;border-radius:8px;background:var(--dsw-input);color:var(--dsw-label);font:inherit;font-size:14px;font-family:var(--font-mono);white-space:pre-wrap;overflow:visible;height:auto;min-height:0;max-height:none}
 .fsdb-fileview-img{display:block;width:auto;max-width:100%;height:auto;max-height:none;object-fit:contain;border-radius:8px;background:var(--dsw-hover)}
 .fsdb-page .tasks-title-cell{display:flex;align-items:center;gap:2px;min-width:0}
 .fsdb-page .tasks-tree-toggle{width:20px;height:20px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--dsw-label-3);border-radius:4px;cursor:pointer;padding:0}
@@ -214,9 +214,9 @@ const CSS = `
 .fsdb-boolbox.is-locked{cursor:default;opacity:.9}
 .fsdb-boolbox.is-locked.is-on{background:var(--dsw-pick,#2383e2);border-color:transparent;color:var(--dsw-bg)}
 .fsdb-boolbtn:hover .fsdb-boolbox:not(.is-on){border-color:var(--dsw-label-2)}
-.fsdb-detail-stage{display:flex;min-width:0;min-height:0;flex:1;flex-direction:row;overflow:hidden;background:var(--dsw-bg)}
-.fsdb-detail-screen{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
-.fsdb-detail-screen .fsdb-detail-split,.fsdb-detail-screen > :not(header){flex:1;min-height:0;overflow:auto}
+.fsdb-detail-stage{display:flex;min-width:0;min-height:min-content;flex:1 0 auto;flex-direction:row;overflow:visible;background:var(--dsw-bg)}
+.fsdb-detail-screen{display:flex;min-width:0;min-height:min-content;flex:1;flex-direction:column;overflow:visible}
+.fsdb-detail-screen .fsdb-detail-split,.fsdb-detail-screen > :not(header){flex:none;min-height:min-content;overflow:visible}
 .fsdb-detail-rail{height:100%;flex:none;border-right:0;border-left:1px solid var(--dsw-border)}
 .fsdb-detail-rail .app-activity-indicator{left:auto;right:0;border-radius:2px 0 0 2px}
 .fsdb-detail-rail .app-activity-item:disabled{opacity:.35;cursor:default}
@@ -228,7 +228,7 @@ const CSS = `
 .fsdb-detail-tabs button.is-active{background:var(--dsw-surface);color:var(--dsw-label)}
 .fsdb-detail-tab-count{margin-left:6px;font-size:11px;font-weight:700;color:var(--dsw-label-3)}
 .fsdb-detail-head-actions{display:inline-flex;align-items:center;gap:2px;justify-self:end}
-.fsdb-detail-split{display:flex;flex-direction:column;flex:1;min-height:0;overflow:auto}
+.fsdb-detail-split{display:flex;flex-direction:column;flex:none;min-height:min-content;overflow:visible}
 .fsdb-detail-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;flex-direction:column;gap:8px;padding:20px 24px 24px;min-width:0}
 .fsdb-page:not(.inspector-database-page) .fsdb-detail-main{padding:80px 24px 24px}
 .fsdb-detail-aside{display:flex;flex-direction:column;gap:2px;padding:8px 0 12px}
