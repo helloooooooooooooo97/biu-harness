@@ -3,12 +3,26 @@ import { useNavigate } from 'react-router-dom'
 import {
   ArrowDownTrayIcon,
   ChatBubbleLeftIcon,
+  ChatBubbleLeftRightIcon,
+  ClipboardDocumentListIcon,
   Cog6ToothIcon,
+  DocumentIcon,
   PuzzlePieceIcon,
+  QueueListIcon,
+  SignalIcon,
 } from '@heroicons/react/16/solid'
 import type { AppModule } from '@biu/web-app-modules'
 import type { DockService } from '@biu/core-dock'
-import { setChatOverlay } from './chat-overlay.ts'
+import { requestInspectorOpen, requestInspectorTab, setChatOverlay } from './chat-overlay.ts'
+
+const INSPECTOR_DOCK_TOOLS = [
+  { id: 'inspector:pages', title: '页面', tabId: 'database:/pages', order: 40, Icon: DocumentIcon },
+  { id: 'inspector:sessions', title: '会话', tabId: 'database:/sessions', order: 41, Icon: ChatBubbleLeftRightIcon },
+  { id: 'inspector:tasks', title: '任务', tabId: 'database:/tasks', order: 42, Icon: ClipboardDocumentListIcon },
+  { id: 'inspector:plugins', title: '插件', tabId: 'database:/plugins', order: 43, Icon: PuzzlePieceIcon },
+  { id: 'inspector:traj', title: '轨迹', tabId: 'traj', order: 44, Icon: QueueListIcon },
+  { id: 'inspector:usage', title: '用量', tabId: 'usage', order: 45, Icon: SignalIcon },
+] as const
 
 function DockModuleIcon({ module }: { module: AppModule }) {
   if (module.Icon) {
@@ -144,6 +158,27 @@ export function ShellDockNav({
     dock.patch('pick', { visible: showTools })
     if (!showTools) setChatOverlay(false)
   }, [dock, activeId])
+
+  useEffect(() => {
+    const offs = INSPECTOR_DOCK_TOOLS.map((item) => {
+      const Icon = item.Icon
+      return dock.register({
+        id: item.id,
+        title: item.title,
+        kind: 'tool',
+        group: 'tools',
+        order: item.order,
+        Icon: () => <Icon className="size-5" />,
+        onOpen: () => {
+          requestInspectorOpen()
+          requestInspectorTab(item.tabId)
+        },
+      })
+    })
+    return () => {
+      for (const off of offs) off()
+    }
+  }, [dock])
 
   useEffect(() => {
     const Icon = () => <Cog6ToothIcon className="size-5" />

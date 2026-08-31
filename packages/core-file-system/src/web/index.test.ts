@@ -23,13 +23,11 @@ test('navConflict flags duplicate route and display name against existing module
   assert.equal(navConflict({ moduleId: 'tasks', route: '/tasks' }, 'Tasks', modules, 'tasks'), null)
 })
 
-test('database page registers collection shortcuts on the dock tools group', () => {
+test('database page no longer registers collection shortcuts on the dock', () => {
   const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
-  assert.match(page, /DATA_DOCK_TOOLS/)
-  assert.match(page, /data:\$\{item\.path\}/)
-  assert.match(page, /group: 'tools'/)
-  assert.match(page, /databaseAllViewPath\(item.path\)/)
-  assert.doesNotMatch(page, /navigate\(databaseViewPath\(item.path\)\)/)
+  assert.doesNotMatch(page, /DATA_DOCK_TOOLS/)
+  assert.doesNotMatch(page, /data:\$\{item\.path\}/)
+  assert.doesNotMatch(page, /databaseAllViewPath\(item.path\)/)
   assert.match(page, /builtinAllViewId\(parsed.collection\)/)
   assert.doesNotMatch(page, /isCollectionHub/)
 })

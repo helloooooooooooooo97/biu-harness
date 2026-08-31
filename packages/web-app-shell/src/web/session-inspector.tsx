@@ -197,10 +197,13 @@ export const SessionInspector = memo(function SessionInspector({
   useEffect(() => {
     const onTab = (event: Event) => {
       const next = inspectorTabFromEvent(event)
-      if (next && allowedTabs.includes(next)) {
-        persistOpened(opened.includes(next) ? opened : [...opened, next])
-        setTab(next)
-      }
+      if (!next) return
+      const allowed = allowedTabs.includes(next) || allowedTabs.includes(slotTabId(next))
+      if (!allowed) return
+      const existing = opened.find((id) => id === next || slotTabId(id) === next)
+      const id = existing ?? next
+      persistOpened(opened.includes(id) ? opened : [...opened, id])
+      setTab(id)
     }
     window.addEventListener('biu:inspector-tab', onTab)
     return () => window.removeEventListener('biu:inspector-tab', onTab)
