@@ -149,7 +149,7 @@ export function crumbLabelAction(crumb: Crumb, parent?: Crumb): CrumbTarget {
   return { kind: 'root' }
 }
 
-/** 表 / 视图 / 记录都出菜单（搜索、添加）；其它级点标题回到上一级。 */
+/** 表 / 视图 / 记录点标题一律弹出同级选择菜单。其它级才回到上一级。 */
 export function crumbButtonAction(crumb: Crumb, parent?: Crumb): 'menu' | CrumbTarget {
   if (crumb.kind === 'collection' || crumb.kind === 'view' || crumb.kind === 'record') return 'menu'
   return crumbLabelAction(crumb, parent)

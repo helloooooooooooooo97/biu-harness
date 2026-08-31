@@ -189,7 +189,7 @@ test('记录页面包屑是表 / 视图 / 记录，点表只回到表', () => {
   assert.ok(!pathForCrumbTarget(crumbs[1]!.target).includes('/record/'))
 })
 
-test('表视图记录都出菜单，点标题仍可回到上一级', () => {
+test('表视图记录点标题一律出选择菜单', () => {
   const crumbs = buildCrumbs({
     collection: '/tasks',
     collectionLabel: 'Task',

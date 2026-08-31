@@ -202,11 +202,6 @@ export function CrumbTrail({
                     onOpenId(null)
                     return
                   }
-                  if (crumb.kind === 'collection' && index < crumbs.length - 1) {
-                    onPick(crumb.target)
-                    onOpenId(null)
-                    return
-                  }
                   const action = crumbButtonAction(crumb, index ? crumbs[index - 1] : undefined)
                   if (action === 'menu') {
                     onOpenId(open ? null : crumb.id)
