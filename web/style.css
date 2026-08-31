@@ -407,14 +407,10 @@ body {
   color: #f0efed;
 }
 
-.os-dock-tile svg {
+.os-dock-item > .os-dock-tile > svg,
+.os-dock-tile .brand-corner-mascot-btn svg {
   width: 22px !important;
   height: 22px !important;
-}
-
-.os-dock-tile .brand-agent-menu svg {
-  width: unset !important;
-  height: unset !important;
 }
 
 .os-dock-item:has(.brand-agent-menu):hover,
