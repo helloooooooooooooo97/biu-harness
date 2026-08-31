@@ -17,5 +17,5 @@ test('activity bar is gone; modules register on the os dock', () => {
   assert.match(nav, /id: `module:\$\{mod\.id\}`/)
   assert.doesNotMatch(css, /\.app-activity-bar\s*\{/)
   assert.doesNotMatch(css, /\.app-rail-hover\s*\{/)
-  assert.match(css, /\.os-dock-shelf\s*\{[^}]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.1\)/s)
+  assert.match(css, /\.os-dock-shelf-row\s*\{[^}]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.1\)/s)
 })
