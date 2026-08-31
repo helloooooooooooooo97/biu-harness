@@ -177,12 +177,12 @@ const CSS = `
 .fsdb-page .tasks-queue-item-body .fsdb-propchip{width:auto;max-width:100%;min-width:0;min-height:18px;line-height:18px;white-space:nowrap}
 .fsdb-page .tasks-queue-item-body .fsdb-propchip-v{line-height:18px;white-space:nowrap;overflow:hidden;min-width:0}
 .fsdb-page .tasks-board{display:grid;gap:12px;overflow:auto;align-items:start;padding-bottom:8px}
-.fsdb-page .tasks-board-col{min-height:180px;background:#202020;border-radius:10px;padding:10px}
+.fsdb-page .tasks-board-col{min-height:180px;background:transparent;padding:10px}
 .fsdb-page .tasks-board-colhead{display:flex;align-items:center;gap:6px;padding:4px 6px 10px;color:var(--dsw-label-2);font-weight:600;font-size:14px}
 .fsdb-page .tasks-board-coltitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-page .tasks-board-count{margin-left:auto;color:var(--dsw-label-3);font-size:14px;font-weight:600;background:var(--dsw-muted-fill);border-radius:8px;padding:1px 6px}
 .fsdb-page .tasks-board-list{display:flex;flex-direction:column;gap:8px}
-.fsdb-page .tasks-board-col .tasks-minicard{background:#191919}
+.fsdb-page .tasks-board-col .tasks-minicard{background:#202020}
 .fsdb-page .fsdb-proplist{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 10px;min-width:0;max-width:100%;overflow:visible;height:auto}
 .fsdb-page .fsdb-propchip{display:inline-flex;align-items:center;flex-wrap:nowrap;gap:0;width:auto;max-width:100%;min-width:0;height:auto;min-height:20px;padding:0;background:transparent;color:var(--dsw-label-2);font-size:14px;font-weight:500;line-height:20px}
 .fsdb-page .fsdb-propchip-k{display:none}
