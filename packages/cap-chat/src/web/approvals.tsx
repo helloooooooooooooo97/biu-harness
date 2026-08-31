@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
 import {
   BoltIcon,
   CheckCircleIcon,
@@ -15,7 +14,6 @@ import { bindSessionView, type ChatNode, type DispatchedTaskRow, type SessionVie
 import { BrandAgentMenu, SidebarMascot, resolveSessionMascot } from '@biu/web-mascot'
 import { SessionProjectPanel } from './project-panel.tsx'
 import { ChatLiveMetrics } from './live-hud.tsx'
-import { shouldNavigateToSession } from './composer-nav.ts'
 
 type AgentMode = 'minimal' | 'standard' | 'create'
 
@@ -171,8 +169,6 @@ export function ApprovalsRail(props: SlotProps) {
   const agentMenuRef = useRef<HTMLDivElement>(null)
   const approvalMenuRef = useRef<HTMLDivElement>(null)
   const sessionPickerRef = useRef<HTMLSpanElement>(null)
-  const navigate = useNavigate()
-  const location = useLocation()
   const cornerAgents = useMemo(
     () =>
       sessions.map((item) => ({
@@ -388,8 +384,7 @@ export function ApprovalsRail(props: SlotProps) {
                   activeId={sessionId}
                   onSelect={(id) => {
                     setSessionPickerOpen(false)
-                    if (shouldNavigateToSession(location.pathname, id)) navigate(`/s/${encodeURIComponent(id)}`)
-                    else void sessionView.load(id, { view: 'chat' })
+                    void sessionView.load(id, { view: 'chat' })
                   }}
                 />
               ) : null}

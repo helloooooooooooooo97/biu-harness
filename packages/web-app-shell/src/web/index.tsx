@@ -254,7 +254,9 @@ const AgentMainPanels = memo(function AgentMainPanels({
     }
   })
   heightRef.current = overlayChatHeight
-  const keepVisible = useCallback(() => {
+  const keepVisible = useCallback((event?: { target?: EventTarget | null }) => {
+    const hit = event?.target
+    if (hit instanceof Element && hit.closest('.dock-agent-stack')) return
     setOverlayAutohide(false)
   }, [])
   const hideIfIdle = useCallback(
@@ -350,7 +352,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
             ['--overlay-chat-height' as string]: `${overlayChatHeight}px`,
             ['--rail-w' as string]: railOpen ? '48px' : '0px',
           } as CSSProperties}
-          onMouseEnter={keepVisible}
+          onMouseEnter={(event) => keepVisible(event)}
           onMouseLeave={hideIfIdle}
         >
           <div
@@ -882,16 +884,14 @@ function Shell(props: SlotProps) {
       ) : null}
 
       <DanceStage sessions={danceSessions} on={dancing} shape={danceShape} />
-      {activeModule === 'agent' ? null : (
-        <BrandCornerMascot
-          agents={danceSessions}
-          activeId={sessionId}
-          leading={props.renderSlot('corner-tools')}
-          onSelect={(id) => {
-            void sessionView.load(id, { view: 'chat' })
-          }}
-        />
-      )}
+      <BrandCornerMascot
+        agents={danceSessions}
+        activeId={sessionId}
+        leading={props.renderSlot('corner-tools')}
+        onSelect={(id) => {
+          void sessionView.load(id, { view: 'chat' })
+        }}
+      />
 
       <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
         <div

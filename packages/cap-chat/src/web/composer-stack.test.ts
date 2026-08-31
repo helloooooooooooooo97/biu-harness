@@ -36,7 +36,9 @@ describe('composer dock stacking above sticky user', () => {
     const shell = readFileSync(resolve(root, 'packages/web-app-shell/src/web/index.tsx'), 'utf8')
     expect(approvals).toMatch(/onMouseEnter=\{\(\) => \{\s*setSessionPickerOpen\(true\)/)
     expect(approvals).toMatch(/onMouseLeave=\{\(event\) => \{/)
-    expect(approvals).not.toMatch(/onMouseEnter=\{\(\) => setOverlayAutohide\(false\)\}/)
+    expect(approvals).toContain("void sessionView.load(id, { view: 'chat' })")
+    expect(approvals).not.toContain('shouldNavigateToSession')
+    expect(shell).toMatch(/hit\.closest\('\.dock-agent-stack'\)/)
     expect(css).toMatch(/\.chat-overlay-panel\.is-autohide \{\s*[^}]*overflow:\s*visible/)
     expect(shell).toMatch(/overlayCollapsed = !overlayOpen \|\| hidden/)
     expect(css).toMatch(
