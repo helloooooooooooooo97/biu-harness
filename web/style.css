@@ -1074,6 +1074,8 @@ body {
 
 .app-side-bar.is-closed,
 .session-inspector.is-closed {
+  min-width: 0;
+  max-width: none;
   overflow: hidden;
   border-color: transparent;
   pointer-events: none;
@@ -1359,6 +1361,12 @@ body {
   overflow: hidden;
 }
 
+.app-shell-agent > .app-side-bar,
+.app-shell-agent > .session-inspector {
+  min-width: 0;
+  max-width: none;
+}
+
 /* 侧栏独立合成层：右侧 Markdown 重绘时少拖累左侧 :hover */
 .app-side-bar {
   contain: layout paint style;
@@ -1366,9 +1374,9 @@ body {
   backface-visibility: hidden;
   color: var(--dsw-sidebar-fg);
   position: relative;
-  min-width: var(--dsw-sidebar-min);
+  min-width: 0;
   width: 100%;
-  max-width: var(--dsw-sidebar-max);
+  max-width: none;
 }
 
 .sidebar-resize {
