@@ -32,6 +32,10 @@ test('closing the chat overlay exits pick mode', () => {
   assert.match(overlay, /pick.exit\(\)/)
 })
 
+test('Escape blurs the focused control so the UA focus ring does not linger', () => {
+  assert.match(overlay, /active.blur\(\)/)
+})
+
 test('Command/Ctrl+Q toggles pick mode', () => {
   assert.match(overlay, /event.metaKey \|\| event.ctrlKey/)
   assert.match(overlay, /key === 'q'/)

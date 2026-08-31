@@ -367,12 +367,19 @@ body {
   padding: 0;
   color: inherit;
   cursor: pointer;
+  outline: none;
+  box-shadow: none;
   transform-origin: 50% 100%;
   transition: transform .18s cubic-bezier(.22, 1.2, .36, 1);
 }
 
-.os-dock-item:hover,
+.os-dock-item:focus,
 .os-dock-item:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.os-dock-item:hover {
   z-index: 2;
   transform: translateY(-4px) scale(1.18);
 }
@@ -387,7 +394,6 @@ body {
     transition: none;
   }
   .os-dock-item:hover,
-  .os-dock-item:focus-visible,
   .os-dock-item:active {
     transform: none;
   }

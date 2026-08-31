@@ -104,6 +104,11 @@ export function OsDock(props: SlotProps) {
       onMouseEnter={show}
       onMouseLeave={(event) => hideSoon(event)}
       onFocusCapture={show}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return
+        const active = document.activeElement
+        if (active instanceof HTMLElement && rootRef.current?.contains(active)) active.blur()
+      }}
       onBlurCapture={(event) => {
         if (pointerOver.current) return
         hideSoon(event)
