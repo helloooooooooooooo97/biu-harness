@@ -25,6 +25,7 @@ import type { SlotsService } from '@biu/web-slots'
 import { inspectorTabFromEvent, requestInspectorAction } from './chat-overlay.ts'
 import { getInspectorCaption, getInspectorCaptionVersion, subscribeInspectorCaptions } from './inspector-captions.ts'
 import { inspectorPanelMatches, inspectorViewProps, nextRepeatableTabId, resolveInspectorTab, slotTabId } from './inspector-panels.ts'
+import { SidebarMascot, resolveSessionMascot } from '@biu/web-mascot'
 
 function captionTableIcon(icon?: string) {
   const name = (icon ?? '').trim().toLowerCase()
@@ -102,6 +103,10 @@ export const SessionInspector = memo(function SessionInspector({
   renderSlot,
 }: SessionInspectorProps) {
   const sessionId = useSessionView((state) => state.sessionId)
+  const sessions = useSessionView((state) => state.sessions)
+  const currentSession = sessions.find((item) => item.id === sessionId)
+  const sessionIdentity = sessionId ? resolveSessionMascot(sessionId, currentSession?.mascot) : null
+  const sessionLabel = (currentSession?.title || '').trim() || (sessionIdentity ? `${sessionIdentity.shape}` : '')
   const focusCallId = useSessionView((state) => state.focusCallId)
   const extras = useSlotEntries(slots, 'inspector-panels')
   const captionRev = useSyncExternalStore(subscribeInspectorCaptions, getInspectorCaptionVersion, () => 0)
@@ -363,11 +368,22 @@ export const SessionInspector = memo(function SessionInspector({
               data-caption-rev={captionRev}
               style={{ right: plusPos.right, top: plusPos.top }}
             >
-              <div className="inspector-add-head">面板</div>
-              {headerTabs.length ? (
-                headerTabs.map((item) => {
-                  const caption = getInspectorCaption(item.id)
-                  return (
+              {sessionId && sessionIdentity ? (
+                <div className="inspector-add-owner" data-testid="inspector-add-owner">
+                  <SidebarMascot
+                    size={22}
+                    sessionId={sessionId}
+                    identity={sessionIdentity}
+                    busy={Boolean(currentSession?.busy)}
+                    animate={false}
+                    title={sessionLabel}
+                  />
+                  <span className="min-w-0 flex-1 truncate">{sessionLabel}</span>
+                </div>
+              ) : null}
+              {headerTabs.map((item) => {
+                const caption = getInspectorCaption(item.id)
+                return (
                   <div key={item.id} className={`inspector-add-row${tab === item.id ? ' is-active' : ''}`}>
                     <button
                       type="button"
@@ -395,11 +411,8 @@ export const SessionInspector = memo(function SessionInspector({
                       <TrashGlyph {...chromeIcon} />
                     </button>
                   </div>
-                  )
-                })
-              ) : (
-                <div className="inspector-add-empty">还没有打开的面板</div>
-              )}
+                )
+              })}
               <div className="inspector-add-foot">
                 {displayTabs
                   .filter((item) => item.repeatable || !opened.some((id) => slotTabId(id) === item.id))

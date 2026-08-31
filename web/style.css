@@ -845,6 +845,23 @@ body {
   gap: 4px;
 }
 
+.inspector-add-owner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 8px 8px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--dsw-border);
+  color: var(--dsw-sidebar-fg-active);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.inspector-add-owner .sidebar-mascot {
+  flex: none;
+}
+
 .inspector-add-head {
   font-size: 14px;
   font-weight: 600;
