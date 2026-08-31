@@ -17,6 +17,8 @@
   --dsw-surface: var(--dsw-bg);
   --dsw-danger: #cf2d56;
   --dsw-danger-soft: rgba(207, 45, 86, 0.14);
+  --dsw-warning: #f5a623;
+  --dsw-success: #30a46c;
   --dsw-ok: #1f8a65;
   --dsw-pick: #2383e2;
   --dsw-pick-fill: rgba(35, 131, 226, 0.18);
@@ -4292,6 +4294,48 @@ body {
 .composer-model-item-note {
   font-size: var(--dsw-chat-ui-font-size);
   color: var(--dsw-label-3);
+}
+
+.composer-model-item-badge {
+  flex: none;
+  border: 1px solid var(--dsw-border);
+  border-radius: 4px;
+  padding: 0 4px;
+  color: var(--dsw-business);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.composer-model-refresh-error {
+  border-bottom: 1px solid var(--dsw-border);
+  padding: 6px 10px;
+  color: var(--dsw-warning, #f5a623);
+  font-size: var(--dsw-chat-ui-font-size);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.composer-model-refresh-success {
+  border-bottom: 1px solid var(--dsw-border);
+  padding: 6px 10px;
+  color: var(--dsw-success, #30a46c);
+  font-size: var(--dsw-chat-ui-font-size);
+  line-height: 1.5;
+}
+
+.composer-model-config-entry.is-spinning svg {
+  animation: composer-spin 0.9s linear infinite;
+}
+
+@keyframes composer-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .composer-model-empty {
