@@ -17,7 +17,7 @@ export function databaseViewPath(collection: string, viewId?: string): string {
   })
 }
 
-/** 内置「全部 xx」视图，码头会话/任务/页面/插件直接进这里。 */
+/** 内置「全部 xx」视图，数据页默认进这里。 */
 export function databaseAllViewPath(collection: string): string {
   return databaseViewPath(collection, builtinAllViewId(collection))
 }

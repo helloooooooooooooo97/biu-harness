@@ -14,7 +14,7 @@ test('view and record helpers match the database URL scheme', () => {
   assert.equal(parseAppPath(databaseRecordPath('/pages', 'rec-1'), plugins).kind, 'record')
 })
 
-test('dock collection shortcuts open the builtin 全部xx view', () => {
+test('builtin all-view helpers keep the database URL scheme', () => {
   assert.equal(
     databaseAllViewPath('/sessions'),
     `/database/sessions/view/${encodeURIComponent('builtin-all:/sessions')}`,
