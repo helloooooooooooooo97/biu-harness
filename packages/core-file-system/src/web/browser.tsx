@@ -82,11 +82,13 @@ import {
   rememberRecords,
   rememberViews,
   persistStarredViews,
+  persistViewDisplay,
   pushSavedViews,
   subscribeStarredViews,
   toggleStarredView,
   viewForPath,
   viewsKey,
+  withViewDisplay,
 } from './view-storage.ts'
 import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
@@ -729,10 +731,11 @@ export function CollectionBrowser({
 
   function persistViewsFor(path: string, next: SavedView[]) {
     const table = tables.find((item) => item.path === path) ?? { path, label: path.replace(/^\//, '') }
-    const listed =
+    const listed = (
       path === VIEWS_COLLECTION_PATH
         ? mergeCatalogViews(tables, next)
         : mergeTableViews(table, next)
+    ).map((view) => withViewDisplay(path, view))
     const stored = listed.filter((view) => !view.builtin)
     rememberViews(path, listed)
     if (!embed) {
@@ -881,7 +884,12 @@ export function CollectionBrowser({
   function patchActiveView(patch: Partial<SavedView>) {
     if (!activeViewId) return
     const current = views.find((view) => view.id === activeViewId)
-    if (current?.builtin) return
+    if (!current) return
+    if (current.builtin) {
+      persistViewDisplay(collectionPath, current.id, patch)
+      persistViews(views)
+      return
+    }
     persistViews(views.map((view) => (view.id === activeViewId ? { ...view, ...patch } : view)))
   }
 
@@ -1381,13 +1389,13 @@ export function CollectionBrowser({
     const id = window.setTimeout(() => {
       if (hydratePath.current !== `${collectionPath}\0${dataPath}`) return
       const current = viewsRef.current.find((view) => view.id === activeViewId)
-      if (!current || current.builtin || tableHub) return
+      if (!current || tableHub) return
       const next = normalizeSavedView({
         ...current,
         mode,
         sortField,
         sortDir,
-        filters,
+        filters: current.builtin ? current.filters : filters,
         columns: pinLabelColumn(schema, columnKeys),
         groupBy,
         tree: showTree,
@@ -1397,6 +1405,11 @@ export function CollectionBrowser({
         pageSize,
       })
       if (viewStateKey(current) === viewStateKey(next)) return
+      if (current.builtin) {
+        persistViewDisplay(collectionPath, current.id, next)
+        persistViews(viewsRef.current)
+        return
+      }
       persistViews(viewsRef.current.map((view) => (view.id === activeViewId ? next : view)))
     }, 400)
     return () => window.clearTimeout(id)

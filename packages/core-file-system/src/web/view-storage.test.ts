@@ -1,8 +1,14 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { builtinAllViewId, builtinCatalogViewId } from '../catalog-views.ts'
-import { defaultViewId, viewForPath } from './view-storage.ts'
+import { builtinAllView, builtinAllViewId, builtinCatalogViewId } from '../catalog-views.ts'
 import { VIEWS_COLLECTION_PATH } from './database-path.ts'
+import {
+  defaultViewId,
+  persistViewDisplay,
+  viewDisplayKey,
+  viewForPath,
+  withViewDisplay,
+} from './view-storage.ts'
 
 test('views collection still resolves catalog stubs from the route', () => {
   assert.equal(viewForPath(VIEWS_COLLECTION_PATH, 'builtin:/events')?.filters.tablePath, '/events')
@@ -14,4 +20,28 @@ test('tables default to the builtin 全部xx view', () => {
   assert.equal(defaultViewId(VIEWS_COLLECTION_PATH), builtinAllViewId(VIEWS_COLLECTION_PATH))
   assert.equal(viewForPath('/sessions')?.builtin, true)
   assert.deepEqual(viewForPath('/sessions')?.filters, {})
+})
+
+test('builtin view wrap is stored as display prefs and restored', () => {
+  const mem: Record<string, string> = {}
+  const storage = {
+    getItem: (key: string) => mem[key] ?? null,
+    setItem: (key: string, value: string) => {
+      mem[key] = value
+    },
+    removeItem: (key: string) => {
+      delete mem[key]
+    },
+  }
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: storage })
+  const path = '/sessions'
+  const id = builtinAllViewId(path)
+  persistViewDisplay(path, id, { wrap: true, truncate: false })
+  assert.equal(mem[viewDisplayKey(path, id)]?.includes('"wrap":true'), true)
+  const painted = withViewDisplay(path, builtinAllView({ path, label: '会话', view: { title: '会话' } }))
+  assert.equal(painted.wrap, true)
+  assert.equal(painted.truncate, false)
+  assert.equal(painted.builtin, true)
+  assert.equal(painted.name, '全部会话')
+  assert.equal(viewForPath(path)?.wrap, true)
 })

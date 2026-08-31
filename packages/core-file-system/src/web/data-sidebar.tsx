@@ -38,6 +38,7 @@ import {
   persistStarredViews,
   subscribeStarredViews,
   toggleStarredView,
+  withViewDisplay,
 } from './view-storage.ts'
 import { pickDomAttrs, recordPickKind, viewPickId } from './pick-dom.ts'
 import { toggleExpandedViewKey } from './sidebar-nav.ts'
@@ -372,9 +373,9 @@ export const DataSidebar = memo(function DataSidebar({
 
   function viewsFor(path: string) {
     const listed = path === collectionPath ? views : loadViews(path)
-    if (path === VIEWS_COLLECTION_PATH) return mergeCatalogViews(tables, listed)
+    if (path === VIEWS_COLLECTION_PATH) return mergeCatalogViews(tables, listed).map((view) => withViewDisplay(path, view))
     const table = listedTables.find((row) => row.path === path) ?? { path, label: path.replace(/^\//, '') }
-    return mergeTableViews(table, listed)
+    return mergeTableViews(table, listed).map((view) => withViewDisplay(path, view))
   }
 
   const starredRows = starredViews.flatMap((item) => {

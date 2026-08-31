@@ -62,7 +62,7 @@ export function viewForPath(collectionPath: string, routeViewId?: string): Saved
     listed.find((item) => item.id === loadActiveViewId(collectionPath, listed)) ??
     fallback ??
     listed[0]
-  return preferred ? normalizeSavedView(preferred) : null
+  return preferred ? withViewDisplay(collectionPath, normalizeSavedView(preferred)) : null
 }
 
 export function defaultViewId(collectionPath: string, routeViewId?: string) {
@@ -145,4 +145,66 @@ export function isViewStarred(items: StarredView[], path: string, viewId: string
 export function toggleStarredView(items: StarredView[], path: string, viewId: string): StarredView[] {
   if (isViewStarred(items, path, viewId)) return items.filter((item) => item.path !== path || item.viewId !== viewId)
   return [...items, { path, viewId }]
+}
+
+const DISPLAY_KEYS = [
+  'mode',
+  'sortField',
+  'sortDir',
+  'columns',
+  'groupBy',
+  'tree',
+  'wrap',
+  'truncate',
+  'query',
+  'pageSize',
+] as const
+
+export type ViewDisplayPatch = Partial<Pick<SavedView, (typeof DISPLAY_KEYS)[number]>>
+
+export function viewDisplayKey(collectionPath: string, viewId: string) {
+  return `fsdb.viewDisplay:${collectionPath}:${viewId}`
+}
+
+function pickDisplay(patch: Partial<SavedView>): ViewDisplayPatch {
+  const next: ViewDisplayPatch = {}
+  for (const key of DISPLAY_KEYS) {
+    if (patch[key] !== undefined) (next as Record<string, unknown>)[key] = patch[key]
+  }
+  return next
+}
+
+export function loadViewDisplay(collectionPath: string, viewId: string): ViewDisplayPatch {
+  try {
+    const raw = localStorage.getItem(viewDisplayKey(collectionPath, viewId))
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    if (!parsed || typeof parsed !== 'object') return {}
+    return pickDisplay(parsed)
+  } catch {
+    return {}
+  }
+}
+
+export function persistViewDisplay(collectionPath: string, viewId: string, patch: Partial<SavedView>) {
+  try {
+    const next = { ...loadViewDisplay(collectionPath, viewId), ...pickDisplay(patch) }
+    localStorage.setItem(viewDisplayKey(collectionPath, viewId), JSON.stringify(next))
+  } catch {
+    /* ignore */
+  }
+}
+
+/** 内置「全部 xx」不能当用户视图存整份，显示项（换行等）单独记。 */
+export function withViewDisplay(collectionPath: string, view: SavedView): SavedView {
+  const overlay = loadViewDisplay(collectionPath, view.id)
+  if (!Object.keys(overlay).length) return normalizeSavedView(view)
+  return normalizeSavedView({
+    ...view,
+    ...overlay,
+    id: view.id,
+    name: view.name,
+    builtin: view.builtin,
+    filters: view.filters,
+  })
 }

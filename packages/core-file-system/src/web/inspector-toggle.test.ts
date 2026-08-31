@@ -84,8 +84,10 @@ test('create record sits at the right of the toolbar with a blue label', () => {
   assert.match(css, /\.fsdb-create-btn\{[^}]*border-radius:4px/)
   assert.match(css, /\.fsdb-create-btn\{[^}]*background:var\(--dsw-pick/)
   assert.match(css, /\.fsdb-boolbox\.is-on\{[^}]*background:var\(--dsw-pick/)
-  assert.doesNotMatch(css, /#4F7FDE/)
-  assert.doesNotMatch(browser, /backgroundColor: '#4F7FDE'/)
+  assert.match(browser, /persistViewDisplay/)
+  assert.match(browser, /withViewDisplay/)
+  assert.doesNotMatch(browser, /if \(current\?\.builtin\) return/)
+  assert.match(css, /\.tasks-table\.is-wrap\{[^}]*white-space:normal/)
 })
 
 test('filesystem header expands the shared left sidebar and toggles the right inspector', () => {
