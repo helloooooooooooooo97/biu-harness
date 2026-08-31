@@ -22,6 +22,12 @@ export class PickService extends Service {
   constructor(ctx: Context) {
     super(ctx, 'pick')
     boundPick = this
+    ctx.effect(() => {
+      if (typeof window === 'undefined') return
+      const onClosed = () => this.exit()
+      window.addEventListener('biu:overlay-closed', onClosed)
+      return () => window.removeEventListener('biu:overlay-closed', onClosed)
+    })
   }
 
   subscribe = (fn: () => void) => {

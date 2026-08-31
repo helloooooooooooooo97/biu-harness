@@ -53,6 +53,7 @@ export function resolvePickFromNode(start: Element | null, route: string): { el:
 
 export function resolvePickAtPoint(x: number, y: number, route: string) {
   const stacked = document.elementsFromPoint(x, y)
+  if (stacked.some((el) => el instanceof Element && el.closest('[data-testid="chat-overlay-panel"]'))) return null
   for (const el of stacked) {
     if (el instanceof Element && isPickIgnored(el)) continue
     const hit = resolvePickFromNode(el, route)

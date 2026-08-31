@@ -8,8 +8,10 @@ const DRAG_PX = 6
 export const PICK_NAV_GUARD =
   '[data-biu-ignore], .app-side-bar, .brand-corner-cluster, [data-os-dock], [data-testid="inspector-toggle"], [data-testid="fsdb-inspector-toggle"], [data-testid="chat-overlay-panel"]'
 
-export function ignorePickCapture(target: Element) {
-  return Boolean(target.closest(PICK_NAV_GUARD))
+export function ignorePickCapture(target: EventTarget | null, event?: Event) {
+  const path = event && 'composedPath' in event ? event.composedPath() : []
+  const nodes = path.length ? path : target instanceof Element ? [target] : []
+  return nodes.some((node) => node instanceof Element && node.closest(PICK_NAV_GUARD))
 }
 
 function hoverBox(el: HTMLElement) {
@@ -54,8 +56,7 @@ export function PickOverlay(_props: SlotProps) {
 
     const onDown = (event: PointerEvent) => {
       if (event.button !== 0) return
-      const target = event.target
-      if (target instanceof Element && ignorePickCapture(target)) return
+      if (ignorePickCapture(event.target, event)) return
       event.preventDefault()
       drag = { x: event.clientX, y: event.clientY, boxed: false }
     }
@@ -74,8 +75,7 @@ export function PickOverlay(_props: SlotProps) {
     }
 
     const onClick = (event: MouseEvent) => {
-      const target = event.target
-      if (target instanceof Element && ignorePickCapture(target)) return
+      if (ignorePickCapture(event.target, event)) return
       event.preventDefault()
       event.stopPropagation()
     }

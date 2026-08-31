@@ -55,3 +55,14 @@ test('adding a pick notifies the overlay to open', () => {
   window.removeEventListener('biu:pick-attached', onAttached)
   assert.equal(attached, 1)
 })
+
+test('overlay-closed on window exits pick mode and keeps chips', () => {
+  const ctx = new Context()
+  const pick = new PickService(ctx)
+  pick.enter()
+  pick.add({ kind: 'page', id: 'p1', label: '页面', route: '/pages' })
+  assert.equal(pick.picking, true)
+  window.dispatchEvent(new Event('biu:overlay-closed'))
+  assert.equal(pick.picking, false)
+  assert.equal(pick.refs.length, 1)
+})

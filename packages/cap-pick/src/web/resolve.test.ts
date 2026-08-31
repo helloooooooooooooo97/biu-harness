@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { resolvePickFromNode, resolvePicksInRect } from './resolve.ts'
+import { resolvePickFromNode, resolvePickAtPoint, resolvePicksInRect } from './resolve.ts'
 import { formatPicks, parsePicks, splitPickStream, chipLabel, dedupePicks } from './types.ts'
 import { pickKindIcon } from './chip.tsx'
 import { CpuChipIcon, ClipboardDocumentCheckIcon, ChatBubbleLeftIcon, PuzzlePieceIcon, TagIcon, DocumentIcon } from '@heroicons/react/16/solid'
@@ -44,6 +44,22 @@ test('ignored subtrees are not pickable', () => {
   document.body.append(wrap)
   assert.equal(resolvePickFromNode(inner, '/'), null)
   wrap.remove()
+})
+
+test('picking does not look through the chat overlay', () => {
+  const behind = document.createElement('div')
+  behind.setAttribute('data-biu-kind', 'page')
+  behind.setAttribute('data-biu-id', 'p1')
+  const panel = document.createElement('div')
+  panel.setAttribute('data-testid', 'chat-overlay-panel')
+  document.body.append(behind, panel)
+  Object.defineProperty(document, 'elementsFromPoint', {
+    configurable: true,
+    value: () => [panel, behind],
+  })
+  assert.equal(resolvePickAtPoint(0, 0, '/pages'), null)
+  behind.remove()
+  panel.remove()
 })
 
 test('formatPicks emits data handles only', () => {

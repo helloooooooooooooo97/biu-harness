@@ -118,9 +118,20 @@ export function setChatOverlay(next: boolean) {
   if (!next) {
     setOverlayAutohide(false)
     setOverlayThread(false)
-    if (typeof window !== 'undefined') window.dispatchEvent(new Event('biu:overlay-closed'))
+    notifyOverlayClosed()
   }
   emit()
+}
+
+function notifyOverlayClosed() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event('biu:overlay-closed'))
+}
+
+/** 关掉浮窗并退出选取。已经关着也会再通知一次。 */
+export function closeChatOverlay() {
+  notifyOverlayClosed()
+  setChatOverlay(false)
 }
 
 export function getOverlayThread() {

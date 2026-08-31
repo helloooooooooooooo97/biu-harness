@@ -14,6 +14,7 @@ import {
   SIDEBAR_TAG_AT,
   getChatOverlay,
   setChatOverlay,
+  closeChatOverlay,
   getOverlayThread,
   openOverlayComposer,
   revealOverlayThread,
@@ -160,6 +161,19 @@ test('pick opens a compose-only overlay; send reveals the thread', () => {
   assert.equal(getOverlayThread(), true)
   setChatOverlay(false)
   assert.equal(getOverlayThread(), false)
+})
+
+test('closeChatOverlay notifies even if the overlay was already closed', () => {
+  setChatOverlay(false)
+  let closed = 0
+  const onClosed = () => {
+    closed += 1
+  }
+  window.addEventListener('biu:overlay-closed', onClosed)
+  closeChatOverlay()
+  window.removeEventListener('biu:overlay-closed', onClosed)
+  assert.equal(getChatOverlay(), false)
+  assert.equal(closed, 1)
 })
 
 test('closing the overlay notifies pick to exit', () => {

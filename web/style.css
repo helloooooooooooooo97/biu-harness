@@ -4730,6 +4730,16 @@ html.pick-mode * {
   user-select: none !important;
 }
 
+html.pick-mode .chat-overlay-panel,
+html.pick-mode .chat-overlay-panel * {
+  cursor: auto !important;
+  user-select: auto !important;
+}
+
+html.pick-mode .chat-overlay-drag {
+  cursor: grab !important;
+}
+
 .pick-overlay-box {
   position: fixed;
   z-index: 9998;

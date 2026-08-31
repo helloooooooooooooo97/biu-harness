@@ -112,11 +112,11 @@ export function OverlayChatWindow({
   }
 
   const handles: Array<{ key: string; className: string; edge: ResizeEdge }> = [
-    { key: 'n', className: 'absolute inset-x-2 top-0 h-1.5 cursor-n-resize', edge: { north: true } },
+    { key: 'n', className: 'absolute inset-x-8 top-0 h-1.5 cursor-n-resize', edge: { north: true } },
     { key: 's', className: 'absolute inset-x-2 bottom-0 h-1.5 cursor-s-resize', edge: { south: true } },
-    { key: 'e', className: 'absolute inset-y-2 right-0 w-1.5 cursor-e-resize', edge: { east: true } },
+    { key: 'e', className: 'absolute inset-y-8 right-0 w-1.5 cursor-e-resize', edge: { east: true } },
     { key: 'w', className: 'absolute inset-y-2 left-0 w-1.5 cursor-w-resize', edge: { west: true } },
-    { key: 'ne', className: 'absolute top-0 right-0 size-3 cursor-nesw-resize', edge: { north: true, east: true } },
+    { key: 'ne', className: 'pointer-events-none absolute top-0 right-0 size-3', edge: { north: true, east: true } },
     { key: 'nw', className: 'absolute top-0 left-0 size-3 cursor-nwse-resize', edge: { north: true, west: true } },
     { key: 'se', className: 'absolute bottom-0 right-0 size-3 cursor-nwse-resize', edge: { south: true, east: true } },
     { key: 'sw', className: 'absolute bottom-0 left-0 size-3 cursor-nesw-resize', edge: { south: true, west: true } },

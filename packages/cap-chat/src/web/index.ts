@@ -12,7 +12,7 @@ import { TrajectoryView } from './trajectory.tsx'
 import { UsagePanel } from './usage-panel.tsx'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
 import type { PickService } from '@biu/cap-pick/web'
-import { getChatOverlay, subscribeChatOverlay, setChatOverlay, requestOverlayFocus } from '@biu/web-app-shell/chat-overlay'
+import { getChatOverlay, subscribeChatOverlay, setChatOverlay, closeChatOverlay, requestOverlayFocus } from '@biu/web-app-shell/chat-overlay'
 
 export const name = 'chat-ui'
 export const inject = ['slots', 'sessionView', 'projectView', 'dock']
@@ -91,7 +91,7 @@ export function apply(ctx: Context) {
     Icon: () => createElement(ChatBubbleBottomCenterTextIcon, { className: 'size-5' }),
     onOpen: () => {
       if (getChatOverlay()) {
-        setChatOverlay(false)
+        closeChatOverlay()
         return
       }
       setChatOverlay(true)

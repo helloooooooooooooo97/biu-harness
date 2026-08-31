@@ -4,6 +4,7 @@ import {
   getChatOverlay,
   subscribeChatOverlay,
   setChatOverlay,
+  closeChatOverlay,
   requestInspectorClose,
   allocateShellColumns,
   clampSidebarWidth,
@@ -561,7 +562,11 @@ function Shell(props: SlotProps) {
           title="关闭聊天窗口"
           aria-label="关闭聊天窗口"
           data-testid="chat-overlay-close"
-          onClick={() => setChatOverlay(false)}
+          onPointerDown={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            closeChatOverlay()
+          }}
         >
           <XMarkIcon {...chromeIcon} />
         </button>
