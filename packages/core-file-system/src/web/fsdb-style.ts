@@ -36,7 +36,7 @@ const CSS = `
 .fsdb-collection-head.is-inline{padding:0 0 2px}
 .fsdb-collection-name{font-size:14px;font-weight:650;color:var(--dsw-label);line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-collection-head .fsdb-footnote{margin:4px 0 0;font-size:14px;font-weight:400;line-height:1.45;color:var(--dsw-label-3);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
-.fsdb-main{box-sizing:border-box;width:100%;max-width:none;margin-inline:0;display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;gap:10px;padding:12px 24px 16px;overflow:hidden}
+.fsdb-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;gap:10px;padding:12px 24px 16px;overflow:hidden}
 .fsdb-page:not(.inspector-database-page) .fsdb-main{padding-bottom:var(--brand-corner-clearance,60px)}
 .inspector-database-page .fsdb-main{padding-bottom:0}
 .fsdb-page .tasks-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;min-width:0}
@@ -223,7 +223,7 @@ const CSS = `
 .fsdb-detail-tab-count{margin-left:6px;font-size:11px;font-weight:700;color:var(--dsw-label-3)}
 .fsdb-detail-head-actions{display:inline-flex;align-items:center;gap:2px;justify-self:end}
 .fsdb-detail-split{display:flex;flex-direction:column;flex:1;min-height:0;overflow:auto}
-.fsdb-detail-main{box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:20px 24px 24px;min-width:0}
+.fsdb-detail-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;flex-direction:column;gap:8px;padding:20px 24px 24px;min-width:0}
 .fsdb-page:not(.inspector-database-page) .fsdb-detail-main{padding:80px 24px 24px}
 .fsdb-detail-aside{display:flex;flex-direction:column;gap:2px;padding:8px 0 12px}
 .fsdb-prop{display:grid;grid-template-columns:108px minmax(0,1fr);align-items:center;gap:8px;min-height:32px;font-size:14px;color:var(--dsw-label-3)}
