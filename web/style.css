@@ -412,6 +412,17 @@ body {
   height: 22px !important;
 }
 
+.os-dock-tile .brand-agent-menu svg {
+  width: unset !important;
+  height: unset !important;
+}
+
+.os-dock-item:has(.brand-agent-menu):hover,
+.os-dock-item:has(.brand-agent-menu):active {
+  transform: none;
+  z-index: 3;
+}
+
 .os-dock-fallback {
   display: grid;
   place-items: center;
@@ -556,6 +567,17 @@ body {
   background: #202020;
   padding: 4px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.chat-sidebar-popover {
+  display: flex;
+  flex-direction: column;
+  right: auto;
+  left: 0;
+  max-height: min(72vh, 560px);
+  overflow: hidden;
+  padding: 4px 0 0;
+  color: var(--dsw-sidebar-fg);
 }
 
 /* 右侧检查器 tab：选中态与顶栏收起检查器按钮相同，无底边指示条 */

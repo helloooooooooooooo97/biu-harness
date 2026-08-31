@@ -55,26 +55,48 @@ import {
 export const name = 'shell'
 export const inject = ['slots', 'dock', 'snapshot', 'sessionView', 'projectView', 'appModules']
 
+function DockSessionMascot({
+  useSessionView,
+  sessionView,
+}: {
+  useSessionView: ReturnType<typeof bindSessionView>
+  sessionView: SessionViewService
+}) {
+  const agents = useSessionView((state) => state.sessions)
+  const activeId = useSessionView((state) => state.sessionId)
+  const location = useLocation()
+  const appRoute = parseAppPath(location.pathname)
+  const routeSessionId = appRoute.kind === 'session' ? appRoute.sessionId : null
+  return (
+    <BrandCornerMascot
+      agents={agents}
+      activeId={activeId}
+      menu={(close) => (
+        <ChatSidebar
+          variant="popover"
+          visible
+          routeSessionId={routeSessionId}
+          useSessionView={useSessionView}
+          sessionView={sessionView}
+          onActivate={close}
+        />
+      )}
+    />
+  )
+}
+
 function ShellDockPins({
   dock,
-  agents,
-  activeId,
+  useSessionView,
   sessionView,
 }: {
   dock: DockService
-  agents: Parameters<typeof BrandCornerMascot>[0]['agents']
-  activeId: string | null | undefined
+  useSessionView: ReturnType<typeof bindSessionView>
   sessionView: SessionViewService
 }) {
   useEffect(() => {
     const Tile = () => (
-      <BrandCornerMascot
-        agents={agents}
-        activeId={activeId}
-        onSelect={(id) => {
-          void sessionView.load(id, { view: 'chat' })
-        }}
-      />
+      <DockSessionMascot useSessionView={useSessionView} sessionView={sessionView} />
     )
     return dock.register({
       id: 'session',
@@ -84,7 +106,7 @@ function ShellDockPins({
       order: 10,
       Tile,
     })
-  }, [dock, agents, activeId, sessionView])
+  }, [dock, useSessionView, sessionView])
   return null
 }
 
@@ -618,7 +640,7 @@ function Shell(props: SlotProps) {
       ) : null}
 
       <DanceStage sessions={danceSessions} on={dancing} shape={danceShape} />
-      <ShellDockPins dock={dock} agents={danceSessions} activeId={sessionId} sessionView={sessionView} />
+      <ShellDockPins dock={dock} useSessionView={useSessionView} sessionView={sessionView} />
       <ShellDockNav
         dock={dock}
         modules={railModules}

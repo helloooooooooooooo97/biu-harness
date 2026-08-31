@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { SidebarMascot } from './sidebar-mascot.tsx'
 import { resolveSessionMascot } from './session-mascot.ts'
 
@@ -89,11 +89,13 @@ export function BrandCornerMascot({
   activeId,
   onSelect,
   leading,
+  menu,
 }: {
   agents?: CornerAgent[]
   activeId?: string | null
   onSelect?: (id: string) => void
   leading?: ReactNode
+  menu?: ReactNode | ((close: () => void) => ReactNode)
 }) {
   const [agentsOpen, setAgentsOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -101,15 +103,36 @@ export function BrandCornerMascot({
   const current = ranked.find((item) => item.id === activeId) ?? ranked[0]
   const identity = current ? resolveSessionMascot(current.id, current.mascot) : undefined
   const name = current?.title?.trim() || '切换 Agent'
+  const closeMenu = useCallback(() => setAgentsOpen(false), [])
 
   useEffect(() => {
     if (!agentsOpen) return
     function onPointer(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setAgentsOpen(false)
+      const target = event.target as Node | null
+      if (rootRef.current?.contains(target)) return
+      if (target instanceof Element && target.closest('[data-testid="chat-session-delete-dialog"]')) return
+      setAgentsOpen(false)
     }
     window.addEventListener('mousedown', onPointer)
     return () => window.removeEventListener('mousedown', onPointer)
   }, [agentsOpen])
+
+  const panel = !agentsOpen
+    ? null
+    : menu
+      ? typeof menu === 'function'
+        ? menu(closeMenu)
+        : menu
+      : (
+        <BrandAgentMenu
+          agents={ranked}
+          activeId={activeId ?? current?.id}
+          onSelect={(id) => {
+            onSelect?.(id)
+            closeMenu()
+          }}
+        />
+      )
 
   return (
     <div className="brand-corner-cluster" ref={rootRef} data-testid="brand-corner-mascot">
@@ -120,7 +143,7 @@ export function BrandCornerMascot({
           className={`brand-corner-mascot-btn${agentsOpen ? ' is-active' : ''}`}
           title={name}
           aria-label={current ? `切换 Agent，当前：${name}` : '切换 Agent'}
-          aria-haspopup="menu"
+          aria-haspopup={menu ? 'dialog' : 'menu'}
           aria-expanded={agentsOpen}
           data-dock-tip={name}
           data-testid="brand-corner-mascot-toggle"
@@ -132,16 +155,7 @@ export function BrandCornerMascot({
             <BrandMascot className="size-9" />
           )}
         </button>
-        {agentsOpen ? (
-          <BrandAgentMenu
-            agents={ranked}
-            activeId={activeId ?? current?.id}
-            onSelect={(id) => {
-              onSelect?.(id)
-              setAgentsOpen(false)
-            }}
-          />
-        ) : null}
+        {panel}
       </div>
     </div>
   )
