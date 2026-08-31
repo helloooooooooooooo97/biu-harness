@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { Context } from 'cordis'
 import type { PluginStoreService } from './store.ts'
+import { parseStoreShell, type StoreShell } from '../shell.ts'
 
 export type PluginCreateInput = {
   id: string
@@ -11,6 +12,7 @@ export type PluginCreateInput = {
   tags?: string[]
   author?: string
   authorUrl?: string
+  shell?: StoreShell | Record<string, unknown>
   hostJs?: string
   webJs?: string
 }
@@ -23,6 +25,7 @@ export type StoreManifestFields = {
   author: string
   authorUrl: string
   createdAt: number
+  shell: StoreShell
 }
 
 export function parseTags(value: unknown): string[] {
@@ -35,7 +38,7 @@ export function parseTags(value: unknown): string[] {
 }
 
 export function buildStoreManifest(
-  input: Pick<PluginCreateInput, 'id' | 'name' | 'blurb' | 'tags' | 'author' | 'authorUrl'>,
+  input: Pick<PluginCreateInput, 'id' | 'name' | 'blurb' | 'tags' | 'author' | 'authorUrl' | 'shell'>,
   existing?: Partial<StoreManifestFields>,
   now = Date.now(),
 ): StoreManifestFields {
@@ -48,6 +51,7 @@ export function buildStoreManifest(
     author: String(input.author ?? existing?.author ?? '').trim(),
     authorUrl: String(input.authorUrl ?? existing?.authorUrl ?? '').trim(),
     createdAt: Number.isFinite(createdAt) && createdAt > 0 ? createdAt : now,
+    shell: parseStoreShell(input.shell ?? existing?.shell),
   }
 }
 
@@ -65,6 +69,7 @@ export function parseStoreManifest(raw: unknown): StoreManifestFields {
       tags: parseTags(data.tags),
       author: data.author != null ? String(data.author) : undefined,
       authorUrl: data.authorUrl != null ? String(data.authorUrl) : data.author_url != null ? String(data.author_url) : undefined,
+      shell: data.shell,
     },
     { createdAt },
     Number.isFinite(createdAt) && createdAt > 0 ? createdAt : 0,
@@ -132,6 +137,7 @@ export async function readSandboxManifest(dir: string) {
 const CONTRACT = [
   '契约：id 与 export const name 相同。禁止 import npm / react / @biu/*。不要改 packages/ 或 cordis.plugins.json。',
   'host 与 web 按需，至少一侧。Web：ctx.slots.place("plugin-store-extras", Comp, { key })。运行窗口会给 extras 套 macOS 窗口框（关/缩/全屏），key 尽量用插件 id。',
+  '有 UI 时在 manifest.shell 声明内容区像素：{ width, height, minWidth?, minHeight?, resizable? }。窗口按这个尺寸打开，插件根节点铺满窗口，不要用 100vw 或测量 DOM 撑开外壳。缺省 480×360。',
 ].join(' ')
 
 const PLUGIN_CREATE_DESCRIPTION = [
@@ -160,6 +166,7 @@ function createArgs(args: Record<string, unknown>): PluginCreateInput {
     tags: parseTags(args.tags),
     author: args.author != null ? String(args.author) : undefined,
     authorUrl: args.authorUrl != null ? String(args.authorUrl) : undefined,
+    shell: args.shell && typeof args.shell === 'object' ? (args.shell as Record<string, unknown>) : undefined,
     hostJs: args.hostJs != null ? String(args.hostJs) : undefined,
     webJs: args.webJs != null ? String(args.webJs) : undefined,
   }
@@ -179,6 +186,17 @@ const ID_NAME_BLURB = {
   },
   author: { type: 'string', description: '作者名' },
   authorUrl: { type: 'string', description: '作者主页 / 仓库链接' },
+  shell: {
+    type: 'object',
+    description: '运行窗口内容区尺寸（像素，不含标题栏）。缺省 480×360。',
+    properties: {
+      width: { type: 'number', description: '内容区宽' },
+      height: { type: 'number', description: '内容区高' },
+      minWidth: { type: 'number' },
+      minHeight: { type: 'number' },
+      resizable: { type: 'boolean', description: 'false 则锁死尺寸，适合固定画布' },
+    },
+  },
 }
 
 export function registerPluginCreate(ctx: Context, store: PluginStoreService) {

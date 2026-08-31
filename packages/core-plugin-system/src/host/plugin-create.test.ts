@@ -42,6 +42,13 @@ test('create compiles host source straight into .plugin/<id>/', async () => {
     const listed = await store.list()
     assert.equal(listed[0]?.createdAt, manifest.createdAt)
     assert.equal(listed[0]?.lastRunAt, null)
+    assert.deepEqual(listed[0]?.shell, {
+      width: 480,
+      height: 360,
+      minWidth: 200,
+      minHeight: 160,
+      resizable: true,
+    })
     const hostJs = await readFile(join(pluginDir, 'store-echo', 'host.js'), 'utf8')
     assert.match(hostJs, /\bapply\b/)
     assert.doesNotMatch(hostJs, /ctx: \{/)
@@ -49,6 +56,33 @@ test('create compiles host source straight into .plugin/<id>/', async () => {
       () => store.create({ id: 'store-empty', name: 'Empty' }),
       /hostJs and\/or webJs/,
     )
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('create writes manifest.shell from input', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'plugin-shell-'))
+  try {
+    const ctx = new Context()
+    stubHub(ctx)
+    const pluginDir = join(dir, '.plugin')
+    const store = new PluginStoreService(ctx, pluginDir, join(dir, 'store.json'), join(dir, '.plugin-dev')).open()
+    await store.create({
+      id: 'store-game',
+      name: 'Game',
+      shell: { width: 640, height: 480, resizable: false },
+      webJs: `export const name = 'store-game'\nexport function apply() {}`,
+    })
+    const manifest = JSON.parse(await readFile(join(pluginDir, 'store-game', 'manifest.json'), 'utf8')) as {
+      shell: { width: number; height: number; resizable: boolean }
+    }
+    assert.equal(manifest.shell.width, 640)
+    assert.equal(manifest.shell.height, 480)
+    assert.equal(manifest.shell.resizable, false)
+    const listed = await store.list()
+    assert.equal(listed[0]?.shell.width, 640)
+    assert.equal(listed[0]?.shell.resizable, false)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

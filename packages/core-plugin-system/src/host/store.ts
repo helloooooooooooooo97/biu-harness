@@ -15,7 +15,9 @@ import {
   registerPluginCreate,
   WEB_ENTRIES,
   type PluginCreateInput,
+  type StoreManifestFields,
 } from './plugin-create.ts'
+import type { StoreShell } from '../shell.ts'
 
 export type StoreListing = {
   id: string
@@ -32,17 +34,10 @@ export type StoreListing = {
   lastRunAt: number | null
   hasHost: boolean
   hasWeb: boolean
+  shell: StoreShell
 }
 
-export type StoreManifest = {
-  id: string
-  name: string
-  blurb: string
-  tags: string[]
-  author: string
-  authorUrl: string
-  createdAt: number
-}
+export type StoreManifest = StoreManifestFields
 
 type StoreHub = {
   adopt(entry: CatalogEntry): Promise<unknown>

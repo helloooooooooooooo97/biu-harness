@@ -5,11 +5,20 @@ import type { SlotProps } from '@biu/type-slots'
 
 import type { DatabaseUi } from '@biu/type-file-system/ui'
 import { pluginsChrome } from './chrome.tsx'
+import {
+  WIN_CHROME_H,
+  centeredGeom,
+  clampGeom,
+  defaultStoreShell,
+  parseStoreShell,
+  type StoreShell,
+  type WinGeom,
+} from '../shell.ts'
 
 export const name = 'core-plugin-system-ui'
 export const inject = ['slots', 'databaseUi']
 
-type StoreListing = { id: string; name: string }
+type StoreListing = { id: string; name: string; shell?: StoreShell }
 
 async function readJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init)
@@ -28,60 +37,20 @@ function resolveListing(extraId: string, items: StoreListing[]) {
   )
 }
 
-const WIN_MIN_W = 200
-const WIN_MIN_H = 160
-const WIN_CHROME_H = 32
-const WIN_DEFAULT_W = 480
-const WIN_DEFAULT_H = 360
+function viewport() {
+  return { w: window.innerWidth, h: window.innerHeight }
+}
+
 let pluginWindowZ = 21
 
-type WinGeom = { x: number; y: number; w: number; h: number }
 type ResizeEdge = { north?: boolean; south?: boolean; east?: boolean; west?: boolean }
 type ResizeSession = WinGeom & ResizeEdge & { px: number; py: number }
-
-function defaultPos(seed: string): { x: number; y: number } {
-  let hash = 0
-  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
-  return {
-    x: Math.max(16, Math.round(window.innerWidth / 2 - 160) + (hash % 5) * 28 - 56),
-    y: Math.max(16, Math.round(window.innerHeight / 2 - 120) + (hash % 4) * 24 - 48),
-  }
-}
-
-function clampGeom(next: WinGeom, lockSize: boolean): WinGeom {
-  const maxX = Math.max(0, window.innerWidth - 64)
-  const maxY = Math.max(0, window.innerHeight - 36)
-  return {
-    x: Math.min(maxX, Math.max(0, next.x)),
-    y: Math.min(maxY, Math.max(0, next.y)),
-    w: lockSize ? Math.min(window.innerWidth, Math.max(WIN_MIN_W, next.w)) : next.w,
-    h: lockSize ? Math.min(window.innerHeight, Math.max(WIN_MIN_H, next.h)) : next.h,
-  }
-}
-
-function innerHasExplicitSize(el: HTMLElement | null): { w: boolean; h: boolean } {
-  if (!el) return { w: false, h: false }
-  return {
-    w: Boolean(el.style.width) || el.hasAttribute('width'),
-    h: Boolean(el.style.height) || el.hasAttribute('height'),
-  }
-}
-
-function measurePluginBox(body: HTMLElement): { w: number; h: number } {
-  const inner = body.firstElementChild as HTMLElement | null
-  const explicit = innerHasExplicitSize(inner)
-  const w = explicit.w && inner ? inner.offsetWidth : WIN_DEFAULT_W
-  const contentH = explicit.h && inner ? inner.offsetHeight : WIN_DEFAULT_H
-  return {
-    w: Math.max(WIN_MIN_W, w),
-    h: Math.max(WIN_MIN_H, contentH + WIN_CHROME_H),
-  }
-}
 
 function PluginAppWindow({
   extraId,
   title,
   pluginId,
+  shell,
   fullscreen,
   onClose,
   onMinimize,
@@ -91,52 +60,24 @@ function PluginAppWindow({
   extraId: string
   title: string
   pluginId: string
+  shell: StoreShell
   fullscreen: boolean
   onClose: () => void
   onMinimize: () => void
   onToggleFullscreen: () => void
   children: ReactNode
 }) {
-  const [geom, setGeom] = useState<WinGeom>(() => ({
-    ...defaultPos(extraId),
-    w: WIN_DEFAULT_W,
-    h: WIN_DEFAULT_H + WIN_CHROME_H,
-  }))
+  const [geom, setGeom] = useState<WinGeom>(() => centeredGeom(shell, viewport(), extraId))
   const [userSized, setUserSized] = useState(false)
   const [z, setZ] = useState(() => ++pluginWindowZ)
   const boxRef = useRef<HTMLElement>(null)
-  const bodyRef = useRef<HTMLDivElement>(null)
-  const centeredRef = useRef(false)
   const dragRef = useRef<{ px: number; py: number; x: number; y: number } | null>(null)
   const resizeRef = useRef<ResizeSession | null>(null)
 
   useEffect(() => {
     if (userSized || fullscreen) return
-    const body = bodyRef.current
-    const box = boxRef.current
-    if (!body || !box) return
-    const applyMeasure = () => {
-      const size = measurePluginBox(body)
-      setGeom((cur) => {
-        const next = { ...cur, ...size }
-        if (!centeredRef.current) {
-          centeredRef.current = true
-          next.x = Math.max(16, Math.round((window.innerWidth - size.w) / 2))
-          next.y = Math.max(16, Math.round((window.innerHeight - size.h) / 2))
-        }
-        return clampGeom(next, true)
-      })
-    }
-    applyMeasure()
-    const id = window.requestAnimationFrame(applyMeasure)
-    const inner = body.firstElementChild
-    const ro = inner ? new ResizeObserver(applyMeasure) : null
-    if (inner) ro?.observe(inner)
-    return () => {
-      window.cancelAnimationFrame(id)
-      ro?.disconnect()
-    }
-  }, [userSized, fullscreen])
+    setGeom(centeredGeom(shell, viewport(), extraId))
+  }, [extraId, fullscreen, shell.height, shell.minHeight, shell.minWidth, shell.width, userSized])
 
   useEffect(() => {
     const onMove = (event: PointerEvent) => {
@@ -149,11 +90,13 @@ function PluginAppWindow({
               x: drag.x + event.clientX - drag.px,
               y: drag.y + event.clientY - drag.py,
             },
-            userSized,
+            shell,
+            viewport(),
           ),
         )
         return
       }
+      if (!shell.resizable) return
       const resize = resizeRef.current
       if (!resize) return
       const dx = event.clientX - resize.px
@@ -161,24 +104,26 @@ function PluginAppWindow({
       let { x, y, w, h } = resize
       if (resize.east) w = resize.w + dx
       if (resize.south) h = resize.h + dy
+      const minW = shell.minWidth
+      const minH = shell.minHeight + WIN_CHROME_H
       if (resize.west) {
         w = resize.w - dx
         x = resize.x + dx
-        if (w < WIN_MIN_W) {
-          x = resize.x + resize.w - WIN_MIN_W
-          w = WIN_MIN_W
+        if (w < minW) {
+          x = resize.x + resize.w - minW
+          w = minW
         }
       }
       if (resize.north) {
         h = resize.h - dy
         y = resize.y + dy
-        if (h < WIN_MIN_H) {
-          y = resize.y + resize.h - WIN_MIN_H
-          h = WIN_MIN_H
+        if (h < minH) {
+          y = resize.y + resize.h - minH
+          h = minH
         }
       }
       setUserSized(true)
-      setGeom(clampGeom({ x, y, w, h }, true))
+      setGeom(clampGeom({ x, y, w, h }, shell, viewport()))
     }
     const onUp = () => {
       dragRef.current = null
@@ -192,7 +137,7 @@ function PluginAppWindow({
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
     }
-  }, [userSized])
+  }, [shell.minHeight, shell.minWidth, shell.resizable])
 
   const bringFront = () => setZ(++pluginWindowZ)
 
@@ -205,7 +150,7 @@ function PluginAppWindow({
   }
 
   const startResize = (edge: ResizeEdge) => (event: ReactPointerEvent) => {
-    if (fullscreen) return
+    if (fullscreen || !shell.resizable) return
     event.preventDefault()
     event.stopPropagation()
     bringFront()
@@ -241,6 +186,9 @@ function PluginAppWindow({
       style={style}
       data-testid={`plugin-app-window-${extraId}`}
       data-plugin-id={pluginId}
+      data-shell-width={shell.width}
+      data-shell-height={shell.height}
+      data-shell-resizable={shell.resizable ? '1' : '0'}
       data-fullscreen={fullscreen || undefined}
       onPointerDown={bringFront}
     >
@@ -288,10 +236,10 @@ function PluginAppWindow({
         </div>
         <span className="w-13 shrink-0" aria-hidden />
       </header>
-      <div ref={bodyRef} className="min-h-0 min-w-0 flex-1 overflow-auto bg-transparent">
+      <div className="plugin-store-window-body flex min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent">
         {children}
       </div>
-      {fullscreen
+      {fullscreen || !shell.resizable
         ? null
         : handles.map((item) => (
             <div
@@ -353,6 +301,7 @@ function PluginExtrasLayer(props: SlotProps) {
         const listing = resolveListing(entry.id, listings)
         const pluginId = listing?.id ?? entry.id
         const title = listing?.name ?? entry.id
+        const shell = parseStoreShell(listing?.shell ?? defaultStoreShell())
         const Component = entry.Component
         return (
           <PluginAppWindow
@@ -360,6 +309,7 @@ function PluginExtrasLayer(props: SlotProps) {
             extraId={entry.id}
             title={title}
             pluginId={pluginId}
+            shell={shell}
             fullscreen={fullscreenId === entry.id}
             onClose={() => {
               setMinimized((cur) => {
@@ -422,4 +372,14 @@ export function apply(ctx: Context) {
       'plugin-store-extras': { kind: 'list' },
     },
   })
+}
+
+if (typeof document !== 'undefined') {
+  const id = 'biu-plugin-store-window-style'
+  const style = document.getElementById(id) ?? document.createElement('style')
+  style.id = id
+  style.textContent = `
+.plugin-store-window-body > * { box-sizing:border-box; width:100%; height:100%; min-width:0; min-height:0; }
+`
+  document.documentElement.appendChild(style)
 }

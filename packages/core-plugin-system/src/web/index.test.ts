@@ -52,3 +52,15 @@ test('plugin system web passes name/tags/action chrome into databaseUi', async (
   assert.equal(typeof ui.last?.chrome.cells?.tags, 'function')
   assert.equal(typeof ui.last?.chrome.Action, 'function')
 })
+
+test('plugin window sizes from manifest.shell instead of measuring DOM', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const { resolve } = await import('node:path')
+  const src = await readFile(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  assert.match(src, /data-shell-width=\{shell\.width\}/)
+  assert.match(src, /parseStoreShell/)
+  assert.doesNotMatch(src, /measurePluginBox/)
+  assert.doesNotMatch(src, /ResizeObserver/)
+  const create = await readFile(resolve(import.meta.dirname, '../host/plugin-create.ts'), 'utf8')
+  assert.match(create, /manifest\.shell/)
+})
