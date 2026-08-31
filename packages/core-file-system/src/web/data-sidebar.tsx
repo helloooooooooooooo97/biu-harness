@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import {
   ChevronDoubleLeftIcon,
@@ -137,6 +137,16 @@ type PreviewState = { items: DbRecord[]; total: number; loading: boolean; error:
 
 const previewCache = new Map<string, { items: DbRecord[]; total: number }>()
 
+function SidebarFold({ open, children, className }: { open: boolean; children: ReactNode; className?: string }) {
+  return (
+    <div className={`sidebar-fold${open ? ' is-open' : ''}${className ? ` ${className}` : ''}`} aria-hidden={!open}>
+      <div className="sidebar-fold-inner" inert={!open || undefined}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 function ViewRecordPreview({
   path,
   view,
@@ -220,7 +230,6 @@ function ViewRecordPreview({
     }
   }
 
-  if (!open) return null
   const remaining = Math.max(0, state.total - state.items.length)
   const capped = state.items.length >= SIDEBAR_PREVIEW_MAX && remaining > 0
   return (
@@ -505,7 +514,7 @@ export const DataSidebar = memo(function DataSidebar({
             </div>
             <ChatCount count={listed.length} />
           </div>
-          <div className={`sidebar-session-list min-w-0 ${open ? '' : 'hidden'}`} aria-hidden={!open}>
+          <SidebarFold open={open} className="sidebar-session-list min-w-0">
             {listed.map((view) => {
               const starred = isViewStarred(starredViews, table.path, view.id)
               const active = table.path === collectionPath && view.id === activeViewId
@@ -580,6 +589,7 @@ export const DataSidebar = memo(function DataSidebar({
                       <StarIcon className={`size-4 shrink-0${starred ? ' text-[#f5b700]' : ''}`} />
                     </button>
                   </div>
+                  <SidebarFold open={expanded}>
                   <ViewRecordPreview
                     path={table.path}
                     view={view}
@@ -588,10 +598,11 @@ export const DataSidebar = memo(function DataSidebar({
                     tableIcon={table.view?.icon}
                     onOpenRecord={(id, row) => openRecord(table.path, view, id, row)}
                   />
+                  </SidebarFold>
                 </div>
               )
             })}
-          </div>
+          </SidebarFold>
         </div>
       )
     })
@@ -645,7 +656,7 @@ export const DataSidebar = memo(function DataSidebar({
                 </div>
                 <ChatCount count={starredRows.length} />
               </div>
-              {favOpen ? (
+              <SidebarFold open={favOpen}>
                 <div className="min-w-0 pt-0.5">
                   {starredRows.map(({ table, view }) => {
                     const tableName = table.view?.title ?? table.label
@@ -702,6 +713,7 @@ export const DataSidebar = memo(function DataSidebar({
                             <StarIcon className="size-4 shrink-0 text-[#f5b700]" />
                           </button>
                         </div>
+                        <SidebarFold open={expanded}>
                         <ViewRecordPreview
                           path={table.path}
                           view={view}
@@ -710,11 +722,12 @@ export const DataSidebar = memo(function DataSidebar({
                           tableIcon={table.view?.icon}
                           onOpenRecord={(id, row) => openRecord(table.path, view, id, row)}
                         />
+                        </SidebarFold>
                       </div>
                     )
                   })}
                 </div>
-              ) : null}
+              </SidebarFold>
             </section>
           ) : null}
 
@@ -732,13 +745,13 @@ export const DataSidebar = memo(function DataSidebar({
               </div>
               <ChatCount count={userTables.length} />
             </div>
-            {userOpen ? (
+            <SidebarFold open={userOpen}>
               <div className="min-w-0 space-y-1.5 pt-0.5" data-testid="sidebar-user-collections">
                 {userTables.length ? renderTableRows(userTables) : (
                   <div className="px-1 py-1 text-[12px] text-(--dsw-label-3)">还没有可改的表</div>
                 )}
               </div>
-            ) : null}
+            </SidebarFold>
           </section>
 
           {systemTables.length ? (
@@ -757,11 +770,11 @@ export const DataSidebar = memo(function DataSidebar({
                 </div>
                 <ChatCount count={systemTables.length} />
               </div>
-              {systemOpen ? (
+              <SidebarFold open={systemOpen}>
                 <div className="min-w-0 space-y-1.5 pt-0.5" data-testid="sidebar-system-collections">
                   {renderTableRows(systemTables)}
                 </div>
-              ) : null}
+              </SidebarFold>
             </section>
           ) : null}
         </div>
