@@ -326,9 +326,9 @@ body {
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  margin: 0 0 16px;
-  padding: 8px 14px 10px;
-  border-radius: 20px;
+  margin: 0 0 14px;
+  padding: 5px 12px 7px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.1);
   box-shadow: 0 1px 2px rgba(15, 15, 15, 0.04), 0 10px 32px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(16px) saturate(1.2);
@@ -351,8 +351,8 @@ body {
 
 .os-dock-sep {
   width: 1px;
-  height: 28px;
-  margin: 0 4px 8px;
+  height: 24px;
+  margin: 0 3px 6px;
   background: rgba(255, 255, 255, 0.18);
 }
 
@@ -396,21 +396,21 @@ body {
 .os-dock-tile {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   color: #f0efed;
 }
 
 .os-dock-tile svg {
-  width: 26px !important;
-  height: 26px !important;
+  width: 22px !important;
+  height: 22px !important;
 }
 
 .os-dock-fallback {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 10px;
   background: #3a3a3c;
   font-size: 15px;
@@ -478,8 +478,8 @@ body {
 }
 
 .os-dock .brand-corner-mascot-btn {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
 }
 
 .brand-corner-cluster {

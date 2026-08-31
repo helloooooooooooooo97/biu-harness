@@ -299,7 +299,7 @@ export const OVERLAY_WIN_MIN_H = 280
 export const OVERLAY_WIN_DEFAULT_W = 420
 export const OVERLAY_WIN_DEFAULT_H = 520
 const OVERLAY_WIN_GEOM_KEY = 'cordis.overlay.geom'
-const OVERLAY_DOCK_CLEARANCE = 88
+const OVERLAY_DOCK_CLEARANCE = 80
 
 export function defaultOverlayWinGeom(vw = 1280, vh = 800): OverlayWinGeom {
   const w = Math.min(OVERLAY_WIN_DEFAULT_W, Math.max(OVERLAY_WIN_MIN_W, vw - 40))
