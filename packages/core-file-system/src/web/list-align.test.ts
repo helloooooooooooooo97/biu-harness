@@ -8,10 +8,12 @@ const css = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8'
 test('list and detail share the chat column max width with side padding', () => {
   assert.match(css, /\.fsdb-main\{[^}]*max-width:var\(--dsw-chat-max-width\)/)
   assert.match(css, /\.fsdb-main\{[^}]*margin-inline:auto/)
-  assert.match(css, /\.fsdb-main\{[^}]*padding:12px 24px 16px/)
+  assert.match(css, /\.fsdb-main\{[^}]*padding:20px 24px 16px/)
+  assert.match(css, /\.fsdb-page:not\(\.inspector-database-page\) \.fsdb-main\{[^}]*padding:80px 24px/)
   assert.match(css, /\.fsdb-detail-main\{[^}]*max-width:var\(--dsw-chat-max-width\)/)
   assert.match(css, /\.fsdb-detail-main\{[^}]*margin-inline:auto/)
   assert.match(css, /\.fsdb-detail-main\{[^}]*padding:20px 24px 24px/)
+  assert.match(css, /\.fsdb-page:not\(\.inspector-database-page\) \.fsdb-detail-main\{[^}]*padding:80px 24px 24px/)
   assert.doesNotMatch(css, /\.fsdb-main\{[^}]*max-width:none/)
   assert.match(css, /\.tasks-queue-item-body\{[^}]*flex-wrap:nowrap/)
   assert.match(css, /\.tasks-queue-item-main\{[^}]*flex:1 1 12rem/)
