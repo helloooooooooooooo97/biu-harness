@@ -11,7 +11,7 @@ import {
 import { ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
 import { asStringList } from './fields.ts'
 import { FieldEditor, FieldGlyph, parseFieldValue } from './fsdb-cells.tsx'
-import { loadSchemaTags, persistSchemaTags, slugTagId, subscribeSchemaTags } from './schema-tags.ts'
+import { loadSchemaTags, persistSchemaTags, fieldKeyFromLabel, slugTagId, subscribeSchemaTags } from './schema-tags.ts'
 
 const TYPE_LABEL: Record<AtomicFieldType, string> = {
   string: '文本',
@@ -41,19 +41,6 @@ function asDraft(value: unknown, field: FieldSpec): string {
   if (kind === 'boolean') return value === true || value === 'true' ? 'true' : 'false'
   if (value == null) return ''
   return String(value)
-}
-
-function fieldKeyFromLabel(label: string, used: Set<string>) {
-  const slug = slugTagId(label || 'field', new Set()).replace(/-/g, '_')
-  let key = /^[A-Za-z]/.test(slug) ? slug : `f_${slug.replace(/^t_?/, '') || 'field'}`
-  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key)) key = 'field'
-  let n = 2
-  let next = key
-  while (used.has(next)) {
-    next = `${key}_${n}`
-    n += 1
-  }
-  return next
 }
 
 export function SchemaChip({
@@ -192,7 +179,7 @@ function TagPicker({
           ref={inputRef}
           className="fsdb-schema-tokens-input"
           value={draft}
-          placeholder={selected.length ? '搜索 SuperTag' : '选择或新建 SuperTag'}
+          placeholder={selected.length ? '搜索' : '选择或新建'}
           onFocus={() => setOpen(true)}
           onChange={(event) => {
             setDraft(event.target.value)
@@ -255,7 +242,7 @@ function TagPicker({
   )
 }
 
-function AddProperty({ onAdd }: { onAdd: (label: string, type: AtomicFieldType) => void }) {
+export function AddProperty({ onAdd }: { onAdd: (label: string, type: AtomicFieldType) => void }) {
   const [open, setOpen] = useState(false)
   const [label, setLabel] = useState('')
   const [type, setType] = useState<AtomicFieldType>('string')
@@ -433,7 +420,6 @@ export function SchemaFieldEditor({
   return (
     <div className="fsdb-schema" data-testid="fsdb-schema">
       <TagPicker catalog={catalog} selectedIds={parsed.tags} onToggle={toggleTag} onCreate={createTag} />
-      <p className="fsdb-schema-foot">SuperTag 是工作区全局的，任意表都能搜到、勾上同一枚。</p>
       {selected.map((tag) => {
         const bag = parsed.values[tag.id] ?? {}
         return (
