@@ -95,6 +95,8 @@ test('table title opens record from the title-side button', () => {
   assert.match(browser, /tagRowOpenTarget/)
   assert.match(browser, /stampRowOpenTarget/)
   assert.match(browser, /onOpenTable\?\.\(target\.collection, target\.viewId\)/)
+  assert.doesNotMatch(browser, /subscribeSchemaTags\(undefined, \(\) => persistViews/)
+  assert.match(browser, /viewForPath\(collectionPath, routeViewId\)/)
   assert.doesNotMatch(browser, /recordPick\(row\)\} onClick=\{\(\) => setDetailId\(row\.id\)\}/)
 })
 

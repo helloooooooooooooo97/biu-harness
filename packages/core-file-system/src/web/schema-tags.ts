@@ -75,13 +75,15 @@ export async function pullSchemaTags(_collectionPath?: string) {
     const body = (await res.json()) as { tags?: unknown[] }
     if (!res.ok || !Array.isArray(body.tags)) return loadSchemaTags()
     const tags = parseTags(body.tags)
+    const prev = JSON.stringify(memory ?? [])
+    const next = JSON.stringify(tags)
     memory = tags
     try {
       localStorage.setItem(SUPER_TAGS_KEY, JSON.stringify(tags))
     } catch {
       /* ignore */
     }
-    emit()
+    if (prev !== next) emit()
     return tags
   } catch {
     /* ignore */

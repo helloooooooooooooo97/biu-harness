@@ -797,8 +797,16 @@ export function CollectionBrowser({
 
   useEffect(() => {
     if (collectionPath !== SUPERTAGS_COLLECTION_PATH) return
-    return subscribeSchemaTags(undefined, () => persistViews(loadViews(collectionPath)))
-  }, [collectionPath])
+    return subscribeSchemaTags(undefined, () => {
+      const table = tables.find((item) => item.path === collectionPath) ?? { path: collectionPath, label: title }
+      const listed = mergeViewsForPath(collectionPath, table, tables, loadViews(collectionPath), loadSchemaTags()).map((view) =>
+        withViewDisplay(collectionPath, view),
+      )
+      rememberViews(collectionPath, listed)
+      viewsRef.current = listed
+      setViews((prev) => (prev.map((view) => view.id).join('\n') === listed.map((view) => view.id).join('\n') ? prev : listed))
+    })
+  }, [collectionPath, tablePathsKey, title])
 
   function rememberActiveView(id: string) {
     setActiveViewId(id)
@@ -859,7 +867,8 @@ export function CollectionBrowser({
 
   useEffect(() => {
     if (!routeViewId) return
-    const view = viewsRef.current.find((item) => item.id === routeViewId)
+    const view =
+      viewsRef.current.find((item) => item.id === routeViewId) ?? viewForPath(collectionPath, routeViewId)
     if (view) applyView(view)
   }, [collectionPath, routeViewId])
 
