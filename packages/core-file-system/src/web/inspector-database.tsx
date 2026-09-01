@@ -8,8 +8,8 @@ import { buildCrumbs, pathForCrumbTarget, type Crumb, type CrumbTarget } from '.
 import { CollectionBrowser } from './browser.tsx'
 import { CrumbTrail } from './crumb-trail.tsx'
 import { defaultViewId, loadRecords, loadViews, viewForPath } from './view-storage.ts'
-import { builtinAllViewId, mergeViewsForPath } from '../catalog-views.ts'
-import { DATA_MODULE, DATA_MODULE_ID, VIEWS_COLLECTION_PATH, databaseAllViewPath, databaseRecordPath, databaseViewPath, viewsCatalogSource } from './database-path.ts'
+import { builtinAllViewId } from '../catalog-views.ts'
+import { DATA_MODULE, DATA_MODULE_ID, SUPERTAGS_COLLECTION_PATH, VIEWS_COLLECTION_PATH, databaseAllViewPath, databaseRecordPath, databaseViewPath, viewsCatalogSource } from './database-path.ts'
 import {
   getInspectorDbPath,
   setInspectorDbPath,
@@ -17,7 +17,8 @@ import {
 } from './inspector-db-route.ts'
 import { getDatabaseUi } from './database-ui.ts'
 import { TableGlyph } from './nav-glyphs.tsx'
-import { loadSchemaTags } from './schema-tags.ts'
+import { openRegisteredRow, viewsForRegisteredCollection } from './collection-nav.ts'
+import { addSchemaTagField } from './schema-tags.ts'
 
 const tabIcons = new Map<string, ComponentType<{ className?: string }>>()
 
@@ -132,13 +133,7 @@ function crumbsForRoute(
   const collection = parsed.kind === 'collection-view' || parsed.kind === 'record' ? parsed.collection : ''
   const table = tables.find((item) => item.path === collection)
   const stored = collection ? loadViews(collection) : []
-  const views = mergeViewsForPath(
-    collection,
-    table ?? (collection ? { path: collection } : undefined),
-    tables,
-    stored,
-    loadSchemaTags(),
-  )
+  const views = viewsForRegisteredCollection(collection, tables, stored)
   const urlViewId = parsed.kind === 'collection-view' ? parsed.viewId : undefined
   const recordId = parsed.kind === 'record' ? parsed.recordId : undefined
   const resolvedView = collection ? viewForPath(collection, urlViewId) : null
@@ -344,6 +339,22 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
       onOpenView={(nextViewId) => setInspectorDbPath(id, databaseViewPath(currentPath, nextViewId))}
       onOpenRecord={(recordIdNext, _viewId, nextCollection) => {
         setInspectorDbPath(id, databaseRecordPath(nextCollection ?? currentPath, recordIdNext))
+      }}
+      onOpenRow={(row) =>
+        openRegisteredRow(currentPath, row, {
+          table: (path, nextViewId) => {
+            setInspectorDbPath(id, databaseViewPath(path, nextViewId ?? builtinAllViewId(path)))
+          },
+          record: (recordIdNext, nextCollection) => {
+            setInspectorDbPath(id, databaseRecordPath(nextCollection ?? currentPath, recordIdNext))
+          },
+        })
+      }
+      resolveViews={(path, user) => viewsForRegisteredCollection(path, tables, user)}
+      onAddField={(label, type, filters) => {
+        const tagId = String(filters.tag ?? '').trim()
+        if (currentPath !== SUPERTAGS_COLLECTION_PATH || !tagId) return
+        addSchemaTagField(tagId, label, type)
       }}
       onCloseRecord={() => {
         setInspectorDbPath(

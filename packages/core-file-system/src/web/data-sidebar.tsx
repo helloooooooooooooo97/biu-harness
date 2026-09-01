@@ -12,8 +12,9 @@ import {
 } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import type { CollectionInfo, DbRecord } from '@biu/type-file-system'
-import { builtinAllViewId, mergeViewsForPath } from '../catalog-views.ts'
+import { builtinAllViewId } from '../catalog-views.ts'
 import { isSystemCollection, sortDataCollections } from './database-path.ts'
+import { viewsForRegisteredCollection } from './collection-nav.ts'
 import type { SavedView } from './saved-view.ts'
 import {
   fetchViewPreview,
@@ -284,9 +285,7 @@ export const DataSidebar = memo(function DataSidebar({
   usePreviewTotalsVersion()
 
   function viewsFor(path: string) {
-    const listed = path === collectionPath ? views : loadViews(path)
-    const table = listedTables.find((row) => row.path === path) ?? { path, label: path.replace(/^\//, '') }
-    return mergeViewsForPath(path, table, tables, listed, loadSchemaTags()).map((view) => withViewDisplay(path, view))
+    return viewsForRegisteredCollection(path, tables, listed).map((view) => withViewDisplay(path, view))
   }
 
   const starredRows = starredViews.flatMap((item) => {

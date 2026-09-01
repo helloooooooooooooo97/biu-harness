@@ -31,7 +31,7 @@ import {
   TableCellsIcon,
   ViewColumnsIcon,
 } from '@heroicons/react/16/solid'
-import type { CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
+import type { AtomicFieldType, CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
 import type { CollectionChrome, CollectionViewType, DatabaseUi } from '@biu/type-file-system/ui'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { BoolBox, ChatCount } from '@biu/public-ui'
@@ -104,11 +104,10 @@ import {
 } from './page-width.ts'
 import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
-import { mergeViewsForPath, catalogRowOpenTarget, tagRowOpenTarget, stampRowOpenTarget } from '../catalog-views.ts'
-import { SUPERTAGS_COLLECTION_PATH, VIEWS_COLLECTION_PATH } from './database-path.ts'
+import { mergeTableViews } from '../catalog-views.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
-import { SchemaChips } from './schema-field.tsx'
-import { loadSchemaTags, pullSchemaTags, subscribeSchemaTags } from './schema-tags.ts'
+import { SchemaChips, AddProperty } from './schema-field.tsx'
+import { loadSchemaTags, pullSchemaTags } from './schema-tags.ts'
 
 type StatResult = { schema?: CollectionSchema }
 
@@ -138,6 +137,9 @@ export function CollectionBrowser({
   onCloseRecord,
   onCrumbTarget,
   embed = false,
+  onOpenRow,
+  resolveViews,
+  onAddField,
 }: {
   moduleId?: string
   collectionPath: string
@@ -157,8 +159,21 @@ export function CollectionBrowser({
   onCrumbTarget?: (target: CrumbTarget) => void
   /** 检查器内页：只有中间舞台，不写侧栏开关/视图存储。 */
   embed?: boolean
+  /** 返回 true 则自己处理这一行，不打开本表详情。 */
+  onOpenRow?: (row: DbRecord) => boolean
+  resolveViews?: (path: string, user: SavedView[]) => SavedView[]
+  /** 当前筛选下的表可以往 schema 加列时传入，表头右侧出现「添加属性」。 */
+  onAddField?: (label: string, type: AtomicFieldType, filters: Record<string, string>) => void
 }) {
   ensureFsdbStyle()
+  const listedViews = (path: string, user: SavedView[]) => {
+    if (resolveViews) return resolveViews(path, user)
+    const table = tables.find((item) => item.path === path) ?? {
+      path,
+      label: path === collectionPath ? title : path.replace(/^\//, ''),
+    }
+    return mergeTableViews(table, user)
+  }
   const dataPath = collectionPath
   const [stat, setStat] = useState<StatResult | null>(null)
   const [items, setItems] = useState<Array<DbRecord & { path?: string }>>([])
@@ -195,16 +210,11 @@ export function CollectionBrowser({
   const [activeViewId, setActiveViewId] = useState<string | null>(initialView?.id ?? null)
   const catalogLocks = useMemo(() => {
     const current = views.find((view) => view.id === activeViewId)
-    if (!current?.builtin) return { ...lockedFilters, ...(current?.filters.tag ? { tag: String(current.filters.tag) } : {}) }
+    if (!current?.builtin) return lockedFilters
     return { ...current.filters, ...lockedFilters }
   }, [activeViewId, lockedFilters, views])
   const queryFilters = useMemo(() => ({ ...filters, ...catalogLocks }), [catalogLocks, filters])
   const lockedFilterKeys = Object.keys(catalogLocks)
-  const lockedSource = catalogLocks.tablePath ?? ''
-  useEffect(() => {
-    if (!lockedSource) return
-    setMode('table')
-  }, [lockedSource])
   const detailId = openDetailId
   const setDetailId = (id: string | null, row?: DbRecord | null) => {
     flushSync(() => {
@@ -216,25 +226,7 @@ export function CollectionBrowser({
     else onCloseRecord?.()
   }
   const openRow = (row: DbRecord) => {
-    if (dataPath === VIEWS_COLLECTION_PATH) {
-      const target = catalogRowOpenTarget(row)
-      if (target) {
-        onOpenTable?.(target.collection, target.viewId)
-        return
-      }
-    }
-    if (dataPath === SUPERTAGS_COLLECTION_PATH) {
-      const stamp = stampRowOpenTarget(row)
-      if (stamp) {
-        onOpenRecord?.(stamp.recordId, null, stamp.collection)
-        return
-      }
-      const tag = tagRowOpenTarget(row)
-      if (tag) {
-        onOpenTable?.(SUPERTAGS_COLLECTION_PATH, tag.viewId)
-        return
-      }
-    }
+    if (onOpenRow?.(row)) return
     setDetailId(row.id, row)
   }
   const [hydrated, setHydrated] = useState(false)
@@ -448,7 +440,7 @@ export function CollectionBrowser({
         prev?.schema && JSON.stringify(prev.schema) === JSON.stringify(nextSchema) ? prev : { ...nextStat, schema: nextSchema },
       )
       setItems((prev) => (recordsFingerprint(prev) === recordsFingerprint(listed.items) ? prev : listed.items))
-      if (collectionPath === SUPERTAGS_COLLECTION_PATH && listed.schema) {
+      if (listed.schema) {
         const current = viewsRef.current.find((view) => view.id === activeViewId)
         if (current?.builtin) {
           setColumnKeys(defaultColumnKeys(listed.schema, Object.keys(listed.schema.fields)))
@@ -516,13 +508,7 @@ export function CollectionBrowser({
     setPage(0)
     const stored = viewForPath(collectionPath, routeViewId)
     const user = loadViews(collectionPath)
-    const listed = mergeViewsForPath(
-      collectionPath,
-      tables.find((table) => table.path === collectionPath) ?? { path: collectionPath, label: title },
-      tables,
-      user,
-      loadSchemaTags(),
-    )
+    const listed = listedViews(collectionPath, user)
     rememberViews(collectionPath, listed)
     if (stored || listed[0]) {
       const next = (routeViewId && listed.find((item) => item.id === routeViewId)) || stored || listed[0]
@@ -605,9 +591,10 @@ export function CollectionBrowser({
   useEffect(() => () => window.clearTimeout(noticeTimer.current), [])
 
   const schema = stat?.schema
-  const collectMode = Boolean(queryFilters.tag)
-  const canCreate = Boolean(schema?.records?.create) && !collectMode
-  const canDelete = Boolean(schema?.records?.delete) && !collectMode
+  const subsetLocked = lockedFilterKeys.length > 0
+  const canCreate = Boolean(schema?.records?.create) && !subsetLocked
+  const canDelete = Boolean(schema?.records?.delete) && !subsetLocked
+  const canAddField = Boolean(onAddField && subsetLocked)
   useEffect(() => {
     setPickedIds([])
   }, [collectionPath])
@@ -694,7 +681,7 @@ export function CollectionBrowser({
     return flattenRows(rows).map((item) => item.row.id)
   }, [flattenRows, grouped, grouping, visible])
   const tableColSpan =
-    Math.max(columns.length, 1) + (schema?.actions?.length ? 1 : 0) + (canDelete ? 1 : 0)
+    Math.max(columns.length, 1) + (schema?.actions?.length ? 1 : 0) + (canDelete ? 1 : 0) + (canAddField ? 1 : 0)
 
   const selected =
     (detailId &&
@@ -778,14 +765,7 @@ export function CollectionBrowser({
   }, [dlg])
 
   function persistViewsFor(path: string, next: SavedView[]) {
-    const table = tables.find((item) => item.path === path) ?? { path, label: path.replace(/^\//, '') }
-    const listed = mergeViewsForPath(
-      path,
-      table,
-      tables,
-      next,
-      loadSchemaTags(),
-    ).map((view) => withViewDisplay(path, view))
+    const listed = listedViews(path, next).map((view) => withViewDisplay(path, view))
     const stored = listed.filter((view) => !view.builtin)
     rememberViews(path, listed)
     if (!embed) {
@@ -803,19 +783,6 @@ export function CollectionBrowser({
   function persistViews(next: SavedView[]) {
     persistViewsFor(collectionPath, next)
   }
-
-  useEffect(() => {
-    if (collectionPath !== SUPERTAGS_COLLECTION_PATH) return
-    return subscribeSchemaTags(undefined, () => {
-      const table = tables.find((item) => item.path === collectionPath) ?? { path: collectionPath, label: title }
-      const listed = mergeViewsForPath(collectionPath, table, tables, loadViews(collectionPath), loadSchemaTags()).map((view) =>
-        withViewDisplay(collectionPath, view),
-      )
-      rememberViews(collectionPath, listed)
-      viewsRef.current = listed
-      setViews((prev) => (prev.map((view) => view.id).join('\n') === listed.map((view) => view.id).join('\n') ? prev : listed))
-    })
-  }, [collectionPath, tablePathsKey, title])
 
   function rememberActiveView(id: string) {
     setActiveViewId(id)
@@ -903,8 +870,8 @@ export function CollectionBrowser({
       mode: 'table',
       sortField: target === collectionPath ? (allColumns[0]?.key ?? 'id') : 'id',
       sortDir: 'asc',
-      filters: queryFilters.tag ? { tag: String(queryFilters.tag) } : {},
-      columns: target === collectionPath ? [...schemaDefaultKeys] : queryFilters.tag ? ['title', 'table'] : [],
+      filters: { ...catalogLocks },
+      columns: target === collectionPath ? [...schemaDefaultKeys] : [],
       groupBy: '',
       tree: true,
       wrap: false,
@@ -1488,6 +1455,7 @@ export function CollectionBrowser({
                 <RecordActions row={row} place="row" />
               </td>
             ) : null}
+            {canAddField ? <td className="fsdb-th-add-cell" /> : null}
           </tr>
         ))}
       </>
@@ -2126,6 +2094,11 @@ export function CollectionBrowser({
                   </th>
                 ))}
                       {schema?.actions?.length ? <th>操作</th> : null}
+                      {canAddField ? (
+                        <th className="fsdb-th-add-cell">
+                          <AddProperty onAdd={(label, type) => onAddField?.(label, type, queryFilters)} />
+                        </th>
+                      ) : null}
               </tr>
             </thead>
             <tbody>

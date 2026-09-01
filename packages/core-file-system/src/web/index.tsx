@@ -17,6 +17,8 @@ import {
 import { defaultViewId, pushAllSavedViews } from './view-storage.ts'
 import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, SUPERTAGS_COLLECTION_PATH, VIEWS_COLLECTION_PATH, sortDataCollections, viewsCatalogSource } from './database-path.ts'
 import { superTagsChrome } from './super-tags-chrome.tsx'
+import { openRegisteredRow, viewsForRegisteredCollection } from './collection-nav.ts'
+import { addSchemaTagField } from './schema-tags.ts'
 import { builtinAllViewId } from '../catalog-views.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
@@ -158,6 +160,18 @@ function CollectionPage(props: SlotProps) {
       onOpenRecord={(recordId, _viewId, collection) =>
         go({ collection: collection ?? currentPath, recordId })
       }
+      onOpenRow={(row) =>
+        openRegisteredRow(currentPath, row, {
+          table: (path, viewId) => go({ collection: path, viewId: viewId ?? builtinAllViewId(path) }),
+          record: (recordId, collection) => go({ collection: collection ?? currentPath, recordId }),
+        })
+      }
+      resolveViews={(path, user) => viewsForRegisteredCollection(path, orderedTables, user)}
+      onAddField={(label, type, filters) => {
+        const tagId = String(filters.tag ?? '').trim()
+        if (currentPath !== SUPERTAGS_COLLECTION_PATH || !tagId) return
+        addSchemaTagField(tagId, label, type)
+      }}
       onCloseRecord={() =>
         go({ collection: currentPath, viewId: defaultViewId(currentPath) }, { replace: true })
       }
