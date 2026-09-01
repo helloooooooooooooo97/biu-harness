@@ -114,6 +114,7 @@ export function FieldGlyph({ kind }: { kind: FieldType }) {
   if (kind === 'image') return <PhotoIcon aria-hidden className={cls} />
   if (kind === 'attachment') return <PaperClipIcon aria-hidden className={cls} />
   if (kind === 'file') return <DocumentTextIcon aria-hidden className={cls} />
+  if (kind === 'schema') return <Squares2X2Icon aria-hidden className={cls} />
   return <Bars3BottomLeftIcon aria-hidden className={cls} />
 }
 
@@ -208,6 +209,15 @@ export function parseFieldValue(field: FieldSpec, raw: string): unknown {
   if (kind === 'boolean') return raw === 'true'
   if (kind === 'number' || kind === 'datetime' || kind === 'bytes') return raw === '' ? null : Number(raw)
   if (kind === 'multi-select') return asStringList(raw)
+  if (kind === 'schema') {
+    const trimmed = raw.trim()
+    if (!trimmed) return { tags: [], values: {} }
+    try {
+      return JSON.parse(trimmed) as unknown
+    } catch {
+      return { tags: [], values: {} }
+    }
+  }
   if (kind === 'file') {
     const trimmed = raw.trim()
     if (!trimmed) return null

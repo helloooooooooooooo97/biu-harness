@@ -107,6 +107,8 @@ import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 import { mergeCatalogViews, mergeTableViews, catalogRowOpenTarget } from '../catalog-views.ts'
 import { VIEWS_COLLECTION_PATH } from './database-path.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
+import { SchemaChips } from './schema-field.tsx'
+import { loadSchemaTags, pullSchemaTags } from './schema-tags.ts'
 
 type StatResult = { schema?: CollectionSchema }
 
@@ -426,6 +428,7 @@ export function CollectionBrowser({
           sortDir,
           filters: queryFilters,
         }),
+        pullSchemaTags(collectionPath),
       ])
       if (gen !== reloadGen.current) return true
       setStat((prev) => (prev?.schema && JSON.stringify(prev.schema) === JSON.stringify(nextStat.schema) ? prev : nextStat))
@@ -1146,6 +1149,9 @@ export function CollectionBrowser({
     const Custom = chrome?.cells?.[key]
     const fallback = formatField(field, row[key])
     if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={fallback} />
+    if (resolveFieldType(field) === 'schema') {
+      return <SchemaChips value={row[key]} tags={loadSchemaTags(collectionPath)} />
+    }
     if (resolveFieldType(field) === 'select' && field.writable && field.enum?.length) {
       return (
         <CellSelect
@@ -2267,6 +2273,7 @@ export function CollectionBrowser({
           writeOne={writeOne}
           writePatch={writePatch}
           tableIcon={currentTable?.view?.icon}
+          collectionPath={collectionPath}
           onDelete={canDelete && selected ? () => setDlg({ kind: 'delete-record', row: selected }) : undefined}
         />
       ) : null}

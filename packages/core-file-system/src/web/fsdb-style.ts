@@ -244,6 +244,23 @@ const CSS = `
 .fsdb-detail-aside{display:flex;flex-direction:column;gap:2px;padding:8px 0 12px}
 .fsdb-prop{display:grid;grid-template-columns:108px minmax(0,1fr);align-items:center;gap:8px;min-height:32px;font-size:14px;color:var(--dsw-label-3)}
 .fsdb-prop>span:first-child{font-size:14px;font-weight:600;color:var(--dsw-label-3);display:inline-flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fsdb-prop.is-stack{align-items:flex-start;flex-wrap:wrap}
+.fsdb-prop.is-stack>span:first-child{padding-top:6px}
+.fsdb-prop-val.is-schema{overflow:visible;white-space:normal;max-width:none}
+.fsdb-schema{display:flex;flex-direction:column;gap:8px;min-width:0;width:100%}
+.fsdb-schema-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.fsdb-schema-chip{gap:4px;max-width:none;cursor:pointer;border:0;font:inherit}
+.fsdb-schema-chip.is-on{background:color-mix(in srgb,var(--dsw-business) 22%,transparent);color:var(--dsw-business)}
+.fsdb-schema-add{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border:1px dashed var(--dsw-border);border-radius:4px;background:transparent;color:var(--dsw-label-2);font:inherit;font-size:13px;cursor:pointer}
+.fsdb-schema-add:hover{color:var(--dsw-label);border-color:var(--dsw-label-3)}
+.fsdb-schema-new,.fsdb-schema-newfield{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.fsdb-schema-body{display:flex;flex-direction:column;gap:6px;padding:8px;border:1px solid var(--dsw-border);border-radius:8px;background:var(--dsw-input)}
+.fsdb-schema-head{font-size:13px;font-weight:650;color:var(--dsw-label-2)}
+.fsdb-schema-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.fsdb-schema-row>span{display:inline-flex;align-items:center;gap:6px;min-width:0;color:var(--dsw-label-2)}
+.fsdb-schema-row-val{display:flex;align-items:center;gap:6px;min-width:0;flex:1;justify-content:flex-end}
+.fsdb-schema-del{display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
+.fsdb-schema-del:hover{background:var(--dsw-hover);color:var(--dsw-danger)}
 .fsdb-prop-val{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-label)}
 .fsdb-prop-val .fsdb-plain-input,.fsdb-prop-val .fsdb-link,.fsdb-prop-val .fsdb-meta,.fsdb-prop-val .fsdb-file,.fsdb-prop-val .fsdb-file-name,.fsdb-prop-val .fsdb-pill,.fsdb-prop-val .fsdb-tags{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-prop-val .fsdb-plain-input{text-overflow:ellipsis}

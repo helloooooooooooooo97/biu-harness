@@ -4,6 +4,7 @@ import {
   asAttachment,
   asHttpHref,
   asImageSrc,
+  normalizeSchemaValue,
   withBuiltinFields,
   type CollectionAction,
   type CollectionActionInfo,
@@ -16,6 +17,7 @@ import {
   type ListPage,
 } from '@biu/type-file-system'
 import { SavedViewsStore, viewsCollection, type StoredView } from './saved-views.ts'
+import { SchemaTagsStore } from './schema-tags.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
 function publicAction(action: CollectionAction): CollectionActionInfo {
@@ -36,6 +38,11 @@ function schemaFor(spec: CollectionSpec): CollectionSchema {
     labelField,
     contentField,
     fields,
+    columns: spec.schema.columns?.includes('schema')
+      ? spec.schema.columns
+      : spec.schema.columns
+        ? [...spec.schema.columns, 'schema']
+        : spec.schema.columns,
     actions: (spec.actions ?? []).map(publicAction),
     records: {
       update: Boolean(spec.records?.update),
@@ -153,6 +160,7 @@ function coerce(field: FieldSpec, value: unknown) {
     if (typeof value === 'object') return value
     throw new Error('expected file')
   }
+  if (kind === 'schema') return normalizeSchemaValue(value)
   const text = String(value ?? '')
   if ((kind === 'select' || field.enum) && field.enum && !field.enum.includes(text)) {
     throw new Error(`expected one of ${field.enum.join(', ')}`)
@@ -523,6 +531,7 @@ export const inject = ['tools', 'http']
 export function apply(ctx: Context) {
   const db = new DatabaseService(ctx)
   const savedViews = new SavedViewsStore()
+  const schemaTags = new SchemaTagsStore()
   db.register(viewsCollection(savedViews, () => db.collectionsList().map((item) => ({
     id: item.id,
     path: item.path,
@@ -696,6 +705,24 @@ export function apply(ctx: Context) {
       savedViews.replace(String(body?.path ?? ''), Array.isArray(body?.views) ? body.views : [])
       ctx.emit('database/change')
       route.send(200, { ok: true })
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
+  })
+  ctx.http.route('GET', '/api/db/schema-tags', (route) => {
+    try {
+      const path = route.query.get('path') || ''
+      route.send(200, { tags: schemaTags.list(path) })
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
+  })
+  ctx.http.route('POST', '/api/db/schema-tags', async (route) => {
+    try {
+      const body = (await route.json()) as { path?: string; tags?: unknown[] }
+      schemaTags.replace(String(body?.path ?? ''), Array.isArray(body.tags) ? body.tags : [])
+      ctx.emit('database/change')
+      route.send(200, { ok: true, tags: schemaTags.list(String(body?.path ?? '')) })
     } catch (error) {
       route.send(400, { error: String(error) })
     }

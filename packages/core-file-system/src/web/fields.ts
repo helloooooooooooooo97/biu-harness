@@ -1,5 +1,5 @@
 import type { CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
-import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS } from '@biu/type-file-system'
+import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS, normalizeSchemaValue } from '@biu/type-file-system'
 
 export const BUILTIN_VIEW_MODES = ['queue', 'table', 'cards', 'board'] as const
 export type BuiltinViewMode = (typeof BUILTIN_VIEW_MODES)[number]
@@ -184,6 +184,10 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
     const tags = asStringList(value)
     return tags.length ? tags.join(', ') : '—'
   }
+  if (kind === 'schema') {
+    const tags = normalizeSchemaValue(value).tags
+    return tags.length ? tags.join(', ') : '—'
+  }
   return String(value)
 }
 
@@ -195,6 +199,7 @@ export function fieldHasValue(field: FieldSpec | undefined, value: unknown): boo
   if (!field) return true
   const kind = resolveFieldType(field)
   if (kind === 'boolean') return value === true || value === 'true'
+  if (kind === 'schema') return normalizeSchemaValue(value).tags.length > 0
   return formatField(field, value) !== '—'
 }
 

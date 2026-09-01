@@ -12,6 +12,7 @@ export type FieldType =
   | 'attachment'
   | 'file'
   | 'string[]'
+  | 'schema'
 
 export type FieldSpec = {
   type: FieldType
@@ -81,9 +82,107 @@ export const BUILTIN_FIELDS = {
   updatedAt: { type: 'datetime', label: '更新时间' },
   content: { type: 'file', label: '内容' },
   emoji: { type: 'string', label: '图标', writable: true },
+  schema: { type: 'schema', label: 'Schema', writable: true },
 } as const satisfies Record<string, FieldSpec>
 
+/** 表格默认不展开这些内置列（标题除外）。Schema 作为默认业务列留下。 */
 export const BUILTIN_FIELD_KEYS = ['id', 'createdAt', 'updatedAt', 'content', 'emoji'] as const
+
+/** Schema 包内允许的原子类型，不能再套 schema。 */
+export const ATOMIC_FIELD_TYPES = [
+  'string',
+  'number',
+  'boolean',
+  'select',
+  'multi-select',
+  'datetime',
+  'bytes',
+  'url',
+  'image',
+  'attachment',
+  'file',
+] as const satisfies readonly FieldType[]
+
+export type AtomicFieldType = (typeof ATOMIC_FIELD_TYPES)[number]
+
+export function isAtomicFieldType(type: unknown): type is AtomicFieldType {
+  return typeof type === 'string' && (ATOMIC_FIELD_TYPES as readonly string[]).includes(type)
+}
+
+export type SchemaPackField = FieldSpec & {
+  key: string
+  type: AtomicFieldType
+}
+
+export type CollectionSchemaPack = {
+  id: string
+  label: string
+  fields: SchemaPackField[]
+}
+
+export function normalizeSchemaPack(raw: unknown): CollectionSchemaPack | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const rec = raw as Record<string, unknown>
+  const id = String(rec.id ?? '').trim()
+  if (!/^[a-z][a-z0-9-]{0,31}$/.test(id)) return null
+  const label = String(rec.label ?? id).trim() || id
+  const fields: SchemaPackField[] = []
+  const seen = new Set<string>()
+  const listed = Array.isArray(rec.fields) ? rec.fields : []
+  for (const item of listed) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue
+    const row = item as Record<string, unknown>
+    const key = String(row.key ?? '').trim()
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key) || seen.has(key)) continue
+    if (!isAtomicFieldType(row.type)) continue
+    seen.add(key)
+    const field: SchemaPackField = {
+      key,
+      type: row.type,
+      label: String(row.label ?? key).trim() || key,
+      writable: row.writable !== false,
+    }
+    if (Array.isArray(row.enum)) field.enum = row.enum.map((option) => String(option)).filter(Boolean)
+    fields.push(field)
+  }
+  return { id, label, fields }
+}
+
+export type SchemaFieldValue = {
+  tags: string[]
+  values: Record<string, Record<string, unknown>>
+}
+
+export function emptySchemaValue(): SchemaFieldValue {
+  return { tags: [], values: {} }
+}
+
+export function normalizeSchemaValue(raw: unknown): SchemaFieldValue {
+  if (raw == null || raw === '') return emptySchemaValue()
+  if (typeof raw === 'string') {
+    try {
+      return normalizeSchemaValue(JSON.parse(raw) as unknown)
+    } catch {
+      return emptySchemaValue()
+    }
+  }
+  if (Array.isArray(raw)) {
+    return { tags: [...new Set(raw.map((item) => String(item).trim()).filter(Boolean))], values: {} }
+  }
+  if (typeof raw !== 'object') return emptySchemaValue()
+  const rec = raw as Record<string, unknown>
+  const tags = Array.isArray(rec.tags)
+    ? [...new Set(rec.tags.map((item) => String(item).trim()).filter(Boolean))]
+    : []
+  const values: Record<string, Record<string, unknown>> = {}
+  if (rec.values && typeof rec.values === 'object' && !Array.isArray(rec.values)) {
+    for (const [key, item] of Object.entries(rec.values as Record<string, unknown>)) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) continue
+      values[key] = { ...(item as Record<string, unknown>) }
+    }
+  }
+  return { tags, values }
+}
 
 export function withBuiltinFields(
   fields: Record<string, FieldSpec>,
@@ -96,6 +195,7 @@ export function withBuiltinFields(
   if (!next.createdAt) next.createdAt = BUILTIN_FIELDS.createdAt
   if (!next.updatedAt) next.updatedAt = BUILTIN_FIELDS.updatedAt
   if (!next.emoji) next.emoji = BUILTIN_FIELDS.emoji
+  if (!next.schema) next.schema = BUILTIN_FIELDS.schema
   if (contentField === 'content' && !next.content) next.content = BUILTIN_FIELDS.content
   const ordered: Record<string, FieldSpec> = {
     id: next.id,

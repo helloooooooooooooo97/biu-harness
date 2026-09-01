@@ -6,6 +6,7 @@ import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { contentFieldKey, formatField, resolveFieldType, uniqueValues } from './fields.ts'
 import { LocalText } from './controls.tsx'
 import { FieldEditor, FieldGlyph, FilePreview } from './fsdb-cells.tsx'
+import { SchemaFieldEditor } from './schema-field.tsx'
 import { RecordEmojiBoard } from '@biu/public-ui'
 import { TableGlyph } from './nav-glyphs.tsx'
 import { normalizeRecordEmoji, recordPreviewEmoji } from './sidebar-preview.ts'
@@ -94,6 +95,7 @@ export function RecordDetail({
   writeOne,
   writePatch,
   tableIcon,
+  collectionPath,
   onDelete,
 }: {
   selected: DbRecord
@@ -108,6 +110,7 @@ export function RecordDetail({
   writeOne: (row: DbRecord, key: string, field: FieldSpec, raw: string) => Promise<unknown> | void
   writePatch: (row: DbRecord, patch: Record<string, unknown>) => Promise<unknown> | void
   tableIcon?: string
+  collectionPath: string
   onDelete?: () => void
 }) {
   return (
@@ -166,6 +169,25 @@ export function RecordDetail({
                   {Object.entries(schema.fields).map(([key, field]) => {
                     if (key === 'id' || key === schema.labelField || key === contentFieldKey(schema)) return null
                     const kind = resolveFieldType(field)
+                    if (kind === 'schema') {
+                      return (
+                        <div key={key} className="fsdb-prop is-stack">
+                          <span title={field.label ?? key}>
+                            <FieldGlyph kind={kind} />
+                            {field.label ?? key}
+                          </span>
+                          <div className="fsdb-prop-val is-schema">
+                            <SchemaFieldEditor
+                              collectionPath={collectionPath}
+                              record={selected}
+                              value={selected[key]}
+                              writable={field.writable}
+                              onChange={(next) => void writePatch(selected, { [key]: next })}
+                            />
+                          </div>
+                        </div>
+                      )
+                    }
                     return (
                       <div key={key} className="fsdb-prop">
                         <span title={field.label ?? key}>

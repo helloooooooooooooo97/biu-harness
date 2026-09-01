@@ -38,4 +38,6 @@ test('collection browser renders extra views registered for that path', () => {
   assert.match(ui, /registerView\(path: string, view: CollectionViewType\)/)
   assert.match(browser, /dbUi\?\.views\(collectionPath\)/)
   assert.match(browser, /<customView\.View/)
+  assert.match(browser, /collectionPath=\{collectionPath\}/)
+  assert.match(browser, /SchemaChips/)
 })

@@ -85,10 +85,15 @@ test('page plugin stores markdown under .page and assets for images', async () =
   assert.match(disk, /cover: assets\/hero.png/)
   assert.match(disk, /# 标题\n内容/)
 
-  const written = await spec.update!(created.id, { enabled: false })
+  const written = await spec.update!(created.id, {
+    enabled: false,
+    schema: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } },
+  })
   assert.equal(written.enabled, false)
+  assert.deepEqual(written.schema, { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } })
   const again = await readFile(join(root, PAGE_ROOT, `${created.id}.md`), 'utf8')
   assert.match(again, /enabled: false/)
+  assert.match(again, /complexity: O\(n\)/)
 
   await spec.remove!(created.id)
   assert.equal((await spec.list()).length, 0)

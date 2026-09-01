@@ -1,6 +1,7 @@
 import { mkdir, readFile, unlink } from 'node:fs/promises'
 import { basename, dirname } from 'node:path'
-import type { DbRecord } from '@biu/type-file-system'
+import type { DbRecord, SchemaFieldValue } from '@biu/type-file-system'
+import { emptySchemaValue, normalizeSchemaValue } from '@biu/type-file-system'
 import { dumpMarkdown, splitMarkdown } from './markdown.ts'
 
 export const PAGE_ROOT = '.page'
@@ -24,6 +25,7 @@ export type PageRow = DbRecord & {
   notes: string
   score: number
   parentId: string | null
+  schema: SchemaFieldValue
   createdAt: number
   updatedAt: number
 }
@@ -148,6 +150,7 @@ function matterOf(row: PageRow): Record<string, unknown> {
     },
     score: row.score,
     parentId: row.parentId,
+    schema: row.schema,
     createdAt: new Date(row.createdAt).toISOString(),
     updatedAt: new Date(row.updatedAt).toISOString(),
   }
@@ -180,6 +183,7 @@ function rowFromFile(id: string, raw: string): PageRow {
     notes: body,
     score: Number(matter.score) || 0,
     parentId: matter.parentId == null || matter.parentId === '' ? null : String(matter.parentId),
+    schema: normalizeSchemaValue(matter.schema),
     createdAt,
     updatedAt,
   }
@@ -203,6 +207,7 @@ function emptyRow(id: string, ts: number): PageRow {
     notes: '',
     score: 0,
     parentId: null,
+    schema: emptySchemaValue(),
     createdAt: ts,
     updatedAt: ts,
   }
@@ -229,6 +234,7 @@ function applyPatch(current: PageRow, patch: Record<string, unknown>): PageRow {
     parentId: 'parentId' in patch
       ? patch.parentId == null || patch.parentId === '' ? null : String(patch.parentId)
       : current.parentId,
+    schema: 'schema' in patch ? normalizeSchemaValue(patch.schema) : current.schema,
     score: current.score,
     createdAt: current.createdAt,
     updatedAt: Date.now(),
