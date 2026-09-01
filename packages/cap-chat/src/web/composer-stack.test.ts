@@ -17,7 +17,7 @@ describe('composer dock stacking above sticky user', () => {
 
     expect(css).toMatch(/\.chat-stage\s*\{[^}]*isolation:\s*isolate/s)
     expect(css).toMatch(/\.chat-composer-dock\s*\{[^}]*z-index:\s*20/s)
-    expect(thread).toMatch(/sticky top-0 z-1/)
+    expect(thread).toMatch(/sticky top-0 z-1 bg-transparent/)
     expect(shell).toContain('chat-composer-dock')
     expect(shell).not.toMatch(/bottom-0 z-\[2\]/)
   })
