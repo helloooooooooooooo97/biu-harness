@@ -256,9 +256,6 @@ const CSS = `
 .fsdb-schema-tokens-option{display:flex;width:100%;min-width:0;align-items:center;justify-content:space-between;gap:8px;border:0;border-radius:6px;padding:6px 8px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;text-align:left;cursor:pointer}
 .fsdb-schema-tokens-option:hover,.fsdb-schema-tokens-option.is-create{background:var(--dsw-hover)}
 .fsdb-schema-tokens-hint,.fsdb-schema-tokens-empty{color:var(--dsw-label-3);font-size:12px}
-.fsdb-ntag-wrap{border:0;background:transparent;padding:0;cursor:pointer}
-.fsdb-ntag{display:inline-flex;align-items:center;gap:2px;height:20px;padding:0 6px;border-radius:4px;font-size:13px;font-weight:500;line-height:20px;background:color-mix(in srgb,var(--ntag,#5b9fd6) 22%,transparent);color:var(--ntag,#5b9fd6);max-width:160px}
-.fsdb-ntag-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-schema-pack{display:flex;flex-direction:column;gap:0;min-width:0;padding:4px 0 8px}
 .fsdb-schema-pack-head{display:flex;align-items:center;min-height:24px;padding:0 4px 4px}
 .fsdb-schema-prop{display:grid;grid-template-columns:108px minmax(0,1fr);align-items:center;gap:8px;min-height:32px;border-radius:6px;padding:0 4px}
@@ -274,9 +271,6 @@ const CSS = `
 .fsdb-schema-addprop-form{display:flex;align-items:center;gap:6px;margin:2px 4px 0;min-width:0}
 .fsdb-schema-addprop-input{flex:1;min-width:0;border:0;border-radius:6px;padding:4px 6px;background:var(--dsw-hover);color:var(--dsw-label);font:inherit;font-size:14px;outline:none}
 .fsdb-schema-addprop-ok{border:0;border-radius:6px;padding:4px 8px;background:transparent;color:var(--dsw-label-2);font:inherit;font-size:13px;font-weight:650;cursor:pointer}
-.fsdb-th-add-cell{min-width:132px;vertical-align:middle}
-.fsdb-th-add-cell .fsdb-schema-addprop{margin:0;height:22px;font-size:13px}
-.fsdb-th-add-cell .fsdb-schema-addprop-form{margin:0}
 .fsdb-schema-type{position:relative;flex:none}
 .fsdb-schema-type-btn{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 6px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-2);font:inherit;font-size:13px;cursor:pointer}
 .fsdb-schema-type-btn:hover{background:var(--dsw-hover);color:var(--dsw-label)}

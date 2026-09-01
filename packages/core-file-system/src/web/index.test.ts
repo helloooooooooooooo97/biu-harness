@@ -41,6 +41,8 @@ test('collection browser renders extra views registered for that path', () => {
   assert.match(browser, /collectionPath=\{collectionPath\}/)
   assert.match(browser, /SchemaChips/)
   const schemaUi = readFileSync(resolve(import.meta.dirname, './schema-field.tsx'), 'utf8')
+  assert.match(schemaUi, /from '@biu\/public-ui'/)
+  assert.match(schemaUi, /<TagChip /)
   assert.match(schemaUi, /placeholder=""/)
   assert.doesNotMatch(schemaUi, /placeholder=\{selected\.length/)
   assert.doesNotMatch(schemaUi, /搜索 SuperTag/)

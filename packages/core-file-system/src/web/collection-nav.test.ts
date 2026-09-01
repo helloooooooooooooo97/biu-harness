@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { builtinAllViewId, builtinTagViewId } from '../catalog-views.ts'
+import { builtinAllViewId } from '../catalog-views.ts'
 import { openRegisteredRow } from './collection-nav.ts'
 
 test('views catalog rows jump to the source table', () => {
@@ -22,43 +22,11 @@ test('views catalog rows jump to the source table', () => {
   assert.equal(viewId, builtinAllViewId('/pages'))
 })
 
-test('tag catalog rows open the collect view; stamp rows open the source record', () => {
-  let tablePath = ''
-  let viewId = ''
-  const tag = openRegisteredRow(
-    '/supertags',
-    { id: 'dp', title: '动态规划' },
-    {
-      table: (path, id) => {
-        tablePath = path
-        viewId = id ?? ''
-      },
-      record: () => undefined,
-    },
+test('tag and ordinary tables open as normal records', () => {
+  assert.equal(
+    openRegisteredRow('/supertags', { id: 'dp', title: '动态规划' }, { table: () => undefined, record: () => undefined }),
+    false,
   )
-  assert.equal(tag, true)
-  assert.equal(tablePath, '/supertags')
-  assert.equal(viewId, builtinTagViewId('dp'))
-
-  let collection = ''
-  let recordId = ''
-  const stamp = openRegisteredRow(
-    '/supertags',
-    { id: 'pages::home', tablePath: '/pages', sourceId: 'home' },
-    {
-      table: () => undefined,
-      record: (id, col) => {
-        recordId = id
-        collection = col ?? ''
-      },
-    },
-  )
-  assert.equal(stamp, true)
-  assert.equal(collection, '/pages')
-  assert.equal(recordId, 'home')
-})
-
-test('ordinary tables are not intercepted', () => {
   assert.equal(
     openRegisteredRow('/pages', { id: 'home' }, { table: () => undefined, record: () => undefined }),
     false,

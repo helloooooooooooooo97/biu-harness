@@ -9,6 +9,7 @@ import {
   type SchemaPackField,
 } from '@biu/type-file-system'
 import { ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
+import { TagChip, TagChips, tagTone } from '@biu/public-ui'
 import { asStringList } from './fields.ts'
 import { FieldEditor, FieldGlyph, parseFieldValue } from './fsdb-cells.tsx'
 import { loadSchemaTags, persistSchemaTags, fieldKeyFromLabel, slugTagId, subscribeSchemaTags } from './schema-tags.ts'
@@ -27,13 +28,7 @@ const TYPE_LABEL: Record<AtomicFieldType, string> = {
   file: '正文',
 }
 
-const TAG_TONES = ['#5b9fd6', '#9a6dd7', '#d9730d', '#448361', '#c4554d', '#e255a1', '#c2920a', '#787774']
-
-export function schemaTagTone(id: string) {
-  let hash = 0
-  for (let i = 0; i < id.length; i += 1) hash = (hash * 33 + id.charCodeAt(i)) >>> 0
-  return TAG_TONES[hash % TAG_TONES.length]!
-}
+export const schemaTagTone = tagTone
 
 function asDraft(value: unknown, field: FieldSpec): string {
   const kind = field.type
@@ -56,29 +51,7 @@ export function SchemaChip({
   onClick?: () => void
   active?: boolean
 }) {
-  const chip = (
-    <span
-      className={`fsdb-ntag${active ? ' is-on' : ''}${onClick ? ' is-btn' : ''}`}
-      style={{ ['--ntag' as string]: schemaTagTone(id) }}
-      title={label}
-    >
-      <span className="fsdb-ntag-label">{label}</span>
-      {onRemove ? (
-        <button type="button" className="fsdb-token-x" aria-label={`移除 ${label}`} onClick={(event) => {
-          event.stopPropagation()
-          onRemove()
-        }}>
-          <XMarkIcon aria-hidden className="size-3" />
-        </button>
-      ) : null}
-    </span>
-  )
-  if (!onClick) return chip
-  return (
-    <button type="button" className="fsdb-ntag-wrap" onClick={onClick}>
-      {chip}
-    </button>
-  )
+  return <TagChip id={id} label={label} onRemove={onRemove} onClick={onClick} active={active} />
 }
 
 export function SchemaChips({ value, tags }: { value: unknown; tags: CollectionSchemaPack[] }) {
@@ -86,11 +59,11 @@ export function SchemaChips({ value, tags }: { value: unknown; tags: CollectionS
   if (!parsed.tags.length) return <span className="fsdb-muted">空</span>
   const byId = new Map(tags.map((tag) => [tag.id, tag]))
   return (
-    <span className="fsdb-tags">
+    <TagChips>
       {parsed.tags.map((id) => (
         <SchemaChip key={id} id={id} label={byId.get(id)?.label ?? id} />
       ))}
-    </span>
+    </TagChips>
   )
 }
 

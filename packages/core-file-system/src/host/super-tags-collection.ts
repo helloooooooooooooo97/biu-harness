@@ -73,7 +73,7 @@ export function superTagsCollection(
       route: '/db-supertags',
       title: '标签',
       inspector: true,
-      blurb: '工作区全局标签：点开一枚就是跨表收集到的记录，可保存表格、看板视图。',
+      blurb: '工作区全局标签。',
       order: 14,
       icon: 'tag',
     },

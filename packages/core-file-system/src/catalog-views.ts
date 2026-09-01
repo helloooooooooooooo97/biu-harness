@@ -144,28 +144,6 @@ export function stubBuiltinTagView(id: string): SavedView | null {
   return builtinTagView({ id: tagId, label: tagId })
 }
 
-export function mergeTagViews(table: TableRef | undefined, tags: TagRef[], user: SavedView[]): SavedView[] {
-  const extra = userViews(user)
-  const all = table?.path ? builtinAllView(table) : null
-  return [...(all ? [all] : []), ...tags.filter((tag) => tag.id).map(builtinTagView), ...extra]
-}
-
-/** 标签目录里的一行：打开该标签的收集表，而不是记录详情。 */
-export function tagRowOpenTarget(row: { id?: unknown; tablePath?: unknown; sourceId?: unknown }) {
-  if (String(row.tablePath ?? '').trim() && String(row.sourceId ?? '').trim()) return null
-  const id = String(row.id ?? '').trim()
-  if (!id || id.includes('::')) return null
-  return { viewId: builtinTagViewId(id) }
-}
-
-/** 收集表里的一行：打开原始表里的那条记录。 */
-export function stampRowOpenTarget(row: { tablePath?: unknown; sourceId?: unknown }) {
-  const collection = normalizeCollectionPath(String(row.tablePath ?? ''))
-  const recordId = String(row.sourceId ?? '').trim()
-  if (!collection || collection === '/' || !recordId) return null
-  return { collection, recordId }
-}
-
 /** 路由里已经是 builtin: 时，即使本地还没合并登记表，也能先还原筛选。 */
 export function stubBuiltinCatalogView(id: string): SavedView | null {
   if (!isBuiltinCatalogViewId(id)) return null
@@ -192,13 +170,9 @@ export function mergeViewsForPath(
   table: TableRef | undefined,
   tables: CollectionInfo[],
   user: SavedView[],
-  tags: TagRef[] = [],
 ) {
   const normalized = normalizeCollectionPath(path)
   if (normalized === '/views') return mergeCatalogViews(tables, user)
-  if (normalized === '/supertags') {
-    return mergeTagViews(table ?? { path: '/supertags', label: '标签', view: { title: '标签' } }, tags, user)
-  }
   return mergeTableViews(table, user)
 }
 

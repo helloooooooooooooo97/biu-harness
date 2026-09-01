@@ -31,7 +31,7 @@ import {
   TableCellsIcon,
   ViewColumnsIcon,
 } from '@heroicons/react/16/solid'
-import type { AtomicFieldType, CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
+import type { CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
 import type { CollectionChrome, CollectionViewType, DatabaseUi } from '@biu/type-file-system/ui'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { BoolBox, ChatCount } from '@biu/public-ui'
@@ -106,7 +106,7 @@ import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 import { mergeTableViews } from '../catalog-views.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
-import { SchemaChips, AddProperty } from './schema-field.tsx'
+import { SchemaChips } from './schema-field.tsx'
 import { loadSchemaTags, pullSchemaTags } from './schema-tags.ts'
 
 type StatResult = { schema?: CollectionSchema }
@@ -139,7 +139,6 @@ export function CollectionBrowser({
   embed = false,
   onOpenRow,
   resolveViews,
-  onAddField,
 }: {
   moduleId?: string
   collectionPath: string
@@ -162,8 +161,6 @@ export function CollectionBrowser({
   /** 返回 true 则自己处理这一行，不打开本表详情。 */
   onOpenRow?: (row: DbRecord) => boolean
   resolveViews?: (path: string, user: SavedView[]) => SavedView[]
-  /** 当前筛选下的表可以往 schema 加列时传入，表头右侧出现「添加属性」。 */
-  onAddField?: (label: string, type: AtomicFieldType, filters: Record<string, string>) => void
 }) {
   ensureFsdbStyle()
   const listedViews = (path: string, user: SavedView[]) => {
@@ -594,7 +591,6 @@ export function CollectionBrowser({
   const subsetLocked = lockedFilterKeys.length > 0
   const canCreate = Boolean(schema?.records?.create) && !subsetLocked
   const canDelete = Boolean(schema?.records?.delete) && !subsetLocked
-  const canAddField = Boolean(onAddField && subsetLocked)
   useEffect(() => {
     setPickedIds([])
   }, [collectionPath])
@@ -681,7 +677,7 @@ export function CollectionBrowser({
     return flattenRows(rows).map((item) => item.row.id)
   }, [flattenRows, grouped, grouping, visible])
   const tableColSpan =
-    Math.max(columns.length, 1) + (schema?.actions?.length ? 1 : 0) + (canDelete ? 1 : 0) + (canAddField ? 1 : 0)
+    Math.max(columns.length, 1) + (schema?.actions?.length ? 1 : 0) + (canDelete ? 1 : 0)
 
   const selected =
     (detailId &&
@@ -1455,7 +1451,6 @@ export function CollectionBrowser({
                 <RecordActions row={row} place="row" />
               </td>
             ) : null}
-            {canAddField ? <td className="fsdb-th-add-cell" /> : null}
           </tr>
         ))}
       </>
@@ -2094,11 +2089,6 @@ export function CollectionBrowser({
                   </th>
                 ))}
                       {schema?.actions?.length ? <th>操作</th> : null}
-                      {canAddField ? (
-                        <th className="fsdb-th-add-cell">
-                          <AddProperty onAdd={(label, type) => onAddField?.(label, type, queryFilters)} />
-                        </th>
-                      ) : null}
               </tr>
             </thead>
             <tbody>

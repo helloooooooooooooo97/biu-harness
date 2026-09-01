@@ -45,7 +45,6 @@ import {
 import { pickDomAttrs, recordPickKind, viewPickId } from './pick-dom.ts'
 import { toggleExpandedViewKey } from './sidebar-nav.ts'
 import { TableGlyph, ViewModeGlyph } from './nav-glyphs.tsx'
-import { loadSchemaTags, subscribeSchemaTags } from './schema-tags.ts'
 
 const SIDEBAR_BRAND_GRADIENT =
   'linear-gradient(105deg, color-mix(in srgb, #0066B0 42%, var(--dsw-hover)), color-mix(in srgb, #5B3E90 40%, var(--dsw-hover)) 52%, color-mix(in srgb, #E22726 42%, var(--dsw-hover)))'
@@ -264,11 +263,6 @@ export const DataSidebar = memo(function DataSidebar({
   const { user: userTables, system: systemTables } = useMemo(() => sortDataCollections(listedTables), [listedTables])
   const [openTables, setOpenTables] = useState<Record<string, boolean>>(() => ({ [collectionPath]: true }))
   useSyncExternalStore(subscribeStarredViews, getStarredViewsVersion, () => 0)
-  useSyncExternalStore(
-    (fn) => subscribeSchemaTags(undefined, fn),
-    () => loadSchemaTags().map((tag) => `${tag.id}:${tag.label}`).join('\n'),
-    () => '',
-  )
   const starredViews = getStarredViews()
   const [favOpen, setFavOpen] = useState(() => {
     try {

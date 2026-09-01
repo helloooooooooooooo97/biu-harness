@@ -9,7 +9,7 @@ import { CollectionBrowser } from './browser.tsx'
 import { CrumbTrail } from './crumb-trail.tsx'
 import { defaultViewId, loadRecords, loadViews, viewForPath } from './view-storage.ts'
 import { builtinAllViewId } from '../catalog-views.ts'
-import { DATA_MODULE, DATA_MODULE_ID, SUPERTAGS_COLLECTION_PATH, VIEWS_COLLECTION_PATH, databaseAllViewPath, databaseRecordPath, databaseViewPath, viewsCatalogSource } from './database-path.ts'
+import { DATA_MODULE, DATA_MODULE_ID, VIEWS_COLLECTION_PATH, databaseAllViewPath, databaseRecordPath, databaseViewPath, viewsCatalogSource } from './database-path.ts'
 import {
   getInspectorDbPath,
   setInspectorDbPath,
@@ -18,7 +18,6 @@ import {
 import { getDatabaseUi } from './database-ui.ts'
 import { TableGlyph } from './nav-glyphs.tsx'
 import { openRegisteredRow, viewsForRegisteredCollection } from './collection-nav.ts'
-import { addSchemaTagField } from './schema-tags.ts'
 
 const tabIcons = new Map<string, ComponentType<{ className?: string }>>()
 
@@ -351,11 +350,6 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
         })
       }
       resolveViews={(path, user) => viewsForRegisteredCollection(path, tables, user)}
-      onAddField={(label, type, filters) => {
-        const tagId = String(filters.tag ?? '').trim()
-        if (currentPath !== SUPERTAGS_COLLECTION_PATH || !tagId) return
-        addSchemaTagField(tagId, label, type)
-      }}
       onCloseRecord={() => {
         setInspectorDbPath(
           id,

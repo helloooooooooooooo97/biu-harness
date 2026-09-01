@@ -1,10 +1,9 @@
 import type { CollectionInfo, DbRecord } from '@biu/type-file-system'
-import { catalogRowOpenTarget, mergeViewsForPath, stampRowOpenTarget, tagRowOpenTarget } from '../catalog-views.ts'
-import { SUPERTAGS_COLLECTION_PATH, VIEWS_COLLECTION_PATH } from './database-path.ts'
+import { catalogRowOpenTarget, mergeViewsForPath } from '../catalog-views.ts'
+import { VIEWS_COLLECTION_PATH } from './database-path.ts'
 import type { SavedView } from './saved-view.ts'
-import { loadSchemaTags } from './schema-tags.ts'
 
-/** 视图目录、标签收集等：点一行时跳到别处，而不是打开本表记录。 */
+/** 视图目录：点一行时跳到对应表的视图，而不是打开本表记录。 */
 export function openRegisteredRow(
   collectionPath: string,
   row: DbRecord,
@@ -19,17 +18,6 @@ export function openRegisteredRow(
     go.table(target.collection, target.viewId)
     return true
   }
-  if (collectionPath === SUPERTAGS_COLLECTION_PATH) {
-    const stamp = stampRowOpenTarget(row)
-    if (stamp) {
-      go.record(stamp.recordId, stamp.collection)
-      return true
-    }
-    const tag = tagRowOpenTarget(row)
-    if (!tag) return false
-    go.table(collectionPath, tag.viewId)
-    return true
-  }
   return false
 }
 
@@ -39,5 +27,5 @@ export function viewsForRegisteredCollection(
   user: SavedView[],
 ) {
   const table = tables.find((item) => item.path === path) ?? { path, label: path.replace(/^\//, '') }
-  return mergeViewsForPath(path, table, tables, user, loadSchemaTags())
+  return mergeViewsForPath(path, table, tables, user)
 }

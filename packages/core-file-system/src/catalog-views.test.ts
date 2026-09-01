@@ -12,10 +12,8 @@ import {
   stubBuiltinCatalogView,
   catalogRowOpenTarget,
   builtinTagViewId,
-  mergeTagViews,
-  stampRowOpenTarget,
-  tagRowOpenTarget,
   isBuiltinTagViewId,
+  mergeViewsForPath,
 } from './catalog-views.ts'
 
 test('each registered table gets a builtin catalog view', () => {
@@ -76,21 +74,13 @@ test('catalog view rows open the source table view instead of a record pane', ()
   assert.equal(catalogRowOpenTarget({ tablePath: '/events' }), null)
 })
 
-test('tag catalog rows open a collect view; stamp rows open the source record', () => {
+test('tags collection uses the same view list as other tables', () => {
   assert.equal(isBuiltinTagViewId(builtinTagViewId('dp')), true)
   assert.equal(isBuiltinCatalogViewId(builtinTagViewId('dp')), false)
-  const merged = mergeTagViews(
-    { path: '/supertags', label: '标签', view: { title: '标签' } },
-    [{ id: 'dp', label: '动态规划' }],
-    [],
-  )
+  const table = { path: '/supertags', label: '标签', view: { title: '标签' } }
+  const merged = mergeViewsForPath('/supertags', table, [], [{ id: 'mine', name: '置顶', mode: 'table', sortField: 'id', sortDir: 'asc', filters: {}, columns: [] }])
+  assert.equal(merged[0]?.id, builtinAllViewId('/supertags'))
   assert.equal(merged[0]?.name, '全部标签')
-  assert.equal(merged[1]?.id, builtinTagViewId('dp'))
-  assert.deepEqual(merged[1]?.filters, { tag: 'dp' })
-  assert.deepEqual(tagRowOpenTarget({ id: 'dp', stampCount: 1 }), { viewId: builtinTagViewId('dp') })
-  assert.equal(tagRowOpenTarget({ id: 'pages::home', tablePath: '/pages', sourceId: 'home' }), null)
-  assert.deepEqual(stampRowOpenTarget({ tablePath: '/pages', sourceId: 'home' }), {
-    collection: '/pages',
-    recordId: 'home',
-  })
+  assert.equal(merged.some((view) => isBuiltinTagViewId(view.id)), false)
+  assert.equal(merged.some((view) => view.id === 'mine'), true)
 })
