@@ -238,6 +238,7 @@ test('inspector crumbs lock the first level to an icon', () => {
   assert.match(trail, /lockRootCrumb/)
   assert.match(trail, /rootLocked/)
   assert.match(trail, /fsdb-crumb-btn is-static/)
+  assert.match(trail, /lockRootCrumb && index === 1/)
   assert.doesNotMatch(browser, /lockRootCrumb/)
 })
 
