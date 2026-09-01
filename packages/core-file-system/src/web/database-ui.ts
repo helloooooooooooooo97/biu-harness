@@ -1,5 +1,5 @@
 import { Service, type Context } from 'cordis'
-import type { CollectionChrome, CollectionViewType, DatabaseUi } from '@biu/type-file-system/ui'
+import type { CollectionChrome, CollectionViewType, DatabaseUi, FieldTypeUi } from '@biu/type-file-system/ui'
 import { normalizeCollectionPath } from '../paths.ts'
 
 export { normalizeCollectionPath }
@@ -52,8 +52,10 @@ export function getDatabaseUi() {
 export class DatabaseUiService extends Service implements DatabaseUi {
   private layers = new Map<string, CollectionChrome[]>()
   private viewLayers = new Map<string, CollectionViewType[]>()
+  private fieldTypes = new Map<string, FieldTypeUi[]>()
   private snapshot = new Map<string, CollectionChrome>()
   private viewSnapshot = new Map<string, CollectionViewType[]>()
+  private fieldSnapshot = new Map<string, FieldTypeUi>()
   private listeners = new Set<() => void>()
 
   constructor(ctx: Context) {
@@ -75,6 +77,30 @@ export class DatabaseUiService extends Service implements DatabaseUi {
         this.emit()
       },
     }
+  }
+
+  registerFieldType(type: string, ui: FieldTypeUi) {
+    const list = this.fieldTypes.get(type) ?? []
+    list.push(ui)
+    this.fieldTypes.set(type, list)
+    this.emit()
+    return {
+      dispose: () => {
+        const next = (this.fieldTypes.get(type) ?? []).filter((item) => item !== ui)
+        if (next.length) this.fieldTypes.set(type, next)
+        else this.fieldTypes.delete(type)
+        this.emit()
+      },
+    }
+  }
+
+  fieldType(type: string): FieldTypeUi | undefined {
+    const cached = this.fieldSnapshot.get(type)
+    if (cached) return cached
+    const list = this.fieldTypes.get(type) ?? []
+    const last = list[list.length - 1]
+    if (last) this.fieldSnapshot.set(type, last)
+    return last
   }
 
   registerView(path: string, view: CollectionViewType) {
@@ -121,6 +147,7 @@ export class DatabaseUiService extends Service implements DatabaseUi {
   private emit() {
     this.snapshot.clear()
     this.viewSnapshot.clear()
+    this.fieldSnapshot.clear()
     for (const fn of this.listeners) fn()
   }
 }

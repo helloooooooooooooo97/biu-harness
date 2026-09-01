@@ -78,10 +78,36 @@ export type CollectionViewType = {
   View: ComponentType<FsViewProps>
 }
 
+export type FsFieldCellProps = {
+  field: string
+  spec: FieldSpec
+  value: unknown
+  record: DbRecord
+}
+
+export type FsFieldEditorProps = FsFieldCellProps & {
+  collectionPath: string
+  writable?: boolean
+  onChange: (next: unknown) => void
+}
+
+/** 按 FieldSpec.type 登记的单元格 / 筛选 / 检索，而不是写进表格内核。 */
+export type FieldTypeUi = {
+  Cell?: ComponentType<FsFieldCellProps>
+  Editor?: ComponentType<FsFieldEditorProps>
+  filterLabel?: (value: string) => string
+  searchText?: (value: unknown) => string
+  matchesFilter?: (value: unknown, expected: string) => boolean
+  hideReadOnlyDetail?: boolean
+  stackDetail?: boolean
+}
+
 export interface DatabaseUi {
   decorate(path: string, chrome: CollectionChrome): { dispose: () => void }
   /** 给指定集合登记一种查看模式。其它集合看不到、也不能选。 */
   registerView(path: string, view: CollectionViewType): { dispose: () => void }
+  registerFieldType(type: string, ui: FieldTypeUi): { dispose: () => void }
+  fieldType(type: string): FieldTypeUi | undefined
   chrome(path: string): CollectionChrome
   views(path: string): CollectionViewType[]
   subscribe(listener: () => void): () => void

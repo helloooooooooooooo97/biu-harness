@@ -68,3 +68,17 @@ test('registerView is scoped to the collection that registered it', () => {
   first.dispose()
   assert.equal(ui.views('/tasks').length, 0)
 })
+
+test('registerFieldType last layer wins and dispose restores', () => {
+  const ctx = new Context()
+  const ui = new DatabaseUiService(ctx)
+  const CellA = () => null
+  const CellB = () => null
+  const first = ui.registerFieldType('schema', { Cell: CellA })
+  const later = ui.registerFieldType('schema', { Cell: CellB })
+  assert.equal(ui.fieldType('schema')?.Cell, CellB)
+  later.dispose()
+  assert.equal(ui.fieldType('schema')?.Cell, CellA)
+  first.dispose()
+  assert.equal(ui.fieldType('schema'), undefined)
+})

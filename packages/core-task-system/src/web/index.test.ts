@@ -27,6 +27,12 @@ class FakeDatabaseUi extends Service implements DatabaseUi {
   subscribe() {
     return () => undefined
   }
+  registerFieldType() {
+    return { dispose() {} }
+  }
+  fieldType() {
+    return undefined
+  }
 }
 
 test('task-system web paints /tasks chrome without importing file-system', async () => {

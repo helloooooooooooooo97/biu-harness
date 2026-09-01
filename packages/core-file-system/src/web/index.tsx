@@ -18,6 +18,7 @@ import { defaultViewId, pushAllSavedViews } from './view-storage.ts'
 import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, SUPERTAGS_COLLECTION_PATH, VIEWS_COLLECTION_PATH, sortDataCollections } from './database-path.ts'
 import { superTagsChrome } from './super-tags-chrome.tsx'
 import { viewsChrome } from './views-chrome.ts'
+import { schemaFieldType } from './schema-field.tsx'
 import { viewsForRegisteredCollection } from './collection-nav.ts'
 import { builtinAllViewId } from '../catalog-views.ts'
 import { normalizeCollectionPath } from '../paths.ts'
@@ -214,9 +215,11 @@ export function apply(ctx: Context) {
     if (!ui) return () => undefined
     const views = ui.decorate(VIEWS_COLLECTION_PATH, viewsChrome)
     const tags = ui.decorate(SUPERTAGS_COLLECTION_PATH, superTagsChrome)
+    const schemaType = ui.registerFieldType('schema', schemaFieldType)
     return () => {
       views.dispose()
       tags.dispose()
+      schemaType.dispose()
     }
   })
   const slots = ctx.get('slots') as SlotsService

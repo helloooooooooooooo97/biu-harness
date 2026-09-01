@@ -106,8 +106,6 @@ import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 import { mergeTableViews } from '../catalog-views.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
-import { SchemaChips } from './schema-field.tsx'
-import { loadSchemaTags, pullSchemaTags } from './schema-tags.ts'
 
 type StatResult = { schema?: CollectionSchema }
 
@@ -217,11 +215,11 @@ export function CollectionBrowser({
   }, [activeViewId, lockedFilters, sheet, views])
   const queryFilters = useMemo(() => ({ ...filters, ...catalogLocks }), [catalogLocks, filters])
   const lockedFilterKeys = Object.keys(catalogLocks)
-  const lockedSource = catalogLocks.tablePath ?? ''
+  const hasLockedFilters = lockedFilterKeys.some((key) => Boolean(catalogLocks[key]))
   useEffect(() => {
-    if (!lockedSource) return
+    if (!hasLockedFilters) return
     setMode('table')
-  }, [lockedSource])
+  }, [hasLockedFilters])
   const detailId = openDetailId
   const setDetailId = (id: string | null, row?: DbRecord | null) => {
     flushSync(() => {
@@ -448,7 +446,6 @@ export function CollectionBrowser({
           sortDir,
           filters: queryFilters,
         }),
-        pullSchemaTags(),
       ])
       if (gen !== reloadGen.current) return true
       const nextSchema = listed.schema ?? nextStat.schema
@@ -1170,9 +1167,8 @@ export function CollectionBrowser({
     const Custom = chrome?.cells?.[key]
     const fallback = formatField(field, row[key])
     if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={fallback} />
-    if (resolveFieldType(field) === 'schema') {
-      return <SchemaChips value={row[key]} tags={loadSchemaTags()} />
-    }
+    const TypeCell = getDatabaseUi()?.fieldType(resolveFieldType(field))?.Cell
+    if (TypeCell) return <TypeCell field={key} spec={field} value={row[key]} record={row} />
     if (resolveFieldType(field) === 'select' && field.writable && field.enum?.length) {
       return (
         <CellSelect
@@ -1764,13 +1760,22 @@ export function CollectionBrowser({
               ) : null}
             </div>
             )}
-            {lockedSource ? (
-              <span className="fsdb-locked-filter" title="按当前数据类型筛选，不可更改">
-                {tables.find((item) => item.path === lockedSource)?.view?.title ??
-                  tables.find((item) => item.path === lockedSource)?.label ??
-                  lockedSource}
-              </span>
-            ) : null}
+            {lockedFilterKeys.map((key) => {
+              const value = catalogLocks[key]
+              if (!value) return null
+              const table = tables.find((item) => item.path === value)
+              const field = schema?.fields[key]
+              const kind = field ? resolveFieldType(field) : undefined
+              const typed = kind ? getDatabaseUi()?.fieldType(kind)?.filterLabel?.(value) : undefined
+              const label = table
+                ? (table.view?.title ?? table.label ?? value)
+                : typed ?? (field?.label ? `${field.label}: ${value}` : value)
+              return (
+                <span key={key} className="fsdb-locked-filter" title="当前视图锁定的筛选，不可更改">
+                  {label}
+                </span>
+              )
+            })}
           </div>
           <div className="tasks-toolbar-right">
             <div className={`tasks-search-wrap${searchExpanded ? ' is-open' : ''}`} ref={searchRef}>
@@ -1971,12 +1976,10 @@ export function CollectionBrowser({
                               { value: 'true', label: '是' },
                               { value: 'false', label: '否' },
                             ]
-                        : item.kind === 'schema'
-                          ? uniqueValues(items, item.key, item.field).map((option) => ({
-                              value: option,
-                              label: loadSchemaTags().find((tag) => tag.id === option)?.label ?? option,
-                            }))
-                          : uniqueValues(items, item.key, item.field).map((option) => ({ value: option, label: option }))
+                        : uniqueValues(items, item.key, item.field).map((option) => ({
+                            value: option,
+                            label: getDatabaseUi()?.fieldType(item.kind)?.filterLabel?.(option) ?? option,
+                          }))
                     return (
                       <div key={item.key} className="fsdb-filter-row">
                         <span className="fsdb-filter-row-key">

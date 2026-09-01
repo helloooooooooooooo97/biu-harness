@@ -1,19 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ATOMIC_FIELD_TYPES,
+  isAtomicFieldType,
   normalizeSchemaValue,
+  schemaSearchHaystack,
   type AtomicFieldType,
   type CollectionSchemaPack,
-  type DbRecord,
-  type FieldSpec,
   type SchemaFieldValue,
   type SchemaPackField,
 } from '@biu/type-file-system'
-import { ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
-import { TagChip, TagChips, tagTone } from '@biu/public-ui'
+import type { FieldTypeUi, FsFieldCellProps, FsFieldEditorProps } from '@biu/type-file-system/ui'
+import {
+  AddProperty,
+  SchemaChips,
+  SchemaFieldShell,
+  SchemaPack,
+  SchemaPackHead,
+  SchemaProp,
+  TagChip,
+  TagPicker,
+} from '@biu/public-ui'
 import { asStringList } from './fields.ts'
 import { FieldEditor, FieldGlyph, parseFieldValue } from './fsdb-cells.tsx'
-import { loadSchemaTags, persistSchemaTags, fieldKeyFromLabel, slugTagId, subscribeSchemaTags } from './schema-tags.ts'
+import { fieldKeyFromLabel, loadSchemaTags, persistSchemaTags, pullSchemaTags, slugTagId, subscribeSchemaTags } from './schema-tags.ts'
 
 const TYPE_LABEL: Record<AtomicFieldType, string> = {
   string: '文本',
@@ -29,9 +38,15 @@ const TYPE_LABEL: Record<AtomicFieldType, string> = {
   file: '正文',
 }
 
-export const schemaTagTone = tagTone
+function typeOptions() {
+  return ATOMIC_FIELD_TYPES.map((type) => ({
+    id: type,
+    label: TYPE_LABEL[type],
+    icon: <FieldGlyph kind={type} />,
+  }))
+}
 
-function asDraft(value: unknown, field: FieldSpec): string {
+function asDraft(value: unknown, field: SchemaPackField): string {
   const kind = field.type
   if (kind === 'multi-select') return asStringList(value).join(', ')
   if (kind === 'boolean') return value === true || value === 'true' ? 'true' : 'false'
@@ -39,262 +54,40 @@ function asDraft(value: unknown, field: FieldSpec): string {
   return String(value)
 }
 
-export function SchemaChip({
-  id,
-  label,
-  onRemove,
-  onClick,
-  active,
-}: {
-  id: string
-  label: string
-  onRemove?: () => void
-  onClick?: () => void
-  active?: boolean
-}) {
-  return <TagChip id={id} label={label} onRemove={onRemove} onClick={onClick} active={active} />
+function useSchemaCatalog() {
+  const [catalog, setCatalog] = useState(() => loadSchemaTags())
+  useEffect(() => {
+    void pullSchemaTags()
+    return subscribeSchemaTags(undefined, () => setCatalog(loadSchemaTags()))
+  }, [])
+  return [catalog, (next: CollectionSchemaPack[]) => {
+    persistSchemaTags(next)
+    setCatalog(next)
+  }] as const
 }
 
-export function SchemaChips({ value, tags }: { value: unknown; tags: CollectionSchemaPack[] }) {
+function chipTags(value: unknown, catalog: CollectionSchemaPack[]) {
   const parsed = normalizeSchemaValue(value)
-  if (!parsed.tags.length) return <span className="fsdb-muted">空</span>
-  const byId = new Map(tags.map((tag) => [tag.id, tag]))
-  return (
-    <TagChips>
-      {parsed.tags.map((id) => (
-        <SchemaChip key={id} id={id} label={byId.get(id)?.label ?? id} />
-      ))}
-    </TagChips>
-  )
+  const byId = new Map(catalog.map((tag) => [tag.id, tag]))
+  return parsed.tags.map((id) => ({ id, label: byId.get(id)?.label ?? id }))
 }
 
-function TypeMenu({ value, onChange }: { value: AtomicFieldType; onChange: (next: AtomicFieldType) => void }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const onDown = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
-  return (
-    <div className="fsdb-schema-type" ref={ref}>
-      <button type="button" className="fsdb-schema-type-btn" onClick={() => setOpen((prev) => !prev)}>
-        <FieldGlyph kind={value} />
-        <span>{TYPE_LABEL[value]}</span>
-        <ChevronDownIcon aria-hidden className="size-3 fsdb-schema-type-caret" />
-      </button>
-      {open ? (
-        <div className="fsdb-schema-type-menu" role="listbox">
-          {ATOMIC_FIELD_TYPES.map((type) => (
-            <button
-              key={type}
-              type="button"
-              className={`fsdb-schema-type-option${type === value ? ' is-on' : ''}`}
-              onClick={() => {
-                onChange(type)
-                setOpen(false)
-              }}
-            >
-              <FieldGlyph kind={type} />
-              {TYPE_LABEL[type]}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  )
-}
-
-function TagPicker({
-  catalog,
-  selectedIds,
-  onToggle,
-  onCreate,
-}: {
-  catalog: CollectionSchemaPack[]
-  selectedIds: string[]
-  onToggle: (id: string) => void
-  onCreate: (label: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [draft, setDraft] = useState('')
-  const boxRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const q = draft.trim().toLowerCase()
-  const selected = catalog.filter((tag) => selectedIds.includes(tag.id))
-  const available = catalog.filter((tag) => !selectedIds.includes(tag.id) && (!q || tag.label.toLowerCase().includes(q) || tag.id.includes(q)))
-  const canCreate = Boolean(draft.trim()) && !catalog.some((tag) => tag.label === draft.trim())
-
-  useEffect(() => {
-    if (!open) return
-    const onDown = (event: MouseEvent) => {
-      if (boxRef.current && !boxRef.current.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
-
-  return (
-    <div className="fsdb-schema-tokens" ref={boxRef}>
-      <div
-        className="fsdb-schema-tokens-box"
-        onClick={() => {
-          setOpen(true)
-          inputRef.current?.focus()
-        }}
-      >
-        {selected.map((tag) => (
-          <SchemaChip key={tag.id} id={tag.id} label={tag.label} onRemove={() => onToggle(tag.id)} />
-        ))}
-        <input
-          ref={inputRef}
-          className="fsdb-schema-tokens-input"
-          value={draft}
-          placeholder=""
-          onFocus={() => setOpen(true)}
-          onChange={(event) => {
-            setDraft(event.target.value)
-            setOpen(true)
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              if (available[0]) {
-                onToggle(available[0].id)
-                setDraft('')
-              } else if (canCreate) {
-                onCreate(draft)
-                setDraft('')
-              }
-            } else if (event.key === 'Backspace' && !draft && selected.length) {
-              onToggle(selected[selected.length - 1]!.id)
-            } else if (event.key === 'Escape') {
-              setOpen(false)
-            }
-          }}
-        />
-      </div>
-      {open ? (
-        <div className="fsdb-schema-tokens-menu" role="listbox">
-          {available.map((tag) => (
-            <button
-              key={tag.id}
-              type="button"
-              className="fsdb-schema-tokens-option"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                onToggle(tag.id)
-                setDraft('')
-                inputRef.current?.focus()
-              }}
-            >
-              <SchemaChip id={tag.id} label={tag.label} />
-              <span className="fsdb-schema-tokens-hint">{tag.fields.length ? `${tag.fields.length} 个属性` : '还没有属性'}</span>
-            </button>
-          ))}
-          {canCreate ? (
-            <button
-              type="button"
-              className="fsdb-schema-tokens-option is-create"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                onCreate(draft)
-                setDraft('')
-              }}
-            >
-              <PlusIcon aria-hidden className="size-3.5" />
-              创建 SuperTag <SchemaChip id={draft.trim()} label={draft.trim()} />
-            </button>
-          ) : null}
-          {!available.length && !canCreate ? <div className="fsdb-schema-tokens-empty">没有匹配的 SuperTag</div> : null}
-        </div>
-      ) : null}
-    </div>
-  )
-}
-
-export function AddProperty({ onAdd }: { onAdd: (label: string, type: AtomicFieldType) => void }) {
-  const [open, setOpen] = useState(false)
-  const [label, setLabel] = useState('')
-  const [type, setType] = useState<AtomicFieldType>('string')
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (open) inputRef.current?.focus()
-  }, [open])
-
-  function commit() {
-    const name = label.trim()
-    if (!name) {
-      setOpen(false)
-      return
-    }
-    onAdd(name, type)
-    setLabel('')
-    setType('string')
-    setOpen(false)
-  }
-
-  if (!open) {
-    return (
-      <button type="button" className="fsdb-schema-addprop" onClick={() => setOpen(true)}>
-        <PlusIcon aria-hidden className="size-3.5" />
-        添加属性
-      </button>
-    )
-  }
-
-  return (
-    <div className="fsdb-schema-addprop-form">
-      <input
-        ref={inputRef}
-        className="fsdb-schema-addprop-input"
-        value={label}
-        placeholder="属性名"
-        onChange={(event) => setLabel(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault()
-            commit()
-          }
-          if (event.key === 'Escape') {
-            setOpen(false)
-            setLabel('')
-          }
-        }}
-        onBlur={(event) => {
-          if (event.relatedTarget && event.currentTarget.parentElement?.contains(event.relatedTarget as Node)) return
-          if (!label.trim()) setOpen(false)
-        }}
-      />
-      <TypeMenu value={type} onChange={setType} />
-      <button type="button" className="fsdb-schema-addprop-ok" disabled={!label.trim()} onClick={commit}>
-        添加
-      </button>
-    </div>
-  )
+export function SchemaCell({ value }: FsFieldCellProps) {
+  const [catalog] = useSchemaCatalog()
+  return <SchemaChips tags={chipTags(value, catalog)} />
 }
 
 export function SuperTagPackEditor({ tagId }: { tagId: string }) {
-  const [catalog, setCatalog] = useState(() => loadSchemaTags())
-  useEffect(() => subscribeSchemaTags(undefined, () => setCatalog(loadSchemaTags())), [])
+  const [catalog, saveCatalog] = useSchemaCatalog()
   const tag = catalog.find((item) => item.id === tagId)
-
-  function saveCatalog(next: CollectionSchemaPack[]) {
-    persistSchemaTags(next)
-    setCatalog(next)
-  }
-
   if (!tag) return <p className="fsdb-muted">这枚 SuperTag 已不在目录里。</p>
   const pack = tag
 
-  function addField(name: string, type: AtomicFieldType) {
+  function addField(name: string, typeId: string) {
+    if (!isAtomicFieldType(typeId)) return
     const key = fieldKeyFromLabel(name, new Set(pack.fields.map((item) => item.key)))
     if (pack.fields.some((item) => item.key === key)) return
-    const field: SchemaPackField = { key, type, label: name, writable: true }
+    const field: SchemaPackField = { key, type: typeId, label: name, writable: true }
     saveCatalog(catalog.map((item) => (item.id === pack.id ? { ...item, fields: [...item.fields, field] } : item)))
   }
 
@@ -303,54 +96,41 @@ export function SuperTagPackEditor({ tagId }: { tagId: string }) {
   }
 
   return (
-    <div className="fsdb-schema-pack">
+    <SchemaPack>
       {pack.fields.map((field) => (
-        <div key={field.key} className="fsdb-schema-prop">
-          <span className="fsdb-schema-prop-k" title={field.label ?? field.key}>
-            <FieldGlyph kind={field.type} />
-            {field.label ?? field.key}
-          </span>
-          <div className="fsdb-schema-prop-v">
-            <span className="fsdb-muted">{TYPE_LABEL[field.type]}</span>
-            <button type="button" className="fsdb-schema-prop-del" aria-label={`删除 ${field.label ?? field.key}`} onClick={() => removeField(field.key)}>
-              <XMarkIcon aria-hidden className="size-3" />
-            </button>
-          </div>
-        </div>
+        <SchemaProp
+          key={field.key}
+          label={field.label ?? field.key}
+          icon={<FieldGlyph kind={field.type} />}
+          onRemove={() => removeField(field.key)}
+        >
+          <span className="fsdb-muted">{TYPE_LABEL[field.type]}</span>
+        </SchemaProp>
       ))}
-      <AddProperty onAdd={addField} />
-    </div>
+      <AddProperty typeOptions={typeOptions()} defaultType="string" onAdd={addField} />
+    </SchemaPack>
   )
 }
 
 export function SchemaFieldEditor({
   collectionPath: _collectionPath,
-  record,
+  record: _record,
   value,
   writable,
   onChange,
 }: {
   collectionPath: string
-  record: DbRecord
+  record: { id: string }
   value: unknown
   writable?: boolean
   onChange: (next: SchemaFieldValue) => void
 }) {
   const parsed = normalizeSchemaValue(value)
-  const [catalog, setCatalog] = useState(() => loadSchemaTags())
-
-  useEffect(() => subscribeSchemaTags(undefined, () => setCatalog(loadSchemaTags())), [])
-
+  const [catalog, saveCatalog] = useSchemaCatalog()
   const selected = useMemo(
-    () =>
-      parsed.tags.map((id) => catalog.find((tag) => tag.id === id) ?? { id, label: id, fields: [] }),
+    () => parsed.tags.map((id) => catalog.find((tag) => tag.id === id) ?? { id, label: id, fields: [] as SchemaPackField[] }),
     [catalog, parsed.tags],
   )
-
-  function saveCatalog(next: CollectionSchemaPack[]) {
-    persistSchemaTags(next)
-    setCatalog(next)
-  }
 
   function patchValue(next: SchemaFieldValue) {
     onChange(next)
@@ -372,10 +152,11 @@ export function SchemaFieldEditor({
     patchValue({ tags: [...parsed.tags, id], values: parsed.values })
   }
 
-  function addField(tag: CollectionSchemaPack, name: string, type: AtomicFieldType) {
+  function addField(tag: CollectionSchemaPack, name: string, typeId: string) {
+    if (!isAtomicFieldType(typeId)) return
     const key = fieldKeyFromLabel(name, new Set(tag.fields.map((item) => item.key)))
     if (tag.fields.some((item) => item.key === key)) return
-    const field: SchemaPackField = { key, type, label: name, writable: true }
+    const field: SchemaPackField = { key, type: typeId, label: name, writable: true }
     saveCatalog(catalog.map((item) => (item.id === tag.id ? { ...item, fields: [...item.fields, field] } : item)))
   }
 
@@ -389,51 +170,74 @@ export function SchemaFieldEditor({
     patchValue({ tags: parsed.tags, values: { ...parsed.values, [tagId]: bag } })
   }
 
-  if (!writable) return <SchemaChips value={value} tags={catalog} />
+  if (!writable) return <SchemaChips tags={chipTags(value, catalog)} />
 
   return (
-    <div className="fsdb-schema" data-testid="fsdb-schema">
-      <TagPicker catalog={catalog} selectedIds={parsed.tags} onToggle={toggleTag} onCreate={createTag} />
+    <SchemaFieldShell>
+      <TagPicker
+        catalog={catalog.map((tag) => ({
+          id: tag.id,
+          label: tag.label,
+          hint: tag.fields.length ? `${tag.fields.length} 个属性` : '还没有属性',
+        }))}
+        selectedIds={parsed.tags}
+        onToggle={toggleTag}
+        onCreate={createTag}
+        createLabel="创建 SuperTag"
+        emptyLabel="没有匹配的 SuperTag"
+      />
       {selected.map((tag) => {
         const bag = parsed.values[tag.id] ?? {}
         return (
-          <div key={tag.id} className="fsdb-schema-pack">
-            <div className="fsdb-schema-pack-head">
-              <SchemaChip id={tag.id} label={tag.label} />
-            </div>
+          <SchemaPack key={tag.id}>
+            <SchemaPackHead>
+              <TagChip id={tag.id} label={tag.label} />
+            </SchemaPackHead>
             {tag.fields.map((field) => (
-              <div key={field.key} className="fsdb-schema-prop">
-                <span className="fsdb-schema-prop-k" title={field.label ?? field.key}>
-                  <FieldGlyph kind={field.type} />
-                  {field.label ?? field.key}
-                </span>
-                <div className="fsdb-schema-prop-v">
-                  <FieldEditor
-                    fieldKey={field.label ?? field.key}
-                    field={field}
-                    value={asDraft(bag[field.key], field)}
-                    onChange={(next) => writeField(tag.id, field, next)}
-                  />
-                  <button
-                    type="button"
-                    className="fsdb-schema-prop-del"
-                    aria-label={`删除 ${field.label ?? field.key}`}
-                    onClick={() => removeField(tag.id, field.key)}
-                  >
-                    <XMarkIcon aria-hidden className="size-3" />
-                  </button>
-                </div>
-              </div>
+              <SchemaProp
+                key={field.key}
+                label={field.label ?? field.key}
+                icon={<FieldGlyph kind={field.type} />}
+                onRemove={() => removeField(tag.id, field.key)}
+              >
+                <FieldEditor
+                  fieldKey={field.label ?? field.key}
+                  field={field}
+                  value={asDraft(bag[field.key], field)}
+                  onChange={(next) => writeField(tag.id, field, next)}
+                />
+              </SchemaProp>
             ))}
-            <AddProperty onAdd={(name, type) => addField(tag, name, type)} />
-          </div>
+            <AddProperty typeOptions={typeOptions()} defaultType="string" onAdd={(name, type) => addField(tag, name, type)} />
+          </SchemaPack>
         )
       })}
-    </div>
+    </SchemaFieldShell>
   )
 }
 
-export function formatSchemaCell(value: unknown) {
-  const parsed = normalizeSchemaValue(value)
-  return parsed.tags.length ? parsed.tags.join(', ') : '—'
+function SchemaEditor(props: FsFieldEditorProps) {
+  return (
+    <SchemaFieldEditor
+      collectionPath={props.collectionPath}
+      record={props.record}
+      value={props.value}
+      writable={props.writable}
+      onChange={(next) => props.onChange(next)}
+    />
+  )
+}
+
+export const schemaFieldType: FieldTypeUi = {
+  Cell: SchemaCell,
+  Editor: SchemaEditor,
+  hideReadOnlyDetail: true,
+  stackDetail: true,
+  filterLabel: (value) => loadSchemaTags().find((tag) => tag.id === value)?.label ?? value,
+  searchText: (value) => schemaSearchHaystack(value, loadSchemaTags()),
+  matchesFilter: (value, expected) => {
+    const parsed = normalizeSchemaValue(value)
+    if (parsed.tags.includes(expected)) return true
+    return loadSchemaTags().some((tag) => parsed.tags.includes(tag.id) && tag.label === expected)
+  },
 }
