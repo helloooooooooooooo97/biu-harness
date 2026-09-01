@@ -1,6 +1,6 @@
 import type { CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
 import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS, normalizeSchemaValue, schemaSearchHaystack } from '@biu/type-file-system'
-import { loadSchemaTags } from './schema-tags.ts'
+import { getDatabaseUi } from './database-ui.ts'
 
 export const BUILTIN_VIEW_MODES = ['queue', 'table', 'cards', 'board'] as const
 export type BuiltinViewMode = (typeof BUILTIN_VIEW_MODES)[number]
@@ -231,8 +231,14 @@ export function matchesQuery(row: DbRecord, query: string, schema: CollectionSch
   if (!q) return true
   if (String(row.id).toLowerCase().includes(q)) return true
   for (const [key, field] of Object.entries(schema.fields)) {
-    if (resolveFieldType(field) === 'schema') {
-      if (schemaSearchHaystack(row[key], loadSchemaTags()).toLowerCase().includes(q)) return true
+    const kind = resolveFieldType(field)
+    const extra = getDatabaseUi()?.fieldType(kind)
+    if (extra?.searchText) {
+      if (extra.searchText(row[key]).toLowerCase().includes(q)) return true
+      continue
+    }
+    if (kind === 'schema') {
+      if (schemaSearchHaystack(row[key]).toLowerCase().includes(q)) return true
       continue
     }
     const text = formatField(field, row[key]).toLowerCase()
@@ -260,8 +266,10 @@ export function matchesFilters(row: DbRecord, filters: Record<string, string>, s
       continue
     }
     if (kind === 'schema') {
-      const parsed = normalizeSchemaValue(row[key])
-      if (!parsed.tags.includes(expected) && !loadSchemaTags().some((tag) => parsed.tags.includes(tag.id) && tag.label === expected)) {
+      const extra = getDatabaseUi()?.fieldType(kind)
+      if (extra?.matchesFilter) {
+        if (!extra.matchesFilter(row[key], expected)) return false
+      } else if (!normalizeSchemaValue(row[key]).tags.includes(expected)) {
         return false
       }
       continue
@@ -326,6 +334,8 @@ export function groupField(schema: CollectionSchema | undefined, preferred?: str
 }
 
 function groupBucketLabel(kind: FieldType, key: string) {
+  const labeled = getDatabaseUi()?.fieldType(kind)?.filterLabel?.(key)
+  if (labeled) return labeled
   if (kind === 'boolean') return key === 'true' ? '是' : '否'
   return key
 }

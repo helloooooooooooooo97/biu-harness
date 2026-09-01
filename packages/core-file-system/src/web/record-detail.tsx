@@ -6,7 +6,7 @@ import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { contentFieldKey, formatField, resolveFieldType, uniqueValues } from './fields.ts'
 import { LocalText } from './controls.tsx'
 import { FieldEditor, FieldGlyph, FilePreview } from './fsdb-cells.tsx'
-import { SchemaFieldEditor } from './schema-field.tsx'
+import { getDatabaseUi } from './database-ui.ts'
 import { RecordEmojiBoard } from '@biu/public-ui'
 import { TableGlyph } from './nav-glyphs.tsx'
 import { normalizeRecordEmoji, recordPreviewEmoji } from './sidebar-preview.ts'
@@ -173,16 +173,20 @@ export function RecordDetail({
                   {Object.entries(schema.fields).map(([key, field]) => {
                     if (key === 'id' || key === schema.labelField || key === contentFieldKey(schema)) return null
                     const kind = resolveFieldType(field)
-                    if (kind === 'schema' && !field.writable) return null
-                    if (kind === 'schema') {
+                    const typeUi = getDatabaseUi()?.fieldType(kind)
+                    if (typeUi?.hideReadOnlyDetail && !field.writable) return null
+                    if (typeUi?.Editor) {
+                      const Editor = typeUi.Editor
                       return (
-                        <div key={key} className="fsdb-prop is-stack">
+                        <div key={key} className={`fsdb-prop${typeUi.stackDetail ? ' is-stack' : ''}`}>
                           <span title={field.label ?? key}>
                             <FieldGlyph kind={kind} />
                             {field.label ?? key}
                           </span>
-                          <div className="fsdb-prop-val is-schema">
-                            <SchemaFieldEditor
+                          <div className={`fsdb-prop-val${typeUi.stackDetail ? ' is-schema' : ''}`}>
+                            <Editor
+                              field={key}
+                              spec={field}
                               collectionPath={collectionPath}
                               record={selected}
                               value={selected[key]}

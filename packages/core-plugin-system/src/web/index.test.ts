@@ -27,6 +27,12 @@ class FakeDatabaseUi extends Service implements DatabaseUi {
   subscribe() {
     return () => undefined
   }
+  registerFieldType() {
+    return { dispose() {} }
+  }
+  fieldType() {
+    return undefined
+  }
 }
 
 test('plugin system web declares extras so store plugins can mount windows', async () => {
