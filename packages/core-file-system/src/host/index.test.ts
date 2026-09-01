@@ -376,14 +376,17 @@ test('listing /supertags with tag filter returns stamped records as a table', as
   const db = new DatabaseService(ctx)
   db.register(notesCollection())
   db.register(superTagsCollection(db.schemaTags, () => [{ id: 'notes', path: '/notes', label: '笔记' }]))
-  db.schemaTags.replace([{ id: 'dp', label: '动态规划', fields: [] }])
-  await db.update('/notes/n1', { schema: { tags: ['dp'], values: {} } })
+  db.schemaTags.replace([{ id: 'dp', label: '动态规划', fields: [{ key: 'complexity', type: 'string', label: '复杂度' }] }])
+  await db.update('/notes/n1', { schema: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } } })
   const listed = await db.list('/supertags', { tag: 'dp' })
   if (listed.kind !== 'collection') return
   assert.equal(listed.items.length, 1)
   assert.equal(listed.items[0]?.id, 'notes::n1')
   assert.equal(listed.items[0]?.table, '笔记')
   assert.equal(listed.items[0]?.sourceId, 'n1')
+  assert.equal(listed.items[0]?.complexity, 'O(n)')
+  assert.equal(listed.schema.fields.complexity?.label, '复杂度')
+  assert.deepEqual(listed.schema.columns, ['title', 'table', 'complexity'])
 })
 
 test('SuperTag list filter asks the collection only for stamped ids', async () => {

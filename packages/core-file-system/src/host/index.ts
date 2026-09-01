@@ -30,6 +30,45 @@ function publicAction(action: CollectionAction): CollectionActionInfo {
   return info
 }
 
+const STAMP_FIELD_BLOCKLIST = new Set([
+  'id',
+  'title',
+  'table',
+  'tablePath',
+  'sourceId',
+  'tag',
+  'fieldCount',
+  'stampCount',
+  'schema',
+  'content',
+  'emoji',
+  'createdAt',
+  'updatedAt',
+])
+
+function schemaWithTagPack(schema: CollectionSchema, pack: CollectionSchemaPack | null): CollectionSchema {
+  if (!pack?.fields.length) {
+    return {
+      ...schema,
+      columns: ['title', 'table'],
+    }
+  }
+  const fields = { ...schema.fields }
+  const extra: string[] = []
+  for (const field of pack.fields) {
+    if (STAMP_FIELD_BLOCKLIST.has(field.key)) continue
+    fields[field.key] = {
+      type: field.type,
+      label: field.label ?? field.key,
+      writable: false,
+      computed: true,
+      ...(field.enum ? { enum: field.enum } : {}),
+    }
+    extra.push(field.key)
+  }
+  return { ...schema, fields, columns: ['title', 'table', ...extra] }
+}
+
 function schemaFor(spec: CollectionSpec): CollectionSchema {
   const contentField = spec.schema.contentField ?? 'content'
   const labelField = spec.schema.labelField ?? 'title'
@@ -350,6 +389,24 @@ export class DatabaseService extends Service implements Database {
     return rows.filter((row) => allow.has(row.id))
   }
 
+  private async hydrateSuperTagStamps(rows: DbRecord[], pack: CollectionSchemaPack | null) {
+    if (!pack?.fields.length) return
+    const wanted = pack.fields.filter((field) => !STAMP_FIELD_BLOCKLIST.has(field.key))
+    if (!wanted.length) return
+    for (const row of rows) {
+      const collection = String(row.tablePath ?? '')
+      const id = String(row.sourceId ?? '')
+      const spec = collection ? this.collection(collection) : undefined
+      if (!spec || !id) continue
+      const record = await spec.get(id)
+      if (!record) continue
+      const bag = normalizeSchemaValue(record.schema).values[pack.id] ?? {}
+      for (const field of wanted) {
+        if (bag[field.key] !== undefined) row[field.key] = bag[field.key]
+      }
+    }
+  }
+
   private bump() {
     this.ctx.emit('database/change')
     if (this.bumpQueued) return
@@ -404,7 +461,7 @@ export class DatabaseService extends Service implements Database {
     if (parts.length !== 1) throw new Error(`cannot list: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
-    const schema = schemaFor(spec)
+    let schema = schemaFor(spec)
     const { limit, offset } = clampPage(page?.limit, page?.offset)
     const q = page?.q ?? ''
     const sortField = page?.sortField ?? ''
@@ -430,6 +487,12 @@ export class DatabaseService extends Service implements Database {
       query.ids = [...stamped]
     }
     const rows = await this.loadCollectionRows(spec, query)
+    const tagFilter = spec.path === '/supertags' ? String(filter?.tag ?? '').trim() : ''
+    const tagPack = tagFilter ? this.schemaTags.get(tagFilter) : null
+    if (tagFilter) {
+      schema = schemaWithTagPack(schema, tagPack)
+      await this.hydrateSuperTagStamps(rows, tagPack)
+    }
     const matched = rows.filter((row) => matchListFilter(row, filter, schema, packs) && matchQuery(row, q, packs))
     const sorted = sortRecords(matched, sortField, sortDir)
     const total = sorted.length

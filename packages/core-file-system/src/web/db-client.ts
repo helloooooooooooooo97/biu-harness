@@ -1,4 +1,4 @@
-import type { DbRecord } from '@biu/type-file-system'
+import type { CollectionSchema, DbRecord } from '@biu/type-file-system'
 
 export async function readJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init)
@@ -10,6 +10,7 @@ export async function readJson<T>(path: string, init?: RequestInit): Promise<T> 
 export type ListPage = {
   items: Array<DbRecord & { path?: string }>
   total: number
+  schema?: CollectionSchema
 }
 
 export async function listCollection(opts: {
@@ -30,10 +31,13 @@ export async function listCollection(opts: {
     dir: opts.sortDir === 'desc' ? 'desc' : 'asc',
     filter: JSON.stringify(opts.filters ?? {}),
   })
-  const body = await readJson<ListPage & { items?: DbRecord[]; total?: number }>(`/api/db/list?${params}`)
+  const body = await readJson<ListPage & { items?: DbRecord[]; total?: number; schema?: CollectionSchema }>(
+    `/api/db/list?${params}`,
+  )
   const items = Array.isArray(body.items) ? body.items : []
   return {
     items,
     total: typeof body.total === 'number' ? body.total : items.length,
+    schema: body.schema,
   }
 }

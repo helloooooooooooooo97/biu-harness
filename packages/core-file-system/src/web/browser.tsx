@@ -443,8 +443,17 @@ export function CollectionBrowser({
         pullSchemaTags(),
       ])
       if (gen !== reloadGen.current) return true
-      setStat((prev) => (prev?.schema && JSON.stringify(prev.schema) === JSON.stringify(nextStat.schema) ? prev : nextStat))
+      const nextSchema = listed.schema ?? nextStat.schema
+      setStat((prev) =>
+        prev?.schema && JSON.stringify(prev.schema) === JSON.stringify(nextSchema) ? prev : { ...nextStat, schema: nextSchema },
+      )
       setItems((prev) => (recordsFingerprint(prev) === recordsFingerprint(listed.items) ? prev : listed.items))
+      if (collectionPath === SUPERTAGS_COLLECTION_PATH && listed.schema) {
+        const current = viewsRef.current.find((view) => view.id === activeViewId)
+        if (current?.builtin) {
+          setColumnKeys(defaultColumnKeys(listed.schema, Object.keys(listed.schema.fields)))
+        }
+      }
       setTotal(listed.total)
       if (activeViewId) {
         rememberPreviewTotal(
@@ -895,7 +904,7 @@ export function CollectionBrowser({
       sortField: target === collectionPath ? (allColumns[0]?.key ?? 'id') : 'id',
       sortDir: 'asc',
       filters: queryFilters.tag ? { tag: String(queryFilters.tag) } : {},
-      columns: queryFilters.tag ? ['title', 'table'] : target === collectionPath ? [...schemaDefaultKeys] : [],
+      columns: target === collectionPath ? [...schemaDefaultKeys] : queryFilters.tag ? ['title', 'table'] : [],
       groupBy: '',
       tree: true,
       wrap: false,
