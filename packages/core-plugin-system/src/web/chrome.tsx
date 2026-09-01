@@ -20,6 +20,9 @@ function PluginTitle({ record, label }: { record: DbRecord; label: string }) {
       {record.hasWeb ? (
         <span className="shrink-0 rounded px-1 text-[10px] font-semibold tracking-wide text-(--dsw-label-3)">Web</span>
       ) : null}
+      {record.headless ? (
+        <span className="shrink-0 rounded px-1 text-[10px] font-semibold tracking-wide text-(--dsw-label-3)">无头</span>
+      ) : null}
     </span>
   )
 }

@@ -39,11 +39,16 @@ export function declaredStoreShell(value: unknown): boolean {
   return Number.isFinite(width) && Number.isFinite(height)
 }
 
-export function requireDeclaredShell(value: unknown, hasWeb: boolean, where: string) {
-  if (!hasWeb) return
+export function requireDeclaredShell(value: unknown, hasWeb: boolean, where: string, headless = false) {
+  if (!hasWeb || headless) return
   if (!declaredStoreShell(value)) {
-    throw new Error(`${where}: web plugins must set shell.width and shell.height (content pixels)`)
+    throw new Error(`${where}: web plugins must set shell.width and shell.height (content pixels), or set headless: true`)
   }
+}
+
+export function listingIsHeadless(row: unknown): boolean {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return false
+  return (row as { headless?: unknown }).headless === true
 }
 
 /** /plugins 列表把 shell 拆成 shellWidth 等字段，窗口层要还原。 */

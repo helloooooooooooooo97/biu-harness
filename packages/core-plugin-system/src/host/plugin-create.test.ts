@@ -136,6 +136,48 @@ test('pack with web rejects sandbox manifest without shell size', async () => {
   }
 })
 
+test('create and pack allow web without shell when headless', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'plugin-headless-'))
+  try {
+    const ctx = new Context()
+    stubHub(ctx)
+    const store = new PluginStoreService(
+      ctx,
+      join(dir, '.plugin'),
+      join(dir, 'store.json'),
+      join(dir, '.plugin-dev'),
+    ).open()
+    await store.create({
+      id: 'store-skin',
+      name: 'Skin',
+      headless: true,
+      webJs: `export const name = 'store-skin'\nexport function apply() {}`,
+    })
+    const created = JSON.parse(await readFile(join(dir, '.plugin', 'store-skin', 'manifest.json'), 'utf8')) as {
+      headless?: boolean
+      shell?: unknown
+    }
+    assert.equal(created.headless, true)
+    assert.equal(created.shell, undefined)
+    const listed = await store.list()
+    assert.equal(listed[0]?.headless, true)
+    assert.equal(listed[0]?.shell, undefined)
+
+    await store.initSandbox({ id: 'store-skin-src', name: 'Skin Src', headless: true })
+    const sandbox = join(dir, '.plugin-dev', 'store-skin-src')
+    await writeFile(join(sandbox, 'web.tsx'), `export const name = 'store-skin-src'\nexport function apply() {}\n`)
+    await store.pack('store-skin-src')
+    const packed = JSON.parse(await readFile(join(dir, '.plugin', 'store-skin-src', 'manifest.json'), 'utf8')) as {
+      headless?: boolean
+      shell?: unknown
+    }
+    assert.equal(packed.headless, true)
+    assert.equal(packed.shell, undefined)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
 test('initSandbox writes source; pack bundles into .plugin/<id>/', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'plugin-create-'))
   try {
@@ -214,6 +256,7 @@ test('registers plugin_create, plugin_sandbox, plugin_pack', () => {
   assert.match(descriptions.join('\n'), /storeShellFromRecord/)
   assert.match(descriptions.join('\n'), /listing\.shell/)
   assert.match(descriptions.join('\n'), /shellWidth/)
+  assert.match(descriptions.join('\n'), /无头/)
 })
 
 test('pack web jsx uses globalThis.React instead of bundling npm react', async () => {

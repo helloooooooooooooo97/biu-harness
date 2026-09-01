@@ -70,6 +70,8 @@ test('plugin window sizes from manifest.shell instead of measuring DOM', async (
   assert.match(src, /storeShellFromRecord/)
   assert.match(src, /dismissAndStop/)
   assert.match(src, /dismissed\[entry\.id\]/)
+  assert.match(src, /listingIsHeadless/)
+  assert.match(src, /extraProps\.headless === true/)
   assert.doesNotMatch(src, /measurePluginBox/)
   assert.doesNotMatch(src, /ResizeObserver/)
   const create = await readFile(resolve(import.meta.dirname, '../host/plugin-create.ts'), 'utf8')

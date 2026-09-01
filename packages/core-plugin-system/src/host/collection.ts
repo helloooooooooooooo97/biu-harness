@@ -33,11 +33,16 @@ function asInstalledRecord(row: StoreListing): DbRecord {
     lastRunAt: row.lastRunAt,
     hasHost: row.hasHost,
     hasWeb: row.hasWeb,
-    shellWidth: shell.width,
-    shellHeight: shell.height,
-    shellMinWidth: shell.minWidth,
-    shellMinHeight: shell.minHeight,
-    shellResizable: shell.resizable,
+    headless: row.headless === true,
+    ...(row.headless || !shell
+      ? {}
+      : {
+          shellWidth: shell.width,
+          shellHeight: shell.height,
+          shellMinWidth: shell.minWidth,
+          shellMinHeight: shell.minHeight,
+          shellResizable: shell.resizable,
+        }),
   })
 }
 
@@ -53,6 +58,7 @@ function asSandboxRecord(row: SandboxListing): DbRecord {
     sandbox: true,
     hasHost: row.hasHost,
     hasWeb: row.hasWeb,
+    headless: row.headless === true,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
@@ -112,6 +118,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         'shellHeight',
         'hasHost',
         'hasWeb',
+        'headless',
       ],
       fields: {
         name: { type: 'string', label: '名称' },
@@ -127,6 +134,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         lastRunAt: { type: 'datetime', label: '上次运行' },
         hasHost: { type: 'boolean', label: 'Host' },
         hasWeb: { type: 'boolean', label: 'Web' },
+        headless: { type: 'boolean', label: '无头' },
         author: { type: 'string', label: '作者' },
         authorUrl: { type: 'url', label: '作者链接' },
         shellWidth: { type: 'number', label: '窗口宽' },

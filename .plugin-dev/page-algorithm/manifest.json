@@ -5,11 +5,5 @@
   "tags": ["page", "editor", "leetcode"],
   "author": "Biu",
   "authorUrl": "https://github.com/helloooooooooooooo97/biu-harness",
-  "shell": {
-    "width": 360,
-    "height": 220,
-    "minWidth": 280,
-    "minHeight": 160,
-    "resizable": true
-  }
+  "headless": true
 }

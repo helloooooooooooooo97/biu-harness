@@ -1,7 +1,7 @@
 const React = globalThis.React
 // web.tsx
 var name = "page-algorithm";
-var inject = ["pageEditor", "slots"];
+var inject = ["pageEditor"];
 var DEFAULTS = {
   title: "1. Two Sum",
   difficulty: "Easy",
@@ -164,20 +164,6 @@ function AlgorithmCard({
     ))
   );
 }
-function Panel() {
-  return /* @__PURE__ */ React.createElement(
-    "div",
-    {
-      "data-testid": "page-algorithm-panel",
-      style: { boxSizing: "border-box", width: "100%", height: "100%", padding: 16, font: "13px/1.5 ui-sans-serif, system-ui, sans-serif" }
-    },
-    "\u5728\u9875\u9762\u6B63\u6587\u8F93\u5165 / \u9009\u300C\u7B97\u6CD5\u9898\u300D\uFF0C\u63D2\u5165 LeetCode \u98CE\u5361\u7247\uFF1A\u5DE6\u8FB9\u9898\u76EE\uFF0C\u53F3\u8FB9\u4EE3\u7801\u3002"
-  );
-}
-function Icon(props) {
-  const className = props.className ?? "size-5";
-  return /* @__PURE__ */ React.createElement("svg", { viewBox: "0 0 16 16", fill: "currentColor", className, "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("path", { d: "M3 2h6l4 4v8H3V2Zm6 1.4V6h2.6L9 3.4ZM5 9h6v1H5V9Zm0 2h6v1H5v-1Z" }));
-}
 function apply(ctx) {
   ctx.pageEditor.registerBlock({
     kind: "algorithm",
@@ -186,10 +172,6 @@ function apply(ctx) {
     aliases: ["leetcode", "algo", "\u7B97\u6CD5", "lc"],
     defaults: DEFAULTS,
     View: AlgorithmCard
-  });
-  ctx.slots.place("plugin-store-extras", Panel, {
-    key: "page-algorithm",
-    props: () => ({ Icon })
   });
 }
 export {

@@ -5,11 +5,5 @@
   "tags": ["page", "editor", "theme"],
   "author": "Biu",
   "authorUrl": "https://github.com/helloooooooooooooo97/biu-harness",
-  "shell": {
-    "width": 320,
-    "height": 200,
-    "minWidth": 280,
-    "minHeight": 160,
-    "resizable": true
-  }
+  "headless": true
 }

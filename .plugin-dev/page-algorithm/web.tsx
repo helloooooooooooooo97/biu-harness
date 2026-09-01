@@ -1,5 +1,5 @@
 export const name = 'page-algorithm'
-export const inject = ['pageEditor', 'slots']
+export const inject = ['pageEditor']
 
 const DEFAULTS = {
   title: '1. Two Sum',
@@ -162,26 +162,6 @@ function AlgorithmCard({
   )
 }
 
-function Panel() {
-  return (
-    <div
-      data-testid="page-algorithm-panel"
-      style={{ boxSizing: 'border-box', width: '100%', height: '100%', padding: 16, font: '13px/1.5 ui-sans-serif, system-ui, sans-serif' }}
-    >
-      在页面正文输入 / 选「算法题」，插入 LeetCode 风卡片：左边题目，右边代码。
-    </div>
-  )
-}
-
-function Icon(props: { className?: string }) {
-  const className = props.className ?? 'size-5'
-  return (
-    <svg viewBox="0 0 16 16" fill="currentColor" className={className} aria-hidden="true">
-      <path d="M3 2h6l4 4v8H3V2Zm6 1.4V6h2.6L9 3.4ZM5 9h6v1H5V9Zm0 2h6v1H5v-1Z" />
-    </svg>
-  )
-}
-
 export function apply(ctx: {
   pageEditor: {
     registerBlock: (spec: {
@@ -193,9 +173,6 @@ export function apply(ctx: {
       View: (props: { data: Record<string, unknown>; update: (patch: Record<string, unknown>) => void; writable: boolean }) => unknown
     }) => void
   }
-  slots: {
-    place: (slot: string, Comp: unknown, options: { key: string; props: () => { Icon: unknown } }) => void
-  }
 }) {
   ctx.pageEditor.registerBlock({
     kind: 'algorithm',
@@ -204,9 +181,5 @@ export function apply(ctx: {
     aliases: ['leetcode', 'algo', '算法', 'lc'],
     defaults: DEFAULTS,
     View: AlgorithmCard,
-  })
-  ctx.slots.place('plugin-store-extras', Panel, {
-    key: 'page-algorithm',
-    props: () => ({ Icon }),
   })
 }
