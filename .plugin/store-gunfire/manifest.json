@@ -1,0 +1,16 @@
+{
+  "id": "store-gunfire",
+  "name": "🔫 枪火战场",
+  "blurb": "俯视角波次生存射击游戏：6 种武器、6 类敌人、Boss 战、粒子特效与合成音效，撑满一整个游戏循环。",
+  "tags": [],
+  "author": "",
+  "authorUrl": "",
+  "createdAt": 0,
+  "shell": {
+    "width": 960,
+    "height": 600,
+    "minWidth": 480,
+    "minHeight": 300,
+    "resizable": true
+  }
+}
