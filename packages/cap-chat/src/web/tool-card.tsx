@@ -88,22 +88,22 @@ function DetailView({ detail }: { detail: FormattedDetail }) {
     const artifacts = detail.artifacts ?? []
     return (
       <div className="space-y-2">
-        <div className="overflow-hidden rounded-[10px] border border-(--dsw-border) bg-[#1e1f24]">
-          <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-1.5">
-            <span className="font-mono text-(length:--dsw-chat-ui-font-size) tracking-wide text-white/45 uppercase">output</span>
+        <div className="overflow-hidden rounded-[10px] border border-(--dsw-border) bg-(--dsw-tool)">
+          <div className="flex items-center justify-between gap-2 border-b border-(--dsw-border) px-3 py-1.5">
+            <span className="font-mono text-(length:--dsw-chat-ui-font-size) tracking-wide text-(--dsw-label-3) uppercase">output</span>
             <span
               className={`font-mono text-(length:--dsw-chat-ui-font-size) tabular-nums ${
-                detail.code === 0 || detail.code == null ? 'text-[#7dcea0]' : 'text-[#f1948a]'
+                detail.code === 0 || detail.code == null ? 'text-(--dsw-ok)' : 'text-(--dsw-danger)'
               }`}
             >
               exit {detail.code ?? '—'}
             </span>
           </div>
-          <pre className="max-h-72 overflow-auto px-3 py-2 font-mono text-(length:--dsw-chat-ui-font-size) leading-5 text-[#e8eaed]">
+          <pre className="max-h-72 overflow-auto px-3 py-2 font-mono text-(length:--dsw-chat-ui-font-size) leading-5 text-(--dsw-label-2)">
             {hasOut ? <span className="whitespace-pre-wrap">{detail.stdout.replace(/\n$/, '')}</span> : null}
             {hasOut && hasErr ? '\n\n' : null}
-            {hasErr ? <span className="whitespace-pre-wrap text-[#f5b7b1]">{detail.stderr.replace(/\n$/, '')}</span> : null}
-            {!hasOut && !hasErr ? <span className="text-white/35">(empty)</span> : null}
+            {hasErr ? <span className="whitespace-pre-wrap text-(--dsw-danger)">{detail.stderr.replace(/\n$/, '')}</span> : null}
+            {!hasOut && !hasErr ? <span className="text-(--dsw-label-3)">(empty)</span> : null}
           </pre>
         </div>
         <ArtifactGallery artifacts={artifacts} />
@@ -168,8 +168,8 @@ function ToolBody({ parsed, rawArguments, detail }: { parsed: ParsedToolCall; ra
   if (parsed.kind === 'bash') {
     return (
       <div className="space-y-2">
-        <pre className="overflow-x-auto rounded-[10px] border border-(--dsw-border) bg-[#1e1f24] px-3 py-2 font-mono text-(length:--dsw-chat-ui-font-size) leading-5 text-[#e8eaed]">
-          <span className="text-[#8ab4f8]">$ </span>
+        <pre className="overflow-x-auto rounded-[10px] border border-(--dsw-border) bg-(--dsw-tool) px-3 py-2 font-mono text-(length:--dsw-chat-ui-font-size) leading-5 text-(--dsw-label-2)">
+          <span className="text-(--dsw-label-3)">$ </span>
           {parsed.command}
         </pre>
         {formatted ? <DetailView detail={formatted} /> : null}
