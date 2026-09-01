@@ -54,6 +54,12 @@ export function apply(ctx: Context) {
         .sort((a, b) => Number(b.id === 'core-file-system') - Number(a.id === 'core-file-system'))
       const enabledIds = new Set(enabledRows.map((plugin) => plugin.id))
 
+      for (const [id, fiber] of [...forks.entries()]) {
+        if (enabledIds.has(id)) continue
+        await fiber.dispose()
+        forks.delete(id)
+      }
+
       for (const row of enabledRows) {
         if (forks.has(row.id)) continue
         const loaded = await resolvePlugin(row.id, row.web)
@@ -67,11 +73,6 @@ export function apply(ctx: Context) {
         await fiber
       }
 
-      for (const [id, fiber] of [...forks.entries()]) {
-        if (enabledIds.has(id)) continue
-        await fiber.dispose()
-        forks.delete(id)
-      }
       const fsUi = rows.some(
         (plugin) =>
           plugin.id === 'core-file-system' &&

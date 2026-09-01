@@ -32,6 +32,15 @@ test('store plugin web urls are runtime modules', () => {
   assert.equal(isRuntimeWebModule('@biu/core-task-system/web'), false)
 })
 
+test('ui-hub unloads disabled plugins before importing new ones', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const { resolve } = await import('node:path')
+  const src = await readFile(resolve(import.meta.dirname, './index.ts'), 'utf8')
+  const disposeAt = src.indexOf('await fiber.dispose()')
+  const importAt = src.indexOf('resolvePlugin(row.id, row.web)')
+  assert.ok(disposeAt > 0 && importAt > 0 && disposeAt < importAt)
+})
+
 test('ui-hub mounts configured ui packages including chat', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)

@@ -62,6 +62,8 @@ test('plugin window sizes from manifest.shell instead of measuring DOM', async (
   const src = await readFile(resolve(import.meta.dirname, './index.tsx'), 'utf8')
   assert.match(src, /data-shell-width=\{shell\.width\}/)
   assert.match(src, /storeShellFromRecord/)
+  assert.match(src, /dismissAndStop/)
+  assert.match(src, /dismissed\[entry\.id\]/)
   assert.doesNotMatch(src, /measurePluginBox/)
   assert.doesNotMatch(src, /ResizeObserver/)
   const create = await readFile(resolve(import.meta.dirname, '../host/plugin-create.ts'), 'utf8')

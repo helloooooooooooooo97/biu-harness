@@ -298,6 +298,7 @@ function PluginExtrasLayer(props: SlotProps) {
   const extras = useSlotEntries(slots, 'plugin-store-extras')
   const [listings, setListings] = useState<StoreListing[]>([])
   const [minimized, setMinimized] = useState<Record<string, boolean>>({})
+  const [dismissed, setDismissed] = useState<Record<string, boolean>>({})
   const [fullscreenId, setFullscreenId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -332,11 +333,37 @@ function PluginExtrasLayer(props: SlotProps) {
     }
   }
 
+  function dismissAndStop(entryId: string, pluginId: string) {
+    setDismissed((cur) => ({ ...cur, [entryId]: true }))
+    setMinimized((cur) => {
+      const next = { ...cur }
+      delete next[entryId]
+      return next
+    })
+    if (fullscreenId === entryId) setFullscreenId(null)
+    void closePlugin(pluginId)
+  }
+
   const sorted = [...extras].sort((a, b) => a.order - b.order)
+
+  useEffect(() => {
+    const live = new Set(sorted.map((entry) => entry.id))
+    setDismissed((cur) => {
+      let changed = false
+      const next = { ...cur }
+      for (const id of Object.keys(next)) {
+        if (live.has(id)) continue
+        delete next[id]
+        changed = true
+      }
+      return changed ? next : cur
+    })
+  }, [sorted.map((entry) => entry.id).join('|')])
 
   useEffect(() => {
     const live = new Set<string>()
     for (const entry of sorted) {
+      if (dismissed[entry.id]) continue
       const listing = resolveListing(entry.id, listings)
       const title = listing?.name ?? entry.id
       const dockId = `plugin:${entry.id}`
@@ -363,7 +390,7 @@ function PluginExtrasLayer(props: SlotProps) {
         },
         onClose: () => {
           const listingNow = resolveListing(entry.id, listings)
-          void closePlugin(listingNow?.id ?? entry.id)
+          dismissAndStop(entry.id, listingNow?.id ?? entry.id)
         },
       })
       dock.patch(dockId, {
@@ -375,13 +402,13 @@ function PluginExtrasLayer(props: SlotProps) {
     for (const app of dock.list()) {
       if (app.kind === 'plugin' && !live.has(app.id)) dock.unregister(app.id)
     }
-  }, [dock, listings, minimized, sorted.map((entry) => entry.id).join('|')])
+  }, [dock, listings, minimized, dismissed, sorted.map((entry) => entry.id).join('|')])
 
   if (extras.length === 0) return null
   return (
     <div className="pointer-events-none fixed inset-0 z-20" data-testid="plugin-store-extras">
       {sorted.map((entry) => {
-        if (minimized[entry.id]) return null
+        if (minimized[entry.id] || dismissed[entry.id]) return null
         const listing = resolveListing(entry.id, listings)
         const pluginId = listing?.id ?? entry.id
         const title = listing?.name ?? entry.id
@@ -395,15 +422,7 @@ function PluginExtrasLayer(props: SlotProps) {
             pluginId={pluginId}
             shell={shell}
             fullscreen={Boolean(shell.resizable) && fullscreenId === entry.id}
-            onClose={() => {
-              setMinimized((cur) => {
-                const next = { ...cur }
-                delete next[entry.id]
-                return next
-              })
-              if (fullscreenId === entry.id) setFullscreenId(null)
-              void closePlugin(pluginId)
-            }}
+            onClose={() => dismissAndStop(entry.id, pluginId)}
             onMinimize={() => {
               if (fullscreenId === entry.id) setFullscreenId(null)
               setMinimized((cur) => ({ ...cur, [entry.id]: true }))
