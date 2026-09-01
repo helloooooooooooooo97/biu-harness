@@ -3799,11 +3799,52 @@ body {
   font-size: 12px;
 }
 
-/* 折叠靠 hidden，不卸载，展开不再重建 Markdown/工具 DOM */
+/* 折叠靠 hidden，不卸载，展开不再重建 Markdown/工具 DOM。
+   色比最终回复暗一档，避免 Details 和最后一条正文抢对比度。 */
 .chat-reply-details {
   display: flex;
   flex-direction: column;
   gap: var(--dsw-chat-gap);
+  color: var(--dsw-label-2);
+}
+
+.chat-reply-details .chat-md,
+.chat-reply-details .chat-md-stream-pre,
+.chat-reply-details .chat-md p,
+.chat-reply-details .chat-md li,
+.chat-reply-details .chat-md h1,
+.chat-reply-details .chat-md h2,
+.chat-reply-details .chat-md h3,
+.chat-reply-details .chat-md h4,
+.chat-reply-details .chat-md code,
+.chat-reply-details .chat-md pre,
+.chat-reply-details .chat-md pre code {
+  color: var(--dsw-label-2);
+}
+
+.chat-reply-details .chat-md a {
+  color: var(--dsw-label-2);
+}
+
+.chat-reply-details .chat-step-bar {
+  background: color-mix(in srgb, var(--dsw-sidebar) 42%, var(--dsw-bg));
+}
+
+.chat-reply-details .chat-reply-meta,
+.chat-reply-details .chat-reply-meta-item,
+.chat-reply-details .chat-reply-meta-icon {
+  color: var(--dsw-label-3);
+}
+
+.chat-reply-details .tool-call,
+.chat-reply-details .tool-call-head,
+.chat-reply-details .tool-call-toggle {
+  color: var(--dsw-label-2);
+}
+
+.chat-reply-details .tool-call-head:hover::before,
+.chat-reply-details .tool-call-head.is-open::before {
+  background: color-mix(in srgb, var(--dsw-sidebar) 42%, var(--dsw-bg));
 }
 
 .chat-reply-details[hidden] {
