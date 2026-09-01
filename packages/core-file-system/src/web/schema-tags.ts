@@ -1,4 +1,4 @@
-import { normalizeSchemaPack, type CollectionSchemaPack } from '@biu/type-file-system'
+import { isAtomicFieldType, normalizeSchemaPack, type AtomicFieldType, type CollectionSchemaPack } from '@biu/type-file-system'
 
 export const SUPER_TAGS_KEY = 'fsdb.superTags'
 
@@ -107,4 +107,33 @@ export function slugTagId(label: string, used: Set<string>) {
     n += 1
   }
   return id
+}
+
+export function fieldKeyFromLabel(label: string, used: Set<string>) {
+  const slug = slugTagId(label || 'field', new Set()).replace(/-/g, '_')
+  let key = /^[A-Za-z]/.test(slug) ? slug : `f_${slug.replace(/^t_?/, '') || 'field'}`
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key)) key = 'field'
+  let n = 2
+  let next = key
+  while (used.has(next)) {
+    next = `${key}_${n}`
+    n += 1
+  }
+  return next
+}
+
+export function addSchemaTagField(tagId: string, name: string, type: AtomicFieldType) {
+  if (!isAtomicFieldType(type)) return false
+  const label = name.trim()
+  if (!label) return false
+  const catalog = loadSchemaTags()
+  const tag = catalog.find((item) => item.id === tagId)
+  if (!tag) return false
+  const key = fieldKeyFromLabel(label, new Set(tag.fields.map((item) => item.key)))
+  persistSchemaTags(
+    catalog.map((item) =>
+      item.id === tag.id ? { ...item, fields: [...item.fields, { key, type, label, writable: true }] } : item,
+    ),
+  )
+  return true
 }
