@@ -3694,7 +3694,7 @@ body {
 
 .chat-outline {
   position: absolute;
-  left: 6px;
+  left: 8px;
   top: 50%;
   z-index: 8;
   display: flex;
@@ -3710,7 +3710,7 @@ body {
   flex: none;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: 8px;
   min-width: 12px;
   max-height: min(72vh, 640px);
   overflow-x: visible;
@@ -3735,21 +3735,21 @@ body {
   content: '';
   display: block;
   width: 6px;
-  height: 1.5px;
+  height: 2px;
   margin: 0;
   border-radius: 1px;
   background: var(--dsw-label);
-  opacity: 0.22;
+  opacity: 0.3;
 }
 
 .chat-outline-tick.is-robot::after {
-  opacity: 0.14;
+  opacity: 0.2;
 }
 
 .chat-outline-tick:hover::after,
 .chat-outline-tick.is-active::after {
   width: 10px;
-  opacity: 0.55;
+  opacity: 0.62;
 }
 
 .chat-outline-panel {
