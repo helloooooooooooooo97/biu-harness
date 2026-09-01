@@ -25,7 +25,6 @@ export const ChatMessageOutline = memo(function ChatMessageOutline({
   const panelRef = useRef<HTMLElement>(null)
   const leaveTimer = useRef(0)
   const [hoverId, setHoverId] = useState<string | null>(null)
-  const [alignTick, setAlignTick] = useState(true)
   const filter = useSyncExternalStore(subscribeChatOutline, getChatOutlineFilter, (): ChatOutlineFilter => 'user')
   const items = useMemo(() => deriveChatOutline(nodes, filter), [nodes, filter])
 
@@ -39,40 +38,28 @@ export const ChatMessageOutline = memo(function ChatMessageOutline({
     window.clearTimeout(leaveTimer.current)
     leaveTimer.current = window.setTimeout(() => {
       setHoverId(null)
-      setAlignTick(true)
     }, 140)
   }
 
   function hoverTick(id: string) {
     keepOpen()
     setHoverId(id)
-    setAlignTick(true)
   }
 
   function hoverMenuItem(id: string) {
     keepOpen()
     setHoverId(id)
-    setAlignTick(false)
   }
 
   useLayoutEffect(() => {
     if (!hoverId) return
-    const root = rootRef.current
     const rail = railRef.current
     const panel = panelRef.current
     const tick = rail?.querySelector<HTMLElement>(`[data-outline-tick="${escapeId(hoverId)}"]`)
     const row = panel?.querySelector<HTMLElement>(`[data-outline-row="${escapeId(hoverId)}"]`)
-    if (!root || !rail || !panel || !tick) return
-    tick.scrollIntoView({ block: 'nearest' })
+    tick?.scrollIntoView({ block: 'nearest' })
     row?.scrollIntoView({ block: 'nearest' })
-    if (!alignTick) return
-    const rootBox = root.getBoundingClientRect()
-    const tickBox = tick.getBoundingClientRect()
-    const panelH = panel.offsetHeight
-    const mid = tickBox.top - rootBox.top + tickBox.height / 2
-    const top = Math.min(Math.max(panelH / 2, mid), Math.max(panelH / 2, rootBox.height - panelH / 2))
-    panel.style.top = `${top}px`
-  }, [hoverId, alignTick, items.length])
+  }, [hoverId, items.length])
 
   if (!items.length) return null
 
