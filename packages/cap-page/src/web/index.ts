@@ -5,7 +5,7 @@ import { PageEditorService } from './service.ts'
 import { PAGE_EDITOR_STYLE } from './style.ts'
 
 export { PageEditorService, getPageEditor, usePageEditorVersion } from './service.ts'
-export type { HeadingReplacement, HeadingViewProps, SlashCommandSpec, SlashInsert } from './service.ts'
+export type { HeadingReplacement, SlashCommandSpec, SlashInsert } from './service.ts'
 
 export const name = 'page-ui'
 export const inject = ['databaseUi']

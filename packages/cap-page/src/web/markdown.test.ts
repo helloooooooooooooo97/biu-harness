@@ -46,6 +46,18 @@ const a = 1
   editor.destroy()
 })
 
+test('heading stays a native h1 without node-view wrappers', () => {
+  const editor = new Editor({
+    extensions: pageEditorExtensions(),
+    content: '# 标题\n\n正文',
+    contentType: 'markdown',
+  })
+  const html = editor.getHTML()
+  assert.match(html, /<h1>标题<\/h1>/)
+  assert.doesNotMatch(html, /data-node-view/)
+  editor.destroy()
+})
+
 test('slash command turns the current block into a heading', () => {
   const editor = new Editor({
     extensions: pageEditorExtensions(),

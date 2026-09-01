@@ -2,27 +2,15 @@ export const name = 'page-heading-cards'
 export const inject = ['pageEditor', 'slots']
 
 function card(level: 1 | 2 | 3, accent: string) {
-  return function HeadingCard({ children }: { children?: unknown }) {
-    return (
-      <span
-        data-testid={`page-heading-card-${level}`}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-          borderLeft: `4px solid ${accent}`,
-          padding: '8px 12px',
-          margin: '2px 0',
-          background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-          borderRadius: 8,
-        }}
-      >
-        <span contentEditable={false} style={{ fontSize: 11, fontWeight: 700, opacity: 0.55, letterSpacing: '0.06em' }}>
-          {`H${level}`}
-        </span>
-        {children}
-      </span>
-    )
+  return {
+    label: `H${level}`,
+    className: 'page-heading-card',
+    style: [
+      `border-left:4px solid ${accent}`,
+      'padding:8px 12px',
+      'margin:2px 0',
+      `background:color-mix(in srgb, ${accent} 14%, transparent)`,
+    ].join(';'),
   }
 }
 
@@ -38,7 +26,7 @@ function Panel() {
         font: '13px/1.5 ui-sans-serif, system-ui, sans-serif',
       }}
     >
-      已替换页面正文的 H1 / H2 / H3。在页面里输入 / 插入标题即可看到卡片样式。关掉本插件后恢复原生标题。
+      已给页面 H1 / H2 / H3 套上卡片皮肤。标题仍是原生 heading，方向键可以上下移动。关掉本插件后恢复默认样式。
     </div>
   )
 }
@@ -54,18 +42,15 @@ function Icon(props: { className?: string }) {
 
 export function apply(ctx: {
   pageEditor: {
-    replaceHeading: (
-      level: 1 | 2 | 3,
-      spec: { View: (props: { level: 1 | 2 | 3; children?: unknown }) => unknown },
-    ) => void
+    replaceHeading: (level: 1 | 2 | 3, spec: { className?: string; style?: string; label?: string }) => void
   }
   slots: {
     place: (slot: string, Comp: unknown, options: { key: string; props: () => { Icon: unknown } }) => void
   }
 }) {
-  ctx.pageEditor.replaceHeading(1, { View: card(1, '#7c5cfc') })
-  ctx.pageEditor.replaceHeading(2, { View: card(2, '#3b82f6') })
-  ctx.pageEditor.replaceHeading(3, { View: card(3, '#22c55e') })
+  ctx.pageEditor.replaceHeading(1, card(1, '#7c5cfc'))
+  ctx.pageEditor.replaceHeading(2, card(2, '#3b82f6'))
+  ctx.pageEditor.replaceHeading(3, card(3, '#22c55e'))
   ctx.slots.place('plugin-store-extras', Panel, {
     key: 'page-heading-cards',
     props: () => ({ Icon }),

@@ -32,12 +32,10 @@ test('page editor paints markdown headings without a chrome toolbar', async () =
   assert.equal(container.querySelector('h1')?.textContent?.trim(), '欢迎')
 })
 
-test('page editor uses plugin heading views when pageEditor has replacements', async () => {
+test('heading plugin skins native h1 and does not install a node view', async () => {
   const ctx = new Context()
   new PageEditorService(ctx)
-  ctx.pageEditor.replaceHeading(1, {
-    View: ({ children }) => <span data-testid="h1-plugin">{children}</span>,
-  })
+  ctx.pageEditor.replaceHeading(1, { label: 'H1', className: 'page-heading-card' })
   const { container } = render(
     <PageEditor
       record={{ id: 'home' }}
@@ -48,9 +46,10 @@ test('page editor uses plugin heading views when pageEditor has replacements', a
     />,
   )
   await waitFor(() => {
-    assert.ok(container.querySelector('h1.page-heading [data-testid="h1-plugin"]'))
+    assert.ok(container.querySelector('h1[data-heading-plugin="1"]'))
   })
-  const heading = container.querySelector('h1.page-heading')
+  const heading = container.querySelector('h1[data-heading-plugin="1"]')
   assert.equal(heading?.textContent?.trim(), '欢迎')
-  assert.equal(heading?.querySelector('[data-node-view-content]')?.tagName, 'SPAN')
+  assert.equal(heading?.classList.contains('page-heading-card'), true)
+  assert.equal(container.querySelector('[data-node-view-wrapper]'), null)
 })

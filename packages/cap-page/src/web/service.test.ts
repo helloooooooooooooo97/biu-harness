@@ -8,16 +8,15 @@ test('replaceHeading is scoped to the calling plugin fiber', async () => {
   const ctx = new Context()
   new PageEditorService(ctx)
   assert.ok(getPageEditor())
-  const View = () => null
   const fiber = ctx.plugin({
     name: 'theme',
     inject: ['pageEditor'],
     apply(inner) {
-      inner.pageEditor.replaceHeading(1, { View })
+      inner.pageEditor.replaceHeading(1, { label: 'H1' })
     },
   })
   await fiber
-  assert.equal(ctx.pageEditor.headingView(1)?.View, View)
+  assert.equal(ctx.pageEditor.headingView(1)?.label, 'H1')
   await fiber.dispose()
   assert.equal(ctx.pageEditor.headingView(1), undefined)
 })

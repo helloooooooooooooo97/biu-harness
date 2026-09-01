@@ -1,13 +1,12 @@
-import { useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
+import { useSyncExternalStore } from 'react'
 import { Service, type Context } from 'cordis'
 
-export type HeadingViewProps = {
-  level: HeadingLevel
-  children?: ReactNode
-}
+export type HeadingLevel = 1 | 2 | 3
 
 export type HeadingReplacement = {
-  View: ComponentType<HeadingViewProps>
+  className?: string
+  style?: string
+  label?: string
 }
 
 export type SlashInsert =
@@ -28,8 +27,6 @@ export type SlashCommandSpec = {
   aliases?: string[]
   insert?: SlashInsert
 }
-
-export type HeadingLevel = 1 | 2 | 3
 
 let bound: PageEditorService | undefined
 
@@ -66,7 +63,7 @@ export class PageEditorService extends Service {
     return [...this.extras]
   }
 
-  /** 用商店插件的 React 组件替换原生 H1 / H2 / H3 外观。卸载插件后恢复。 */
+  /** 给原生 H1 / H2 / H3 加皮肤（class/style/::before 标签）。不要包 Node View，否则方向键无法向上。 */
   replaceHeading(level: HeadingLevel, spec: HeadingReplacement) {
     return this.ctx.effect(() => {
       this.headings.set(level, spec)
@@ -78,7 +75,6 @@ export class PageEditorService extends Service {
     })
   }
 
-  /** 增补或覆盖斜杠菜单项。不要传 TipTap 对象，只用 insert 声明要变成哪种块。 */
   slash(spec: SlashCommandSpec) {
     return this.ctx.effect(() => {
       this.extras = [...this.extras.filter((item) => item.id !== spec.id), spec]
