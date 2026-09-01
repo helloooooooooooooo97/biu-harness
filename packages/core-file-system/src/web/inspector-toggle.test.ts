@@ -230,6 +230,17 @@ test('database inspector tab has a close control beside crumb expand', () => {
   assert.match(tab, /data-testid="inspector-crumb-toggle"/)
 })
 
+test('inspector crumbs lock the first level to an icon', () => {
+  const tab = readFileSync(resolve(import.meta.dirname, './inspector-database.tsx'), 'utf8')
+  const trail = readFileSync(resolve(import.meta.dirname, './crumb-trail.tsx'), 'utf8')
+  const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf8')
+  assert.match(tab, /lockRootCrumb/)
+  assert.match(trail, /lockRootCrumb/)
+  assert.match(trail, /rootLocked/)
+  assert.match(trail, /fsdb-crumb-btn is-static/)
+  assert.doesNotMatch(browser, /lockRootCrumb/)
+})
+
 test('collection header has a layout config control next to the star', () => {
   assert.match(browser, /data-testid="fsdb-layout-toggle"/)
   assert.match(browser, /data-testid="fsdb-layout-menu"/)

@@ -143,6 +143,7 @@ export function CrumbTrail({
   className,
   label,
   allowMenu = true,
+  lockRootCrumb = false,
 }: {
   crumbs: Crumb[]
   openId: string | null
@@ -157,6 +158,8 @@ export function CrumbTrail({
   label?: string
   /** 收起时只激活面板，不弹出某一级的选择菜单 */
   allowMenu?: boolean
+  /** 右侧检查器：一级只显示图标且不可点选，从第二级开始切换 */
+  lockRootCrumb?: boolean
 }) {
   const btnRefs = useRef(new Map<string, HTMLButtonElement>())
   const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null)
@@ -177,13 +180,26 @@ export function CrumbTrail({
   return (
     <nav className={className ?? 'fsdb-crumbs'} aria-label={label ?? '位置'} ref={navRef}>
       {crumbs.map((crumb, index) => {
-        const canPick = allowMenu && canOpenCrumbMenu(crumb)
+        const rootLocked = lockRootCrumb && index === 0 && crumbs.length > 1
+        const canPick = allowMenu && !rootLocked && canOpenCrumbMenu(crumb)
         const open = openId === crumb.id
         const current = crumb.choices.find((item) => item.id === crumb.id)
+        const glyph = (
+          <>
+            {!allowMenu && crumb.kind === 'view' ? <TableGlyph icon={tableIcon} /> : null}
+            <CrumbItemGlyph kind={crumb.kind} icon={crumb.icon ?? current?.icon} mode={current?.mode} emoji={current?.emoji} />
+            {rootLocked ? null : <span className="chat-view-project-name">{crumb.label}</span>}
+          </>
+        )
         return (
           <span key={crumb.id} className="fsdb-crumb">
             {index ? <span className="fsdb-crumb-sep" aria-hidden>/</span> : null}
             <span className="fsdb-crumb-pick">
+              {rootLocked ? (
+                <span className="fsdb-crumb-btn is-static" title={crumb.label} aria-label={crumb.label}>
+                  {glyph}
+                </span>
+              ) : (
               <button
                 type="button"
                 ref={(el) => {
@@ -211,10 +227,9 @@ export function CrumbTrail({
                   onOpenId(null)
                 }}
               >
-                {!allowMenu && crumb.kind === 'view' ? <TableGlyph icon={tableIcon} /> : null}
-                <CrumbItemGlyph kind={crumb.kind} icon={crumb.icon ?? current?.icon} mode={current?.mode} emoji={current?.emoji} />
-                <span className="chat-view-project-name">{crumb.label}</span>
+                {glyph}
               </button>
+              )}
             </span>
           </span>
         )

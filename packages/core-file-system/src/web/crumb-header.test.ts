@@ -17,6 +17,8 @@ describe('顶栏三级标题', () => {
     expect(browser).not.toContain('{ catalog: true }')
     expect(trail).not.toContain("crumb.kind === 'collection' && index < crumbs.length - 1")
     expect(trail).toContain('crumbButtonAction(crumb')
+    expect(trail).toContain('lockRootCrumb')
+    expect(browser).not.toContain('lockRootCrumb')
     expect(browser).toContain('<CrumbTrail')
     const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
     expect(page).toMatch(/onOpenView=\{\(viewId\) => go\(\{ collection: currentPath, viewId \}\)/)

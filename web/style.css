@@ -738,6 +738,16 @@ body {
   overflow: visible;
 }
 
+.inspector-crumb-full .fsdb-crumb-btn.is-static {
+  cursor: default;
+  pointer-events: none;
+}
+
+.inspector-crumb-full .fsdb-crumb-btn.is-static:hover {
+  background: transparent;
+  color: inherit;
+}
+
 .inspector-crumb-full .fsdb-crumb-btn {
   max-width: 140px;
 }

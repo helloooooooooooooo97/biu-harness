@@ -231,6 +231,7 @@ export function DatabaseInspectorTab({
           onOpenId={setCrumbOpen}
           onActivate={onActivate}
           allowMenu={trailOpen}
+          lockRootCrumb
           onPick={(target) => {
             onActivate?.()
             goInspector(id, target)
