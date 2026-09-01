@@ -3844,7 +3844,7 @@ body {
 
 .tool-call-head:hover::before,
 .tool-call-head.is-open::before {
-  background: var(--dsw-hover);
+  background: var(--dsw-sidebar);
 }
 
 .tool-call-toggle {
