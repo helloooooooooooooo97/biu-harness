@@ -212,6 +212,11 @@ export function CollectionBrowser({
   }, [activeViewId, lockedFilters, views])
   const queryFilters = useMemo(() => ({ ...filters, ...catalogLocks }), [catalogLocks, filters])
   const lockedFilterKeys = Object.keys(catalogLocks)
+  const lockedSource = catalogLocks.tablePath ?? ''
+  useEffect(() => {
+    if (!lockedSource) return
+    setMode('table')
+  }, [lockedSource])
   const detailId = openDetailId
   const setDetailId = (id: string | null, row?: DbRecord | null) => {
     flushSync(() => {

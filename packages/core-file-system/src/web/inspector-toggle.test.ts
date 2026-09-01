@@ -105,6 +105,7 @@ test('table title opens record from the title-side button', () => {
   assert.doesNotMatch(nav, /stampRowOpenTarget/)
   assert.doesNotMatch(browser, /onAddField/)
   assert.doesNotMatch(browser, /<AddProperty/)
+  assert.match(browser, /const lockedSource = catalogLocks.tablePath/)
   assert.doesNotMatch(browser, /recordPick\(row\)\} onClick=\{\(\) => setDetailId\(row\.id\)\}/)
 })
 
