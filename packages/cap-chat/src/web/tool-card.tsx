@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Image } from 'antd'
 import {
-  BugAntIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   CheckCircleIcon,
   XCircleIcon,
   ArrowPathIcon,
+  MapIcon,
 } from '@heroicons/react/16/solid'
 import type { ChatToolPart } from '@biu/web-session-view'
 import { pickDomAttrs } from '@biu/cap-pick/web'
@@ -275,7 +275,7 @@ export function ToolCard({
           aria-label="在轨迹中查看"
           onClick={() => onInspect(node.callId)}
         >
-          <BugAntIcon className="size-3.5" aria-hidden />
+          <MapIcon className="size-3.5" aria-hidden />
         </button>
       </div>
       {!open && previewLines && previewLines.length > 0 ? (
