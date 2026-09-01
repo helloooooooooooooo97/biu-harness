@@ -217,7 +217,7 @@ export function ToolCard({
     [node.result?.detail, parsed.kind],
   )
   const [open, setOpen] = useState(() => shouldAutoOpenTool(parsed, node.result?.detail))
-  const summary = toolSummary(parsed, node.result?.detail?.slice(0, 80) || node.arguments.slice(0, 80) || '…')
+  const summary = toolSummary(parsed, node.result?.detail || node.arguments || '…')
   const title = toolTitle(parsed, node.name)
   const previewLines = useMemo(() => {
     if (parsed.kind !== 'str_replace' || open) return null
@@ -263,7 +263,7 @@ export function ToolCard({
             {open ? <ChevronDownIcon className="size-3.5" /> : <ChevronRightIcon className="size-3.5" />}
           </span>
           <span className="tool-call-title">{title}</span>
-          <span className="tool-call-summary">{summary}</span>
+          {open ? null : <span className="tool-call-summary">{summary}</span>}
         </button>
         <span className={status.className} title={status.label} aria-label={status.label}>
           {status.icon}
