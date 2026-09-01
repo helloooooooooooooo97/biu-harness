@@ -5,11 +5,13 @@ import {
   asHttpHref,
   asImageSrc,
   normalizeSchemaValue,
+  schemaSearchHaystack,
   withBuiltinFields,
   type CollectionAction,
   type CollectionActionInfo,
   type CollectionInfo,
   type CollectionSchema,
+  type CollectionSchemaPack,
   type CollectionSpec,
   type Database,
   type DbRecord,
@@ -212,25 +214,39 @@ function assertViewAvailable(entry: CollectionSpec, others: CollectionSpec[]) {
   }
 }
 
-function matchQuery(record: DbRecord, q: string) {
+function matchQuery(record: DbRecord, q: string, packs: CollectionSchemaPack[] = []) {
   const needle = q.trim().toLowerCase()
   if (!needle) return true
   if (String(record.id).toLowerCase().includes(needle)) return true
-  for (const value of Object.values(record)) {
+  for (const [key, value] of Object.entries(record)) {
     if (value == null || value === '') continue
+    if (key === 'schema' || (value && typeof value === 'object' && !Array.isArray(value) && 'tags' in (value as object))) {
+      if (schemaSearchHaystack(value, packs).toLowerCase().includes(needle)) return true
+      continue
+    }
     const text = Array.isArray(value) ? value.map(String).join(' ') : typeof value === 'object' ? '' : String(value)
     if (text.toLowerCase().includes(needle)) return true
   }
   return false
 }
 
-function matchListFilter(record: DbRecord, filter: Record<string, unknown> | undefined, schema: CollectionSchema) {
+function matchListFilter(record: DbRecord, filter: Record<string, unknown> | undefined, schema: CollectionSchema, packs: CollectionSchemaPack[] = []) {
   if (!filter) return true
   for (const [key, expected] of Object.entries(filter)) {
     if (expected == null || expected === '') continue
     const want = String(expected)
     const actual = record[key]
     const field = schema.fields[key]
+    if (field?.type === 'schema') {
+      const parsed = normalizeSchemaValue(actual)
+      const hit = parsed.tags.some((id) => {
+        if (id === want) return true
+        const pack = packs.find((item) => item.id === id)
+        return pack?.label === want
+      })
+      if (!hit) return false
+      continue
+    }
     if (field?.type === 'datetime' && ['1h', '24h', '7d', '30d'].includes(want)) {
       const n = Number(actual)
       if (!Number.isFinite(n) || n <= 0) return false
@@ -278,6 +294,7 @@ export function clampPage(limit?: number, offset?: number) {
 
 export class DatabaseService extends Service implements Database {
   private collections = new Map<string, CollectionSpec>()
+  schemaTags = new SchemaTagsStore()
 
   private bumpQueued = false
 
@@ -379,8 +396,9 @@ export class DatabaseService extends Service implements Database {
     const q = page?.q ?? ''
     const sortField = page?.sortField ?? ''
     const sortDir = page?.sortDir === 'desc' ? 'desc' : 'asc'
+    const packs = this.schemaTags.list()
     const matched = (await spec.list()).filter(
-      (row) => matchListFilter(row, filter, schema) && matchQuery(row, q),
+      (row) => matchListFilter(row, filter, schema, packs) && matchQuery(row, q, packs),
     )
     const sorted = sortRecords(matched, sortField, sortDir)
     const total = sorted.length
@@ -400,6 +418,30 @@ export class DatabaseService extends Service implements Database {
         kind: 'record',
       })),
     }
+  }
+
+  async collectSuperTag(id: string) {
+    const tagId = String(id ?? '').trim()
+    if (!tagId) return { tag: null as CollectionSchemaPack | null, items: [] as Array<Record<string, string>> }
+    const tag = this.schemaTags.list().find((item) => item.id === tagId || item.label === tagId) ?? null
+    const want = tag?.id ?? tagId
+    const items: Array<Record<string, string>> = []
+    for (const spec of this.collectionsList()) {
+      const schema = schemaFor(spec)
+      if (!schema.fields.schema) continue
+      const labelKey = schema.labelField ?? 'title'
+      for (const row of await spec.list()) {
+        if (!normalizeSchemaValue(row.schema).tags.includes(want)) continue
+        items.push({
+          collection: spec.path,
+          collectionLabel: spec.label ?? spec.id,
+          id: row.id,
+          path: `${spec.path}/${row.id}`,
+          title: String(row[labelKey] ?? row.id),
+        })
+      }
+    }
+    return { tag, items }
   }
 
   async read(path: string) {
@@ -531,7 +573,7 @@ export const inject = ['tools', 'http']
 export function apply(ctx: Context) {
   const db = new DatabaseService(ctx)
   const savedViews = new SavedViewsStore()
-  const schemaTags = new SchemaTagsStore()
+  const schemaTags = db.schemaTags
   db.register(viewsCollection(savedViews, () => db.collectionsList().map((item) => ({
     id: item.id,
     path: item.path,
@@ -709,10 +751,14 @@ export function apply(ctx: Context) {
       route.send(400, { error: String(error) })
     }
   })
-  ctx.http.route('GET', '/api/db/schema-tags', (route) => {
+  ctx.http.route('GET', '/api/db/schema-tags', async (route) => {
     try {
-      const path = route.query.get('path') || ''
-      route.send(200, { tags: schemaTags.list(path) })
+      const collect = route.query.get('collect') || ''
+      if (collect) {
+        route.send(200, await db.collectSuperTag(collect))
+        return
+      }
+      route.send(200, { tags: schemaTags.list() })
     } catch (error) {
       route.send(400, { error: String(error) })
     }
@@ -720,9 +766,9 @@ export function apply(ctx: Context) {
   ctx.http.route('POST', '/api/db/schema-tags', async (route) => {
     try {
       const body = (await route.json()) as { path?: string; tags?: unknown[] }
-      schemaTags.replace(String(body?.path ?? ''), Array.isArray(body.tags) ? body.tags : [])
+      schemaTags.replace(Array.isArray(body.tags) ? body.tags : [])
       ctx.emit('database/change')
-      route.send(200, { ok: true, tags: schemaTags.list(String(body?.path ?? '')) })
+      route.send(200, { ok: true, tags: schemaTags.list() })
     } catch (error) {
       route.send(400, { error: String(error) })
     }

@@ -58,11 +58,14 @@ test('formatField renders datetime bytes tags and media', () => {
 
 test('filters and sort follow declared column types', () => {
   const rows = [
-    { id: '2', title: 'b', status: 'todo', tags: ['x'], dueAt: 20 },
-    { id: '1', title: 'a', status: 'doing', tags: ['x', 'y'], dueAt: 10 },
+    { id: '2', title: 'b', status: 'todo', tags: ['x'], dueAt: 20, schema: { tags: ['dp'], values: {} } },
+    { id: '1', title: 'a', status: 'doing', tags: ['x', 'y'], dueAt: 10, schema: { tags: [], values: {} } },
   ]
+  const withSchema = { ...schema, fields: { ...schema.fields, schema: { type: 'schema' as const } } }
   assert.equal(matchesFilters(rows[1]!, { status: 'doing' }, schema), true)
   assert.equal(matchesFilters(rows[0]!, { tags: 'y' }, schema), false)
+  assert.equal(matchesFilters(rows[0]!, { schema: 'dp' }, withSchema), true)
+  assert.equal(matchesFilters(rows[1]!, { schema: 'dp' }, withSchema), false)
   assert.deepEqual(
     sortRows(rows, schema, 'status', 'asc').map((row) => row.id),
     ['2', '1'],

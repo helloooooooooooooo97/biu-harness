@@ -428,7 +428,7 @@ export function CollectionBrowser({
           sortDir,
           filters: queryFilters,
         }),
-        pullSchemaTags(collectionPath),
+        pullSchemaTags(),
       ])
       if (gen !== reloadGen.current) return true
       setStat((prev) => (prev?.schema && JSON.stringify(prev.schema) === JSON.stringify(nextStat.schema) ? prev : nextStat))
@@ -1150,7 +1150,7 @@ export function CollectionBrowser({
     const fallback = formatField(field, row[key])
     if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={fallback} />
     if (resolveFieldType(field) === 'schema') {
-      return <SchemaChips value={row[key]} tags={loadSchemaTags(collectionPath)} />
+      return <SchemaChips value={row[key]} tags={loadSchemaTags()} />
     }
     if (resolveFieldType(field) === 'select' && field.writable && field.enum?.length) {
       return (
@@ -1945,6 +1945,11 @@ export function CollectionBrowser({
                               { value: 'true', label: '是' },
                               { value: 'false', label: '否' },
                             ]
+                        : item.kind === 'schema'
+                          ? uniqueValues(items, item.key, item.field).map((option) => ({
+                              value: option,
+                              label: loadSchemaTags().find((tag) => tag.id === option)?.label ?? option,
+                            }))
                           : uniqueValues(items, item.key, item.field).map((option) => ({ value: option, label: option }))
                     return (
                       <div key={item.key} className="fsdb-filter-row">

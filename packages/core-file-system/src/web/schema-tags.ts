@@ -1,77 +1,89 @@
 import { normalizeSchemaPack, type CollectionSchemaPack } from '@biu/type-file-system'
 
-export function schemaTagsKey(collectionPath: string) {
-  return `fsdb.schemaTags:${collectionPath}`
+export const SUPER_TAGS_KEY = 'fsdb.superTags'
+
+let memory: CollectionSchemaPack[] | null = null
+const listeners = new Set<() => void>()
+
+function emit() {
+  for (const fn of listeners) fn()
 }
 
-const memory = new Map<string, CollectionSchemaPack[]>()
-const listeners = new Map<string, Set<() => void>>()
-
-function emit(collectionPath: string) {
-  for (const fn of listeners.get(collectionPath) ?? []) fn()
+function parseTags(raw: unknown): CollectionSchemaPack[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map((item) => normalizeSchemaPack(item)).filter((item): item is CollectionSchemaPack => Boolean(item))
 }
 
-export function subscribeSchemaTags(collectionPath: string, fn: () => void) {
-  const set = listeners.get(collectionPath) ?? new Set<() => void>()
-  set.add(fn)
-  listeners.set(collectionPath, set)
+function mergeLegacyLocal(): CollectionSchemaPack[] {
+  const byId = new Map<string, CollectionSchemaPack>()
+  try {
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith('fsdb.schemaTags:')) continue
+      for (const tag of parseTags(JSON.parse(localStorage.getItem(key) ?? '[]'))) byId.set(tag.id, tag)
+    }
+  } catch {
+    /* ignore */
+  }
+  return [...byId.values()]
+}
+
+export function subscribeSchemaTags(_collectionPath: string | undefined, fn: () => void) {
+  listeners.add(fn)
   return () => {
-    set.delete(fn)
+    listeners.delete(fn)
   }
 }
 
-export function loadSchemaTags(collectionPath: string): CollectionSchemaPack[] {
-  const hit = memory.get(collectionPath)
-  if (hit) return hit
+export function loadSchemaTags(_collectionPath?: string): CollectionSchemaPack[] {
+  if (memory) return memory
   try {
-    const raw = localStorage.getItem(schemaTagsKey(collectionPath))
-    const parsed = raw ? (JSON.parse(raw) as unknown[]) : []
-    const tags = Array.isArray(parsed)
-      ? parsed.map((item) => normalizeSchemaPack(item)).filter((item): item is CollectionSchemaPack => Boolean(item))
-      : []
-    memory.set(collectionPath, tags)
+    const stored = parseTags(JSON.parse(localStorage.getItem(SUPER_TAGS_KEY) ?? '[]'))
+    const tags = stored.length ? stored : mergeLegacyLocal()
+    memory = tags
     return tags
   } catch {
-    return []
+    memory = []
+    return memory
   }
 }
 
-export function persistSchemaTags(collectionPath: string, tags: CollectionSchemaPack[]) {
-  const next = tags.map((item) => normalizeSchemaPack(item)).filter((item): item is CollectionSchemaPack => Boolean(item))
-  memory.set(collectionPath, next)
+export function persistSchemaTags(tags: CollectionSchemaPack[], _collectionPath?: string) {
+  const next = parseTags(tags)
+  memory = next
   try {
-    localStorage.setItem(schemaTagsKey(collectionPath), JSON.stringify(next))
+    localStorage.setItem(SUPER_TAGS_KEY, JSON.stringify(next))
   } catch {
     /* ignore */
   }
   void fetch('/api/db/schema-tags', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ path: collectionPath, tags: next }),
+    body: JSON.stringify({ tags: next }),
   }).catch(() => undefined)
-  emit(collectionPath)
+  emit()
 }
 
-export async function pullSchemaTags(collectionPath: string) {
+export async function pullSchemaTags(_collectionPath?: string) {
   try {
-    const res = await fetch(`/api/db/schema-tags?path=${encodeURIComponent(collectionPath)}`)
+    const res = await fetch('/api/db/schema-tags')
     const body = (await res.json()) as { tags?: unknown[] }
-    if (!res.ok || !Array.isArray(body.tags)) return loadSchemaTags(collectionPath)
-    const tags = body.tags.map((item) => normalizeSchemaPack(item)).filter((item): item is CollectionSchemaPack => Boolean(item))
+    if (!res.ok || !Array.isArray(body.tags)) return loadSchemaTags()
+    const tags = parseTags(body.tags)
     if (tags.length) {
-      memory.set(collectionPath, tags)
+      memory = tags
       try {
-        localStorage.setItem(schemaTagsKey(collectionPath), JSON.stringify(tags))
+        localStorage.setItem(SUPER_TAGS_KEY, JSON.stringify(tags))
       } catch {
         /* ignore */
       }
-      emit(collectionPath)
+      emit()
       return tags
     }
   } catch {
     /* ignore */
   }
-  return loadSchemaTags(collectionPath)
+  return loadSchemaTags()
 }
 
 export function slugTagId(label: string, used: Set<string>) {

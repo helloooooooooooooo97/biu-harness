@@ -2,9 +2,9 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { SchemaTagsStore } from './schema-tags.ts'
 
-test('SchemaTagsStore keeps atomic fields and drops nested schema types', () => {
+test('SchemaTagsStore is a workspace-wide SuperTag catalog', () => {
   const store = new SchemaTagsStore()
-  store.replace('/pages', [
+  store.replace([
     {
       id: 'dp',
       label: '动态规划',
@@ -15,7 +15,7 @@ test('SchemaTagsStore keeps atomic fields and drops nested schema types', () => 
     },
     { id: '??', label: '坏的', fields: [] },
   ])
-  const tags = store.list('/pages/')
+  const tags = store.list()
   assert.equal(tags.length, 1)
   assert.equal(tags[0]?.id, 'dp')
   assert.deepEqual(tags[0]?.fields.map((field) => field.key), ['complexity'])

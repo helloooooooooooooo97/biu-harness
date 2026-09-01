@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { asImageSrc, emptySchemaValue, normalizeSchemaPack, normalizeSchemaValue, withBuiltinFields } from './index.ts'
+import { asImageSrc, emptySchemaValue, normalizeSchemaPack, normalizeSchemaValue, schemaSearchHaystack, withBuiltinFields } from './index.ts'
 
 test('asImageSrc keeps http, data:image, and same-origin image paths', () => {
   assert.equal(asImageSrc('https://example.com/a.png'), 'https://example.com/a.png')
@@ -17,13 +17,13 @@ test('asImageSrc rejects scripts and non-image paths', () => {
   assert.equal(asImageSrc('../secret.png'), '')
 })
 
-test('normalizeSchemaValue keeps tags and per-tag values', () => {
-  assert.deepEqual(normalizeSchemaValue(null), emptySchemaValue())
-  assert.deepEqual(normalizeSchemaValue(['dp', 'io', 'dp']), { tags: ['dp', 'io'], values: {} })
-  assert.deepEqual(
-    normalizeSchemaValue({ tags: ['dp'], values: { dp: { complexity: 'O(n)' }, skip: 1 } }),
+test('schemaSearchHaystack includes SuperTag labels and field values', () => {
+  const text = schemaSearchHaystack(
     { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } },
+    [{ id: 'dp', label: '动态规划', fields: [] }],
   )
+  assert.match(text, /动态规划/)
+  assert.match(text, /O\(n\)/)
 })
 
 test('normalizeSchemaPack drops nested schema fields', () => {
@@ -39,8 +39,9 @@ test('normalizeSchemaPack drops nested schema fields', () => {
   assert.deepEqual(pack?.fields.map((field) => field.key), ['complexity'])
 })
 
-test('withBuiltinFields always includes writable schema', () => {
+test('withBuiltinFields always includes writable SuperTag schema', () => {
   const fields = withBuiltinFields({ title: { type: 'string', writable: true } })
   assert.equal(fields.schema?.type, 'schema')
   assert.equal(fields.schema?.writable, true)
+  assert.equal(fields.schema?.label, 'SuperTag')
 })

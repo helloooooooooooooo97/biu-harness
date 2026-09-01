@@ -40,4 +40,7 @@ test('collection browser renders extra views registered for that path', () => {
   assert.match(browser, /<customView\.View/)
   assert.match(browser, /collectionPath=\{collectionPath\}/)
   assert.match(browser, /SchemaChips/)
+  const schemaUi = readFileSync(resolve(import.meta.dirname, './schema-field.tsx'), 'utf8')
+  assert.match(schemaUi, /SuperTag 是工作区全局的/)
+  assert.match(schemaUi, /选择或新建 SuperTag/)
 })

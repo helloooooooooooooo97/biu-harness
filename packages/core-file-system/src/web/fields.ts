@@ -1,5 +1,6 @@
 import type { CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
-import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS, normalizeSchemaValue } from '@biu/type-file-system'
+import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS, normalizeSchemaValue, schemaSearchHaystack } from '@biu/type-file-system'
+import { loadSchemaTags } from './schema-tags.ts'
 
 export const BUILTIN_VIEW_MODES = ['queue', 'table', 'cards', 'board'] as const
 export type BuiltinViewMode = (typeof BUILTIN_VIEW_MODES)[number]
@@ -185,8 +186,8 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
     return tags.length ? tags.join(', ') : '—'
   }
   if (kind === 'schema') {
-    const tags = normalizeSchemaValue(value).tags
-    return tags.length ? tags.join(', ') : '—'
+    const parsed = normalizeSchemaValue(value)
+    return parsed.tags.length ? parsed.tags.join(', ') : '—'
   }
   return String(value)
 }
@@ -230,6 +231,10 @@ export function matchesQuery(row: DbRecord, query: string, schema: CollectionSch
   if (!q) return true
   if (String(row.id).toLowerCase().includes(q)) return true
   for (const [key, field] of Object.entries(schema.fields)) {
+    if (resolveFieldType(field) === 'schema') {
+      if (schemaSearchHaystack(row[key], loadSchemaTags()).toLowerCase().includes(q)) return true
+      continue
+    }
     const text = formatField(field, row[key]).toLowerCase()
     if (text.includes(q)) return true
   }
@@ -252,6 +257,13 @@ export function matchesFilters(row: DbRecord, filters: Record<string, string>, s
     }
     if (kind === 'multi-select') {
       if (!asStringList(row[key]).includes(expected)) return false
+      continue
+    }
+    if (kind === 'schema') {
+      const parsed = normalizeSchemaValue(row[key])
+      if (!parsed.tags.includes(expected) && !loadSchemaTags().some((tag) => parsed.tags.includes(tag.id) && tag.label === expected)) {
+        return false
+      }
       continue
     }
     if (kind === 'boolean') {
@@ -289,6 +301,8 @@ export function uniqueValues(rows: DbRecord[], key: string, field: FieldSpec): s
   for (const row of rows) {
     if (resolveFieldType(field) === 'multi-select') {
       for (const item of asStringList(row[key])) set.add(item)
+    } else if (resolveFieldType(field) === 'schema') {
+      for (const item of normalizeSchemaValue(row[key]).tags) set.add(item)
     } else if (row[key] != null && row[key] !== '') {
       set.add(String(row[key]))
     }
@@ -298,7 +312,7 @@ export function uniqueValues(rows: DbRecord[], key: string, field: FieldSpec): s
 }
 
 export function isGroupableKind(kind: FieldType) {
-  return kind === 'select' || kind === 'multi-select'
+  return kind === 'select' || kind === 'multi-select' || kind === 'schema'
 }
 
 export function groupableFields(schema: CollectionSchema | undefined) {
@@ -332,8 +346,8 @@ export function groupRecords(rows: DbRecord[], schema: CollectionSchema | undefi
       buckets.set(flag ? 'true' : 'false', [...(buckets.get(flag ? 'true' : 'false') ?? []), row])
       continue
     }
-    if (kind === 'multi-select') {
-      const tags = asStringList(row[group.key])
+    if (kind === 'multi-select' || kind === 'schema') {
+      const tags = kind === 'schema' ? normalizeSchemaValue(row[group.key]).tags : asStringList(row[group.key])
       if (!tags.length) {
         unset.push(row)
         continue

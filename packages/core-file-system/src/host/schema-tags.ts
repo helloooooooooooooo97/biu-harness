@@ -1,16 +1,23 @@
-import { normalizeCollectionPath } from '../paths.ts'
 import { normalizeSchemaPack, type CollectionSchemaPack } from '@biu/type-file-system'
 
+/** 工作区一份 SuperTag 目录，不按表拆。 */
 export class SchemaTagsStore {
-  private byPath = new Map<string, CollectionSchemaPack[]>()
+  private tags: CollectionSchemaPack[] = []
 
-  list(collectionPath: string): CollectionSchemaPack[] {
-    return this.byPath.get(normalizeCollectionPath(collectionPath)) ?? []
+  list(): CollectionSchemaPack[] {
+    return this.tags
   }
 
-  replace(collectionPath: string, tags: unknown[]) {
-    const path = normalizeCollectionPath(collectionPath)
-    const next = tags.map((item) => normalizeSchemaPack(item)).filter((item): item is CollectionSchemaPack => Boolean(item))
-    this.byPath.set(path, next)
+  replace(tags: unknown[]): CollectionSchemaPack[] {
+    const seen = new Set<string>()
+    const next: CollectionSchemaPack[] = []
+    for (const item of tags) {
+      const pack = normalizeSchemaPack(item)
+      if (!pack || seen.has(pack.id)) continue
+      seen.add(pack.id)
+      next.push(pack)
+    }
+    this.tags = next
+    return this.tags
   }
 }

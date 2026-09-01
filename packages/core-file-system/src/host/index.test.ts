@@ -135,6 +135,11 @@ test('every collection schema includes id, title, createdAt and updatedAt', asyn
   assert.equal(stat.schema.contentField, 'content')
   const tagged = await db.update('/notes/n1', { schema: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } } })
   assert.deepEqual(tagged.value.schema, { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } })
+  db.schemaTags.replace([{ id: 'dp', label: '动态规划', fields: [] }])
+  const byLabel = await db.list('/notes', undefined, { q: '动态规划' })
+  assert.equal(byLabel.items.length, 1)
+  const byFilter = await db.list('/notes', { schema: 'dp' })
+  assert.equal(byFilter.items.length, 1)
   await assert.rejects(() => db.update('/notes/n1', { createdAt: Date.now() }), /not writable/)
   await assert.rejects(() => db.update('/notes/n1', { id: 'other' }), /not writable/)
 })
@@ -333,6 +338,33 @@ test('create and delete follow records caps declared at register', async () => {
   const after = await db.list('/notes')
   if (after.kind !== 'collection') return
   assert.equal(after.items.length, 1)
+})
+
+test('SuperTag catalog is workspace-wide and collect scans every table', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  db.register(notesCollection())
+  const pages = new Map<string, Record<string, unknown>>([['p1', { id: 'p1', title: '首页' }]])
+  db.register({
+    id: 'pages',
+    path: '/pages',
+    schema: { fields: { title: { type: 'string', writable: true } } },
+    records: { update: true },
+    list: () => [...pages.values()] as { id: string }[],
+    get: (id) => pages.get(id) as { id: string } | undefined,
+    update: (id, patch) => {
+      const next = { ...pages.get(id), ...patch, id }
+      pages.set(id, next)
+      return next as { id: string }
+    },
+  })
+  db.schemaTags.replace([{ id: 'dp', label: '动态规划', fields: [] }])
+  await db.update('/notes/n1', { schema: { tags: ['dp'], values: {} } })
+  await db.update('/pages/p1', { schema: { tags: ['dp'], values: {} } })
+  const collected = await db.collectSuperTag('动态规划')
+  assert.equal(collected.tag?.id, 'dp')
+  assert.equal(collected.items.length, 2)
+  assert.deepEqual(collected.items.map((item) => item.path).sort(), ['/notes/n1', '/pages/p1'])
 })
 
 test('tables without records.create/delete reject create and delete', async () => {

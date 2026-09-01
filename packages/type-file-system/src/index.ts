@@ -82,10 +82,10 @@ export const BUILTIN_FIELDS = {
   updatedAt: { type: 'datetime', label: '更新时间' },
   content: { type: 'file', label: '内容' },
   emoji: { type: 'string', label: '图标', writable: true },
-  schema: { type: 'schema', label: 'Schema', writable: true },
+  schema: { type: 'schema', label: 'SuperTag', writable: true },
 } as const satisfies Record<string, FieldSpec>
 
-/** 表格默认不展开这些内置列（标题除外）。Schema 作为默认业务列留下。 */
+/** 表格默认不展开这些内置列（标题除外）。SuperTag 作为默认业务列留下。 */
 export const BUILTIN_FIELD_KEYS = ['id', 'createdAt', 'updatedAt', 'content', 'emoji'] as const
 
 /** Schema 包内允许的原子类型，不能再套 schema。 */
@@ -182,6 +182,27 @@ export function normalizeSchemaValue(raw: unknown): SchemaFieldValue {
     }
   }
   return { tags, values }
+}
+
+/** 全文检索：Tag id、显示名、以及包内已填的值。 */
+export function schemaSearchHaystack(raw: unknown, packs: CollectionSchemaPack[] = []): string {
+  const parsed = normalizeSchemaValue(raw)
+  const labelOf = (id: string) => packs.find((pack) => pack.id === id)?.label ?? id
+  const parts: string[] = []
+  for (const id of parsed.tags) {
+    parts.push(id, labelOf(id))
+  }
+  for (const [tagId, bag] of Object.entries(parsed.values)) {
+    parts.push(tagId, labelOf(tagId))
+    for (const [key, item] of Object.entries(bag)) {
+      parts.push(key)
+      if (item == null || item === '') continue
+      if (Array.isArray(item)) parts.push(...item.map(String))
+      else if (typeof item === 'object') parts.push(JSON.stringify(item))
+      else parts.push(String(item))
+    }
+  }
+  return parts.join(' ')
 }
 
 export function withBuiltinFields(
