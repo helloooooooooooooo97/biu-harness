@@ -3672,6 +3672,119 @@ body {
   max-width: var(--dsw-chat-max-width);
 }
 
+.chat-outline {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 196px;
+  min-width: 196px;
+  min-height: 0;
+  border-left: 1px solid color-mix(in srgb, var(--dsw-border) 70%, transparent);
+  background: var(--dsw-sidebar);
+  color: var(--dsw-sidebar-fg);
+}
+
+.chat-outline.is-collapsed {
+  width: 36px;
+  min-width: 36px;
+  align-items: center;
+  padding-top: 10px;
+  background: transparent;
+  border-left: 0;
+}
+
+.chat-outline-fab,
+.chat-outline-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dsw-sidebar) 88%, #000);
+  color: var(--dsw-sidebar-fg);
+  cursor: pointer;
+}
+
+.chat-outline-fab:hover,
+.chat-outline-icon-btn:hover {
+  color: var(--dsw-sidebar-fg-active);
+  background: var(--dsw-hover);
+}
+
+.chat-outline-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 10px 6px;
+}
+
+.chat-outline-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dsw-sidebar-fg-active);
+}
+
+.chat-outline-list {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 4px 8px 16px;
+}
+
+.chat-outline-item {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  padding: 4px 8px;
+  color: var(--dsw-sidebar-fg);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-outline-item:hover {
+  background: var(--dsw-hover);
+  color: var(--dsw-sidebar-fg-active);
+}
+
+.chat-outline-item.is-robot {
+  opacity: 0.78;
+}
+
+.chat-outline-dot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.45;
+}
+
+.chat-outline-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-outline-empty {
+  padding: 8px;
+  color: var(--dsw-label-3);
+  font-size: 12px;
+}
+
 /* 折叠靠 hidden，不卸载，展开不再重建 Markdown/工具 DOM */
 .chat-reply-details {
   display: flex;

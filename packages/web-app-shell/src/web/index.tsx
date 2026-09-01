@@ -19,6 +19,7 @@ import type { Context } from 'cordis'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSnapshot, type SnapshotService } from '@biu/web-snapshot'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
+import { getChatOutlineOpen, setChatOutlineOpen, subscribeChatOutline } from '@biu/web-session-view'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
 import { parseAppPath } from '@biu/web-session-view'
 import {
@@ -184,12 +185,13 @@ const AgentMainPanels = memo(function AgentMainPanels({
         data-testid="agent-center"
       >
         <div className="absolute inset-0 z-1 flex min-h-0 overflow-hidden">
-          <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             {centerStage}
             <div className="chat-composer-dock pointer-events-none absolute inset-x-0 bottom-0 bg-transparent px-6 pb-4 md:px-8 lg:px-10">
               {centerDock}
             </div>
           </div>
+          {renderSlot('stage-aside')}
         </div>
       </div>
       {overlayNode}
@@ -268,6 +270,7 @@ function Shell(props: SlotProps) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<string>('plugins')
   const [configOpen, setConfigOpen] = useState(false)
+  const outlineOpen = useSyncExternalStore(subscribeChatOutline, getChatOutlineOpen, () => true)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       return localStorage.getItem('cordis.sidebar.collapsed') === '1'
@@ -556,6 +559,21 @@ function Shell(props: SlotProps) {
       <div className="chat-view-header-right">
         <button
           type="button"
+          className={`chat-view-header-expand${outlineOpen ? ' is-active' : ''}`}
+          title={outlineOpen ? '收起消息大纲' : '打开消息大纲'}
+          aria-label={outlineOpen ? '收起消息大纲' : '打开消息大纲'}
+          aria-pressed={outlineOpen}
+          data-testid="header-outline-toggle"
+          onClick={() => setChatOutlineOpen(!outlineOpen)}
+        >
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden className="size-4 shrink-0">
+            <rect x="1.25" y="3.4" width="13.5" height="1.7" rx="0.85" fill="currentColor" opacity="0.38" />
+            <rect x="1.25" y="7.15" width="13.5" height="1.7" rx="0.85" fill="currentColor" />
+            <rect x="1.25" y="10.9" width="13.5" height="1.7" rx="0.85" fill="currentColor" opacity="0.38" />
+          </svg>
+        </button>
+        <button
+          type="button"
           className="chat-view-header-expand"
           title="配置"
           aria-label="配置"
@@ -788,6 +806,7 @@ export function apply(ctx: Context) {
       demos: { kind: 'list' },
       dock: { kind: 'list' },
       stage: { kind: 'list' },
+      'stage-aside': { kind: 'single' },
       trajectory: { kind: 'list' },
       project: { kind: 'single' },
       composer: { kind: 'single' },

@@ -19,6 +19,7 @@ import {
 } from '@heroicons/react/16/solid'
 import { ImageThumbs } from './image-thumbs.tsx'
 import { bindSessionView, type SessionListItem, type SessionViewService } from '@biu/web-session-view'
+import { nodeIdFromOutlineEvent } from '@biu/web-session-view'
 import {
   formatTokens,
   type ChatNode,
@@ -48,6 +49,7 @@ import {
   revealStartForMemory,
   shouldRevealFast,
   sliceTurnsFrom,
+  turnIndexContaining,
 } from './thread-reveal.ts'
 
 export { groupNodesIntoTurns } from './thread-reveal.ts'
@@ -789,6 +791,30 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       navigate(`/s/${id}`)
     })
   }, [sessionView, navigate])
+
+  const outlineTargetRef = useRef<string | null>(null)
+  useEffect(() => {
+    const onGo = (event: Event) => {
+      const id = nodeIdFromOutlineEvent(event)
+      if (!id) return
+      const idx = turnIndexContaining(nodes, id)
+      if (idx < 0) return
+      outlineTargetRef.current = id
+      setRevealStart((start) => Math.min(start, idx))
+    }
+    window.addEventListener('biu:chat-outline-go', onGo)
+    return () => window.removeEventListener('biu:chat-outline-go', onGo)
+  }, [nodes])
+
+  useLayoutEffect(() => {
+    const id = outlineTargetRef.current
+    if (!id) return
+    const escaped = typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(id) : id
+    const el = document.querySelector<HTMLElement>(`[data-node-id="${escaped}"]`)
+    if (!el) return
+    outlineTargetRef.current = null
+    el.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }, [mountedNodes, revealStart])
 
   useLayoutEffect(() => {
     const parent = findScrollParent(rootRef.current)

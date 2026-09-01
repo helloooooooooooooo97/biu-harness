@@ -58,6 +58,18 @@ export {
 } from './session-groups.ts'
 export { useSidebarCollapseStore } from './sidebar-collapse-store.ts'
 export {
+  subscribeChatOutline,
+  getChatOutlineOpen,
+  setChatOutlineOpen,
+  getChatOutlineFilter,
+  setChatOutlineFilter,
+  deriveChatOutline,
+  requestChatOutlineGo,
+  nodeIdFromOutlineEvent,
+  type ChatOutlineFilter,
+  type ChatOutlineItem,
+} from './chat-outline.ts'
+export {
   SIDEBAR_MASCOT_INTRO_MS,
   markSidebarMascotFresh,
   remainingSidebarMascotIntroMs,

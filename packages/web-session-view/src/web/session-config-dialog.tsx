@@ -4,6 +4,7 @@ import {
   bindSessionView,
   type SessionViewService,
 } from './index.ts'
+import { ChatOutlineFilterFields } from './chat-outline-fields.tsx'
 
 type ToolSourceId = 'minimal' | 'live' | 'plugin' | 'store'
 type AgentMode = 'standard' | 'minimal' | 'create'
@@ -174,6 +175,8 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
               <p className="m-0 text-[11px] leading-[1.45] text-(--dsw-label-3)">
                 名称、提示词和工具只作用于当前 session；未改的字段沿用全局默认。
               </p>
+
+              <ChatOutlineFilterFields />
 
               <label className="flex flex-col gap-1 text-[11px] text-(--dsw-label-3)">
                 <span>名称</span>
