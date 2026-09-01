@@ -179,7 +179,7 @@ function TagPicker({
           ref={inputRef}
           className="fsdb-schema-tokens-input"
           value={draft}
-          placeholder={selected.length ? '搜索' : '选择或新建'}
+          placeholder=""
           onFocus={() => setOpen(true)}
           onChange={(event) => {
             setDraft(event.target.value)
