@@ -82,3 +82,47 @@ test('page editor paints a registered algorithm block', async () => {
   assert.equal(container.querySelector('[data-testid="algo-view"]')?.textContent, 'Two Sum')
 })
 
+test('page editor hydrates markdown after content fetch', async () => {
+  const ctx = new Context()
+  new PageEditorService(ctx)
+  ctx.pageEditor.registerBlock({
+    kind: 'algorithm',
+    label: '算法题',
+    defaults: { title: 'Two Sum' },
+    View: ({ data }) => <div data-testid="algo-view">{String(data.title ?? '')}</div>,
+  })
+  const src = `:::pageBlock {kind=algorithm}
+{"title":"Two Sum"}
+:::
+
+一段正文
+`
+  const { container, rerender } = render(
+    <PageEditor
+      record={{ id: 'home' }}
+      field="notes"
+      spec={{ type: 'file', label: '正文', writable: true }}
+      value={null}
+      writable
+    />,
+  )
+  await waitFor(() => {
+    assert.ok(container.querySelector('[data-testid="page-editor"]'))
+  })
+  assert.equal(container.querySelector('[data-testid="algo-view"]'), null)
+  rerender(
+    <PageEditor
+      record={{ id: 'home' }}
+      field="notes"
+      spec={{ type: 'file', label: '正文', writable: true }}
+      value={src}
+      writable
+    />,
+  )
+  await waitFor(() => {
+    assert.ok(container.querySelector('[data-testid="algo-view"]'))
+  })
+  assert.equal(container.querySelector('[data-testid="algo-view"]')?.textContent, 'Two Sum')
+  assert.match(container.textContent ?? '', /一段正文/)
+})
+

@@ -43,6 +43,7 @@ function Bubble({ editor }: { editor: Editor }) {
 export function PageEditor({ record, value, writable, onChange }: FsContentProps) {
   const saved = useRef(asMarkdown(value))
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hydratedId = useRef<string | null>(null)
 
   const editor = useEditor(
     {
@@ -61,6 +62,7 @@ export function PageEditor({ record, value, writable, onChange }: FsContentProps
         },
       },
       onUpdate: ({ editor: current }) => {
+        if (hydratedId.current !== record.id) return
         if (timer.current) clearTimeout(timer.current)
         timer.current = setTimeout(() => {
           queueMicrotask(() => {
@@ -73,6 +75,7 @@ export function PageEditor({ record, value, writable, onChange }: FsContentProps
         }, 400)
       },
       onBlur: ({ editor: current }) => {
+        if (hydratedId.current !== record.id) return
         if (timer.current) clearTimeout(timer.current)
         queueMicrotask(() => {
           if (current.isDestroyed) return
@@ -85,6 +88,20 @@ export function PageEditor({ record, value, writable, onChange }: FsContentProps
     },
     [record.id],
   )
+
+  useEffect(() => {
+    hydratedId.current = null
+  }, [record.id])
+
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return
+    if (value == null) return
+    if (hydratedId.current === record.id) return
+    const md = asMarkdown(value)
+    saved.current = md
+    hydratedId.current = record.id
+    editor.commands.setContent(md, { contentType: 'markdown', emitUpdate: false })
+  }, [editor, record.id, value])
 
   useEffect(() => {
     if (!editor || editor.isDestroyed) return
