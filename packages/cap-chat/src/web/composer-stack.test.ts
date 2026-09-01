@@ -49,6 +49,8 @@ describe('composer dock stacking above sticky user', () => {
     expect(overlayWin).toContain("key: 'se'")
     expect(overlayWin).toContain('chat-overlay-resize-')
     expect(css).toMatch(/\.chat-overlay-panel \{/)
+    expect(css).toMatch(/\.chat-overlay-drag\s*\{[^}]*z-index:\s*30/s)
+    expect(css).toMatch(/\.chat-overlay-panel \.chat-composer-dock\s*\{[^}]*z-index:\s*10/s)
     expect(css).not.toMatch(/\.chat-overlay-panel\.is-autohide/)
     expect(css).toMatch(/\.composer-pill/)
   })

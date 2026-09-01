@@ -1150,6 +1150,8 @@ body {
 .chat-overlay-drag {
   cursor: grab;
   flex: none;
+  position: relative;
+  z-index: 30;
 }
 
 .chat-overlay-layout {
@@ -1233,6 +1235,7 @@ body {
 
 .chat-overlay-panel .chat-composer-dock {
   position: relative;
+  z-index: 10;
   flex: none;
 }
 
