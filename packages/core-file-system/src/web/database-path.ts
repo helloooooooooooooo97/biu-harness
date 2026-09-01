@@ -37,9 +37,9 @@ export const EVENTS_COLLECTION_PATH = '/events'
 
 const SYSTEM_COLLECTION_ORDER = [VIEWS_COLLECTION_PATH, EVENTS_COLLECTION_PATH] as const
 
-const USER_COLLECTION_ORDER = ['/sessions', '/tasks', '/pages', '/supertags', '/plugins'] as const
+const USER_COLLECTION_ORDER = ['/sessions', '/tasks', '/pages', '/plugins', '/supertags'] as const
 
-/** 视图、事件由系统自己记下，侧栏归在系统数据。标签和会话、任务一样是用户数据。 */
+/** 视图、事件由系统自己记下，侧栏归在系统数据。标签跨所有表，排在插件后面。 */
 export function isSystemCollection(path: string) {
   const normalized = normalizeCollectionPath(path)
   return (SYSTEM_COLLECTION_ORDER as readonly string[]).includes(normalized)

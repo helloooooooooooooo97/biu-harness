@@ -74,7 +74,7 @@ export function superTagsCollection(
       title: '标签',
       inspector: true,
       blurb: '工作区全局标签。',
-      order: 14,
+      order: 31,
       icon: 'tag',
     },
     records: { update: true, create: true, delete: true },
