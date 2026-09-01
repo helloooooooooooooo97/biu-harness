@@ -337,6 +337,14 @@ export class PagesStore {
     }
   }
 
+  async writeAsset(name: string, content: string) {
+    const file = basename(name)
+    if (!file || file !== name.replace(/\\/g, '/') || !ID_RE.test(file)) throw new Error('invalid asset')
+    await this.ensureDirs()
+    await this.fs.write(`${PAGE_ASSETS}/${file}`, content)
+    return { name: file, href: fileUrl(file) }
+  }
+
   async readAsset(name: string): Promise<{ bytes: Buffer; type: string }> {
     const file = basename(name)
     if (!file || file !== name.replace(/\\/g, '/')) throw new Error('invalid asset')
@@ -360,6 +368,7 @@ function mimeOf(name: string) {
   if (ext === '.svg') return 'image/svg+xml'
   if (ext === '.avif') return 'image/avif'
   if (ext === '.bmp') return 'image/bmp'
+  if (ext === '.json' || ext === '.excalidraw') return 'application/json; charset=utf-8'
   if (ext === '.zip') return 'application/zip'
   if (ext === '.pdf') return 'application/pdf'
   return 'application/octet-stream'

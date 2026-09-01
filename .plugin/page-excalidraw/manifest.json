@@ -1,7 +1,7 @@
 {
   "id": "page-excalidraw",
   "name": "Excalidraw 画板",
-  "blurb": "在页面里用 / 插入可缩放的 Excalidraw 白板。",
+  "blurb": "在页面里用 / 插入 Excalidraw。场景存在 .page/assets，正文只留指针；放大后才能编辑。",
   "tags": [
     "page",
     "editor",
@@ -9,6 +9,6 @@
   ],
   "author": "Biu",
   "authorUrl": "https://github.com/helloooooooooooooo97/biu-harness",
-  "createdAt": 1788271984880,
+  "createdAt": 1788272622908,
   "headless": true
 }

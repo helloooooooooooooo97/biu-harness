@@ -76,6 +76,15 @@ function servePageFile(ctx: Context, store: PagesStore) {
         route.send(404, { error: 'not found' })
       }
     })
+    inner.http.route('PUT', '/api/page/file/:name', async (route) => {
+      try {
+        const body = await route.json()
+        const written = await store.writeAsset(route.params.name ?? '', JSON.stringify(body ?? {}, null, 2))
+        route.send(200, { ok: true, ...written })
+      } catch (error) {
+        route.send(400, { error: String(error) })
+      }
+    })
   })
 }
 

@@ -64,9 +64,9 @@ test('pageBlock markdown roundtrips kind and data', () => {
   editor.destroy()
 })
 
-test('pageBlock markdown roundtrips excalidraw scene', () => {
+test('pageBlock markdown roundtrips excalidraw asset pointer', () => {
   const src = `:::pageBlock {kind=excalidraw}
-{"height":420,"zoom":1.25}
+{"file":"assets/excalidraw-demo.json","height":280}
 :::
 `
   const editor = new Editor({
@@ -77,7 +77,8 @@ test('pageBlock markdown roundtrips excalidraw scene', () => {
   const json = editor.getJSON()
   const block = json.content?.find((node) => node.type === 'pageBlock')
   assert.equal(block?.attrs?.kind, 'excalidraw')
-  assert.equal((block?.attrs?.data as { zoom?: number })?.zoom, 1.25)
+  assert.equal((block?.attrs?.data as { file?: string })?.file, 'assets/excalidraw-demo.json')
+  assert.doesNotMatch(editor.getMarkdown(), /"elements"/)
   editor.destroy()
 })
 

@@ -97,6 +97,15 @@ test('page plugin stores markdown under .page and assets for images', async () =
 
   await spec.remove!(created.id)
   assert.equal((await spec.list()).length, 0)
+
+  const store = new PagesStore(ctx.fs.workspace as never)
+  const asset = await store.writeAsset('board.json', '{\n  "elements": []\n}\n')
+  assert.equal(asset.name, 'board.json')
+  const diskAsset = await readFile(join(root, PAGE_ASSETS, 'board.json'), 'utf8')
+  assert.match(diskAsset, /elements/)
+  const read = await store.readAsset('board.json')
+  assert.equal(read.type, 'application/json; charset=utf-8')
+  await assert.rejects(() => store.writeAsset('../secret.json', '{}'), /invalid asset/)
 })
 
 test('PagesStore reads existing markdown files from .page', async () => {
