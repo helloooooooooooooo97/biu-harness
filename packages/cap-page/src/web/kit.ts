@@ -1,9 +1,8 @@
 import { Markdown } from '@tiptap/markdown'
 import Heading from '@tiptap/extension-heading'
 import Placeholder from '@tiptap/extension-placeholder'
-import { ReactNodeViewRenderer } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { HeadingView } from './heading-view.tsx'
+import { headingNodeView } from './heading-view.tsx'
 import { getPageEditor } from './service.ts'
 import { slashCommand } from './slash.ts'
 
@@ -18,7 +17,7 @@ export function pageEditorExtensions() {
       ? [
           Heading.extend({
             addNodeView() {
-              return ReactNodeViewRenderer(HeadingView)
+              return headingNodeView
             },
           }).configure({ levels: [1, 2, 3] }),
         ]

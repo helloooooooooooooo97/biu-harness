@@ -5,10 +5,13 @@ var inject = ["pageEditor", "slots"];
 function card(level, accent) {
   return function HeadingCard({ children }) {
     return /* @__PURE__ */ React.createElement(
-      "div",
+      "span",
       {
         "data-testid": `page-heading-card-${level}`,
         style: {
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
           borderLeft: `4px solid ${accent}`,
           padding: "8px 12px",
           margin: "2px 0",
@@ -16,7 +19,7 @@ function card(level, accent) {
           borderRadius: 8
         }
       },
-      /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, opacity: 0.55, letterSpacing: "0.06em" } }, `H${level}`),
+      /* @__PURE__ */ React.createElement("span", { contentEditable: false, style: { fontSize: 11, fontWeight: 700, opacity: 0.55, letterSpacing: "0.06em" } }, `H${level}`),
       children
     );
   };

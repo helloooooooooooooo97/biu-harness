@@ -36,7 +36,7 @@ test('page editor uses plugin heading views when pageEditor has replacements', a
   const ctx = new Context()
   new PageEditorService(ctx)
   ctx.pageEditor.replaceHeading(1, {
-    View: ({ children }) => <div data-testid="h1-plugin">{children}</div>,
+    View: ({ children }) => <span data-testid="h1-plugin">{children}</span>,
   })
   const { container } = render(
     <PageEditor
@@ -48,7 +48,9 @@ test('page editor uses plugin heading views when pageEditor has replacements', a
     />,
   )
   await waitFor(() => {
-    assert.ok(container.querySelector('[data-testid="h1-plugin"] h1'))
+    assert.ok(container.querySelector('h1.page-heading [data-testid="h1-plugin"]'))
   })
-  assert.equal(container.querySelector('[data-testid="h1-plugin"] h1')?.textContent?.trim(), '欢迎')
+  const heading = container.querySelector('h1.page-heading')
+  assert.equal(heading?.textContent?.trim(), '欢迎')
+  assert.equal(heading?.querySelector('[data-node-view-content]')?.tagName, 'SPAN')
 })
