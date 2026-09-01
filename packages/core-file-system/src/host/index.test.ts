@@ -340,7 +340,7 @@ test('create and delete follow records caps declared at register', async () => {
   assert.equal(after.items.length, 1)
 })
 
-test('SuperTag catalog is workspace-wide and collect scans every table', async () => {
+test('SuperTag catalog is workspace-wide and collect uses sqlite stamps', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)
   db.register(notesCollection())
