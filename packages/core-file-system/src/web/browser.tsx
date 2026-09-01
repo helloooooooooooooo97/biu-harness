@@ -137,6 +137,7 @@ export function CollectionBrowser({
   onCloseRecord,
   onCrumbTarget,
   embed = false,
+  sheet = false,
   onOpenRow,
   resolveViews,
 }: {
@@ -158,11 +159,14 @@ export function CollectionBrowser({
   onCrumbTarget?: (target: CrumbTarget) => void
   /** 检查器内页：只有中间舞台，不写侧栏开关/视图存储。 */
   embed?: boolean
+  /** 嵌在详情里的收集表：用同一套表组件，但不写视图、不出现视图切换。 */
+  sheet?: boolean
   /** 返回 true 则自己处理这一行，不打开本表详情。 */
   onOpenRow?: (row: DbRecord) => boolean
   resolveViews?: (path: string, user: SavedView[]) => SavedView[]
 }) {
   ensureFsdbStyle()
+  const nested = embed || sheet
   const listedViews = (path: string, user: SavedView[]) => {
     if (resolveViews) return resolveViews(path, user)
     const table = tables.find((item) => item.path === path) ?? {
@@ -206,10 +210,11 @@ export function CollectionBrowser({
   const [views, setViews] = useState<SavedView[]>(() => loadViews(collectionPath))
   const [activeViewId, setActiveViewId] = useState<string | null>(initialView?.id ?? null)
   const catalogLocks = useMemo(() => {
+    if (sheet) return lockedFilters
     const current = views.find((view) => view.id === activeViewId)
     if (!current?.builtin) return lockedFilters
     return { ...current.filters, ...lockedFilters }
-  }, [activeViewId, lockedFilters, views])
+  }, [activeViewId, lockedFilters, sheet, views])
   const queryFilters = useMemo(() => ({ ...filters, ...catalogLocks }), [catalogLocks, filters])
   const lockedFilterKeys = Object.keys(catalogLocks)
   const lockedSource = catalogLocks.tablePath ?? ''
@@ -314,7 +319,7 @@ export function CollectionBrowser({
   }
 
   useEffect(() => {
-    if (embed) return
+    if (nested) return
     function onWidth(event: Event) {
       const n = (event as CustomEvent<number>).detail
       if (typeof n !== 'number' || !Number.isFinite(n)) return
@@ -326,10 +331,10 @@ export function CollectionBrowser({
       setViewsOpen(!aside.classList.contains('hidden') && aside.getAttribute('aria-hidden') !== 'true')
     }
     return () => window.removeEventListener('biu:shell-sidebar-width', onWidth)
-  }, [embed])
+  }, [nested])
 
   useEffect(() => {
-    if (embed) return
+    if (nested) return
     function onToggle(event: Event) {
       const id = (event as CustomEvent<{ id?: string }>).detail?.id
       if (!id || (moduleId && id !== moduleId)) return
@@ -337,10 +342,10 @@ export function CollectionBrowser({
     }
     window.addEventListener('biu:toggle-module-sidebar', onToggle)
     return () => window.removeEventListener('biu:toggle-module-sidebar', onToggle)
-  }, [collectionPath, embed, moduleId])
+  }, [collectionPath, nested, moduleId])
 
   useEffect(() => {
-    if (embed) return
+    if (nested) return
     const sync = (open: boolean) => setInspectorOpen(open)
     const onOpen = () => sync(true)
     const onClose = () => sync(false)
@@ -353,7 +358,7 @@ export function CollectionBrowser({
       window.removeEventListener('biu:inspector-close', onClose)
       window.removeEventListener('biu:inspector-toggle', onToggle)
     }
-  }, [embed])
+  }, [nested])
 
   useEffect(() => {
     function onPointer(event: MouseEvent) {
@@ -544,7 +549,7 @@ export function CollectionBrowser({
       debounce = window.setTimeout(() => void reloadRef.current(), 120)
     }
     window.addEventListener('fsdb:change', onChange)
-    const timer = embed
+    const timer = nested
       ? 0
       : window.setInterval(() => {
           if (detailIdRef.current) return
@@ -555,7 +560,7 @@ export function CollectionBrowser({
       window.clearInterval(timer)
       window.removeEventListener('fsdb:change', onChange)
     }
-  }, [collectionPath, dataPath, embed])
+  }, [collectionPath, dataPath, nested])
 
   useEffect(() => {
     void reload()
@@ -752,13 +757,13 @@ export function CollectionBrowser({
   }, [collectionPath, dataPath, detailId])
 
   useEffect(() => {
-    if (embed || !detailId) return
+    if (nested || !detailId) return
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setDetailId(null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [detailId, embed])
+  }, [detailId, nested])
 
   useEffect(() => {
     if (dlg?.kind !== 'rename') return
@@ -766,10 +771,11 @@ export function CollectionBrowser({
   }, [dlg])
 
   function persistViewsFor(path: string, next: SavedView[]) {
+    if (sheet) return
     const listed = listedViews(path, next).map((view) => withViewDisplay(path, view))
     const stored = listed.filter((view) => !view.builtin)
     rememberViews(path, listed)
-    if (!embed) {
+    if (!nested) {
       localStorage.setItem(viewsKey(path), JSON.stringify(stored))
       pushSavedViews(path, stored)
     }
@@ -787,7 +793,7 @@ export function CollectionBrowser({
 
   function rememberActiveView(id: string) {
     setActiveViewId(id)
-    if (embed) return
+    if (nested) return
     try {
       localStorage.setItem(activeViewStorageKey(collectionPath), id)
     } catch {
@@ -1233,7 +1239,7 @@ export function CollectionBrowser({
         <span className="fsdb-title-text">{body}</span>
         {openDetail ? (
           <span className="tasks-title-aside">
-            {!embed ? (
+            {!nested ? (
               <button
                 type="button"
                 className="tasks-title-open"
@@ -1492,7 +1498,7 @@ export function CollectionBrowser({
   }, [allColumnKeys, collectionPath, dataPath, schema, schemaDefaultKeys])
 
   useEffect(() => {
-    if (!hydrated || !activeViewId) return
+    if (sheet || !hydrated || !activeViewId) return
     const id = window.setTimeout(() => {
       if (hydratePath.current !== `${collectionPath}\0${dataPath}`) return
       const current = viewsRef.current.find((view) => view.id === activeViewId)
@@ -1536,14 +1542,15 @@ export function CollectionBrowser({
     sortField,
     truncateCells,
     wrapCells,
+    sheet,
   ])
 
   return (
     <div
-      className={`fsdb-page tasks-root${embed ? ' inspector-database-page' : ''}${pageWidth === 'full' ? ' is-full-width' : ''}`}
-      data-testid={embed ? 'inspector-database' : undefined}
+      className={`fsdb-page tasks-root${nested ? ' inspector-database-page' : ''}${sheet ? ' is-sheet' : ''}${pageWidth === 'full' ? ' is-full-width' : ''}`}
+      data-testid={embed ? 'inspector-database' : sheet ? 'fsdb-collect-sheet' : undefined}
     >
-      {!embed ? (
+      {!nested ? (
         <DataSidebar
           tables={tables}
           collectionPath={collectionPath}
@@ -1574,7 +1581,7 @@ export function CollectionBrowser({
         />
       ) : null}
       <div className="fsdb-right">
-        {embed ? null : (
+        {nested ? null : (
         <header className="chat-view-header" data-biu-ignore>
           <div className="chat-view-header-left">
             {!viewsOpen ? (
@@ -1689,14 +1696,17 @@ export function CollectionBrowser({
         <div className="fsdb-right-body">
         {!detailId ? (
         <div className="tasks-main fsdb-main">
+        {sheet ? null : (
         <div className="fsdb-detail-title-row">
           <span className="fsdb-detail-title-icon" aria-hidden>
             <TableGlyph icon={currentTable?.view?.icon} className="size-8" />
           </span>
           <h1 className="fsdb-detail-title">{title}</h1>
         </div>
+        )}
         <div className="tasks-toolbar" data-biu-ignore>
           <div className="tasks-toolbar-left">
+            {sheet ? null : (
             <div className="tasks-viewdd-wrap" ref={viewRef}>
               <button
                 type="button"
@@ -1744,6 +1754,7 @@ export function CollectionBrowser({
                 </div>
               ) : null}
             </div>
+            )}
             {lockedSource ? (
               <span className="fsdb-locked-filter" title="按当前数据类型筛选，不可更改">
                 {tables.find((item) => item.path === lockedSource)?.view?.title ??
@@ -2285,6 +2296,7 @@ export function CollectionBrowser({
           writePatch={writePatch}
           tableIcon={currentTable?.view?.icon}
           collectionPath={collectionPath}
+          onOpenRecord={(recordId, collection) => onOpenRecord?.(recordId, activeViewId, collection)}
           onDelete={canDelete && selected ? () => setDlg({ kind: 'delete-record', row: selected }) : undefined}
         />
       ) : null}

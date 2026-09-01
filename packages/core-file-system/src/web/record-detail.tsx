@@ -96,6 +96,7 @@ export function RecordDetail({
   writePatch,
   tableIcon,
   collectionPath,
+  onOpenRecord,
   onDelete,
 }: {
   selected: DbRecord
@@ -111,6 +112,7 @@ export function RecordDetail({
   writePatch: (row: DbRecord, patch: Record<string, unknown>) => Promise<unknown> | void
   tableIcon?: string
   collectionPath: string
+  onOpenRecord?: (recordId: string, collection?: string) => void
   onDelete?: () => void
 }) {
   return (
@@ -156,6 +158,8 @@ export function RecordDetail({
                   </button>
                 ) : null}
                 </div>
+                {chrome?.Board ? <chrome.Board record={selected} openRecord={onOpenRecord} /> : null}
+                {chrome?.Board ? null : (
                 <div className="fsdb-detail-aside">
                   <div className="fsdb-prop">
                     <span>
@@ -215,6 +219,7 @@ export function RecordDetail({
                     )
                   })}
                 </div>
+                )}
                 {contentFieldKey(schema) && schema.fields[contentFieldKey(schema)!] ? (() => {
                   const key = contentFieldKey(schema)!
                   const spec = schema.fields[key]!
@@ -269,7 +274,7 @@ export function RecordDetail({
                             {pane.label}
                             {count ? <span className="fsdb-detail-extra-count">{count}</span> : null}
                           </h3>
-                          <Pane record={selected} />
+                          <Pane record={selected} openRecord={onOpenRecord} />
                         </section>
                       )
                     })}

@@ -14,6 +14,7 @@ import {
   builtinTagViewId,
   isBuiltinTagViewId,
   mergeViewsForPath,
+  stampRowOpenTarget,
 } from './catalog-views.ts'
 
 test('each registered table gets a builtin catalog view', () => {
@@ -83,4 +84,12 @@ test('tags collection uses the same view list as other tables', () => {
   assert.equal(merged[0]?.name, '全部标签')
   assert.equal(merged.some((view) => isBuiltinTagViewId(view.id)), false)
   assert.equal(merged.some((view) => view.id === 'mine'), true)
+})
+
+test('stamp rows open the source record, not a tag view', () => {
+  assert.deepEqual(stampRowOpenTarget({ tablePath: '/pages', sourceId: 'home' }), {
+    collection: '/pages',
+    recordId: 'home',
+  })
+  assert.equal(stampRowOpenTarget({ tablePath: '', sourceId: 'home' }), null)
 })

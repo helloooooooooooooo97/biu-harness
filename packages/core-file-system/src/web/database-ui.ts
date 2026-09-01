@@ -8,12 +8,14 @@ function mergeChrome(layers: CollectionChrome[]): CollectionChrome {
   const cells: CollectionChrome['cells'] = {}
   let Action: CollectionChrome['Action']
   let Title: CollectionChrome['Title']
+  let Board: CollectionChrome['Board']
   let Content: CollectionChrome['Content']
   const panes: NonNullable<CollectionChrome['panes']> = []
   for (const layer of layers) {
     Object.assign(cells, layer.cells)
     if (layer.Action) Action = layer.Action
     if (layer.Title) Title = layer.Title
+    if (layer.Board) Board = layer.Board
     if (layer.Content) Content = layer.Content
     if (layer.panes?.length) {
       for (const pane of layer.panes) {
@@ -23,7 +25,7 @@ function mergeChrome(layers: CollectionChrome[]): CollectionChrome {
       }
     }
   }
-  return { cells, Action, Title, Content, panes: panes.length ? panes : undefined }
+  return { cells, Action, Title, Board, Content, panes: panes.length ? panes : undefined }
 }
 
 function mergeViews(layers: CollectionViewType[]): CollectionViewType[] {

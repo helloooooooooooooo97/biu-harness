@@ -20,6 +20,7 @@ export type FsActionProps = {
 
 export type FsDetailPaneProps = {
   record: DbRecord
+  openRecord?: (recordId: string, collection?: string) => void
 }
 
 export type FsDetailPane = {
@@ -35,6 +36,8 @@ export type CollectionChrome = {
   /** 详情标题左侧图标。不传则用集合 glyph / 记录 emoji。 */
   Icon?: ComponentType<{ record: DbRecord }>
   Title?: ComponentType<{ record: DbRecord; label: string }>
+  /** 详情标题下的主舞台（例如标签收集表）。不传则走字段概况 + 正文。 */
+  Board?: ComponentType<{ record: DbRecord; openRecord?: (recordId: string, collection?: string) => void }>
   /** 正文。不传则把 content 当文件默认渲染。结构由登记方自己解析。 */
   Content?: ComponentType<FsContentProps>
   /** 详情弹窗额外分区（概况之外）。旧任务详情的脚本/进度汇报走这里。 */

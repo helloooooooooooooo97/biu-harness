@@ -1,5 +1,6 @@
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import { SuperTagPackEditor } from './schema-field.tsx'
+import { SuperTagCollectBoard } from './super-tags-collect.tsx'
 import { loadSchemaTags } from './schema-tags.ts'
 
 function SuperTagFieldsPane({ record }: { record: { id: string } }) {
@@ -9,5 +10,6 @@ function SuperTagFieldsPane({ record }: { record: { id: string } }) {
 }
 
 export const superTagsChrome: CollectionChrome = {
+  Board: SuperTagCollectBoard,
   panes: [{ id: 'fields', label: '字段', Pane: SuperTagFieldsPane }],
 }

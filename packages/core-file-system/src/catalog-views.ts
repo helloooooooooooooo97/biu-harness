@@ -144,6 +144,14 @@ export function stubBuiltinTagView(id: string): SavedView | null {
   return builtinTagView({ id: tagId, label: tagId })
 }
 
+/** 收集表里的一行：打开原始表里的那条记录。 */
+export function stampRowOpenTarget(row: { tablePath?: unknown; sourceId?: unknown }) {
+  const collection = normalizeCollectionPath(String(row.tablePath ?? ''))
+  const recordId = String(row.sourceId ?? '').trim()
+  if (!collection || collection === '/' || !recordId) return null
+  return { collection, recordId }
+}
+
 /** 路由里已经是 builtin: 时，即使本地还没合并登记表，也能先还原筛选。 */
 export function stubBuiltinCatalogView(id: string): SavedView | null {
   if (!isBuiltinCatalogViewId(id)) return null

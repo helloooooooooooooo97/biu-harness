@@ -202,7 +202,7 @@ test('database extras sit after the record detail, not in the inspector', () => 
 })
 
 test('inspector embed does not poll the collection every 20s', () => {
-  assert.match(browser, /const timer = embed/)
+  assert.match(browser, /const timer = nested/)
   assert.match(browser, /}, 20000\)/)
 })
 
