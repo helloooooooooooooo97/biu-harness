@@ -100,6 +100,7 @@ function Board({
   const api = useRef<{
     updateScene: (scene: { appState?: Record<string, unknown> }) => void
     scrollToContent: (arg?: unknown, opts?: { fitToContent?: boolean }) => void
+    refresh?: () => void
   } | null>(null)
 
   useEffect(() => {
@@ -142,8 +143,15 @@ function Board({
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setExpanded(false)
     }
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    const frame = requestAnimationFrame(() => api.current?.refresh?.())
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+      cancelAnimationFrame(frame)
+    }
   }, [expanded])
 
   const initialData = useMemo(() => {
@@ -175,43 +183,48 @@ function Board({
     void writeScene(file, updated)
   }
 
-  const frame = (
-    <div style={{ height: expanded ? 'calc(100vh - 48px)' : height, position: 'relative', minHeight: 180 }}>
-      {initialData ? (
-        <Excalidraw
-          key={expanded ? 'expanded' : 'preview'}
+  function bindApi(next: { refresh?: () => void } & NonNullable<typeof api.current>) {
+    api.current = next
+    requestAnimationFrame(() => next.refresh?.())
+  }
+
+  const board = initialData ? (
+    <Excalidraw
+      key={expanded ? 'expanded' : 'preview'}
           langCode="zh-CN"
-          viewModeEnabled={!canEdit}
-          zenModeEnabled={false}
-          gridModeEnabled={false}
-          UIOptions={{
-            canvasActions: {
-              loadScene: false,
-              saveToActiveFile: false,
-              toggleTheme: false,
-              export: false,
-            },
-          }}
-          initialData={initialData as never}
-          excalidrawAPI={(next) => {
-            api.current = next as typeof api.current
-          }}
-          onChange={(elements, appState, files) => {
-            saveSoon({
-              elements: [...elements],
-              files: files as Record<string, unknown>,
-              appState: slimAppState(appState as unknown as Record<string, unknown>),
-              height,
-            })
-          }}
-        />
-      ) : (
-        <div style={{ padding: 24, color: '#6b7280', font: '13px ui-sans-serif, system-ui, sans-serif' }}>加载画板…</div>
-      )}
-    </div>
+          theme="light"
+      viewModeEnabled={!canEdit}
+      zenModeEnabled={false}
+      gridModeEnabled={false}
+      UIOptions={{
+        canvasActions: {
+          loadScene: false,
+          saveToActiveFile: false,
+          toggleTheme: false,
+          export: false,
+        },
+      }}
+      initialData={
+        {
+          ...initialData,
+          appState: { ...initialData.appState, theme: 'light', viewBackgroundColor: '#ffffff' },
+        } as never
+      }
+      excalidrawAPI={(next) => bindApi(next as typeof api.current & { refresh?: () => void })}
+      onChange={(elements, appState, files) => {
+        saveSoon({
+          elements: [...elements],
+          files: files as Record<string, unknown>,
+          appState: slimAppState(appState as unknown as Record<string, unknown>),
+          height,
+        })
+      }}
+    />
+  ) : (
+    <div style={{ padding: 24, color: '#6b7280', font: '13px ui-sans-serif, system-ui, sans-serif' }}>加载画板…</div>
   )
 
-  const toolbar = (
+  const toolbar = (mode: 'preview' | 'expanded') => (
     <div
       style={{
         display: 'flex',
@@ -222,10 +235,12 @@ function Board({
         borderBottom: '1px solid #e5e7eb',
         font: '12px/1.4 ui-sans-serif, system-ui, sans-serif',
         color: '#4b5563',
+        background: '#fff',
+        flex: 'none',
       }}
     >
       <span style={{ fontWeight: 700, color: '#111827' }}>画板</span>
-      {expanded ? (
+      {mode === 'expanded' ? (
         <>
           <button type="button" data-testid="page-excalidraw-fit" onClick={() => api.current?.scrollToContent(undefined, { fitToContent: true })}>
             适应
@@ -251,28 +266,55 @@ function Board({
     </div>
   )
 
-  return (
+  const preview = (
     <div
       data-testid="page-excalidraw"
       data-page-block-capture="1"
-      data-expanded={expanded ? '1' : '0'}
+      data-expanded="0"
       data-file={file || undefined}
       style={{
         border: '1px solid #d0d7de',
-        borderRadius: expanded ? 0 : 12,
+        borderRadius: 12,
         overflow: 'hidden',
         background: '#fff',
-        ...(expanded ? { position: 'fixed', inset: 0, zIndex: 400, borderRadius: 0 } : {}),
       }}
     >
-      {toolbar}
-      {frame}
-      {!expanded ? (
-        <p style={{ margin: 0, padding: '6px 10px 10px', font: '12px ui-sans-serif, system-ui, sans-serif', color: '#6b7280' }}>
-          {writable ? '预览不可画。点「放大」后才能编辑。' : '只读预览。'}
-        </p>
-      ) : null}
+      {toolbar('preview')}
+      <div style={{ height, width: '100%', position: 'relative', minHeight: 180 }}>{expanded ? null : board}</div>
+      <p style={{ margin: 0, padding: '6px 10px 10px', font: '12px ui-sans-serif, system-ui, sans-serif', color: '#6b7280' }}>
+        {writable ? '预览不可画。点「放大」后才能编辑。' : '只读预览。'}
+      </p>
     </div>
+  )
+
+  const overlay = (
+    <div
+      data-testid="page-excalidraw-expanded"
+      data-page-block-capture="1"
+      data-expanded="1"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        background: '#ffffff',
+        color: '#111827',
+      }}
+    >
+      {toolbar('expanded')}
+      <div style={{ flex: 1, minHeight: 0, width: '100%', position: 'relative' }}>{board}</div>
+    </div>
+  )
+
+  const portal = (globalThis as { ReactDOM?: { createPortal?: (node: unknown, el: Element) => unknown } }).ReactDOM?.createPortal
+  return (
+    <>
+      {preview}
+      {expanded ? (portal ? portal(overlay, document.body) : overlay) : null}
+    </>
   )
 }
 

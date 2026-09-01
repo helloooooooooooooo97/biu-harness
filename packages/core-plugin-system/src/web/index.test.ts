@@ -138,4 +138,8 @@ test('packed page-excalidraw plugin stores scenes as page assets', async () => {
   assert.match(src, /replace: true/)
   assert.match(src, /pointerOnly/)
   assert.match(src, /defaults: \(\) => \(\{ file:/)
+  assert.match(src, /createPortal/)
+  assert.match(src, /theme="light"/)
+  assert.match(src, /refresh/)
+  assert.match(src, /page-excalidraw-expanded/)
 })
