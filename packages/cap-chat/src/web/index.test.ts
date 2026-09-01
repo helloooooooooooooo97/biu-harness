@@ -25,6 +25,7 @@ test('one plugin fills thread, trajectory, composer and approvals dock', async (
   await ctx.plugin(shell)
   assert.equal(ctx.slots.list('composer')[0]?.id, 'chat')
   assert.equal(ctx.slots.list('stage').some((item) => item.id === 'chat-thread'), true)
+  assert.equal(ctx.slots.list('stage-aside').some((item) => item.id === 'chat-outline'), true)
   assert.equal(ctx.slots.list('trajectory').some((item) => item.id === 'trajectory'), true)
   assert.equal(ctx.slots.list('project').length, 0)
   assert.equal(ctx.slots.list('dock').some((item) => item.id === 'approvals'), true)
