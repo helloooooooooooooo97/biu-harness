@@ -31,3 +31,11 @@ test('database page no longer registers collection shortcuts on the dock', () =>
   assert.match(page, /builtinAllViewId\(parsed.collection\)/)
   assert.doesNotMatch(page, /isCollectionHub/)
 })
+
+test('collection browser renders extra views registered for that path', () => {
+  const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf8')
+  const ui = readFileSync(resolve(import.meta.dirname, './database-ui.ts'), 'utf8')
+  assert.match(ui, /registerView\(path: string, view: CollectionViewType\)/)
+  assert.match(browser, /dbUi\?\.views\(collectionPath\)/)
+  assert.match(browser, /<customView\.View/)
+})

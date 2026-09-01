@@ -32,7 +32,7 @@ import {
   ViewColumnsIcon,
 } from '@heroicons/react/16/solid'
 import type { CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
-import type { CollectionChrome } from '@biu/type-file-system/ui'
+import type { CollectionChrome, CollectionViewType, DatabaseUi } from '@biu/type-file-system/ui'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { BoolBox, ChatCount } from '@biu/public-ui'
 import {
@@ -75,6 +75,9 @@ import {
 import { ensureFsdbStyle } from './fsdb-style.ts'
 import { RecordDetail } from './record-detail.tsx'
 import { TableGlyph } from './nav-glyphs.tsx'
+import { getDatabaseUi } from './database-ui.ts'
+
+const EMPTY_VIEWS: CollectionViewType[] = []
 import {
   activeViewStorageKey,
   getStarredViews,
@@ -164,12 +167,23 @@ export function CollectionBrowser({
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const initialView = viewForPath(collectionPath, routeViewId)
+  const dbUi = getDatabaseUi()
+  const extraViews = useSyncExternalStore(
+    (fn) => (dbUi ? dbUi.subscribe(fn) : () => undefined),
+    () => dbUi?.views(collectionPath) ?? EMPTY_VIEWS,
+    () => dbUi?.views(collectionPath) ?? EMPTY_VIEWS,
+  )
+  const modeChoices = useMemo(
+    () => [...VIEW_MODES, ...extraViews.map((view) => ({ id: view.id, label: view.label }))],
+    [extraViews],
+  )
   const [query, setQuery] = useState(initialView?.query ?? '')
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(() => normalizePageSize(initialView?.pageSize))
   const [total, setTotal] = useState(0)
   const [fetchQuery, setFetchQuery] = useState(initialView?.query ?? '')
   const [mode, setMode] = useState<ViewMode>(initialView?.mode ?? 'table')
+  const customView = extraViews.find((view) => view.id === mode)
   const [sortField, setSortField] = useState(initialView?.sortField ?? 'id')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialView?.sortDir ?? 'asc')
   const [filters, setFilters] = useState<Record<string, string>>(initialView?.filters ?? {})
@@ -1759,18 +1773,18 @@ export function CollectionBrowser({
                 type="button"
                 className={`tasks-sort-btn${modeMenuOpen ? ' is-active' : ''}`}
                 aria-label="查看模式"
-                title={`模式：${VIEW_MODES.find((item) => item.id === mode)?.label}`}
+                title={`模式：${modeChoices.find((item) => item.id === mode)?.label ?? mode}`}
                 onClick={() => toggleMenu('mode')}
               >
-                <ModeGlyph id={mode} />
+                <ModeGlyph id={mode} extra={extraViews} />
               </button>
               {modeMenuOpen ? (
                 <div className="tasks-sort-menu" role="menu">
                   <div className="tasks-sort-head">查看模式</div>
-                  {VIEW_MODES.map((opt) => (
+                  {modeChoices.map((opt) => (
                     <CheckRow
                       key={opt.id}
-                      icon={<ModeGlyph id={opt.id} />}
+                      icon={<ModeGlyph id={opt.id} extra={extraViews} />}
                       label={opt.label}
                       on={mode === opt.id}
                       onToggle={() => {
@@ -2041,7 +2055,10 @@ export function CollectionBrowser({
 
         <div className="fsdb-workspace">
           <div className="fsdb-stage">
-            {mode === 'table' ? (
+            {customView ? (
+              <customView.View path={dataPath} rows={items} schema={schema} onOpen={openRow} />
+            ) : null}
+            {mode === 'table' && !customView ? (
               <div className="tasks-table-wrap">
                 <table className={`tasks-table${wrapCells ? ' is-wrap' : ''}${truncateCells ? ' is-truncate' : ''}`}>
             <thead>
@@ -2088,7 +2105,7 @@ export function CollectionBrowser({
         </div>
             ) : null}
 
-            {mode === 'cards' ? (
+            {mode === 'cards' && !customView ? (
               grouping ? (
                 <div className="fsdb-cards-stack">
                   {grouped.length ? (
@@ -2119,7 +2136,7 @@ export function CollectionBrowser({
               )
             ) : null}
 
-            {mode === 'queue' ? (
+            {mode === 'queue' && !customView ? (
               <div className="tasks-queue">
                 {visible.length ? (
                   grouping ? (
@@ -2148,7 +2165,7 @@ export function CollectionBrowser({
               </div>
             ) : null}
 
-            {mode === 'board' ? (
+            {mode === 'board' && !customView ? (
               <div className="tasks-board" style={{ gridTemplateColumns: `repeat(${Math.max(grouped.length, 1)}, minmax(240px, 1fr))` }}>
                 {grouped.map((group) => (
                   <div key={group.key || 'all'} className="tasks-board-col">

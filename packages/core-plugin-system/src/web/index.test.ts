@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { Context, Service } from 'cordis'
 import * as slots from '@biu/web-slots'
 import * as dock from '@biu/core-dock'
-import type { CollectionChrome, DatabaseUi } from '@biu/type-file-system/ui'
+import type { CollectionChrome, CollectionViewType, DatabaseUi } from '@biu/type-file-system/ui'
 import * as plugins2Ui from './index.tsx'
 
 class FakeDatabaseUi extends Service implements DatabaseUi {
@@ -17,6 +17,12 @@ class FakeDatabaseUi extends Service implements DatabaseUi {
   }
   chrome() {
     return this.last?.chrome ?? {}
+  }
+  registerView() {
+    return { dispose() {} }
+  }
+  views() {
+    return [] as CollectionViewType[]
   }
   subscribe() {
     return () => undefined

@@ -51,3 +51,20 @@ test('decorate panes with the same id keep a single pane', () => {
   assert.equal(panes[0]?.label, '脚本 B')
   assert.equal(panes[0]?.Pane, PaneB)
 })
+
+test('registerView is scoped to the collection that registered it', () => {
+  const ctx = new Context()
+  const ui = new DatabaseUiService(ctx)
+  const Graph = () => null
+  const first = ui.registerView('/tasks', { id: 'graph', label: '依赖图', View: Graph })
+  assert.equal(ui.views('/tasks').length, 1)
+  assert.equal(ui.views('/tasks')[0]?.id, 'graph')
+  assert.equal(ui.views('/plugins').length, 0)
+  const later = ui.registerView('/tasks', { id: 'graph', label: 'DAG', View: Graph })
+  assert.equal(ui.views('/tasks').length, 1)
+  assert.equal(ui.views('/tasks')[0]?.label, 'DAG')
+  later.dispose()
+  assert.equal(ui.views('/tasks')[0]?.label, '依赖图')
+  first.dispose()
+  assert.equal(ui.views('/tasks').length, 0)
+})

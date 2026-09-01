@@ -1,6 +1,7 @@
 import type { CollectionInfo, CollectionSpec, DbRecord } from '@biu/type-file-system'
 import { builtinAllView, isReadOnlyViewId } from '../catalog-views.ts'
 import type { SavedView } from '../web/saved-view.ts'
+import { isViewModeId } from '../web/fields.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
 export type StoredView = Partial<SavedView> & Pick<SavedView, 'id' | 'name'>
@@ -60,10 +61,7 @@ export class SavedViewsStore {
         ...cur,
         ...(typeof patch.title === 'string' ? { name: patch.title } : {}),
         ...(typeof patch.name === 'string' ? { name: patch.name } : {}),
-        ...(typeof patch.mode === 'string' &&
-        (patch.mode === 'queue' || patch.mode === 'table' || patch.mode === 'cards' || patch.mode === 'board')
-          ? { mode: patch.mode }
-          : {}),
+        ...(typeof patch.mode === 'string' && isViewModeId(patch.mode) ? { mode: patch.mode } : {}),
         ...(typeof patch.sortField === 'string' ? { sortField: patch.sortField } : {}),
         ...(patch.sortDir === 'asc' || patch.sortDir === 'desc' ? { sortDir: patch.sortDir } : {}),
         ...(typeof patch.query === 'string' ? { query: patch.query } : {}),
@@ -131,7 +129,7 @@ export function viewsCollection(store: SavedViewsStore, tables: () => Collection
         table: { type: 'string', label: '来源表' },
         tablePath: { type: 'string', label: '表路径' },
         viewId: { type: 'string', label: '视图 ID' },
-        mode: { type: 'select', label: '呈现', writable: true, enum: ['queue', 'table', 'cards', 'board'] },
+        mode: { type: 'select', label: '呈现', writable: true },
         sortField: { type: 'string', label: '排序字段', writable: true },
         sortDir: { type: 'select', label: '升降序', writable: true, enum: ['asc', 'desc'] },
         query: { type: 'string', label: '搜索', writable: true },

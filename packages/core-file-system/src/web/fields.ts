@@ -1,7 +1,18 @@
 import type { CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
 import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS } from '@biu/type-file-system'
 
-export type ViewMode = 'queue' | 'table' | 'cards' | 'board'
+export const BUILTIN_VIEW_MODES = ['queue', 'table', 'cards', 'board'] as const
+export type BuiltinViewMode = (typeof BUILTIN_VIEW_MODES)[number]
+/** 内置四种 + 集合自己 registerView 的 id（如 graph）。 */
+export type ViewMode = BuiltinViewMode | (string & {})
+
+export function isBuiltinViewMode(mode: string): mode is BuiltinViewMode {
+  return (BUILTIN_VIEW_MODES as readonly string[]).includes(mode)
+}
+
+export function isViewModeId(mode: unknown): mode is ViewMode {
+  return typeof mode === 'string' && /^[a-z][a-z0-9-]{0,31}$/.test(mode)
+}
 
 export function resolveFieldType(field: FieldSpec): FieldType {
   if (field.type === 'string[]') return 'multi-select'

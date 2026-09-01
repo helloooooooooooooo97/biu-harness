@@ -32,6 +32,8 @@ test('viewsCollection lists saved views with source table', async () => {
   const written = await spec.update!(String(user?.id), { title: 'Doing' })
   assert.equal(written.title, 'Doing')
   assert.throws(() => spec.update!(String(all?.id), { title: '改掉' }), /read-only/)
+  const graphed = await spec.update!(String(user?.id), { mode: 'graph' })
+  assert.equal(graphed.mode, 'graph')
 })
 
 test('every registered table gets a builtin all-view even before the client syncs', async () => {

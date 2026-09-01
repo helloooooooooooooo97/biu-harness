@@ -1,11 +1,12 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { Context, Service } from 'cordis'
-import type { CollectionChrome, DatabaseUi } from '@biu/type-file-system/ui'
+import type { CollectionChrome, CollectionViewType, DatabaseUi } from '@biu/type-file-system/ui'
 import * as taskSystemUi from './index.tsx'
 
 class FakeDatabaseUi extends Service implements DatabaseUi {
   last: { path: string; chrome: CollectionChrome } | null = null
+  registered: Array<{ path: string; view: CollectionViewType }> = []
   constructor(ctx: Context) {
     super(ctx, 'databaseUi')
   }
@@ -13,8 +14,15 @@ class FakeDatabaseUi extends Service implements DatabaseUi {
     this.last = { path, chrome }
     return { dispose() {} }
   }
+  registerView(path: string, view: CollectionViewType) {
+    this.registered.push({ path, view })
+    return { dispose() {} }
+  }
   chrome() {
     return this.last?.chrome ?? {}
+  }
+  views(path: string) {
+    return this.registered.filter((item) => item.path === path).map((item) => item.view)
   }
   subscribe() {
     return () => undefined
@@ -34,4 +42,7 @@ test('task-system web paints /tasks chrome without importing file-system', async
   assert.equal(typeof ui.last?.chrome.cells?.creator, 'function')
   assert.equal(typeof ui.last?.chrome.cells?.assignee, 'function')
   assert.equal(ui.last?.chrome.panes?.map((pane) => pane.id).join(','), 'script,reports')
+  assert.equal(ui.registered[0]?.path, '/tasks')
+  assert.equal(ui.registered[0]?.view.id, 'graph')
+  assert.equal(ui.registered[0]?.view.label, '依赖图')
 })

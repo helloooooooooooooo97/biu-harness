@@ -12,15 +12,17 @@ const base: SavedView = {
   columns: ['title', 'status'],
 }
 
-test('normalizeSavedView fills view config defaults', () => {
-  const next = normalizeSavedView({ id: '1', name: 'a', mode: 'graph' as SavedView['mode'], sortField: '', sortDir: 'asc', filters: {}, columns: [] })
-  assert.equal(next.mode, 'table')
-  assert.equal(next.sortField, 'id')
-  assert.equal(next.tree, true)
-  assert.equal(next.truncate, true)
-  assert.equal(next.wrap, false)
-  assert.equal(next.query, '')
-  assert.equal(next.pageSize, 50)
+test('normalizeSavedView keeps custom mode slugs and rejects junk', () => {
+  const graph = normalizeSavedView({ id: '1', name: 'a', mode: 'graph', sortField: '', sortDir: 'asc', filters: {}, columns: [] })
+  assert.equal(graph.mode, 'graph')
+  const junk = normalizeSavedView({ id: '1', name: 'a', mode: '???' as SavedView['mode'], sortField: '', sortDir: 'asc', filters: {}, columns: [] })
+  assert.equal(junk.mode, 'table')
+  assert.equal(junk.sortField, 'id')
+  assert.equal(junk.tree, true)
+  assert.equal(junk.truncate, true)
+  assert.equal(junk.wrap, false)
+  assert.equal(junk.query, '')
+  assert.equal(junk.pageSize, 50)
 })
 
 test('viewStateKey ignores name and treats missing query as empty', () => {

@@ -25,6 +25,7 @@ type TaskRow = DbRecord & {
   creator?: Actor | null
   assignee?: Actor | null
   parentId?: string | null
+  dependsOn?: string[]
   blocked?: boolean
   reports?: TaskReport[]
   usage?: Usage
@@ -112,6 +113,7 @@ function taskRecord(row: TaskRow, lookup: (id: string) => TaskRow | undefined, u
     assigneeSessionId: row.assignee?.sessionId ?? '',
     assigneeActor: row.assignee ?? null,
     parentId: row.parentId ?? null,
+    dependsOn: Array.isArray(row.dependsOn) ? row.dependsOn.map(String).filter(Boolean) : [],
     blocked: Boolean(row.blocked),
     parentChain: parentChain(row, lookup),
     usage: usage.totalTokens,
@@ -181,6 +183,7 @@ export function tasksCollection(tasks: TasksLike): CollectionSpec {
         creator: { type: 'string', label: '创建人' },
         assignee: { type: 'string', label: '承担者' },
         parentId: { type: 'string', label: '父任务', writable: true },
+        dependsOn: { type: 'multi-select', label: '依赖' },
       },
     },
     records: { update: true, create: true, delete: true },

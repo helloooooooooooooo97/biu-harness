@@ -12,6 +12,7 @@ test('tasksCollection maps /tasks rows with rolled-up usage', async () => {
           title: '写方案',
           status: 'todo',
           parentId: 'p',
+          dependsOn: ['p'],
           reports: [{ sessionId: 's1', turn: 1, usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, totalTokens: 15 } }],
         },
       ]
@@ -43,6 +44,7 @@ test('tasksCollection maps /tasks rows with rolled-up usage', async () => {
   const child = listed.find((row) => row.id === 't1')
   const parent = listed.find((row) => row.id === 'p')
   assert.equal(child?.parentChain, '父任务')
+  assert.deepEqual(child?.dependsOn, ['p'])
   assert.equal(child?.usage, 15)
   assert.equal(parent?.usage, 15)
   assert.equal((parent?.usageParts as { aggregate?: boolean } | undefined)?.aggregate, true)

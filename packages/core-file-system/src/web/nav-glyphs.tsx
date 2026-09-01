@@ -7,6 +7,7 @@ import {
   EyeIcon,
   ListBulletIcon,
   PuzzlePieceIcon,
+  ShareIcon,
   Squares2X2Icon,
   TableCellsIcon,
   ViewColumnsIcon,
@@ -30,7 +31,7 @@ export function ViewModeGlyph({ mode, className = 'size-4' }: { mode?: ViewMode;
   if (mode === 'table') return <TableCellsIcon aria-hidden className={className} />
   if (mode === 'cards') return <Squares2X2Icon aria-hidden className={className} />
   if (mode === 'board') return <ViewColumnsIcon aria-hidden className={className} />
-  return <Squares2X2Icon aria-hidden className={className} />
+  return <ShareIcon aria-hidden className={className} />
 }
 
 export function CrumbItemGlyph({

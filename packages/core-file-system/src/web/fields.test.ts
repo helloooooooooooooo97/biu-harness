@@ -1,7 +1,13 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import type { CollectionSchema } from '@biu/type-file-system'
-import { defaultColumnKeys, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, matchActionWhen, matchesFilters, parentFieldKey, resolveFieldType, sortRows } from './fields'
+import { defaultColumnKeys, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, isViewModeId, matchActionWhen, matchesFilters, parentFieldKey, resolveFieldType, sortRows } from './fields'
+
+test('isViewModeId accepts builtin and custom slugs', () => {
+  assert.equal(isViewModeId('table'), true)
+  assert.equal(isViewModeId('graph'), true)
+  assert.equal(isViewModeId('??'), false)
+})
 
 const schema: CollectionSchema = {
   labelField: 'title',

@@ -1,6 +1,8 @@
 import type { Context } from 'cordis'
+import { ShareIcon } from '@heroicons/react/16/solid'
 import type { DatabaseUi } from '@biu/type-file-system/ui'
 import { tasksChrome } from './chrome.tsx'
+import { TaskDepGraph } from './graph-view.tsx'
 
 export const name = 'core-task-system-ui'
 export const inject = ['databaseUi']
@@ -8,6 +10,16 @@ export const inject = ['databaseUi']
 export function apply(ctx: Context) {
   const ui = ctx.get('databaseUi') as DatabaseUi
   ctx.effect(() => ui.decorate('/tasks', tasksChrome).dispose)
+  ctx.effect(() =>
+    ui
+      .registerView('/tasks', {
+        id: 'graph',
+        label: '依赖图',
+        Icon: ShareIcon,
+        View: TaskDepGraph,
+      })
+      .dispose,
+  )
 }
 
 if (typeof document !== 'undefined') {
@@ -129,6 +141,15 @@ if (typeof document !== 'undefined') {
 .tasks-report-note { color:var(--dsw-label-2); font-size:11px; line-height:1.5; white-space:normal; word-break:break-word; padding:8px 10px; border:1px solid var(--dsw-border); border-radius:8px; background:color-mix(in srgb, var(--dsw-muted-fill) 50%, transparent); }
 .tasks-report-usage { display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--dsw-label-3); font-size:12px; font-variant-numeric:tabular-nums; }
 .tasks-report-usage .traj-usage, .tasks-report-usage .traj-usage-empty { font-size:12px; }
+
+.tasks-dep-graph{flex:1;min-width:0;min-height:0;width:100%;height:100%;border-radius:10px;overflow:hidden}
+.tasks-dep-graph .react-flow{background:transparent}
+.tasks-dep-graph .react-flow__node{border:1px solid var(--dsw-border);border-radius:10px;padding:8px 10px;background:var(--dsw-sidebar);color:var(--dsw-label);font-size:13px;font-weight:650;box-shadow:none}
+.tasks-dep-graph .react-flow__node.tasks-graph-node.is-doing{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--dsw-business) 45%,transparent)}
+.tasks-dep-graph .react-flow__node.tasks-graph-node.is-done{opacity:.8}
+.tasks-dep-graph .react-flow__controls{box-shadow:none;border:1px solid var(--dsw-border);overflow:hidden;border-radius:8px}
+.tasks-dep-graph .react-flow__controls-button{background:var(--dsw-sidebar);border-color:var(--dsw-border);fill:var(--dsw-label)}
+.tasks-dep-graph .react-flow__minimap{background:color-mix(in srgb,var(--dsw-sidebar) 80%,transparent)}
 
 /* ---- 依赖（DAG）视图 ---- */
 /* ---- DAG 依赖图（自绘 SVG + 缩放）---- */

@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import type { CollectionActionInfo, DbRecord, FieldSpec } from './index.ts'
+import type { CollectionActionInfo, CollectionSchema, DbRecord, FieldSpec } from './index.ts'
 
 /** 单元格：不传则 File System 按 FieldSpec.type 默认画。 */
 export type FsCellProps = {
@@ -34,6 +34,7 @@ export type CollectionChrome = {
   Action?: ComponentType<FsActionProps>
   /** 详情标题左侧图标。不传则用集合 glyph / 记录 emoji。 */
   Icon?: ComponentType<{ record: DbRecord }>
+  Title?: ComponentType<{ record: DbRecord; label: string }>
   /** 正文。不传则把 content 当文件默认渲染。结构由登记方自己解析。 */
   Content?: ComponentType<FsContentProps>
   /** 详情弹窗额外分区（概况之外）。旧任务详情的脚本/进度汇报走这里。 */
@@ -49,9 +50,27 @@ export type FsContentProps = {
   onChange?: (next: unknown) => void
 }
 
+/** 集合自定义呈现：谁 registerView(path)，谁才能在该 path 用这个 mode。 */
+export type FsViewProps = {
+  path: string
+  rows: DbRecord[]
+  schema?: CollectionSchema
+  onOpen: (row: DbRecord) => void
+}
+
+export type CollectionViewType = {
+  id: string
+  label: string
+  Icon?: ComponentType<{ className?: string }>
+  View: ComponentType<FsViewProps>
+}
+
 export interface DatabaseUi {
   decorate(path: string, chrome: CollectionChrome): { dispose: () => void }
+  /** 给指定集合登记一种查看模式。其它集合看不到、也不能选。 */
+  registerView(path: string, view: CollectionViewType): { dispose: () => void }
   chrome(path: string): CollectionChrome
+  views(path: string): CollectionViewType[]
   subscribe(listener: () => void): () => void
 }
 

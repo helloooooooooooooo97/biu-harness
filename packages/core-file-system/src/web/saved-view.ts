@@ -1,4 +1,4 @@
-import type { ViewMode } from './fields.ts'
+import { isViewModeId, type ViewMode } from './fields.ts'
 
 export type SavedView = {
   id: string
@@ -18,12 +18,10 @@ export type SavedView = {
   builtin?: boolean
 }
 
-const MODES: ViewMode[] = ['queue', 'table', 'cards', 'board']
-
 export function normalizeSavedView(view: SavedView): SavedView {
   return {
     ...view,
-    mode: MODES.includes(view.mode) ? view.mode : 'table',
+    mode: isViewModeId(view.mode) ? view.mode : 'table',
     sortField: view.sortField || 'id',
     sortDir: view.sortDir === 'desc' ? 'desc' : 'asc',
     filters: view.filters && typeof view.filters === 'object' ? view.filters : {},
