@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { SlashItem } from './slash.ts'
 
 function slashIcon(id: string) {
@@ -24,12 +24,18 @@ export const SlashList = forwardRef(function SlashList(
   ref,
 ) {
   const [active, setActive] = useState(0)
-  const activeRef = { current: 0 }
+  const activeRef = useRef(0)
+  const listRef = useRef<HTMLDivElement>(null)
   activeRef.current = active
 
   useEffect(() => {
     setActive(0)
   }, [items])
+
+  useEffect(() => {
+    const el = listRef.current?.querySelector<HTMLElement>('.page-slash-item.is-active')
+    el?.scrollIntoView?.({ block: 'nearest' })
+  }, [active, items])
 
   useImperativeHandle(ref, () => ({
     onKeyDown({ event }: { event: KeyboardEvent }) {
@@ -52,7 +58,15 @@ export const SlashList = forwardRef(function SlashList(
   }))
 
   return (
-    <div className="page-slash" id="slash-command" role="listbox" aria-label="插入模块" data-testid="page-slash">
+    <div
+      ref={listRef}
+      className="page-slash"
+      id="slash-command"
+      role="listbox"
+      aria-label="插入模块"
+      data-testid="page-slash"
+      onWheel={(event) => event.stopPropagation()}
+    >
       <div className="page-slash-head">基础模块</div>
       {items.length ? (
         items.map((item, index) => (
@@ -62,6 +76,7 @@ export const SlashList = forwardRef(function SlashList(
             role="option"
             aria-selected={index === active}
             className={`page-slash-item${index === active ? ' is-active' : ''}`}
+            onMouseEnter={() => setActive(index)}
             onMouseDown={(event) => {
               event.preventDefault()
               command(item)
