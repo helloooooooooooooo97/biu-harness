@@ -53,3 +53,32 @@ test('heading plugin skins native h1 and does not install a node view', async ()
   assert.equal(heading?.classList.contains('page-heading-card'), true)
   assert.equal(container.querySelector('[data-node-view-wrapper]'), null)
 })
+
+test('page editor paints a registered algorithm block', async () => {
+  const ctx = new Context()
+  new PageEditorService(ctx)
+  ctx.pageEditor.registerBlock({
+    kind: 'algorithm',
+    label: '算法题',
+    defaults: { title: 'Two Sum' },
+    View: ({ data }) => <div data-testid="algo-view">{String(data.title ?? '')}</div>,
+  })
+  const src = `:::pageBlock {kind=algorithm}
+{"title":"Two Sum"}
+:::
+`
+  const { container } = render(
+    <PageEditor
+      record={{ id: 'home' }}
+      field="notes"
+      spec={{ type: 'file', label: '正文', writable: true }}
+      value={src}
+      writable
+    />,
+  )
+  await waitFor(() => {
+    assert.ok(container.querySelector('[data-testid="algo-view"]'))
+  })
+  assert.equal(container.querySelector('[data-testid="algo-view"]')?.textContent, 'Two Sum')
+})
+

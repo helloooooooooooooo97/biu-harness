@@ -2,6 +2,7 @@ import { Markdown } from '@tiptap/markdown'
 import Placeholder from '@tiptap/extension-placeholder'
 import StarterKit from '@tiptap/starter-kit'
 import { headingSkin } from './heading-skin.ts'
+import { pageBlock } from './page-block.ts'
 import { slashCommand } from './slash.ts'
 
 export function pageEditorExtensions() {
@@ -20,6 +21,7 @@ export function pageEditorExtensions() {
       includeChildren: false,
     }),
     headingSkin,
+    pageBlock,
     slashCommand,
   ]
 }

@@ -7,6 +7,8 @@ dist/
 !.plugin-dev/store-heavy-ping/**
 !.plugin-dev/page-heading-cards/
 !.plugin-dev/page-heading-cards/**
+!.plugin-dev/page-algorithm/
+!.plugin-dev/page-algorithm/**
 .workspace/
 *.log
 .DS_Store

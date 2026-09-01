@@ -112,7 +112,8 @@ function runInsert(editor: Editor, range: Range, insert: SlashInsert) {
 
 export function slashCatalog(): SlashItem[] {
   const extras = getPageEditor()?.slashCommands() ?? []
-  if (!extras.length) return SLASH_ITEMS
+  const blocks = getPageEditor()?.blocks() ?? []
+  if (!extras.length && !blocks.length) return SLASH_ITEMS
   const map = new Map(SLASH_ITEMS.map((item) => [item.id, item]))
   for (const extra of extras) {
     const prev = map.get(extra.id)
@@ -124,6 +125,25 @@ export function slashCatalog(): SlashItem[] {
       command: extra.insert
         ? ({ editor, range }) => runInsert(editor, range, extra.insert!)
         : (prev?.command ?? (({ editor, range }) => editor.chain().focus().deleteRange(range).run())),
+    })
+  }
+  for (const block of blocks) {
+    map.set(block.kind, {
+      id: block.kind,
+      label: block.label,
+      hint: block.hint ?? '自定义块',
+      aliases: block.aliases ?? [],
+      command: ({ editor, range }) => {
+        editor
+          .chain()
+          .focus()
+          .deleteRange(range)
+          .insertContent({
+            type: 'pageBlock',
+            attrs: { kind: block.kind, data: { ...(block.defaults ?? {}) } },
+          })
+          .run()
+      },
     })
   }
   return [...map.values()]

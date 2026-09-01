@@ -10,7 +10,8 @@ function slashIcon(id: string) {
   if (id === 'quote') return '“'
   if (id === 'code') return '</>'
   if (id === 'divider') return '—'
-  return 'T'
+  if (id === 'algorithm') return 'LC'
+  return '+'
 }
 
 /** 只滚菜单自己，避免 scrollIntoView 把页面/编辑器卷走、光标乱插空段。 */
