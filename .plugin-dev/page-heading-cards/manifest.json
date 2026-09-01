@@ -1,0 +1,15 @@
+{
+  "id": "page-heading-cards",
+  "name": "页面标题卡片",
+  "blurb": "把页面编辑器里的 H1 / H2 / H3 换成左侧色条卡片。关掉插件即恢复原生标题。",
+  "tags": ["page", "editor", "theme"],
+  "author": "Biu",
+  "authorUrl": "https://github.com/helloooooooooooooo97/biu-harness",
+  "shell": {
+    "width": 320,
+    "height": 200,
+    "minWidth": 280,
+    "minHeight": 160,
+    "resizable": true
+  }
+}

@@ -7,6 +7,8 @@ export const PAGE_EDITOR_STYLE = `
 .page-editor .tiptap h1{font-size:1.875em;font-weight:700;line-height:1.3;margin-top:.9em}
 .page-editor .tiptap h2{font-size:1.5em;font-weight:650;line-height:1.3;margin-top:.75em}
 .page-editor .tiptap h3{font-size:1.25em;font-weight:650;line-height:1.3;margin-top:.6em}
+.page-editor .page-h-plugin{margin:4px 0}
+.page-editor .page-h-plugin .page-h-plugin-content{display:block;outline:none;min-height:1.2em}
 .page-editor .tiptap ul,.page-editor .tiptap ol{padding-left:1.6em}
 .page-editor .tiptap li{margin:1px 0}
 .page-editor .tiptap blockquote{margin-left:0;padding-left:14px;border-left:3px solid var(--dsw-border);color:var(--dsw-label-2)}

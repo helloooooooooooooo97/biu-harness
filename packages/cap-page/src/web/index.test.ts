@@ -34,4 +34,5 @@ test('page web paints /pages content chrome', async () => {
   await ctx.plugin(pageUi)
   assert.equal(ui.last?.path, '/pages')
   assert.equal(ui.last?.chrome.Content, pagesChrome.Content)
+  assert.ok(ctx.pageEditor)
 })

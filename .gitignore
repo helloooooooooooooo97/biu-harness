@@ -5,6 +5,8 @@ dist/
 .plugin-dev/*
 !.plugin-dev/store-heavy-ping/
 !.plugin-dev/store-heavy-ping/**
+!.plugin-dev/page-heading-cards/
+!.plugin-dev/page-heading-cards/**
 .workspace/
 *.log
 .DS_Store

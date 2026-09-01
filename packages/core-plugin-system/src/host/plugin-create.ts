@@ -97,6 +97,7 @@ export async function compileStoreModule(source: string, kind: 'host' | 'web') {
     jsx: 'transform',
     jsxFactory: 'React.createElement',
     jsxFragment: 'React.Fragment',
+    tsconfigRaw: '{"compilerOptions":{"jsx":"react"}}',
     sourcemap: false,
   })
   return finishBundle(result.code, kind)
@@ -116,6 +117,7 @@ export async function bundleStoreEntry(entryFile: string, kind: 'host' | 'web') 
     jsx: 'transform',
     jsxFactory: 'React.createElement',
     jsxFragment: 'React.Fragment',
+    tsconfigRaw: '{"compilerOptions":{"jsx":"react"}}',
     logLevel: 'silent',
   })
   const text = result.outputFiles?.[0]?.text

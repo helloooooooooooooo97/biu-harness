@@ -216,6 +216,37 @@ test('registers plugin_create, plugin_sandbox, plugin_pack', () => {
   assert.match(descriptions.join('\n'), /shellWidth/)
 })
 
+test('pack web jsx uses globalThis.React instead of bundling npm react', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'plugin-pack-jsx-'))
+  try {
+    const ctx = new Context()
+    stubHub(ctx)
+    const store = new PluginStoreService(
+      ctx,
+      join(dir, '.plugin'),
+      join(dir, 'store.json'),
+      join(dir, '.plugin-dev'),
+    ).open()
+    await store.initSandbox({
+      id: 'store-jsx',
+      name: 'JSX',
+      shell: { width: 320, height: 200 },
+    })
+    const sandbox = join(dir, '.plugin-dev', 'store-jsx')
+    await writeFile(
+      join(sandbox, 'web.tsx'),
+      `export const name = 'store-jsx'\nexport const inject = ['slots']\nfunction Hi() { return <div data-testid="hi">hi</div> }\nexport function apply(ctx: { slots: { place: (name: string, Comp: unknown, opt: unknown) => void } }) {\n  ctx.slots.place('plugin-store-extras', Hi, { key: 'store-jsx' })\n}\n`,
+    )
+    await store.pack('store-jsx')
+    const webJs = await readFile(join(dir, '.plugin', 'store-jsx', 'web.js'), 'utf8')
+    assert.match(webJs, /globalThis\.React/)
+    assert.match(webJs, /createElement/)
+    assert.doesNotMatch(webJs, /node_modules\/react/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
 test('compileStoreModule strips TypeScript in-process', async () => {
   const code = await compileStoreModule(
     `export const name = 'store-echo'\nexport function apply(ctx: { ok: boolean }) { return ctx.ok }`,

@@ -1,7 +1,9 @@
 import { render, waitFor } from '@testing-library/react'
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
+import { Context } from 'cordis'
 import { PageEditor } from './page-editor.tsx'
+import { PageEditorService } from './service.ts'
 
 test('page editor paints markdown headings without a chrome toolbar', async () => {
   const { container, rerender } = render(
@@ -28,4 +30,29 @@ test('page editor paints markdown headings without a chrome toolbar', async () =
     />,
   )
   assert.equal(container.querySelector('h1')?.textContent?.trim(), '欢迎')
+})
+
+test('page editor uses plugin heading views when pageEditor has replacements', async () => {
+  const ctx = new Context()
+  new PageEditorService(ctx)
+  ctx.pageEditor.replaceHeading(1, {
+    View: ({ Content }) => (
+      <div data-testid="h1-plugin">
+        <Content />
+      </div>
+    ),
+  })
+  const { container } = render(
+    <PageEditor
+      record={{ id: 'home' }}
+      field="notes"
+      spec={{ type: 'file', label: '正文', writable: true }}
+      value={'# 欢迎'}
+      writable
+    />,
+  )
+  await waitFor(() => {
+    assert.ok(container.querySelector('[data-testid="h1-plugin"]'))
+  })
+  assert.match(container.querySelector('[data-testid="h1-plugin"]')?.textContent ?? '', /欢迎/)
 })

@@ -3,6 +3,7 @@ import type { Editor, Range } from '@tiptap/core'
 import { ReactRenderer } from '@tiptap/react'
 import Suggestion, { type SuggestionOptions } from '@tiptap/suggestion'
 import { SlashList } from './slash-list.tsx'
+import { getPageEditor, type SlashInsert } from './service.ts'
 
 export type SlashItem = {
   id: string
@@ -96,10 +97,43 @@ export const SLASH_ITEMS: SlashItem[] = [
   },
 ]
 
+function runInsert(editor: Editor, range: Range, insert: SlashInsert) {
+  const chain = editor.chain().focus().deleteRange(range)
+  if (insert === 'paragraph') return chain.toggleNode('paragraph', 'paragraph').run()
+  if (insert === 'heading1') return chain.setNode('heading', { level: 1 }).run()
+  if (insert === 'heading2') return chain.setNode('heading', { level: 2 }).run()
+  if (insert === 'heading3') return chain.setNode('heading', { level: 3 }).run()
+  if (insert === 'bullet') return chain.toggleBulletList().run()
+  if (insert === 'ordered') return chain.toggleOrderedList().run()
+  if (insert === 'quote') return chain.toggleNode('paragraph', 'paragraph').toggleBlockquote().run()
+  if (insert === 'code') return chain.toggleCodeBlock().run()
+  return chain.setHorizontalRule().run()
+}
+
+export function slashCatalog(): SlashItem[] {
+  const extras = getPageEditor()?.slashCommands() ?? []
+  if (!extras.length) return SLASH_ITEMS
+  const map = new Map(SLASH_ITEMS.map((item) => [item.id, item]))
+  for (const extra of extras) {
+    const prev = map.get(extra.id)
+    map.set(extra.id, {
+      id: extra.id,
+      label: extra.label ?? prev?.label ?? extra.id,
+      hint: extra.hint ?? prev?.hint ?? '',
+      aliases: extra.aliases ?? prev?.aliases ?? [],
+      command: extra.insert
+        ? ({ editor, range }) => runInsert(editor, range, extra.insert!)
+        : (prev?.command ?? (({ editor, range }) => editor.chain().focus().deleteRange(range).run())),
+    })
+  }
+  return [...map.values()]
+}
+
 export function filterSlashItems(query: string) {
+  const items = slashCatalog()
   const needle = query.trim().toLowerCase()
-  if (!needle) return SLASH_ITEMS
-  return SLASH_ITEMS.filter((item) => {
+  if (!needle) return items
+  return items.filter((item) => {
     const hay = [item.id, item.label, item.hint, ...item.aliases].join(' ').toLowerCase()
     return hay.includes(needle)
   })

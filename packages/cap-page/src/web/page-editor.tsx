@@ -4,6 +4,7 @@ import { BubbleMenu } from '@tiptap/react/menus'
 import type { Editor } from '@tiptap/core'
 import type { FsContentProps } from '@biu/type-file-system/ui'
 import { pageEditorExtensions } from './kit.ts'
+import { usePageEditorVersion } from './service.ts'
 
 function asMarkdown(value: unknown) {
   if (value == null) return ''
@@ -43,6 +44,7 @@ function Bubble({ editor }: { editor: Editor }) {
 export function PageEditor({ record, value, writable, onChange }: FsContentProps) {
   const saved = useRef(asMarkdown(value))
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const kitVersion = usePageEditorVersion()
 
   const editor = useEditor(
     {
@@ -83,7 +85,7 @@ export function PageEditor({ record, value, writable, onChange }: FsContentProps
         })
       },
     },
-    [record.id],
+    [record.id, kitVersion],
   )
 
   useEffect(() => {
