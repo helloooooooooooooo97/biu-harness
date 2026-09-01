@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { ChatNodeList, splitReplyForDisplay } from './thread.tsx'
 import type { ChatNode } from '@biu/web-session-view'
 import { resetMarkdownRenderForTests } from './markdown-render.ts'
@@ -84,5 +86,11 @@ describe('Details collapse UI', () => {
     expect(screen.getByTestId('user-tool-count').textContent).toBe('1')
     // 展开后最终 Message 所在 step 的统计也要有
     expect(screen.getByRole('group', { name: 'Step 2' })).toBeTruthy()
+  })
+
+  it('inspect button uses the trajectory map icon', () => {
+    const source = readFileSync(resolve(import.meta.dirname, './tool-card.tsx'), 'utf8')
+    expect(source).toContain('<MapIcon className="size-3.5" aria-hidden />')
+    expect(source).not.toContain('BugAntIcon')
   })
 })
