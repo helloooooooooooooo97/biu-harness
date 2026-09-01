@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import { Service, type Context } from 'cordis'
 import {
   DATABASE_CHANNEL,
@@ -19,7 +20,7 @@ import {
   type ListPage,
 } from '@biu/type-file-system'
 import { SavedViewsStore, viewsCollection, type StoredView } from './saved-views.ts'
-import { SchemaTagsStore } from './schema-tags.ts'
+import { SchemaTagsStore, SUPER_TAGS_SQLITE } from './schema-tags.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
 function publicAction(action: CollectionAction): CollectionActionInfo {
@@ -397,9 +398,12 @@ export class DatabaseService extends Service implements Database {
     const sortField = page?.sortField ?? ''
     const sortDir = page?.sortDir === 'desc' ? 'desc' : 'asc'
     const packs = this.schemaTags.list()
-    const matched = (await spec.list()).filter(
-      (row) => matchListFilter(row, filter, schema, packs) && matchQuery(row, q, packs),
-    )
+    const schemaFilter = filter?.schema != null && filter.schema !== '' ? String(filter.schema) : ''
+    const stamped = schemaFilter && schema.fields.schema ? this.schemaTags.stampedIds(spec.path, schemaFilter) : null
+    const matched = (await spec.list()).filter((row) => {
+      if (stamped && stamped.size > 0 && !stamped.has(row.id)) return false
+      return matchListFilter(row, filter, schema, packs) && matchQuery(row, q, packs)
+    })
     const sorted = sortRecords(matched, sortField, sortDir)
     const total = sorted.length
     const slice = sorted.slice(offset, offset + limit)
@@ -421,27 +425,26 @@ export class DatabaseService extends Service implements Database {
   }
 
   async collectSuperTag(id: string) {
-    const tagId = String(id ?? '').trim()
-    if (!tagId) return { tag: null as CollectionSchemaPack | null, items: [] as Array<Record<string, string>> }
-    const tag = this.schemaTags.list().find((item) => item.id === tagId || item.label === tagId) ?? null
-    const want = tag?.id ?? tagId
-    const items: Array<Record<string, string>> = []
-    for (const spec of this.collectionsList()) {
-      const schema = schemaFor(spec)
-      if (!schema.fields.schema) continue
-      const labelKey = schema.labelField ?? 'title'
-      for (const row of await spec.list()) {
-        if (!normalizeSchemaValue(row.schema).tags.includes(want)) continue
-        items.push({
-          collection: spec.path,
-          collectionLabel: spec.label ?? spec.id,
-          id: row.id,
-          path: `${spec.path}/${row.id}`,
-          title: String(row[labelKey] ?? row.id),
-        })
-      }
+    const found = this.schemaTags.collect(id)
+    const labels = new Map(this.collectionsList().map((spec) => [spec.path, spec.label ?? spec.id]))
+    return {
+      tag: found.tag,
+      items: found.items.map((item) => ({
+        ...item,
+        collectionLabel: labels.get(item.collection) ?? item.collection,
+      })),
     }
-    return { tag, items }
+  }
+
+  private indexSuperTagRecord(spec: CollectionSpec, record: DbRecord) {
+    if (!schemaFor(spec).fields.schema) return
+    const labelKey = schemaFor(spec).labelField ?? 'title'
+    this.schemaTags.indexRecord(
+      spec.path,
+      record.id,
+      String(record[labelKey] ?? record.id),
+      normalizeSchemaValue(record.schema).tags,
+    )
   }
 
   async read(path: string) {
@@ -464,6 +467,7 @@ export class DatabaseService extends Service implements Database {
     if (!spec.records?.update || !spec.update) throw new Error(`collection cannot update: ${spec.path}`)
     const patch = pickWritablePatch(schemaFor(spec), parseContent(content))
     const record = await spec.update(parts[1]!, patch)
+    this.indexSuperTagRecord(spec, record)
     this.bump()
     return { kind: 'record' as const, path: `${spec.path}/${record.id}`, value: withoutContent(spec, record) }
   }
@@ -476,6 +480,7 @@ export class DatabaseService extends Service implements Database {
     if (!spec.records?.create || !spec.create) throw new Error(`collection cannot create: ${spec.path}`)
     const fields = content == null || content === '' ? {} : pickWritablePatch(schemaFor(spec), parseContent(content))
     const record = await spec.create(fields)
+    this.indexSuperTagRecord(spec, record)
     this.bump()
     return { kind: 'record' as const, path: `${spec.path}/${record.id}`, value: withoutContent(spec, record) }
   }
@@ -489,6 +494,7 @@ export class DatabaseService extends Service implements Database {
     const record = await spec.get(parts[1]!)
     if (!record) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
     await spec.remove(parts[1]!)
+    this.schemaTags.removeRecord(spec.path, parts[1]!)
     this.bump()
     return { kind: 'deleted' as const, path: `${spec.path}/${parts[1]}`, id: parts[1] }
   }
@@ -505,6 +511,7 @@ export class DatabaseService extends Service implements Database {
     if (!matchActionWhen(record, action.when)) throw new Error(`action not available: ${actionId}`)
     await action.run(parts[1]!, record)
     const next = (await spec.get(parts[1]!)) ?? record
+    this.indexSuperTagRecord(spec, next)
     this.bump()
     return { kind: 'record' as const, path: `${spec.path}/${next.id}`, value: withoutContent(spec, next) }
   }
@@ -572,6 +579,7 @@ export const inject = ['tools', 'http']
 
 export function apply(ctx: Context) {
   const db = new DatabaseService(ctx)
+  db.schemaTags.open(join(process.cwd(), SUPER_TAGS_SQLITE))
   const savedViews = new SavedViewsStore()
   const schemaTags = db.schemaTags
   db.register(viewsCollection(savedViews, () => db.collectionsList().map((item) => ({
@@ -758,7 +766,8 @@ export function apply(ctx: Context) {
         route.send(200, await db.collectSuperTag(collect))
         return
       }
-      route.send(200, { tags: schemaTags.list() })
+      const q = route.query.get('q') || ''
+      route.send(200, { tags: schemaTags.list(q) })
     } catch (error) {
       route.send(400, { error: String(error) })
     }
