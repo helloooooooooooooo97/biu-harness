@@ -49,6 +49,8 @@ test('plus menu can add another database tab', () => {
   assert.match(inspector, /inspector-add-owner\$\{headerTabs\.length \? ' has-open' : ''\}/)
   assert.doesNotMatch(inspector, /添加\$\{item\.label\}/)
   assert.match(css, /\.inspector-crumb-close/)
+  assert.match(css, /\.inspector-crumb-actions\s*\{[^}]*display:\s*none/s)
+  assert.match(css, /\.inspector-crumb-tab:hover \.inspector-crumb-actions[\s\S]*display:\s*inline-flex/)
   assert.match(css, /\.inspector-crumb-full \.fsdb-crumb-btn\.is-static/)
   assert.match(css, /\.inspector-add-close/)
 })
