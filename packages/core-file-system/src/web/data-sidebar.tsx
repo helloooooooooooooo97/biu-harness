@@ -13,7 +13,7 @@ import {
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import type { CollectionInfo, DbRecord } from '@biu/type-file-system'
 import { builtinAllViewId, mergeViewsForPath } from '../catalog-views.ts'
-import { SUPERTAGS_COLLECTION_PATH, isSystemCollection, sortDataCollections } from './database-path.ts'
+import { isSystemCollection, sortDataCollections } from './database-path.ts'
 import type { SavedView } from './saved-view.ts'
 import {
   fetchViewPreview,
