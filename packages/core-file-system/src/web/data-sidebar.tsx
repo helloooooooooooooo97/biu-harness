@@ -12,8 +12,8 @@ import {
 } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import type { CollectionInfo, DbRecord } from '@biu/type-file-system'
-import { builtinAllViewId, mergeCatalogViews, mergeTableViews } from '../catalog-views.ts'
-import { VIEWS_COLLECTION_PATH, isSystemCollection, sortDataCollections } from './database-path.ts'
+import { builtinAllViewId, mergeViewsForPath } from '../catalog-views.ts'
+import { SUPERTAGS_COLLECTION_PATH, isSystemCollection, sortDataCollections } from './database-path.ts'
 import type { SavedView } from './saved-view.ts'
 import {
   fetchViewPreview,
@@ -44,6 +44,7 @@ import {
 import { pickDomAttrs, recordPickKind, viewPickId } from './pick-dom.ts'
 import { toggleExpandedViewKey } from './sidebar-nav.ts'
 import { TableGlyph, ViewModeGlyph } from './nav-glyphs.tsx'
+import { loadSchemaTags, subscribeSchemaTags } from './schema-tags.ts'
 
 const SIDEBAR_BRAND_GRADIENT =
   'linear-gradient(105deg, color-mix(in srgb, #0066B0 42%, var(--dsw-hover)), color-mix(in srgb, #5B3E90 40%, var(--dsw-hover)) 52%, color-mix(in srgb, #E22726 42%, var(--dsw-hover)))'
@@ -262,6 +263,11 @@ export const DataSidebar = memo(function DataSidebar({
   const { user: userTables, system: systemTables } = useMemo(() => sortDataCollections(listedTables), [listedTables])
   const [openTables, setOpenTables] = useState<Record<string, boolean>>(() => ({ [collectionPath]: true }))
   useSyncExternalStore(subscribeStarredViews, getStarredViewsVersion, () => 0)
+  useSyncExternalStore(
+    (fn) => subscribeSchemaTags(undefined, fn),
+    () => loadSchemaTags().map((tag) => `${tag.id}:${tag.label}`).join('\n'),
+    () => '',
+  )
   const starredViews = getStarredViews()
   const [favOpen, setFavOpen] = useState(() => {
     try {
@@ -279,9 +285,8 @@ export const DataSidebar = memo(function DataSidebar({
 
   function viewsFor(path: string) {
     const listed = path === collectionPath ? views : loadViews(path)
-    if (path === VIEWS_COLLECTION_PATH) return mergeCatalogViews(tables, listed).map((view) => withViewDisplay(path, view))
     const table = listedTables.find((row) => row.path === path) ?? { path, label: path.replace(/^\//, '') }
-    return mergeTableViews(table, listed).map((view) => withViewDisplay(path, view))
+    return mergeViewsForPath(path, table, tables, listed, loadSchemaTags()).map((view) => withViewDisplay(path, view))
   }
 
   const starredRows = starredViews.flatMap((item) => {

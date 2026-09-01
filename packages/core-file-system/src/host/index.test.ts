@@ -4,6 +4,7 @@ import { Context, Service } from 'cordis'
 import * as tools from '@biu/host-tools'
 import { DatabaseService, apply as applyFileSystem } from './index.ts'
 import type { CollectionSpec } from '@biu/type-file-system'
+import { superTagsCollection } from './super-tags-collection.ts'
 
 function notesCollection(): CollectionSpec {
   const rows = new Map<string, { id: string; title: string; status: string; pinned: boolean }>()
@@ -368,6 +369,21 @@ test('SuperTag catalog is workspace-wide and collect uses sqlite stamps', async 
   assert.equal(collected.tag?.id, 'dp')
   assert.equal(collected.items.length, 2)
   assert.deepEqual(collected.items.map((item) => item.path).sort(), ['/notes/n1', '/pages/p1'])
+})
+
+test('listing /supertags with tag filter returns stamped records as a table', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  db.register(notesCollection())
+  db.register(superTagsCollection(db.schemaTags, () => [{ id: 'notes', path: '/notes', label: '笔记' }]))
+  db.schemaTags.replace([{ id: 'dp', label: '动态规划', fields: [] }])
+  await db.update('/notes/n1', { schema: { tags: ['dp'], values: {} } })
+  const listed = await db.list('/supertags', { tag: 'dp' })
+  if (listed.kind !== 'collection') return
+  assert.equal(listed.items.length, 1)
+  assert.equal(listed.items[0]?.id, 'notes::n1')
+  assert.equal(listed.items[0]?.table, '笔记')
+  assert.equal(listed.items[0]?.sourceId, 'n1')
 })
 
 test('SuperTag list filter asks the collection only for stamped ids', async () => {

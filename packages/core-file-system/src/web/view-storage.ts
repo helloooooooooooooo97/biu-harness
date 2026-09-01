@@ -1,4 +1,4 @@
-import { builtinAllViewId, stubBuiltinAllView, stubBuiltinCatalogView } from '../catalog-views.ts'
+import { builtinAllViewId, stubBuiltinAllView, stubBuiltinCatalogView, stubBuiltinTagView } from '../catalog-views.ts'
 import { normalizeSavedView, type SavedView } from './saved-view.ts'
 
 export function viewsKey(collectionPath: string) {
@@ -57,6 +57,7 @@ export function viewForPath(collectionPath: string, routeViewId?: string): Saved
     (routeViewId
       ? listed.find((item) => item.id === routeViewId) ??
         stubBuiltinCatalogView(routeViewId) ??
+        stubBuiltinTagView(routeViewId) ??
         stubBuiltinAllView(routeViewId)
       : undefined) ??
     listed.find((item) => item.id === loadActiveViewId(collectionPath, listed)) ??

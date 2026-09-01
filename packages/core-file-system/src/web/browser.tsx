@@ -104,11 +104,11 @@ import {
 } from './page-width.ts'
 import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
-import { mergeCatalogViews, mergeTableViews, catalogRowOpenTarget } from '../catalog-views.ts'
-import { VIEWS_COLLECTION_PATH } from './database-path.ts'
+import { mergeViewsForPath, catalogRowOpenTarget, tagRowOpenTarget, stampRowOpenTarget } from '../catalog-views.ts'
+import { SUPERTAGS_COLLECTION_PATH, VIEWS_COLLECTION_PATH } from './database-path.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
 import { SchemaChips } from './schema-field.tsx'
-import { loadSchemaTags, pullSchemaTags } from './schema-tags.ts'
+import { loadSchemaTags, pullSchemaTags, subscribeSchemaTags } from './schema-tags.ts'
 
 type StatResult = { schema?: CollectionSchema }
 
@@ -195,7 +195,7 @@ export function CollectionBrowser({
   const [activeViewId, setActiveViewId] = useState<string | null>(initialView?.id ?? null)
   const catalogLocks = useMemo(() => {
     const current = views.find((view) => view.id === activeViewId)
-    if (!current?.builtin) return lockedFilters
+    if (!current?.builtin) return { ...lockedFilters, ...(current?.filters.tag ? { tag: String(current.filters.tag) } : {}) }
     return { ...current.filters, ...lockedFilters }
   }, [activeViewId, lockedFilters, views])
   const queryFilters = useMemo(() => ({ ...filters, ...catalogLocks }), [catalogLocks, filters])
@@ -220,6 +220,18 @@ export function CollectionBrowser({
       const target = catalogRowOpenTarget(row)
       if (target) {
         onOpenTable?.(target.collection, target.viewId)
+        return
+      }
+    }
+    if (dataPath === SUPERTAGS_COLLECTION_PATH) {
+      const stamp = stampRowOpenTarget(row)
+      if (stamp) {
+        onOpenRecord?.(stamp.recordId, null, stamp.collection)
+        return
+      }
+      const tag = tagRowOpenTarget(row)
+      if (tag) {
+        onOpenTable?.(SUPERTAGS_COLLECTION_PATH, tag.viewId)
         return
       }
     }
@@ -495,13 +507,13 @@ export function CollectionBrowser({
     setPage(0)
     const stored = viewForPath(collectionPath, routeViewId)
     const user = loadViews(collectionPath)
-    const listed =
-      collectionPath === VIEWS_COLLECTION_PATH
-        ? mergeCatalogViews(tables, user)
-        : mergeTableViews(
-            tables.find((table) => table.path === collectionPath) ?? { path: collectionPath, label: title },
-            user,
-          )
+    const listed = mergeViewsForPath(
+      collectionPath,
+      tables.find((table) => table.path === collectionPath) ?? { path: collectionPath, label: title },
+      tables,
+      user,
+      loadSchemaTags(),
+    )
     rememberViews(collectionPath, listed)
     if (stored || listed[0]) {
       const next = (routeViewId && listed.find((item) => item.id === routeViewId)) || stored || listed[0]
@@ -584,8 +596,9 @@ export function CollectionBrowser({
   useEffect(() => () => window.clearTimeout(noticeTimer.current), [])
 
   const schema = stat?.schema
-  const canCreate = Boolean(schema?.records?.create)
-  const canDelete = Boolean(schema?.records?.delete)
+  const collectMode = Boolean(queryFilters.tag)
+  const canCreate = Boolean(schema?.records?.create) && !collectMode
+  const canDelete = Boolean(schema?.records?.delete) && !collectMode
   useEffect(() => {
     setPickedIds([])
   }, [collectionPath])
@@ -757,10 +770,12 @@ export function CollectionBrowser({
 
   function persistViewsFor(path: string, next: SavedView[]) {
     const table = tables.find((item) => item.path === path) ?? { path, label: path.replace(/^\//, '') }
-    const listed = (
-      path === VIEWS_COLLECTION_PATH
-        ? mergeCatalogViews(tables, next)
-        : mergeTableViews(table, next)
+    const listed = mergeViewsForPath(
+      path,
+      table,
+      tables,
+      next,
+      loadSchemaTags(),
     ).map((view) => withViewDisplay(path, view))
     const stored = listed.filter((view) => !view.builtin)
     rememberViews(path, listed)
@@ -779,6 +794,11 @@ export function CollectionBrowser({
   function persistViews(next: SavedView[]) {
     persistViewsFor(collectionPath, next)
   }
+
+  useEffect(() => {
+    if (collectionPath !== SUPERTAGS_COLLECTION_PATH) return
+    return subscribeSchemaTags(undefined, () => persistViews(loadViews(collectionPath)))
+  }, [collectionPath])
 
   function rememberActiveView(id: string) {
     setActiveViewId(id)
@@ -865,8 +885,8 @@ export function CollectionBrowser({
       mode: 'table',
       sortField: target === collectionPath ? (allColumns[0]?.key ?? 'id') : 'id',
       sortDir: 'asc',
-      filters: {},
-      columns: target === collectionPath ? [...schemaDefaultKeys] : [],
+      filters: queryFilters.tag ? { tag: String(queryFilters.tag) } : {},
+      columns: queryFilters.tag ? ['title', 'table'] : target === collectionPath ? [...schemaDefaultKeys] : [],
       groupBy: '',
       tree: true,
       wrap: false,

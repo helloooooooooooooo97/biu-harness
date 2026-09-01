@@ -57,9 +57,9 @@ test('views catalog href is filtered by table source', () => {
   assert.equal(viewsCatalogHref('/views'), `/database/views/view/${encodeURIComponent('builtin:/views')}`)
 })
 
-test('views, SuperTags and events are system collections; user tables sort first', () => {
+test('views and events are system collections; tags sort with user tables', () => {
   assert.equal(isSystemCollection('/views'), true)
-  assert.equal(isSystemCollection('/supertags'), true)
+  assert.equal(isSystemCollection('/supertags'), false)
   assert.equal(isSystemCollection('/events'), true)
   assert.equal(isSystemCollection('/sessions'), false)
   const { user, system } = sortDataCollections([
@@ -73,10 +73,10 @@ test('views, SuperTags and events are system collections; user tables sort first
   ])
   assert.deepEqual(
     user.map((item) => item.path),
-    ['/sessions', '/tasks', '/pages', '/plugins'],
+    ['/sessions', '/tasks', '/pages', '/supertags', '/plugins'],
   )
   assert.deepEqual(
     system.map((item) => item.path),
-    ['/views', '/supertags', '/events'],
+    ['/views', '/events'],
   )
 })

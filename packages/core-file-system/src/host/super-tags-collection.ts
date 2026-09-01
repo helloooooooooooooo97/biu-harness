@@ -1,5 +1,6 @@
-import type { CollectionListQuery, CollectionSpec, DbRecord } from '@biu/type-file-system'
+import type { CollectionInfo, CollectionListQuery, CollectionSpec, DbRecord } from '@biu/type-file-system'
 import { SchemaTagsStore, slugSuperTagId } from './schema-tags.ts'
+import { normalizeCollectionPath } from '../paths.ts'
 
 function parseFields(raw: unknown) {
   if (Array.isArray(raw)) return raw
@@ -14,30 +15,66 @@ function parseFields(raw: unknown) {
   return []
 }
 
-export function superTagsCollection(store: SchemaTagsStore): CollectionSpec {
-  const asRecord = (id: string, label: string, fields: unknown[], stampCount: number): DbRecord => ({
+export function stampRecordId(collection: string, recordId: string) {
+  const table = normalizeCollectionPath(collection).replace(/^\//, '')
+  return `${table}::${recordId}`
+}
+
+export function parseStampRecordId(id: string) {
+  const raw = String(id ?? '')
+  const at = raw.indexOf('::')
+  if (at <= 0) return null
+  const table = raw.slice(0, at).trim()
+  const recordId = raw.slice(at + 2).trim()
+  if (!table || !recordId) return null
+  return { collection: `/${table}`, recordId }
+}
+
+export function superTagsCollection(
+  store: SchemaTagsStore,
+  tables: () => Array<Pick<CollectionInfo, 'path' | 'label' | 'id'>> = () => [],
+): CollectionSpec {
+  const asTag = (id: string, label: string, fields: unknown[], stampCount: number): DbRecord => ({
     id,
     title: label,
     fieldCount: fields.length,
     stampCount,
   })
 
-  const rows = () => {
+  const tableLabel = (path: string) => {
+    const hit = tables().find((item) => item.path === path)
+    return hit?.label ?? hit?.id ?? path
+  }
+
+  const tagRows = () => {
     const counts = store.stampCounts()
-    return store.list().map((tag) => asRecord(tag.id, tag.label, tag.fields, counts[tag.id] ?? 0))
+    return store.list().map((tag) => asTag(tag.id, tag.label, tag.fields, counts[tag.id] ?? 0))
+  }
+
+  const stampRows = (tagId: string) => {
+    const found = store.collect(tagId)
+    const id = found.tag?.id ?? tagId
+    return found.items.map((item) => ({
+      id: stampRecordId(item.collection, item.id),
+      title: item.title || item.id,
+      table: tableLabel(item.collection),
+      tablePath: item.collection,
+      sourceId: item.id,
+      tag: id,
+    }))
   }
 
   return {
     id: 'supertags',
     path: '/supertags',
-    label: '超级标签',
+    label: '标签',
     view: {
       moduleId: 'supertags-db',
       route: '/db-supertags',
-      title: '超级标签',
+      title: '标签',
       inspector: true,
-      blurb: '工作区全局 SuperTag：字段定义与跨表收集。可保存自己的表格、看板视图。',
-      order: 18,
+      blurb: '工作区全局标签：点开一枚就是跨表收集到的记录，可保存表格、看板视图。',
+      order: 14,
       icon: 'tag',
     },
     records: { update: true, create: true, delete: true },
@@ -46,41 +83,58 @@ export function superTagsCollection(store: SchemaTagsStore): CollectionSpec {
       contentField: 'none',
       columns: ['title', 'fieldCount', 'stampCount'],
       fields: {
-        title: { type: 'string', label: 'SuperTag', writable: true },
+        title: { type: 'string', label: '标签', writable: true },
         fieldCount: { type: 'number', label: '字段', computed: true },
         stampCount: { type: 'number', label: '收集', computed: true, sortable: true },
+        table: { type: 'string', label: '来源表', computed: true },
+        tablePath: { type: 'string', label: '表路径', computed: true },
+        sourceId: { type: 'string', label: '记录', computed: true },
+        tag: { type: 'string', label: '标签' },
         schema: { type: 'schema', label: 'SuperTag', writable: false, computed: true },
       },
     },
     list: (query?: CollectionListQuery) => {
-      let listed = rows()
+      const tagFilter = String(query?.filter?.tag ?? '').trim()
+      let listed = tagFilter ? stampRows(tagFilter) : tagRows()
       if (query?.ids?.length) {
         const want = new Set(query.ids)
         listed = listed.filter((row) => want.has(row.id))
       }
       const q = query?.q?.trim().toLowerCase() ?? ''
       if (q) {
-        listed = listed.filter((row) => `${row.id} ${row.title}`.toLowerCase().includes(q))
+        listed = listed.filter((row) => `${row.id} ${row.title} ${row.table ?? ''}`.toLowerCase().includes(q))
       }
       return listed
     },
-    get: (id) => rows().find((row) => row.id === id) ?? null,
+    get: (id) => {
+      const stamp = parseStampRecordId(id)
+      if (stamp) {
+        for (const tag of store.list()) {
+          const hit = stampRows(tag.id).find((row) => row.id === id)
+          if (hit) return hit
+        }
+        return null
+      }
+      return tagRows().find((row) => row.id === id) ?? null
+    },
     create: (fields = {}) => {
-      const title = String(fields.title ?? '').trim() || '未命名 SuperTag'
+      const title = String(fields.title ?? '').trim() || '未命名标签'
       const id = slugSuperTagId(title, new Set(store.list().map((tag) => tag.id)))
       const pack = store.upsert({ id, label: title, fields: parseFields(fields.fields) })
-      return asRecord(pack.id, pack.label, pack.fields, 0)
+      return asTag(pack.id, pack.label, pack.fields, 0)
     },
     update: (id, patch) => {
+      if (parseStampRecordId(id)) throw new Error(`cannot update collected row: ${id}`)
       const current = store.get(id)
-      if (!current) throw new Error(`unknown SuperTag: ${id}`)
+      if (!current) throw new Error(`unknown tag: ${id}`)
       const label = patch.title != null ? String(patch.title).trim() || current.label : current.label
       const fields = patch.fields != null ? parseFields(patch.fields) : current.fields
       const pack = store.upsert({ id: current.id, label, fields })
-      return asRecord(pack.id, pack.label, pack.fields, store.stampCounts()[pack.id] ?? 0)
+      return asTag(pack.id, pack.label, pack.fields, store.stampCounts()[pack.id] ?? 0)
     },
     remove: (id) => {
-      if (!store.removeTag(id)) throw new Error(`unknown SuperTag: ${id}`)
+      if (parseStampRecordId(id)) throw new Error(`cannot delete collected row: ${id}`)
+      if (!store.removeTag(id)) throw new Error(`unknown tag: ${id}`)
     },
   }
 }

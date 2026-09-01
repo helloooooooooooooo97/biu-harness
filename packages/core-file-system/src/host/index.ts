@@ -412,7 +412,7 @@ export class DatabaseService extends Service implements Database {
     const packs = this.schemaTags.list()
     const schemaFilter = filter?.schema != null && filter.schema !== '' ? String(filter.schema) : ''
     const query: CollectionListQuery = { q, filter }
-    if (schemaFilter && schema.fields.schema) {
+    if (schemaFilter && schema.fields.schema && spec.path !== '/supertags') {
       const stamped = this.schemaTags.stampedIds(spec.path, schemaFilter)
       if (!stamped.size) {
         return {
@@ -616,7 +616,11 @@ export function apply(ctx: Context) {
     label: item.label ?? item.id,
     view: item.view ?? null,
   }))))
-  db.register(superTagsCollection(schemaTags))
+  db.register(superTagsCollection(schemaTags, () => db.collectionsList().map((item) => ({
+    id: item.id,
+    path: item.path,
+    label: item.label ?? item.id,
+  }))))
   ctx.tools.register({
     name: 'db_list',
     description: '列出 File System 路径：/ 为已登记表，/<表> 为该表记录（不含 content 正文）。默认每页 50 条，最多 200。',

@@ -27,4 +27,13 @@ test('superTagsCollection lists tags with stamp counts and supports create/updat
   await spec.remove!(created.id)
   assert.equal(store.get('io'), null)
   assert.equal((await spec.list()).length, 1)
+
+  const specWithTables = superTagsCollection(store, () => [{ id: 'pages', path: '/pages', label: '页面' }])
+  const collected = await specWithTables.list({ filter: { tag: 'dp' } })
+  assert.equal(collected.length, 1)
+  assert.equal(collected[0]?.id, 'pages::home')
+  assert.equal(collected[0]?.table, '页面')
+  assert.equal(collected[0]?.tablePath, '/pages')
+  assert.equal(collected[0]?.sourceId, 'home')
+  assert.equal(collected[0]?.tag, 'dp')
 })

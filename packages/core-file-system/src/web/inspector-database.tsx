@@ -8,7 +8,7 @@ import { buildCrumbs, pathForCrumbTarget, type Crumb, type CrumbTarget } from '.
 import { CollectionBrowser } from './browser.tsx'
 import { CrumbTrail } from './crumb-trail.tsx'
 import { defaultViewId, loadRecords, loadViews, viewForPath } from './view-storage.ts'
-import { builtinAllViewId, mergeCatalogViews, mergeTableViews } from '../catalog-views.ts'
+import { builtinAllViewId, mergeViewsForPath } from '../catalog-views.ts'
 import { DATA_MODULE, DATA_MODULE_ID, VIEWS_COLLECTION_PATH, databaseAllViewPath, databaseRecordPath, databaseViewPath, viewsCatalogSource } from './database-path.ts'
 import {
   getInspectorDbPath,
@@ -17,6 +17,7 @@ import {
 } from './inspector-db-route.ts'
 import { getDatabaseUi } from './database-ui.ts'
 import { TableGlyph } from './nav-glyphs.tsx'
+import { loadSchemaTags } from './schema-tags.ts'
 
 const tabIcons = new Map<string, ComponentType<{ className?: string }>>()
 
@@ -131,10 +132,13 @@ function crumbsForRoute(
   const collection = parsed.kind === 'collection-view' || parsed.kind === 'record' ? parsed.collection : ''
   const table = tables.find((item) => item.path === collection)
   const stored = collection ? loadViews(collection) : []
-  const views =
-    collection === VIEWS_COLLECTION_PATH
-      ? mergeCatalogViews(tables, stored)
-      : mergeTableViews(table ?? (collection ? { path: collection } : undefined), stored)
+  const views = mergeViewsForPath(
+    collection,
+    table ?? (collection ? { path: collection } : undefined),
+    tables,
+    stored,
+    loadSchemaTags(),
+  )
   const urlViewId = parsed.kind === 'collection-view' ? parsed.viewId : undefined
   const recordId = parsed.kind === 'record' ? parsed.recordId : undefined
   const resolvedView = collection ? viewForPath(collection, urlViewId) : null

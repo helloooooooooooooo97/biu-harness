@@ -14,8 +14,22 @@ export function builtinCatalogViewId(collectionPath: string) {
   return `builtin:${normalizeCollectionPath(collectionPath)}`
 }
 
+const TAG_PREFIX = 'builtin-tag:'
+
 export function isBuiltinCatalogViewId(id: string) {
-  return id.startsWith('builtin:') && !id.startsWith(ALL_PREFIX)
+  return id.startsWith('builtin:') && !id.startsWith(ALL_PREFIX) && !id.startsWith(TAG_PREFIX)
+}
+
+export function builtinTagViewId(tagId: string) {
+  return `${TAG_PREFIX}${String(tagId ?? '').trim()}`
+}
+
+export function isBuiltinTagViewId(id: string) {
+  return id.startsWith(TAG_PREFIX)
+}
+
+export function tagIdFromViewId(id: string) {
+  return isBuiltinTagViewId(id) ? id.slice(TAG_PREFIX.length) : ''
 }
 
 export function builtinAllViewId(collectionPath: string) {
@@ -27,7 +41,7 @@ export function isBuiltinAllViewId(id: string) {
 }
 
 export function isReadOnlyViewId(id: string) {
-  return isBuiltinAllViewId(id) || isBuiltinCatalogViewId(id)
+  return isBuiltinAllViewId(id) || isBuiltinCatalogViewId(id) || isBuiltinTagViewId(id)
 }
 
 export function collectionNoun(table: TableRef) {
@@ -102,6 +116,56 @@ export function mergeTableViews(table: TableRef | undefined, user: SavedView[]):
   return [builtinAllView(table), ...extra]
 }
 
+export type TagRef = { id: string; label: string }
+
+export function builtinTagView(tag: TagRef): SavedView {
+  const id = String(tag.id ?? '').trim()
+  return normalizeSavedView({
+    id: builtinTagViewId(id),
+    name: tag.label || id,
+    mode: 'table',
+    sortField: 'title',
+    sortDir: 'asc',
+    filters: { tag: id },
+    columns: ['title', 'table'],
+    groupBy: '',
+    tree: true,
+    wrap: false,
+    truncate: true,
+    query: '',
+    builtin: true,
+  })
+}
+
+export function stubBuiltinTagView(id: string): SavedView | null {
+  if (!isBuiltinTagViewId(id)) return null
+  const tagId = tagIdFromViewId(id)
+  if (!tagId) return null
+  return builtinTagView({ id: tagId, label: tagId })
+}
+
+export function mergeTagViews(table: TableRef | undefined, tags: TagRef[], user: SavedView[]): SavedView[] {
+  const extra = userViews(user)
+  const all = table?.path ? builtinAllView(table) : null
+  return [...(all ? [all] : []), ...tags.filter((tag) => tag.id).map(builtinTagView), ...extra]
+}
+
+/** 标签目录里的一行：打开该标签的收集表，而不是记录详情。 */
+export function tagRowOpenTarget(row: { id?: unknown; tablePath?: unknown; sourceId?: unknown }) {
+  if (String(row.tablePath ?? '').trim() && String(row.sourceId ?? '').trim()) return null
+  const id = String(row.id ?? '').trim()
+  if (!id || id.includes('::')) return null
+  return { viewId: builtinTagViewId(id) }
+}
+
+/** 收集表里的一行：打开原始表里的那条记录。 */
+export function stampRowOpenTarget(row: { tablePath?: unknown; sourceId?: unknown }) {
+  const collection = normalizeCollectionPath(String(row.tablePath ?? ''))
+  const recordId = String(row.sourceId ?? '').trim()
+  if (!collection || collection === '/' || !recordId) return null
+  return { collection, recordId }
+}
+
 /** 路由里已经是 builtin: 时，即使本地还没合并登记表，也能先还原筛选。 */
 export function stubBuiltinCatalogView(id: string): SavedView | null {
   if (!isBuiltinCatalogViewId(id)) return null
@@ -121,6 +185,21 @@ export function stubBuiltinCatalogView(id: string): SavedView | null {
     query: '',
     builtin: true,
   })
+}
+
+export function mergeViewsForPath(
+  path: string,
+  table: TableRef | undefined,
+  tables: CollectionInfo[],
+  user: SavedView[],
+  tags: TagRef[] = [],
+) {
+  const normalized = normalizeCollectionPath(path)
+  if (normalized === '/views') return mergeCatalogViews(tables, user)
+  if (normalized === '/supertags') {
+    return mergeTagViews(table ?? { path: '/supertags', label: '标签', view: { title: '标签' } }, tags, user)
+  }
+  return mergeTableViews(table, user)
 }
 
 /** /views 表里的一行：打开时应跳到该视图对应表，而不是看视图记录自己的属性。 */
