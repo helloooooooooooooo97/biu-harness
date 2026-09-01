@@ -26,11 +26,9 @@ export function subscribeChatOutline(fn: () => void) {
 
 export function getChatOutlineOpen(): boolean {
   try {
-    const raw = localStorage.getItem(OPEN_KEY)
-    if (raw == null) return true
-    return raw !== '0'
+    return localStorage.getItem(OPEN_KEY) === '1'
   } catch {
-    return true
+    return false
   }
 }
 

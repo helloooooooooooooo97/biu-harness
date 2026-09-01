@@ -1,11 +1,9 @@
-import { memo, useMemo, useSyncExternalStore } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   bindSessionView,
   deriveChatOutline,
   getChatOutlineFilter,
-  getChatOutlineOpen,
   requestChatOutlineGo,
-  setChatOutlineOpen,
   subscribeChatOutline,
   type ChatOutlineFilter,
   type SessionViewService,
@@ -28,61 +26,59 @@ export const ChatMessageOutline = memo(function ChatMessageOutline({
   sessionView?: SessionViewService
 }) {
   const nodes = useSessionView((state) => state.nodes)
-  const open = useSyncExternalStore(subscribeChatOutline, getChatOutlineOpen, () => true)
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLElement>(null)
   const filter = useSyncExternalStore(subscribeChatOutline, getChatOutlineFilter, (): ChatOutlineFilter => 'user')
   const items = useMemo(() => deriveChatOutline(nodes, filter), [nodes, filter])
 
-  if (!open) {
-    return (
-      <aside className="chat-outline is-collapsed" aria-label="消息大纲">
-        <button
-          type="button"
-          className="chat-outline-fab"
-          title="打开消息大纲"
-          aria-label="打开消息大纲"
-          data-testid="chat-outline-open"
-          onClick={() => setChatOutlineOpen(true)}
-        >
-          <OutlineGlyph className="size-4" />
-        </button>
-      </aside>
-    )
-  }
+  useEffect(() => {
+    if (!open) return
+    function onPointer(event: MouseEvent) {
+      const target = event.target as Node
+      if (rootRef.current?.contains(target)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointer)
+    return () => document.removeEventListener('mousedown', onPointer)
+  }, [open])
 
   return (
-    <aside className="chat-outline" aria-label="消息大纲" data-testid="chat-outline">
-      <div className="chat-outline-head">
-        <span className="chat-outline-title">消息</span>
-        <button
-          type="button"
-          className="chat-outline-icon-btn"
-          title="收起消息大纲"
-          aria-label="收起消息大纲"
-          data-testid="chat-outline-close"
-          onClick={() => setChatOutlineOpen(false)}
-        >
-          <OutlineGlyph className="size-3.5" />
-        </button>
-      </div>
-      <nav className="chat-outline-list">
-        {items.length ? (
-          items.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`chat-outline-item${item.robot ? ' is-robot' : ''}`}
-              title={item.text}
-              data-testid={`chat-outline-item-${item.id}`}
-              onClick={() => requestChatOutlineGo(item.id)}
-            >
-              <span className="chat-outline-dot" aria-hidden />
-              <span className="chat-outline-label">{item.text}</span>
-            </button>
-          ))
-        ) : (
-          <div className="chat-outline-empty">还没有消息</div>
-        )}
-      </nav>
+    <aside className="chat-outline" aria-label="消息大纲" ref={rootRef}>
+      <button
+        type="button"
+        className={`chat-outline-icon-btn${open ? ' is-open' : ''}`}
+        title={open ? '收起消息大纲' : '打开消息大纲'}
+        aria-label={open ? '收起消息大纲' : '打开消息大纲'}
+        aria-expanded={open}
+        data-testid="chat-outline-toggle"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <OutlineGlyph className="size-4" />
+      </button>
+      {open ? (
+        <nav className="chat-outline-panel" data-testid="chat-outline">
+          {items.length ? (
+            items.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`chat-outline-item${item.robot ? ' is-robot' : ''}`}
+                title={item.text}
+                data-testid={`chat-outline-item-${item.id}`}
+                onClick={() => {
+                  requestChatOutlineGo(item.id)
+                  setOpen(false)
+                }}
+              >
+                <span className="chat-outline-dot" aria-hidden />
+                <span className="chat-outline-label">{item.text}</span>
+              </button>
+            ))
+          ) : (
+            <div className="chat-outline-empty">还没有消息</div>
+          )}
+        </nav>
+      ) : null}
     </aside>
   )
 })
