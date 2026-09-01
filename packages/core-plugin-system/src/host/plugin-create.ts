@@ -139,7 +139,8 @@ export async function readSandboxManifest(dir: string) {
 const CONTRACT = [
   '契约：id 与 export const name 相同。禁止 import npm / react / @biu/*。不要改 packages/ 或 cordis.plugins.json。',
   'Web：ctx.slots.place("plugin-store-extras", Comp, { key, props: () => ({ Icon }) })。Icon 可选，不传则 Dock 用默认拼图图标。运行窗口会给 extras 套 macOS 窗口框（关/缩/全屏），key 尽量用插件 id。',
-  '有 web 时必须显式写 shell.width 与 shell.height（内容区像素）。可选 minWidth / minHeight / resizable。禁止省略让窗口猜尺寸。插件根节点铺满窗口，不要用 100vw。',
+  '有 web 时必须在 manifest / 本工具 shell 参数里写 width 与 height（内容区像素）。可选 minWidth / minHeight / resizable。禁止省略让窗口猜尺寸。插件根节点铺满窗口，不要用 100vw。',
+  '/plugins 列表没有 listing.shell 对象，只有扁平字段 shellWidth、shellHeight、shellMinWidth、shellMinHeight、shellResizable。运行窗口必须用 storeShellFromRecord 读这些字段，禁止再读 listing.shell（undefined 会落到默认 480×360，操作栏会离开卡片）。',
 ].join(' ')
 
 const PLUGIN_CREATE_DESCRIPTION = [
@@ -190,7 +191,7 @@ const ID_NAME_BLURB = {
   authorUrl: { type: 'string', description: '作者主页 / 仓库链接' },
   shell: {
     type: 'object',
-    description: '有 web 时必填。运行窗口内容区像素。必须给 width 和 height。',
+      description: '有 web 时必填。运行窗口内容区像素，对应 manifest.shell。必须给 width 和 height。/plugins 表里会拆成 shellWidth/shellHeight，窗口用 storeShellFromRecord 读取，不要读 listing.shell。',
     properties: {
       width: { type: 'number', description: '内容区宽，必填' },
       height: { type: 'number', description: '内容区高，必填' },

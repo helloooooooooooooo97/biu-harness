@@ -91,7 +91,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       route: '/plugins',
       title: '插件',
       inspector: true,
-      blurb: '.plugin 已安装与 .plugin-dev 沙箱同一张表：没有的字段留空。',
+      blurb: '.plugin 已安装与 .plugin-dev 沙箱同一张表：没有的字段留空。窗口尺寸来自扁平列 shellWidth/shellHeight，不是 listing.shell。',
       order: 30,
       icon: 'puzzle-piece',
     },

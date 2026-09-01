@@ -196,9 +196,11 @@ test('pack bundles relative imports from sandbox', async () => {
 test('registers plugin_create, plugin_sandbox, plugin_pack', () => {
   const ctx = new Context()
   const names: string[] = []
-  ;(ctx as unknown as { tools: { register: (spec: { name: string }) => void } }).tools = {
+  const descriptions: string[] = []
+  ;(ctx as unknown as { tools: { register: (spec: { name: string; description?: string }) => void } }).tools = {
     register(spec) {
       names.push(spec.name)
+      if (spec.description) descriptions.push(spec.description)
     },
   }
   const store = new PluginStoreService(
@@ -209,6 +211,9 @@ test('registers plugin_create, plugin_sandbox, plugin_pack', () => {
   )
   registerPluginCreate(ctx, store)
   assert.deepEqual(names, ['plugin_create', 'plugin_sandbox', 'plugin_pack'])
+  assert.match(descriptions.join('\n'), /storeShellFromRecord/)
+  assert.match(descriptions.join('\n'), /listing\.shell/)
+  assert.match(descriptions.join('\n'), /shellWidth/)
 })
 
 test('compileStoreModule strips TypeScript in-process', async () => {
