@@ -27,9 +27,9 @@ import {
 function DiffBlock({ lines, path }: { lines: DiffLine[]; path?: string }) {
   const stats = diffStats(lines)
   return (
-    <div className="overflow-hidden rounded-[10px] border border-(--dsw-border) bg-(--dsw-surface)">
+    <div className="overflow-hidden rounded-[10px] bg-(--dsw-sidebar)">
       {path ? (
-        <div className="flex items-center justify-between gap-2 border-b border-(--dsw-border) bg-(--dsw-tool) px-3 py-1.5">
+        <div className="flex items-center justify-between gap-2 px-3 py-1.5">
           <span className="min-w-0 truncate font-mono text-(length:--dsw-chat-ui-font-size) text-(--dsw-label-2)">{path}</span>
           <span className="shrink-0 font-mono text-(length:--dsw-chat-ui-font-size) tabular-nums text-(--dsw-label-3)">
             {stats.removed ? <span className="text-(--dsw-danger)">−{stats.removed}</span> : null}
@@ -88,8 +88,8 @@ function DetailView({ detail }: { detail: FormattedDetail }) {
     const artifacts = detail.artifacts ?? []
     return (
       <div className="space-y-2">
-        <div className="overflow-hidden rounded-[10px] border border-(--dsw-border) bg-(--dsw-tool)">
-          <div className="flex items-center justify-between gap-2 border-b border-(--dsw-border) px-3 py-1.5">
+        <div className="overflow-hidden rounded-[10px] bg-(--dsw-sidebar)">
+          <div className="flex items-center justify-between gap-2 px-3 py-1.5">
             <span className="font-mono text-(length:--dsw-chat-ui-font-size) tracking-wide text-(--dsw-label-3) uppercase">output</span>
             <span
               className={`font-mono text-(length:--dsw-chat-ui-font-size) tabular-nums ${
@@ -113,14 +113,14 @@ function DetailView({ detail }: { detail: FormattedDetail }) {
 
   if (detail.kind === 'json') {
     return (
-      <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-[10px] border border-(--dsw-border) bg-(--dsw-tool) px-3 py-2 font-mono text-(length:--dsw-chat-ui-font-size) leading-5 text-(--dsw-label-2)">
+      <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-[10px] bg-(--dsw-sidebar) px-3 py-2 font-mono text-(length:--dsw-chat-ui-font-size) leading-5 text-(--dsw-label-2)">
         {detail.text}
       </pre>
     )
   }
 
   return (
-    <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-[10px] border border-(--dsw-border) bg-(--dsw-tool) px-3 py-2 font-mono text-(length:--dsw-chat-ui-font-size) leading-5 text-(--dsw-label)">
+    <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-[10px] bg-(--dsw-sidebar) px-3 py-2 font-mono text-(length:--dsw-chat-ui-font-size) leading-5 text-(--dsw-label)">
       {detail.text}
     </pre>
   )
@@ -168,7 +168,7 @@ function ToolBody({ parsed, rawArguments, detail }: { parsed: ParsedToolCall; ra
   if (parsed.kind === 'bash') {
     return (
       <div className="space-y-2">
-        <pre className="overflow-x-auto rounded-[10px] border border-(--dsw-border) bg-(--dsw-tool) px-3 py-2 font-mono text-(length:--dsw-chat-ui-font-size) leading-5 text-(--dsw-label-2)">
+        <pre className="overflow-x-auto rounded-[10px] bg-(--dsw-sidebar) px-3 py-2 font-mono text-(length:--dsw-chat-ui-font-size) leading-5 text-(--dsw-label-2)">
           <span className="text-(--dsw-label-3)">$ </span>
           {parsed.command}
         </pre>
@@ -192,7 +192,7 @@ function ToolBody({ parsed, rawArguments, detail }: { parsed: ParsedToolCall; ra
   return (
     <div className="space-y-2">
       {rawArguments ? (
-        <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-[10px] border border-(--dsw-border) bg-(--dsw-tool) px-3 py-2 font-mono text-(length:--dsw-chat-ui-font-size) leading-5 text-(--dsw-label-2)">
+        <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-[10px] bg-(--dsw-sidebar) px-3 py-2 font-mono text-(length:--dsw-chat-ui-font-size) leading-5 text-(--dsw-label-2)">
           {prettyJsonString(rawArguments)}
         </pre>
       ) : null}
