@@ -15,7 +15,8 @@ export function pageEditorExtensions() {
         return '输入 / 插入模块'
       },
       showOnlyWhenEditable: true,
-      includeChildren: true,
+      showOnlyCurrent: true,
+      includeChildren: false,
     }),
     slashCommand,
   ]

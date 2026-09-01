@@ -13,6 +13,16 @@ function slashIcon(id: string) {
   return 'T'
 }
 
+/** 只滚菜单自己，避免 scrollIntoView 把页面/编辑器卷走、光标乱插空段。 */
+export function scrollMenuChild(list: HTMLElement, item: HTMLElement) {
+  const top = item.offsetTop
+  const bottom = top + item.offsetHeight
+  const viewTop = list.scrollTop
+  const viewBottom = viewTop + list.clientHeight
+  if (top < viewTop) list.scrollTop = top
+  else if (bottom > viewBottom) list.scrollTop = bottom - list.clientHeight
+}
+
 export const SlashList = forwardRef(function SlashList(
   {
     items,
@@ -26,6 +36,7 @@ export const SlashList = forwardRef(function SlashList(
   const [active, setActive] = useState(0)
   const activeRef = useRef(0)
   const listRef = useRef<HTMLDivElement>(null)
+  const keyNav = useRef(false)
   activeRef.current = active
 
   useEffect(() => {
@@ -33,18 +44,23 @@ export const SlashList = forwardRef(function SlashList(
   }, [items])
 
   useEffect(() => {
-    const el = listRef.current?.querySelector<HTMLElement>('.page-slash-item.is-active')
-    el?.scrollIntoView?.({ block: 'nearest' })
+    if (!keyNav.current) return
+    keyNav.current = false
+    const list = listRef.current
+    const item = list?.querySelector<HTMLElement>('.page-slash-item.is-active')
+    if (list && item) scrollMenuChild(list, item)
   }, [active, items])
 
   useImperativeHandle(ref, () => ({
     onKeyDown({ event }: { event: KeyboardEvent }) {
       if (!items.length) return false
       if (event.key === 'ArrowUp') {
+        keyNav.current = true
         setActive((index) => (index + items.length - 1) % items.length)
         return true
       }
       if (event.key === 'ArrowDown') {
+        keyNav.current = true
         setActive((index) => (index + 1) % items.length)
         return true
       }
