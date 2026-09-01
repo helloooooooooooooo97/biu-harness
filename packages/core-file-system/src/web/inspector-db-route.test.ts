@@ -6,6 +6,7 @@ import {
   seedInspectorDbPath,
   setInspectorDbPath,
   showRecordInInspector,
+  showInInspector,
 } from './inspector-db-route.ts'
 
 test('inspector database path does not overwrite after first seed', () => {
@@ -51,5 +52,22 @@ test('showRecordInInspector opens the inspector on this record', async () => {
   await opened
   assert.equal(getInspectorDbPath('database:/pages'), '/database/pages/record/p1')
   assert.deepEqual(tabs, ['database:/pages'])
+  window.removeEventListener('biu:inspector-tab', onTab)
+})
+
+test('showInInspector opens a collection href in the inspector', async () => {
+  const tabs: string[] = []
+  const onTab = (event: Event) => {
+    const detail = (event as CustomEvent).detail
+    if (typeof detail === 'string') tabs.push(detail)
+  }
+  window.addEventListener('biu:inspector-tab', onTab)
+  const opened = new Promise<void>((resolve) => {
+    window.addEventListener('biu:inspector-open', () => resolve(), { once: true })
+  })
+  showInInspector('/supertags', '/database/supertags/view/builtin-all:/supertags?tag=dp')
+  await opened
+  assert.equal(getInspectorDbPath('database:/supertags'), '/database/supertags/view/builtin-all:/supertags?tag=dp')
+  assert.deepEqual(tabs, ['database:/supertags'])
   window.removeEventListener('biu:inspector-tab', onTab)
 })

@@ -45,12 +45,17 @@ export function inspectorCollectionTabId(collection: string) {
   return `database:${collection}`
 }
 
-/** 右侧检查器打开这条记录，中间主界面不动。 */
-export function showRecordInInspector(collection: string, recordId: string) {
+/** 右侧检查器打开这条路径，中间主界面不动。 */
+export function showInInspector(collection: string, href: string) {
   const tabId = inspectorCollectionTabId(collection)
-  setInspectorDbPath(tabId, databaseRecordPath(collection, recordId))
+  setInspectorDbPath(tabId, href)
   window.dispatchEvent(new Event('biu:inspector-open'))
   window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: tabId }))
+}
+
+/** 右侧检查器打开这条记录，中间主界面不动。 */
+export function showRecordInInspector(collection: string, recordId: string) {
+  showInInspector(collection, databaseRecordPath(collection, recordId))
 }
 
 export function seedInspectorDbPath(paneId: string, pathname?: string) {

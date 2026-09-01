@@ -12,6 +12,7 @@ import {
   ChatBubbleLeftRightIcon,
   DocumentIcon,
   PuzzlePieceIcon,
+  TagIcon,
   BoltIcon,
   EyeIcon,
 } from '@heroicons/react/16/solid'
@@ -30,6 +31,7 @@ import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 function captionTableIcon(icon?: string) {
   const name = (icon ?? '').trim().toLowerCase()
   if (name === 'puzzle-piece' || name === 'puzzle') return PuzzlePieceIcon
+  if (name === 'tag') return TagIcon
   if (name === 'clipboard-document-list' || name === 'clipboard') return ClipboardDocumentListIcon
   if (name === 'chat-bubble' || name === 'chat-bubble-left-right') return ChatBubbleLeftRightIcon
   if (name === 'document' || name === 'document-text' || name === 'page') return DocumentIcon
