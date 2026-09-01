@@ -7,8 +7,8 @@ export function PageBlockView({ node, updateAttributes, editor }: NodeViewProps)
   const kind = String(node.attrs.kind ?? 'card')
   const data = (node.attrs.data && typeof node.attrs.data === 'object' ? node.attrs.data : {}) as Record<string, unknown>
   const spec = getPageEditor()?.block(kind)
-  const update = (patch: Record<string, unknown>) => {
-    updateAttributes({ data: { ...data, ...patch } })
+  const update = (patch: Record<string, unknown>, opts?: { replace?: boolean }) => {
+    updateAttributes({ data: opts?.replace ? patch : { ...data, ...patch } })
   }
   const View = spec?.View
   return (

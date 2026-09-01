@@ -5,20 +5,18 @@ import '@excalidraw/excalidraw/index.css'
 export const name = 'page-excalidraw'
 export const inject = ['pageEditor']
 
-const DEFAULTS = {
-  height: 280,
-}
-
 type Scene = {
   elements: unknown[]
   files: Record<string, unknown>
   appState: Record<string, unknown>
+  height: number
 }
 
 const EMPTY_SCENE: Scene = {
   elements: [],
   files: {},
   appState: { viewBackgroundColor: '#ffffff', zoom: { value: 1 } },
+  height: 280,
 }
 
 function assetName(file: unknown) {
@@ -38,7 +36,7 @@ function assetPath(name: string) {
 }
 
 function asHeight(value: number) {
-  return Math.min(900, Math.max(180, Math.round(value)))
+  return Math.min(900, Math.max(180, Math.round(value) || 280))
 }
 
 function slimAppState(appState: Record<string, unknown> | undefined) {
@@ -51,15 +49,20 @@ function slimAppState(appState: Record<string, unknown> | undefined) {
   }
 }
 
+function sceneFrom(raw: Partial<Scene> | Record<string, unknown> | null | undefined, fallbackHeight = 280): Scene {
+  const rec = raw && typeof raw === 'object' ? raw : {}
+  return {
+    elements: Array.isArray((rec as Scene).elements) ? (rec as Scene).elements : [],
+    files: (rec as Scene).files && typeof (rec as Scene).files === 'object' ? (rec as Scene).files : {},
+    appState: slimAppState((rec as Scene).appState),
+    height: asHeight(Number((rec as Scene).height ?? fallbackHeight)),
+  }
+}
+
 async function readScene(name: string): Promise<Scene> {
   const res = await fetch(assetPath(name))
   if (!res.ok) return EMPTY_SCENE
-  const raw = (await res.json()) as Partial<Scene>
-  return {
-    elements: Array.isArray(raw.elements) ? raw.elements : [],
-    files: raw.files && typeof raw.files === 'object' ? raw.files : {},
-    appState: slimAppState(raw.appState as Record<string, unknown> | undefined),
-  }
+  return sceneFrom((await res.json()) as Partial<Scene>)
 }
 
 async function writeScene(name: string, scene: Scene) {
@@ -70,8 +73,13 @@ async function writeScene(name: string, scene: Scene) {
       elements: scene.elements,
       files: scene.files,
       appState: slimAppState(scene.appState),
+      height: scene.height,
     }),
   })
+}
+
+function pointerOnly(file: string) {
+  return { file: `assets/${file}` }
 }
 
 function Board({
@@ -80,10 +88,9 @@ function Board({
   writable,
 }: {
   data: Record<string, unknown>
-  update: (patch: Record<string, unknown>) => void
+  update: (patch: Record<string, unknown>, opts?: { replace?: boolean }) => void
   writable: boolean
 }) {
-  const height = asHeight(Number(data.height ?? DEFAULTS.height))
   const [expanded, setExpanded] = useState(false)
   const [scene, setScene] = useState<Scene | null>(null)
   const [file, setFile] = useState(() => assetName(data.file))
@@ -97,22 +104,26 @@ function Board({
 
   useEffect(() => {
     let name = assetName(data.file)
+    const leftover = sceneFrom(data, Number(data.height) || 280)
     if (!name) {
       name = `excalidraw-${crypto.randomUUID()}.json`
       setFile(name)
-      persist.current({ file: `assets/${name}`, height })
-      const leftover = {
-        elements: Array.isArray(data.elements) ? data.elements : [],
-        files: data.files && typeof data.files === 'object' ? (data.files as Record<string, unknown>) : {},
-        appState: slimAppState(data.appState as Record<string, unknown> | undefined),
-      }
+      persist.current(pointerOnly(name), { replace: true })
       void writeScene(name, leftover).then(() => setScene(leftover))
       return
     }
     setFile(name)
+    const extra = Object.keys(data).some((key) => key !== 'file')
+    if (extra) persist.current(pointerOnly(name), { replace: true })
     let cancelled = false
     void readScene(name).then((next) => {
-      if (!cancelled) setScene(next)
+      if (cancelled) return
+      const merged =
+        leftover.elements.length && next.elements.length === 0
+          ? { ...next, elements: leftover.elements, files: leftover.files, appState: leftover.appState }
+          : next
+      setScene(merged)
+      if (merged !== next) void writeScene(name, merged)
     })
     return () => {
       cancelled = true
@@ -146,6 +157,7 @@ function Board({
   }, [scene, expanded])
 
   const canEdit = expanded && writable
+  const height = asHeight(scene?.height ?? 280)
 
   function saveSoon(next: Scene) {
     if (!file || !canEdit) return
@@ -154,6 +166,13 @@ function Board({
     saveTimer.current = window.setTimeout(() => {
       void writeScene(file, next)
     }, 280)
+  }
+
+  function setHeight(next: number) {
+    if (!file || !scene) return
+    const updated = { ...scene, height: asHeight(next) }
+    setScene(updated)
+    void writeScene(file, updated)
   }
 
   const frame = (
@@ -182,6 +201,7 @@ function Board({
               elements: [...elements],
               files: files as Record<string, unknown>,
               appState: slimAppState(appState as unknown as Record<string, unknown>),
+              height,
             })
           }}
         />
@@ -205,7 +225,6 @@ function Board({
       }}
     >
       <span style={{ fontWeight: 700, color: '#111827' }}>画板</span>
-      {file ? <span style={{ opacity: 0.7 }}>{file}</span> : null}
       {expanded ? (
         <>
           <button type="button" data-testid="page-excalidraw-fit" onClick={() => api.current?.scrollToContent(undefined, { fitToContent: true })}>
@@ -218,10 +237,10 @@ function Board({
       ) : (
         <>
           <span style={{ marginLeft: 'auto' }}>高度 {height}px</span>
-          <button type="button" data-testid="page-excalidraw-shorter" onClick={() => persist.current({ height: asHeight(height - 80) })}>
+          <button type="button" data-testid="page-excalidraw-shorter" onClick={() => setHeight(height - 80)}>
             更矮
           </button>
-          <button type="button" data-testid="page-excalidraw-taller" onClick={() => persist.current({ height: asHeight(height + 80) })}>
+          <button type="button" data-testid="page-excalidraw-taller" onClick={() => setHeight(height + 80)}>
             更高
           </button>
           <button type="button" data-testid="page-excalidraw-expand" onClick={() => setExpanded(true)}>
@@ -237,14 +256,13 @@ function Board({
       data-testid="page-excalidraw"
       data-page-block-capture="1"
       data-expanded={expanded ? '1' : '0'}
+      data-file={file || undefined}
       style={{
         border: '1px solid #d0d7de',
         borderRadius: expanded ? 0 : 12,
         overflow: 'hidden',
         background: '#fff',
-        ...(expanded
-          ? { position: 'fixed', inset: 0, zIndex: 400, borderRadius: 0 }
-          : {}),
+        ...(expanded ? { position: 'fixed', inset: 0, zIndex: 400, borderRadius: 0 } : {}),
       }}
     >
       {toolbar}
@@ -265,17 +283,21 @@ export function apply(ctx: {
       label: string
       hint?: string
       aliases?: string[]
-      defaults?: Record<string, unknown>
-      View: (props: { data: Record<string, unknown>; update: (patch: Record<string, unknown>) => void; writable: boolean }) => unknown
+      defaults?: Record<string, unknown> | (() => Record<string, unknown>)
+      View: (props: {
+        data: Record<string, unknown>
+        update: (patch: Record<string, unknown>, opts?: { replace?: boolean }) => void
+        writable: boolean
+      }) => unknown
     }) => void
   }
 }) {
   ctx.pageEditor.registerBlock({
     kind: 'excalidraw',
     label: '画板',
-    hint: 'Excalidraw：场景存 .page/assets，放大后才能画',
+    hint: '场景在 .page/assets，正文只留 file 引用；放大后才能画',
     aliases: ['excalidraw', 'draw', 'whiteboard', '白板', '画图', 'sketch'],
-    defaults: DEFAULTS,
+    defaults: () => ({ file: `assets/excalidraw-${crypto.randomUUID()}.json` }),
     View: Board,
   })
 }

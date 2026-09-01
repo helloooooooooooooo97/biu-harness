@@ -11,7 +11,7 @@ export type HeadingReplacement = {
 
 export type PageBlockViewProps = {
   data: Record<string, unknown>
-  update: (patch: Record<string, unknown>) => void
+  update: (patch: Record<string, unknown>, opts?: { replace?: boolean }) => void
   writable: boolean
 }
 
@@ -20,7 +20,7 @@ export type PageBlockSpec = {
   label: string
   hint?: string
   aliases?: string[]
-  defaults?: Record<string, unknown>
+  defaults?: Record<string, unknown> | (() => Record<string, unknown>)
   View: ComponentType<PageBlockViewProps>
 }
 

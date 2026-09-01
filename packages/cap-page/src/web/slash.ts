@@ -140,7 +140,10 @@ export function slashCatalog(): SlashItem[] {
           .deleteRange(range)
           .insertContent({
             type: 'pageBlock',
-            attrs: { kind: block.kind, data: { ...(block.defaults ?? {}) } },
+            attrs: {
+              kind: block.kind,
+              data: typeof block.defaults === 'function' ? block.defaults() : { ...(block.defaults ?? {}) },
+            },
           })
           .run()
       },

@@ -64,9 +64,9 @@ test('pageBlock markdown roundtrips kind and data', () => {
   editor.destroy()
 })
 
-test('pageBlock markdown roundtrips excalidraw asset pointer', () => {
+test('pageBlock markdown roundtrips excalidraw as a file pointer only', () => {
   const src = `:::pageBlock {kind=excalidraw}
-{"file":"assets/excalidraw-demo.json","height":280}
+{"file":"assets/excalidraw-demo.json"}
 :::
 `
   const editor = new Editor({
@@ -77,9 +77,43 @@ test('pageBlock markdown roundtrips excalidraw asset pointer', () => {
   const json = editor.getJSON()
   const block = json.content?.find((node) => node.type === 'pageBlock')
   assert.equal(block?.attrs?.kind, 'excalidraw')
-  assert.equal((block?.attrs?.data as { file?: string })?.file, 'assets/excalidraw-demo.json')
-  assert.doesNotMatch(editor.getMarkdown(), /"elements"/)
+  assert.deepEqual(block?.attrs?.data, { file: 'assets/excalidraw-demo.json' })
+  const out = editor.getMarkdown()
+  assert.match(out, /"file": "assets\/excalidraw-demo.json"/)
+  assert.doesNotMatch(out, /"elements"/)
+  assert.doesNotMatch(out, /"height"/)
   editor.destroy()
+})
+
+test('slash insert for excalidraw only puts a file pointer in the node', async () => {
+  const ctx = new Context()
+  new PageEditorService(ctx)
+  const fiber = ctx.plugin({
+    name: 'draw',
+    inject: ['pageEditor'],
+    apply(inner) {
+      inner.pageEditor.registerBlock({
+        kind: 'excalidraw',
+        label: '画板',
+        defaults: () => ({ file: 'assets/excalidraw-new.json' }),
+        View: () => null,
+      })
+    },
+  })
+  await fiber
+  const item = filterSlashItems('画板').find((entry) => entry.id === 'excalidraw')
+  const editor = new Editor({
+    extensions: pageEditorExtensions(),
+    content: '/',
+    contentType: 'markdown',
+  })
+  const from = editor.state.selection.from - 1
+  item!.command({ editor, range: { from: Math.max(1, from), to: editor.state.selection.from } })
+  const block = editor.getJSON().content?.find((node) => node.type === 'pageBlock')
+  assert.deepEqual(block?.attrs?.data, { file: 'assets/excalidraw-new.json' })
+  assert.doesNotMatch(editor.getMarkdown(), /elements/)
+  editor.destroy()
+  await fiber.dispose()
 })
 
 test('pageBlock capture includes drawing surfaces', async () => {

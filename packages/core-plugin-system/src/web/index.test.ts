@@ -135,5 +135,7 @@ test('packed page-excalidraw plugin stores scenes as page assets', async () => {
   assert.match(src, /method: 'PUT'/)
   assert.match(src, /viewModeEnabled=\{!canEdit\}/)
   assert.match(src, /page-excalidraw-expand/)
-  assert.match(src, /from '@excalidraw\/excalidraw'/)
+  assert.match(src, /replace: true/)
+  assert.match(src, /pointerOnly/)
+  assert.match(src, /defaults: \(\) => \(\{ file:/)
 })
