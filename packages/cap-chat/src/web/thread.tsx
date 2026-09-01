@@ -792,6 +792,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     })
   }, [sessionView, navigate])
 
+  const [outlineJump, setOutlineJump] = useState(0)
   const outlineTargetRef = useRef<string | null>(null)
   useEffect(() => {
     const onGo = (event: Event) => {
@@ -801,6 +802,7 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       if (idx < 0) return
       outlineTargetRef.current = id
       setRevealStart((start) => Math.min(start, idx))
+      setOutlineJump((value) => value + 1)
     }
     window.addEventListener('biu:chat-outline-go', onGo)
     return () => window.removeEventListener('biu:chat-outline-go', onGo)
@@ -810,11 +812,19 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
     const id = outlineTargetRef.current
     if (!id) return
     const escaped = typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(id) : id
-    const el = document.querySelector<HTMLElement>(`[data-node-id="${escaped}"]`)
-    if (!el) return
-    outlineTargetRef.current = null
-    el.scrollIntoView({ block: 'start', behavior: 'smooth' })
-  }, [mountedNodes, revealStart])
+    const scrollTo = () => {
+      const el = document.querySelector<HTMLElement>(`[data-node-id="${escaped}"]`)
+      if (!el) return false
+      outlineTargetRef.current = null
+      el.scrollIntoView({ block: 'start', behavior: 'smooth' })
+      return true
+    }
+    if (scrollTo()) return
+    const frame = requestAnimationFrame(() => {
+      scrollTo()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [mountedNodes, revealStart, outlineJump])
 
   useLayoutEffect(() => {
     const parent = findScrollParent(rootRef.current)

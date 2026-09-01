@@ -53,7 +53,7 @@ export const ChatMessageOutline = memo(function ChatMessageOutline({
         data-testid="chat-outline-toggle"
         onClick={() => setOpen((value) => !value)}
       >
-        <OutlineGlyph className="size-4" />
+        <OutlineGlyph className="chat-outline-glyph" />
       </button>
       {open ? (
         <nav className="chat-outline-panel" data-testid="chat-outline">

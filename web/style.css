@@ -3704,12 +3704,12 @@ body {
   pointer-events: auto;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
   margin: 0;
   border: 0;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--dsw-sidebar) 88%, #000);
+  border-radius: 0;
+  background: transparent;
   color: var(--dsw-sidebar-fg);
   cursor: pointer;
 }
@@ -3717,13 +3717,18 @@ body {
 .chat-outline-icon-btn:hover,
 .chat-outline-icon-btn.is-open {
   color: var(--dsw-sidebar-fg-active);
-  background: var(--dsw-hover);
+  background: transparent;
+}
+
+.chat-outline-icon-btn svg {
+  width: 22px;
+  height: 22px;
 }
 
 .chat-outline-panel {
   pointer-events: auto;
   position: absolute;
-  right: 36px;
+  right: 46px;
   top: 50%;
   z-index: 9;
   display: flex;
