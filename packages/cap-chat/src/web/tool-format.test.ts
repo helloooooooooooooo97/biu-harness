@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { diffStats, formatToolDetail, lineDiff, parseToolCall, prettyJsonString, toolSummary } from './tool-format.ts'
+import { diffStats, formatToolDetail, lineDiff, parseToolCall, prettyJsonString, compactJsonSummary, toolSummary } from './tool-format.ts'
 
 test('lineDiff marks removals and additions', () => {
   const lines = lineDiff('a\nb\nc', 'a\nx\nc')
@@ -92,4 +92,17 @@ test('formatToolDetail pretty-prints generic json objects', () => {
 
 test('prettyJsonString indents objects', () => {
   assert.match(prettyJsonString('{"x":1}'), /"x": 1/)
+})
+
+test('compactJsonSummary prefers titles over raw json', () => {
+  const tasks = JSON.stringify([
+    { id: 'task_1', title: '创建五子棋插件：极光五子棋（store-gomoku-aurora）', status: 'open' },
+    { id: 'task_2', title: '第二项', status: 'open' },
+  ])
+  assert.equal(compactJsonSummary(tasks), '2 条 · 创建五子棋插件：极光五子棋（store-gomoku-aurora）')
+  assert.equal(compactJsonSummary('{"views":[{"id":"v1","name":"表格"}]}'), '表格')
+  const parsed = parseToolCall('tasks_list', tasks)
+  assert.equal(parsed.kind, 'raw')
+  assert.equal(toolSummary(parsed, tasks), '2 条 · 创建五子棋插件：极光五子棋（store-gomoku-aurora）')
+  assert.doesNotMatch(toolSummary(parsed, tasks), /\[\{/)
 })

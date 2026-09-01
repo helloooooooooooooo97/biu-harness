@@ -221,6 +221,64 @@ export function parseToolCall(name: string, argumentsJson: string): ParsedToolCa
   return { kind: 'raw', label: name, raw: argumentsJson }
 }
 
+function clip(text: string, max = 72): string {
+  const one = text.replace(/\s+/g, ' ').trim()
+  return one.length > max ? `${one.slice(0, max)}…` : one
+}
+
+function recordLabel(value: Record<string, unknown>): string | undefined {
+  for (const key of ['title', 'name', 'label', 'path', 'query', 'command', 'id']) {
+    const text = asString(value[key])?.trim()
+    if (text) return text
+  }
+  return undefined
+}
+
+function summarizeList(items: unknown[]): string {
+  const labels = items
+    .map((item) => (item && typeof item === 'object' && !Array.isArray(item) ? recordLabel(item as Record<string, unknown>) : typeof item === 'string' ? item : undefined))
+    .filter((item): item is string => Boolean(item))
+  const head = labels[0]
+  if (!items.length) return '空列表'
+  if (items.length === 1) return clip(head || '1 条')
+  return clip(head ? `${items.length} 条 · ${head}` : `${items.length} 条`)
+}
+
+function summarizeRecord(value: Record<string, unknown>): string {
+  for (const key of ['items', 'tasks', 'views', 'records', 'rows', 'results', 'data', 'list']) {
+    const nested = value[key]
+    if (Array.isArray(nested)) return summarizeList(nested)
+  }
+  const parts: string[] = []
+  for (const key of Object.keys(value)) {
+    if (parts.length >= 3) break
+    const nested = value[key]
+    if (nested == null || nested === '') continue
+    if (typeof nested === 'string' || typeof nested === 'number' || typeof nested === 'boolean') {
+      parts.push(`${key} ${nested}`)
+      continue
+    }
+    if (Array.isArray(nested)) {
+      parts.push(summarizeList(nested))
+      continue
+    }
+    if (typeof nested === 'object') {
+      const label = recordLabel(nested as Record<string, unknown>)
+      if (label) parts.push(label)
+    }
+  }
+  return parts.length ? clip(parts.join(' · ')) : ''
+}
+
+/** 把 JSON 参数/结果收成一行可读摘要，避免把花括号铺在标题旁。 */
+export function compactJsonSummary(raw: string): string {
+  const parsed = parseJsonValue(raw.trim())
+  if (parsed === undefined) return clip(raw)
+  if (Array.isArray(parsed)) return summarizeList(parsed)
+  if (parsed && typeof parsed === 'object') return summarizeRecord(parsed as Record<string, unknown>)
+  return clip(String(parsed))
+}
+
 export function toolSummary(parsed: ParsedToolCall, fallback: string): string {
   switch (parsed.kind) {
     case 'str_replace':
@@ -235,10 +293,10 @@ export function toolSummary(parsed: ParsedToolCall, fallback: string): string {
         : `View ${parsed.path}`
     case 'bash': {
       const one = parsed.command.replace(/\s+/g, ' ').trim()
-      return one.length > 72 ? `${one.slice(0, 72)}…` : one || fallback
+      return one.length > 72 ? `${one.slice(0, 72)}…` : one || compactJsonSummary(fallback)
     }
     case 'raw':
-      return fallback
+      return compactJsonSummary(fallback) || '…'
   }
 }
 

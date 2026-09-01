@@ -3887,8 +3887,8 @@ body {
   min-width: 0;
   flex: 1;
   overflow: hidden;
-  font-family: var(--font-mono);
   font-size: var(--dsw-chat-ui-font-size);
+  font-weight: 500;
   color: var(--dsw-label-3);
   text-overflow: ellipsis;
   white-space: nowrap;
