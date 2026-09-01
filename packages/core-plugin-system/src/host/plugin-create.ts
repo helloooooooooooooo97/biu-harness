@@ -1,6 +1,7 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { dirname, extname, join, resolve } from 'node:path'
+import type { Plugin as EsbuildPlugin } from 'esbuild'
 import type { Context } from 'cordis'
 import type { PluginStoreService } from './store.ts'
 import { declaredStoreShell, parseStoreShell, requireDeclaredShell, type StoreShell } from '../shell.ts'
@@ -108,22 +109,172 @@ export async function compileStoreModule(source: string, kind: 'host' | 'web') {
   return finishBundle(result.code, kind)
 }
 
-/** 沙箱入口打包：可相对 import 同目录其它文件。 */
+function mimeForAsset(file: string) {
+  const ext = extname(file).toLowerCase()
+  if (ext === '.woff2') return 'font/woff2'
+  if (ext === '.woff') return 'font/woff'
+  if (ext === '.ttf') return 'font/ttf'
+  if (ext === '.otf') return 'font/otf'
+  if (ext === '.png') return 'image/png'
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg'
+  if (ext === '.svg') return 'image/svg+xml'
+  if (ext === '.css') return 'text/css'
+  return 'application/octet-stream'
+}
+
+function inlineCssUrls(css: string, cssFile: string) {
+  return css.replace(/url\((['"]?)(\.[^'")]+)\1\)/g, (_all, _q: string, rel: string) => {
+    const file = resolve(dirname(cssFile), rel)
+    const buf = readFileSync(file)
+    return `url(data:${mimeForAsset(file)};base64,${buf.toString('base64')})`
+  })
+}
+
+function namedFrom(globalExpr: string, names: string[]) {
+  return `const G = ${globalExpr}
+export default G
+${names.map((name) => `export const ${name} = G.${name}`).join('\n')}
+`
+}
+
+function reactShim(spec: string) {
+  if (spec === 'react/jsx-runtime' || spec === 'react/jsx-dev-runtime') {
+    return `const R = globalThis.React
+export const Fragment = R.Fragment
+export const jsx = (type, props, key) => R.createElement(type, key == null ? props : { ...props, key })
+export const jsxs = jsx
+export const jsxDEV = jsx
+`
+  }
+  if (spec === 'react-dom' || spec.startsWith('react-dom/')) {
+    return namedFrom('globalThis.ReactDOM', [
+      'createPortal',
+      'createRoot',
+      'findDOMNode',
+      'flushSync',
+      'hydrate',
+      'hydrateRoot',
+      'render',
+      'unmountComponentAtNode',
+      'unstable_batchedUpdates',
+      'unstable_renderSubtreeIntoContainer',
+      'version',
+    ])
+  }
+  return namedFrom('globalThis.React', [
+    'Children',
+    'Component',
+    'Fragment',
+    'Profiler',
+    'PureComponent',
+    'StrictMode',
+    'Suspense',
+    'cloneElement',
+    'createContext',
+    'createElement',
+    'createFactory',
+    'createRef',
+    'forwardRef',
+    'isValidElement',
+    'lazy',
+    'memo',
+    'startTransition',
+    'unstable_act',
+    'use',
+    'useActionState',
+    'useCallback',
+    'useContext',
+    'useDebugValue',
+    'useDeferredValue',
+    'useEffect',
+    'useEffectEvent',
+    'useId',
+    'useImperativeHandle',
+    'useInsertionEffect',
+    'useLayoutEffect',
+    'useMemo',
+    'useOptimistic',
+    'useReducer',
+    'useRef',
+    'useState',
+    'useSyncExternalStore',
+    'useTransition',
+    'version',
+  ])
+}
+
+function storeBundlePlugins(kind: 'host' | 'web'): EsbuildPlugin[] {
+  const plugins: EsbuildPlugin[] = [
+    {
+      name: 'store-no-biu',
+      setup(build) {
+        build.onResolve({ filter: /^@biu\// }, (args) => ({
+          errors: [{ text: `store plugins cannot import ${args.path}; inject the host service instead` }],
+          path: args.path,
+        }))
+      },
+    },
+  ]
+  if (kind !== 'web') return plugins
+  plugins.push({
+    name: 'store-host-react',
+    setup(build) {
+      build.onResolve({ filter: /^(react|react-dom)(\/.*)?$/ }, (args) => ({
+        path: args.path,
+        namespace: 'host-react',
+      }))
+      build.onLoad({ filter: /.*/, namespace: 'host-react' }, (args) => ({
+        contents: reactShim(args.path),
+        loader: 'js',
+      }))
+    },
+  })
+  plugins.push({
+    name: 'store-css',
+    setup(build) {
+      build.onLoad({ filter: /\.css$/ }, (args) => {
+        const css = inlineCssUrls(readFileSync(args.path, 'utf8'), args.path)
+        const id = `store-css-${Buffer.from(args.path).toString('base64url').slice(0, 24)}`
+        return {
+          contents: `if (typeof document !== "undefined" && !document.getElementById(${JSON.stringify(id)})) {
+  const el = document.createElement("style")
+  el.id = ${JSON.stringify(id)}
+  el.textContent = ${JSON.stringify(css)}
+  document.head.appendChild(el)
+}
+`,
+          loader: 'js',
+        }
+      })
+    },
+  })
+  return plugins
+}
+
+/** 沙箱入口打包：相对 import + npm（react / @biu/* 除外）。 */
 export async function bundleStoreEntry(entryFile: string, kind: 'host' | 'web') {
   const { build } = await import('esbuild')
   const result = await build({
     absWorkingDir: dirname(entryFile),
     entryPoints: [entryFile],
     bundle: true,
+    minify: true,
+    legalComments: 'none',
     write: false,
     format: 'esm',
-    platform: 'neutral',
+    platform: kind === 'host' ? 'node' : 'browser',
     target: 'es2022',
     jsx: 'transform',
     jsxFactory: 'React.createElement',
     jsxFragment: 'React.Fragment',
     tsconfigRaw: '{"compilerOptions":{"jsx":"react"}}',
     logLevel: 'silent',
+    define: {
+      'process.env.NODE_ENV': JSON.stringify('production'),
+      'process.env.IS_PREACT': 'false',
+    },
+    conditions: ['production', 'import', 'module', 'browser', 'default'],
+    plugins: storeBundlePlugins(kind),
   })
   const text = result.outputFiles?.[0]?.text
   if (!text?.trim()) throw new Error(`${kind} bundle is empty`)
@@ -144,7 +295,7 @@ export async function readSandboxManifest(dir: string) {
 }
 
 const CONTRACT = [
-  '契约：id 与 export const name 相同。禁止 import npm / react / @biu/*。不要改 packages/ 或 cordis.plugins.json。',
+  '契约：id 与 export const name 相同。可以 import npm，plugin_pack 会打进 host.js/web.js。不要 import react / react-dom / @biu/*：Web 用宿主 globalThis.React 与 ReactDOM；宿主服务用 inject。有 npm 依赖请用 plugin_sandbox + plugin_pack（plugin_create 只做单文件、不解析 node_modules）。不要改 packages/ 或 cordis.plugins.json。',
   '有窗口的 Web：ctx.slots.place("plugin-store-extras", Comp, { key, props: () => ({ Icon }) })。Icon 可选。运行窗口会给 extras 套操纵栏（关/缩/全屏），key 尽量用插件 id。',
   '无头插件：manifest 写 headless: true。有 web 也不要 shell，不要 place plugin-store-extras，不要操纵栏。只在 apply 里登记服务（如 pageEditor）。',
   '有窗口的 web 必须在 manifest / 本工具 shell 参数里写 width 与 height。无头插件不要写 shell。',

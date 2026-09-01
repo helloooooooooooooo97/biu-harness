@@ -122,3 +122,16 @@ test('bundled store plugins register their own dock icons', async () => {
   assert.match(gomoku, /Icon: GomokuDockIcon/)
   assert.match(ping, /Icon: HeavyPingDockIcon/)
 })
+
+test('packed page-excalidraw plugin imports the npm board', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const { resolve } = await import('node:path')
+  const web = await readFile(resolve(import.meta.dirname, '../../../../.plugin/page-excalidraw/web.js'), 'utf8')
+  const manifest = JSON.parse(
+    await readFile(resolve(import.meta.dirname, '../../../../.plugin/page-excalidraw/manifest.json'), 'utf8'),
+  ) as { headless?: boolean }
+  assert.equal(manifest.headless, true)
+  assert.match(web, /excalidraw/)
+  assert.match(web, /pageEditor/)
+  assert.doesNotMatch(web, /from ['"]@excalidraw\/excalidraw['"]/)
+})

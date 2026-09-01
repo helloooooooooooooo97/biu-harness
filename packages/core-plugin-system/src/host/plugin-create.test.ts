@@ -257,6 +257,7 @@ test('registers plugin_create, plugin_sandbox, plugin_pack', () => {
   assert.match(descriptions.join('\n'), /listing\.shell/)
   assert.match(descriptions.join('\n'), /shellWidth/)
   assert.match(descriptions.join('\n'), /无头/)
+  assert.match(descriptions.join('\n'), /可以 import npm/)
 })
 
 test('pack web jsx uses globalThis.React instead of bundling npm react', async () => {
@@ -285,6 +286,63 @@ test('pack web jsx uses globalThis.React instead of bundling npm react', async (
     assert.match(webJs, /globalThis\.React/)
     assert.match(webJs, /createElement/)
     assert.doesNotMatch(webJs, /node_modules\/react/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('pack bundles npm deps but keeps react on globalThis', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'plugin-npm-'))
+  try {
+    const ctx = new Context()
+    stubHub(ctx)
+    const store = new PluginStoreService(
+      ctx,
+      join(dir, '.plugin'),
+      join(dir, 'store.json'),
+      join(dir, '.plugin-dev'),
+    ).open()
+    await store.initSandbox({
+      id: 'store-dep',
+      name: 'Dep',
+      headless: true,
+    })
+    const sandbox = join(dir, '.plugin-dev', 'store-dep')
+    const pkg = join(dir, '.plugin-dev', 'store-dep', 'node_modules', 'tiny-ping')
+    await writeFile(join(sandbox, 'web.tsx'), `import { ping } from 'tiny-ping'\nimport { useMemo } from 'react'\nexport const name = 'store-dep'\nexport function apply() { return ping + useMemo(() => 1, []) }\n`)
+    const { mkdir } = await import('node:fs/promises')
+    await mkdir(pkg, { recursive: true })
+    await writeFile(join(pkg, 'package.json'), JSON.stringify({ name: 'tiny-ping', type: 'module', main: 'index.js' }))
+    await writeFile(join(pkg, 'index.js'), `export const ping = 'pong'\n`)
+    await store.pack('store-dep')
+    const webJs = await readFile(join(dir, '.plugin', 'store-dep', 'web.js'), 'utf8')
+    assert.match(webJs, /pong/)
+    assert.match(webJs, /globalThis\.React/)
+    assert.doesNotMatch(webJs, /from ['"]react['"]/)
+    assert.doesNotMatch(webJs, /from ['"]tiny-ping['"]/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('pack rejects @biu imports', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'plugin-biu-'))
+  try {
+    const ctx = new Context()
+    stubHub(ctx)
+    const store = new PluginStoreService(
+      ctx,
+      join(dir, '.plugin'),
+      join(dir, 'store.json'),
+      join(dir, '.plugin-dev'),
+    ).open()
+    await store.initSandbox({ id: 'store-biu', name: 'Biu', headless: true })
+    const sandbox = join(dir, '.plugin-dev', 'store-biu')
+    await writeFile(
+      join(sandbox, 'web.tsx'),
+      `import { foo } from '@biu/web-slots'\nexport const name = 'store-biu'\nexport function apply() { return foo }\n`,
+    )
+    await assert.rejects(() => store.pack('store-biu'), /@biu\/web-slots/)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

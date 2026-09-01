@@ -63,3 +63,29 @@ test('pageBlock markdown roundtrips kind and data', () => {
   assert.match(out, /Two Sum/)
   editor.destroy()
 })
+
+test('pageBlock markdown roundtrips excalidraw scene', () => {
+  const src = `:::pageBlock {kind=excalidraw}
+{"height":420,"zoom":1.25}
+:::
+`
+  const editor = new Editor({
+    extensions: pageEditorExtensions(),
+    content: src,
+    contentType: 'markdown',
+  })
+  const json = editor.getJSON()
+  const block = json.content?.find((node) => node.type === 'pageBlock')
+  assert.equal(block?.attrs?.kind, 'excalidraw')
+  assert.equal((block?.attrs?.data as { zoom?: number })?.zoom, 1.25)
+  editor.destroy()
+})
+
+test('pageBlock capture includes drawing surfaces', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const { resolve } = await import('node:path')
+  const src = await readFile(resolve(import.meta.dirname, './page-block.ts'), 'utf8')
+  assert.match(src, /data-page-block-capture/)
+  assert.match(src, /\.excalidraw/)
+  assert.match(src, /canvas/)
+})

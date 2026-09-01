@@ -23,6 +23,8 @@ export type PageBlockSpec = {
   defaults?: Record<string, unknown>
   View: ComponentType<PageBlockViewProps>
 }
+
+export type SlashInsert =
   | 'paragraph'
   | 'heading1'
   | 'heading2'

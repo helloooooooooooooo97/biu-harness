@@ -9,6 +9,8 @@ dist/
 !.plugin-dev/page-heading-cards/**
 !.plugin-dev/page-algorithm/
 !.plugin-dev/page-algorithm/**
+!.plugin-dev/page-excalidraw/
+!.plugin-dev/page-excalidraw/**
 .workspace/
 *.log
 .DS_Store

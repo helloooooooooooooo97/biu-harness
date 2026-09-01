@@ -1,5 +1,8 @@
 import type { Context, Fiber, Plugin } from 'cordis'
 import * as React from 'react'
+import * as ReactDOM from 'react-dom'
+import { createRoot, hydrateRoot } from 'react-dom/client'
+import { flushSync } from 'react-dom'
 import { uiPackageLoaders } from 'virtual:cordis-ui-loaders'
 
 export const name = 'ui-hub'
@@ -12,8 +15,9 @@ export function isRuntimeWebModule(web: string) {
 
 export function apply(ctx: Context) {
   if (typeof globalThis !== 'undefined') {
-    const g = globalThis as typeof globalThis & { React?: typeof React }
+    const g = globalThis as typeof globalThis & { React?: typeof React; ReactDOM?: typeof ReactDOM & { createRoot: typeof createRoot; hydrateRoot: typeof hydrateRoot } }
     g.React = React
+    g.ReactDOM = { ...ReactDOM, createRoot, hydrateRoot, flushSync }
   }
 
   const forks = new Map<string, Fiber>()
