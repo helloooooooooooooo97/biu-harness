@@ -108,21 +108,31 @@ export function filterSlashItems(query: string) {
 function renderSlash() {
   let component: ReactRenderer<unknown, Record<string, unknown>> | null = null
   let unmount: (() => void) | undefined
+  let cancelled = false
+  let pending: ({ editor: Editor; mount: (el: HTMLElement) => () => void } & Record<string, unknown>) | null = null
 
   return {
     onStart(props: { editor: Editor; mount: (el: HTMLElement) => () => void } & Record<string, unknown>) {
+      cancelled = false
+      pending = props
       if (props.editor.isActive('codeBlock')) return
-      component = new ReactRenderer(SlashList, {
-        props,
-        editor: props.editor,
+      // TipTap 文档：事务是同步的，ReactRenderer 的 flushSync 不能落在 React effect 里。
+      queueMicrotask(() => {
+        if (cancelled || !pending) return
+        component = new ReactRenderer(SlashList, {
+          props: pending,
+          editor: pending.editor,
+        })
+        unmount = pending.mount(component.element)
       })
-      unmount = props.mount(component.element)
     },
     onUpdate(props: Record<string, unknown>) {
+      pending = { ...(pending ?? {}), ...props } as typeof pending
       component?.updateProps(props)
     },
     onKeyDown(props: { event: KeyboardEvent }) {
       if (props.event.key === 'Escape') {
+        cancelled = true
         unmount?.()
         return true
       }
@@ -130,6 +140,8 @@ function renderSlash() {
       return ref?.onKeyDown?.(props) ?? false
     },
     onExit() {
+      cancelled = true
+      pending = null
       unmount?.()
       unmount = undefined
       component?.destroy()

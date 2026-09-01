@@ -44,16 +44,10 @@ export function PageEditor({ record, value, writable, onChange }: FsContentProps
   const saved = useRef(asMarkdown(value))
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const flush = (editor: Editor) => {
-    const next = editor.getMarkdown()
-    if (next === saved.current) return
-    saved.current = next
-    onChange?.(next)
-  }
-
   const editor = useEditor(
     {
       immediatelyRender: false,
+      shouldRerenderOnTransaction: false,
       editable: writable !== false,
       extensions: pageEditorExtensions(),
       content: asMarkdown(value),
@@ -68,26 +62,29 @@ export function PageEditor({ record, value, writable, onChange }: FsContentProps
       },
       onUpdate: ({ editor: current }) => {
         if (timer.current) clearTimeout(timer.current)
-        timer.current = setTimeout(() => flush(current), 400)
+        timer.current = setTimeout(() => {
+          queueMicrotask(() => {
+            if (current.isDestroyed) return
+            const next = current.getMarkdown()
+            if (next === saved.current) return
+            saved.current = next
+            onChange?.(next)
+          })
+        }, 400)
       },
       onBlur: ({ editor: current }) => {
         if (timer.current) clearTimeout(timer.current)
-        flush(current)
+        queueMicrotask(() => {
+          if (current.isDestroyed) return
+          const next = current.getMarkdown()
+          if (next === saved.current) return
+          saved.current = next
+          onChange?.(next)
+        })
       },
     },
     [record.id],
   )
-
-  useEffect(() => {
-    const incoming = asMarkdown(value)
-    if (!editor || editor.isDestroyed) {
-      saved.current = incoming
-      return
-    }
-    if (incoming === saved.current) return
-    saved.current = incoming
-    editor.commands.setContent(incoming, { contentType: 'markdown', emitUpdate: false })
-  }, [editor, record.id, value])
 
   useEffect(() => {
     if (!editor || editor.isDestroyed) return
