@@ -333,19 +333,39 @@ export const SessionInspector = memo(function SessionInspector({
               )
             }
             return (
-              <button
+              <div
                 key={item.id}
-                type="button"
                 role="tab"
                 aria-selected={active}
                 className={`inspector-tab${active ? ' is-active' : ''}`}
-                onClick={() => setTab(item.id)}
                 data-testid={`inspector-tab-${item.id}`}
               >
-                <span className="inspector-tab-indicator" aria-hidden />
-                {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
-                {item.label}
-              </button>
+                <button
+                  type="button"
+                  className="inspector-tab-main"
+                  onClick={() => setTab(item.id)}
+                >
+                  <span className="inspector-tab-indicator" aria-hidden />
+                  {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
+                  {item.label}
+                </button>
+                <span className="inspector-crumb-actions">
+                  <button
+                    type="button"
+                    className="inspector-crumb-close"
+                    title="关闭"
+                    aria-label="关闭此栏"
+                    data-testid={`inspector-tab-close-${item.id}`}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      closeOpenedTab(item.id)
+                    }}
+                  >
+                    <XMarkIcon {...chromeIcon} />
+                  </button>
+                </span>
+              </div>
             )
           })}
         </div>

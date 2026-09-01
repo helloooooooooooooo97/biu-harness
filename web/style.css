@@ -655,6 +655,21 @@ body {
   color: var(--dsw-sidebar-fg-active);
 }
 
+.inspector-tab-main {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 .inspector-tab-indicator {
   display: none;
 }
@@ -665,7 +680,6 @@ body {
   max-width: none;
   min-width: max-content;
   overflow: visible;
-  padding-right: 4px;
 }
 
 .inspector-crumb-tab .inspector-crumb-full .fsdb-crumb:not(:last-child) {
@@ -691,8 +705,8 @@ body {
   margin-left: 2px;
 }
 
-.inspector-crumb-tab:hover .inspector-crumb-actions,
-.inspector-crumb-tab:focus-within .inspector-crumb-actions {
+.inspector-tab:hover .inspector-crumb-actions,
+.inspector-tab:focus-within .inspector-crumb-actions {
   display: inline-flex;
 }
 
