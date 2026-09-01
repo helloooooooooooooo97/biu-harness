@@ -44,6 +44,10 @@ test('brand mascot lives at the corner; sidebar head is title plus collapse', ()
   assert.match(css, /\.brand-agent-menu\s*\{[^}]*width:\s*320px/s)
   assert.match(css, /\.brand-agent-menu\s*\{[^}]*border:\s*0/s)
   assert.match(css, /\.chat-sidebar-popover\s*\{/)
+  assert.match(
+    css,
+    /\.chat-sidebar-popover \.chat-session-row\.is-active::before\s*\{[^}]*background:\s*rgba\(242,\s*241,\s*237,\s*0\.12\)/s,
+  )
   assert.doesNotMatch(css, /\.os-dock-tile svg\s*\{/)
   assert.doesNotMatch(css, /\.brand-agent-menu svg[\s\S]{0,80}unset/)
   assert.doesNotMatch(css, /\.os-dock-tile \.brand-corner-mascot-btn svg\s*\{[^}]*width:\s*22px/s)

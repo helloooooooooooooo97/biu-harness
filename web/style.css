@@ -600,6 +600,12 @@ body {
   color: var(--dsw-sidebar-fg);
 }
 
+/* 毛玻璃上的实心 --dsw-hover 会发闷；悬浮侧栏用更浅的选中膜 */
+.chat-sidebar-popover .chat-session-row:hover:not(.is-active)::before,
+.chat-sidebar-popover .chat-session-row.is-active::before {
+  background: rgba(242, 241, 237, 0.12);
+}
+
 /* 右侧检查器 tab：选中态与顶栏收起检查器按钮相同，无底边指示条 */
 .inspector-tabs {
   display: flex;
@@ -3803,7 +3809,7 @@ body {
 
 .chat-outline-item:hover,
 .chat-outline-item.is-active {
-  background: var(--dsw-hover);
+  background: rgba(242, 241, 237, 0.12);
   color: var(--dsw-sidebar-fg-active);
 }
 
