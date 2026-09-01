@@ -11,8 +11,7 @@ import {
   WIN_CHROME_H,
   centeredGeom,
   clampGeom,
-  defaultStoreShell,
-  parseStoreShell,
+  storeShellFromRecord,
   type StoreShell,
   type WinGeom,
 } from '../shell.ts'
@@ -218,8 +217,8 @@ function PluginAppWindow({
       <div
         className={
           fullscreen
-            ? 'pointer-events-auto absolute inset-y-0 right-0 z-20 flex w-16 items-center justify-end pr-2'
-            : 'pointer-events-auto absolute inset-y-0 left-full z-20 flex w-16 items-center'
+            ? 'pointer-events-auto absolute top-1/2 right-2 z-20 flex -translate-y-1/2'
+            : 'pointer-events-auto absolute top-1/2 left-full z-20 flex -translate-y-1/2 pl-1.5'
         }
         data-testid={`plugin-window-controls-${extraId}`}
         data-controls-place={fullscreen ? 'inside' : 'outside'}
@@ -228,8 +227,8 @@ function PluginAppWindow({
       >
         <nav
           className={`relative flex flex-col gap-1 rounded-lg bg-white/10 p-1 shadow-[0_1px_2px_rgba(15,15,15,.04)] backdrop-blur-sm transition-opacity duration-150 ${
-            fullscreen ? '' : 'ml-1.5'
-          } ${controlsOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
+            controlsOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+          }`}
           aria-label={`${title} 窗口`}
         >
         <button
@@ -386,7 +385,7 @@ function PluginExtrasLayer(props: SlotProps) {
         const listing = resolveListing(entry.id, listings)
         const pluginId = listing?.id ?? entry.id
         const title = listing?.name ?? entry.id
-        const shell = parseStoreShell(listing?.shell ?? defaultStoreShell())
+        const shell = storeShellFromRecord(listing)
         const Component = entry.Component
         return (
           <PluginAppWindow

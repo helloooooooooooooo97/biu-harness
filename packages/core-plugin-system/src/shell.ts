@@ -46,6 +46,25 @@ export function requireDeclaredShell(value: unknown, hasWeb: boolean, where: str
   }
 }
 
+/** /plugins 列表把 shell 拆成 shellWidth 等字段，窗口层要还原。 */
+export function storeShellFromRecord(row: unknown): StoreShell {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return defaultStoreShell()
+  const rec = row as Record<string, unknown>
+  if (rec.shell && typeof rec.shell === 'object' && !Array.isArray(rec.shell)) {
+    return parseStoreShell(rec.shell)
+  }
+  if (rec.shellWidth != null && rec.shellHeight != null) {
+    return parseStoreShell({
+      width: rec.shellWidth,
+      height: rec.shellHeight,
+      minWidth: rec.shellMinWidth,
+      minHeight: rec.shellMinHeight,
+      resizable: rec.shellResizable,
+    })
+  }
+  return defaultStoreShell()
+}
+
 /** manifest.shell：width/height 是内容区像素。缺省 480×360。 */
 export function parseStoreShell(value: unknown): StoreShell {
   const d = defaultStoreShell()

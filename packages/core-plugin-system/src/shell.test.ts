@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { centeredGeom, declaredStoreShell, parseStoreShell, windowOuterSize } from './shell.ts'
+import { centeredGeom, declaredStoreShell, parseStoreShell, storeShellFromRecord, windowOuterSize } from './shell.ts'
 
 test('parseStoreShell defaults and clamps declared content size', () => {
   const d = parseStoreShell(undefined)
@@ -32,6 +32,26 @@ test('centeredGeom keeps the window on screen', () => {
   assert.equal(geom.h, 400)
   assert.ok(geom.x >= 16)
   assert.ok(geom.y >= 16)
+})
+
+test('storeShellFromRecord reads flattened plugin list fields', () => {
+  const fromFlat = storeShellFromRecord({
+    id: 'store-gomoku',
+    shellWidth: 360,
+    shellHeight: 520,
+    shellMinWidth: 360,
+    shellMinHeight: 520,
+    shellResizable: false,
+  })
+  assert.equal(fromFlat.width, 360)
+  assert.equal(fromFlat.height, 520)
+  assert.equal(fromFlat.resizable, false)
+  const nested = storeShellFromRecord({ shell: { width: 640, height: 480 } })
+  assert.equal(nested.width, 640)
+  assert.equal(nested.height, 480)
+  const missing = storeShellFromRecord({ id: 'x' })
+  assert.equal(missing.width, 480)
+  assert.equal(missing.height, 360)
 })
 
 test('declaredStoreShell is true only when width and height are set', () => {
