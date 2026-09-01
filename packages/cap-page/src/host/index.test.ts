@@ -116,4 +116,8 @@ test('PagesStore reads existing markdown files from .page', async () => {
   assert.equal(listed[0]?.id, 'home')
   assert.equal(listed[0]?.title, 'Home')
   assert.equal(listed[0]?.notes, 'hello\n')
+  await writeFile(join(root, PAGE_ROOT, 'other.md'), dumpMarkdown({ title: 'Other' }, ''), 'utf8')
+  const onlyHome = await store.list(['home'])
+  assert.equal(onlyHome.length, 1)
+  assert.equal(onlyHome[0]?.id, 'home')
 })

@@ -11,6 +11,7 @@ import {
   type CollectionAction,
   type CollectionActionInfo,
   type CollectionInfo,
+  type CollectionListQuery,
   type CollectionSchema,
   type CollectionSchemaPack,
   type CollectionSpec,
@@ -338,6 +339,13 @@ export class DatabaseService extends Service implements Database {
     return [...this.collections.values()].sort((a, b) => a.path.localeCompare(b.path))
   }
 
+  private async loadCollectionRows(spec: CollectionSpec, query: CollectionListQuery) {
+    const rows = await spec.list(query)
+    if (!query.ids?.length) return rows
+    const allow = new Set(query.ids)
+    return rows.filter((row) => allow.has(row.id))
+  }
+
   private bump() {
     this.ctx.emit('database/change')
     if (this.bumpQueued) return
@@ -399,11 +407,26 @@ export class DatabaseService extends Service implements Database {
     const sortDir = page?.sortDir === 'desc' ? 'desc' : 'asc'
     const packs = this.schemaTags.list()
     const schemaFilter = filter?.schema != null && filter.schema !== '' ? String(filter.schema) : ''
-    const stamped = schemaFilter && schema.fields.schema ? this.schemaTags.stampedIds(spec.path, schemaFilter) : null
-    const matched = (await spec.list()).filter((row) => {
-      if (stamped && stamped.size > 0 && !stamped.has(row.id)) return false
-      return matchListFilter(row, filter, schema, packs) && matchQuery(row, q, packs)
-    })
+    const query: CollectionListQuery = { q, filter }
+    if (schemaFilter && schema.fields.schema) {
+      const stamped = this.schemaTags.stampedIds(spec.path, schemaFilter)
+      if (!stamped.size) {
+        return {
+          kind: 'collection' as const,
+          path: spec.path,
+          id: spec.id,
+          label: spec.label ?? spec.id,
+          schema,
+          total: 0,
+          offset,
+          limit,
+          items: [],
+        }
+      }
+      query.ids = [...stamped]
+    }
+    const rows = await this.loadCollectionRows(spec, query)
+    const matched = rows.filter((row) => matchListFilter(row, filter, schema, packs) && matchQuery(row, q, packs))
     const sorted = sortRecords(matched, sortField, sortDir)
     const total = sorted.length
     const slice = sorted.slice(offset, offset + limit)

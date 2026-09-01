@@ -57,7 +57,7 @@ export function pagesCollection(store: PagesStore): CollectionSpec {
       },
     },
     records: { update: true, create: true, delete: true },
-    list: () => store.list(),
+    list: (query) => store.list(query?.ids),
     get: (id) => store.get(id),
     update: (id, patch) => store.update(id, patch),
     create: (fields = {}) => store.create(fields),

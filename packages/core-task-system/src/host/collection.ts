@@ -34,7 +34,7 @@ type TaskRow = DbRecord & {
 }
 
 export type TasksLike = {
-  list: () => TaskRow[]
+  list: (filter?: { q?: string; status?: string }) => TaskRow[]
   get: (id: string) => TaskRow | undefined
   update: (id: string, patch: Record<string, unknown>) => DbRecord
   create: (input: Record<string, unknown> & { title: string; creator: Actor }) => TaskRow
@@ -187,7 +187,13 @@ export function tasksCollection(tasks: TasksLike): CollectionSpec {
       },
     },
     records: { update: true, create: true, delete: true },
-    list: () => recordsWithUsage(tasks.list()),
+    list: (query) => {
+      if (query?.ids?.length) {
+        const rows = query.ids.map((id) => tasks.get(id)).filter((row): row is TaskRow => Boolean(row))
+        return recordsWithUsage(rows)
+      }
+      return recordsWithUsage(tasks.list(query?.q ? { q: query.q } : {}))
+    },
     get: (id) => recordsWithUsage(tasks.list()).find((row) => row.id === id) ?? null,
     update: (id, patch) => {
       const next = tasks.update(id, patch) as TaskRow

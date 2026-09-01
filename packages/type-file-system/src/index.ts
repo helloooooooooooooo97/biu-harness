@@ -282,6 +282,13 @@ export type CollectionView = {
   inspector?: boolean
 }
 
+export type CollectionListQuery = {
+  /** 只取这些 id。File System 在 SuperTag 筛选时传入，避免整表 list。 */
+  ids?: string[]
+  q?: string
+  filter?: Record<string, unknown>
+}
+
 export type CollectionSpec = {
   id: string
   path: string
@@ -293,7 +300,8 @@ export type CollectionSpec = {
    * update / create / delete 为 true 时必须提供对应实现；不写则不能改、不能新建、不能删。
    */
   records?: CollectionRecordCaps
-  list: () => DbRecord[] | Promise<DbRecord[]>
+  /** 可接收查询；不认 ids 时 File System 仍会在内存里收窄。 */
+  list: (query?: CollectionListQuery) => DbRecord[] | Promise<DbRecord[]>
   get: (id: string) => DbRecord | null | undefined | Promise<DbRecord | null | undefined>
   /** 更新已有记录的可写字段。不要叫 write。 */
   update?: (id: string, patch: Record<string, unknown>) => DbRecord | Promise<DbRecord>

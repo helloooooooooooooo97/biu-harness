@@ -250,8 +250,17 @@ export class PagesStore {
     await mkdir(this.fs.resolve(PAGE_ASSETS), { recursive: true })
   }
 
-  async list(): Promise<PageRow[]> {
+  async list(ids?: string[]): Promise<PageRow[]> {
     await this.ensureDirs()
+    if (ids) {
+      const rows: PageRow[] = []
+      for (const id of ids) {
+        if (!ID_RE.test(id)) continue
+        const row = await this.get(id)
+        if (row) rows.push(row)
+      }
+      return rows
+    }
     let names: string[] = []
     try {
       names = await this.fs.list(PAGE_ROOT)

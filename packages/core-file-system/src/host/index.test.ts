@@ -367,6 +367,45 @@ test('SuperTag catalog is workspace-wide and collect uses sqlite stamps', async 
   assert.deepEqual(collected.items.map((item) => item.path).sort(), ['/notes/n1', '/pages/p1'])
 })
 
+test('SuperTag list filter asks the collection only for stamped ids', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  const rows = new Map<string, Record<string, unknown>>([
+    ['a', { id: 'a', title: 'A' }],
+    ['b', { id: 'b', title: 'B' }],
+  ])
+  let listed: string[] | undefined
+  db.register({
+    id: 'notes',
+    path: '/notes',
+    schema: { fields: { title: { type: 'string', writable: true } } },
+    records: { update: true },
+    list: (query) => {
+      listed = query?.ids
+      if (query?.ids) return query.ids.map((id) => rows.get(id)).filter(Boolean) as { id: string }[]
+      return [...rows.values()] as { id: string }[]
+    },
+    get: (id) => rows.get(id) as { id: string } | undefined,
+    update: (id, patch) => {
+      const next = { ...rows.get(id), ...patch, id }
+      rows.set(id, next)
+      return next as { id: string }
+    },
+  })
+  const empty = await db.list('/notes', { schema: 'dp' })
+  if (empty.kind !== 'collection') return
+  assert.equal(empty.items.length, 0)
+  assert.equal(listed, undefined)
+  db.schemaTags.replace([{ id: 'dp', label: '动态规划', fields: [] }])
+  await db.update('/notes/a', { schema: { tags: ['dp'], values: {} } })
+  listed = undefined
+  const filtered = await db.list('/notes', { schema: 'dp' })
+  if (filtered.kind !== 'collection') return
+  assert.deepEqual(listed, ['a'])
+  assert.equal(filtered.items.length, 1)
+  assert.equal(filtered.items[0]?.id, 'a')
+})
+
 test('tables without records.create/delete reject create and delete', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)
