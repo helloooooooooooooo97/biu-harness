@@ -15,7 +15,8 @@ import {
   collectionNavKey,
 } from './nav-boot.ts'
 import { defaultViewId, pushAllSavedViews } from './view-storage.ts'
-import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, VIEWS_COLLECTION_PATH, sortDataCollections, viewsCatalogSource } from './database-path.ts'
+import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, SUPERTAGS_COLLECTION_PATH, VIEWS_COLLECTION_PATH, sortDataCollections, viewsCatalogSource } from './database-path.ts'
+import { superTagsChrome } from './super-tags-chrome.tsx'
 import { builtinAllViewId } from '../catalog-views.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
@@ -207,6 +208,10 @@ export const inject = ['slots', 'appModules']
 
 export function apply(ctx: Context) {
   new DatabaseUiService(ctx)
+  ctx.effect(() => {
+    const ui = getDatabaseUi()
+    return ui?.decorate(SUPERTAGS_COLLECTION_PATH, superTagsChrome).dispose
+  })
   const slots = ctx.get('slots') as SlotsService
   const appModules = ctx.get('appModules') as AppModulesService
   const mounted = new Map<string, () => void>()

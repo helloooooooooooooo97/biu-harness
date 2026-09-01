@@ -62,6 +62,11 @@ export function persistSchemaTags(tags: CollectionSchemaPack[], _collectionPath?
     body: JSON.stringify({ tags: next }),
   }).catch(() => undefined)
   emit()
+  try {
+    window.dispatchEvent(new Event('fsdb:change'))
+  } catch {
+    /* ignore */
+  }
 }
 
 export async function pullSchemaTags(_collectionPath?: string) {

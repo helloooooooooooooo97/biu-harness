@@ -5,6 +5,7 @@ import {
   BoltIcon,
   DocumentIcon,
   EyeIcon,
+  TagIcon,
   ListBulletIcon,
   PuzzlePieceIcon,
   ShareIcon,
@@ -23,6 +24,7 @@ export function TableGlyph({ icon, className = 'size-4' }: { icon?: string; clas
   if (name === 'document' || name === 'document-text' || name === 'page') return <DocumentIcon aria-hidden className={className} />
   if (name === 'bolt') return <BoltIcon aria-hidden className={className} />
   if (name === 'eye') return <EyeIcon aria-hidden className={className} />
+  if (name === 'tag') return <TagIcon aria-hidden className={className} />
   return <TableCellsIcon aria-hidden className={className} />
 }
 

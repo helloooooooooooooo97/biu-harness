@@ -168,6 +168,7 @@ export function RecordDetail({
                   </div>
                   {Object.entries(schema.fields).map(([key, field]) => {
                     if (key === 'id' || key === schema.labelField || key === contentFieldKey(schema)) return null
+                    if (collectionPath === '/supertags' && key === 'schema') return null
                     const kind = resolveFieldType(field)
                     if (kind === 'schema') {
                       return (

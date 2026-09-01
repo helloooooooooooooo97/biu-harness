@@ -317,6 +317,51 @@ function AddProperty({ onAdd }: { onAdd: (label: string, type: AtomicFieldType) 
   )
 }
 
+export function SuperTagPackEditor({ tagId }: { tagId: string }) {
+  const [catalog, setCatalog] = useState(() => loadSchemaTags())
+  useEffect(() => subscribeSchemaTags(undefined, () => setCatalog(loadSchemaTags())), [])
+  const tag = catalog.find((item) => item.id === tagId)
+
+  function saveCatalog(next: CollectionSchemaPack[]) {
+    persistSchemaTags(next)
+    setCatalog(next)
+  }
+
+  if (!tag) return <p className="fsdb-muted">这枚 SuperTag 已不在目录里。</p>
+  const pack = tag
+
+  function addField(name: string, type: AtomicFieldType) {
+    const key = fieldKeyFromLabel(name, new Set(pack.fields.map((item) => item.key)))
+    if (pack.fields.some((item) => item.key === key)) return
+    const field: SchemaPackField = { key, type, label: name, writable: true }
+    saveCatalog(catalog.map((item) => (item.id === pack.id ? { ...item, fields: [...item.fields, field] } : item)))
+  }
+
+  function removeField(key: string) {
+    saveCatalog(catalog.map((item) => (item.id === pack.id ? { ...item, fields: item.fields.filter((row) => row.key !== key) } : item)))
+  }
+
+  return (
+    <div className="fsdb-schema-pack">
+      {pack.fields.map((field) => (
+        <div key={field.key} className="fsdb-schema-prop">
+          <span className="fsdb-schema-prop-k" title={field.label ?? field.key}>
+            <FieldGlyph kind={field.type} />
+            {field.label ?? field.key}
+          </span>
+          <div className="fsdb-schema-prop-v">
+            <span className="fsdb-muted">{TYPE_LABEL[field.type]}</span>
+            <button type="button" className="fsdb-schema-prop-del" aria-label={`删除 ${field.label ?? field.key}`} onClick={() => removeField(field.key)}>
+              <XMarkIcon aria-hidden className="size-3" />
+            </button>
+          </div>
+        </div>
+      ))}
+      <AddProperty onAdd={addField} />
+    </div>
+  )
+}
+
 export function SchemaFieldEditor({
   collectionPath: _collectionPath,
   record,

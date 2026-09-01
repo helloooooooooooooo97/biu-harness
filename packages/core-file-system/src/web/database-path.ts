@@ -32,14 +32,17 @@ export function databaseRecordPath(collection: string, recordId: string): string
 }
 
 export const VIEWS_COLLECTION_PATH = '/views'
+export const SUPERTAGS_COLLECTION_PATH = '/supertags'
 export const EVENTS_COLLECTION_PATH = '/events'
+
+const SYSTEM_COLLECTION_ORDER = [VIEWS_COLLECTION_PATH, SUPERTAGS_COLLECTION_PATH, EVENTS_COLLECTION_PATH] as const
 
 const USER_COLLECTION_ORDER = ['/sessions', '/tasks', '/pages', '/plugins'] as const
 
-/** 视图、事件由系统自己记下，侧栏归在系统数据。 */
+/** 视图、超级标签、事件由系统自己记下，侧栏归在系统数据。 */
 export function isSystemCollection(path: string) {
   const normalized = normalizeCollectionPath(path)
-  return normalized === VIEWS_COLLECTION_PATH || normalized === EVENTS_COLLECTION_PATH
+  return (SYSTEM_COLLECTION_ORDER as readonly string[]).includes(normalized)
 }
 
 export function sortDataCollections<T extends { path: string }>(tables: T[]): { user: T[]; system: T[] } {
@@ -57,10 +60,11 @@ export function sortDataCollections<T extends { path: string }>(tables: T[]): { 
   system.sort((a, b) => {
     const left = normalizeCollectionPath(a.path)
     const right = normalizeCollectionPath(b.path)
-    if (left === right) return 0
-    if (left === VIEWS_COLLECTION_PATH) return -1
-    if (right === VIEWS_COLLECTION_PATH) return 1
-    return left.localeCompare(right)
+    const leftRank = SYSTEM_COLLECTION_ORDER.indexOf(left as (typeof SYSTEM_COLLECTION_ORDER)[number])
+    const rightRank = SYSTEM_COLLECTION_ORDER.indexOf(right as (typeof SYSTEM_COLLECTION_ORDER)[number])
+    const aRank = leftRank >= 0 ? leftRank : 50
+    const bRank = rightRank >= 0 ? rightRank : 50
+    return aRank - bRank || left.localeCompare(right)
   })
   return { user, system }
 }

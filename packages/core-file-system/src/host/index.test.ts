@@ -268,6 +268,9 @@ test('apply registers db_* tools', async () => {
   }
   const listed = await ctx.tools.invoke('db_list', { path: '/' })
   assert.equal((listed as { kind: string }).kind, 'root')
+  const paths = ((listed as { items: Array<{ path: string }> }).items ?? []).map((item) => item.path)
+  assert.equal(paths.includes('/views'), true)
+  assert.equal(paths.includes('/supertags'), true)
 })
 
 test('register rejects duplicate view route and nav title', async () => {

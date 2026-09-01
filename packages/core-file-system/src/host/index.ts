@@ -22,6 +22,7 @@ import {
 } from '@biu/type-file-system'
 import { SavedViewsStore, viewsCollection, type StoredView } from './saved-views.ts'
 import { SchemaTagsStore, SUPER_TAGS_SQLITE } from './schema-tags.ts'
+import { superTagsCollection } from './super-tags-collection.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
 function publicAction(action: CollectionAction): CollectionActionInfo {
@@ -42,11 +43,14 @@ function schemaFor(spec: CollectionSpec): CollectionSchema {
     labelField,
     contentField,
     fields,
-    columns: spec.schema.columns?.includes('schema')
-      ? spec.schema.columns
-      : spec.schema.columns
-        ? [...spec.schema.columns, 'schema']
-        : spec.schema.columns,
+    columns:
+      spec.path === '/supertags'
+        ? spec.schema.columns
+        : spec.schema.columns?.includes('schema')
+          ? spec.schema.columns
+          : spec.schema.columns
+            ? [...spec.schema.columns, 'schema']
+            : spec.schema.columns,
     actions: (spec.actions ?? []).map(publicAction),
     records: {
       update: Boolean(spec.records?.update),
@@ -460,7 +464,7 @@ export class DatabaseService extends Service implements Database {
   }
 
   private indexSuperTagRecord(spec: CollectionSpec, record: DbRecord) {
-    if (!schemaFor(spec).fields.schema) return
+    if (spec.path === '/supertags' || !schemaFor(spec).fields.schema) return
     const labelKey = schemaFor(spec).labelField ?? 'title'
     this.schemaTags.indexRecord(
       spec.path,
@@ -612,6 +616,7 @@ export function apply(ctx: Context) {
     label: item.label ?? item.id,
     view: item.view ?? null,
   }))))
+  db.register(superTagsCollection(schemaTags))
   ctx.tools.register({
     name: 'db_list',
     description: '列出 File System 路径：/ 为已登记表，/<表> 为该表记录（不含 content 正文）。默认每页 50 条，最多 200。',

@@ -317,6 +317,10 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-detail-extras{display:flex;flex-direction:column;gap:20px;margin-top:8px;padding-top:16px;border-top:1px solid var(--dsw-border)}
 .fsdb-detail-extra-title{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:14px;font-weight:700;color:var(--dsw-label)}
 .fsdb-detail-extra-count{font-size:11px;font-weight:700;color:var(--dsw-label-3)}
+.fsdb-supertag-collect{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px}
+.fsdb-supertag-collect-link{display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-height:32px;padding:4px 8px;border-radius:6px;color:inherit;text-decoration:none}
+.fsdb-supertag-collect-link:hover{background:var(--dsw-hover)}
+.fsdb-supertag-collect-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .fsdb-fields{display:flex;flex-direction:column;gap:8px}
 .fsdb-field{display:flex;flex-direction:column;gap:4px;color:var(--dsw-label-3);font-size:14px}
 .fsdb-field em{font-style:normal;color:var(--dsw-label);font-size:14px}

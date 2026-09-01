@@ -16,8 +16,26 @@ export type SuperTagStamp = {
   title: string
 }
 
-type TagRow = { id: string; label: string; fields_json: string }
+type TagRow = { id: string; label: string; fields_json: string; updated_at?: number }
 type StampRow = { tag_id: string; collection: string; record_id: string; title: string }
+
+export function slugSuperTagId(label: string, used: Set<string>) {
+  const base =
+    label
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 24) || 'tag'
+  let id = /^[a-z]/.test(base) ? base : `t-${base}`
+  let n = 2
+  while (used.has(id) || !/^[a-z][a-z0-9-]{0,31}$/.test(id)) {
+    id = `${base.slice(0, 20)}-${n}`
+    if (!/^[a-z]/.test(id)) id = `t-${id}`
+    n += 1
+  }
+  return id
+}
 
 function packFromRow(row: TagRow): CollectionSchemaPack | null {
   let fields: unknown = []
@@ -73,12 +91,12 @@ export class SchemaTagsStore {
       q
         ? (db
             .prepare(
-              `SELECT id, label, fields_json FROM super_tags
+              `SELECT id, label, fields_json, updated_at FROM super_tags
                WHERE instr(lower(id), ?) > 0 OR instr(lower(label), ?) > 0
                ORDER BY label`,
             )
             .all(q, q) as TagRow[])
-        : (db.prepare('SELECT id, label, fields_json FROM super_tags ORDER BY label').all() as TagRow[])
+        : (db.prepare('SELECT id, label, fields_json, updated_at FROM super_tags ORDER BY label').all() as TagRow[])
     )
     return rows.map((row) => packFromRow(row)).filter((item): item is CollectionSchemaPack => Boolean(item))
   }
@@ -88,7 +106,7 @@ export class SchemaTagsStore {
     if (!want) return null
     const db = this.ensure()
     const row = db
-      .prepare('SELECT id, label, fields_json FROM super_tags WHERE id = ? OR label = ? LIMIT 1')
+      .prepare('SELECT id, label, fields_json, updated_at FROM super_tags WHERE id = ? OR label = ? LIMIT 1')
       .get(want, want) as TagRow | undefined
     return row ? packFromRow(row) : null
   }
@@ -119,6 +137,44 @@ export class SchemaTagsStore {
       throw error
     }
     return this.list()
+  }
+
+  upsert(raw: unknown): CollectionSchemaPack {
+    const pack = normalizeSchemaPack(raw)
+    if (!pack) throw new Error('invalid SuperTag')
+    this.ensure()
+      .prepare(
+        `INSERT INTO super_tags (id, label, fields_json, updated_at)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET label = excluded.label, fields_json = excluded.fields_json, updated_at = excluded.updated_at`,
+      )
+      .run(pack.id, pack.label, JSON.stringify(pack.fields), Date.now())
+    return pack
+  }
+
+  removeTag(id: string): boolean {
+    const db = this.ensure()
+    const want = String(id ?? '').trim()
+    if (!want) return false
+    db.exec('BEGIN IMMEDIATE')
+    try {
+      db.prepare('DELETE FROM super_tag_stamps WHERE tag_id = ?').run(want)
+      const result = db.prepare('DELETE FROM super_tags WHERE id = ?').run(want)
+      db.exec('COMMIT')
+      return Number(result.changes) > 0
+    } catch (error) {
+      db.exec('ROLLBACK')
+      throw error
+    }
+  }
+
+  stampCounts(): Record<string, number> {
+    const rows = this.ensure()
+      .prepare('SELECT tag_id, COUNT(*) AS n FROM super_tag_stamps GROUP BY tag_id')
+      .all() as Array<{ tag_id: string; n: number | bigint }>
+    const out: Record<string, number> = {}
+    for (const row of rows) out[row.tag_id] = Number(row.n)
+    return out
   }
 
   indexRecord(collection: string, recordId: string, title: string, tagIds: string[]) {
