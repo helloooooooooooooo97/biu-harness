@@ -680,7 +680,7 @@ export const ChatNodeList = memo(function ChatNodeList({
                 replyNode?.turn != null ? dispatchedTasksByTurn[String(replyNode.turn)] : undefined
               const stickyUser =
                 node.kind === 'user'
-                  ? 'sticky top-0 z-1 bg-(--dsw-bg)'
+                  ? 'sticky top-0 z-1 bg-transparent'
                   : ''
               const skipPaint =
                 node.kind === 'reply' || node.kind === 'turn'
