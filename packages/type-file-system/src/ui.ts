@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import type { CollectionActionInfo, CollectionSchema, DbRecord, FieldSpec } from './index.ts'
+import type { CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec } from './index.ts'
 
 /** 单元格：不传则 File System 按 FieldSpec.type 默认画。 */
 export type FsCellProps = {
@@ -42,7 +42,17 @@ export type CollectionChrome = {
   Content?: ComponentType<FsContentProps>
   /** 详情弹窗额外分区（概况之外）。旧任务详情的脚本/进度汇报走这里。 */
   panes?: FsDetailPane[]
+  /** 点行：集合自己决定跳到哪。不传则打开本表记录详情。 */
+  openRow?: (row: DbRecord) => FsOpenRow | null | undefined | false
+  /** 覆盖该集合侧栏/下拉里的视图列表（例如视图目录）。 */
+  listViews?: (tables: CollectionInfo[], user: unknown[]) => unknown[]
+  /** 从当前 URL search 解析锁定筛选（例如视图目录 ?source=）。 */
+  lockedFiltersFromSearch?: (search: string) => Record<string, string>
 }
+
+export type FsOpenRow =
+  | { kind: 'table'; path: string; viewId?: string }
+  | { kind: 'record'; recordId: string; collection?: string }
 
 export type FsContentProps = {
   record: DbRecord

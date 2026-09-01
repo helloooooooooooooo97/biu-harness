@@ -173,17 +173,6 @@ export function stubBuiltinCatalogView(id: string): SavedView | null {
   })
 }
 
-export function mergeViewsForPath(
-  path: string,
-  table: TableRef | undefined,
-  tables: CollectionInfo[],
-  user: SavedView[],
-) {
-  const normalized = normalizeCollectionPath(path)
-  if (normalized === '/views') return mergeCatalogViews(tables, user)
-  return mergeTableViews(table, user)
-}
-
 /** /views 表里的一行：打开时应跳到该视图对应表，而不是看视图记录自己的属性。 */
 export function catalogRowOpenTarget(row: { tablePath?: unknown; viewId?: unknown }) {
   const collection = normalizeCollectionPath(String(row.tablePath ?? ''))

@@ -15,9 +15,10 @@ import {
   collectionNavKey,
 } from './nav-boot.ts'
 import { defaultViewId, pushAllSavedViews } from './view-storage.ts'
-import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, SUPERTAGS_COLLECTION_PATH, VIEWS_COLLECTION_PATH, sortDataCollections, viewsCatalogSource } from './database-path.ts'
+import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, SUPERTAGS_COLLECTION_PATH, VIEWS_COLLECTION_PATH, sortDataCollections } from './database-path.ts'
 import { superTagsChrome } from './super-tags-chrome.tsx'
-import { openRegisteredRow, viewsForRegisteredCollection } from './collection-nav.ts'
+import { viewsChrome } from './views-chrome.ts'
+import { viewsForRegisteredCollection } from './collection-nav.ts'
 import { builtinAllViewId } from '../catalog-views.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
@@ -136,9 +137,7 @@ function CollectionPage(props: SlotProps) {
     go({ collection: first.path, viewId: defaultViewId(first.path) }, { replace: true })
   }, [collectionFromRoute, orderedTables])
 
-  const sourceFilter = useMemo(() => viewsCatalogSource(location.search), [location.search])
-  const lockedFilters: Record<string, string> =
-    currentPath === VIEWS_COLLECTION_PATH && sourceFilter ? { tablePath: sourceFilter } : {}
+  const lockedFilters = chrome.lockedFiltersFromSearch?.(location.search) ?? {}
   if (!currentPath) return null
   const title = row?.view?.title ?? row?.label ?? currentPath.replace(/^\//, '')
   return (
@@ -158,12 +157,6 @@ function CollectionPage(props: SlotProps) {
       onOpenView={(viewId) => go({ collection: currentPath, viewId })}
       onOpenRecord={(recordId, _viewId, collection) =>
         go({ collection: collection ?? currentPath, recordId })
-      }
-      onOpenRow={(row) =>
-        openRegisteredRow(currentPath, row, {
-          table: (path, viewId) => go({ collection: path, viewId: viewId ?? builtinAllViewId(path) }),
-          record: (recordId, collection) => go({ collection: collection ?? currentPath, recordId }),
-        })
       }
       resolveViews={(path, user) => viewsForRegisteredCollection(path, orderedTables, user)}
       onCloseRecord={() =>
@@ -219,7 +212,12 @@ export function apply(ctx: Context) {
   ctx.effect(() => {
     const ui = getDatabaseUi()
     if (!ui) return () => undefined
-    return ui.decorate(SUPERTAGS_COLLECTION_PATH, superTagsChrome).dispose
+    const views = ui.decorate(VIEWS_COLLECTION_PATH, viewsChrome)
+    const tags = ui.decorate(SUPERTAGS_COLLECTION_PATH, superTagsChrome)
+    return () => {
+      views.dispose()
+      tags.dispose()
+    }
   })
   const slots = ctx.get('slots') as SlotsService
   const appModules = ctx.get('appModules') as AppModulesService

@@ -13,7 +13,6 @@ import {
   catalogRowOpenTarget,
   builtinTagViewId,
   isBuiltinTagViewId,
-  mergeViewsForPath,
   stampRowOpenTarget,
 } from './catalog-views.ts'
 
@@ -79,7 +78,7 @@ test('tags collection uses the same view list as other tables', () => {
   assert.equal(isBuiltinTagViewId(builtinTagViewId('dp')), true)
   assert.equal(isBuiltinCatalogViewId(builtinTagViewId('dp')), false)
   const table = { path: '/supertags', label: '标签', view: { title: '标签' } }
-  const merged = mergeViewsForPath('/supertags', table, [], [{ id: 'mine', name: '置顶', mode: 'table', sortField: 'id', sortDir: 'asc', filters: {}, columns: [] }])
+  const merged = mergeTableViews(table, [{ id: 'mine', name: '置顶', mode: 'table', sortField: 'id', sortDir: 'asc', filters: {}, columns: [] }])
   assert.equal(merged[0]?.id, builtinAllViewId('/supertags'))
   assert.equal(merged[0]?.name, '全部标签')
   assert.equal(merged.some((view) => isBuiltinTagViewId(view.id)), false)

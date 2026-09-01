@@ -9,7 +9,7 @@ import { CollectionBrowser } from './browser.tsx'
 import { CrumbTrail } from './crumb-trail.tsx'
 import { defaultViewId, loadRecords, loadViews, viewForPath } from './view-storage.ts'
 import { builtinAllViewId } from '../catalog-views.ts'
-import { DATA_MODULE, DATA_MODULE_ID, VIEWS_COLLECTION_PATH, databaseAllViewPath, databaseRecordPath, databaseViewPath, viewsCatalogSource } from './database-path.ts'
+import { DATA_MODULE, DATA_MODULE_ID, databaseAllViewPath, databaseRecordPath, databaseViewPath } from './database-path.ts'
 import {
   getInspectorDbPath,
   setInspectorDbPath,
@@ -17,7 +17,7 @@ import {
 } from './inspector-db-route.ts'
 import { getDatabaseUi } from './database-ui.ts'
 import { TableGlyph } from './nav-glyphs.tsx'
-import { openRegisteredRow, viewsForRegisteredCollection } from './collection-nav.ts'
+import { viewsForRegisteredCollection } from './collection-nav.ts'
 
 const tabIcons = new Map<string, ComponentType<{ className?: string }>>()
 
@@ -305,16 +305,14 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
   const { pathname, search } = splitHref(inspectorPath)
   const { collection, viewId, recordId } = crumbsForRoute(pathname, tables)
   const currentPath = collection
-  const sourceFilter = viewsCatalogSource(search)
-  const lockedFilters: Record<string, string> =
-    currentPath === VIEWS_COLLECTION_PATH && sourceFilter ? { tablePath: sourceFilter } : {}
-  const table = tables.find((item) => item.path === currentPath)
-  const title = table ? tableLabel(table) : '数据'
   const chrome = useSyncExternalStore(
     (fn) => (ui ? ui.subscribe(fn) : () => undefined),
     () => (currentPath ? ui?.chrome(currentPath) ?? EMPTY_CHROME : EMPTY_CHROME),
     () => (currentPath ? ui?.chrome(currentPath) ?? EMPTY_CHROME : EMPTY_CHROME),
   )
+  const lockedFilters = chrome.lockedFiltersFromSearch?.(search) ?? {}
+  const table = tables.find((item) => item.path === currentPath)
+  const title = table ? tableLabel(table) : '数据'
 
   if (!currentPath) {
     return <p className="fsdb-inspector-empty">没有数据表</p>
@@ -339,16 +337,6 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
       onOpenRecord={(recordIdNext, _viewId, nextCollection) => {
         setInspectorDbPath(id, databaseRecordPath(nextCollection ?? currentPath, recordIdNext))
       }}
-      onOpenRow={(row) =>
-        openRegisteredRow(currentPath, row, {
-          table: (path, nextViewId) => {
-            setInspectorDbPath(id, databaseViewPath(path, nextViewId ?? builtinAllViewId(path)))
-          },
-          record: (recordIdNext, nextCollection) => {
-            setInspectorDbPath(id, databaseRecordPath(nextCollection ?? currentPath, recordIdNext))
-          },
-        })
-      }
       resolveViews={(path, user) => viewsForRegisteredCollection(path, tables, user)}
       onCloseRecord={() => {
         setInspectorDbPath(

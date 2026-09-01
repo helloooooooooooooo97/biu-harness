@@ -233,6 +233,15 @@ export function CollectionBrowser({
     else onCloseRecord?.()
   }
   const openRow = (row: DbRecord) => {
+    const jump = chrome?.openRow?.(row)
+    if (jump && jump.kind === 'table') {
+      onOpenTable?.(jump.path, jump.viewId)
+      return
+    }
+    if (jump && jump.kind === 'record') {
+      onOpenRecord?.(jump.recordId, activeViewId, jump.collection)
+      return
+    }
     if (onOpenRow?.(row)) return
     setDetailId(row.id, row)
   }
