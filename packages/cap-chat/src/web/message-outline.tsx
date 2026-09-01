@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   bindSessionView,
   deriveChatOutline,
@@ -9,14 +9,8 @@ import {
   type SessionViewService,
 } from '@biu/web-session-view'
 
-function OutlineGlyph({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
-      <rect x="1.25" y="3.4" width="13.5" height="1.7" rx="0.85" fill="currentColor" opacity="0.38" />
-      <rect x="1.25" y="7.15" width="13.5" height="1.7" rx="0.85" fill="currentColor" />
-      <rect x="1.25" y="10.9" width="13.5" height="1.7" rx="0.85" fill="currentColor" opacity="0.38" />
-    </svg>
-  )
+function escapeId(id: string) {
+  return typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(id) : id
 }
 
 export const ChatMessageOutline = memo(function ChatMessageOutline({
@@ -26,57 +20,103 @@ export const ChatMessageOutline = memo(function ChatMessageOutline({
   sessionView?: SessionViewService
 }) {
   const nodes = useSessionView((state) => state.nodes)
-  const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLElement>(null)
+  const railRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
+  const leaveTimer = useRef(0)
+  const [hoverId, setHoverId] = useState<string | null>(null)
+  const [alignTick, setAlignTick] = useState(true)
   const filter = useSyncExternalStore(subscribeChatOutline, getChatOutlineFilter, (): ChatOutlineFilter => 'user')
   const items = useMemo(() => deriveChatOutline(nodes, filter), [nodes, filter])
 
-  useEffect(() => {
-    if (!open) return
-    function onPointer(event: MouseEvent) {
-      const target = event.target as Node
-      if (rootRef.current?.contains(target)) return
-      setOpen(false)
-    }
-    document.addEventListener('mousedown', onPointer)
-    return () => document.removeEventListener('mousedown', onPointer)
-  }, [open])
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), [])
+
+  function keepOpen() {
+    window.clearTimeout(leaveTimer.current)
+  }
+
+  function scheduleClose() {
+    window.clearTimeout(leaveTimer.current)
+    leaveTimer.current = window.setTimeout(() => {
+      setHoverId(null)
+      setAlignTick(true)
+    }, 140)
+  }
+
+  function hoverTick(id: string) {
+    keepOpen()
+    setHoverId(id)
+    setAlignTick(true)
+  }
+
+  function hoverMenuItem(id: string) {
+    keepOpen()
+    setHoverId(id)
+    setAlignTick(false)
+  }
+
+  useLayoutEffect(() => {
+    if (!hoverId) return
+    const root = rootRef.current
+    const rail = railRef.current
+    const panel = panelRef.current
+    const tick = rail?.querySelector<HTMLElement>(`[data-outline-tick="${escapeId(hoverId)}"]`)
+    const row = panel?.querySelector<HTMLElement>(`[data-outline-row="${escapeId(hoverId)}"]`)
+    if (!root || !rail || !panel || !tick) return
+    tick.scrollIntoView({ block: 'nearest' })
+    row?.scrollIntoView({ block: 'nearest' })
+    if (!alignTick) return
+    const rootBox = root.getBoundingClientRect()
+    const tickBox = tick.getBoundingClientRect()
+    const panelH = panel.offsetHeight
+    const mid = tickBox.top - rootBox.top + tickBox.height / 2
+    const top = Math.min(Math.max(panelH / 2, mid), Math.max(panelH / 2, rootBox.height - panelH / 2))
+    panel.style.top = `${top}px`
+  }, [hoverId, alignTick, items.length])
+
+  if (!items.length) return null
 
   return (
-    <aside className="chat-outline" aria-label="消息大纲" ref={rootRef}>
-      <button
-        type="button"
-        className={`chat-outline-icon-btn${open ? ' is-open' : ''}`}
-        title={open ? '收起消息大纲' : '打开消息大纲'}
-        aria-label={open ? '收起消息大纲' : '打开消息大纲'}
-        aria-expanded={open}
-        data-testid="chat-outline-toggle"
-        onClick={() => setOpen((value) => !value)}
-      >
-        <OutlineGlyph className="chat-outline-glyph" />
-      </button>
-      {open ? (
-        <nav className="chat-outline-panel" data-testid="chat-outline">
-          {items.length ? (
-            items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`chat-outline-item${item.robot ? ' is-robot' : ''}`}
-                title={item.text}
-                data-testid={`chat-outline-item-${item.id}`}
-                onClick={() => {
-                  requestChatOutlineGo(item.id)
-                  setOpen(false)
-                }}
-              >
-                <span className="chat-outline-dot" aria-hidden />
-                <span className="chat-outline-label">{item.text}</span>
-              </button>
-            ))
-          ) : (
-            <div className="chat-outline-empty">还没有消息</div>
-          )}
+    <aside
+      className="chat-outline"
+      aria-label="消息大纲"
+      ref={rootRef}
+      data-testid="chat-outline"
+      onMouseEnter={keepOpen}
+      onMouseLeave={scheduleClose}
+    >
+      <div className="chat-outline-rail" ref={railRef} data-testid="chat-outline-rail">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={`chat-outline-tick${item.robot ? ' is-robot' : ''}${hoverId === item.id ? ' is-active' : ''}`}
+            title={item.text}
+            aria-label={item.text}
+            data-outline-tick={item.id}
+            data-testid={`chat-outline-tick-${item.id}`}
+            onMouseEnter={() => hoverTick(item.id)}
+            onFocus={() => hoverTick(item.id)}
+            onClick={() => requestChatOutlineGo(item.id)}
+          />
+        ))}
+      </div>
+      {hoverId ? (
+        <nav className="chat-outline-panel" ref={panelRef} data-testid="chat-outline-panel">
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`chat-outline-item${item.robot ? ' is-robot' : ''}${hoverId === item.id ? ' is-active' : ''}`}
+              title={item.text}
+              data-outline-row={item.id}
+              data-testid={`chat-outline-item-${item.id}`}
+              onMouseEnter={() => hoverMenuItem(item.id)}
+              onClick={() => requestChatOutlineGo(item.id)}
+            >
+              <span className="chat-outline-label">{item.text}</span>
+            </button>
+          ))}
         </nav>
       ) : null}
     </aside>
