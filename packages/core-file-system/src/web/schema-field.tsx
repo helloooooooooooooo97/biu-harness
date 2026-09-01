@@ -4,6 +4,7 @@ import {
   normalizeSchemaValue,
   type AtomicFieldType,
   type CollectionSchemaPack,
+  type DbRecord,
   type FieldSpec,
   type SchemaFieldValue,
   type SchemaPackField,

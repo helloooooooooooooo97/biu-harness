@@ -218,7 +218,8 @@ export function apply(ctx: Context) {
   new DatabaseUiService(ctx)
   ctx.effect(() => {
     const ui = getDatabaseUi()
-    return ui?.decorate(SUPERTAGS_COLLECTION_PATH, superTagsChrome).dispose
+    if (!ui) return () => undefined
+    return ui.decorate(SUPERTAGS_COLLECTION_PATH, superTagsChrome).dispose
   })
   const slots = ctx.get('slots') as SlotsService
   const appModules = ctx.get('appModules') as AppModulesService

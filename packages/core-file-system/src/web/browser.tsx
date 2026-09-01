@@ -1732,7 +1732,7 @@ export function CollectionBrowser({
                     </div>
                   ))}
                   <div className="tasks-viewdd-foot">
-                    <button type="button" className="tasks-viewdd-saveas" onClick={addEmptyView}>
+                    <button type="button" className="tasks-viewdd-saveas" onClick={() => addEmptyView()}>
                       <PlusIcon aria-hidden className="size-[14px]" />
                       添加视图
                     </button>

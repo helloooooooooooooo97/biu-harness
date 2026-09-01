@@ -279,6 +279,7 @@ export const DataSidebar = memo(function DataSidebar({
   usePreviewTotalsVersion()
 
   function viewsFor(path: string) {
+    const listed = path === collectionPath ? views : loadViews(path)
     return viewsForRegisteredCollection(path, tables, listed).map((view) => withViewDisplay(path, view))
   }
 
@@ -512,7 +513,7 @@ export const DataSidebar = memo(function DataSidebar({
   const body = (
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
         <div className="app-side-actions" role="navigation" aria-label="视图操作" data-biu-ignore>
-          <button type="button" className="app-side-actions-item" title="添加视图" onClick={onAddView}>
+          <button type="button" className="app-side-actions-item" title="添加视图" onClick={() => onAddView()}>
             <span className="app-side-actions-icon" aria-hidden>
               <PlusIcon className="size-4 shrink-0" />
             </span>

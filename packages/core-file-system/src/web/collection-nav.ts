@@ -13,7 +13,7 @@ export function openRegisteredRow(
   },
 ) {
   if (collectionPath === VIEWS_COLLECTION_PATH) {
-    const target = catalogRowOpenTarget(row)
+    const target = catalogRowOpenTarget({ tablePath: row.tablePath, viewId: row.viewId })
     if (!target) return false
     go.table(target.collection, target.viewId)
     return true
