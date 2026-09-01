@@ -456,12 +456,6 @@ export function CollectionBrowser({
         prev?.schema && JSON.stringify(prev.schema) === JSON.stringify(nextSchema) ? prev : { ...nextStat, schema: nextSchema },
       )
       setItems((prev) => (recordsFingerprint(prev) === recordsFingerprint(listed.items) ? prev : listed.items))
-      if (listed.schema) {
-        const current = viewsRef.current.find((view) => view.id === activeViewId)
-        if (current?.builtin) {
-          setColumnKeys(defaultColumnKeys(listed.schema, Object.keys(listed.schema.fields)))
-        }
-      }
       setTotal(listed.total)
       if (activeViewId) {
         rememberPreviewTotal(
@@ -621,6 +615,8 @@ export function CollectionBrowser({
   )
   const allColumnKeys = useMemo(() => allColumns.map((item) => item.key), [allColumns])
   const schemaDefaultKeys = useMemo(() => defaultColumnKeys(schema, allColumnKeys), [schema, allColumnKeys])
+  const schemaDefaultSig = schemaDefaultKeys.join('\0')
+  const prevSchemaDefaultSig = useRef('')
   const columns = useMemo(() => {
     const selected = allColumns.filter((item) => columnKeys.includes(item.key))
     const base = selected.length ? selected : allColumns.filter((item) => schemaDefaultKeys.includes(item.key))
@@ -657,15 +653,20 @@ export function CollectionBrowser({
 
   useEffect(() => {
     if (!schemaDefaultKeys.length) return
+    const prevDefaults = prevSchemaDefaultSig.current ? prevSchemaDefaultSig.current.split('\0').filter(Boolean) : []
+    prevSchemaDefaultSig.current = schemaDefaultSig
     setColumnKeys((prev) => {
-      if (!prev.length) return schemaDefaultKeys
       const allowed = new Set(allColumnKeys)
-      const kept = pinLabelColumn(schema, prev.filter((key) => allowed.has(key)))
-      if (!kept.length) return schemaDefaultKeys
+      const grown = prevDefaults.length ? schemaDefaultKeys.filter((key) => !prevDefaults.includes(key)) : []
+      const kept = pinLabelColumn(
+        schema,
+        [...prev.filter((key) => allowed.has(key)), ...grown.filter((key) => allowed.has(key) && !prev.includes(key))],
+      )
+      if (!prev.length || !kept.length) return schemaDefaultKeys
       if (kept.length === prev.length && kept.every((key, index) => key === prev[index])) return prev
       return kept
     })
-  }, [allColumnKeys, schema, schemaDefaultKeys])
+  }, [allColumnKeys, schema, schemaDefaultKeys, schemaDefaultSig])
 
   useEffect(() => {
     if (!schema || sortFields.some((item) => item.key === sortField)) return
@@ -990,7 +991,13 @@ export function CollectionBrowser({
     if (!pinned.length) return
     setColumnKeys(pinned)
     if (!activeViewId) return
-    if (views.find((view) => view.id === activeViewId)?.builtin) return
+    const current = views.find((view) => view.id === activeViewId)
+    if (!current) return
+    if (current.builtin) {
+      persistViewDisplay(collectionPath, current.id, { columns: pinned })
+      persistViews(views)
+      return
+    }
     persistViews(views.map((view) => (view.id === activeViewId ? { ...view, columns: pinned } : view)))
   }
 

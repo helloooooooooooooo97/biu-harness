@@ -45,3 +45,26 @@ test('builtin view wrap is stored as display prefs and restored', () => {
   assert.equal(painted.name, '全部会话')
   assert.equal(viewForPath(path)?.wrap, true)
 })
+
+test('builtin view columns overlay survives withViewDisplay', () => {
+  const mem: Record<string, string> = {}
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => mem[key] ?? null,
+      setItem: (key: string, value: string) => {
+        mem[key] = value
+      },
+      removeItem: (key: string) => {
+        delete mem[key]
+      },
+    },
+  })
+  const path = '/sessions'
+  const id = builtinAllViewId(path)
+  persistViewDisplay(path, id, { columns: ['title', 'project'] })
+  assert.deepEqual(withViewDisplay(path, builtinAllView({ path, label: '会话', view: { title: '会话' } })).columns, [
+    'title',
+    'project',
+  ])
+})
