@@ -2,7 +2,7 @@ export const name = 'page-heading-cards'
 export const inject = ['pageEditor', 'slots']
 
 function card(level: 1 | 2 | 3, accent: string) {
-  return function HeadingCard({ Content }: { Content: () => unknown }) {
+  return function HeadingCard({ children }: { children?: unknown }) {
     return (
       <div
         data-testid={`page-heading-card-${level}`}
@@ -15,7 +15,7 @@ function card(level: 1 | 2 | 3, accent: string) {
         }}
       >
         <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.55, letterSpacing: '0.06em' }}>{`H${level}`}</div>
-        <Content />
+        {children}
       </div>
     )
   }
@@ -49,7 +49,10 @@ function Icon(props: { className?: string }) {
 
 export function apply(ctx: {
   pageEditor: {
-    replaceHeading: (level: 1 | 2 | 3, spec: { View: (props: { Content: () => unknown }) => unknown }) => void
+    replaceHeading: (
+      level: 1 | 2 | 3,
+      spec: { View: (props: { level: 1 | 2 | 3; children?: unknown }) => unknown },
+    ) => void
   }
   slots: {
     place: (slot: string, Comp: unknown, options: { key: string; props: () => { Icon: unknown } }) => void

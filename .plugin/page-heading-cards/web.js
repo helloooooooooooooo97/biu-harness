@@ -3,7 +3,7 @@ const React = globalThis.React
 var name = "page-heading-cards";
 var inject = ["pageEditor", "slots"];
 function card(level, accent) {
-  return function HeadingCard({ Content }) {
+  return function HeadingCard({ children }) {
     return /* @__PURE__ */ React.createElement(
       "div",
       {
@@ -17,7 +17,7 @@ function card(level, accent) {
         }
       },
       /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, fontWeight: 700, opacity: 0.55, letterSpacing: "0.06em" } }, `H${level}`),
-      /* @__PURE__ */ React.createElement(Content, null)
+      children
     );
   };
 }

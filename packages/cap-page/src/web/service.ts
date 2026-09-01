@@ -1,8 +1,9 @@
-import { useSyncExternalStore, type ComponentType } from 'react'
+import { useSyncExternalStore, type ComponentType, type ReactNode } from 'react'
 import { Service, type Context } from 'cordis'
 
 export type HeadingViewProps = {
-  Content: ComponentType
+  level: HeadingLevel
+  children?: ReactNode
 }
 
 export type HeadingReplacement = {
