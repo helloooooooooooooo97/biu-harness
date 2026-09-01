@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   ATOMIC_FIELD_TYPES,
-  emptySchemaValue,
   normalizeSchemaValue,
   type AtomicFieldType,
   type CollectionSchemaPack,
