@@ -193,7 +193,7 @@ export function CrumbTrail({
         )
         return (
           <span key={crumb.id} className="fsdb-crumb">
-            {index ? <span className="fsdb-crumb-sep" aria-hidden>/</span> : null}
+            {index && !(lockRootCrumb && index === 1) ? <span className="fsdb-crumb-sep" aria-hidden>/</span> : null}
             <span className="fsdb-crumb-pick">
               {rootLocked ? (
                 <span className="fsdb-crumb-btn is-static" title={crumb.label} aria-label={crumb.label}>
