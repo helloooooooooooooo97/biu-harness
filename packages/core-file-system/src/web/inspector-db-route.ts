@@ -1,10 +1,43 @@
 /** 检查器里每个数据库 Tab 有自己的路径，不改中间主界面。 */
 
-import { DATA_MODULE_PATH, databaseRecordPath } from './database-path.ts'
+import { normalizeCollectionPath } from '../paths.ts'
+import { DATA_MODULE_PATH, databaseAllViewPath, databaseRecordPath } from './database-path.ts'
 
 const DEFAULT_PANE = 'database'
 const listeners = new Set<() => void>()
 const paths = new Map<string, string>()
+const working = new Set<string>()
+const workingListeners = new Set<() => void>()
+
+export function subscribeInspectorAgentWorking(fn: () => void) {
+  workingListeners.add(fn)
+  return () => {
+    workingListeners.delete(fn)
+  }
+}
+
+function bumpWorking() {
+  for (const fn of workingListeners) fn()
+}
+
+export function isInspectorAgentWorking(collection: string) {
+  return working.has(normalizeCollectionPath(collection))
+}
+
+export function setInspectorAgentWorking(collection: string, next: boolean) {
+  const path = normalizeCollectionPath(collection)
+  if (!path || path === '/') return
+  const had = working.has(path)
+  if (next && !had) {
+    working.add(path)
+    bumpWorking()
+    return
+  }
+  if (!next && had) {
+    working.delete(path)
+    bumpWorking()
+  }
+}
 
 export function subscribeInspectorDbPath(fn: () => void) {
   listeners.add(fn)
@@ -56,6 +89,31 @@ export function showInInspector(collection: string, href: string) {
 /** 右侧检查器打开这条记录，中间主界面不动。 */
 export function showRecordInInspector(collection: string, recordId: string) {
   showInInspector(collection, databaseRecordPath(collection, recordId))
+}
+
+/** 工具查/改/删某张表后：打开右侧检查器并切到该表（中间主界面不动）。 */
+export function applyDatabaseReveal(reveal: unknown) {
+  if (!reveal || typeof reveal !== 'object' || Array.isArray(reveal)) return
+  const collection = normalizeCollectionPath(String((reveal as { collection?: unknown }).collection ?? ''))
+  if (!collection || collection === '/') return
+  const recordId = String((reveal as { recordId?: unknown }).recordId ?? '').trim()
+  if (recordId) {
+    showRecordInInspector(collection, recordId)
+    return
+  }
+  showInInspector(collection, databaseAllViewPath(collection))
+}
+
+/** Agent 工具推送：先切过去并标成干活中，完成后停 busy。中间主界面不动。 */
+export function applyDatabaseChannelPayload(payload: unknown) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return
+  const reveal = (payload as { reveal?: unknown }).reveal
+  if (!reveal || typeof reveal !== 'object' || Array.isArray(reveal)) return
+  const collection = normalizeCollectionPath(String((reveal as { collection?: unknown }).collection ?? ''))
+  if (!collection || collection === '/') return
+  const phase = String((payload as { phase?: unknown }).phase ?? '')
+  applyDatabaseReveal(reveal)
+  setInspectorAgentWorking(collection, phase !== 'done')
 }
 
 export function seedInspectorDbPath(paneId: string, pathname?: string) {

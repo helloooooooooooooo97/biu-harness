@@ -674,6 +674,10 @@ body {
   color: #F0EFED;
 }
 
+.inspector-tab.is-agent-working {
+  background: color-mix(in srgb, #5b9fd6 22%, transparent);
+}
+
 .inspector-tab-main {
   display: inline-flex;
   min-width: 0;

@@ -301,6 +301,8 @@ test('database inspector tab has a close control beside crumb expand', () => {
   assert.match(tab, /XMarkIcon/)
   assert.match(tab, /inspector-crumb-actions/)
   assert.match(tab, /data-testid="inspector-crumb-toggle"/)
+  assert.match(tab, /is-agent-working/)
+  assert.match(tab, /fsdb-agent-follow/)
 })
 
 test('inspector crumbs lock the first level to an icon', () => {

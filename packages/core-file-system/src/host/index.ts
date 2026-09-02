@@ -24,7 +24,7 @@ import {
 import { SavedViewsStore, viewsCollection, type StoredView } from './saved-views.ts'
 import { SchemaTagsStore, SUPER_TAGS_SQLITE } from './schema-tags.ts'
 import { superTagsCollection } from './super-tags-collection.ts'
-import { normalizeCollectionPath } from '../paths.ts'
+import { databaseRevealForTool, normalizeCollectionPath } from '../paths.ts'
 
 function publicAction(action: CollectionAction): CollectionActionInfo {
   const { run: _run, ...info } = action
@@ -670,6 +670,36 @@ function asFilter(value: unknown): Record<string, unknown> | undefined {
   return value as Record<string, unknown>
 }
 
+function broadcastInspectorReveal(
+  ctx: Context,
+  path: string,
+  result: unknown,
+  dropRecord: boolean,
+  phase: 'working' | 'done',
+) {
+  const reveal = databaseRevealForTool({ path, result, dropRecord })
+  if (!reveal) return
+  const http = ctx.get('http') as { broadcast?: (type: string, payload: unknown) => void } | undefined
+  http?.broadcast?.(DATABASE_CHANNEL, { ts: Date.now(), reveal, phase })
+}
+
+async function withInspectorReveal<T>(
+  ctx: Context,
+  path: string,
+  op: () => T | Promise<T>,
+  dropRecord = false,
+) {
+  broadcastInspectorReveal(ctx, path, undefined, dropRecord, 'working')
+  try {
+    const result = await op()
+    broadcastInspectorReveal(ctx, path, result, dropRecord, 'done')
+    return result
+  } catch (error) {
+    broadcastInspectorReveal(ctx, path, undefined, dropRecord, 'done')
+    throw error
+  }
+}
+
 export const name = 'core-file-system'
 export const inject = ['tools', 'http']
 
@@ -706,20 +736,24 @@ export function apply(ctx: Context) {
       },
       required: ['path'],
     },
-    execute: (args) =>
-      db.list(String(args.path), asFilter(args.filter), {
-        q: args.q != null ? String(args.q) : '',
-        sortField: args.sortField != null ? String(args.sortField) : '',
-        sortDir: args.sortDir === 'desc' ? 'desc' : 'asc',
-        limit: args.limit != null ? Number(args.limit) : undefined,
-        offset: args.offset != null ? Number(args.offset) : undefined,
-      }),
+    execute: (args) => {
+      const path = String(args.path)
+      return withInspectorReveal(ctx, path, () =>
+        db.list(path, asFilter(args.filter), {
+          q: args.q != null ? String(args.q) : '',
+          sortField: args.sortField != null ? String(args.sortField) : '',
+          sortDir: args.sortDir === 'desc' ? 'desc' : 'asc',
+          limit: args.limit != null ? Number(args.limit) : undefined,
+          offset: args.offset != null ? Number(args.offset) : undefined,
+        }),
+      )
+    },
   })
   ctx.tools.register({
     name: 'db_read',
     description: '读取 File System 路径：表返回列表，记录返回该行 JSON（不含 content 正文，正文用 db_content）。',
     parameters: PATH_PARAM,
-    execute: (args) => db.read(String(args.path)),
+    execute: (args) => withInspectorReveal(ctx, String(args.path), () => db.read(String(args.path))),
   })
   ctx.tools.register({
     name: 'db_update',
@@ -732,7 +766,7 @@ export function apply(ctx: Context) {
       },
       required: ['path', 'content'],
     },
-    execute: (args) => db.update(String(args.path), args.content),
+    execute: (args) => withInspectorReveal(ctx, String(args.path), () => db.update(String(args.path), args.content)),
   })
   ctx.tools.register({
     name: 'db_create',
@@ -745,13 +779,13 @@ export function apply(ctx: Context) {
       },
       required: ['path'],
     },
-    execute: (args) => db.create(String(args.path), args.content),
+    execute: (args) => withInspectorReveal(ctx, String(args.path), () => db.create(String(args.path), args.content)),
   })
   ctx.tools.register({
     name: 'db_delete',
     description: '删除一条记录，路径为 /<表>/<id>。能否删除看 db_stat 的 caps 与 schema.records；未声明 delete 的表会失败。',
     parameters: PATH_PARAM,
-    execute: (args) => db.remove(String(args.path)),
+    execute: (args) => withInspectorReveal(ctx, String(args.path), () => db.remove(String(args.path)), true),
   })
   ctx.tools.register({
     name: 'db_action',
@@ -767,12 +801,14 @@ export function apply(ctx: Context) {
       required: ['path', 'action'],
     },
     execute: (args) =>
-      db.action(
-        String(args.path),
-        String(args.action),
-        args.args && typeof args.args === 'object' && !Array.isArray(args.args)
-          ? (args.args as Record<string, unknown>)
-          : undefined,
+      withInspectorReveal(ctx, String(args.path), () =>
+        db.action(
+          String(args.path),
+          String(args.action),
+          args.args && typeof args.args === 'object' && !Array.isArray(args.args)
+            ? (args.args as Record<string, unknown>)
+            : undefined,
+        ),
       ),
   })
   ctx.tools.register({
@@ -793,7 +829,9 @@ export function apply(ctx: Context) {
       required: ['path'],
     },
     execute: (args) =>
-      args.value !== undefined ? db.writeContent(String(args.path), args.value) : db.content(String(args.path)),
+      withInspectorReveal(ctx, String(args.path), () =>
+        args.value !== undefined ? db.writeContent(String(args.path), args.value) : db.content(String(args.path)),
+      ),
   })
 
   const send = async (route: { query: URLSearchParams; send: (status: number, body: unknown) => void }, op: () => unknown) => {

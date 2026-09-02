@@ -12,7 +12,9 @@ import { builtinAllViewId } from '../catalog-views.ts'
 import { DATA_MODULE, DATA_MODULE_ID, databaseAllViewPath, databaseRecordPath, databaseViewPath } from './database-path.ts'
 import {
   getInspectorDbPath,
+  isInspectorAgentWorking,
   setInspectorDbPath,
+  subscribeInspectorAgentWorking,
   subscribeInspectorDbPath,
 } from './inspector-db-route.ts'
 import { getDatabaseUi } from './database-ui.ts'
@@ -110,6 +112,14 @@ function useBindInspectorDbPath(paneId: string, tables: CollectionInfo[], seedCo
   return inspectorPath || defaultInspectorDbPath(tables, seedCollection)
 }
 
+function useInspectorAgentWorking(collection: string) {
+  return useSyncExternalStore(
+    subscribeInspectorAgentWorking,
+    () => isInspectorAgentWorking(collection),
+    () => false,
+  )
+}
+
 function paneOf(props: { paneId?: unknown }) {
   return String(props.paneId || 'database')
 }
@@ -177,6 +187,8 @@ export function DatabaseInspectorTab({
     [collections],
   )
   const inspectorPath = useBindInspectorDbPath(id, tables, seedCollection)
+  const { collection: tabCollection } = crumbsForRoute(inspectorPath, tables)
+  const agentWorking = useInspectorAgentWorking(tabCollection || seedCollection || '')
   const [crumbOpen, setCrumbOpen] = useState<string | null>(null)
   const [trailOpen, setTrailOpen] = useState(false)
   const crumbRef = useRef<HTMLElement>(null)
@@ -214,7 +226,7 @@ export function DatabaseInspectorTab({
   return (
     <div
       ref={tabRef}
-      className={`inspector-tab inspector-crumb-tab${active ? ' is-active' : ''}${trailOpen ? ' is-crumb-open' : ''}`}
+      className={`inspector-tab inspector-crumb-tab${active ? ' is-active' : ''}${trailOpen ? ' is-crumb-open' : ''}${agentWorking ? ' is-agent-working' : ''}`}
       role="tab"
       aria-selected={Boolean(active)}
       data-testid="inspector-tab-database"
@@ -301,6 +313,7 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
     [collections],
   )
   const inspectorPath = useBindInspectorDbPath(id, tables, seedOf(extra))
+  const agentWorking = useInspectorAgentWorking(seedOf(extra) || '')
   useViewTick()
   const { pathname, search } = splitHref(inspectorPath)
   const { collection, viewId, recordId } = crumbsForRoute(pathname, tables)
@@ -313,12 +326,18 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
   const lockedFilters = chrome.lockedFiltersFromSearch?.(search) ?? {}
   const table = tables.find((item) => item.path === currentPath)
   const title = table ? tableLabel(table) : '数据'
+  const liveWorking = useInspectorAgentWorking(currentPath)
 
   if (!currentPath) {
     return <p className="fsdb-inspector-empty">没有数据表</p>
   }
 
   return (
+    <div
+      className={`fsdb-agent-follow${liveWorking || agentWorking ? ' is-working' : ''}`}
+      data-testid="fsdb-agent-follow"
+      aria-busy={liveWorking || agentWorking}
+    >
     <CollectionBrowser
       embed
       moduleId={DATA_MODULE_ID}
@@ -346,5 +365,6 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
       }}
       onCrumbTarget={(target) => goInspector(id, target)}
     />
+    </div>
   )
 }

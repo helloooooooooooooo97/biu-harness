@@ -279,6 +279,37 @@ test('apply registers db_* tools', async () => {
   assert.equal(paths.includes('/supertags'), true)
 })
 
+test('db_list on a table broadcasts inspector working then done', async () => {
+  const seen: Array<{ type: string; payload: unknown }> = []
+  const ctx = new Context()
+  await ctx.plugin(tools)
+  class HttpStub extends Service {
+    constructor(c: Context) {
+      super(c, 'http')
+    }
+    route() {}
+    broadcast(type: string, payload: unknown) {
+      seen.push({ type, payload })
+    }
+  }
+  new HttpStub(ctx)
+  await ctx.plugin({ inject: ['tools', 'http'], apply: applyFileSystem })
+  await ctx.tools.invoke('db_list', { path: '/views' })
+  const reveals = seen.filter((item) => {
+    const payload = item.payload as { reveal?: { collection?: string }; phase?: string }
+    return item.type === 'database' && payload?.reveal?.collection === '/views'
+  })
+  assert.equal((reveals[0]?.payload as { phase?: string }).phase, 'working')
+  assert.equal((reveals.at(-1)?.payload as { phase?: string }).phase, 'done')
+  const before = seen.length
+  await ctx.tools.invoke('db_list', { path: '/' })
+  const extra = seen.slice(before).filter((item) => {
+    const payload = item.payload as { reveal?: unknown }
+    return item.type === 'database' && payload?.reveal
+  })
+  assert.equal(extra.length, 0)
+})
+
 test('register rejects duplicate view route and nav title', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)

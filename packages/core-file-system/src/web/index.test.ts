@@ -28,6 +28,7 @@ test('database page no longer registers collection shortcuts on the dock', () =>
   assert.doesNotMatch(page, /DATA_DOCK_TOOLS/)
   assert.doesNotMatch(page, /data:\$\{item\.path\}/)
   assert.doesNotMatch(page, /databaseAllViewPath\(item.path\)/)
+  assert.match(page, /applyDatabaseChannelPayload/)
   assert.match(page, /builtinAllViewId\(parsed.collection\)/)
   assert.doesNotMatch(page, /isCollectionHub/)
 })

@@ -1,5 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
+import { databaseAllViewPath } from './database-path.ts'
 import {
   getInspectorDbPath,
   isInspectorDatabasePath,
@@ -7,6 +8,10 @@ import {
   setInspectorDbPath,
   showRecordInInspector,
   showInInspector,
+  applyDatabaseReveal,
+  applyDatabaseChannelPayload,
+  isInspectorAgentWorking,
+  setInspectorAgentWorking,
 } from './inspector-db-route.ts'
 
 test('inspector database path does not overwrite after first seed', () => {
@@ -70,4 +75,22 @@ test('showInInspector opens a collection href in the inspector', async () => {
   assert.equal(getInspectorDbPath('database:/supertags'), '/database/supertags/view/builtin-all:/supertags?tag=dp')
   assert.deepEqual(tabs, ['database:/supertags'])
   window.removeEventListener('biu:inspector-tab', onTab)
+})
+
+test('applyDatabaseReveal opens the table, or the record when an id is present', () => {
+  applyDatabaseReveal({ collection: '/tasks' })
+  assert.equal(getInspectorDbPath('database:/tasks'), databaseAllViewPath('/tasks'))
+  applyDatabaseReveal({ collection: '/tasks', recordId: 't9' })
+  assert.equal(getInspectorDbPath('database:/tasks'), '/database/tasks/record/t9')
+  applyDatabaseReveal({ collection: '/' })
+  assert.equal(getInspectorDbPath('database:/tasks'), '/database/tasks/record/t9')
+})
+
+test('applyDatabaseChannelPayload marks the table as agent-working until done', () => {
+  setInspectorAgentWorking('/tasks', false)
+  applyDatabaseChannelPayload({ phase: 'working', reveal: { collection: '/tasks' } })
+  assert.equal(isInspectorAgentWorking('/tasks'), true)
+  applyDatabaseChannelPayload({ phase: 'done', reveal: { collection: '/tasks', recordId: 't1' } })
+  assert.equal(isInspectorAgentWorking('/tasks'), false)
+  assert.equal(getInspectorDbPath('database:/tasks'), '/database/tasks/record/t1')
 })
