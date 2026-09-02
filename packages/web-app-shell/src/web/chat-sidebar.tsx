@@ -21,7 +21,7 @@ import { SidebarMascot } from '@biu/public-mascot'
 import { resolveSessionMascot } from '@biu/public-mascot'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import { chromeIcon, chromeIconClass } from './chrome-icon.ts'
-import { openOverlayComposer } from './chat-overlay.ts'
+import { isChatPagePath, openOverlayComposer } from './chat-overlay.ts'
 import { ShellSidebarFrame } from './shell-sidebar-frame.tsx'
 import {
   ChevronDownIcon,
@@ -271,6 +271,10 @@ export const ChatSidebar = memo(function ChatSidebar({
     (opts: { type?: 'chat' | 'live'; projectPath?: string } = {}) => {
       void sessionView.newSession(opts).then((id) => {
         onActivate?.()
+        if (isChatPagePath(window.location.pathname)) {
+          navigate(`/s/${id}`)
+          return
+        }
         if (variant === 'popover') {
           openOverlayComposer({ revealThread: true })
           return
@@ -284,10 +288,14 @@ export const ChatSidebar = memo(function ChatSidebar({
   const openSession = useCallback(
     (item: SessionListItem) => {
       void sessionView.load(item.id, { view: 'chat' })
-      openOverlayComposer({ revealThread: true })
+      if (isChatPagePath(window.location.pathname)) {
+        navigate(`/s/${item.id}`)
+      } else {
+        openOverlayComposer({ revealThread: true })
+      }
       onActivate?.()
     },
-    [onActivate, sessionView],
+    [navigate, onActivate, sessionView],
   )
 
   const requestDeleteChat = useCallback((item: SessionListItem) => {

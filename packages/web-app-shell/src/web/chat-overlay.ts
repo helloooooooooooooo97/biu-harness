@@ -172,8 +172,12 @@ export function isChatPagePath(pathname: string) {
   return path === '/' || path.startsWith('/s/')
 }
 
-/** 选取对象后弹出输入条：工具栏 + 统计 + 输入框，回复区等发出去再展开。 */
+/** 选取对象后弹出输入条：工具栏 + 统计 + 输入框，回复区等发出去再展开。聊天页本身已有输入框，不要再弹窗。 */
 export function openOverlayComposer(opts?: { revealThread?: boolean }) {
+  if (typeof window !== 'undefined' && isChatPagePath(window.location.pathname)) {
+    requestComposerFocus()
+    return
+  }
   setChatOverlay(true)
   setOverlayAutohide(false)
   setOverlayThread(Boolean(opts?.revealThread))
@@ -308,6 +312,10 @@ export function toggleChatOverlay() {
       }),
     )
     setChatOverlay(false)
+    return
+  }
+  if (typeof window !== 'undefined' && isChatPagePath(window.location.pathname)) {
+    requestComposerFocus()
     return
   }
   requestInspectorOpen()

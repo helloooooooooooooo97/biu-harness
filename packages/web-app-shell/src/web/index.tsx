@@ -9,6 +9,7 @@ import {
   requestInspectorClose,
   allocateShellColumns,
   clampSidebarWidth,
+  isChatPagePath,
   SIDEBAR_DEFAULT,
   SIDEBAR_LABEL_AT,
   SIDEBAR_TAG_AT,
@@ -62,19 +63,22 @@ function DockSessionMascot({
 }: {
   useSessionView: ReturnType<typeof bindSessionView>
 }) {
+  const location = useLocation()
   const agents = useSessionView((state) => state.sessions)
   const activeId = useSessionView((state) => state.sessionId)
   const overlayOpen = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
+  const onChatPage = isChatPagePath(location.pathname)
   return (
     <BrandCornerMascot
       agents={agents}
       activeId={activeId}
-      open={overlayOpen}
+      open={onChatPage ? false : overlayOpen}
       onToggle={() => {
         if (getChatOverlay()) {
           closeChatOverlay()
           return
         }
+        if (isChatPagePath(location.pathname)) return
         setChatOverlay(true)
         requestOverlayFocus()
       }}
@@ -136,7 +140,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
   )
 
   const overlayNode =
-    overlayMounted && overlayOpen
+    overlayMounted && overlayOpen && !showCenter
       ? createPortal(
         <OverlayChatWindow
           header={header}
@@ -478,6 +482,10 @@ function Shell(props: SlotProps) {
     const route = parseAppPath(location.pathname, pluginModules)
     void sessionView.applyRoute(route).catch(() => undefined)
   }, [location.pathname, navReady, sessionView, appModules.version()])
+
+  useEffect(() => {
+    if (activeModule === 'agent' && getChatOverlay()) closeChatOverlay()
+  }, [activeModule])
 
   // /debug 兼容：主区仍聊天，轨迹在右侧；URL 收成 /s/:id
   useEffect(() => {

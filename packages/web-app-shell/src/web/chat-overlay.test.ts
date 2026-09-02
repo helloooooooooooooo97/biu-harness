@@ -188,8 +188,16 @@ test('pick-attached on the chat page focuses composer instead of overlay', () =>
   assert.ok(focused > 0)
 })
 
+test('openOverlayComposer on the chat page does not open a window', () => {
+  setChatOverlay(false)
+  history.replaceState(null, '', '/s/session-1')
+  openOverlayComposer({ revealThread: true })
+  assert.equal(getChatOverlay(), false)
+})
+
 test('pick opens a compose-only overlay; send reveals the thread', () => {
   setChatOverlay(false)
+  history.replaceState(null, '', '/database')
   openOverlayComposer({ revealThread: false })
   assert.equal(getChatOverlay(), true)
   assert.equal(getOverlayThread(), false)
