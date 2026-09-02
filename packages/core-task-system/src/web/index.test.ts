@@ -46,3 +46,13 @@ test('task-system web paints /tasks chrome without importing file-system', async
   assert.equal(ui.registered[0]?.view.id, 'graph')
   assert.equal(ui.registered[0]?.view.label, '依赖图')
 })
+
+test('task tags use public-ui TagChip', async () => {
+  const { readFileSync } = await import('node:fs')
+  const { resolve } = await import('node:path')
+  const chrome = readFileSync(resolve(import.meta.dirname, './chrome.tsx'), 'utf8')
+  const css = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  assert.match(chrome, /TagChip/)
+  assert.doesNotMatch(chrome, /className="tasks-tag"/)
+  assert.doesNotMatch(css, /\.tasks-tag\{/)
+})

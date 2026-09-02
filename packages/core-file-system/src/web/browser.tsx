@@ -74,7 +74,8 @@ import {
 } from './fsdb-cells.tsx'
 import { ensureFsdbStyle } from './fsdb-style.ts'
 import { RecordDetail } from './record-detail.tsx'
-import { TableGlyph } from './nav-glyphs.tsx'
+import { TableGlyph, ViewModeGlyph } from './nav-glyphs.tsx'
+import { countFittingViewTabs, splitVisibleViews } from './view-tabs.ts'
 import { getDatabaseUi } from './database-ui.ts'
 
 const EMPTY_VIEWS: CollectionViewType[] = []
@@ -299,6 +300,10 @@ export function CollectionBrowser({
   const [crumbOpen, setCrumbOpen] = useState<string | null>(null)
   const crumbRef = useRef<HTMLElement>(null)
   const viewRef = useRef<HTMLDivElement>(null)
+  const toolbarRef = useRef<HTMLDivElement>(null)
+  const toolbarRightRef = useRef<HTMLDivElement>(null)
+  const viewMeasureRef = useRef<HTMLDivElement>(null)
+  const [viewTabFit, setViewTabFit] = useState(99)
   const modeRef = useRef<HTMLDivElement>(null)
   const sortRef = useRef<HTMLDivElement>(null)
   const columnRef = useRef<HTMLDivElement>(null)
@@ -405,6 +410,30 @@ export function CollectionBrowser({
     document.addEventListener('mousedown', onPointer)
     return () => document.removeEventListener('mousedown', onPointer)
   }, [query])
+
+  useLayoutEffect(() => {
+    if (sheet) return
+    function measure() {
+      const toolbar = toolbarRef.current
+      const right = toolbarRightRef.current
+      const row = viewMeasureRef.current
+      if (!toolbar || !right || !row) return
+      const more = row.querySelector('[data-view-measure-more]')
+      const tabs = [...row.querySelectorAll('[data-view-measure]')] as HTMLElement[]
+      const available = Math.max(0, toolbar.clientWidth - right.offsetWidth - 12)
+      const moreWidth = more instanceof HTMLElement ? more.offsetWidth : 32
+      setViewTabFit(countFittingViewTabs(tabs.map((el) => el.offsetWidth), moreWidth, available, 2))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    if (toolbarRef.current) ro.observe(toolbarRef.current)
+    if (toolbarRightRef.current) ro.observe(toolbarRightRef.current)
+    window.addEventListener('resize', measure)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [sheet, views, searchExpanded])
 
   useLayoutEffect(() => {
     if (!pageSizeOpen) {
@@ -702,8 +731,7 @@ export function CollectionBrowser({
     const rows = grouping ? grouped.flatMap((group) => group.rows) : visible
     return flattenRows(rows).map((item) => item.row.id)
   }, [flattenRows, grouped, grouping, visible])
-  const tableColSpan =
-    Math.max(columns.length, 1) + (schema?.actions?.length ? 1 : 0) + (canDelete ? 1 : 0)
+  const tableColSpan = Math.max(columns.length, 1) + (canDelete ? 1 : 0)
 
   const selected =
     (detailId &&
@@ -1259,7 +1287,7 @@ export function CollectionBrowser({
           )
         ) : null}
         <span className="fsdb-title-text">{body}</span>
-        {openDetail ? <RecordOpenControls row={row} kidCount={tree ? kidCount : 0} /> : null}
+        {openDetail ? <RecordRowTools row={row} kidCount={tree ? kidCount : 0} /> : null}
       </div>
     )
   }
@@ -1303,6 +1331,15 @@ export function CollectionBrowser({
     )
   }
 
+  function RecordRowTools({ row, kidCount = 0 }: { row: DbRecord; kidCount?: number }) {
+    return (
+      <span className="tasks-row-tools">
+        <RecordActions row={row} place="row" />
+        <RecordOpenControls row={row} kidCount={kidCount} />
+      </span>
+    )
+  }
+
   function RecordActions({ row, place }: { row: DbRecord; place: 'row' | 'detail' }) {
     const actions = visibleActions(schema, row, place)
     if (!actions.length) return null
@@ -1334,11 +1371,12 @@ export function CollectionBrowser({
     )
   }
 
-  function RecordProperties({ row, omit }: { row: DbRecord; omit?: string }) {
+  function RecordProperties({ row, omit, skipBoolean }: { row: DbRecord; omit?: string; skipBoolean?: boolean }) {
     const hide = omit ?? activeGroup?.key
-    const cols = (hide ? propColumns.filter((item) => item.key !== hide) : propColumns).filter((item) =>
-      fieldHasValue(item.field, row[item.key]),
-    )
+    const cols = (hide ? propColumns.filter((item) => item.key !== hide) : propColumns).filter((item) => {
+      if (skipBoolean && resolveFieldType(item.field) === 'boolean') return false
+      return fieldHasValue(item.field, row[item.key])
+    })
     if (!cols.length) return null
     return (
       <div className="fsdb-proplist">
@@ -1427,8 +1465,7 @@ export function CollectionBrowser({
           </button>
           <RecordProperties row={row} />
           <div className="tasks-queue-item-tools">
-            <RecordActions row={row} place="row" />
-            <RecordOpenControls row={row} />
+            <RecordRowTools row={row} />
           </div>
         </div>
       </li>
@@ -1438,6 +1475,9 @@ export function CollectionBrowser({
   function MiniCard({ row }: { row: DbRecord }) {
     return (
       <div className={`tasks-minicard${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
+        <div className="tasks-minicard-bar">
+          <RecordRowTools row={row} />
+        </div>
         <div className="tasks-minicard-title">
           <RowCheck id={row.id} />
           <button type="button" className="tasks-minicard-open" data-biu-action="open" onClick={() => openRow(row)}>
@@ -1445,13 +1485,9 @@ export function CollectionBrowser({
               <RecordTitle row={row} openDetail={false} />
             </span>
           </button>
-          <div className="tasks-minicard-tools">
-            <RecordActions row={row} place="row" />
-            <RecordOpenControls row={row} />
-          </div>
         </div>
         <div className="tasks-minicard-foot">
-          <RecordProperties row={row} />
+          <RecordProperties row={row} skipBoolean />
         </div>
       </div>
     )
@@ -1487,11 +1523,6 @@ export function CollectionBrowser({
                 )}
               </td>
             ))}
-            {schema?.actions?.length ? (
-              <td>
-                <RecordActions row={row} place="row" />
-              </td>
-            ) : null}
           </tr>
         ))}
       </>
@@ -1734,20 +1765,52 @@ export function CollectionBrowser({
           <h1 className="fsdb-detail-title">{title}</h1>
         </div>
         )}
-        <div className="tasks-toolbar" data-biu-ignore>
+        <div className="tasks-toolbar" ref={toolbarRef} data-biu-ignore>
           <div className="tasks-toolbar-left">
             {sheet ? null : (
             <div className="tasks-viewdd-wrap" ref={viewRef}>
+              <div className="tasks-viewtabs-measure" ref={viewMeasureRef} aria-hidden>
+                {views.map((view) => (
+                  <button key={view.id} type="button" className="tasks-viewdd-btn tasks-viewtab" tabIndex={-1} data-view-measure={view.id}>
+                    <ViewModeGlyph mode={view.mode} className="size-[14px]" />
+                    <span className="tasks-viewdd-name">{view.name}</span>
+                  </button>
+                ))}
+                <button type="button" className="tasks-viewdd-btn tasks-viewdd-more" tabIndex={-1} data-view-measure-more>
+                  <EllipsisHorizontalIcon aria-hidden className="size-[14px]" />
+                </button>
+              </div>
+              <div className="tasks-viewtabs">
+                {(views.length ? splitVisibleViews(views, viewTabFit, activeViewId).shown : []).map((view) => (
+                  <button
+                    key={view.id}
+                    type="button"
+                    className={`tasks-viewdd-btn tasks-viewtab${view.id === activeViewId ? ' is-active' : ''}`}
+                    data-testid="fsdb-view-tab"
+                    aria-pressed={view.id === activeViewId}
+                    onClick={() => selectView(view)}
+                  >
+                    <ViewModeGlyph mode={view.mode} className="size-[14px]" />
+                    <span className="tasks-viewdd-name">{view.name}</span>
+                  </button>
+                ))}
+                {!views.length ? (
+                  <button type="button" className="tasks-viewdd-btn tasks-viewtab is-active" disabled>
+                    <Squares2X2Icon aria-hidden className="size-[14px]" />
+                    <span className="tasks-viewdd-name">未保存</span>
+                  </button>
+                ) : null}
+              </div>
               <button
                 type="button"
-                className={`tasks-viewdd-btn${viewMenuOpen ? ' is-active' : ''}`}
-                aria-label="切换视图"
+                className={`tasks-viewdd-btn tasks-viewdd-more${viewMenuOpen ? ' is-active' : ''}`}
+                aria-label="视图菜单"
                 aria-haspopup="menu"
                 aria-expanded={viewMenuOpen}
+                data-testid="fsdb-view-more"
                 onClick={() => toggleMenu('view')}
               >
-                <Squares2X2Icon aria-hidden className="size-[14px]" />
-                <span className="tasks-viewdd-name">{activeView?.name ?? '未保存'}</span>
+                <EllipsisHorizontalIcon aria-hidden className="size-[14px]" />
               </button>
               {viewMenuOpen ? (
                 <div className="tasks-viewdd-menu" role="menu">
@@ -1793,7 +1856,7 @@ export function CollectionBrowser({
               </span>
             ) : null}
           </div>
-          <div className="tasks-toolbar-right">
+          <div className="tasks-toolbar-right" ref={toolbarRightRef}>
             <div className={`tasks-search-wrap${searchExpanded ? ' is-open' : ''}`} ref={searchRef}>
               <button
                 type="button"
@@ -2134,7 +2197,6 @@ export function CollectionBrowser({
                     </span>
                   </th>
                 ))}
-                      {schema?.actions?.length ? <th>操作</th> : null}
               </tr>
             </thead>
             <tbody>
