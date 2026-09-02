@@ -42,6 +42,12 @@ function asRecord(row: SessionSummary): DbRecord {
     tags: Array.isArray(row.config?.tags) ? row.config.tags.map(String) : [],
     eventCount: row.eventCount,
     project: row.project?.name ?? '',
+    projectPath: row.project?.path ?? '',
+    model: row.config?.model ?? '',
+    provider: row.config?.provider ?? '',
+    systemPrompt: row.config?.systemPrompt ?? '',
+    agentMode: row.config?.agentMode ?? '',
+    extraTools: Array.isArray(row.config?.extraTools) ? row.config.extraTools.map(String) : [],
     mascot,
     mascotName: nameFromSessionMascot(mascot),
     mascotShape: mascot.shape,
@@ -130,7 +136,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       route: '/db-sessions',
       title: '会话',
       inspector: true,
-      blurb: '会话元数据可改、可删；聊天记录本身不能从这张表改。进度/检查/压缩走 db_action。',
+      blurb: '标题、置顶、标签、模型等元数据用 db_update；聊天记录不能从这张表改。进度/检查/压缩走 db_action。',
       order: 18,
       icon: 'chat-bubble',
     },
@@ -145,7 +151,13 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         pinned: { type: 'boolean', label: '置顶', writable: true },
         tags: { type: 'multi-select', label: '标签', writable: true },
         eventCount: { type: 'number', label: '事件数', computed: true, sortable: true },
-        project: { type: 'string', label: '项目' },
+        project: { type: 'string', label: '项目', computed: true },
+        projectPath: { type: 'string', label: '项目路径', writable: true },
+        model: { type: 'string', label: '模型', writable: true },
+        provider: { type: 'select', label: '服务商', enum: ['deepseek', 'openai', 'anthropic'], writable: true },
+        systemPrompt: { type: 'string', label: '系统提示', writable: true },
+        agentMode: { type: 'select', label: '模式', enum: ['standard', 'minimal', 'create'], writable: true },
+        extraTools: { type: 'multi-select', label: '额外工具', writable: true },
         updatedAt: { type: 'datetime', label: '更新时间', sortable: true },
         mascotName: { type: 'string', label: '形象', computed: true },
         mascotShape: { type: 'select', label: '外形', enum: [...GROK_SHAPES], computed: true },
@@ -163,7 +175,20 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       if ('emoji' in patch) config.emoji = String(patch.emoji ?? '')
       if ('schema' in patch) config.schema = normalizeSchemaValue(patch.schema)
       if (typeof patch.createdAt === 'number') config.createdAt = patch.createdAt
+      if (typeof patch.model === 'string') config.model = patch.model
+      if (patch.provider === 'deepseek' || patch.provider === 'openai' || patch.provider === 'anthropic') {
+        config.provider = patch.provider
+      }
+      if (typeof patch.systemPrompt === 'string') config.systemPrompt = patch.systemPrompt
+      if (patch.agentMode === 'standard' || patch.agentMode === 'minimal' || patch.agentMode === 'create') {
+        config.agentMode = patch.agentMode
+      }
+      if (Array.isArray(patch.extraTools)) config.extraTools = patch.extraTools.map((item) => String(item))
       if (Object.keys(config).length) await sessions.patchConfig(id, config)
+      if ('projectPath' in patch && sessions.setProject) {
+        const path = String(patch.projectPath ?? '').trim()
+        await sessions.setProject(id, path ? { path } : null)
+      }
       const next = (await list()).find((row) => row.id === id)
       if (!next) throw new Error(`unknown session: ${id}`)
       return next
@@ -241,88 +266,6 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
               inboxPending: sessions.inboxPending?.(id),
             }),
           }
-        },
-      },
-      {
-        id: 'star',
-        label: '收藏',
-        placement: ['row', 'detail'],
-        parameters: {
-          type: 'object',
-          properties: { pinned: { type: 'boolean' } },
-        },
-        run: async (id, record, args) => {
-          const current = Boolean(record.pinned)
-          const next = typeof args?.pinned === 'boolean' ? args.pinned : !current
-          await sessions.patchConfig(id, { pinned: next })
-          return { id, pinned: next }
-        },
-      },
-      {
-        id: 'tag',
-        label: '标签',
-        placement: ['detail'],
-        parameters: {
-          type: 'object',
-          properties: {
-            tag: { type: 'string' },
-            tags: { type: 'array', items: { type: 'string' } },
-            op: { type: 'string', enum: ['add', 'set', 'remove', 'clear'] },
-          },
-        },
-        run: async (id, record, args) => {
-          const op = args?.op === 'set' || args?.op === 'remove' || args?.op === 'clear' ? args.op : 'add'
-          const incoming = Array.isArray(args?.tags)
-            ? args.tags.map((item) => String(item).trim()).filter(Boolean)
-            : typeof args?.tag === 'string' && args.tag.trim()
-              ? [args.tag.trim()]
-              : []
-          if (op !== 'clear' && incoming.length === 0) throw new Error('tag or tags required')
-          const current = [...new Set((Array.isArray(record.tags) ? record.tags : []).map((item) => String(item)))]
-          let next: string[]
-          if (op === 'clear') next = []
-          else if (op === 'set') next = [...new Set(incoming)]
-          else if (op === 'remove') next = current.filter((item) => !incoming.includes(item))
-          else next = [...new Set([...current, ...incoming])]
-          next = next.slice(0, 24)
-          await sessions.patchConfig(id, { tags: next })
-          return { id, op, tags: next }
-        },
-      },
-      {
-        id: 'configure',
-        label: '配置',
-        placement: ['detail'],
-        parameters: {
-          type: 'object',
-          properties: {
-            title: { type: 'string' },
-            project: { type: 'string' },
-            model: { type: 'string' },
-            provider: { type: 'string', enum: ['deepseek', 'openai'] },
-            systemPrompt: { type: 'string' },
-            agentMode: { type: 'string', enum: ['standard', 'minimal', 'create'] },
-            extraTools: { type: 'array', items: { type: 'string' } },
-            pinned: { type: 'boolean' },
-          },
-        },
-        run: async (id, _record, args = {}) => {
-          const config: SessionConfig = {}
-          if (typeof args.title === 'string') config.title = args.title
-          if (typeof args.model === 'string') config.model = args.model
-          if (args.provider === 'deepseek' || args.provider === 'openai') config.provider = args.provider
-          if (typeof args.systemPrompt === 'string') config.systemPrompt = args.systemPrompt
-          if (args.agentMode === 'standard' || args.agentMode === 'minimal' || args.agentMode === 'create') {
-            config.agentMode = args.agentMode
-          }
-          if (Array.isArray(args.extraTools)) config.extraTools = args.extraTools.map((item) => String(item))
-          if (typeof args.pinned === 'boolean') config.pinned = args.pinned
-          if (Object.keys(config).length) await sessions.patchConfig(id, config)
-          if (typeof args.project === 'string' && sessions.setProject) {
-            const path = args.project.trim()
-            await sessions.setProject(id, path ? { path } : null)
-          }
-          return (await list()).find((row) => row.id === id)
         },
       },
       {

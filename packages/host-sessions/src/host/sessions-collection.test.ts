@@ -23,6 +23,9 @@ test('sessionsCollection maps summaries and writes title/pinned/tags', async () 
     patchConfig: async (id, patch) => {
       calls.push(['patch', id, patch])
     },
+    setProject: async (id, project) => {
+      calls.push(['project', id, project])
+    },
     delete: async (id) => {
       calls.push(['delete', id])
       return true
@@ -40,16 +43,20 @@ test('sessionsCollection maps summaries and writes title/pinned/tags', async () 
   assert.equal(rows[0]?.mascotEye, 1)
   assert.equal(rows[0]?.mascotName, '橙石美')
   assert.deepEqual(rows[0]?.tags, ['a'])
-  await spec.update?.('s1', { title: 'renamed', pinned: true, tags: ['b', 'c'] })
+  await spec.update?.('s1', {
+    title: 'renamed',
+    pinned: true,
+    tags: ['b', 'c'],
+    model: 'deepseek-reasoner',
+    projectPath: '/tmp/app',
+  })
   await spec.remove?.({ ids: ['s1'] })
   assert.deepEqual(calls, [
     ['rename', 's1', 'renamed'],
-    ['patch', 's1', { pinned: true, tags: ['b', 'c'] }],
+    ['patch', 's1', { pinned: true, tags: ['b', 'c'], model: 'deepseek-reasoner' }],
+    ['project', 's1', { path: '/tmp/app' }],
     ['delete', 's1'],
   ])
-  assert.equal(spec.actions?.some((item) => item.id === 'progress'), true)
-  assert.equal(spec.actions?.some((item) => item.id === 'compact'), true)
-  assert.equal(spec.actions?.some((item) => item.id === 'star'), true)
-  const starred = await spec.actions?.find((item) => item.id === 'star')?.run('s1', rows[0]!, { pinned: true })
-  assert.deepEqual(starred, { id: 's1', pinned: true })
+  const actionIds = (spec.actions ?? []).map((item) => item.id)
+  assert.deepEqual(actionIds, ['inspect', 'progress', 'compact', 'clear', 'retrieve', 'status'])
 })
