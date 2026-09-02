@@ -160,8 +160,11 @@ const CSS = `
 .fsdb-page .tasks-minicard-open{display:flex;min-width:0;flex:1;border:0;padding:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .fsdb-page .tasks-minicard:hover{background:var(--dsw-hover)}
 .fsdb-page .tasks-minicard.is-active{background:var(--dsw-hover)}
-.fsdb-page .tasks-minicard-title{display:flex;align-items:flex-start;gap:6px;font-size:14px;font-weight:620;line-height:1.35}
+.fsdb-page .tasks-minicard-title{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:620;line-height:1.35}
 .fsdb-page .tasks-minicard-titletext{flex:1;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.fsdb-page .tasks-minicard-tools,.fsdb-page .tasks-queue-item-tools{display:inline-flex;align-items:center;gap:2px;flex:none;margin-left:auto}
+.fsdb-page .tasks-minicard .tasks-title-open,.fsdb-page .tasks-queue-item .tasks-title-open,.fsdb-page .tasks-minicard .tasks-row-actions,.fsdb-page .tasks-queue-item .tasks-row-actions{opacity:0}
+.fsdb-page .tasks-minicard:hover .tasks-title-open,.fsdb-page .tasks-queue-item:hover .tasks-title-open,.fsdb-page .tasks-minicard .tasks-title-open:focus-visible,.fsdb-page .tasks-queue-item .tasks-title-open:focus-visible,.fsdb-page .tasks-minicard:hover .tasks-row-actions,.fsdb-page .tasks-queue-item:hover .tasks-row-actions,.fsdb-page .tasks-minicard .tasks-row-actions:focus-within,.fsdb-page .tasks-queue-item .tasks-row-actions:focus-within{opacity:1;pointer-events:auto}
 .fsdb-page .tasks-minicard-foot{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px;min-width:0;width:100%;overflow:visible}
 .fsdb-page .tasks-minicard-foot > .fsdb-proplist{flex:1;flex-direction:row;flex-wrap:wrap;width:100%;min-width:0;align-items:center;justify-content:flex-start;gap:6px 10px}
 .fsdb-page .tasks-row-actions{display:inline-flex;align-items:center;gap:2px;flex:none}
