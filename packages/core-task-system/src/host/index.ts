@@ -727,7 +727,7 @@ function actorsEqual(a: TaskActor | null, b: TaskActor | null): boolean {
 export const DELIVER_COLLABORATION_NOTE = [
   '',
   '【协作规范】请优先使用本系统的任务体系进行后续任务派发与协作：',
-  '新需求请用 db_create 在 /tasks 建记录、用 db_action path=/tasks/<id> action=deliver 派工、action=report 上报进度。',
+  '新需求请用 db_create 在 /tasks 批量建记录（records 数组）、用 db_action path=/tasks/<id> action=deliver 派工、action=report 上报进度。',
   '这样需求可被跟踪、进度可回传、派发人会收到回执。避免绕过任务系统直接 dispatch 子 session。',
 ].join('\n')
 

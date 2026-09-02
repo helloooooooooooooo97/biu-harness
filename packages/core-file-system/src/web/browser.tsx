@@ -1126,17 +1126,17 @@ export function CollectionBrowser({
   async function createRecord() {
     if (!canCreate) return
     try {
-      const data = await readJson<{ value?: DbRecord }>('/api/db/create', {
+      const data = await readJson<{ items?: Array<{ value?: DbRecord }> }>('/api/db/create', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ path: dataPath, content: {} }),
+        body: JSON.stringify({ path: dataPath, records: [{}] }),
       })
       quietUntil.current = 0
       await reload()
-      const id = data.value?.id
+      const id = data.items?.[0]?.value?.id
       if (id) {
         setOpenDetailId(id)
-        if (data.value) setDetailRow(data.value)
+        if (data.items?.[0]?.value) setDetailRow(data.items[0]!.value)
         onOpenRecord?.(id, activeViewId, dataPath)
       }
     } catch (err) {
@@ -1149,7 +1149,7 @@ export function CollectionBrowser({
       await readJson('/api/db/delete', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ path: `${dataPath}/${row.id}` }),
+        body: JSON.stringify({ path: dataPath, ids: [row.id] }),
       })
       onCloseRecord?.()
       quietUntil.current = 0
@@ -1161,13 +1161,11 @@ export function CollectionBrowser({
 
   async function executeDeleteRecords(ids: string[]) {
     try {
-      for (const id of ids) {
-        await readJson('/api/db/delete', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ path: `${dataPath}/${id}` }),
-        })
-      }
+      await readJson('/api/db/delete', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ path: dataPath, ids }),
+      })
       if (detailId && ids.includes(detailId)) onCloseRecord?.()
       setPickedIds([])
       quietUntil.current = 0

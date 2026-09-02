@@ -67,34 +67,34 @@ test('page plugin stores markdown under .page and assets for images', async () =
   await mkdir(join(root, PAGE_ASSETS), { recursive: true })
   await writeFile(join(root, PAGE_ASSETS, 'hero.png'), 'fake-png', 'utf8')
 
-  const created = await spec.create!({
+  const created = await spec.create!([{
     title: '新页面',
     notes: '# 标题\n内容',
     cover: 'assets/hero.png',
     tags: ['blue'],
-  })
-  assert.equal(created.title, '新页面')
-  assert.equal(created.notes, '# 标题\n内容')
-  assert.equal(created.cover, '/api/page/file/hero.png')
-  assert.equal(asImageSrc(created.cover), '/api/page/file/hero.png')
+  }])
+  assert.equal(created[0]?.title, '新页面')
+  assert.equal(created[0]?.notes, '# 标题\n内容')
+  assert.equal(created[0]?.cover, '/api/page/file/hero.png')
+  assert.equal(asImageSrc(created[0]?.cover), '/api/page/file/hero.png')
 
-  const disk = await readFile(join(root, PAGE_ROOT, `${created.id}.md`), 'utf8')
+  const disk = await readFile(join(root, PAGE_ROOT, `${created[0]!.id}.md`), 'utf8')
   assert.match(disk, /^---\n/)
   assert.match(disk, /title: 新页面/)
   assert.match(disk, /cover: assets\/hero.png/)
   assert.match(disk, /# 标题\n内容/)
 
-  const written = await spec.update!(created.id, {
+  const written = await spec.update!(created[0]!.id, {
     enabled: false,
     schema: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } },
   })
   assert.equal(written.enabled, false)
   assert.deepEqual(written.schema, { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } })
-  const again = await readFile(join(root, PAGE_ROOT, `${created.id}.md`), 'utf8')
+  const again = await readFile(join(root, PAGE_ROOT, `${created[0]!.id}.md`), 'utf8')
   assert.match(again, /enabled: false/)
   assert.match(again, /complexity: O\(n\)/)
 
-  await spec.remove!(created.id)
+  await spec.remove!({ ids: [created[0]!.id] })
   assert.equal((await spec.list()).length, 0)
 
   const store = new PagesStore(ctx.fs.workspace as never)

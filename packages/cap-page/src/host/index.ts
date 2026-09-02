@@ -62,8 +62,16 @@ export function pagesCollection(store: PagesStore): CollectionSpec {
     list: (query) => store.list(query?.ids),
     get: (id) => store.get(id),
     update: (id, patch) => store.update(id, patch),
-    create: (fields = {}) => store.create(fields),
-    remove: (id) => store.remove(id),
+    create: async (rows) => {
+      const out = []
+      for (const fields of rows) out.push(await store.create(fields))
+      return out
+    },
+    remove: async (query) => {
+      const ids = query.ids ?? []
+      for (const id of ids) await store.remove(id)
+      return ids
+    },
   }
 }
 

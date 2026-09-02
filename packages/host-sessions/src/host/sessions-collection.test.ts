@@ -41,7 +41,7 @@ test('sessionsCollection maps summaries and writes title/pinned/tags', async () 
   assert.equal(rows[0]?.mascotName, '橙石美')
   assert.deepEqual(rows[0]?.tags, ['a'])
   await spec.update?.('s1', { title: 'renamed', pinned: true, tags: ['b', 'c'] })
-  await spec.remove?.('s1')
+  await spec.remove?.({ ids: ['s1'] })
   assert.deepEqual(calls, [
     ['rename', 's1', 'renamed'],
     ['patch', 's1', { pinned: true, tags: ['b', 'c'] }],

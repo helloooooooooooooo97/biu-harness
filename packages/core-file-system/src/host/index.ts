@@ -8,6 +8,7 @@ import {
   normalizeSchemaValue,
   schemaSearchHaystack,
   withBuiltinFields,
+  hasCollectionDeleteQuery,
   type CollectionAction,
   type CollectionActionInfo,
   type CollectionInfo,
@@ -390,6 +391,24 @@ export class DatabaseService extends Service implements Database {
     return rows.filter((row) => allow.has(row.id))
   }
 
+  private async matchCollectionRows(
+    spec: CollectionSpec,
+    query: CollectionListQuery,
+    filter: Record<string, unknown> | undefined,
+    q: string,
+  ) {
+    let schema = schemaFor(spec)
+    const packs = this.schemaTags.list()
+    const rows = await this.loadCollectionRows(spec, query)
+    const tagFilter = spec.path === '/supertags' ? String(filter?.tag ?? '').trim() : ''
+    const tagPack = tagFilter ? this.schemaTags.get(tagFilter) : null
+    if (tagFilter) {
+      schema = schemaWithTagPack(schema, tagPack)
+      await this.hydrateSuperTagStamps(rows, tagPack)
+    }
+    return rows.filter((row) => matchListFilter(row, filter, schema, packs) && matchQuery(row, q, packs))
+  }
+
   private async hydrateSuperTagStamps(rows: DbRecord[], pack: CollectionSchemaPack | null) {
     if (!pack?.fields.length) return
     const wanted = pack.fields.filter((field) => !STAMP_FIELD_BLOCKLIST.has(field.key))
@@ -467,7 +486,6 @@ export class DatabaseService extends Service implements Database {
     const q = page?.q ?? ''
     const sortField = page?.sortField ?? ''
     const sortDir = page?.sortDir === 'desc' ? 'desc' : 'asc'
-    const packs = this.schemaTags.list()
     const schemaFilter = filter?.schema != null && filter.schema !== '' ? String(filter.schema) : ''
     const query: CollectionListQuery = { q, filter }
     if (schemaFilter && schema.fields.schema && spec.path !== '/supertags') {
@@ -487,14 +505,9 @@ export class DatabaseService extends Service implements Database {
       }
       query.ids = [...stamped]
     }
-    const rows = await this.loadCollectionRows(spec, query)
+    const matched = await this.matchCollectionRows(spec, query, filter, q)
     const tagFilter = spec.path === '/supertags' ? String(filter?.tag ?? '').trim() : ''
-    const tagPack = tagFilter ? this.schemaTags.get(tagFilter) : null
-    if (tagFilter) {
-      schema = schemaWithTagPack(schema, tagPack)
-      await this.hydrateSuperTagStamps(rows, tagPack)
-    }
-    const matched = rows.filter((row) => matchListFilter(row, filter, schema, packs) && matchQuery(row, q, packs))
+    if (tagFilter) schema = schemaWithTagPack(schema, this.schemaTags.get(tagFilter))
     const sorted = sortRecords(matched, sortField, sortDir)
     const total = sorted.length
     const slice = sorted.slice(offset, offset + limit)
@@ -569,25 +582,46 @@ export class DatabaseService extends Service implements Database {
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     if (!spec.records?.create || !spec.create) throw new Error(`collection cannot create: ${spec.path}`)
-    const fields = content == null || content === '' ? {} : pickWritablePatch(schemaFor(spec), parseContent(content))
-    const record = await spec.create(fields)
-    this.indexSuperTagRecord(spec, record)
+    const schema = schemaFor(spec)
+    const records = parseRecords(content).map((row) => pickWritablePatch(schema, row))
+    const created = await spec.create(records)
+    for (const record of created) this.indexSuperTagRecord(spec, record)
     this.bump()
-    return { kind: 'record' as const, path: `${spec.path}/${record.id}`, value: withoutContent(spec, record) }
+    return {
+      kind: 'created' as const,
+      path: spec.path,
+      items: created.map((record) => ({
+        kind: 'record' as const,
+        path: `${spec.path}/${record.id}`,
+        value: withoutContent(spec, record),
+      })),
+    }
   }
 
-  async remove(path: string) {
+  async remove(path: string, query: CollectionListQuery = {}) {
     const parts = splitPath(path)
-    if (parts.length !== 2) throw new Error(`cannot delete: ${normalizeCollectionPath(path)}`)
+    if (parts.length !== 1) throw new Error(`cannot delete: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     if (!spec.records?.delete || !spec.remove) throw new Error(`collection cannot delete: ${spec.path}`)
-    const record = await spec.get(parts[1]!)
-    if (!record) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
-    await spec.remove(parts[1]!)
-    this.schemaTags.removeRecord(spec.path, parts[1]!)
+    if (!hasCollectionDeleteQuery(query)) throw new Error('delete requires ids, q, or filter')
+    const schema = schemaFor(spec)
+    const q = query.q ?? ''
+    const filter = query.filter
+    const listQuery: CollectionListQuery = { q, filter, ids: query.ids }
+    const schemaFilter = filter?.schema != null && filter.schema !== '' ? String(filter.schema) : ''
+    if (schemaFilter && schema.fields.schema && spec.path !== '/supertags') {
+      const stamped = this.schemaTags.stampedIds(spec.path, schemaFilter)
+      if (!stamped.size) return { kind: 'deleted' as const, path: spec.path, ids: [] as string[] }
+      listQuery.ids = query.ids?.length ? query.ids.filter((id) => stamped.has(id)) : [...stamped]
+    }
+    const matched = await this.matchCollectionRows(spec, listQuery, filter, q)
+    const ids = [...new Set(matched.map((row) => row.id))]
+    if (!ids.length) return { kind: 'deleted' as const, path: spec.path, ids }
+    await spec.remove({ ids })
+    for (const id of ids) this.schemaTags.removeRecord(spec.path, id)
     this.bump()
-    return { kind: 'deleted' as const, path: `${spec.path}/${parts[1]}`, id: parts[1] }
+    return { kind: 'deleted' as const, path: spec.path, ids }
   }
 
   async action(path: string, actionId: string, args?: Record<string, unknown>) {
@@ -663,11 +697,37 @@ function parseContent(content: unknown): Record<string, unknown> {
   return content as Record<string, unknown>
 }
 
+function parseRecords(content: unknown): Record<string, unknown>[] {
+  const raw = typeof content === 'string' ? JSON.parse(content.trim() || 'null') : content
+  if (!Array.isArray(raw) || !raw.length) throw new Error('records must be a non-empty array')
+  return raw.map((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error(`records[${index}] must be an object`)
+    return item as Record<string, unknown>
+  })
+}
+
 const PATH_PARAM = { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] } as const
 
 function asFilter(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
   return value as Record<string, unknown>
+}
+
+function asIds(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  return value.map((item) => String(item).trim()).filter(Boolean)
+}
+
+function asDeleteQuery(args: Record<string, unknown>): CollectionListQuery {
+  return {
+    ids: asIds(args.ids),
+    q: args.q != null ? String(args.q) : undefined,
+    filter: asFilter(args.filter),
+  }
+}
+
+function asCreateRecords(args: Record<string, unknown>) {
+  return args.records !== undefined ? args.records : args.content
 }
 
 export const name = 'core-file-system'
@@ -736,22 +796,31 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_create',
-    description: '在已登记且允许新建的表中新增一条记录。路径为 /<表>。能否新建看 db_stat 的 caps 与 schema.records。',
+    description: '在已登记且允许新建的表中批量新增记录。路径为 /<表>，records 为对象数组。能否新建看 db_stat 的 caps 与 schema.records。',
     parameters: {
       type: 'object',
       properties: {
         path: { type: 'string' },
-        content: { description: '可选，按 schema 可写字段给出初值（对象或 JSON 字符串）' },
+        records: { type: 'array', description: '要创建的记录（对象数组），按 schema 可写字段给初值' },
       },
-      required: ['path'],
+      required: ['path', 'records'],
     },
-    execute: (args) => db.create(String(args.path), args.content),
+    execute: (args) => db.create(String(args.path), asCreateRecords(args)),
   })
   ctx.tools.register({
     name: 'db_delete',
-    description: '删除一条记录，路径为 /<表>/<id>。能否删除看 db_stat 的 caps 与 schema.records；未声明 delete 的表会失败。',
-    parameters: PATH_PARAM,
-    execute: (args) => db.remove(String(args.path)),
+    description: '按条件删除记录。路径为 /<表>，必须带 ids、q 或 filter 之一，禁止无条件清空全表。能否删除看 db_stat 的 caps 与 schema.records。',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: { type: 'string' },
+        ids: { type: 'array', items: { type: 'string' }, description: '要删除的 id 列表' },
+        q: { type: 'string', description: '全文搜索条件' },
+        filter: { type: 'object', description: '按列等值过滤' },
+      },
+      required: ['path'],
+    },
+    execute: (args) => db.remove(String(args.path), asDeleteQuery(args)),
   })
   ctx.tools.register({
     name: 'db_action',
@@ -845,16 +914,16 @@ export function apply(ctx: Context) {
   })
   ctx.http.route('POST', '/api/db/create', async (route) => {
     try {
-      const body = (await route.json()) as { path?: string; content?: unknown }
-      route.send(200, await db.create(String(body?.path ?? ''), body?.content))
+      const body = (await route.json()) as { path?: string; records?: unknown; content?: unknown }
+      route.send(200, await db.create(String(body?.path ?? ''), body?.records ?? body?.content))
     } catch (error) {
       route.send(400, { error: String(error) })
     }
   })
   ctx.http.route('POST', '/api/db/delete', async (route) => {
     try {
-      const body = (await route.json()) as { path?: string }
-      route.send(200, await db.remove(String(body?.path ?? '')))
+      const body = (await route.json()) as { path?: string; ids?: unknown; q?: unknown; filter?: unknown }
+      route.send(200, await db.remove(String(body?.path ?? ''), asDeleteQuery((body ?? {}) as Record<string, unknown>)))
     } catch (error) {
       route.send(400, { error: String(error) })
     }

@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { asImageSrc, emptySchemaValue, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, schemaSearchHaystack, withBuiltinFields } from './index.ts'
+import { asImageSrc, emptySchemaValue, hasCollectionDeleteQuery, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, schemaSearchHaystack, withBuiltinFields } from './index.ts'
 
 test('asImageSrc keeps http, data:image, and same-origin image paths', () => {
   assert.equal(asImageSrc('https://example.com/a.png'), 'https://example.com/a.png')
@@ -62,4 +62,13 @@ test('required record fields are icon, timestamps, and SuperTag', () => {
   assert.equal(REQUIRED_RECORD_FIELDS.schema.type, 'schema')
   assert.equal(REQUIRED_RECORD_FIELDS.createdAt.type, 'datetime')
   assert.equal(REQUIRED_RECORD_FIELDS.updatedAt.type, 'datetime')
+})
+
+test('hasCollectionDeleteQuery requires ids, q, or a non-empty filter', () => {
+  assert.equal(hasCollectionDeleteQuery({}), false)
+  assert.equal(hasCollectionDeleteQuery({ ids: [] }), false)
+  assert.equal(hasCollectionDeleteQuery({ ids: ['a'] }), true)
+  assert.equal(hasCollectionDeleteQuery({ q: '  x ' }), true)
+  assert.equal(hasCollectionDeleteQuery({ filter: { status: 'open' } }), true)
+  assert.equal(hasCollectionDeleteQuery({ filter: { status: '' } }), false)
 })
