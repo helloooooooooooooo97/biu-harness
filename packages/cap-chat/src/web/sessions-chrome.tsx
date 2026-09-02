@@ -75,7 +75,8 @@ function SessionRecordChat({ record }: FsContentProps) {
     el?.scrollIntoView({ block: 'start', behavior: 'smooth' })
   }, [])
   useLayoutEffect(() => {
-    const root = anchorRef.current?.closest('.fsdb-right-body')
+    const el = anchorRef.current
+    const root = el?.closest('.fsdb-right') ?? el?.closest('.fsdb-right-body') ?? el?.closest('.fsdb-detail-stage')
     setHost(root instanceof HTMLElement ? root : null)
   }, [])
   useEffect(() => {
@@ -134,9 +135,9 @@ if (typeof document !== 'undefined') {
 .fsdb-fileview:has(.chat-pane-embed){display:flex;flex-direction:column;flex:1;min-height:min(72vh,720px);background:#191919}
 .inspector-database-page .fsdb-fileview:has(.chat-pane-embed){min-height:0;flex:1}
 .fsdb-detail-main:has(.chat-pane-embed),.fsdb-detail-screen:has(.chat-pane-embed){background:#191919}
-.session-outline-host{position:sticky;top:0;z-index:8;width:0;height:0;overflow:visible;pointer-events:none}
-.fsdb-right-body:has(.session-outline-host){container-type:size}
-.session-outline-host .chat-outline{left:8px;top:50cqh}
+.session-outline-host{position:absolute;inset:0;z-index:20;pointer-events:none}
+.fsdb-right:has(.session-outline-host),.fsdb-right-body:has(.session-outline-host),.fsdb-detail-stage:has(.session-outline-host){position:relative}
+.session-outline-host .chat-outline{left:8px;top:50%}
 `
   document.head.appendChild(style)
 }
