@@ -209,11 +209,12 @@ test('autohide resets when overlay closes', () => {
   assert.equal(getOverlayAutohide(), false)
 })
 
-test('overlay window geom clamps and sits above the dock by default', () => {
+test('overlay window geom clamps and sits above the corner mascot by default', () => {
   const def = defaultOverlayWinGeom(1280, 800)
   assert.ok(def.w >= OVERLAY_WIN_MIN_W)
   assert.ok(def.h >= OVERLAY_WIN_MIN_H)
   assert.ok(def.y + def.h <= 800 - OVERLAY_DOCK_CLEARANCE)
+  assert.ok(def.x >= 1280 - def.w - 16)
   const tiny = clampOverlayWinGeom({ x: -400, y: -20, w: 10, h: 10 }, 1280, 800)
   assert.equal(tiny.w, OVERLAY_WIN_MIN_W)
   assert.equal(tiny.h, OVERLAY_WIN_MIN_H)

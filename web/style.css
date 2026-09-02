@@ -508,22 +508,11 @@ body {
   color: #fff;
 }
 
-.os-dock .brand-corner-cluster {
-  position: static;
-  right: auto;
-  bottom: auto;
-}
-
-.os-dock .brand-corner-mascot-btn {
-  width: 42px;
-  height: 42px;
-}
-
 .brand-corner-cluster {
   position: fixed;
   right: 16px;
   bottom: 16px;
-  z-index: 90;
+  z-index: 200;
   display: flex;
   overflow: visible;
   align-items: center;
