@@ -16,6 +16,7 @@ import {
   setChatOverlay,
   closeChatOverlay,
   getOverlayThread,
+  isChatPagePath,
   openOverlayComposer,
   revealOverlayThread,
   getOverlayAutohide,
@@ -156,12 +157,35 @@ test('overlay starts closed', () => {
   setChatOverlay(false)
 })
 
+test('chat page paths skip the overlay', () => {
+  assert.equal(isChatPagePath('/'), true)
+  assert.equal(isChatPagePath('/s/abc'), true)
+  assert.equal(isChatPagePath('/s/abc/debug'), true)
+  assert.equal(isChatPagePath('/database'), false)
+  assert.equal(isChatPagePath('/tasks'), false)
+})
+
 test('pick-attached only opens; closing stays closed even if chips remain', () => {
   setChatOverlay(false)
+  history.replaceState(null, '', '/database')
   window.dispatchEvent(new Event('biu:pick-attached'))
   assert.equal(getChatOverlay(), true)
   closeChatOverlay()
   assert.equal(getChatOverlay(), false)
+})
+
+test('pick-attached on the chat page focuses composer instead of overlay', () => {
+  setChatOverlay(false)
+  history.replaceState(null, '', '/s/session-1')
+  let focused = 0
+  const onFocus = () => {
+    focused += 1
+  }
+  window.addEventListener('biu:composer-focus', onFocus)
+  window.dispatchEvent(new Event('biu:pick-attached'))
+  window.removeEventListener('biu:composer-focus', onFocus)
+  assert.equal(getChatOverlay(), false)
+  assert.ok(focused > 0)
 })
 
 test('pick opens a compose-only overlay; send reveals the thread', () => {

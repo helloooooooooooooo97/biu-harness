@@ -166,6 +166,12 @@ export function requestComposerFocus() {
   window.setTimeout(fire, 40)
 }
 
+/** 聊天页中间已有输入框，选取不要再弹悬浮窗。 */
+export function isChatPagePath(pathname: string) {
+  const path = (pathname.split('?')[0] || '/').replace(/\/+$/, '') || '/'
+  return path === '/' || path.startsWith('/s/')
+}
+
 /** 选取对象后弹出输入条：工具栏 + 统计 + 输入框，回复区等发出去再展开。 */
 export function openOverlayComposer(opts?: { revealThread?: boolean }) {
   setChatOverlay(true)
@@ -443,6 +449,10 @@ export function clampOverlayChatHeight(height: number, maxHeight = 800) {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('biu:pick-attached', () => {
+    if (isChatPagePath(window.location.pathname)) {
+      requestComposerFocus()
+      return
+    }
     openOverlayComposer({ revealThread: false })
   })
 }

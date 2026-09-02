@@ -7,7 +7,9 @@ const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
 
 test('overlay chat is a resident floating window off the agent page', () => {
   assert.match(shell, /showCenter=\{activeModule === 'agent'\}/)
-  assert.match(shell, /floating=\{activeModule !== 'agent'\}/)
+  const overlay = readFileSync(resolve(import.meta.dirname, './chat-overlay.ts'), 'utf8')
+  assert.match(overlay, /isChatPagePath/)
+  assert.match(overlay, /requestComposerFocus\(\)/)
   assert.match(shell, /overlayMounted && overlayOpen/)
   assert.match(shell, /chat-overlay-close/)
   assert.match(shell, /closeChatOverlay\(\)/)
