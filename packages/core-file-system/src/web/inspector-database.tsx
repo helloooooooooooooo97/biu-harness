@@ -334,6 +334,7 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
 
   return (
     <div
+      key={inspectorPath}
       className={`fsdb-agent-follow${liveWorking || agentWorking ? ' is-working' : ''}`}
       data-testid="fsdb-agent-follow"
       aria-busy={liveWorking || agentWorking}

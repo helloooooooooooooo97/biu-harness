@@ -283,7 +283,6 @@ export const SessionInspector = memo(function SessionInspector({
     return [{ ...item, id: openedId }]
   })
   const extraActive = headerTabs.find((item) => item.id === tab)
-  const ExtraComponent = extraActive?.entry.Component
 
   function pickOffer(item: (typeof extraTabs)[number]) {
     if (item.action) {
@@ -488,30 +487,34 @@ export const SessionInspector = memo(function SessionInspector({
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {extraActive && ExtraComponent ? (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid={`inspector-${extraActive.id}`}>
-            <ExtraComponent {...inspectorViewProps((extraActive.entry.props?.() ?? {}) as Record<string, unknown>)} paneId={extraActive.id} renderSlot={renderSlot} />
-          </div>
-        ) : (
-          <div className="inspector-empty" data-testid="inspector-catalog">
-            {displayTabs.length || toolTabs.length ? (
-              <div className="inspector-empty-list">
-                {displayTabs
-                  .filter((item) => item.repeatable || !opened.some((id) => slotTabId(id) === item.id))
-                  .map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className="inspector-empty-item"
-                      onClick={() => pickOffer(item)}
-                      data-testid={`inspector-empty-${item.id}`}
-                    >
-                      {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
-                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                    </button>
-                  ))}
-                {toolTabs.map((item) => (
+      <div className="inspector-stage">
+        {headerTabs.map((item) => {
+          const Pane = item.entry.Component
+          if (!Pane) return null
+          const active = item.id === tab
+          return (
+            <div
+              key={item.id}
+              className={`inspector-stage-pane${active ? ' is-active' : ''}`}
+              data-testid={`inspector-${item.id}`}
+              aria-hidden={!active}
+              inert={!active || undefined}
+            >
+              <Pane {...inspectorViewProps((item.entry.props?.() ?? {}) as Record<string, unknown>)} paneId={item.id} renderSlot={renderSlot} />
+            </div>
+          )
+        })}
+        <div
+          className={`inspector-stage-pane inspector-empty${extraActive ? '' : ' is-active'}`}
+          data-testid="inspector-catalog"
+          aria-hidden={Boolean(extraActive)}
+          inert={extraActive ? true : undefined}
+        >
+          {displayTabs.length || toolTabs.length ? (
+            <div className="inspector-empty-list">
+              {displayTabs
+                .filter((item) => item.repeatable || !opened.some((id) => slotTabId(id) === item.id))
+                .map((item) => (
                   <button
                     key={item.id}
                     type="button"
@@ -523,10 +526,21 @@ export const SessionInspector = memo(function SessionInspector({
                     <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   </button>
                 ))}
-              </div>
-            ) : null}
-          </div>
-        )}
+              {toolTabs.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="inspector-empty-item"
+                  onClick={() => pickOffer(item)}
+                  data-testid={`inspector-empty-${item.id}`}
+                >
+                  {item.Icon ? <item.Icon {...chromeIcon} /> : <Squares2X2Icon {...chromeIcon} />}
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </div>
     </aside>
   )
