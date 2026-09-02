@@ -58,8 +58,10 @@ test('center stage keeps modules mounted and crossfades', () => {
   const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
   assert.match(shell, /className="app-stage"/)
   assert.match(shell, /app-stage-pane/)
+  assert.match(shell, /is-window-resizing/)
   assert.doesNotMatch(shell, /if \(moduleId !== activeId\) return null/)
   assert.match(css, /\.app-stage-pane\.is-active[\s\S]*?opacity:\s*1/)
+  assert.match(css, /\.app-stage-pane[\s\S]*?content-visibility:\s*hidden/)
   assert.match(css, /\.app-pane-in\s*\{[^}]*animation:\s*app-pane-in/s)
 })
 

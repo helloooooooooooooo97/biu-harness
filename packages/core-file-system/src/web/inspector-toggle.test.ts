@@ -47,6 +47,8 @@ test('table and view rows only expand from the fold column', () => {
   const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
   assert.match(css, /\.sidebar-fold\s*\{[^}]*grid-template-rows:\s*0fr/s)
   assert.match(css, /\.sidebar-fold\.is-open\s*\{[^}]*grid-template-rows:\s*1fr/)
+  assert.match(css, /\.sidebar-fold\.is-animating\s*\{[^}]*transition:\s*grid-template-rows/)
+  assert.doesNotMatch(css, /\.sidebar-fold\s*\{[^}]*transition:\s*grid-template-rows/s)
   assert.match(sidebar, /const listed = path === collectionPath \? views : loadViews\(path\)/)
   assert.match(sidebar, /viewsForRegisteredCollection\(path, tables, listed\)/)
   assert.doesNotMatch(sidebar, /catalog: true/)

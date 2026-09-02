@@ -335,6 +335,7 @@ function Shell(props: SlotProps) {
     return 320
   })
   const [columnResizing, setColumnResizing] = useState(false)
+  const [windowResizing, setWindowResizing] = useState(false)
   useEffect(() => {
     const onDown = (event: PointerEvent) => {
       const target = event.target
@@ -427,10 +428,19 @@ function Shell(props: SlotProps) {
     typeof window === 'undefined' ? 1440 : window.innerWidth,
   )
   useEffect(() => {
-    const sync = () => setViewportWidth(window.innerWidth)
+    let timer = 0
+    const sync = () => {
+      setViewportWidth(window.innerWidth)
+      setWindowResizing(true)
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => setWindowResizing(false), 120)
+    }
     sync()
     window.addEventListener('resize', sync)
-    return () => window.removeEventListener('resize', sync)
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('resize', sync)
+    }
   }, [])
   const leftPane =
     showChatSidebar ||
@@ -605,8 +615,8 @@ function Shell(props: SlotProps) {
     <div
       className={`app-shell${leftPane
           ? ` app-shell-agent${leftHidden ? ' is-sidebar-collapsed' : ''}${sidebarNarrow && !leftHidden ? ' is-sidebar-narrow' : ''}${inspectorVisible ? ' is-inspector-open' : ''
-          }${columnResizing ? ' is-resizing' : ''}`
-          : ` app-shell-module${inspectorVisible ? ' is-inspector-open' : ''}${columnResizing ? ' is-resizing' : ''}`
+          }${columnResizing ? ' is-resizing' : ''}${windowResizing ? ' is-window-resizing' : ''}`
+          : ` app-shell-module${inspectorVisible ? ' is-inspector-open' : ''}${columnResizing ? ' is-resizing' : ''}${windowResizing ? ' is-window-resizing' : ''}`
         }${leftHidden ? ' is-left-hidden' : ''}`}
       data-testid="app-shell"
       style={

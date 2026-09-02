@@ -90,6 +90,8 @@ test('shell columns keep three tracks so sidebar and inspector can animate', () 
     css,
     /\.app-shell-agent\s*\{[^}]*grid-template-columns:\s*var\(--sidebar-col, 0px\) minmax\(0, 1fr\) var\(--inspector-width, 0px\)/s,
   )
+  assert.match(css, /\.app-shell-agent\.is-window-resizing\s*\{[^}]*transition:\s*none/s)
+  assert.match(css, /\.app-shell-module\.is-window-resizing\s*\{[^}]*transition:\s*none/s)
   assert.doesNotMatch(css, /\.app-shell-agent\.is-sidebar-collapsed\s*\{/)
   assert.match(frame, /is-closed flex/)
   assert.match(css, /\.app-side-bar\s*\{[^}]*min-width:\s*0/s)

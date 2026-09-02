@@ -70,5 +70,6 @@ test('inspector header tabs sit on the same vertical center as the main header',
   assert.doesNotMatch(css, /\.inspector-crumb-tab\s*\{[^}]*padding-right:\s*4px/s)
   assert.match(css, /\.inspector-stage-pane\.is-active[\s\S]*?opacity:\s*1/)
   assert.match(css, /\.inspector-stage-pane[\s\S]*?transition:/)
+  assert.match(css, /\.inspector-stage-pane[\s\S]*?content-visibility:\s*hidden/)
   assert.match(css, /\.app-stage-pane\.is-active[\s\S]*?opacity:\s*1/)
 })
