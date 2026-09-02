@@ -26,6 +26,7 @@ type Scene = {
 type DrawApi = {
   refresh: () => void
   scrollToContent?: (target?: unknown, opts?: { fitToContent?: boolean; animate?: boolean }) => void
+  updateScene?: (opts: { appState?: Record<string, unknown> }) => void
 }
 
 function appCanvasColor() {
@@ -34,18 +35,37 @@ function appCanvasColor() {
   return fromCss || '#191919'
 }
 
-function isLightCanvas(color: unknown) {
+function parseRgb(color: unknown): [number, number, number] | null {
   const value = String(color ?? '').trim().toLowerCase()
-  return !value || value === '#fff' || value === '#ffffff' || value === 'white' || value === 'rgb(255, 255, 255)'
+  if (!value) return null
+  if (value === 'white') return [255, 255, 255]
+  if (value === 'black') return [0, 0, 0]
+  const hex = value.startsWith('#') ? value.slice(1) : ''
+  if (/^[0-9a-f]{3}$/.test(hex)) {
+    return [parseInt(hex[0] + hex[0], 16), parseInt(hex[1] + hex[1], 16), parseInt(hex[2] + hex[2], 16)]
+  }
+  if (/^[0-9a-f]{6}$/.test(hex)) {
+    return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)]
+  }
+  const rgb = value.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
+  if (rgb) return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])]
+  return null
 }
 
-function isStockDarkCanvas(color: unknown) {
-  return String(color ?? '').trim().toLowerCase() === '#121212'
+function isLightCanvas(color: unknown) {
+  const rgb = parseRgb(color)
+  if (!rgb) return !String(color ?? '').trim()
+  const [r, g, b] = rgb.map((channel) => channel / 255)
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45
+}
+
+function isStockLight(color: unknown) {
+  const value = String(color ?? '').trim().toLowerCase()
+  return value === '#d8d8d8' || value === '#ffffff' || value === '#fff' || value === 'white'
 }
 
 function resolveCanvas(color: unknown, empty: boolean) {
-  if (isStockDarkCanvas(color) || !String(color ?? '').trim()) return appCanvasColor()
-  if (empty && isLightCanvas(color)) return appCanvasColor()
+  if (!String(color ?? '').trim() || isStockLight(color) || (empty && isLightCanvas(color))) return appCanvasColor()
   return String(color)
 }
 
@@ -181,6 +201,11 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
 
   const bindApi = useCallback((api: DrawApi | null) => {
     apiRef.current = api
+    const current = live.current
+    const empty = !(current?.elements && current.elements.length)
+    if (api?.updateScene && (empty || isLightCanvas(current?.appState?.viewBackgroundColor))) {
+      api.updateScene({ appState: { theme: 'dark', viewBackgroundColor: appCanvasColor() } })
+    }
     requestAnimationFrame(() => fitView(api))
   }, [])
 

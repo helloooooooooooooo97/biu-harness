@@ -182,7 +182,7 @@ function renderSlash() {
           editor: pending.editor,
         })
         const el = component.element as HTMLElement
-        el.style.zIndex = '10000'
+        el.style.zIndex = '20000'
         unmount = pending.mount(el)
       })
     },
@@ -221,14 +221,14 @@ export const slashCommand = Extension.create({
         command: ({ editor, range, props }) => {
           props.command({ editor, range })
         },
-        placement: 'bottom-start',
+        placement: 'top-start',
         flip: false,
         floatingUi: {
           strategy: 'fixed',
           middleware: [
             flip({
               padding: 8,
-              fallbackPlacements: ['top-start', 'top-end', 'bottom-end'],
+              fallbackPlacements: ['top-end', 'bottom-start', 'bottom-end'],
             }),
             shift({ padding: 8 }),
             size({

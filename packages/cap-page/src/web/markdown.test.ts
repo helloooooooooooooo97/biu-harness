@@ -64,9 +64,10 @@ test('slash suggestion uses a fixed high stacking context', async () => {
   const src = await readFile(resolve(import.meta.dirname, './slash.ts'), 'utf8')
   const css = await readFile(resolve(import.meta.dirname, './style.ts'), 'utf8')
   assert.match(src, /strategy: 'fixed'/)
-  assert.match(src, /fallbackPlacements: \['top-start', 'top-end', 'bottom-end'\]/)
-  assert.match(src, /zIndex = '10000'/)
-  assert.match(css, /\.page-slash\{[^}]*z-index:10000/)
+  assert.match(src, /placement: 'top-start'/)
+  assert.match(src, /fallbackPlacements: \['top-end', 'bottom-start', 'bottom-end'\]/)
+  assert.match(src, /zIndex = '20000'/)
+  assert.match(css, /\.page-slash\{[^}]*z-index:20000/)
   assert.match(css, /\.page-editor \.page-block\{[^}]*isolation:isolate/)
 })
 

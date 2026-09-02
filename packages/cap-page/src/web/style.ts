@@ -23,7 +23,7 @@ export const PAGE_EDITOR_STYLE = `
 .page-editor .tiptap p.is-editor-empty:first-child::before,
 .page-editor .tiptap .is-empty::before{content:attr(data-placeholder);float:left;height:0;pointer-events:none;color:var(--dsw-label-3)}
 .page-bubble{z-index:80;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);box-shadow:0 8px 28px rgba(15,15,15,.12),0 0 0 1px color-mix(in srgb,var(--dsw-border) 70%,transparent);border-radius:10px;overflow:hidden}
-.page-slash{position:fixed;z-index:10000;width:324px;max-height:min(70vh,420px);padding:6px;display:flex;flex-direction:column;gap:2px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);box-shadow:0 8px 28px rgba(15,15,15,.12),0 0 0 1px color-mix(in srgb,var(--dsw-border) 70%,transparent);border-radius:10px}
+.page-slash{position:fixed;z-index:20000;width:324px;max-height:min(70vh,420px);padding:6px;display:flex;flex-direction:column;gap:2px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);box-shadow:0 8px 28px rgba(15,15,15,.12),0 0 0 1px color-mix(in srgb,var(--dsw-border) 70%,transparent);border-radius:10px}
 .page-slash-head,.page-slash-empty{padding:6px 8px;color:var(--dsw-label-3);font-size:12px;font-weight:600}
 .page-slash-head{position:sticky;top:0;z-index:1;margin:-6px -6px 0;padding:12px 14px 8px;background:var(--dsw-sidebar)}
 .page-slash-item{display:flex;align-items:center;gap:10px;width:100%;margin:0;border:0;border-radius:8px;padding:6px 8px;background:transparent;color:var(--dsw-label);font:inherit;text-align:left;cursor:pointer}
