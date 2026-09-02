@@ -28,5 +28,7 @@ test('slash list keeps overflow-y auto', () => {
     ref.current?.onKeyDown({ event: new KeyboardEvent('keydown', { key: 'ArrowDown' }) })
   })
   assert.equal(getComputedStyle(list).overflowY, 'auto')
+  assert.equal(getComputedStyle(list).position, 'fixed')
+  assert.equal(getComputedStyle(list).zIndex, '10000')
   style.remove()
 })

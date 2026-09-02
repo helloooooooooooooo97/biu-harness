@@ -180,7 +180,9 @@ function renderSlash() {
           props: pending,
           editor: pending.editor,
         })
-        unmount = pending.mount(component.element)
+        const el = component.element as HTMLElement
+        el.style.zIndex = '10000'
+        unmount = pending.mount(el)
       })
     },
     onUpdate(props: Record<string, unknown>) {
@@ -218,6 +220,7 @@ export const slashCommand = Extension.create({
         command: ({ editor, range, props }) => {
           props.command({ editor, range })
         },
+        floatingUi: { strategy: 'fixed' },
         render: renderSlash,
       } satisfies Partial<SuggestionOptions<SlashItem, SlashItem>>,
     }

@@ -8,7 +8,7 @@ export const PAGE_EDITOR_STYLE = `
 .page-editor .tiptap h2{font-size:1.5em;font-weight:650;line-height:1.3;margin-top:.75em}
 .page-editor .tiptap h3{font-size:1.25em;font-weight:650;line-height:1.3;margin-top:.6em}
 .page-editor .tiptap [data-heading-plugin]{border-radius:8px}
-.page-editor .page-block{margin:12px 0}
+.page-editor .page-block{margin:12px 0;position:relative;z-index:0;isolation:isolate;overflow:hidden}
 .page-editor .page-block-missing{padding:12px 14px;border:1px dashed var(--dsw-border);border-radius:8px;color:var(--dsw-label-3);font-size:13px}
 .page-editor .tiptap ul,.page-editor .tiptap ol{padding-left:1.6em}
 .page-editor .tiptap li{margin:1px 0}
@@ -21,7 +21,7 @@ export const PAGE_EDITOR_STYLE = `
 .page-editor .tiptap p.is-editor-empty:first-child::before,
 .page-editor .tiptap .is-empty::before{content:attr(data-placeholder);float:left;height:0;pointer-events:none;color:var(--dsw-label-3)}
 .page-bubble{z-index:80;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);box-shadow:0 8px 28px rgba(15,15,15,.12),0 0 0 1px color-mix(in srgb,var(--dsw-border) 70%,transparent);border-radius:10px;overflow:hidden}
-.page-slash{z-index:80;width:324px;max-height:min(70vh,420px);padding:6px;display:flex;flex-direction:column;gap:2px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);box-shadow:0 8px 28px rgba(15,15,15,.12),0 0 0 1px color-mix(in srgb,var(--dsw-border) 70%,transparent);border-radius:10px}
+.page-slash{position:fixed;z-index:10000;width:324px;max-height:min(70vh,420px);padding:6px;display:flex;flex-direction:column;gap:2px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);box-shadow:0 8px 28px rgba(15,15,15,.12),0 0 0 1px color-mix(in srgb,var(--dsw-border) 70%,transparent);border-radius:10px}
 .page-slash-head,.page-slash-empty{padding:6px 8px;color:var(--dsw-label-3);font-size:12px;font-weight:600}
 .page-slash-head{position:sticky;top:0;z-index:1;margin:-6px -6px 0;padding:12px 14px 8px;background:var(--dsw-sidebar)}
 .page-slash-item{display:flex;align-items:center;gap:10px;width:100%;margin:0;border:0;border-radius:8px;padding:6px 8px;background:transparent;color:var(--dsw-label);font:inherit;text-align:left;cursor:pointer}

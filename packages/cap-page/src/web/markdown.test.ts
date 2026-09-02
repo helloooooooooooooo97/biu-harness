@@ -58,6 +58,17 @@ test('heading stays a native h1 without node-view wrappers', () => {
   editor.destroy()
 })
 
+test('slash suggestion uses a fixed high stacking context', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const { resolve } = await import('node:path')
+  const src = await readFile(resolve(import.meta.dirname, './slash.ts'), 'utf8')
+  const css = await readFile(resolve(import.meta.dirname, './style.ts'), 'utf8')
+  assert.match(src, /strategy: 'fixed'/)
+  assert.match(src, /zIndex = '10000'/)
+  assert.match(css, /\.page-slash\{[^}]*z-index:10000/)
+  assert.match(css, /\.page-editor \.page-block\{[^}]*isolation:isolate/)
+})
+
 test('slash command turns the current block into a heading', () => {
   const editor = new Editor({
     extensions: pageEditorExtensions(),

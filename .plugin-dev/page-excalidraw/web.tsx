@@ -137,7 +137,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
   const canvas = (
     <div
       className={expanded ? 'h-full w-full' : 'pointer-events-none h-full w-full'}
-      style={{ height: '100%', width: '100%' }}
+      style={{ height: '100%', width: '100%', isolation: 'isolate', overflow: 'hidden' }}
     >
       <Excalidraw
         initialData={{
@@ -169,7 +169,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
       <div className="h-[280px]">{expanded ? null : canvas}</div>
       {expanded
         ? createPortal(
-            <div className="fixed inset-0 z-[80] flex flex-col bg-[var(--background)]">
+            <div className="fixed inset-0 z-[20] flex flex-col bg-[var(--background)]">
               <div className="flex items-center justify-between border-b border-[var(--border)] px-3 py-2 text-sm">
                 <span>画板</span>
                 <button type="button" className="rounded px-2 py-1 hover:bg-[var(--muted)]" onClick={() => setExpanded(false)}>
