@@ -28,7 +28,7 @@ export function loadViews(collectionPath: string): SavedView[] {
   return []
 }
 
-export type CrumbRecord = { id: string; label: string; emoji?: string }
+export type CrumbRecord = { id: string; label: string; emoji?: string; mascot?: unknown }
 
 const memoryRecords = new Map<string, CrumbRecord[]>()
 

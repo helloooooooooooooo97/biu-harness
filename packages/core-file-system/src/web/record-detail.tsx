@@ -3,11 +3,10 @@ import type { CollectionChrome } from '@biu/type-file-system/ui'
 import type { CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
 import { HashtagIcon } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
-import { contentFieldKey, formatField, resolveFieldType, uniqueValues } from './fields.ts'
+import { contentFieldKey, formatField, resolveFieldType } from './fields.ts'
 import { LocalText } from './controls.tsx'
-import { FieldEditor, FilePreview } from './fsdb-cells.tsx'
+import { FilePreview } from './fsdb-cells.tsx'
 import { PropertyRow } from './property-row.tsx'
-import { SchemaFieldEditor } from './schema-field.tsx'
 import { RecordEmojiBoard } from '@biu/public-ui'
 import { TableGlyph } from './nav-glyphs.tsx'
 import { normalizeRecordEmoji, recordPreviewEmoji } from './sidebar-preview.ts'
@@ -54,7 +53,9 @@ function DetailTitleIcon({
         {emoji ? (
           <span className="fsdb-record-emoji">{emoji}</span>
         ) : Icon ? (
-          <Icon record={record} />
+          <span className="fsdb-record-mark is-lg">
+            <Icon record={record} />
+          </span>
         ) : (
           <TableGlyph icon={tableIcon} className="size-8" />
         )}
@@ -89,7 +90,6 @@ export function RecordDetail({
   schema,
   chrome,
   draft,
-  items,
   detailBody,
   labelOf,
   renderCell,
@@ -97,7 +97,6 @@ export function RecordDetail({
   writeOne,
   writePatch,
   tableIcon,
-  collectionPath,
   onOpenRecord,
   onDelete,
 }: {
@@ -105,7 +104,6 @@ export function RecordDetail({
   schema: CollectionSchema
   chrome?: CollectionChrome
   draft: Record<string, string>
-  items: DbRecord[]
   detailBody: unknown
   labelOf: (row: DbRecord) => string
   renderCell: (row: DbRecord, key: string, field: FieldSpec) => ReactNode
@@ -113,7 +111,6 @@ export function RecordDetail({
   writeOne: (row: DbRecord, key: string, field: FieldSpec, raw: string) => Promise<unknown> | void
   writePatch: (row: DbRecord, patch: Record<string, unknown>) => Promise<unknown> | void
   tableIcon?: string
-  collectionPath: string
   onOpenRecord?: (recordId: string, collection?: string) => void
   onDelete?: () => void
 }) {
@@ -196,38 +193,10 @@ export function RecordDetail({
                     if (key === 'id' || key === schema.labelField || key === contentFieldKey(schema)) return null
                     const kind = resolveFieldType(field)
                     if (kind === 'schema' && !field.writable) return null
-                    if (kind === 'schema') {
-                      return (
-                        <PropertyRow key={key} field={field} fieldKey={key} stacked>
-                          <div className="fsdb-prop-val is-schema">
-                            <SchemaFieldEditor
-                              collectionPath={collectionPath}
-                              record={selected}
-                              value={selected[key]}
-                              writable={field.writable}
-                              onChange={(next) => void writePatch(selected, { [key]: next })}
-                            />
-                          </div>
-                        </PropertyRow>
-                      )
-                    }
                     return (
-                      <PropertyRow key={key} field={field} fieldKey={key}>
-                        <div className="fsdb-prop-val" title={formatField(field, selected[key])}>
-                        {field.writable ? (
-                          <FieldEditor
-                            fieldKey={key}
-                            field={field}
-                            value={draft[key] ?? ''}
-                            options={uniqueValues(items, key, field)}
-                            onChange={(next) => {
-                              setDraft((prev) => ({ ...prev, [key]: next }))
-                              void writeOne(selected, key, field, next)
-                            }}
-                          />
-                        ) : (
-                          renderCell(selected, key, field)
-                        )}
+                      <PropertyRow key={key} field={field} fieldKey={key} stacked={kind === 'schema'}>
+                        <div className={kind === 'schema' ? 'fsdb-prop-val is-schema' : 'fsdb-prop-val'} title={formatField(field, selected[key])}>
+                          {renderCell(selected, key, field)}
                         </div>
                       </PropertyRow>
                     )

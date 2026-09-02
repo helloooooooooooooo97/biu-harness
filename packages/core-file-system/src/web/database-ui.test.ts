@@ -25,6 +25,17 @@ test('decorate merges cells; later layer wins; dispose restores', () => {
   assert.equal(ui.chrome('/plugins').cells?.name, undefined)
 })
 
+test('decorate keeps Icon as the record mark, later layer wins', () => {
+  const ctx = new Context()
+  const ui = new DatabaseUiService(ctx)
+  const IconA = () => null
+  const IconB = () => null
+  ui.decorate('/sessions', { Icon: IconA })
+  assert.equal(ui.chrome('/sessions').Icon, IconA)
+  ui.decorate('/sessions', { Icon: IconB })
+  assert.equal(ui.chrome('/sessions').Icon, IconB)
+})
+
 test('decorate notifies subscribers', () => {
   const ctx = new Context()
   const ui = new DatabaseUiService(ctx)

@@ -167,7 +167,7 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
       inspector: true,
       blurb: 'Task table in File System; detail panes host scripts and progress reports.',
       order: 21,
-      icon: 'clipboard-document-list',
+      icon: 'check-circle',
     },
     schema: {
       labelField: 'title',

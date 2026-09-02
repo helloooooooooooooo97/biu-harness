@@ -59,20 +59,20 @@ import { buildCrumbs, type CrumbTarget } from './sidebar-nav.ts'
 import { CrumbTrail } from './crumb-trail.tsx'
 import { pickDomAttrs, recordPickKind } from './pick-dom.ts'
 import { recordPreviewEmoji, crumbRecordLabel } from './sidebar-preview.ts'
+import { recordPreviewMascot, RecordMark } from './record-mark.tsx'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
 import {
   actionIcon,
-  BoolCell,
   DefaultCell,
   draftFromRecord,
   FieldEditor,
   FieldGlyph,
   FilePreview,
+  fieldDraftValue,
   ModeGlyph,
   parseFieldValue,
   VIEW_MODES,
   visibleActions,
-  boolOn,
 } from './fsdb-cells.tsx'
 import { ensureFsdbStyle } from './fsdb-style.ts'
 import { RecordDetail } from './record-detail.tsx'
@@ -109,7 +109,7 @@ import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 import { mergeTableViews } from '../catalog-views.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
-import { SchemaChips } from './schema-field.tsx'
+import { SchemaChips, SchemaFieldEditor } from './schema-field.tsx'
 import { loadSchemaTags, pullSchemaTags } from './schema-tags.ts'
 
 type StatResult = { schema?: CollectionSchema }
@@ -744,12 +744,14 @@ export function CollectionBrowser({
       id: row.id,
       label: crumbRecordLabel(row, schema?.labelField),
       emoji: recordPreviewEmoji(row),
+      mascot: recordPreviewMascot(row),
     }))
     if (selected && !rows.some((row) => row.id === selected.id)) {
       rows.push({
         id: selected.id,
         label: crumbRecordLabel(selected, schema?.labelField),
         emoji: recordPreviewEmoji(selected),
+        mascot: recordPreviewMascot(selected),
       })
     }
     rememberRecords(collectionPath, rows)
@@ -1201,6 +1203,7 @@ export function CollectionBrowser({
           id: row.id,
           label: crumbRecordLabel(row, schema?.labelField),
           emoji: recordPreviewEmoji(row),
+          mascot: recordPreviewMascot(row),
         })),
       }),
     [activeView?.name, activeViewId, collectionPath, items, routeViewId, schema?.labelField, selected, tables, title, views],
@@ -1210,34 +1213,35 @@ export function CollectionBrowser({
   const recordPick = (row: DbRecord) => pickDomAttrs(recordKind, row.id, labelOf(row))
 
   function renderCell(row: DbRecord, key: string, field: FieldSpec) {
+    const kind = resolveFieldType(field)
+    if (kind === 'schema') {
+      if (field.writable) {
+        return (
+          <SchemaFieldEditor
+            collectionPath={collectionPath}
+            record={row}
+            value={row[key]}
+            writable
+            onChange={(next) => void writePatch(row, { [key]: next })}
+          />
+        )
+      }
+      return <SchemaChips value={row[key]} tags={loadSchemaTags()} />
+    }
+    if (field.writable && kind !== 'file') {
+      return (
+        <FieldEditor
+          fieldKey={key}
+          field={field}
+          value={fieldDraftValue(field, row[key])}
+          options={uniqueValues(items, key, field)}
+          onChange={(next) => void writeOne(row, key, field, next)}
+        />
+      )
+    }
     const Custom = chrome?.cells?.[key]
     const fallback = formatField(field, row[key])
     if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={fallback} />
-    if (resolveFieldType(field) === 'schema') {
-      return <SchemaChips value={row[key]} tags={loadSchemaTags()} />
-    }
-    if (resolveFieldType(field) === 'select' && field.writable && field.enum?.length) {
-      return (
-        <CellSelect
-          value={String(row[key] ?? '')}
-          options={field.enum.map((item) => ({ value: item, label: item }))}
-          onSelect={(next) => void writeOne(row, key, field, next)}
-        />
-      )
-    }
-    if (resolveFieldType(field) === 'boolean') {
-      return (
-        <BoolCell
-          on={boolOn(row[key])}
-          writable={field.writable}
-          onToggle={
-            field.writable
-              ? () => void writeOne(row, key, field, boolOn(row[key]) ? 'false' : 'true')
-              : undefined
-          }
-        />
-      )
-    }
     return <DefaultCell field={field} value={row[key]} />
   }
 
@@ -1256,16 +1260,24 @@ export function CollectionBrowser({
   }) {
     const key = schema?.labelField
     const field = key && schema ? schema.fields[key] : undefined
-    const body = chrome?.Title ? (
-      <chrome.Title record={row} label={labelOf(row)} />
-    ) : key && field ? (
-      renderCell(row, key, field)
-    ) : (
-      <>{labelOf(row)}</>
-    )
+    const body =
+      key && field?.writable ? (
+        renderCell(row, key, field)
+      ) : chrome?.Title ? (
+        <chrome.Title record={row} label={labelOf(row)} />
+      ) : key && field ? (
+        renderCell(row, key, field)
+      ) : (
+        <>{labelOf(row)}</>
+      )
     const host = (
       <span className="fsdb-title-host">
         {openDetail ? <RowCheck id={row.id} /> : null}
+        <RecordMark
+          record={row}
+          tableIcon={currentTable?.view?.icon}
+          Icon={chrome?.Icon}
+        />
         <span className="fsdb-title-text">{body}</span>
       </span>
     )
@@ -1414,10 +1426,13 @@ export function CollectionBrowser({
     )
   }
 
-  function RecordProperties({ row, omit, skipBoolean }: { row: DbRecord; omit?: string; skipBoolean?: boolean }) {
+  function RecordProperties({ row, omit }: { row: DbRecord; omit?: string }) {
     const hide = omit ?? activeGroup?.key
+    const bodyKey = contentFieldKey(schema)
     const cols = (hide ? propColumns.filter((item) => item.key !== hide) : propColumns).filter((item) => {
-      if (skipBoolean && resolveFieldType(item.field) === 'boolean') return false
+      if (item.key === schema?.labelField || item.key === bodyKey) return false
+      const kind = resolveFieldType(item.field)
+      if (item.field.writable && kind !== 'file') return true
       return fieldHasValue(item.field, row[item.key])
     })
     if (!cols.length) return null
@@ -1502,16 +1517,16 @@ export function CollectionBrowser({
         <div className="tasks-queue-item-body">
           <span className="fsdb-title-host tasks-queue-item-lead">
             <RowCheck id={row.id} />
-            <button type="button" className="tasks-queue-item-main" data-biu-action="open" onClick={() => openRow(row)}>
+            <div className="tasks-queue-item-main">
               <span className="tasks-queue-item-title">
                 <RecordTitle row={row} openDetail={false} />
               </span>
-            </button>
+            </div>
             <div className="tasks-queue-item-tools">
               <RecordRowTools row={row} />
             </div>
           </span>
-          <RecordProperties row={row} skipBoolean />
+          <RecordProperties row={row} />
         </div>
       </li>
     )
@@ -1525,14 +1540,14 @@ export function CollectionBrowser({
         </div>
         <div className="tasks-minicard-title fsdb-title-host">
           <RowCheck id={row.id} />
-          <button type="button" className="tasks-minicard-open" data-biu-action="open" onClick={() => openRow(row)}>
+          <div className="tasks-minicard-open">
             <span className="tasks-minicard-titletext">
               <RecordTitle row={row} openDetail={false} />
             </span>
-          </button>
+          </div>
         </div>
         <div className="tasks-minicard-foot">
-          <RecordProperties row={row} skipBoolean />
+          <RecordProperties row={row} />
         </div>
       </div>
     )
@@ -2417,7 +2432,6 @@ export function CollectionBrowser({
           schema={schema}
           chrome={chrome}
           draft={draft}
-          items={items}
           detailBody={detailBody}
           labelOf={labelOf}
           renderCell={renderCell}
@@ -2425,7 +2439,6 @@ export function CollectionBrowser({
           writeOne={writeOne}
           writePatch={writePatch}
           tableIcon={currentTable?.view?.icon}
-          collectionPath={collectionPath}
           onOpenRecord={(recordId, collection) => onOpenRecord?.(recordId, activeViewId, collection)}
           onDelete={canDelete && selected ? () => setDlg({ kind: 'delete-record', row: selected }) : undefined}
         />

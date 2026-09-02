@@ -4,7 +4,7 @@ import {
   ArrowDownTrayIcon,
   ChatBubbleLeftIcon,
   ChatBubbleLeftRightIcon,
-  ClipboardDocumentListIcon,
+  CheckCircleIcon,
   Cog6ToothIcon,
   DocumentIcon,
   PuzzlePieceIcon,
@@ -19,7 +19,7 @@ import { requestInspectorOpen, requestInspectorTab, setChatOverlay } from './cha
 const INSPECTOR_DOCK_TOOLS = [
   { id: 'inspector:pages', title: '页面', tabId: 'database:/pages', order: 40, Icon: DocumentIcon },
   { id: 'inspector:sessions', title: '会话', tabId: 'database:/sessions', order: 41, Icon: ChatBubbleLeftRightIcon },
-  { id: 'inspector:tasks', title: '任务', tabId: 'database:/tasks', order: 42, Icon: ClipboardDocumentListIcon },
+  { id: 'inspector:tasks', title: '任务', tabId: 'database:/tasks', order: 42, Icon: CheckCircleIcon },
   { id: 'inspector:plugins', title: '插件', tabId: 'database:/plugins', order: 43, Icon: PuzzlePieceIcon },
   { id: 'inspector:tags', title: '标签', tabId: 'database:/supertags', order: 44, Icon: TagIcon },
   { id: 'inspector:traj', title: '轨迹', tabId: 'traj', order: 45, Icon: MapIcon },

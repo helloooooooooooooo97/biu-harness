@@ -103,7 +103,15 @@ function CrumbMenu({
                 onOpenId(null)
               }}
             >
-              <CrumbItemGlyph kind={glyphKind} icon={choice.icon} mode={choice.mode} emoji={choice.emoji} />
+              <CrumbItemGlyph
+                kind={glyphKind}
+                icon={choice.icon}
+                mode={choice.mode}
+                emoji={choice.emoji}
+                mascot={choice.mascot}
+                collection={choice.target.kind === 'record' ? choice.target.collection : undefined}
+                recordId={choice.target.kind === 'record' ? choice.target.recordId : undefined}
+              />
               <span className="chat-view-project-name">{choice.label}</span>
             </button>
           )
@@ -187,7 +195,15 @@ export function CrumbTrail({
         const glyph = (
           <>
             {!allowMenu && crumb.kind === 'view' ? <TableGlyph icon={tableIcon} /> : null}
-            <CrumbItemGlyph kind={crumb.kind} icon={crumb.icon ?? current?.icon} mode={current?.mode} emoji={current?.emoji} />
+            <CrumbItemGlyph
+              kind={crumb.kind}
+              icon={crumb.icon ?? current?.icon}
+              mode={current?.mode}
+              emoji={current?.emoji ?? crumb.emoji}
+              mascot={current?.mascot ?? crumb.mascot}
+              collection={crumb.kind === 'record' && crumb.target.kind === 'record' ? crumb.target.collection : undefined}
+              recordId={crumb.kind === 'record' && crumb.target.kind === 'record' ? crumb.target.recordId : undefined}
+            />
             {rootLocked ? null : <span className="chat-view-project-name">{crumb.label}</span>}
           </>
         )
