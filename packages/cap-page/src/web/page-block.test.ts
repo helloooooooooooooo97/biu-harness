@@ -5,6 +5,7 @@ import { Context } from 'cordis'
 import { pageEditorExtensions } from './kit.ts'
 import { filterSlashItems } from './slash.ts'
 import { PageEditorService } from './service.ts'
+import { duplicateAssetPath } from './page-block.ts'
 
 test('registerBlock adds a slash item and inserts pageBlock', async () => {
   const ctx = new Context()
@@ -114,6 +115,30 @@ test('slash insert for excalidraw only puts a file pointer in the node', async (
   assert.doesNotMatch(editor.getMarkdown(), /elements/)
   editor.destroy()
   await fiber.dispose()
+})
+
+test('duplicate pageBlock file pointers get a cloneFrom copy', () => {
+  assert.match(duplicateAssetPath('assets/画板.json'), /^assets\/画板-copy-[0-9a-f]{8}\.json$/)
+  const editor = new Editor({
+    extensions: pageEditorExtensions(),
+    content: { type: 'doc', content: [{ type: 'paragraph' }] },
+  })
+  editor.commands.setContent({
+    type: 'doc',
+    content: [
+      { type: 'pageBlock', attrs: { kind: 'excalidraw', data: { file: 'assets/board.json' } } },
+      { type: 'pageBlock', attrs: { kind: 'excalidraw', data: { file: 'assets/board.json' } } },
+    ],
+  })
+  const blocks = editor.getJSON().content?.filter((node) => node.type === 'pageBlock') ?? []
+  assert.equal(blocks.length, 2)
+  const first = blocks[0]?.attrs?.data as { file?: string; cloneFrom?: string }
+  const second = blocks[1]?.attrs?.data as { file?: string; cloneFrom?: string }
+  assert.equal(first.file, 'assets/board.json')
+  assert.ok(second.file && second.file !== first.file)
+  assert.equal(second.cloneFrom, 'assets/board.json')
+  assert.doesNotMatch(editor.getMarkdown(), /cloneFrom/)
+  editor.destroy()
 })
 
 test('pageBlock capture includes drawing surfaces', async () => {

@@ -140,6 +140,7 @@ test('collectPageAssetNames picks page asset pointers', () => {
   assert.equal(names.has('hero.png'), true)
   assert.equal(names.has('excalidraw-aa.json'), true)
   assert.equal(names.has('pack.zip'), true)
+  assert.equal(collectPageAssetNames('assets/画板-ab.json').has('画板-ab.json'), true)
   assert.equal(ASSET_GC_GRACE_MS, 24 * 60 * 60 * 1000)
 })
 

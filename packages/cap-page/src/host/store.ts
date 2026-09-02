@@ -10,14 +10,19 @@ export const PAGE_ASSETS = '.page/assets'
 export const ASSET_GC_GRACE_MS = 24 * 60 * 60 * 1000
 
 const ID_RE = /^[A-Za-z0-9._-]+$/
-const ASSET_REF_RE = /(?:(?:\.page\/)?assets\/|\/api\/page\/file\/)([A-Za-z0-9._-]+)/g
+const ASSET_FILE_RE = /^[\p{L}\p{N}._-]+$/u
+const ASSET_REF_RE = /(?:(?:\.page\/)?assets\/|\/api\/page\/file\/)([\p{L}\p{N}._-]+)/gu
+
+export function isPageAssetFileName(name: string) {
+  return Boolean(name) && name === basename(name) && name !== '.gitkeep' && ASSET_FILE_RE.test(name)
+}
 
 export function collectPageAssetNames(...chunks: unknown[]): Set<string> {
   const names = new Set<string>()
   const eat = (text: string) => {
     for (const match of text.matchAll(ASSET_REF_RE)) {
       const name = basename(match[1] ?? '')
-      if (name && name !== '.gitkeep' && ID_RE.test(name)) names.add(name)
+      if (isPageAssetFileName(name)) names.add(name)
     }
   }
   for (const chunk of chunks) {
@@ -350,7 +355,7 @@ export class PagesStore {
 
   async writeAsset(name: string, content: string) {
     const file = basename(name)
-    if (!file || file !== name.replace(/\\/g, '/') || !ID_RE.test(file)) throw new Error('invalid asset')
+    if (!file || file !== name.replace(/\\/g, '/') || !isPageAssetFileName(file)) throw new Error('invalid asset')
     await this.ensureDirs()
     await this.fs.write(`${PAGE_ASSETS}/${file}`, content)
     return { name: file, href: fileUrl(file) }
@@ -377,7 +382,7 @@ export class PagesStore {
       for (const name of collectPageAssetNames(dumpMarkdown(matterOf(row), row.notes ?? ''))) live.add(name)
     }
     for (const name of names) {
-      if (name === '.gitkeep' || live.has(name) || !ID_RE.test(name)) continue
+      if (name === '.gitkeep' || live.has(name) || !isPageAssetFileName(name)) continue
       const full = this.fs.resolve(`${PAGE_ASSETS}/${name}`)
       try {
         const info = await stat(full)

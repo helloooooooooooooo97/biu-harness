@@ -1,10 +1,12 @@
 import { mergeAttributes, Node } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
-import { PluginKey } from '@tiptap/pm/state'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
+import type { Node as PmNode } from '@tiptap/pm/model'
 import { PageBlockView } from './page-block-view.tsx'
 import { getPageEditor } from './service.ts'
 
 const metaKey = new PluginKey('page-block-meta')
+const uniqueFilesKey = new PluginKey('page-block-unique-files')
 
 function parseData(raw: string | null) {
   if (!raw) return {}
@@ -17,6 +19,24 @@ function parseData(raw: string | null) {
       return {}
     }
   }
+}
+
+function blockFile(node: PmNode) {
+  const data = node.attrs.data
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return ''
+  const file = (data as { file?: unknown }).file
+  return typeof file === 'string' ? file : ''
+}
+
+/** 复制块时换一个 assets 文件名，内容由 View 按 cloneFrom 再拷一份。 */
+export function duplicateAssetPath(file: string) {
+  const raw = file.replace(/^assets\//, '')
+  const dot = raw.lastIndexOf('.')
+  const ext = dot >= 0 ? raw.slice(dot) : '.json'
+  let stem = dot >= 0 ? raw.slice(0, dot) : raw
+  stem = stem.replace(/-copy-[0-9a-f]{8}$/i, '')
+  const id = crypto.randomUUID().replace(/-/g, '').slice(0, 8)
+  return `assets/${stem}-copy-${id}${ext}`
 }
 
 export const pageBlock = Node.create({
@@ -74,7 +94,9 @@ export const pageBlock = Node.create({
 
   renderMarkdown: (node) => {
     const kind = String(node.attrs?.kind ?? 'card')
-    const body = JSON.stringify(node.attrs?.data ?? {}, null, 2)
+    const data = { ...((node.attrs?.data && typeof node.attrs.data === 'object' ? node.attrs.data : {}) as Record<string, unknown>) }
+    delete data.cloneFrom
+    const body = JSON.stringify(data, null, 2)
     return `:::pageBlock {kind=${kind}}\n${body}\n:::`
   },
 
@@ -111,6 +133,41 @@ export const pageBlock = Node.create({
         )
       },
     })
+  },
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: uniqueFilesKey,
+        appendTransaction(transactions, _old, state) {
+          if (!transactions.some((item) => item.docChanged)) return null
+          const seen = new Set<string>()
+          const dupes: { pos: number; node: PmNode }[] = []
+          state.doc.descendants((node, pos) => {
+            if (node.type.name !== 'pageBlock') return
+            const file = blockFile(node)
+            if (!file) return
+            if (!seen.has(file)) {
+              seen.add(file)
+              return
+            }
+            dupes.push({ pos, node })
+          })
+          if (!dupes.length) return null
+          let tr = state.tr
+          for (const { pos, node } of dupes.slice().sort((a, b) => b.pos - a.pos)) {
+            const data = {
+              ...((node.attrs.data && typeof node.attrs.data === 'object' ? node.attrs.data : {}) as Record<string, unknown>),
+            }
+            const from = String(data.file)
+            data.file = duplicateAssetPath(from)
+            data.cloneFrom = from
+            tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, data })
+          }
+          return tr
+        },
+      }),
+    ]
   },
 
   onCreate() {

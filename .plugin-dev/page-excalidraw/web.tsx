@@ -23,22 +23,36 @@ type Scene = {
   files?: Record<string, unknown>
 }
 
+type DrawApi = {
+  refresh: () => void
+  scrollToContent?: (target?: unknown, opts?: { fitToContent?: boolean; animate?: boolean }) => void
+}
+
+const DARK_BG = '#121212'
+
 function emptyScene(): Scene {
-  return { elements: [], appState: { viewBackgroundColor: '#ffffff' }, files: {} }
+  return { elements: [], appState: { theme: 'dark', viewBackgroundColor: DARK_BG }, files: {} }
 }
 
 function parseScene(raw: unknown): Scene {
   if (!raw || typeof raw !== 'object') return emptyScene()
   const o = raw as Scene
+  const appState = o.appState && typeof o.appState === 'object' ? { ...o.appState } : {}
+  if (!appState.theme) appState.theme = 'dark'
+  if (!appState.viewBackgroundColor) appState.viewBackgroundColor = DARK_BG
   return {
     elements: Array.isArray(o.elements) ? o.elements : [],
-    appState: o.appState && typeof o.appState === 'object' ? o.appState : { viewBackgroundColor: '#ffffff' },
+    appState,
     files: o.files && typeof o.files === 'object' ? o.files : {},
   }
 }
 
 function assetName(file: string) {
   return file.replace(/^assets\//, '')
+}
+
+function validAssetFile(name: string) {
+  return name === name.replace(/[\\/]/g, '') && /^[\p{L}\p{N}._-]+$/u.test(name)
 }
 
 async function loadScene(file: string): Promise<Scene> {
@@ -70,24 +84,84 @@ function saveScene(file: string, scene: Scene) {
   })
 }
 
+function fitView(api: DrawApi | null) {
+  if (!api) return
+  api.refresh?.()
+  api.scrollToContent?.(undefined, { fitToContent: true, animate: false })
+}
+
 const UI_OPTIONS = { canvasActions: { loadScene: false, saveToActiveFile: false } } as const
 
-function Board(props: { data: Record<string, unknown>; update: (p: Record<string, unknown>) => void }) {
+function BoardBar(props: {
+  file: string
+  expanded: boolean
+  writable: boolean
+  onToggle: () => void
+  onRename: (name: string) => void
+}) {
+  const [draft, setDraft] = useState(assetName(props.file))
+  useEffect(() => {
+    setDraft(assetName(props.file))
+  }, [props.file])
+
+  const commit = () => {
+    let next = draft.trim() || assetName(props.file)
+    if (!next.includes('.')) next = `${next}.json`
+    if (!validAssetFile(next) || next === assetName(props.file)) {
+      setDraft(assetName(props.file))
+      return
+    }
+    props.onRename(next)
+  }
+
+  return (
+    <div className="flex items-center gap-2 px-1 py-1 text-xs text-[var(--muted-foreground)]">
+      <span className="shrink-0">画板</span>
+      <input
+        data-page-block-capture=""
+        className="min-w-0 flex-1 rounded bg-transparent px-1 py-0.5 text-center text-[var(--foreground)] outline-none hover:bg-[var(--muted)] focus:bg-[var(--muted)]"
+        value={draft}
+        disabled={!props.writable}
+        aria-label="画板文件名"
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            ;(event.target as HTMLInputElement).blur()
+          }
+        }}
+      />
+      <button
+        type="button"
+        className="shrink-0 rounded px-2 py-0.5 hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+        onClick={props.onToggle}
+      >
+        {props.expanded ? '缩小' : '放大'}
+      </button>
+    </div>
+  )
+}
+
+function Board(props: { data: Record<string, unknown>; update: (p: Record<string, unknown>) => void; writable: boolean }) {
   const file = String(props.data.file || '')
   const [scene, setScene] = useState<Scene | null>(null)
   const [expanded, setExpanded] = useState(false)
-  const apiRef = useRef<{ refresh: () => void } | null>(null)
+  const apiRef = useRef<DrawApi | null>(null)
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSaved = useRef('')
   const live = useRef<Scene | null>(null)
+  const expandedRef = useRef(expanded)
+  expandedRef.current = expanded
 
-  const bindApi = useCallback((api: { refresh: () => void } | null) => {
+  const bindApi = useCallback((api: DrawApi | null) => {
     apiRef.current = api
+    requestAnimationFrame(() => fitView(api))
   }, [])
 
   useEffect(() => {
     if (!file) {
-      props.update({ file: `assets/excalidraw-${crypto.randomUUID()}.json` })
+      props.update({ file: `assets/画板-${crypto.randomUUID().slice(0, 8)}.json` })
       return
     }
     let gone = false
@@ -103,12 +177,15 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
   }, [file])
 
   useEffect(() => {
-    if (!expanded) return
+    if (!expanded) {
+      const id = requestAnimationFrame(() => fitView(apiRef.current))
+      return () => cancelAnimationFrame(id)
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setExpanded(false)
     }
     window.addEventListener('keydown', onKey)
-    const id = requestAnimationFrame(() => apiRef.current?.refresh())
+    const id = requestAnimationFrame(() => fitView(apiRef.current))
     return () => {
       window.removeEventListener('keydown', onKey)
       cancelAnimationFrame(id)
@@ -130,6 +207,13 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
     pending.current = setTimeout(() => saveScene(file, next), 400)
   }, [file])
 
+  const onRename = (name: string) => {
+    const nextFile = `assets/${name}`
+    const current = live.current
+    if (current) saveScene(nextFile, current)
+    props.update({ file: nextFile })
+  }
+
   if (!file) return <div className="text-sm text-[var(--muted-foreground)]">正在创建画板文件…</div>
   if (!scene) return <div className="text-sm text-[var(--muted-foreground)]">正在加载画板…</div>
 
@@ -140,9 +224,10 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
       style={{ height: '100%', width: '100%', isolation: 'isolate', overflow: 'hidden' }}
     >
       <Excalidraw
+        theme="dark"
         initialData={{
           elements: start.elements as never,
-          appState: { ...start.appState, collaborators: new Map() },
+          appState: { ...start.appState, theme: 'dark', collaborators: new Map() },
           files: start.files as never,
         }}
         viewModeEnabled={!expanded}
@@ -155,27 +240,25 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
   )
 
   return (
-    <div className="overflow-hidden rounded-md border border-[var(--border)] bg-[var(--background)]">
-      <div className="flex items-center justify-between border-b border-[var(--border)] px-2 py-1 text-xs text-[var(--muted-foreground)]">
-        <span>画板</span>
-        <button
-          type="button"
-          className="rounded px-2 py-0.5 hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
-          onClick={() => setExpanded((v) => !v)}
-        >
-          {expanded ? '缩小' : '放大'}
-        </button>
-      </div>
+    <div className="overflow-hidden bg-transparent">
+      <BoardBar
+        file={file}
+        expanded={expanded}
+        writable={props.writable}
+        onToggle={() => setExpanded((v) => !v)}
+        onRename={onRename}
+      />
       <div className="h-[280px]">{expanded ? null : canvas}</div>
       {expanded
         ? createPortal(
-            <div className="fixed inset-0 z-[20] flex flex-col bg-[var(--background)]">
-              <div className="flex items-center justify-between border-b border-[var(--border)] px-3 py-2 text-sm">
-                <span>画板</span>
-                <button type="button" className="rounded px-2 py-1 hover:bg-[var(--muted)]" onClick={() => setExpanded(false)}>
-                  缩小
-                </button>
-              </div>
+            <div className="fixed inset-0 flex flex-col bg-[#121212]" style={{ zIndex: 9990 }}>
+              <BoardBar
+                file={file}
+                expanded={expanded}
+                writable={props.writable}
+                onToggle={() => setExpanded(false)}
+                onRename={onRename}
+              />
               <div className="min-h-0 flex-1">{canvas}</div>
             </div>,
             document.body,
@@ -191,7 +274,7 @@ export function apply(ctx: { pageEditor: PageEditor }) {
     label: '画板',
     hint: '手绘白板，放大后编辑',
     aliases: ['excalidraw', 'draw', '白板', '画板', 'board'],
-    defaults: () => ({ file: `assets/excalidraw-${crypto.randomUUID()}.json` }),
+    defaults: () => ({ file: `assets/画板-${crypto.randomUUID().slice(0, 8)}.json` }),
     View: Board,
   })
 }
