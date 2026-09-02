@@ -396,5 +396,6 @@ test('excalidraw board onChange does not setState', async () => {
   assert.doesNotMatch(onChange, /setScene/)
   assert.match(onChange, /saveScene/)
   assert.match(src, /res\.status === 404/)
-  assert.match(src, /createPortal/)
+  assert.match(src, /export const inject/)
+  assert.match(src, /View: Board/)
 })

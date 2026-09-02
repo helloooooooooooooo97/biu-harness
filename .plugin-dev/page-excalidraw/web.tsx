@@ -3,16 +3,17 @@ import '@excalidraw/excalidraw/index.css'
 import { createPortal } from 'react-dom'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-type Ctx = {
-  inject: (name: string) => unknown
-}
+export const name = 'page-excalidraw'
+export const inject = ['pageEditor']
 
 type PageEditor = {
   registerBlock: (spec: {
     kind: string
     label: string
+    hint?: string
+    aliases?: string[]
     defaults?: () => Record<string, unknown>
-    view: (props: { data: Record<string, unknown>; update: (p: Record<string, unknown>) => void }) => unknown
+    View: (props: { data: Record<string, unknown>; update: (p: Record<string, unknown>) => void; writable: boolean }) => unknown
   }) => void
 }
 
@@ -184,12 +185,13 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
   )
 }
 
-export default function apply(ctx: Ctx) {
-  const pageEditor = ctx.inject('pageEditor') as PageEditor | undefined
-  pageEditor?.registerBlock({
+export function apply(ctx: { pageEditor: PageEditor }) {
+  ctx.pageEditor.registerBlock({
     kind: 'excalidraw',
     label: '画板',
+    hint: '手绘白板，放大后编辑',
+    aliases: ['excalidraw', 'draw', '白板', '画板', 'board'],
     defaults: () => ({ file: `assets/excalidraw-${crypto.randomUUID()}.json` }),
-    view: (props) => <Board data={props.data} update={props.update} />,
+    View: Board,
   })
 }

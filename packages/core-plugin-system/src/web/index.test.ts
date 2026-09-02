@@ -136,6 +136,8 @@ test('packed page-excalidraw plugin stores scenes as page assets', async () => {
   assert.match(src, /viewModeEnabled=\{!expanded\}/)
   assert.match(src, /createPortal/)
   assert.match(src, /document\.body/)
+  assert.match(src, /export const inject = \['pageEditor'\]/)
+  assert.match(src, /View: Board/)
   assert.match(src, /defaults: \(\) => \(\{ file:/)
   assert.match(src, /res\.status === 404/)
   const onChange = src.match(/const onChange = useCallback\([\s\S]*?\}, \[file\]\)/)?.[0]
@@ -144,5 +146,7 @@ test('packed page-excalidraw plugin stores scenes as page assets', async () => {
   assert.match(onChange, /saveScene/)
   const packed = await readFile(resolve(import.meta.dirname, '../../../../.plugin/page-excalidraw/web.js'), 'utf8')
   assert.match(packed, /ReactJSXRuntime/)
+  assert.match(packed, /pageEditor/)
+  assert.match(packed, /inject/)
   assert.match(src, /refresh/)
 })

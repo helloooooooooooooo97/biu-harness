@@ -8,7 +8,7 @@ import * as snapshot from '@biu/web-snapshot'
 import * as sessionView from '@biu/web-session-view'
 import * as projectView from '@biu/web-project-view'
 import * as uiHub from './index.ts'
-import { isRuntimeWebModule } from './index.ts'
+import { isRuntimeWebModule, runtimeWebPlugin } from './index.ts'
 import { uiPackageLoaders } from 'virtual:cordis-ui-loaders'
 
 const Dummy = () => null
@@ -30,6 +30,19 @@ function plugin(id: string, enabled: boolean, web?: string) {
 test('store plugin web urls are runtime modules', () => {
   assert.equal(isRuntimeWebModule('/api/plugin-store/files/store-hello/web.js'), true)
   assert.equal(isRuntimeWebModule('@biu/core-task-system/web'), false)
+})
+
+test('runtimeWebPlugin keeps inject when default is apply', () => {
+  function apply() {}
+  const plugin = runtimeWebPlugin({
+    name: 'page-excalidraw',
+    inject: ['pageEditor'],
+    apply,
+    default: apply,
+  }) as { name?: string; inject?: string[]; apply?: unknown }
+  assert.equal(plugin.name, 'page-excalidraw')
+  assert.deepEqual(plugin.inject, ['pageEditor'])
+  assert.equal(plugin.apply, apply)
 })
 
 test('ui-hub unloads disabled plugins before importing new ones', async () => {
