@@ -65,6 +65,13 @@ test('brand mascot lives at the corner; sidebar head is title plus collapse', ()
   assert.match(css, /\.os-dock\s*\{/)
   assert.match(css, /\.os-dock-shelf-row\s*\{[^}]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.1\)/s)
   assert.match(css, /\.os-dock-shelf-row\s*\{[^}]*backdrop-filter:\s*blur/s)
+  assert.match(css, /\.chat-view-header-expand\s*\{[^}]*color:\s*#F0EFED/s)
+  assert.match(css, /\.chat-view-header-expand:hover\s*\{[^}]*color:\s*#F0EFED/s)
+  assert.match(css, /\.chat-view-header-expand\.is-active\s*\{[^}]*color:\s*#F0EFED/s)
+  assert.match(css, /\.chat-view-project\s*\{[^}]*color:\s*#F0EFED/s)
+  assert.match(css, /\.chat-view-session-title\s*\{[^}]*color:\s*#F0EFED/s)
+  assert.match(css, /\.chat-overlay-panel \.chat-view-header\s*\{[^}]*color:\s*#F0EFED/s)
+  assert.match(css, /\.inspector-tab\s*\{[^}]*color:\s*#F0EFED/s)
 })
 
 test('shell columns keep three tracks so sidebar and inspector can animate', () => {

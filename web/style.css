@@ -231,7 +231,7 @@ body {
   border-radius: 6px;
   background: transparent;
   padding: 4px 10px;
-  color: var(--dsw-label);
+  color: #F0EFED;
   font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
@@ -633,7 +633,7 @@ body {
   border-radius: 6px;
   background: transparent;
   padding: 0 8px;
-  color: var(--dsw-sidebar-fg);
+  color: #F0EFED;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -642,12 +642,12 @@ body {
 
 .inspector-tab:hover {
   background: var(--dsw-hover);
-  color: var(--dsw-sidebar-fg-active);
+  color: #F0EFED;
 }
 
 .inspector-tab.is-active {
   background: var(--dsw-hover);
-  color: var(--dsw-sidebar-fg-active);
+  color: #F0EFED;
 }
 
 .inspector-tab-main {
@@ -718,7 +718,7 @@ body {
   border-radius: 4px;
   background: transparent;
   box-shadow: none;
-  color: var(--dsw-sidebar-fg);
+  color: #F0EFED;
   cursor: pointer;
 }
 
@@ -727,7 +727,7 @@ body {
 .inspector-crumb-close:hover {
   background: var(--dsw-hover);
   box-shadow: none;
-  color: var(--dsw-sidebar-fg-active);
+  color: #F0EFED;
 }
 
 .inspector-crumb-leaf,
@@ -1035,13 +1035,13 @@ body {
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--dsw-sidebar-fg);
+  color: #F0EFED;
   cursor: pointer;
 }
 
 .chat-view-header-expand:hover {
   background: var(--dsw-hover);
-  color: var(--dsw-sidebar-fg-active);
+  color: #F0EFED;
 }
 
 .chat-view-project {
@@ -1050,14 +1050,14 @@ body {
   max-width: 220px;
   align-items: center;
   gap: 6px;
-  color: var(--dsw-sidebar-fg);
+  color: #F0EFED;
 }
 
 .chat-view-project-icon {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-  color: var(--dsw-sidebar-fg);
+  color: #F0EFED;
 }
 
 .chat-view-project-name {
@@ -1202,6 +1202,7 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   padding-inline: 4px;
+  color: #F0EFED;
 }
 
 .chat-overlay-panel .chat-view-header-left {
@@ -4985,7 +4986,7 @@ body {
 
 .chat-view-header-expand.is-active {
   background: var(--dsw-hover);
-  color: var(--dsw-sidebar-fg-active);
+  color: #F0EFED;
 }
 
 /* ===== Mascot Dance Stage（彩蛋）===== */
