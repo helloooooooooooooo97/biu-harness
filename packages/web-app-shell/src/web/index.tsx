@@ -193,13 +193,15 @@ function PluginModuleStage({
       {sorted.map((entry) => {
         const extra = entry.props?.() ?? {}
         const moduleId = String(extra.moduleId ?? extra.id ?? entry.id)
-        if (moduleId !== activeId) return null
+        const active = moduleId === activeId
         const Component = entry.Component
         return (
           <div
             key={entry.id}
-            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+            className={`app-stage-pane${active ? ' is-active' : ''}`}
             data-testid={`${moduleId}-module`}
+            aria-hidden={!active}
+            inert={!active || undefined}
           >
             <Component {...extra} renderSlot={renderSlot} />
           </div>
@@ -656,11 +658,13 @@ function Shell(props: SlotProps) {
         onSettings={openSettings}
       />
 
-      <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+      <main className="app-stage">
         <div
-          className={`min-h-0 min-w-0 flex-col overflow-hidden ${activeModule === 'agent' ? 'flex flex-1' : 'contents'}`}
+          className={`app-stage-pane${activeModule === 'agent' ? ' is-active' : ''}`}
+          aria-hidden={activeModule !== 'agent'}
+          inert={activeModule !== 'agent' || undefined}
         >
-          {activeModule === 'agent' ? chatHeader : null}
+          {chatHeader}
           <AgentMainPanels
             renderSlot={props.renderSlot}
             header={overlayHeader}

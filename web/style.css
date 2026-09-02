@@ -879,7 +879,8 @@ body {
   padding: 28px 20px 40px;
 }
 
-.inspector-stage {
+.inspector-stage,
+.app-stage {
   position: relative;
   display: grid;
   min-height: 0;
@@ -888,7 +889,8 @@ body {
   overflow: hidden;
 }
 
-.inspector-stage-pane {
+.inspector-stage-pane,
+.app-stage-pane {
   grid-area: 1 / 1;
   display: flex;
   min-height: 0;
@@ -905,13 +907,28 @@ body {
     visibility 0s linear 220ms;
 }
 
-.inspector-stage-pane.is-active {
+.inspector-stage-pane.is-active,
+.app-stage-pane.is-active {
   opacity: 1;
   transform: none;
   pointer-events: auto;
   visibility: visible;
   z-index: 1;
   transition-delay: 0s;
+}
+
+@keyframes app-pane-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.app-pane-in {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  animation: app-pane-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .inspector-empty-list {
@@ -1143,8 +1160,11 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .app-shell-agent,
   .app-shell-module,
-  .inspector-stage-pane {
+  .inspector-stage-pane,
+  .app-stage-pane,
+  .app-pane-in {
     transition: none;
+    animation: none;
   }
 }
 

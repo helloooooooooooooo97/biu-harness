@@ -1808,6 +1808,10 @@ export function CollectionBrowser({
         </header>
         )}
         <div className="fsdb-right-body">
+        <div
+          key={nested ? 'embed' : `${collectionPath}:${detailId ?? ''}`}
+          className={nested ? undefined : 'app-pane-in'}
+        >
         {!detailId ? (
         <div className="tasks-main fsdb-main">
         {sheet ? null : (
@@ -2443,6 +2447,7 @@ export function CollectionBrowser({
           onDelete={canDelete && selected ? () => setDlg({ kind: 'delete-record', row: selected }) : undefined}
         />
       ) : null}
+        </div>
         </div>
       </div>
       {dlg?.kind === 'rename' ? (

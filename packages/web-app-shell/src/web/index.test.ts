@@ -52,3 +52,13 @@ test('refresh does not send unfinished plugin routes home', () => {
   assert.doesNotMatch(shell, /navigate\('\/', \{ replace: true \}\)/)
   assert.match(shell, /waitingOnNav/)
 })
+
+test('center stage keeps modules mounted and crossfades', () => {
+  const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
+  assert.match(shell, /className="app-stage"/)
+  assert.match(shell, /app-stage-pane/)
+  assert.doesNotMatch(shell, /if \(moduleId !== activeId\) return null/)
+  assert.match(css, /\.app-stage-pane\.is-active[\s\S]*?opacity:\s*1/)
+  assert.match(css, /\.app-pane-in\s*\{[^}]*animation:\s*app-pane-in/s)
+})
