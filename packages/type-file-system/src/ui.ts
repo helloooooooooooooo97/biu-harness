@@ -33,7 +33,7 @@ export type FsDetailPane = {
 export type CollectionChrome = {
   cells?: Partial<Record<string, ComponentType<FsCellProps>>>
   Action?: ComponentType<FsActionProps>
-  /** 详情标题左侧图标。不传则用集合 glyph / 记录 emoji。 */
+  /** 记录独立图标属性。有 emoji 用 emoji；不传则详情/侧栏/面包屑用集合 glyph。 */
   Icon?: ComponentType<{ record: DbRecord }>
   Title?: ComponentType<{ record: DbRecord; label: string }>
   /** 详情标题下的主舞台（例如标签收集表）。不传则走字段概况 + 正文。 */

@@ -11,6 +11,7 @@ import {
   WIN_CHROME_H,
   centeredGeom,
   clampGeom,
+  listingIsHeadless,
   storeShellFromRecord,
   type StoreShell,
   type WinGeom,
@@ -19,7 +20,7 @@ import {
 export const name = 'core-plugin-system-ui'
 export const inject = ['slots', 'databaseUi', 'dock']
 
-type StoreListing = { id: string; name: string; shell?: StoreShell }
+type StoreListing = { id: string; name: string; shell?: StoreShell; headless?: boolean }
 
 async function readJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init)
@@ -364,11 +365,12 @@ function PluginExtrasLayer(props: SlotProps) {
     const live = new Set<string>()
     for (const entry of sorted) {
       if (dismissed[entry.id]) continue
+      const extraProps = entry.props?.() ?? {}
       const listing = resolveListing(entry.id, listings)
+      if (listingIsHeadless(listing) || extraProps.headless === true) continue
       const title = listing?.name ?? entry.id
       const dockId = `plugin:${entry.id}`
       live.add(dockId)
-      const extraProps = entry.props?.() ?? {}
       const ExtraIcon = extraProps.Icon as ((props: { className?: string }) => ReactNode) | undefined
       const Icon = ExtraIcon
         ? () => <ExtraIcon className="size-5" />
@@ -410,6 +412,8 @@ function PluginExtrasLayer(props: SlotProps) {
       {sorted.map((entry) => {
         if (minimized[entry.id] || dismissed[entry.id]) return null
         const listing = resolveListing(entry.id, listings)
+        const extraProps = entry.props?.() ?? {}
+        if (listingIsHeadless(listing) || extraProps.headless === true) return null
         const pluginId = listing?.id ?? entry.id
         const title = listing?.name ?? entry.id
         const shell = storeShellFromRecord(listing)

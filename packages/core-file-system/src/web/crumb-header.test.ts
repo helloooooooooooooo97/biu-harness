@@ -12,6 +12,7 @@ describe('顶栏三级标题', () => {
     expect(trail).toContain("aria-haspopup={canPick ? 'menu' : undefined}")
     expect(trail).toContain('allowMenu')
     expect(trail).toContain('icon={crumb.icon ?? current?.icon}')
+    expect(trail).toContain('emoji={current?.emoji ?? crumb.emoji}')
     expect(trail).toContain('tableCrumb?.icon')
     expect(nav).toContain('builtinAllViewId(target.collection)')
     expect(browser).not.toContain('{ catalog: true }')
@@ -35,7 +36,7 @@ describe('顶栏三级标题', () => {
 
   it('中间顶栏面包屑字重和颜色与侧栏标题对齐', () => {
     expect(style).toContain('.fsdb-crumb-btn{display:inline-flex')
-    expect(style).toMatch(/\.fsdb-crumb-btn\{[^}]*color:var\(--dsw-sidebar-fg\)/)
+    expect(style).toMatch(/\.fsdb-crumb-btn\{[^}]*color:#F0EFED/)
     expect(style).toMatch(/\.fsdb-crumb-btn\{[^}]*font-weight:600/)
     expect(style).toMatch(/\.fsdb-crumb-option\{[^}]*font-weight:600/)
   })

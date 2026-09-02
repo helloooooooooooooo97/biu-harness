@@ -31,13 +31,16 @@ test('tasksCollection maps /tasks rows with rolled-up usage', async () => {
       return true
     },
   }
-  const spec = tasksCollection(tasks)
+  const spec = tasksCollection(tasks, {
+    report: async () => ({ ok: 'report' }),
+    deliver: async () => ({ ok: 'deliver' }),
+  })
   assert.equal(spec.path, '/tasks')
   assert.equal(spec.view?.moduleId, 'tasks')
   assert.equal(spec.view?.route, '/tasks')
   assert.equal(spec.view?.title, '任务')
   assert.equal(spec.view?.inspector, true)
-  assert.equal(spec.view?.icon, 'clipboard-document-list')
+  assert.equal(spec.view?.icon, 'check-circle')
   assert.deepEqual(spec.schema.columns, ['title', 'status', 'priority', 'difficulty', 'usage', 'creator', 'assignee', 'project', 'tags', 'dueAt'])
   assert.equal(spec.schema.fields.usage?.computed, true)
   const listed = await spec.list()
@@ -51,6 +54,6 @@ test('tasksCollection maps /tasks rows with rolled-up usage', async () => {
   const written = await spec.update!('t1', { status: 'doing' })
   assert.equal(written.status, 'doing')
   assert.deepEqual(spec.records, { update: true, create: true, delete: true })
-  const created = await spec.create!({ title: '新任务' })
-  assert.equal(created.title, '新任务')
+  assert.equal(spec.actions?.some((item) => item.id === 'report'), true)
+  assert.equal(spec.actions?.some((item) => item.id === 'deliver'), true)
 })

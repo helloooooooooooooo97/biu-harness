@@ -589,21 +589,26 @@ export class DatabaseService extends Service implements Database {
     return { kind: 'deleted' as const, path: `${spec.path}/${parts[1]}`, id: parts[1] }
   }
 
-  async action(path: string, actionId: string) {
+  async action(path: string, actionId: string, args?: Record<string, unknown>) {
     const parts = splitPath(path)
     if (parts.length !== 2) throw new Error(`cannot action: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
-    const record = await spec.get(parts[1]!)
-    if (!record) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
     const action = spec.actions?.find((item) => item.id === actionId)
     if (!action) throw new Error(`unknown action: ${actionId}`)
+    const record = (await spec.get(parts[1]!)) ?? (action.allowMissing ? { id: parts[1]! } : null)
+    if (!record) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
     if (!matchActionWhen(record, action.when)) throw new Error(`action not available: ${actionId}`)
-    await action.run(parts[1]!, record)
+    const result = await action.run(parts[1]!, record, args)
     const next = (await spec.get(parts[1]!)) ?? record
     this.indexSuperTagRecord(spec, next)
     this.bump()
-    return { kind: 'record' as const, path: `${spec.path}/${next.id}`, value: withoutContent(spec, next) }
+    return {
+      kind: 'record' as const,
+      path: `${spec.path}/${next.id}`,
+      value: withoutContent(spec, next),
+      ...(result !== undefined ? { result } : {}),
+    }
   }
 
   async content(path: string) {
@@ -749,16 +754,25 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_action',
-    description: '对一条记录执行登记方声明的动作，路径为 /<表>/<id>，action 为动作 id（如 start、stop）。',
+    description:
+      '对一条记录执行该表登记的动作。路径为 /<表>/<id>，action 为动作 id（见 db_stat 的 schema.actions）。需要参数时放在 args。任务派工/汇报、会话压缩/进度、插件创建/打包一律走这里。',
     parameters: {
       type: 'object',
       properties: {
         path: { type: 'string' },
         action: { type: 'string' },
+        args: { type: 'object', description: '可选，动作参数（见 schema.actions[].parameters）' },
       },
       required: ['path', 'action'],
     },
-    execute: (args) => db.action(String(args.path), String(args.action)),
+    execute: (args) =>
+      db.action(
+        String(args.path),
+        String(args.action),
+        args.args && typeof args.args === 'object' && !Array.isArray(args.args)
+          ? (args.args as Record<string, unknown>)
+          : undefined,
+      ),
   })
   ctx.tools.register({
     name: 'db_stat',
@@ -879,8 +893,12 @@ export function apply(ctx: Context) {
   })
   ctx.http.route('POST', '/api/db/action', async (route) => {
     try {
-      const body = (await route.json()) as { path?: string; action?: string }
-      route.send(200, await db.action(String(body?.path ?? ''), String(body?.action ?? '')))
+      const body = (await route.json()) as { path?: string; action?: string; args?: unknown }
+      const extra =
+        body?.args && typeof body.args === 'object' && !Array.isArray(body.args)
+          ? (body.args as Record<string, unknown>)
+          : undefined
+      route.send(200, await db.action(String(body?.path ?? ''), String(body?.action ?? ''), extra))
     } catch (error) {
       route.send(400, { error: String(error) })
     }

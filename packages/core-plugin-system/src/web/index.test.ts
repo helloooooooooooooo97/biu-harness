@@ -62,6 +62,16 @@ test('plugin system web passes name/tags/action chrome into databaseUi', async (
   assert.equal(typeof ui.last?.chrome.Action, 'function')
 })
 
+test('plugin title is the name only and tags use public-ui TagChip', async () => {
+  const { readFileSync } = await import('node:fs')
+  const { resolve } = await import('node:path')
+  const chrome = readFileSync(resolve(import.meta.dirname, './chrome.tsx'), 'utf8')
+  assert.match(chrome, /TagChip/)
+  assert.match(chrome, /TagChips/)
+  assert.doesNotMatch(chrome, /已装/)
+  assert.doesNotMatch(chrome, /rounded-full/)
+})
+
 test('plugin window sizes from manifest.shell instead of measuring DOM', async () => {
   const { readFile } = await import('node:fs/promises')
   const { resolve } = await import('node:path')
@@ -70,6 +80,8 @@ test('plugin window sizes from manifest.shell instead of measuring DOM', async (
   assert.match(src, /storeShellFromRecord/)
   assert.match(src, /dismissAndStop/)
   assert.match(src, /dismissed\[entry\.id\]/)
+  assert.match(src, /listingIsHeadless/)
+  assert.match(src, /extraProps\.headless === true/)
   assert.doesNotMatch(src, /measurePluginBox/)
   assert.doesNotMatch(src, /ResizeObserver/)
   const create = await readFile(resolve(import.meta.dirname, '../host/plugin-create.ts'), 'utf8')
@@ -119,4 +131,41 @@ test('bundled store plugins register their own dock icons', async () => {
   assert.match(hello, /Icon: HelloDockIcon/)
   assert.match(gomoku, /Icon: GomokuDockIcon/)
   assert.match(ping, /Icon: HeavyPingDockIcon/)
+})
+
+test('packed page-excalidraw plugin stores scenes as page assets', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const { resolve } = await import('node:path')
+  const src = await readFile(resolve(import.meta.dirname, '../../../../.plugin-dev/page-excalidraw/web.tsx'), 'utf8')
+  const manifest = JSON.parse(
+    await readFile(resolve(import.meta.dirname, '../../../../.plugin/page-excalidraw/manifest.json'), 'utf8'),
+  ) as { headless?: boolean }
+  assert.equal(manifest.headless, true)
+  assert.match(src, /\/api\/page\/file\//)
+  assert.match(src, /method: 'PUT'/)
+  assert.match(src, /viewModeEnabled=\{!expanded\}/)
+  assert.match(src, /createPortal/)
+  assert.match(src, /document\.body/)
+  assert.match(src, /export const inject = \['pageEditor'\]/)
+  assert.match(src, /View: Board/)
+  assert.match(src, /defaults: \(\) => \(\{ file:/)
+  assert.match(src, /res\.status === 404/)
+  const onChange = src.match(/const onChange = useCallback\([\s\S]*?\}, \[file\]\)/)?.[0]
+  assert.ok(onChange)
+  assert.doesNotMatch(onChange, /setScene/)
+  assert.match(onChange, /saveScene/)
+  assert.match(src, /theme="dark"/)
+  assert.match(src, /viewBackgroundColor: DARK_BG/)
+  assert.match(src, /forceDarkCanvas/)
+  assert.match(src, /zIndex: 9990/)
+  assert.match(src, /scrollToContent/)
+  assert.match(src, /aria-label="画板名称"/)
+  assert.match(src, /assetStem/)
+  assert.match(src, /normalizeStem/)
+  assert.doesNotMatch(src, /border-\[var\(--border\)\]/)
+  const packed = await readFile(resolve(import.meta.dirname, '../../../../.plugin/page-excalidraw/web.js'), 'utf8')
+  assert.match(packed, /ReactJSXRuntime/)
+  assert.match(packed, /pageEditor/)
+  assert.match(packed, /inject/)
+  assert.match(src, /refresh/)
 })

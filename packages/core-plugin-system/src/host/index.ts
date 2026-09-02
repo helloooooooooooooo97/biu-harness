@@ -3,7 +3,7 @@ import { pluginsCollection } from './collection.ts'
 import { openStore } from './store.ts'
 
 export const name = 'core-plugin-system'
-export const inject = ['http', 'hub', 'tools']
+export const inject = ['http', 'hub']
 
 export {
   PluginStoreService,

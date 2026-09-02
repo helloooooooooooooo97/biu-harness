@@ -1,15 +1,16 @@
-import { useState, type ReactNode, type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useState, type ReactNode, type Dispatch, type SetStateAction } from 'react'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import type { CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
 import { HashtagIcon } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
-import { contentFieldKey, formatField, resolveFieldType, uniqueValues } from './fields.ts'
+import { contentFieldKey, formatField, resolveFieldType } from './fields.ts'
 import { LocalText } from './controls.tsx'
-import { FieldEditor, FieldGlyph, FilePreview } from './fsdb-cells.tsx'
-import { SchemaFieldEditor } from './schema-field.tsx'
+import { FilePreview } from './fsdb-cells.tsx'
+import { PropertyRow } from './property-row.tsx'
 import { RecordEmojiBoard } from '@biu/public-ui'
 import { TableGlyph } from './nav-glyphs.tsx'
 import { normalizeRecordEmoji, recordPreviewEmoji } from './sidebar-preview.ts'
+import { FOCUS_RECORD_CONTENT, FOCUS_RECORD_TITLE, shouldLeaveTitleForContent } from './title-content-nav.ts'
 
 function DetailTitleIcon({
   emoji,
@@ -52,7 +53,9 @@ function DetailTitleIcon({
         {emoji ? (
           <span className="fsdb-record-emoji">{emoji}</span>
         ) : Icon ? (
-          <Icon record={record} />
+          <span className="fsdb-record-mark is-lg">
+            <Icon record={record} />
+          </span>
         ) : (
           <TableGlyph icon={tableIcon} className="size-8" />
         )}
@@ -87,7 +90,6 @@ export function RecordDetail({
   schema,
   chrome,
   draft,
-  items,
   detailBody,
   labelOf,
   renderCell,
@@ -95,7 +97,6 @@ export function RecordDetail({
   writeOne,
   writePatch,
   tableIcon,
-  collectionPath,
   onOpenRecord,
   onDelete,
 }: {
@@ -103,7 +104,6 @@ export function RecordDetail({
   schema: CollectionSchema
   chrome?: CollectionChrome
   draft: Record<string, string>
-  items: DbRecord[]
   detailBody: unknown
   labelOf: (row: DbRecord) => string
   renderCell: (row: DbRecord, key: string, field: FieldSpec) => ReactNode
@@ -111,10 +111,21 @@ export function RecordDetail({
   writeOne: (row: DbRecord, key: string, field: FieldSpec, raw: string) => Promise<unknown> | void
   writePatch: (row: DbRecord, patch: Record<string, unknown>) => Promise<unknown> | void
   tableIcon?: string
-  collectionPath: string
   onOpenRecord?: (recordId: string, collection?: string) => void
   onDelete?: () => void
 }) {
+  useEffect(() => {
+    const onTitle = () => {
+      const el = document.querySelector<HTMLTextAreaElement>('.fsdb-detail-title-input')
+      if (!el) return
+      el.focus()
+      const n = el.value.length
+      el.setSelectionRange(n, n)
+    }
+    window.addEventListener(FOCUS_RECORD_TITLE, onTitle)
+    return () => window.removeEventListener(FOCUS_RECORD_TITLE, onTitle)
+  }, [])
+
   return (
 <div className="fsdb-detail-stage">
           <div className="fsdb-detail-screen" role="main" aria-label="记录详情">
@@ -140,6 +151,14 @@ export function RecordDetail({
                       className="fsdb-detail-title-input"
                       value={draft[schema.labelField] ?? ''}
                       rows={(draft[schema.labelField] ?? '').length > 48 ? 2 : 1}
+                      onKeyDown={(event) => {
+                        const el = event.currentTarget
+                        if (!(el instanceof HTMLTextAreaElement)) return
+                        if (event.nativeEvent.isComposing) return
+                        if (!shouldLeaveTitleForContent(event.key, event.shiftKey, el.value, el.selectionEnd)) return
+                        event.preventDefault()
+                        window.dispatchEvent(new Event(FOCUS_RECORD_CONTENT))
+                      }}
                       onCommit={(raw) => {
                         const next = raw.trim()
                         setDraft((prev) => ({ ...prev, [schema.labelField!]: next }))
@@ -174,48 +193,12 @@ export function RecordDetail({
                     if (key === 'id' || key === schema.labelField || key === contentFieldKey(schema)) return null
                     const kind = resolveFieldType(field)
                     if (kind === 'schema' && !field.writable) return null
-                    if (kind === 'schema') {
-                      return (
-                        <div key={key} className="fsdb-prop is-stack">
-                          <span title={field.label ?? key}>
-                            <FieldGlyph kind={kind} />
-                            {field.label ?? key}
-                          </span>
-                          <div className="fsdb-prop-val is-schema">
-                            <SchemaFieldEditor
-                              collectionPath={collectionPath}
-                              record={selected}
-                              value={selected[key]}
-                              writable={field.writable}
-                              onChange={(next) => void writePatch(selected, { [key]: next })}
-                            />
-                          </div>
-                        </div>
-                      )
-                    }
                     return (
-                      <div key={key} className="fsdb-prop">
-                        <span title={field.label ?? key}>
-                          <FieldGlyph kind={kind} />
-                          {field.label ?? key}
-                        </span>
-                        <div className="fsdb-prop-val" title={formatField(field, selected[key])}>
-                        {field.writable ? (
-                          <FieldEditor
-                            fieldKey={key}
-                            field={field}
-                            value={draft[key] ?? ''}
-                            options={uniqueValues(items, key, field)}
-                            onChange={(next) => {
-                              setDraft((prev) => ({ ...prev, [key]: next }))
-                              void writeOne(selected, key, field, next)
-                            }}
-                          />
-                        ) : (
-                          renderCell(selected, key, field)
-                        )}
+                      <PropertyRow key={key} field={field} fieldKey={key} stacked={kind === 'schema'}>
+                        <div className={kind === 'schema' ? 'fsdb-prop-val is-schema' : 'fsdb-prop-val'} title={formatField(field, selected[key])}>
+                          {renderCell(selected, key, field)}
                         </div>
-                      </div>
+                      </PropertyRow>
                     )
                   })}
                 </div>
@@ -250,6 +233,14 @@ export function RecordDetail({
                         value={draft[key] ?? saved}
                         rows={12}
                         placeholder="内容：文本，或 JSON 文件"
+                        onKeyDown={(event) => {
+                          const el = event.currentTarget
+                          if (!(el instanceof HTMLTextAreaElement)) return
+                          if (event.key !== 'ArrowUp' || event.shiftKey || event.nativeEvent.isComposing) return
+                          if (el.selectionStart !== 0 || el.selectionEnd !== 0) return
+                          event.preventDefault()
+                          window.dispatchEvent(new Event(FOCUS_RECORD_TITLE))
+                        }}
                         onCommit={(next) => {
                           setDraft((prev) => ({ ...prev, [key]: next }))
                           if (next !== saved) void writeOne(selected, key, spec, next)

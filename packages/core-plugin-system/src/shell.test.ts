@@ -1,6 +1,14 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { centeredGeom, declaredStoreShell, parseStoreShell, storeShellFromRecord, windowOuterSize } from './shell.ts'
+import {
+  centeredGeom,
+  declaredStoreShell,
+  listingIsHeadless,
+  parseStoreShell,
+  requireDeclaredShell,
+  storeShellFromRecord,
+  windowOuterSize,
+} from './shell.ts'
 
 test('parseStoreShell defaults and clamps declared content size', () => {
   const d = parseStoreShell(undefined)
@@ -59,4 +67,16 @@ test('declaredStoreShell is true only when width and height are set', () => {
   assert.equal(declaredStoreShell({}), false)
   assert.equal(declaredStoreShell({ width: 640 }), false)
   assert.equal(declaredStoreShell({ width: 640, height: 480 }), true)
+})
+
+test('requireDeclaredShell skips size when headless', () => {
+  assert.doesNotThrow(() => requireDeclaredShell(undefined, true, 'plugin_create', true))
+  assert.throws(() => requireDeclaredShell(undefined, true, 'plugin_create', false), /headless: true/)
+  assert.doesNotThrow(() => requireDeclaredShell(undefined, false, 'plugin_create', false))
+})
+
+test('listingIsHeadless reads flattened /plugins rows', () => {
+  assert.equal(listingIsHeadless({ headless: true }), true)
+  assert.equal(listingIsHeadless({ id: 'x', shellWidth: 320 }), false)
+  assert.equal(listingIsHeadless(undefined), false)
 })

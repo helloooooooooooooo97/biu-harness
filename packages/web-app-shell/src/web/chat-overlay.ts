@@ -330,8 +330,8 @@ export function defaultOverlayWinGeom(vw = 1280, vh = 800): OverlayWinGeom {
   return {
     w,
     h,
-    x: Math.round((vw - w) / 2),
-    y: Math.max(OVERLAY_MARGIN, Math.round(vh - h - OVERLAY_DOCK_CLEARANCE)),
+    x: Math.max(OVERLAY_MARGIN, vw - w - OVERLAY_MARGIN),
+    y: Math.max(OVERLAY_MARGIN, vh - h - OVERLAY_DOCK_CLEARANCE),
   }
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type HTMLAttributes, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 export function AnchorMenu({
@@ -8,6 +8,7 @@ export function AnchorMenu({
   className = 'fsdb-cellselect-menu',
   role = 'listbox',
   zIndex = 80,
+  ...rest
 }: {
   anchor: HTMLElement | null
   onClose: () => void
@@ -15,7 +16,7 @@ export function AnchorMenu({
   className?: string
   role?: string
   zIndex?: number
-}) {
+} & Omit<HTMLAttributes<HTMLDivElement>, 'role' | 'className' | 'children'>) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState({ top: 0, left: 0, width: 200 })
 
@@ -54,6 +55,7 @@ export function AnchorMenu({
       className={className}
       role={role}
       style={{ position: 'fixed', top: box.top, left: box.left, width: box.width, zIndex }}
+      {...rest}
     >
       {children}
     </div>,

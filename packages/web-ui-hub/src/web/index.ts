@@ -1,5 +1,9 @@
 import type { Context, Fiber, Plugin } from 'cordis'
 import * as React from 'react'
+import * as ReactDOM from 'react-dom'
+import * as ReactJSXRuntime from 'react/jsx-runtime'
+import { createRoot, hydrateRoot } from 'react-dom/client'
+import { flushSync } from 'react-dom'
 import { uiPackageLoaders } from 'virtual:cordis-ui-loaders'
 
 export const name = 'ui-hub'
@@ -10,10 +14,36 @@ export function isRuntimeWebModule(web: string) {
   return web.startsWith('/') || /^https?:\/\//.test(web)
 }
 
+/** 动态 import 得到的是模块命名空间；不要只用 default，否则会丢掉 inject / name。 */
+export function runtimeWebPlugin(loaded: unknown): Plugin | undefined {
+  if (loaded == null) return undefined
+  if (typeof loaded === 'function') return loaded as Plugin
+  if (typeof loaded !== 'object') return undefined
+  const mod = loaded as { default?: unknown; apply?: unknown; inject?: unknown; name?: unknown }
+  const def = mod.default
+  const hasMeta = typeof mod.apply === 'function' || Array.isArray(mod.inject) || typeof mod.name === 'string'
+  if (typeof def === 'function' && hasMeta) {
+    return {
+      ...(typeof mod.name === 'string' ? { name: mod.name } : {}),
+      ...(Array.isArray(mod.inject) ? { inject: mod.inject as string[] } : {}),
+      apply: (typeof mod.apply === 'function' ? mod.apply : def) as Plugin['apply']
+    } as Plugin
+  }
+  if (def && typeof def === 'object') return def as Plugin
+  if (typeof def === 'function') return def as Plugin
+  return loaded as Plugin
+}
+
 export function apply(ctx: Context) {
   if (typeof globalThis !== 'undefined') {
-    const g = globalThis as typeof globalThis & { React?: typeof React }
+    const g = globalThis as typeof globalThis & {
+      React?: typeof React
+      ReactDOM?: typeof ReactDOM & { createRoot: typeof createRoot; hydrateRoot: typeof hydrateRoot }
+      ReactJSXRuntime?: typeof ReactJSXRuntime
+    }
     g.React = React
+    g.ReactDOM = { ...ReactDOM, createRoot, hydrateRoot, flushSync }
+    g.ReactJSXRuntime = ReactJSXRuntime
   }
 
   const forks = new Map<string, Fiber>()
@@ -64,10 +94,7 @@ export function apply(ctx: Context) {
         if (forks.has(row.id)) continue
         const loaded = await resolvePlugin(row.id, row.web)
         if (!loaded) continue
-        const plugin =
-          loaded && typeof loaded === 'object' && 'default' in loaded && (loaded as { default?: Plugin }).default
-            ? (loaded as { default: Plugin }).default
-            : loaded
+        const plugin = runtimeWebPlugin(loaded)
         const fiber = ctx.plugin(plugin)
         forks.set(row.id, fiber)
         await fiber

@@ -112,6 +112,7 @@
       "layer": "capability",
       "blurb": "@biu/cap-page。页面存成工作区 .page 下的 Markdown，YAML 写属性，图片和附件在 .page/assets。",
       "package": "@biu/cap-page/host",
+      "web": "@biu/cap-page/web",
       "togglable": true,
       "enabled": true
     }

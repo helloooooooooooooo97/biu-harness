@@ -290,6 +290,33 @@ test('register rejects duplicate view route and nav title', async () => {
   assert.throws(() => db.register(dupName), /名称重复/)
 })
 
+test('allowMissing actions can run before the record exists', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  const rows = new Map<string, { id: string; title: string }>()
+  db.register({
+    id: 'notes',
+    path: '/notes',
+    schema: { fields: { title: { type: 'string' } } },
+    list: () => [...rows.values()],
+    get: (id) => rows.get(id) ?? null,
+    actions: [
+      {
+        id: 'seed',
+        label: 'seed',
+        allowMissing: true,
+        run: (id) => {
+          rows.set(id, { id, title: 'seeded' })
+          return { id }
+        },
+      },
+    ],
+  })
+  const done = await db.action('/notes/n9', 'seed')
+  assert.deepEqual(done.result, { id: 'n9' })
+  assert.equal((await db.read('/notes/n9')).kind, 'record')
+})
+
 test('registered actions run when when-clause matches', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)
@@ -299,8 +326,8 @@ test('registered actions run when when-clause matches', async () => {
   if (stat.kind !== 'collection') return
   assert.equal(stat.schema.actions?.[0]?.id, 'pin')
   assert.equal('run' in (stat.schema.actions?.[0] ?? {}), false)
-  const done = await db.action('/notes/n1', 'pin')
-  assert.equal((done.value as unknown as { pinned: boolean }).pinned, true)
+  const pinned = await db.action('/notes/n1', 'pin')
+  assert.equal((pinned.value as unknown as { pinned: boolean }).pinned, true)
   await assert.rejects(() => db.action('/notes/n1', 'pin'), /not available/)
 })
 

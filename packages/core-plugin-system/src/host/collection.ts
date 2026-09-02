@@ -1,4 +1,12 @@
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
+import {
+  createArgs,
+  PLUGIN_CREATE_DESCRIPTION,
+  PLUGIN_CREATE_PROPERTIES,
+  PLUGIN_PACK_DESCRIPTION,
+  PLUGIN_SANDBOX_DESCRIPTION,
+  PLUGIN_SANDBOX_PROPERTIES,
+} from './plugin-create.ts'
 import type { PluginStoreService, StoreListing } from './store.ts'
 
 type SandboxListing = Awaited<ReturnType<PluginStoreService['listSandboxes']>>[number]
@@ -33,11 +41,16 @@ function asInstalledRecord(row: StoreListing): DbRecord {
     lastRunAt: row.lastRunAt,
     hasHost: row.hasHost,
     hasWeb: row.hasWeb,
-    shellWidth: shell.width,
-    shellHeight: shell.height,
-    shellMinWidth: shell.minWidth,
-    shellMinHeight: shell.minHeight,
-    shellResizable: shell.resizable,
+    headless: row.headless === true,
+    ...(row.headless || !shell
+      ? {}
+      : {
+          shellWidth: shell.width,
+          shellHeight: shell.height,
+          shellMinWidth: shell.minWidth,
+          shellMinHeight: shell.minHeight,
+          shellResizable: shell.resizable,
+        }),
   })
 }
 
@@ -53,6 +66,7 @@ function asSandboxRecord(row: SandboxListing): DbRecord {
     sandbox: true,
     hasHost: row.hasHost,
     hasWeb: row.hasWeb,
+    headless: row.headless === true,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
@@ -91,7 +105,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       route: '/plugins',
       title: '插件',
       inspector: true,
-      blurb: '.plugin 已安装与 .plugin-dev 沙箱同一张表：没有的字段留空。窗口尺寸来自扁平列 shellWidth/shellHeight，不是 listing.shell。',
+      blurb: '.plugin 已安装与 .plugin-dev 沙箱同一张表。新建用 db_action create/sandbox，打包用 pack。窗口尺寸来自扁平列 shellWidth/shellHeight，不是 listing.shell。',
       order: 30,
       icon: 'puzzle-piece',
     },
@@ -112,6 +126,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         'shellHeight',
         'hasHost',
         'hasWeb',
+        'headless',
       ],
       fields: {
         name: { type: 'string', label: '名称' },
@@ -127,6 +142,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         lastRunAt: { type: 'datetime', label: '上次运行' },
         hasHost: { type: 'boolean', label: 'Host' },
         hasWeb: { type: 'boolean', label: 'Web' },
+        headless: { type: 'boolean', label: '无头' },
         author: { type: 'string', label: '作者' },
         authorUrl: { type: 'url', label: '作者链接' },
         shellWidth: { type: 'number', label: '窗口宽' },
@@ -142,6 +158,32 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       await store.uninstall(id)
     },
     actions: [
+      {
+        id: 'create',
+        label: '直写安装',
+        placement: [],
+        allowMissing: true,
+        parameters: {
+          type: 'object',
+          description: PLUGIN_CREATE_DESCRIPTION,
+          properties: PLUGIN_CREATE_PROPERTIES,
+          required: ['name'],
+        },
+        run: async (id, _record, args = {}) => store.create(createArgs({ ...args, id })),
+      },
+      {
+        id: 'sandbox',
+        label: '开沙箱',
+        placement: [],
+        allowMissing: true,
+        parameters: {
+          type: 'object',
+          description: PLUGIN_SANDBOX_DESCRIPTION,
+          properties: PLUGIN_SANDBOX_PROPERTIES,
+          required: ['name'],
+        },
+        run: async (id, _record, args = {}) => store.initSandbox(createArgs({ ...args, id })),
+      },
       {
         id: 'start',
         label: '运行',
@@ -162,9 +204,8 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         id: 'pack',
         label: '打包安装',
         when: { sandbox: true },
-        run: async (id) => {
-          await store.pack(id)
-        },
+        parameters: { type: 'object', description: PLUGIN_PACK_DESCRIPTION, properties: {} },
+        run: async (id) => store.pack(id),
       },
       {
         id: 'uninstall',

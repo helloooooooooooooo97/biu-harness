@@ -68,6 +68,7 @@ test('pluginsCollection lists installed plugins and sandboxes in one table', asy
   assert.equal(demo?.sandbox, undefined)
   assert.equal(demo?.shellWidth, defaultStoreShell().width)
   assert.equal(demo?.hasWeb, true)
+  assert.equal(demo?.headless, undefined)
   assert.equal(draft?.sandbox, true)
   assert.equal(draft?.installed, undefined)
   assert.equal(draft?.running, undefined)
@@ -75,7 +76,7 @@ test('pluginsCollection lists installed plugins and sandboxes in one table', asy
   assert.equal(draft?.shellWidth, undefined)
   assert.deepEqual(
     spec.actions?.map((item) => item.id),
-    ['start', 'stop', 'pack', 'uninstall'],
+    ['create', 'sandbox', 'start', 'stop', 'pack', 'uninstall'],
   )
   await spec.actions!.find((item) => item.id === 'start')!.run('demo', demo!)
   await spec.actions!.find((item) => item.id === 'pack')!.run('draft-hello', draft!)
@@ -88,6 +89,40 @@ test('pluginsCollection lists installed plugins and sandboxes in one table', asy
   assert.deepEqual(spec.actions?.find((item) => item.id === 'start')?.when, { installed: true, running: false })
   assert.deepEqual(spec.actions?.find((item) => item.id === 'pack')?.when, { sandbox: true })
   assert.deepEqual(spec.actions?.find((item) => item.id === 'uninstall')?.when, { installed: true })
+})
+
+test('headless plugins omit shell columns', async () => {
+  const spec = pluginsCollection({
+    list: () =>
+      Promise.resolve([
+        {
+          id: 'skin',
+          name: 'Skin',
+          blurb: '',
+          tags: [],
+          author: '',
+          authorUrl: '',
+          enabled: true,
+          running: true,
+          bytes: 8,
+          createdAt: 1,
+          updatedAt: 2,
+          lastRunAt: null,
+          hasHost: false,
+          hasWeb: true,
+          headless: true,
+        },
+      ]),
+    listSandboxes: () => Promise.resolve([]),
+    openPlugin() {},
+    close() {},
+    pack() {},
+    uninstall() {},
+  } as PluginStoreService)
+  const listed = await spec.list()
+  assert.equal(listed[0]?.headless, true)
+  assert.equal(listed[0]?.shellWidth, undefined)
+  assert.ok(spec.schema.columns?.includes('headless'))
 })
 
 test('same id with sandbox and install merges into one row', async () => {

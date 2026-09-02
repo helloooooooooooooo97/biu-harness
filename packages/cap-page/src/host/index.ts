@@ -2,7 +2,7 @@ import type { Context } from 'cordis'
 import type { CollectionSpec } from '@biu/type-file-system'
 import { PagesStore, STATUS, type WorkspaceFs } from './store.ts'
 
-export { PAGE_ROOT, PAGE_ASSETS, PagesStore } from './store.ts'
+export { PAGE_ROOT, PAGE_ASSETS, ASSET_GC_GRACE_MS, collectPageAssetNames, PagesStore } from './store.ts'
 
 const COLORS = ['red', 'orange', 'yellow', 'green', 'blue'] as const
 
@@ -74,6 +74,15 @@ function servePageFile(ctx: Context, store: PagesStore) {
         route.res.end(bytes)
       } catch {
         route.send(404, { error: 'not found' })
+      }
+    })
+    inner.http.route('PUT', '/api/page/file/:name', async (route) => {
+      try {
+        const body = await route.json()
+        const written = await store.writeAsset(route.params.name ?? '', JSON.stringify(body ?? {}, null, 2))
+        route.send(200, { ok: true, ...written })
+      } catch (error) {
+        route.send(400, { error: String(error) })
       }
     })
   })

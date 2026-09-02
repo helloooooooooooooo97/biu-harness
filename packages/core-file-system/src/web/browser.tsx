@@ -51,30 +51,33 @@ import {
   fieldHasValue,
   type ViewMode,
 } from './fields.ts'
+import { DbMenu, DbSearchOption } from '@biu/database-ui'
 import { AppDialog, CellSelect, CheckRow, LocalText } from './controls.tsx'
+import { PropertyRow } from './property-row.tsx'
 import { DataSidebar } from './data-sidebar.tsx'
 import { buildCrumbs, type CrumbTarget } from './sidebar-nav.ts'
 import { CrumbTrail } from './crumb-trail.tsx'
 import { pickDomAttrs, recordPickKind } from './pick-dom.ts'
 import { recordPreviewEmoji, crumbRecordLabel } from './sidebar-preview.ts'
+import { recordPreviewMascot, RecordMark } from './record-mark.tsx'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
 import {
   actionIcon,
-  BoolCell,
   DefaultCell,
   draftFromRecord,
   FieldEditor,
   FieldGlyph,
   FilePreview,
+  fieldDraftValue,
   ModeGlyph,
   parseFieldValue,
   VIEW_MODES,
   visibleActions,
-  boolOn,
 } from './fsdb-cells.tsx'
 import { ensureFsdbStyle } from './fsdb-style.ts'
 import { RecordDetail } from './record-detail.tsx'
-import { TableGlyph } from './nav-glyphs.tsx'
+import { TableGlyph, ViewModeGlyph } from './nav-glyphs.tsx'
+import { countFittingViewTabs, splitVisibleViews } from './view-tabs.ts'
 import { getDatabaseUi } from './database-ui.ts'
 
 const EMPTY_VIEWS: CollectionViewType[] = []
@@ -106,7 +109,7 @@ import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 import { mergeTableViews } from '../catalog-views.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
-import { SchemaChips } from './schema-field.tsx'
+import { SchemaChips, SchemaFieldEditor } from './schema-field.tsx'
 import { loadSchemaTags, pullSchemaTags } from './schema-tags.ts'
 
 type StatResult = { schema?: CollectionSchema }
@@ -119,6 +122,8 @@ function recordsFingerprint(rows: Array<DbRecord & { path?: string }>) {
   return JSON.stringify(rows)
 }
 
+const EMPTY_FILTERS: Record<string, string> = {}
+
 export function CollectionBrowser({
   moduleId,
   collectionPath,
@@ -127,7 +132,7 @@ export function CollectionBrowser({
   chrome,
   tables = [],
   onOpenTable,
-  lockedFilters = {},
+  lockedFilters = EMPTY_FILTERS,
   routeRecordId = null,
   routeViewId,
   expandedViewKey,
@@ -297,6 +302,10 @@ export function CollectionBrowser({
   const [crumbOpen, setCrumbOpen] = useState<string | null>(null)
   const crumbRef = useRef<HTMLElement>(null)
   const viewRef = useRef<HTMLDivElement>(null)
+  const toolbarRef = useRef<HTMLDivElement>(null)
+  const toolbarRightRef = useRef<HTMLDivElement>(null)
+  const viewMeasureRef = useRef<HTMLDivElement>(null)
+  const [viewTabFit, setViewTabFit] = useState(99)
   const modeRef = useRef<HTMLDivElement>(null)
   const sortRef = useRef<HTMLDivElement>(null)
   const columnRef = useRef<HTMLDivElement>(null)
@@ -405,6 +414,30 @@ export function CollectionBrowser({
   }, [query])
 
   useLayoutEffect(() => {
+    if (sheet) return
+    function measure() {
+      const toolbar = toolbarRef.current
+      const right = toolbarRightRef.current
+      const row = viewMeasureRef.current
+      if (!toolbar || !right || !row) return
+      const more = row.querySelector('[data-view-measure-more]')
+      const tabs = [...row.querySelectorAll('[data-view-measure]')] as HTMLElement[]
+      const available = Math.max(0, toolbar.clientWidth - right.offsetWidth - 12)
+      const moreWidth = more instanceof HTMLElement ? more.offsetWidth : 32
+      setViewTabFit(countFittingViewTabs(tabs.map((el) => el.offsetWidth), moreWidth, available, 2))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    if (toolbarRef.current) ro.observe(toolbarRef.current)
+    if (toolbarRightRef.current) ro.observe(toolbarRightRef.current)
+    window.addEventListener('resize', measure)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [sheet, views, searchExpanded])
+
+  useLayoutEffect(() => {
     if (!pageSizeOpen) {
       setPageSizeMenuPos(null)
       return
@@ -448,7 +481,6 @@ export function CollectionBrowser({
           sortDir,
           filters: queryFilters,
         }),
-        pullSchemaTags(),
       ])
       if (gen !== reloadGen.current) return true
       const nextSchema = listed.schema ?? nextStat.schema
@@ -479,6 +511,7 @@ export function CollectionBrowser({
   }, [activeViewId, collectionPath, dataPath, fetchQuery, queryFilters, page, pageSize, sortDir, sortField])
   const reloadRef = useRef(reload)
   reloadRef.current = reload
+  const reloadKey = `${dataPath}\0${page}\0${pageSize}\0${fetchQuery}\0${sortField}\0${sortDir}\0${JSON.stringify(queryFilters)}\0${activeViewId ?? ''}`
   const detailIdRef = useRef<string | null>(null)
   detailIdRef.current = detailId
 
@@ -566,8 +599,12 @@ export function CollectionBrowser({
   }, [collectionPath, dataPath, nested])
 
   useEffect(() => {
-    void reload()
-  }, [reload])
+    void pullSchemaTags()
+  }, [collectionPath])
+
+  useEffect(() => {
+    void reloadRef.current()
+  }, [reloadKey])
 
   useLayoutEffect(() => {
     setOpenDetailId(routeRecordId)
@@ -696,8 +733,7 @@ export function CollectionBrowser({
     const rows = grouping ? grouped.flatMap((group) => group.rows) : visible
     return flattenRows(rows).map((item) => item.row.id)
   }, [flattenRows, grouped, grouping, visible])
-  const tableColSpan =
-    Math.max(columns.length, 1) + (schema?.actions?.length ? 1 : 0) + (canDelete ? 1 : 0)
+  const tableColSpan = Math.max(columns.length, 1)
 
   const selected =
     (detailId &&
@@ -708,12 +744,14 @@ export function CollectionBrowser({
       id: row.id,
       label: crumbRecordLabel(row, schema?.labelField),
       emoji: recordPreviewEmoji(row),
+      mascot: recordPreviewMascot(row),
     }))
     if (selected && !rows.some((row) => row.id === selected.id)) {
       rows.push({
         id: selected.id,
         label: crumbRecordLabel(selected, schema?.labelField),
         emoji: recordPreviewEmoji(selected),
+        mascot: recordPreviewMascot(selected),
       })
     }
     rememberRecords(collectionPath, rows)
@@ -1165,6 +1203,7 @@ export function CollectionBrowser({
           id: row.id,
           label: crumbRecordLabel(row, schema?.labelField),
           emoji: recordPreviewEmoji(row),
+          mascot: recordPreviewMascot(row),
         })),
       }),
     [activeView?.name, activeViewId, collectionPath, items, routeViewId, schema?.labelField, selected, tables, title, views],
@@ -1174,34 +1213,35 @@ export function CollectionBrowser({
   const recordPick = (row: DbRecord) => pickDomAttrs(recordKind, row.id, labelOf(row))
 
   function renderCell(row: DbRecord, key: string, field: FieldSpec) {
+    const kind = resolveFieldType(field)
+    if (kind === 'schema') {
+      if (field.writable) {
+        return (
+          <SchemaFieldEditor
+            collectionPath={collectionPath}
+            record={row}
+            value={row[key]}
+            writable
+            onChange={(next) => void writePatch(row, { [key]: next })}
+          />
+        )
+      }
+      return <SchemaChips value={row[key]} tags={loadSchemaTags()} />
+    }
+    if (field.writable && kind !== 'file') {
+      return (
+        <FieldEditor
+          fieldKey={key}
+          field={field}
+          value={fieldDraftValue(field, row[key])}
+          options={uniqueValues(items, key, field)}
+          onChange={(next) => void writeOne(row, key, field, next)}
+        />
+      )
+    }
     const Custom = chrome?.cells?.[key]
     const fallback = formatField(field, row[key])
     if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={fallback} />
-    if (resolveFieldType(field) === 'schema') {
-      return <SchemaChips value={row[key]} tags={loadSchemaTags()} />
-    }
-    if (resolveFieldType(field) === 'select' && field.writable && field.enum?.length) {
-      return (
-        <CellSelect
-          value={String(row[key] ?? '')}
-          options={field.enum.map((item) => ({ value: item, label: item }))}
-          onSelect={(next) => void writeOne(row, key, field, next)}
-        />
-      )
-    }
-    if (resolveFieldType(field) === 'boolean') {
-      return (
-        <BoolCell
-          on={boolOn(row[key])}
-          writable={field.writable}
-          onToggle={
-            field.writable
-              ? () => void writeOne(row, key, field, boolOn(row[key]) ? 'false' : 'true')
-              : undefined
-          }
-        />
-      )
-    }
     return <DefaultCell field={field} value={row[key]} />
   }
 
@@ -1220,15 +1260,29 @@ export function CollectionBrowser({
   }) {
     const key = schema?.labelField
     const field = key && schema ? schema.fields[key] : undefined
-    const body = chrome?.Title ? (
-      <chrome.Title record={row} label={labelOf(row)} />
-    ) : key && field ? (
-      renderCell(row, key, field)
-    ) : (
-      <>{labelOf(row)}</>
+    const body =
+      key && field?.writable ? (
+        renderCell(row, key, field)
+      ) : chrome?.Title ? (
+        <chrome.Title record={row} label={labelOf(row)} />
+      ) : key && field ? (
+        renderCell(row, key, field)
+      ) : (
+        <>{labelOf(row)}</>
+      )
+    const host = (
+      <span className="fsdb-title-host">
+        {openDetail ? <RowCheck id={row.id} /> : null}
+        <RecordMark
+          record={row}
+          tableIcon={currentTable?.view?.icon}
+          Icon={chrome?.Icon}
+        />
+        <span className="fsdb-title-text">{body}</span>
+      </span>
     )
     const tree = openDetail && parentKey && showTree
-    if (!openDetail && !tree) return body
+    if (!openDetail && !tree) return host
     return (
       <div className="tasks-title-cell" style={tree ? { paddingLeft: depth * 16 } : undefined}>
         {tree ? (
@@ -1252,92 +1306,142 @@ export function CollectionBrowser({
             <span className="tasks-tree-toggle is-empty" aria-hidden />
           )
         ) : null}
-        <span className="fsdb-title-text">{body}</span>
-        {openDetail ? (
-          <span className="tasks-title-aside">
-            {!nested ? (
-              <button
-                type="button"
-                className="tasks-title-open"
-                data-testid="record-title-split"
-                aria-label="在右侧打开"
-                title="在右侧打开"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  showRecordInInspector(collectionPath, row.id)
-                }}
-              >
-                <ViewColumnsIcon aria-hidden className="size-[14px]" />
-              </button>
-            ) : null}
-            <span className="tasks-title-zoom">
-              {tree && kidCount > 0 ? (
-                <ChatCount count={kidCount} className="tasks-tree-count" title={`${kidCount} 项`} />
-              ) : null}
-              <button
-                type="button"
-                className="tasks-title-open"
-                data-testid="record-title-open"
-                data-biu-action="open"
-                aria-label="查看详情"
-                title="查看详情"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  openRow(row)
-                }}
-              >
-                <ArrowsPointingOutIcon aria-hidden className="size-[14px]" />
-              </button>
-            </span>
-          </span>
-        ) : null}
+        {host}
+        {openDetail ? <RecordRowTools row={row} kidCount={tree ? kidCount : 0} /> : null}
       </div>
+    )
+  }
+
+  function RecordOpenControls({ row, kidCount = 0 }: { row: DbRecord; kidCount?: number }) {
+    return (
+      <span className="tasks-title-aside">
+        {!nested ? (
+          <button
+            type="button"
+            className="tasks-title-open"
+            data-testid="record-title-split"
+            aria-label="在右侧打开"
+            title="在右侧打开"
+            onClick={(event) => {
+              event.stopPropagation()
+              showRecordInInspector(collectionPath, row.id)
+            }}
+          >
+            <ViewColumnsIcon aria-hidden className="size-[14px]" />
+          </button>
+        ) : null}
+        <span className="tasks-title-zoom">
+          {kidCount > 0 ? <ChatCount count={kidCount} className="tasks-tree-count" title={`${kidCount} 项`} /> : null}
+          <button
+            type="button"
+            className="tasks-title-open"
+            data-testid="record-title-open"
+            data-biu-action="open"
+            aria-label="查看详情"
+            title="查看详情"
+            onClick={(event) => {
+              event.stopPropagation()
+              openRow(row)
+            }}
+          >
+            <ArrowsPointingOutIcon aria-hidden className="size-[14px]" />
+          </button>
+        </span>
+      </span>
+    )
+  }
+
+  function RecordRowTools({ row, kidCount = 0 }: { row: DbRecord; kidCount?: number }) {
+    return (
+      <span className="tasks-row-tools">
+        <RecordActions row={row} place="row" />
+        <RecordOpenControls row={row} kidCount={kidCount} />
+      </span>
     )
   }
 
   function RecordActions({ row, place }: { row: DbRecord; place: 'row' | 'detail' }) {
     const actions = visibleActions(schema, row, place)
+    const [moreOpen, setMoreOpen] = useState(false)
+    const moreRef = useRef<HTMLButtonElement>(null)
     if (!actions.length) return null
     const Action = chrome?.Action
+    const shown = actions.filter((action) => action.id === 'open-split' || action.id === 'open-page')
+    const overflow = actions.filter((action) => action.id !== 'open-split' && action.id !== 'open-page')
+    const busy = Boolean(busyKey?.endsWith(`:${row.id}`))
+    const renderOne = (action: CollectionActionInfo) => {
+      const run = () => void runAction(row, action)
+      if (Action) return <Action key={action.id} action={action} record={row} busy={busy} run={run} />
+      const glyph = actionIcon(action.id)
+      return (
+        <button
+          key={action.id}
+          type="button"
+          className={`tasks-icon-btn${action.tone === 'danger' ? ' is-danger' : ''}`}
+          title={action.label}
+          aria-label={`${action.label} ${labelOf(row)}`}
+          disabled={busy}
+          onClick={run}
+        >
+          {glyph ?? action.label}
+        </button>
+      )
+    }
     return (
       <div className="tasks-row-actions" data-biu-ignore onClick={(event) => event.stopPropagation()}>
-        {actions.map((action) => {
-          const busy = Boolean(busyKey?.endsWith(`:${row.id}`))
-          const run = () => void runAction(row, action)
-          if (Action) {
-            return <Action key={action.id} action={action} record={row} busy={busy} run={run} />
-          }
-          const glyph = actionIcon(action.id)
-          return (
+        {shown.map(renderOne)}
+        {overflow.length ? (
+          <>
             <button
-              key={action.id}
+              ref={moreRef}
               type="button"
-              className={`tasks-icon-btn${action.tone === 'danger' ? ' is-danger' : ''}`}
-              title={action.label}
-              aria-label={`${action.label} ${labelOf(row)}`}
+              className="tasks-icon-btn"
+              title="更多"
+              aria-label="更多操作"
+              aria-expanded={moreOpen}
               disabled={busy}
-              onClick={run}
+              onClick={() => setMoreOpen((open) => !open)}
             >
-              {glyph ?? action.label}
+              <EllipsisHorizontalIcon aria-hidden className="size-[14px]" />
             </button>
-          )
-        })}
+            {moreOpen ? (
+              <DbMenu anchor={moreRef.current} onClose={() => setMoreOpen(false)}>
+                {overflow.map((action) => (
+                  <DbSearchOption
+                    key={action.id}
+                    onClick={() => {
+                      setMoreOpen(false)
+                      void runAction(row, action)
+                    }}
+                  >
+                    {actionIcon(action.id)}
+                    {action.label}
+                  </DbSearchOption>
+                ))}
+              </DbMenu>
+            ) : null}
+          </>
+        ) : null}
       </div>
     )
   }
 
   function RecordProperties({ row, omit }: { row: DbRecord; omit?: string }) {
     const hide = omit ?? activeGroup?.key
-    const cols = (hide ? propColumns.filter((item) => item.key !== hide) : propColumns).filter((item) =>
-      fieldHasValue(item.field, row[item.key]),
-    )
+    const bodyKey = contentFieldKey(schema)
+    const cols = (hide ? propColumns.filter((item) => item.key !== hide) : propColumns).filter((item) => {
+      if (item.key === schema?.labelField || item.key === bodyKey) return false
+      const kind = resolveFieldType(item.field)
+      if (item.field.writable && kind !== 'file') return true
+      return fieldHasValue(item.field, row[item.key])
+    })
     if (!cols.length) return null
     return (
       <div className="fsdb-proplist">
         {cols.map((col) => (
-          <span key={col.key} className="fsdb-propchip">
-            <span className="fsdb-propchip-v">{renderCell(row, col.key, col.field)}</span>
-          </span>
+          <PropertyRow key={col.key} field={col.field} fieldKey={col.key}>
+            {renderCell(row, col.key, col.field)}
+          </PropertyRow>
         ))}
       </div>
     )
@@ -1411,14 +1515,18 @@ export function CollectionBrowser({
     return (
       <li className={`tasks-queue-item${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
         <div className="tasks-queue-item-body">
-          <RowCheck id={row.id} />
-          <button type="button" className="tasks-queue-item-main" data-biu-action="open" onClick={() => openRow(row)}>
-            <span className="tasks-queue-item-title">
-              <RecordTitle row={row} openDetail={false} />
-            </span>
-          </button>
+          <span className="fsdb-title-host tasks-queue-item-lead">
+            <RowCheck id={row.id} />
+            <div className="tasks-queue-item-main">
+              <span className="tasks-queue-item-title">
+                <RecordTitle row={row} openDetail={false} />
+              </span>
+            </div>
+            <div className="tasks-queue-item-tools">
+              <RecordRowTools row={row} />
+            </div>
+          </span>
           <RecordProperties row={row} />
-          <RecordActions row={row} place="row" />
         </div>
       </li>
     )
@@ -1427,14 +1535,16 @@ export function CollectionBrowser({
   function MiniCard({ row }: { row: DbRecord }) {
     return (
       <div className={`tasks-minicard${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
-        <div className="tasks-minicard-title">
+        <div className="tasks-minicard-bar">
+          <RecordRowTools row={row} />
+        </div>
+        <div className="tasks-minicard-title fsdb-title-host">
           <RowCheck id={row.id} />
-          <button type="button" className="tasks-minicard-open" data-biu-action="open" onClick={() => openRow(row)}>
+          <div className="tasks-minicard-open">
             <span className="tasks-minicard-titletext">
               <RecordTitle row={row} openDetail={false} />
             </span>
-          </button>
-          <RecordActions row={row} place="row" />
+          </div>
         </div>
         <div className="tasks-minicard-foot">
           <RecordProperties row={row} />
@@ -1459,11 +1569,6 @@ export function CollectionBrowser({
       <>
         {listed.map(({ row, depth, hasKids, kidCount }) => (
           <tr key={`${keyPrefix}${row.id}`} className={row.id === detailId ? 'is-active' : undefined} {...recordPick(row)}>
-            {canDelete ? (
-              <td className="fsdb-row-check-cell">
-                <RowCheck id={row.id} />
-              </td>
-            ) : null}
             {columns.map((col) => (
               <td key={col.key}>
                 {col.key === schema?.labelField ? (
@@ -1473,11 +1578,6 @@ export function CollectionBrowser({
                 )}
               </td>
             ))}
-            {schema?.actions?.length ? (
-              <td>
-                <RecordActions row={row} place="row" />
-              </td>
-            ) : null}
           </tr>
         ))}
       </>
@@ -1720,20 +1820,52 @@ export function CollectionBrowser({
           <h1 className="fsdb-detail-title">{title}</h1>
         </div>
         )}
-        <div className="tasks-toolbar" data-biu-ignore>
+        <div className="tasks-toolbar" ref={toolbarRef} data-biu-ignore>
           <div className="tasks-toolbar-left">
             {sheet ? null : (
             <div className="tasks-viewdd-wrap" ref={viewRef}>
+              <div className="tasks-viewtabs-measure" ref={viewMeasureRef} aria-hidden>
+                {views.map((view) => (
+                  <button key={view.id} type="button" className="tasks-viewdd-btn tasks-viewtab" tabIndex={-1} data-view-measure={view.id}>
+                    <ViewModeGlyph mode={view.mode} className="size-[14px]" />
+                    <span className="tasks-viewdd-name">{view.name}</span>
+                  </button>
+                ))}
+                <button type="button" className="tasks-viewdd-btn tasks-viewdd-more" tabIndex={-1} data-view-measure-more>
+                  <EllipsisHorizontalIcon aria-hidden className="size-[14px]" />
+                </button>
+              </div>
+              <div className="tasks-viewtabs">
+                {(views.length ? splitVisibleViews(views, viewTabFit, activeViewId).shown : []).map((view) => (
+                  <button
+                    key={view.id}
+                    type="button"
+                    className={`tasks-viewdd-btn tasks-viewtab${view.id === activeViewId ? ' is-active' : ''}`}
+                    data-testid="fsdb-view-tab"
+                    aria-pressed={view.id === activeViewId}
+                    onClick={() => selectView(view)}
+                  >
+                    <ViewModeGlyph mode={view.mode} className="size-[14px]" />
+                    <span className="tasks-viewdd-name">{view.name}</span>
+                  </button>
+                ))}
+                {!views.length ? (
+                  <button type="button" className="tasks-viewdd-btn tasks-viewtab is-active" disabled>
+                    <Squares2X2Icon aria-hidden className="size-[14px]" />
+                    <span className="tasks-viewdd-name">未保存</span>
+                  </button>
+                ) : null}
+              </div>
               <button
                 type="button"
-                className={`tasks-viewdd-btn${viewMenuOpen ? ' is-active' : ''}`}
-                aria-label="切换视图"
+                className={`tasks-viewdd-btn tasks-viewdd-more${viewMenuOpen ? ' is-active' : ''}`}
+                aria-label="视图菜单"
                 aria-haspopup="menu"
                 aria-expanded={viewMenuOpen}
+                data-testid="fsdb-view-more"
                 onClick={() => toggleMenu('view')}
               >
-                <Squares2X2Icon aria-hidden className="size-[14px]" />
-                <span className="tasks-viewdd-name">{activeView?.name ?? '未保存'}</span>
+                <EllipsisHorizontalIcon aria-hidden className="size-[14px]" />
               </button>
               {viewMenuOpen ? (
                 <div className="tasks-viewdd-menu" role="menu">
@@ -1779,7 +1911,7 @@ export function CollectionBrowser({
               </span>
             ) : null}
           </div>
-          <div className="tasks-toolbar-right">
+          <div className="tasks-toolbar-right" ref={toolbarRightRef}>
             <div className={`tasks-search-wrap${searchExpanded ? ' is-open' : ''}`} ref={searchRef}>
               <button
                 type="button"
@@ -1932,8 +2064,9 @@ export function CollectionBrowser({
                 {columnCustom ? <span className="tasks-sort-dot" aria-hidden /> : null}
               </button>
               {columnMenuOpen ? (
-                <div className="tasks-sort-menu" role="menu">
+                <div className="tasks-sort-menu fsdb-col-menu" role="menu">
                   <div className="tasks-sort-head">可见列</div>
+                  <div className="fsdb-col-menu-list">
                   {allColumns.map((item) => {
                     const on = columns.some((col) => col.key === item.key)
                     return (
@@ -1947,6 +2080,7 @@ export function CollectionBrowser({
                       />
                     )
                   })}
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -2107,20 +2241,17 @@ export function CollectionBrowser({
                 <table className={`tasks-table${wrapCells ? ' is-wrap' : ''}${truncateCells ? ' is-truncate' : ''}`}>
             <thead>
               <tr>
-                {canDelete ? (
-                  <th className="fsdb-row-check-cell">
-                    <RowCheck ids={pickableIds} />
-                  </th>
-                ) : null}
                 {columns.map((col) => (
                   <th key={col.key}>
-                    <span className="tasks-th">
-                      <FieldGlyph kind={col.kind} />
-                      {col.field.label ?? col.key}
+                    <span className="fsdb-title-host">
+                      {col.key === schema?.labelField ? <RowCheck ids={pickableIds} /> : null}
+                      <span className="tasks-th">
+                        <FieldGlyph kind={col.kind} />
+                        {col.field.label ?? col.key}
+                      </span>
                     </span>
                   </th>
                 ))}
-                      {schema?.actions?.length ? <th>操作</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -2303,7 +2434,6 @@ export function CollectionBrowser({
           schema={schema}
           chrome={chrome}
           draft={draft}
-          items={items}
           detailBody={detailBody}
           labelOf={labelOf}
           renderCell={renderCell}
@@ -2311,7 +2441,6 @@ export function CollectionBrowser({
           writeOne={writeOne}
           writePatch={writePatch}
           tableIcon={currentTable?.view?.icon}
-          collectionPath={collectionPath}
           onOpenRecord={(recordId, collection) => onOpenRecord?.(recordId, activeViewId, collection)}
           onDelete={canDelete && selected ? () => setDlg({ kind: 'delete-record', row: selected }) : undefined}
         />

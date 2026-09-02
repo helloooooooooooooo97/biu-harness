@@ -238,6 +238,10 @@ export type CollectionActionInfo = {
   confirm?: string
   /** 记录字段等值时才显示，例如 { enabled: false } */
   when?: Record<string, unknown>
+  /** 给 db_action 的 args；不进按钮 UI。 */
+  parameters?: Record<string, unknown>
+  /** 记录还不存在时也能跑（例如新建插件）。 */
+  allowMissing?: boolean
 }
 
 export type CollectionSchema = {
@@ -265,7 +269,7 @@ export type CollectionRecordCaps = {
 export type DbRecord = { id: string } & Record<string, unknown>
 
 export type CollectionAction = CollectionActionInfo & {
-  run: (id: string, record: DbRecord) => unknown | Promise<unknown>
+  run: (id: string, record: DbRecord, args?: Record<string, unknown>) => unknown | Promise<unknown>
 }
 
 /** 登记方自己选定的前端导航：路由、图标、显示名。Core-File System 按此在 Dock 挂入口，不代为生成路由。 */
@@ -337,7 +341,7 @@ export interface Database {
   update(path: string, content: unknown): Promise<unknown>
   create(path: string, content?: unknown): Promise<unknown>
   remove(path: string): Promise<unknown>
-  action(path: string, actionId: string): Promise<unknown>
+  action(path: string, actionId: string, args?: Record<string, unknown>): Promise<unknown>
   stat(path: string): Promise<unknown>
   /** 单独读写记录正文（content 字段），不走 list/read。 */
   content(path: string): Promise<unknown>

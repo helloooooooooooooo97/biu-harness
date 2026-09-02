@@ -203,6 +203,19 @@ test('表视图记录点标题一律出选择菜单', () => {
     records: [{ id: 'evt-194', label: '打开一条事件' }],
   })
   assert.equal(crumbs[2]!.choices[0]!.icon, 'clipboard')
+  const withEmoji = buildCrumbs({
+    collection: '/tasks',
+    collectionLabel: 'Task',
+    tables: [{ path: '/tasks', label: 'Task', icon: 'clipboard' }],
+    viewId: 'v1',
+    viewName: '默认视图',
+    views: [{ id: 'v1', name: '默认视图' }],
+    recordId: 't1',
+    recordLabel: '写文档',
+    records: [{ id: 't1', label: '写文档', emoji: '🔥' }],
+  })
+  assert.equal(withEmoji[2]!.emoji, '🔥')
+  assert.equal(withEmoji[2]!.choices[0]!.emoji, '🔥')
   assert.equal(crumbButtonAction(crumbs[2]!, crumbs[1]!), 'menu')
   assert.equal(crumbButtonAction(crumbs[1]!, crumbs[0]!), 'menu')
   assert.equal(crumbButtonAction(crumbs[0]!), 'menu')

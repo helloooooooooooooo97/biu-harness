@@ -42,8 +42,7 @@ if (typeof document !== 'undefined') {
 .tasks-graph-status.is-doing{color:var(--dsw-business)}
 .tasks-graph-status.is-done{color:#2f7d4c}
 .tasks-proj-tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:14px;font-weight:600;color:var(--dsw-label-2);background:color-mix(in srgb,var(--dsw-border) 55%,transparent);white-space:nowrap}
-.tasks-tags{display:inline-flex;flex-wrap:wrap;gap:3px;vertical-align:middle}
-.tasks-tag{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:14px;font-weight:600;color:var(--tag,#3b6fd9);background:color-mix(in srgb,var(--tag,#3b6fd9) 12%,transparent);white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+.tasks-tags{display:inline-flex;flex-wrap:wrap;gap:4px;vertical-align:middle;align-items:center}
 .tasks-status-cell{display:inline-flex;align-items:center;gap:5px;min-width:0}
 .tasks-actor{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%}
 .tasks-actor.is-empty{color:var(--dsw-label-3)}
@@ -60,7 +59,8 @@ if (typeof document !== 'undefined') {
 .tasks-assignee-option:hover,.tasks-cellselect-option:hover{background:var(--dsw-hover)}
 .tasks-assignee-option.is-selected,.tasks-cellselect-option.is-selected{background:color-mix(in srgb,var(--dsw-business) 14%,transparent)}
 .tasks-assignee-loading{display:flex;align-items:center;gap:6px;padding:6px;color:var(--dsw-label-3);font-size:11px}
-.tasks-cellselect{position:relative;display:inline-flex;min-width:0;width:100%}
+.tasks-cellselect{position:relative;display:inline-flex;min-width:0;width:100%;max-width:none}
+.tasks-cellselect .db-cell-select-trigger,.tasks-cellselect.db-cell-select .db-cell-select-trigger{max-width:none;width:100%;height:auto;background:transparent}
 .tasks-cellselect-trigger{display:inline-flex;align-items:center;gap:5px;width:100%;min-width:0;border:0;border-radius:6px;padding:3px 7px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-align:left}
 .tasks-cellselect-trigger:hover,.tasks-cellselect-trigger[data-open]{background:var(--dsw-hover)}
 .tasks-cellselect-trigger.is-todo{color:var(--dsw-label-3)}

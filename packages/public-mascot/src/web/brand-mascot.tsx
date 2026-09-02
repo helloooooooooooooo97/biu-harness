@@ -88,6 +88,8 @@ export function BrandCornerMascot({
   agents = [],
   activeId,
   onSelect,
+  onToggle,
+  open,
   leading,
   menu,
   size = 36,
@@ -95,6 +97,8 @@ export function BrandCornerMascot({
   agents?: CornerAgent[]
   activeId?: string | null
   onSelect?: (id: string) => void
+  onToggle?: () => void
+  open?: boolean
   leading?: ReactNode
   menu?: ReactNode | ((close: () => void) => ReactNode)
   size?: number
@@ -104,11 +108,12 @@ export function BrandCornerMascot({
   const ranked = useMemo(() => rankCornerAgents(agents), [agents])
   const current = ranked.find((item) => item.id === activeId) ?? ranked[0]
   const identity = current ? resolveSessionMascot(current.id, current.mascot) : undefined
-  const name = current?.title?.trim() || '切换 Agent'
+  const name = current?.title?.trim() || (onToggle ? '聊天' : '切换 Agent')
   const closeMenu = useCallback(() => setAgentsOpen(false), [])
+  const expanded = onToggle ? Boolean(open) : agentsOpen
 
   useEffect(() => {
-    if (!agentsOpen) return
+    if (!agentsOpen || onToggle) return
     function onPointer(event: MouseEvent) {
       const target = event.target as Node | null
       if (rootRef.current?.contains(target)) return
@@ -117,9 +122,9 @@ export function BrandCornerMascot({
     }
     window.addEventListener('mousedown', onPointer)
     return () => window.removeEventListener('mousedown', onPointer)
-  }, [agentsOpen])
+  }, [agentsOpen, onToggle])
 
-  const panel = !agentsOpen
+  const panel = onToggle || !agentsOpen
     ? null
     : menu
       ? typeof menu === 'function'
@@ -142,14 +147,20 @@ export function BrandCornerMascot({
       <div className="brand-corner-mascot">
         <button
           type="button"
-          className={`brand-corner-mascot-btn${agentsOpen ? ' is-active' : ''}`}
-          title={name}
-          aria-label={current ? `切换 Agent，当前：${name}` : '切换 Agent'}
-          aria-haspopup={menu ? 'dialog' : 'menu'}
-          aria-expanded={agentsOpen}
-          data-dock-tip={name}
+          className={`brand-corner-mascot-btn${expanded ? ' is-active' : ''}`}
+          title={onToggle ? (expanded ? '关闭聊天窗' : '打开聊天窗') : name}
+          aria-label={onToggle ? (expanded ? '关闭聊天窗' : '打开聊天窗') : current ? `切换 Agent，当前：${name}` : '切换 Agent'}
+          aria-haspopup={onToggle ? 'dialog' : menu ? 'dialog' : 'menu'}
+          aria-expanded={expanded}
+          data-dock-tip={onToggle ? (expanded ? '关闭聊天窗' : '打开聊天窗') : name}
           data-testid="brand-corner-mascot-toggle"
-          onClick={() => setAgentsOpen((prev) => !prev)}
+          onClick={() => {
+            if (onToggle) {
+              onToggle()
+              return
+            }
+            setAgentsOpen((prev) => !prev)
+          }}
         >
           {identity && current ? (
             <SidebarMascot size={size} sessionId={current.id} identity={identity} animate={false} title="" />

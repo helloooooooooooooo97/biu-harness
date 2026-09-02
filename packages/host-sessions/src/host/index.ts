@@ -18,6 +18,8 @@ import {
   mergeSessionConfig,
   normalizeSessionConfig,
   normalizeSessionType,
+  isSessionCompactPoint,
+  sessionCompactSummaryText,
 } from '@biu/type-session'
 import {
   ensureSessionMascot,
@@ -56,21 +58,11 @@ export function deriveMessages(events: SessionEvent[]): LlmMessage[] {
   }
 
   for (const event of events) {
-    // 压缩点：某次 context_compact_submit / session_compact / context_clear 的 tool/call 即压缩点。
-    // 从此处重起，丢弃该点之前的历史（避免重复发送旧 token）；摘要取该 tool 调用的 text 参数。
-    if (
-      event.type === 'tool/call' &&
-      (event.name === 'context_compact_submit' || event.name === 'session_compact' || event.name === 'context_clear')
-    ) {
+    // 压缩点：sessions 的 compact/clear（含旧独立工具名）。从此处重起，摘要取调用参数。
+    if (isSessionCompactPoint(event)) {
       messages.length = 0
       pendingToolCalls.clear()
-      let text = ''
-      try {
-        const args = JSON.parse(event.arguments || '{}') as { text?: string }
-        text = String(args.text ?? '').trim()
-      } catch {
-        text = ''
-      }
+      const text = sessionCompactSummaryText(event)
       if (text) {
         messages.push({ role: 'system', content: `[已压缩的历史摘要] ${text}` })
       }
@@ -135,15 +127,12 @@ export interface InputComposition {
  *   system prompt 计入本次。「历史(hist)」= 本次之前更早的所有 turn。
  * - 角色归类：user/message、assistant/message(含 tool_calls 的 arguments)、
  *   assistant/chunk、tool/call、tool/result 按所在 turn 计入；system/prompt、system/compact 计入当前 turn。
- * - 压缩点语义与 deriveMessages 对齐：context_compact_submit / session_compact 的
- *   tool/call 即压缩点，仅统计该点之后的事件（从压缩点重起）。
+ * - 压缩点语义与 deriveMessages 对齐：仅统计最后一个压缩点之后的事件。
  * - 字数用字符长度。total 为 0 时各 pct 返回 0。
  */
 export function statInputComposition(events: SessionEvent[]): InputComposition {
   const len = (s: string | null | undefined) => (s ? s.length : 0)
-  const isCompact = (e: SessionEvent) =>
-    e.type === 'tool/call' &&
-    (e.name === 'context_compact_submit' || e.name === 'session_compact' || e.name === 'context_clear')
+  const isCompact = (e: SessionEvent) => isSessionCompactPoint(e)
 
   // —— 第一遍：定位「本次(最近一次) turn」。
   //     与 deriveMessages 一致：仅统计最后一个压缩点之后的事件（无压缩点则全量）。
@@ -282,7 +271,31 @@ export class SessionsService extends Service {
   constructor(ctx: Context) {
     super(ctx, 'sessions')
     ctx.inject(['database'], (inner) => {
-      inner.database.register(sessionsCollection(this))
+      inner.database.register(
+        sessionsCollection({
+          listSummaries: () => this.listSummaries(),
+          rename: (id, title) => this.rename(id, title),
+          patchConfig: (id, patch) => this.patchConfig(id, patch),
+          delete: (id) => this.delete(id),
+          create: (opts) => this.create(undefined, opts),
+          require: (id) => this.require(id),
+          setProject: (id, project) => this.setProject(id, project),
+          isBusy: (id) => {
+            try {
+              return Boolean(this.ctx.agents?.isBusy(id))
+            } catch {
+              return false
+            }
+          },
+          inboxPending: (id) => {
+            try {
+              return Number(this.ctx.agents?.inboxPending(id) ?? 0)
+            } catch {
+              return 0
+            }
+          },
+        }),
+      )
     })
   }
 
@@ -579,6 +592,7 @@ async function resolveHostProject(input: string): Promise<SessionProject> {
 }
 
 export { sessionsCollection } from './sessions-collection.ts'
+export { lastUsageBeforeCompact, retrieveHistory } from './session-compact.ts'
 
 export const name = 'sessions'
 export const inject = ['sessionStore']

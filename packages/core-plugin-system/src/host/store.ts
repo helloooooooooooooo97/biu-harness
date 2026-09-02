@@ -11,7 +11,6 @@ import {
   findEntry,
   HOST_ENTRIES,
   parseStoreManifest,
-  registerPluginCreate,
   WEB_ENTRIES,
   type PluginCreateInput,
   type StoreManifestFields,
@@ -33,7 +32,8 @@ export type StoreListing = {
   lastRunAt: number | null
   hasHost: boolean
   hasWeb: boolean
-  shell: StoreShell
+  headless?: boolean
+  shell?: StoreShell
 }
 
 export type StoreManifest = StoreManifestFields
@@ -210,8 +210,8 @@ export class PluginStoreService extends Service {
     if (!name) throw new Error('plugin name required')
     const hostJs = String(input.hostJs ?? '').trim()
     const webSrc = input.webJs != null ? String(input.webJs).trim() : ''
-    if (!hostJs && !webSrc) throw new Error('plugin_create needs hostJs and/or webJs')
-    requireDeclaredShell(input.shell, Boolean(webSrc), 'plugin_create')
+    if (!hostJs && !webSrc) throw new Error('create needs hostJs and/or webJs')
+    requireDeclaredShell(input.shell, Boolean(webSrc), 'create', Boolean(input.headless))
     this.invalidateList()
     const dest = this.pluginPath(id)
     mkdirSync(dest, { recursive: true })
@@ -237,8 +237,8 @@ export class PluginStoreService extends Service {
     const hostJs = String(input.hostJs ?? '').trim()
     const webSrc = input.webJs != null ? String(input.webJs).trim() : ''
     const hasWeb = Boolean(webSrc) || Boolean(findEntry(dest, WEB_ENTRIES))
-    requireDeclaredShell(input.shell, hasWeb, 'plugin_sandbox')
     const existing = existsSync(join(dest, 'manifest.json')) ? await readManifest(dest).catch(() => undefined) : undefined
+    requireDeclaredShell(input.shell, hasWeb, 'sandbox', Boolean(input.headless) || Boolean(existing?.headless))
     const manifest = buildStoreManifest(input, existing)
     await writeFile(join(dest, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
     if (hostJs) await writeFile(join(dest, 'host.ts'), hostJs.endsWith('\n') ? hostJs : `${hostJs}\n`)
@@ -259,7 +259,8 @@ export class PluginStoreService extends Service {
     requireDeclaredShell(
       raw && typeof raw === 'object' ? (raw as { shell?: unknown }).shell : undefined,
       Boolean(webEntry),
-      'plugin_pack',
+      'pack',
+      Boolean(manifest.headless),
     )
     this.invalidateList()
     const dest = this.pluginPath(manifest.id)
@@ -284,6 +285,7 @@ export class PluginStoreService extends Service {
       authorUrl: string
       hasHost: boolean
       hasWeb: boolean
+      headless?: boolean
       createdAt: number
       updatedAt: number
     }> = []
@@ -302,6 +304,7 @@ export class PluginStoreService extends Service {
         authorUrl: manifest.authorUrl,
         hasHost: Boolean(findEntry(dir, HOST_ENTRIES)),
         hasWeb: Boolean(findEntry(dir, WEB_ENTRIES)),
+        ...(manifest.headless ? { headless: true } : {}),
         createdAt: manifest.createdAt || stats.createdAt,
         updatedAt: stats.updatedAt,
       })
@@ -336,7 +339,7 @@ export class PluginStoreService extends Service {
         lastRunAt: this.state.lastRunAt[manifest.id] ?? null,
         hasHost: stats.hasHost,
         hasWeb: stats.hasWeb,
-        shell: parseStoreShell(manifest.shell),
+        ...(manifest.headless ? { headless: true } : { shell: parseStoreShell(manifest.shell) }),
       })
     }
     this.listCache = items
@@ -445,7 +448,6 @@ export async function openStore(ctx: Context) {
   } catch (error) {
     ctx.logger('core-plugin-system').error(error)
   }
-  registerPluginCreate(ctx, store)
 
   ctx.http.route('GET', '/api/plugin-store/files/:id/:file', async (route) => {
     try {

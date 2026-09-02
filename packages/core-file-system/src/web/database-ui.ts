@@ -7,6 +7,7 @@ export { normalizeCollectionPath }
 function mergeChrome(layers: CollectionChrome[]): CollectionChrome {
   const cells: CollectionChrome['cells'] = {}
   let Action: CollectionChrome['Action']
+  let Icon: CollectionChrome['Icon']
   let Title: CollectionChrome['Title']
   let Board: CollectionChrome['Board']
   let Content: CollectionChrome['Content']
@@ -17,6 +18,7 @@ function mergeChrome(layers: CollectionChrome[]): CollectionChrome {
   for (const layer of layers) {
     Object.assign(cells, layer.cells)
     if (layer.Action) Action = layer.Action
+    if (layer.Icon) Icon = layer.Icon
     if (layer.Title) Title = layer.Title
     if (layer.Board) Board = layer.Board
     if (layer.Content) Content = layer.Content
@@ -31,7 +33,7 @@ function mergeChrome(layers: CollectionChrome[]): CollectionChrome {
       }
     }
   }
-  return { cells, Action, Title, Board, Content, panes: panes.length ? panes : undefined, openRow, listViews, lockedFiltersFromSearch }
+  return { cells, Action, Icon, Title, Board, Content, panes: panes.length ? panes : undefined, openRow, listViews, lockedFiltersFromSearch }
 }
 
 function mergeViews(layers: CollectionViewType[]): CollectionViewType[] {
