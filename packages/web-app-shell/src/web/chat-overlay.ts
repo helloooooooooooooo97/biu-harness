@@ -9,7 +9,7 @@ export const SIDEBAR_MIN = 160
 export const SIDEBAR_LABEL_AT = SIDEBAR_MIN
 /** 拉到侧栏最大宽度才显示会话 tag（日报、总结、+N 等）。 */
 export const SIDEBAR_TAG_AT = SIDEBAR_MAX
-/** 中间列最窄约为对话内容最大宽 768 的 2/3，好让左右栏先完整显示。 */
+/** 中间列希望至少这么宽；不够时先压检查器，不够再压左侧，不要一窄就把侧栏关掉。 */
 export const CENTER_MIN = 512
 export const INSPECTOR_MIN = 240
 const RAIL = 0
@@ -22,7 +22,7 @@ export function clampSidebarWidth(width: number) {
   return Math.min(SIDEBAR_MAX, n)
 }
 
-/** 窄屏时先整栏关掉左侧（不要压成细条），再压检查器（不低于 INSPECTOR_MIN），最后才压中间。 */
+/** 窄屏时先压中间、再把检查器收到 INSPECTOR_MIN；左侧尽量保持，两侧都压到顶后才收到 SIDEBAR_MIN，仍不够才整栏关掉。 */
 export function allocateShellColumns(opts: {
   viewportWidth: number
   railWidth?: number
@@ -36,12 +36,22 @@ export function allocateShellColumns(opts: {
   let left = opts.leftPane ? clampSidebarWidth(opts.leftWidth ?? SIDEBAR_MAX) : 0
   let inspector = opts.inspectorOpen ? Math.max(INSPECTOR_MIN, opts.inspectorWidth) : 0
   let center = available - left - inspector
-  if (center < CENTER_MIN && left > 0) {
+  if (center < CENTER_MIN && inspector > INSPECTOR_MIN) {
+    const take = Math.min(inspector - INSPECTOR_MIN, CENTER_MIN - center)
+    inspector -= take
+    center += take
+  }
+  if (center < 0 && left > SIDEBAR_MIN) {
+    const take = Math.min(left - SIDEBAR_MIN, -center)
+    left -= take
+    center += take
+  }
+  if (center < 0 && left > 0) {
     center += left
     left = 0
   }
-  if (center < CENTER_MIN && inspector > INSPECTOR_MIN) {
-    const take = Math.min(inspector - INSPECTOR_MIN, CENTER_MIN - center)
+  if (center < 0 && inspector > 0) {
+    const take = Math.min(inspector, -center)
     inspector -= take
     center += take
   }

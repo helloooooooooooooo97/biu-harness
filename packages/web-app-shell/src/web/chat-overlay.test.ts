@@ -76,7 +76,7 @@ test('sidebar stays a normal pane at min width, never an icon rail', () => {
   assert.equal(atMin.left, SIDEBAR_MIN)
 })
 
-test('narrow viewport hides the left pane outright, then shrinks inspector, then center', () => {
+test('narrow viewport shrinks center and inspector first; left hides last', () => {
   const wide = allocateShellColumns({
     viewportWidth: 1600,
     leftPane: true,
@@ -87,38 +87,38 @@ test('narrow viewport hides the left pane outright, then shrinks inspector, then
   assert.equal(wide.inspector, 320)
   assert.equal(wide.center, 1600 - SIDEBAR_MAX - 320)
 
-  const hideLeft = allocateShellColumns({
+  const keepLeft = allocateShellColumns({
     viewportWidth: SIDEBAR_MAX + CENTER_MIN + 320 - 100,
     leftPane: true,
     inspectorOpen: true,
     inspectorWidth: 320,
   })
+  assert.equal(keepLeft.left, SIDEBAR_MAX)
+  assert.equal(keepLeft.inspector, INSPECTOR_MIN)
+  assert.equal(keepLeft.center, SIDEBAR_MAX + CENTER_MIN + 320 - 100 - SIDEBAR_MAX - INSPECTOR_MIN)
+
+  const squeezeInspector = allocateShellColumns({
+    viewportWidth: SIDEBAR_MAX + 200 + INSPECTOR_MIN,
+    leftPane: true,
+    inspectorOpen: true,
+    inspectorWidth: 320,
+  })
+  assert.equal(squeezeInspector.left, SIDEBAR_MAX)
+  assert.equal(squeezeInspector.inspector, INSPECTOR_MIN)
+  assert.equal(squeezeInspector.center, 200)
+
+  const hideLeft = allocateShellColumns({
+    viewportWidth: SIDEBAR_MIN + INSPECTOR_MIN - 1,
+    leftPane: true,
+    inspectorOpen: true,
+    inspectorWidth: 320,
+  })
   assert.equal(hideLeft.left, 0)
-  assert.equal(hideLeft.inspector, 320)
-  assert.equal(hideLeft.center, SIDEBAR_MAX + CENTER_MIN + 320 - 100 - 320)
-
-  const stealInspector = allocateShellColumns({
-    viewportWidth: CENTER_MIN + INSPECTOR_MIN,
-    leftPane: true,
-    inspectorOpen: true,
-    inspectorWidth: 320,
-  })
-  assert.equal(stealInspector.left, 0)
-  assert.equal(stealInspector.inspector, INSPECTOR_MIN)
-  assert.equal(stealInspector.center, CENTER_MIN)
-
-  const squeezeCenter = allocateShellColumns({
-    viewportWidth: CENTER_MIN + INSPECTOR_MIN - 80,
-    leftPane: true,
-    inspectorOpen: true,
-    inspectorWidth: 320,
-  })
-  assert.equal(squeezeCenter.left, 0)
-  assert.equal(squeezeCenter.inspector, INSPECTOR_MIN)
-  assert.equal(squeezeCenter.center, CENTER_MIN - 80)
+  assert.equal(hideLeft.inspector, INSPECTOR_MIN)
+  assert.equal(hideLeft.center, SIDEBAR_MIN + INSPECTOR_MIN - 1 - INSPECTOR_MIN)
 })
 
-test('center min is two thirds of the old 768 so side panes stay visible longer', () => {
+test('center min is two thirds of the old 768; inspector shrinks before the left pane', () => {
   assert.equal(CENTER_MIN, 512)
   const keepBoth = allocateShellColumns({
     viewportWidth: SIDEBAR_MAX + 600 + 320,
