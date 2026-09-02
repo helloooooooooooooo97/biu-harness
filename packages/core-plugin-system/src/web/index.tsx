@@ -262,22 +262,17 @@ function PluginAppWindow({
         >
           <MinusIcon className="size-5" />
         </button>
+        {shell.resizable ? (
         <button
           type="button"
-          className={`flex size-8 items-center justify-center rounded-md border-0 bg-transparent p-0 transition-colors ${
-            shell.resizable
-              ? 'cursor-pointer text-neutral-500 hover:bg-black/5 hover:text-neutral-800'
-              : 'cursor-not-allowed text-neutral-400/50'
-          }`}
-          title={shell.resizable ? (fullscreen ? '还原' : '全屏') : '固定尺寸，不能放大'}
-          aria-label={
-            shell.resizable ? (fullscreen ? `还原 ${title}` : `全屏 ${title}`) : `${title} 固定尺寸，不能放大`
-          }
-          disabled={!shell.resizable}
-          onClick={shell.resizable ? onToggleFullscreen : undefined}
+          className="flex size-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800"
+          title={fullscreen ? '还原' : '全屏'}
+          aria-label={fullscreen ? `还原 ${title}` : `全屏 ${title}`}
+          onClick={onToggleFullscreen}
         >
           {fullscreen ? <ArrowsPointingInIcon className="size-5" /> : <ArrowsPointingOutIcon className="size-5" />}
         </button>
+        ) : null}
         </nav>
       </div>
       {fullscreen || !shell.resizable
