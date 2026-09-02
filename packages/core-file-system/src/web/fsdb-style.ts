@@ -255,7 +255,7 @@ const CSS = `
 .fsdb-detail-tab-count{margin-left:6px;font-size:11px;font-weight:700;color:var(--dsw-label-3)}
 .fsdb-detail-head-actions{display:inline-flex;align-items:center;gap:2px;justify-self:end}
 .fsdb-detail-split{display:flex;flex-direction:column;flex:none;min-height:min-content;overflow:visible}
-.fsdb-detail-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;flex-direction:column;gap:8px;padding:80px 24px 24px;min-width:0}
+.fsdb-detail-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;flex-direction:column;gap:8px;padding:20px 24px 24px;min-width:0}
 .fsdb-tag-collect{display:flex;flex:1;min-width:0;min-height:320px}
 .fsdb-tag-collect>.fsdb-page{flex:1;min-width:0;min-height:0;background:transparent}
 .fsdb-page.is-sheet .tasks-main{padding:0;gap:8px;max-width:none}
