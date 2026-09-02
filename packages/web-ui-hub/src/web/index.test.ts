@@ -40,7 +40,7 @@ test('ui-hub unloads disabled plugins before importing new ones', async () => {
   const importAt = src.indexOf('resolvePlugin(row.id, row.web)')
   assert.ok(disposeAt > 0 && importAt > 0 && disposeAt < importAt)
   assert.match(src, /g\.React = React/)
-  assert.match(src, /g\.ReactDOM/)
+  assert.match(src, /g\.ReactJSXRuntime/)
 })
 
 test('ui-hub mounts configured ui packages including chat', async () => {

@@ -258,6 +258,7 @@ test('registers plugin_create, plugin_sandbox, plugin_pack', () => {
   assert.match(descriptions.join('\n'), /shellWidth/)
   assert.match(descriptions.join('\n'), /无头/)
   assert.match(descriptions.join('\n'), /可以 import npm/)
+  assert.match(descriptions.join('\n'), /ReactJSXRuntime/)
 })
 
 test('pack web jsx uses globalThis.React instead of bundling npm react', async () => {
@@ -285,6 +286,36 @@ test('pack web jsx uses globalThis.React instead of bundling npm react', async (
     const webJs = await readFile(join(dir, '.plugin', 'store-jsx', 'web.js'), 'utf8')
     assert.match(webJs, /globalThis\.React/)
     assert.match(webJs, /createElement/)
+    assert.doesNotMatch(webJs, /node_modules\/react/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('pack maps react/jsx-runtime to globalThis.ReactJSXRuntime', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'plugin-pack-jsx-rt-'))
+  try {
+    const ctx = new Context()
+    stubHub(ctx)
+    const store = new PluginStoreService(
+      ctx,
+      join(dir, '.plugin'),
+      join(dir, 'store.json'),
+      join(dir, '.plugin-dev'),
+    ).open()
+    await store.initSandbox({
+      id: 'store-jsx-rt',
+      name: 'JSXRT',
+      shell: { width: 320, height: 200 },
+    })
+    const sandbox = join(dir, '.plugin-dev', 'store-jsx-rt')
+    await writeFile(
+      join(sandbox, 'web.tsx'),
+      `import { jsx } from 'react/jsx-runtime'\nexport const name = 'store-jsx-rt'\nexport function apply() { return jsx('div', { children: 'hi' }, 'k') }\n`,
+    )
+    await store.pack('store-jsx-rt')
+    const webJs = await readFile(join(dir, '.plugin', 'store-jsx-rt', 'web.js'), 'utf8')
+    assert.match(webJs, /ReactJSXRuntime/)
     assert.doesNotMatch(webJs, /node_modules\/react/)
   } finally {
     await rm(dir, { recursive: true, force: true })
@@ -355,4 +386,15 @@ test('compileStoreModule strips TypeScript in-process', async () => {
   )
   assert.match(code, /\bapply\b/)
   assert.doesNotMatch(code, /ctx: \{/)
+})
+
+test('excalidraw board onChange does not setState', async () => {
+  const { resolve } = await import('node:path')
+  const src = await readFile(resolve(import.meta.dirname, '../../../../.plugin-dev/page-excalidraw/web.tsx'), 'utf8')
+  const onChange = src.match(/const onChange = useCallback\([\s\S]*?\}, \[file\]\)/)?.[0]
+  assert.ok(onChange)
+  assert.doesNotMatch(onChange, /setScene/)
+  assert.match(onChange, /saveScene/)
+  assert.match(src, /res\.status === 404/)
+  assert.match(src, /createPortal/)
 })

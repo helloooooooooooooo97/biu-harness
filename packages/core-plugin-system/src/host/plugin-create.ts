@@ -140,10 +140,11 @@ ${names.map((name) => `export const ${name} = G.${name}`).join('\n')}
 function reactShim(spec: string) {
   if (spec === 'react/jsx-runtime' || spec === 'react/jsx-dev-runtime') {
     return `const R = globalThis.React
-export const Fragment = R.Fragment
-export const jsx = (type, props, key) => R.createElement(type, key == null ? props : { ...props, key })
-export const jsxs = jsx
-export const jsxDEV = jsx
+const J = globalThis.ReactJSXRuntime
+export const Fragment = (J && J.Fragment) || R.Fragment
+export const jsx = J && J.jsx ? J.jsx : (type, props, key) => R.createElement(type, key == null ? props : { ...props, key })
+export const jsxs = J && J.jsxs ? J.jsxs : jsx
+export const jsxDEV = J && (J.jsxDEV || J.jsx) ? (J.jsxDEV || J.jsx) : jsx
 `
   }
   if (spec === 'react-dom' || spec.startsWith('react-dom/')) {
@@ -295,7 +296,7 @@ export async function readSandboxManifest(dir: string) {
 }
 
 const CONTRACT = [
-  '契约：id 与 export const name 相同。可以 import npm，plugin_pack 会打进 host.js/web.js。不要 import react / react-dom / @biu/*：Web 用宿主 globalThis.React 与 ReactDOM；宿主服务用 inject。有 npm 依赖请用 plugin_sandbox + plugin_pack（plugin_create 只做单文件、不解析 node_modules）。不要改 packages/ 或 cordis.plugins.json。',
+  '契约：id 与 export const name 相同。可以 import npm，plugin_pack 会打进 host.js/web.js。不要 import react / react-dom / @biu/*：Web 用宿主 globalThis.React、ReactDOM 与 ReactJSXRuntime；宿主服务用 inject。有 npm 依赖请用 plugin_sandbox + plugin_pack（plugin_create 只做单文件、不解析 node_modules）。不要改 packages/ 或 cordis.plugins.json。',
   '有窗口的 Web：ctx.slots.place("plugin-store-extras", Comp, { key, props: () => ({ Icon }) })。Icon 可选。运行窗口会给 extras 套操纵栏（关/缩/全屏），key 尽量用插件 id。',
   '无头插件：manifest 写 headless: true。有 web 也不要 shell，不要 place plugin-store-extras，不要操纵栏。只在 apply 里登记服务（如 pageEditor）。',
   '有窗口的 web 必须在 manifest / 本工具 shell 参数里写 width 与 height。无头插件不要写 shell。',
