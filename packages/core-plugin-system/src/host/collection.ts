@@ -1,4 +1,12 @@
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
+import {
+  createArgs,
+  PLUGIN_CREATE_DESCRIPTION,
+  PLUGIN_CREATE_PROPERTIES,
+  PLUGIN_PACK_DESCRIPTION,
+  PLUGIN_SANDBOX_DESCRIPTION,
+  PLUGIN_SANDBOX_PROPERTIES,
+} from './plugin-create.ts'
 import type { PluginStoreService, StoreListing } from './store.ts'
 
 type SandboxListing = Awaited<ReturnType<PluginStoreService['listSandboxes']>>[number]
@@ -97,7 +105,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       route: '/plugins',
       title: '插件',
       inspector: true,
-      blurb: '.plugin 已安装与 .plugin-dev 沙箱同一张表：没有的字段留空。窗口尺寸来自扁平列 shellWidth/shellHeight，不是 listing.shell。',
+      blurb: '.plugin 已安装与 .plugin-dev 沙箱同一张表。新建用 db_action create/sandbox，打包用 pack。窗口尺寸来自扁平列 shellWidth/shellHeight，不是 listing.shell。',
       order: 30,
       icon: 'puzzle-piece',
     },
@@ -151,6 +159,32 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
     },
     actions: [
       {
+        id: 'create',
+        label: '直写安装',
+        placement: [],
+        allowMissing: true,
+        parameters: {
+          type: 'object',
+          description: PLUGIN_CREATE_DESCRIPTION,
+          properties: PLUGIN_CREATE_PROPERTIES,
+          required: ['name'],
+        },
+        run: async (id, _record, args = {}) => store.create(createArgs({ ...args, id })),
+      },
+      {
+        id: 'sandbox',
+        label: '开沙箱',
+        placement: [],
+        allowMissing: true,
+        parameters: {
+          type: 'object',
+          description: PLUGIN_SANDBOX_DESCRIPTION,
+          properties: PLUGIN_SANDBOX_PROPERTIES,
+          required: ['name'],
+        },
+        run: async (id, _record, args = {}) => store.initSandbox(createArgs({ ...args, id })),
+      },
+      {
         id: 'start',
         label: '运行',
         when: { installed: true, running: false },
@@ -170,9 +204,8 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         id: 'pack',
         label: '打包安装',
         when: { sandbox: true },
-        run: async (id) => {
-          await store.pack(id)
-        },
+        parameters: { type: 'object', description: PLUGIN_PACK_DESCRIPTION, properties: {} },
+        run: async (id) => store.pack(id),
       },
       {
         id: 'uninstall',

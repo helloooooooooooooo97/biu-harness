@@ -1,5 +1,6 @@
 import { nameFromSessionMascot } from './session-mascot-name.ts'
 export { nameFromSessionMascot, MASCOT_COLOR_NAME, MASCOT_EYE_NAME, MASCOT_SHAPE_NAME } from './session-mascot-name.ts'
+export { isSessionCompactPoint, sessionCompactSummaryText } from './compact-point.ts'
 export const SESSION_FORMAT_VERSION = 1
 
 export type InboxKind = 'wake' | 'inject'

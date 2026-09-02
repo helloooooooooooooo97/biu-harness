@@ -10,7 +10,7 @@ import type { ChatProvider, LlmModelDef, LlmEndpointDef } from './model-catalog.
 export type { ChatProvider, LlmModelDef, LlmEndpointDef } from './model-catalog.ts'
 export { LLM_ENDPOINT_PRESETS, LLM_MODEL_CATALOG } from './model-catalog.ts'
 import { currentSessionId } from '@biu/host-sessions/scope'
-import type { SessionConfig, SessionEvent } from '@biu/type-session'
+import { isSessionCompactPoint, type SessionConfig, type SessionEvent } from '@biu/type-session'
 import { DEFAULT_TAIL_TURNS, sliceBeforeTurns, sliceTailTurns } from '@biu/host-sessions/window'
 import {
   DEFAULT_TRAJECTORY_TURNS,
@@ -1102,12 +1102,7 @@ export function apply(ctx: Context) {
     let turn = 0
     for (const event of record.events) {
       if (event.type === 'step/start') turn = event.turn
-      if (
-        event.type === 'tool/call' &&
-        (event.name === 'context_compact_submit' || event.name === 'context_clear')
-      ) {
-        // 压缩点：仅「真正提交上下文压缩」的 context_compact_submit / context_clear 调用；
-        // session_compact（旧压缩）与其它的 status/brief 查询类不算压缩点。
+      if (isSessionCompactPoint(event)) {
         compactions.push(event.seq)
         continue
       }

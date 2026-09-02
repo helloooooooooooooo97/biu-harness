@@ -594,10 +594,10 @@ export class DatabaseService extends Service implements Database {
     if (parts.length !== 2) throw new Error(`cannot action: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
-    const record = await spec.get(parts[1]!)
-    if (!record) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
     const action = spec.actions?.find((item) => item.id === actionId)
     if (!action) throw new Error(`unknown action: ${actionId}`)
+    const record = (await spec.get(parts[1]!)) ?? (action.allowMissing ? { id: parts[1]! } : null)
+    if (!record) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
     if (!matchActionWhen(record, action.when)) throw new Error(`action not available: ${actionId}`)
     const result = await action.run(parts[1]!, record, args)
     const next = (await spec.get(parts[1]!)) ?? record
@@ -755,7 +755,7 @@ export function apply(ctx: Context) {
   ctx.tools.register({
     name: 'db_action',
     description:
-      '对一条记录执行该表登记的动作。路径为 /<表>/<id>，action 为动作 id（见 db_stat 的 schema.actions）。需要参数时放在 args。任务派工/汇报、会话进度等一律走这里，不要再调独立的 tasks_* / session_* 工具。',
+      '对一条记录执行该表登记的动作。路径为 /<表>/<id>，action 为动作 id（见 db_stat 的 schema.actions）。需要参数时放在 args。任务派工/汇报、会话压缩/进度、插件创建/打包一律走这里。',
     parameters: {
       type: 'object',
       properties: {

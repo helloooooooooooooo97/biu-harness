@@ -302,6 +302,34 @@ test('deriveMessages projects pasted images as multimodal content', () => {
   assert.equal(parts[1]?.image_url?.url, 'data:image/png;base64,abc')
 })
 
+test('deriveMessages honors db_action compact as new prefix', () => {
+  const events: SessionEvent[] = [
+    { type: 'session/open', version: 1, seq: 0, ts: 0 },
+    { type: 'system/prompt', text: 'SYS', seq: 1, ts: 1 },
+    { type: 'user/message', text: '旧的早期消息A', kind: 'wake', seq: 2, ts: 2 },
+    { type: 'assistant/message', text: '早期回答B', seq: 3, ts: 3 },
+    {
+      type: 'tool/call',
+      id: 't1',
+      name: 'db_action',
+      arguments: JSON.stringify({
+        path: '/sessions/s1',
+        action: 'compact',
+        args: { text: '摘要：聊了早期内容' },
+      }),
+      seq: 4,
+      ts: 4,
+    },
+    { type: 'user/message', text: '压缩后的新问题', kind: 'wake', seq: 5, ts: 5 },
+  ]
+  const out = deriveMessages(events as any)
+  const joined = out.map((m) => (typeof m.content === 'string' ? m.content : '')).join('|')
+  assert.ok(joined.includes('压缩后的新问题'))
+  assert.ok(joined.includes('摘要：聊了早期内容'))
+  assert.ok(!joined.includes('旧的早期消息A'))
+  assert.ok(!joined.includes('早期回答B'))
+})
+
 test('deriveMessages honors context_compact_submit tool/call as new prefix', () => {
   const events: SessionEvent[] = [
     { type: 'session/open', version: 1, seq: 0, ts: 0 },
