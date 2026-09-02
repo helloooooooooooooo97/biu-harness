@@ -148,7 +148,4 @@ test('pageBlock capture includes drawing surfaces', async () => {
   assert.match(src, /data-page-block-capture/)
   assert.match(src, /\.excalidraw/)
   assert.match(src, /canvas/)
-  const view = await readFile(resolve(import.meta.dirname, './page-block-view.tsx'), 'utf8')
-  assert.match(view, /draggable=\{kind !== 'excalidraw'\}/)
-  assert.match(src, /dragstart/)
 })

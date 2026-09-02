@@ -10,7 +10,7 @@ export const PAGE_EDITOR_STYLE = `
 .page-editor .tiptap [data-heading-plugin]{border-radius:8px}
 .page-editor .page-block{margin:12px 0;position:relative;z-index:0;isolation:isolate;overflow:hidden}
 .page-editor .page-block.ProseMirror-selectednode{outline:none;box-shadow:none}
-.page-editor .page-block[data-page-block=excalidraw]{outline:none;box-shadow:none;border:0;-webkit-user-drag:none}
+.page-editor .page-block[data-page-block=excalidraw]{outline:none;box-shadow:none;border:0}
 .page-editor .page-block-missing{padding:12px 14px;border:1px dashed var(--dsw-border);border-radius:8px;color:var(--dsw-label-3);font-size:13px}
 .page-editor .tiptap ul,.page-editor .tiptap ol{padding-left:1.6em}
 .page-editor .tiptap li{margin:1px 0}

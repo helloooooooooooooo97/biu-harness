@@ -51,13 +51,7 @@ export function PageBlockView({ node, updateAttributes, editor }: NodeViewProps)
   }, [cloneFrom, file])
 
   return (
-    <NodeViewWrapper
-      className="page-block"
-      data-page-block={kind}
-      data-testid={`page-block-${kind}`}
-      draggable={kind !== 'excalidraw'}
-      onDragStart={kind === 'excalidraw' ? (event) => event.preventDefault() : undefined}
-    >
+    <NodeViewWrapper className="page-block" data-page-block={kind} data-testid={`page-block-${kind}`}>
       {cloneFrom ? (
         <div className="page-block-missing">正在复制附件…</div>
       ) : View ? (

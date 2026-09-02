@@ -128,10 +128,6 @@ export const pageBlock = Node.create({
       className: 'page-block',
       stopEvent: ({ event }) => {
         const target = event.target as HTMLElement | null
-        if (event.type === 'dragstart' && target?.closest('[data-page-block="excalidraw"]')) {
-          event.preventDefault()
-          return true
-        }
         return Boolean(
           target?.closest('textarea, input, select, button, canvas, .excalidraw, [data-page-block-capture]'),
         )

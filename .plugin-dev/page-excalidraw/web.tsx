@@ -51,8 +51,15 @@ function assetName(file: string) {
   return file.replace(/^assets\//, '')
 }
 
-function validAssetFile(name: string) {
-  return name === name.replace(/[\\/]/g, '') && /^[\p{L}\p{N}._-]+$/u.test(name)
+function assetStem(file: string) {
+  return assetName(file).replace(/\.[^.]+$/, '')
+}
+
+function normalizeStem(raw: string, fallback: string) {
+  const trimmed = raw.trim() || fallback
+  const stem = trimmed.replace(/\.[^.]+$/, '')
+  if (!stem || /[\\/]/.test(stem) || !/^[\p{L}\p{N}._-]+$/u.test(stem)) return fallback
+  return stem
 }
 
 async function loadScene(file: string): Promise<Scene> {
@@ -99,19 +106,16 @@ function BoardBar(props: {
   onToggle: () => void
   onRename: (name: string) => void
 }) {
-  const [draft, setDraft] = useState(assetName(props.file))
+  const [draft, setDraft] = useState(assetStem(props.file))
   useEffect(() => {
-    setDraft(assetName(props.file))
+    setDraft(assetStem(props.file))
   }, [props.file])
 
   const commit = () => {
-    let next = draft.trim() || assetName(props.file)
-    if (!next.includes('.')) next = `${next}.json`
-    if (!validAssetFile(next) || next === assetName(props.file)) {
-      setDraft(assetName(props.file))
-      return
-    }
-    props.onRename(next)
+    const next = normalizeStem(draft, assetStem(props.file))
+    setDraft(next)
+    if (next === assetStem(props.file)) return
+    props.onRename(`${next}.json`)
   }
 
   return (
@@ -122,7 +126,7 @@ function BoardBar(props: {
         className="min-w-0 flex-1 rounded bg-transparent px-1 py-0.5 text-center text-[var(--foreground)] outline-none hover:bg-[var(--muted)] focus:bg-[var(--muted)]"
         value={draft}
         disabled={!props.writable}
-        aria-label="画板文件名"
+        aria-label="画板名称"
         onChange={(event) => setDraft(event.target.value)}
         onBlur={commit}
         onKeyDown={(event) => {
