@@ -4,6 +4,8 @@ import { catalogRowOpenTarget, mergeCatalogViews } from '../catalog-views.ts'
 import { viewsCatalogSource } from './database-path.ts'
 import type { SavedView } from './saved-view.ts'
 
+const EMPTY_FILTERS: Record<string, string> = {}
+
 export const viewsChrome: CollectionChrome = {
   openRow(row: DbRecord) {
     const target = catalogRowOpenTarget({ tablePath: row.tablePath, viewId: row.viewId })
@@ -12,7 +14,7 @@ export const viewsChrome: CollectionChrome = {
   },
   lockedFiltersFromSearch(search: string) {
     const source = viewsCatalogSource(search)
-    return source ? { tablePath: source } : ({} as Record<string, string>)
+    return source ? { tablePath: source } : EMPTY_FILTERS
   },
   listViews(tables: CollectionInfo[], user: unknown[]) {
     return mergeCatalogViews(tables, user as SavedView[])

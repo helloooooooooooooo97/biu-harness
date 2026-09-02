@@ -222,6 +222,16 @@ test('list polling pauses while a record is open', () => {
   assert.match(browser, /}, 20000\)/)
 })
 
+test('collection reload does not follow callback identity', () => {
+  assert.match(browser, /const reloadKey = /)
+  assert.match(browser, /void reloadRef\.current\(\)/)
+  assert.doesNotMatch(browser, /void reload\(\)\s*\n\s*\}, \[reload\]/)
+  assert.match(browser, /const EMPTY_FILTERS/)
+  assert.doesNotMatch(browser, /lockedFilters = \{\}/)
+  assert.match(browser, /void pullSchemaTags\(\)/)
+  assert.doesNotMatch(browser, /pullSchemaTags\(\),\s*\n\s*\]\)/)
+})
+
 test('page collection uses a document glyph, not the table/database icon', () => {
   const glyphs = readFileSync(resolve(import.meta.dirname, './nav-glyphs.tsx'), 'utf8')
   assert.match(glyphs, /name === 'document' \|\| name === 'document-text' \|\| name === 'page'/)

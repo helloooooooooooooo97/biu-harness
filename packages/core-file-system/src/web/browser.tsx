@@ -119,6 +119,8 @@ function recordsFingerprint(rows: Array<DbRecord & { path?: string }>) {
   return JSON.stringify(rows)
 }
 
+const EMPTY_FILTERS: Record<string, string> = {}
+
 export function CollectionBrowser({
   moduleId,
   collectionPath,
@@ -127,7 +129,7 @@ export function CollectionBrowser({
   chrome,
   tables = [],
   onOpenTable,
-  lockedFilters = {},
+  lockedFilters = EMPTY_FILTERS,
   routeRecordId = null,
   routeViewId,
   expandedViewKey,
@@ -448,7 +450,6 @@ export function CollectionBrowser({
           sortDir,
           filters: queryFilters,
         }),
-        pullSchemaTags(),
       ])
       if (gen !== reloadGen.current) return true
       const nextSchema = listed.schema ?? nextStat.schema
@@ -479,6 +480,7 @@ export function CollectionBrowser({
   }, [activeViewId, collectionPath, dataPath, fetchQuery, queryFilters, page, pageSize, sortDir, sortField])
   const reloadRef = useRef(reload)
   reloadRef.current = reload
+  const reloadKey = `${dataPath}\0${page}\0${pageSize}\0${fetchQuery}\0${sortField}\0${sortDir}\0${JSON.stringify(queryFilters)}\0${activeViewId ?? ''}`
   const detailIdRef = useRef<string | null>(null)
   detailIdRef.current = detailId
 
@@ -566,8 +568,12 @@ export function CollectionBrowser({
   }, [collectionPath, dataPath, nested])
 
   useEffect(() => {
-    void reload()
-  }, [reload])
+    void pullSchemaTags()
+  }, [collectionPath])
+
+  useEffect(() => {
+    void reloadRef.current()
+  }, [reloadKey])
 
   useLayoutEffect(() => {
     setOpenDetailId(routeRecordId)

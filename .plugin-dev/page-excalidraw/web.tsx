@@ -201,12 +201,16 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
 
   const bindApi = useCallback((api: DrawApi | null) => {
     apiRef.current = api
-    const current = live.current
-    const empty = !(current?.elements && current.elements.length)
-    if (api?.updateScene && (empty || isLightCanvas(current?.appState?.viewBackgroundColor))) {
-      api.updateScene({ appState: { theme: 'dark', viewBackgroundColor: appCanvasColor() } })
-    }
-    requestAnimationFrame(() => fitView(api))
+    if (!api) return
+    requestAnimationFrame(() => {
+      if (apiRef.current !== api) return
+      const current = live.current
+      const empty = !(current?.elements && current.elements.length)
+      if (api.updateScene && (empty || isLightCanvas(current?.appState?.viewBackgroundColor))) {
+        api.updateScene({ appState: { theme: 'dark', viewBackgroundColor: appCanvasColor() } })
+      }
+      fitView(api)
+    })
   }, [])
 
   useEffect(() => {
