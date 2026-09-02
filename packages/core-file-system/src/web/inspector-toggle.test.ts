@@ -124,6 +124,10 @@ test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.match(browser, /if \(field.writable && kind !== 'file'\)/)
   assert.match(browser, /<FieldEditor/)
   assert.match(browser, /fieldDraftValue\(field, row\[key\]\)/)
+  assert.match(browser, /if \(field.writable && kind !== 'file'\)[\s\S]*const Custom = chrome\?\.cells/)
+  assert.match(browser, /function RecordProperties[\s\S]*item\.field\.writable && kind !== 'file'/)
+  assert.match(browser, /key && field\?\.writable \?/)
+  assert.doesNotMatch(browser, /skipBoolean/)
 })
 
 test('create record sits at the right of the toolbar with a blue label', () => {
@@ -163,6 +167,8 @@ test('card and queue rows expose split and expand like the table', () => {
   assert.match(browser, /function QueueRow[\s\S]*tasks-queue-item-tools[\s\S]*RecordProperties/)
   assert.doesNotMatch(browser, /fsdb-row-check-cell/)
   assert.doesNotMatch(browser, /<th>操作<\/th>/)
+  assert.doesNotMatch(browser, /tasks-queue-item-main" data-biu-action="open"/)
+  assert.doesNotMatch(browser, /tasks-minicard-open" data-biu-action="open"/)
   const style = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8')
   assert.match(style, /tasks-minicard-bar/)
   assert.match(style, /tasks-queue-item-tools/)

@@ -151,7 +151,7 @@ const CSS = `
 .fsdb-page .tasks-title-open:hover{opacity:1;color:var(--dsw-label);background:var(--dsw-hover)}
 .fsdb-page .tasks-tree-count{pointer-events:none}
 .fsdb-page .tasks-table.is-truncate:not(.is-wrap) .fsdb-cell{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fsdb-page .tasks-table .fsdb-cell:has(.tasks-assignee-picker),.fsdb-page .tasks-table .fsdb-cell:has(.tasks-cellselect),.fsdb-page .tasks-table .fsdb-cell:has(.fsdb-tokens),.fsdb-page .tasks-table .fsdb-cell:has(.fsdb-plain-input),.fsdb-page .tasks-table .fsdb-cell:has(.fsdb-thumb-btn),.fsdb-page .fsdb-proprow-v:has(.tasks-assignee-picker),.fsdb-page .fsdb-proprow-v:has(.tasks-cellselect),.fsdb-page .fsdb-proprow-v:has(.fsdb-tokens){overflow:visible}
+.fsdb-page .tasks-table .fsdb-cell:has(.tasks-assignee-picker),.fsdb-page .tasks-table .fsdb-cell:has(.tasks-cellselect),.fsdb-page .tasks-table .fsdb-cell:has(.tasks-tags),.fsdb-page .tasks-table .fsdb-cell:has(.fsdb-cellselect),.fsdb-page .tasks-table .fsdb-cell:has(.db-cell-select),.fsdb-page .tasks-table .fsdb-cell:has(.fsdb-tokens),.fsdb-page .tasks-table .fsdb-cell:has(.fsdb-boolbtn),.fsdb-page .tasks-table .fsdb-cell:has(.fsdb-plain-input),.fsdb-page .tasks-table .fsdb-cell:has(.fsdb-thumb-btn),.fsdb-page .fsdb-proprow-v:has(.tasks-assignee-picker),.fsdb-page .fsdb-proprow-v:has(.tasks-cellselect),.fsdb-page .fsdb-proprow-v:has(.fsdb-cellselect),.fsdb-page .fsdb-proprow-v:has(.fsdb-tokens),.fsdb-page .fsdb-proprow-v:has(.fsdb-boolbtn){overflow:visible}
 .fsdb-page .tasks-table.is-wrap .fsdb-cell{white-space:normal;overflow-wrap:anywhere;word-break:break-word;max-width:100%;align-items:flex-start}
 .fsdb-page .tasks-table.is-wrap.is-truncate .fsdb-cell{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .fsdb-page .tasks-table th,.fsdb-page .tasks-table td{overflow:visible}
@@ -166,7 +166,7 @@ const CSS = `
 .fsdb-page .tasks-table tr.fsdb-group-row:hover td{background:transparent}
 .fsdb-page .tasks-table tr.fsdb-group-row .tasks-queue-ghead{padding:2px 4px}
 .fsdb-page .tasks-minicard{display:flex;flex-direction:column;gap:8px;position:static;width:100%;min-width:0;height:auto;min-height:min-content;margin:0;overflow:visible;text-align:left;border:0;border-radius:8px;padding:10px 11px;background:var(--dsw-sidebar);color:var(--dsw-label);font:inherit;box-shadow:none;transition:background .12s ease}
-.fsdb-page .tasks-minicard-open{display:flex;min-width:0;flex:1;border:0;padding:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.fsdb-page .tasks-minicard-open{display:flex;min-width:0;flex:1;border:0;padding:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:default}
 .fsdb-page .tasks-minicard:hover{background:var(--dsw-hover)}
 .fsdb-page .tasks-minicard.is-active{background:var(--dsw-hover)}
 .fsdb-page .tasks-minicard-bar{display:flex;align-items:center;justify-content:flex-end;gap:2px;min-width:0;width:100%}
@@ -194,7 +194,7 @@ const CSS = `
 .fsdb-page .tasks-queue-item{display:block;min-width:0;width:100%}
 .fsdb-page .tasks-queue-item-body{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;min-width:0;width:100%;box-sizing:border-box;border-radius:6px;padding:6px 6px 6px 0}
 .fsdb-page .tasks-queue-item-lead{display:inline-flex;align-items:center;gap:4px;flex:none;min-width:0;max-width:min(56%,32rem)}
-.fsdb-page .tasks-queue-item-main{display:flex;align-items:center;gap:10px;flex:none;width:auto;max-width:min(42%,22rem);min-width:0;box-sizing:border-box;overflow:visible;text-align:left;border:0;border-radius:6px;padding:2px 8px;background:transparent;color:var(--dsw-label);font:inherit;cursor:pointer;box-shadow:none}
+.fsdb-page .tasks-queue-item-main{display:flex;align-items:center;gap:10px;flex:none;width:auto;max-width:min(42%,22rem);min-width:0;box-sizing:border-box;overflow:visible;text-align:left;border:0;border-radius:6px;padding:2px 8px;background:transparent;color:var(--dsw-label);font:inherit;cursor:default;box-shadow:none}
 .fsdb-page .tasks-queue-item:hover .tasks-queue-item-body{background:var(--dsw-hover)}
 .fsdb-page .tasks-queue-item.is-active .tasks-queue-item-body{background:color-mix(in srgb,var(--dsw-hover) 85%,transparent)}
 .fsdb-page .tasks-queue-item .tasks-row-actions{flex:none;padding:2px}

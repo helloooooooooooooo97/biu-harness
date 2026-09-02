@@ -329,14 +329,17 @@ export function FieldEditor({
   options?: string[]
 }) {
   const kind = resolveFieldType(field)
-  if (kind === 'select' && field.enum) {
-    return (
-      <CellSelect
-        value={value}
-        options={field.enum.map((item) => ({ value: item, label: item }))}
-        onSelect={onChange}
-      />
-    )
+  if (kind === 'select') {
+    const list = [...(field.enum ?? []), ...(options ?? [])].filter((item, index, all) => all.indexOf(item) === index)
+    if (list.length) {
+      return (
+        <CellSelect
+          value={value}
+          options={[{ value: '', label: '未选择' }, ...list.map((item) => ({ value: item, label: item }))]}
+          onSelect={onChange}
+        />
+      )
+    }
   }
   if (kind === 'boolean') {
     return <BoolCell on={value === 'true'} writable onToggle={() => onChange(value === 'true' ? 'false' : 'true')} />
