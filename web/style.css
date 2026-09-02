@@ -5194,6 +5194,11 @@ html.pick-mode * {
   user-select: none !important;
 }
 
+html.pick-mode .chat-stage,
+html.pick-mode .chat-stage * {
+  user-select: text !important;
+}
+
 html.pick-mode .chat-overlay-panel,
 html.pick-mode .chat-overlay-panel * {
   cursor: auto !important;

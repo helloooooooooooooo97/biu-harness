@@ -1,7 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { resolvePickFromNode, resolvePickAtPoint, resolvePicksInRect, visiblePickBox } from './resolve.ts'
-import { formatPicks, parsePicks, splitPickStream, chipLabel, dedupePicks } from './types.ts'
+import { formatPicks, parsePicks, splitPickStream, chipLabel, dedupePicks, textPickFromSelection } from './types.ts'
 
 test('splitPickStream keeps text and chips in order', () => {
   const parts = splitPickStream('看 <pick kind="task" id="t1" label="写需求" /> 和 <pick kind="plugin" id="p1" label="Hello" /> 吧')
@@ -66,6 +66,20 @@ test('formatPicks emits data handles only', () => {
   ])
   assert.equal(text, '<pick kind="session" id="abc" route="/s/abc" label="聊天" />')
   assert.doesNotMatch(text, /class=|svg|html/i)
+})
+
+test('selected body text becomes a text pick', () => {
+  const fake = {
+    isCollapsed: false,
+    rangeCount: 1,
+    toString: () => '  这段正文  ',
+  }
+  const ref = textPickFromSelection('/s/abc', fake)
+  assert.ok(ref)
+  assert.equal(ref.kind, 'text')
+  assert.equal(ref.label, '这段正文')
+  assert.equal(ref.route, '/s/abc')
+  assert.equal(textPickFromSelection('/', { isCollapsed: true, rangeCount: 1, toString: () => 'x' }), null)
 })
 
 test('parsePicks recovers chips that markdown would strip', () => {

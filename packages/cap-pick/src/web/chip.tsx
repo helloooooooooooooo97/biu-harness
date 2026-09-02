@@ -1,11 +1,11 @@
 import {
-  CpuChipIcon,
   CircleStackIcon,
   StopCircleIcon,
   HashtagIcon,
   Square3Stack3DIcon,
   RectangleStackIcon,
   DocumentIcon,
+  DocumentTextIcon,
   ClipboardDocumentCheckIcon,
   CheckCircleIcon,
   ChatBubbleLeftIcon,
@@ -47,7 +47,8 @@ export function pickKindTone(kind: string) {
 type Glyph = ComponentType<{ className?: string }>
 
 const KIND_ICONS: Record<string, Glyph> = {
-  session: CpuChipIcon,
+  session: ChatBubbleLeftIcon,
+  text: DocumentTextIcon,
   task: CheckCircleIcon,
   page: DocumentIcon,
   collection: RectangleStackIcon,
