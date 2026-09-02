@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 import { sessionsChrome } from './sessions-chrome.tsx'
 
 const chrome = sessionsChrome({
+  slots: {} as never,
   useSessionView: () => undefined as never,
   sessionView: {} as never,
   useProjectView: () => undefined as never,
@@ -27,6 +28,12 @@ test('session table uses mascot as the standalone icon property, title is just t
   assert.match(src, /ChatStage/)
   assert.match(src, /ChatDockStack/)
   assert.match(src, /embed/)
+  assert.match(src, /SlotOutlet/)
+  assert.match(src, /name="stage"/)
+  assert.match(src, /name="dock"/)
+  assert.match(src, /name="composer"/)
+  assert.doesNotMatch(src, /ApprovalsRail/)
+  assert.doesNotMatch(src, /ChatThread/)
   assert.doesNotMatch(src, /session-record-log/)
   const index = readFileSync(resolve(import.meta.dirname, './index.ts'), 'utf8')
   assert.match(index, /decorate\('\/sessions', sessionsChrome/)
