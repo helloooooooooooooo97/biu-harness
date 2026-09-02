@@ -9,7 +9,8 @@
     "./chat-overlay": "./src/web/chat-overlay.ts"
   },
   "dependencies": {
-    "@biu/public-ui": "0.1.0"
+    "@biu/public-ui": "0.1.0",
+    "@biu/public-mascot": "0.1.0"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8",

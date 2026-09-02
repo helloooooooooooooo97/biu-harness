@@ -277,6 +277,31 @@ body {
   padding-right: 8px;
 }
 
+.sidebar-brand-lockup {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-brand-mascot {
+  flex-shrink: 0;
+  display: block;
+  overflow: visible;
+}
+
+.sidebar-brand-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  color: #fff;
+}
+
 .app-side-bar-head-brand .chat-view-header-expand {
   position: absolute;
   right: 8px;
@@ -1471,7 +1496,7 @@ body {
 .app-side-bar.is-narrow .sidebar-tag,
 .app-side-bar.is-narrow .chat-session-row-delete,
 .app-side-bar.is-narrow .chat-session-row-star,
-.app-side-bar.is-narrow .app-side-bar-head-brand > span:first-child {
+.app-side-bar.is-narrow .app-side-bar-head-brand .sidebar-brand-name {
   display: none;
 }
 
