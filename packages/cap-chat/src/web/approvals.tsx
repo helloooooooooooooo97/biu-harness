@@ -295,7 +295,7 @@ export function ApprovalsRail(props: SlotProps) {
             type="button"
             disabled={!sessionId || clearBusy}
             aria-label="清空上下文"
-            className="project-chip project-chip-icon-only project-chip-clear-ctx relative"
+            className={`project-chip project-chip-icon-only project-chip-clear-ctx relative${histRatio != null && histRatio > 0 ? ' has-ctx' : ''}`}
             data-dock-tip={
               histRatio != null
                 ? `清空上下文 · 上下文占输入文字 ${Math.round(histRatio * 100)}%`
@@ -303,11 +303,6 @@ export function ApprovalsRail(props: SlotProps) {
             }
             onClick={() => void clearContext()}
           >
-            {histRatio != null && histRatio > 0 ? (
-              <span className="project-chip-hist" aria-hidden>
-                <span className="project-chip-hist-bar" style={{ height: `${Math.round(histRatio * 100)}%` }} />
-              </span>
-            ) : null}
             <PaintBrushIcon className="size-4 relative z-1" aria-hidden />
           </button>
           {typeof props.renderSlot === 'function' ? props.renderSlot('header-tools') : null}

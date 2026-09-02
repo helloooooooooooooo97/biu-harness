@@ -1,5 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { Context } from 'cordis'
 import * as slots from '@biu/web-slots'
 import * as dock from '@biu/core-dock'
@@ -20,4 +22,7 @@ test('places overlay and a header pick toggle, not a dock tile', async () => {
   assert.equal(ctx.slots.list('header-tools').some((item) => item.id === 'pick-toggle'), true)
   assert.equal(ctx.slots.list('root-overlays').some((item) => item.id === 'pick-overlay'), true)
   assert.equal(ctx.dock.list().some((item) => item.id === 'pick'), false)
+  const src = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  assert.match(src, /project-chip-pick-toggle/)
+  assert.match(src, /is-active/)
 })

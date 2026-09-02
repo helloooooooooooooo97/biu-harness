@@ -18,7 +18,7 @@ function PickToggle() {
   return (
     <button
       type="button"
-      className="project-chip project-chip-icon-only relative"
+      className={`project-chip project-chip-icon-only project-chip-pick-toggle relative${state.picking ? ' is-active' : ''}`}
       aria-pressed={state.picking}
       aria-label="选取"
       data-dock-tip="选取"

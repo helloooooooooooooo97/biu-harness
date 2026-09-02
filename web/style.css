@@ -53,7 +53,6 @@
   --dsw-sidebar-max: 360px;
   --dsw-inspector-min: 240px;
   --dsw-chat-code-bg: var(--dsw-sidebar);
-  --dsw-chat-hist-fill: #c4554d;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, Consolas, monospace;
@@ -1171,8 +1170,8 @@ body {
   padding: 0;
   border: 0;
   border-radius: 14px;
-  background: transparent;
-  box-shadow: none;
+  background: #191919;
+  box-shadow: 0 1px 2px rgba(15, 15, 15, 0.04), 0 10px 32px rgba(0, 0, 0, 0.28);
   pointer-events: auto;
 }
 
@@ -2261,25 +2260,6 @@ body {
   line-height: 1;
 }
 
-.project-chip-hist {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: inherit;
-}
-
-.project-chip-hist-bar {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  transform-origin: bottom;
-  background: var(--dsw-chat-hist-fill);
-  transition: height 0.2s ease;
-}
-
 .project-chip-dashed {
   border-style: dashed;
 }
@@ -2290,13 +2270,34 @@ body {
 
 .project-chip.project-chip-clear-ctx {
   border: 0;
-  background: color-mix(in srgb, #e255a1 22%, transparent);
+  background: transparent;
   color: #e255a1;
 }
 
-.project-chip.project-chip-clear-ctx:hover:not(:disabled) {
+.project-chip.project-chip-clear-ctx.has-ctx {
+  --biu-tag: #e255a1;
+  background: color-mix(in srgb, var(--biu-tag, #e255a1) 22%, transparent);
+}
+
+.project-chip.project-chip-clear-ctx.has-ctx:hover:not(:disabled) {
   color: #e255a1;
-  background: color-mix(in srgb, #e255a1 34%, transparent);
+  background: color-mix(in srgb, var(--biu-tag, #e255a1) 34%, transparent);
+}
+
+.project-chip.project-chip-pick-toggle {
+  border: 0;
+  background: transparent;
+}
+
+.project-chip.project-chip-pick-toggle.is-active {
+  --biu-tag: #5b9fd6;
+  border: 0;
+  background: color-mix(in srgb, var(--biu-tag, #5b9fd6) 22%, transparent);
+  color: #5b9fd6;
+}
+
+.project-chip.project-chip-pick-toggle.is-active:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--biu-tag, #5b9fd6) 34%, transparent);
 }
 
 .project-chip:disabled,
