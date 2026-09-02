@@ -177,7 +177,7 @@ function coerce(field: FieldSpec, value: unknown) {
   const kind = field.type === 'string[]' ? 'multi-select' : field.format && field.type === 'string' ? field.format : field.type
   if (kind === 'boolean') return value === true || value === 'true'
   if (kind === 'multi-select') return coerceList(value)
-  if (kind === 'number' || kind === 'datetime' || kind === 'bytes') {
+  if (kind === 'number' || kind === 'datetime') {
     if (value == null || value === '') return null
     const n = Number(value)
     if (!Number.isFinite(n)) throw new Error(`expected ${kind}`)

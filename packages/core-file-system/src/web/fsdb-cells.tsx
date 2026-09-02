@@ -7,7 +7,6 @@ import {
   Bars3BottomLeftIcon,
   CalendarDaysIcon,
   CheckIcon,
-  CircleStackIcon,
   ClipboardDocumentListIcon,
   DocumentTextIcon,
   HashtagIcon,
@@ -112,7 +111,6 @@ export function FieldGlyph({ kind }: { kind: FieldType }) {
   if (kind === 'select') return <ListBulletIcon aria-hidden className={cls} />
   if (kind === 'multi-select') return <RectangleStackIcon aria-hidden className={cls} />
   if (kind === 'datetime') return <CalendarDaysIcon aria-hidden className={cls} />
-  if (kind === 'bytes') return <CircleStackIcon aria-hidden className={cls} />
   if (kind === 'number') return <HashtagIcon aria-hidden className={cls} />
   if (kind === 'url') return <LinkIcon aria-hidden className={cls} />
   if (kind === 'image') return <PhotoIcon aria-hidden className={cls} />
@@ -211,7 +209,7 @@ function ImageThumb({ src }: { src: string }) {
 export function parseFieldValue(field: FieldSpec, raw: string): unknown {
   const kind = resolveFieldType(field)
   if (kind === 'boolean') return raw === 'true'
-  if (kind === 'number' || kind === 'datetime' || kind === 'bytes') return raw === '' ? null : Number(raw)
+  if (kind === 'number' || kind === 'datetime') return raw === '' ? null : Number(raw)
   if (kind === 'multi-select') return asStringList(raw)
   if (kind === 'schema') {
     const trimmed = raw.trim()
@@ -312,7 +310,7 @@ export function DefaultCell({ field, value }: { field: FieldSpec; value: unknown
     return <FilePreview value={value} compact kind={kind} />
   }
   const text = formatField(field, value)
-  return <span className={kind === 'datetime' || kind === 'bytes' ? 'fsdb-meta' : undefined}>{text}</span>
+  return <span className={kind === 'datetime' ? 'fsdb-meta' : undefined}>{text}</span>
 }
 
 export function FieldEditor({

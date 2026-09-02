@@ -16,7 +16,7 @@ const schema: CollectionSchema = {
     status: { type: 'select', enum: ['todo', 'doing', 'done'] },
     tags: { type: 'multi-select' },
     dueAt: { type: 'datetime' },
-    size: { type: 'bytes' },
+    size: { type: 'number' },
   },
 }
 
@@ -24,7 +24,6 @@ test('resolveFieldType maps legacy aliases', () => {
   assert.equal(resolveFieldType({ type: 'string[]' }), 'multi-select')
   assert.equal(resolveFieldType({ type: 'string', enum: ['a'] }), 'select')
   assert.equal(resolveFieldType({ type: 'number', format: 'datetime' }), 'datetime')
-  assert.equal(resolveFieldType({ type: 'number', format: 'bytes' }), 'bytes')
   assert.equal(resolveFieldType({ type: 'string', format: 'url' }), 'url')
   assert.equal(resolveFieldType({ type: 'image' }), 'image')
   assert.equal(resolveFieldType({ type: 'attachment' }), 'attachment')
@@ -47,8 +46,8 @@ test('fieldHasValue hides missing list/card/board chips', () => {
   assert.equal(fieldHasValue({ type: 'url' }, 'https://example.com'), true)
 })
 
-test('formatField renders datetime bytes tags and media', () => {
-  assert.equal(formatField(schema.fields.size, 2048).endsWith('KB'), true)
+test('formatField renders datetime tags and media', () => {
+  assert.equal(formatField(schema.fields.size, 2048), '2048')
   assert.equal(formatField(schema.fields.tags, ['a', 'b']), 'a, b')
   assert.equal(formatField(schema.fields.dueAt, 0), '—')
   assert.equal(formatField({ type: 'url' }, 'https://example.com/x'), 'https://example.com/x')

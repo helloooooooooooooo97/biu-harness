@@ -47,7 +47,7 @@ export function pagesCollection(store: PagesStore): CollectionSpec {
         tags: { type: 'multi-select', label: '标签', writable: true, enum: [...COLORS, 'prod', 'lab'] },
         aliases: { type: 'string[]', label: '别名', writable: true },
         publishedAt: { type: 'datetime', label: '发布时间', writable: true },
-        size: { type: 'bytes', label: '体积', writable: true },
+        size: { type: 'number', label: '体积', writable: true },
         homepage: { type: 'url', label: '地址', writable: true },
         cover: { type: 'image', label: '封面', writable: true },
         pack: { type: 'attachment', label: '附件', writable: true },

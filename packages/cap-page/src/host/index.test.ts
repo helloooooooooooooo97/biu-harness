@@ -18,7 +18,6 @@ const FIELD_TYPES: FieldType[] = [
   'select',
   'multi-select',
   'datetime',
-  'bytes',
   'url',
   'image',
   'attachment',
