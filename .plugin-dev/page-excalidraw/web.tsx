@@ -26,48 +26,18 @@ type Scene = {
 type DrawApi = {
   refresh: () => void
   scrollToContent?: (target?: unknown, opts?: { fitToContent?: boolean; animate?: boolean }) => void
-  updateScene?: (opts: { appState?: Record<string, unknown> }) => void
-}
-
-/** 夜间模式会对 canvas 做 invert(93%)。底色必须是浅色，#191919 会被反成灰 #d8d8d8。 */
-const CANVAS_BG = '#ffffff'
-
-function isForcedDarkCanvas(color: unknown) {
-  const value = String(color ?? '').trim().toLowerCase()
-  return (
-    value === '#191919' ||
-    value === '#121212' ||
-    value === '#0a0a0a' ||
-    value === '#000' ||
-    value === '#000000' ||
-    value === 'black'
-  )
-}
-
-function isStockLight(color: unknown) {
-  const value = String(color ?? '').trim().toLowerCase()
-  return value === '#d8d8d8' || value === '#ffffff' || value === '#fff' || value === 'white'
-}
-
-function resolveCanvas(color: unknown) {
-  if (!String(color ?? '').trim() || isForcedDarkCanvas(color) || isStockLight(color)) return CANVAS_BG
-  return String(color)
 }
 
 function emptyScene(): Scene {
-  return { elements: [], appState: { theme: 'dark', viewBackgroundColor: CANVAS_BG }, files: {} }
+  return { elements: [], appState: { theme: 'dark' }, files: {} }
 }
 
 function parseScene(raw: unknown): Scene {
   if (!raw || typeof raw !== 'object') return emptyScene()
   const o = raw as Scene
-  const appState = o.appState && typeof o.appState === 'object' ? { ...o.appState } : {}
-  const elements = Array.isArray(o.elements) ? o.elements : []
-  appState.theme = 'dark'
-  appState.viewBackgroundColor = resolveCanvas(appState.viewBackgroundColor)
   return {
-    elements,
-    appState,
+    elements: Array.isArray(o.elements) ? o.elements : [],
+    appState: { theme: 'dark' },
     files: o.files && typeof o.files === 'object' ? o.files : {},
   }
 }
@@ -185,14 +155,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
 
   const bindApi = useCallback((api: DrawApi | null) => {
     apiRef.current = api
-    if (!api) return
-    requestAnimationFrame(() => {
-      if (apiRef.current !== api) return
-      api.updateScene?.({
-        appState: { theme: 'dark', viewBackgroundColor: resolveCanvas(live.current?.appState?.viewBackgroundColor) },
-      })
-      fitView(api)
-    })
+    requestAnimationFrame(() => fitView(api))
   }, [])
 
   useEffect(() => {
@@ -232,12 +195,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
     if (!file) return
     const next: Scene = {
       elements,
-      appState: {
-        ...appState,
-        collaborators: undefined,
-        theme: 'dark',
-        viewBackgroundColor: resolveCanvas(appState.viewBackgroundColor),
-      },
+      appState: { theme: 'dark' },
       files,
     }
     live.current = next
@@ -268,12 +226,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
         theme="dark"
         initialData={{
           elements: start.elements as never,
-          appState: {
-            ...start.appState,
-            theme: 'dark',
-            viewBackgroundColor: resolveCanvas(start.appState?.viewBackgroundColor),
-            collaborators: new Map(),
-          },
+          appState: { theme: 'dark', collaborators: new Map() },
           files: start.files as never,
         }}
         viewModeEnabled={!expanded}

@@ -236,7 +236,10 @@ export const slashCommand = Extension.create({
                     bottom: rects.reference.y + rects.reference.height,
                     left: rects.reference.x,
                   },
-                  menu: { width: rects.floating.width, height: rects.floating.height },
+                  menu: {
+                    width: Math.max(rects.floating.width, 324),
+                    height: Math.max(rects.floating.height, 420),
+                  },
                   viewport: { width: window.innerWidth, height: window.innerHeight },
                 })
                 elements.floating.style.maxHeight = `${placed.maxHeight}px`
