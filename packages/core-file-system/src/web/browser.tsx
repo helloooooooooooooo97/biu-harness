@@ -731,7 +731,7 @@ export function CollectionBrowser({
     const rows = grouping ? grouped.flatMap((group) => group.rows) : visible
     return flattenRows(rows).map((item) => item.row.id)
   }, [flattenRows, grouped, grouping, visible])
-  const tableColSpan = Math.max(columns.length, 1) + (canDelete ? 1 : 0)
+  const tableColSpan = Math.max(columns.length, 1)
 
   const selected =
     (detailId &&
@@ -1261,8 +1261,14 @@ export function CollectionBrowser({
     ) : (
       <>{labelOf(row)}</>
     )
+    const host = (
+      <span className="fsdb-title-host">
+        {openDetail ? <RowCheck id={row.id} /> : null}
+        <span className="fsdb-title-text">{body}</span>
+      </span>
+    )
     const tree = openDetail && parentKey && showTree
-    if (!openDetail && !tree) return body
+    if (!openDetail && !tree) return host
     return (
       <div className="tasks-title-cell" style={tree ? { paddingLeft: depth * 16 } : undefined}>
         {tree ? (
@@ -1286,7 +1292,7 @@ export function CollectionBrowser({
             <span className="tasks-tree-toggle is-empty" aria-hidden />
           )
         ) : null}
-        <span className="fsdb-title-text">{body}</span>
+        {host}
         {openDetail ? <RecordRowTools row={row} kidCount={tree ? kidCount : 0} /> : null}
       </div>
     )
@@ -1457,16 +1463,18 @@ export function CollectionBrowser({
     return (
       <li className={`tasks-queue-item${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
         <div className="tasks-queue-item-body">
-          <RowCheck id={row.id} />
-          <button type="button" className="tasks-queue-item-main" data-biu-action="open" onClick={() => openRow(row)}>
-            <span className="tasks-queue-item-title">
-              <RecordTitle row={row} openDetail={false} />
-            </span>
-          </button>
-          <RecordProperties row={row} />
-          <div className="tasks-queue-item-tools">
-            <RecordRowTools row={row} />
-          </div>
+          <span className="fsdb-title-host tasks-queue-item-lead">
+            <RowCheck id={row.id} />
+            <button type="button" className="tasks-queue-item-main" data-biu-action="open" onClick={() => openRow(row)}>
+              <span className="tasks-queue-item-title">
+                <RecordTitle row={row} openDetail={false} />
+              </span>
+            </button>
+            <div className="tasks-queue-item-tools">
+              <RecordRowTools row={row} />
+            </div>
+          </span>
+          <RecordProperties row={row} skipBoolean />
         </div>
       </li>
     )
@@ -1478,7 +1486,7 @@ export function CollectionBrowser({
         <div className="tasks-minicard-bar">
           <RecordRowTools row={row} />
         </div>
-        <div className="tasks-minicard-title">
+        <div className="tasks-minicard-title fsdb-title-host">
           <RowCheck id={row.id} />
           <button type="button" className="tasks-minicard-open" data-biu-action="open" onClick={() => openRow(row)}>
             <span className="tasks-minicard-titletext">
@@ -1509,11 +1517,6 @@ export function CollectionBrowser({
       <>
         {listed.map(({ row, depth, hasKids, kidCount }) => (
           <tr key={`${keyPrefix}${row.id}`} className={row.id === detailId ? 'is-active' : undefined} {...recordPick(row)}>
-            {canDelete ? (
-              <td className="fsdb-row-check-cell">
-                <RowCheck id={row.id} />
-              </td>
-            ) : null}
             {columns.map((col) => (
               <td key={col.key}>
                 {col.key === schema?.labelField ? (
@@ -2184,16 +2187,14 @@ export function CollectionBrowser({
                 <table className={`tasks-table${wrapCells ? ' is-wrap' : ''}${truncateCells ? ' is-truncate' : ''}`}>
             <thead>
               <tr>
-                {canDelete ? (
-                  <th className="fsdb-row-check-cell">
-                    <RowCheck ids={pickableIds} />
-                  </th>
-                ) : null}
                 {columns.map((col) => (
                   <th key={col.key}>
-                    <span className="tasks-th">
-                      <FieldGlyph kind={col.kind} />
-                      {col.field.label ?? col.key}
+                    <span className="fsdb-title-host">
+                      {col.key === schema?.labelField ? <RowCheck ids={pickableIds} /> : null}
+                      <span className="tasks-th">
+                        <FieldGlyph kind={col.kind} />
+                        {col.field.label ?? col.key}
+                      </span>
                     </span>
                   </th>
                 ))}
