@@ -12,3 +12,4 @@ export {
   CHAT_STAGE_PANE,
   CHAT_DOCK_STACK,
 } from './chat-pane.tsx'
+export { OutlineNav, type OutlineNavItem } from './outline-nav.tsx'

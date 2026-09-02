@@ -32,10 +32,12 @@ export function ChatDockStack({ children }: { children?: ReactNode }) {
 export function ChatPane({
   thread,
   dock,
+  aside,
   embed,
 }: {
   thread: ReactNode
   dock?: ReactNode
+  aside?: ReactNode
   embed?: boolean
 }) {
   return (
@@ -43,6 +45,7 @@ export function ChatPane({
       className={`chat-pane${embed ? ' chat-pane-embed' : ''}`}
       data-testid={embed ? 'session-record-chat' : 'chat-pane'}
     >
+      {aside}
       <div className="chat-overlay-thread">{thread}</div>
       {dock ? <div className="chat-composer-dock">{dock}</div> : null}
     </div>

@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import type { Context } from 'cordis'
 import { SignalIcon, MapIcon } from '@heroicons/react/16/solid'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
-import type { SlotProps, SlotsService } from '@biu/web-slots'
+import type { SlotProps } from '@biu/web-slots'
 import { ApprovalsRail } from './approvals.tsx'
 import { ChatComposer } from './composer.tsx'
 import { ChatConfigBanner } from './config-banner.tsx'
@@ -87,9 +87,6 @@ export function apply(ctx: Context) {
   })
   ctx.inject(['databaseUi'], (inner) => {
     const ui = inner.get('databaseUi') as DatabaseUi
-    return ui.decorate('/sessions', sessionsChrome({
-      ...slotProps,
-      slots: inner.slots as SlotsService,
-    })).dispose
+    return ui.decorate('/sessions', sessionsChrome()).dispose
   })
 }

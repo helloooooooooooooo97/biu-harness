@@ -1,12 +1,22 @@
-import { useEffect } from 'react'
-import { ChatPane, ChatStage } from '@biu/public-ui'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { ChatPane, ChatStage, OutlineNav } from '@biu/public-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { MASCOT_COLOR_NAME, MASCOT_EYE_NAME, MASCOT_SHAPE_NAME } from '@biu/type-session'
 import type { CollectionChrome, FsCellProps, FsContentProps } from '@biu/type-file-system/ui'
 import type { DbRecord } from '@biu/type-file-system'
-import { SlotOutlet, type SlotsService } from '@biu/web-slots'
-import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
-import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
+import {
+  deriveChatOutline,
+  getChatOutlineFilter,
+  mergeDispatchedUsageIntoNodes,
+  projectNodes,
+  SESSION_LOAD_TURNS,
+  subscribeChatOutline,
+  type ChatNode,
+  type ChatOutlineFilter,
+  type SessionEvent,
+  type TrajectoryUsage,
+} from '@biu/web-session-view'
+import { ChatNodeList } from './thread.tsx'
 
 function sessionMascot(record: DbRecord) {
   const raw = record.mascot
@@ -46,36 +56,55 @@ function MascotEyeCell({ value }: FsCellProps) {
   return <span>{name}</span>
 }
 
-type SessionChatProps = {
-  slots: SlotsService
-  useSessionView: ReturnType<typeof bindSessionView>
-  sessionView: SessionViewService
-  useProjectView: ReturnType<typeof bindProjectView>
-  projectView: ProjectViewService
+function escapeId(id: string) {
+  return typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(id) : id
 }
 
-function SessionRecordChat({ record, slots, sessionView, useSessionView }: FsContentProps & SessionChatProps) {
+function SessionRecordChat({ record }: FsContentProps) {
   const sessionId = String(record.id)
-  const liveId = useSessionView((state) => state.sessionId)
+  const [nodes, setNodes] = useState<ChatNode[]>([])
+  const filter = useSyncExternalStore(subscribeChatOutline, getChatOutlineFilter, (): ChatOutlineFilter => 'user')
+  const items = useMemo(() => deriveChatOutline(nodes, filter), [nodes, filter])
+  const go = useCallback((id: string) => {
+    const el = document.querySelector<HTMLElement>(
+      `[data-testid="session-record-chat"] [data-node-id="${escapeId(id)}"]`,
+    )
+    el?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }, [])
   useEffect(() => {
-    if (sessionView.get().sessionId === sessionId) return
-    void sessionView.load(sessionId, { view: 'chat' }).catch(() => undefined)
-  }, [sessionId, sessionView])
+    const ac = new AbortController()
+    void fetch(`/api/sessions/${sessionId}?turns=${SESSION_LOAD_TURNS}`, { signal: ac.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (!body || !Array.isArray(body.events)) return
+        setNodes(
+          mergeDispatchedUsageIntoNodes(
+            projectNodes(body.events as SessionEvent[]),
+            (body.dispatchedUsageByTurn as Record<string, TrajectoryUsage>) ?? {},
+          ),
+        )
+      })
+      .catch(() => undefined)
+    return () => ac.abort()
+  }, [sessionId])
   return (
     <ChatPane
       embed
+      aside={<OutlineNav items={items} testId="session-outline" onSelect={go} />}
       thread={
-        <ChatStage variant="pane">{liveId === sessionId ? <SlotOutlet slots={slots} name="stage" /> : null}</ChatStage>
+        <ChatStage variant="pane">
+          <ChatNodeList nodes={nodes} onInspect={() => undefined} onFork={() => undefined} />
+        </ChatStage>
       }
     />
   )
 }
 
-export function sessionsChrome(slot: SessionChatProps): CollectionChrome {
+export function sessionsChrome(): CollectionChrome {
   return {
     Title: SessionTitle,
     Icon: SessionIcon,
-    Content: (props) => <SessionRecordChat {...props} {...slot} />,
+    Content: SessionRecordChat,
     cells: {
       mascotShape: MascotShapeCell,
       mascotColor: MascotColorCell,
@@ -90,8 +119,9 @@ if (typeof document !== 'undefined') {
   style.id = id
   style.textContent = `
 .sessions-title-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-.fsdb-fileview:has(.chat-pane-embed){display:flex;flex-direction:column;flex:1;min-height:min(72vh,720px)}
+.fsdb-fileview:has(.chat-pane-embed){display:flex;flex-direction:column;flex:1;min-height:min(72vh,720px);background:#191919}
 .inspector-database-page .fsdb-fileview:has(.chat-pane-embed){min-height:0;flex:1}
+.fsdb-detail-main:has(.chat-pane-embed),.fsdb-detail-screen:has(.chat-pane-embed){background:#191919}
 `
   document.head.appendChild(style)
 }

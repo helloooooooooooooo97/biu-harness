@@ -1,0 +1,104 @@
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+
+export type OutlineNavItem = {
+  id: string
+  text: string
+  robot?: boolean
+}
+
+function escapeId(id: string) {
+  return typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(id) : id
+}
+
+/** 左侧刻度条 + 悬停展开列表。聊天区和会话详情共用。 */
+export function OutlineNav({
+  items,
+  label = '消息大纲',
+  testId = 'chat-outline',
+  onSelect,
+}: {
+  items: OutlineNavItem[]
+  label?: string
+  testId?: string
+  onSelect: (id: string) => void
+}) {
+  const railRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
+  const leaveTimer = useRef(0)
+  const [hoverId, setHoverId] = useState<string | null>(null)
+
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), [])
+
+  function keepOpen() {
+    window.clearTimeout(leaveTimer.current)
+  }
+
+  function scheduleClose() {
+    window.clearTimeout(leaveTimer.current)
+    leaveTimer.current = window.setTimeout(() => {
+      setHoverId(null)
+    }, 140)
+  }
+
+  function hoverTick(id: string) {
+    keepOpen()
+    setHoverId(id)
+  }
+
+  useLayoutEffect(() => {
+    if (!hoverId) return
+    const rail = railRef.current
+    const panel = panelRef.current
+    const tick = rail?.querySelector<HTMLElement>(`[data-outline-tick="${escapeId(hoverId)}"]`)
+    const row = panel?.querySelector<HTMLElement>(`[data-outline-row="${escapeId(hoverId)}"]`)
+    tick?.scrollIntoView({ block: 'nearest' })
+    row?.scrollIntoView({ block: 'nearest' })
+  }, [hoverId, items.length])
+
+  if (!items.length) return null
+
+  return (
+    <aside
+      className="chat-outline"
+      aria-label={label}
+      data-testid={testId}
+      onMouseEnter={keepOpen}
+      onMouseLeave={scheduleClose}
+    >
+      <div className="chat-outline-rail" ref={railRef} data-testid={`${testId}-rail`}>
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={`chat-outline-tick${item.robot ? ' is-robot' : ''}${hoverId === item.id ? ' is-active' : ''}`}
+            title={item.text}
+            aria-label={item.text}
+            data-outline-tick={item.id}
+            data-testid={`${testId}-tick-${item.id}`}
+            onMouseEnter={() => hoverTick(item.id)}
+            onFocus={() => hoverTick(item.id)}
+            onClick={() => onSelect(item.id)}
+          />
+        ))}
+      </div>
+      {hoverId ? (
+        <nav className="chat-outline-panel" ref={panelRef} data-testid={`${testId}-panel`}>
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`chat-outline-item${item.robot ? ' is-robot' : ''}${hoverId === item.id ? ' is-active' : ''}`}
+              title={item.text}
+              data-outline-row={item.id}
+              data-testid={`${testId}-item-${item.id}`}
+              onMouseEnter={() => hoverTick(item.id)}
+              onClick={() => onSelect(item.id)}
+            >
+              <span className="chat-outline-label">{item.text}</span>
+            </button>
+          ))}
+        </nav>
+      ) : null}
+    </aside>
+  )
+}

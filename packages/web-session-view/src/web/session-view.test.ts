@@ -711,7 +711,7 @@ test('home and module routes open the most recently updated chat', async () => {
   assert.equal(view.get().sessionId, 'new')
 })
 
-test('sessions record routes open that session instead of the most recent chat', async () => {
+test('sessions record routes do not switch the live session', async () => {
   mockFetch({
     '/api/sessions': () => ({
       sessions: [
@@ -719,8 +719,8 @@ test('sessions record routes open that session instead of the most recent chat',
         { id: 'new', title: 'new', eventCount: 1, updatedAt: 9 },
       ],
     }),
-    '/api/sessions/old?turns=': () => ({
-      id: 'old',
+    '/api/sessions/new?turns=': () => ({
+      id: 'new',
       events: [{ type: 'session/open', version: 1, seq: 0, ts: 1 }],
       hasMore: false,
       totalTurns: 0,
@@ -731,6 +731,8 @@ test('sessions record routes open that session instead of the most recent chat',
   await ctx.plugin(sessionView)
   const view = ctx.sessionView as SessionViewService
   await view.refreshSessions()
+  await view.applyRoute({ kind: 'home' })
+  assert.equal(view.get().sessionId, 'new')
   await view.applyRoute({
     kind: 'record',
     moduleId: 'database',
@@ -738,5 +740,5 @@ test('sessions record routes open that session instead of the most recent chat',
     collection: '/sessions',
     recordId: 'old',
   })
-  assert.equal(view.get().sessionId, 'old')
+  assert.equal(view.get().sessionId, 'new')
 })

@@ -10,6 +10,7 @@ test('ChatPane is the overlay interior: thread, optional composer dock', () => {
   assert.match(src, /chat-overlay-thread/)
   assert.match(src, /dock \? <div className="chat-composer-dock">/)
   assert.match(src, /chat-pane-embed/)
+  assert.match(src, /aside/)
   assert.match(src, /export function ChatStage/)
   assert.match(src, /export function ChatDockStack/)
   assert.match(CHAT_STAGE_PANE, /px-1 py-1/)
