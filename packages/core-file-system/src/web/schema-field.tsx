@@ -22,7 +22,6 @@ const TYPE_LABEL: Record<AtomicFieldType, string> = {
   select: '单选',
   'multi-select': '多选',
   datetime: '时间',
-  bytes: '体积',
   url: '链接',
   image: '图片',
   attachment: '附件',

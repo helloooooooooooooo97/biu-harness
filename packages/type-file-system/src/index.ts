@@ -6,7 +6,6 @@ export type FieldType =
   | 'select'
   | 'multi-select'
   | 'datetime'
-  | 'bytes'
   | 'url'
   | 'image'
   | 'attachment'
@@ -19,7 +18,7 @@ export type FieldSpec = {
   label?: string
   writable?: boolean
   sortable?: boolean
-  format?: 'datetime' | 'bytes' | 'url' | 'image' | 'attachment' | 'file'
+  format?: 'datetime' | 'url' | 'image' | 'attachment' | 'file'
   /** select / multi-select 的选项 */
   enum?: string[]
   /** 由 list/get 计算写入记录，不能 PATCH。例如任务消耗。 */
@@ -96,7 +95,6 @@ export const ATOMIC_FIELD_TYPES = [
   'select',
   'multi-select',
   'datetime',
-  'bytes',
   'url',
   'image',
   'attachment',

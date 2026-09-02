@@ -136,7 +136,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         enabled: { type: 'boolean', label: '已打开' },
         running: { type: 'boolean', label: '运行中' },
         tags: { type: 'multi-select', label: '标签' },
-        bytes: { type: 'bytes', label: '大小' },
+        bytes: { type: 'number', label: '大小' },
         createdAt: { type: 'datetime', label: '创建时间' },
         updatedAt: { type: 'datetime', label: '更新时间' },
         lastRunAt: { type: 'datetime', label: '上次运行' },

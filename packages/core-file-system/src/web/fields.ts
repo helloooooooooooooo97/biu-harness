@@ -19,7 +19,6 @@ export function resolveFieldType(field: FieldSpec): FieldType {
   if (field.type === 'string[]') return 'multi-select'
   if (field.type === 'string' && field.enum?.length) return 'select'
   if (field.type === 'number' && field.format === 'datetime') return 'datetime'
-  if (field.type === 'number' && field.format === 'bytes') return 'bytes'
   if (field.type === 'string' && (field.format === 'url' || field.format === 'image' || field.format === 'attachment' || field.format === 'file')) {
     return field.format
   }
@@ -154,13 +153,6 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
       hour12: false,
     })
   }
-  if (kind === 'bytes') {
-    const n = Number(value)
-    if (!Number.isFinite(n)) return '—'
-    if (n < 1024) return `${n} B`
-    if (n < 1024 * 1024) return `${(n / 1024).toFixed(n < 10 * 1024 ? 1 : 0)} KB`
-    return `${(n / (1024 * 1024)).toFixed(1)} MB`
-  }
   if (kind === 'boolean') return value === true || value === 'true' ? '是' : '否'
   if (kind === 'url') return asHttpHref(value) || '—'
   if (kind === 'image') return asImageSrc(value) || '—'
@@ -278,7 +270,7 @@ export function matchesFilters(row: DbRecord, filters: Record<string, string>, s
 
 function compareValues(field: FieldSpec, a: unknown, b: unknown): number {
   const kind = resolveFieldType(field)
-  if (kind === 'number' || kind === 'datetime' || kind === 'bytes') return asTime(a) - asTime(b) || Number(a ?? 0) - Number(b ?? 0)
+  if (kind === 'number' || kind === 'datetime') return asTime(a) - asTime(b) || Number(a ?? 0) - Number(b ?? 0)
   if (kind === 'boolean') return Number(a === true || a === 'true') - Number(b === true || b === 'true')
   if (kind === 'select' && field.enum?.length) {
     return field.enum.indexOf(String(a ?? '')) - field.enum.indexOf(String(b ?? ''))
