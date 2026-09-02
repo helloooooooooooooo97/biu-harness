@@ -7,8 +7,8 @@ import { TAG_TONE_GREEN, TAG_TONE_RED } from '@biu/public-ui'
 
 const CACHE_RING = TAG_TONE_GREEN
 const HIST_RING = TAG_TONE_RED
-const CACHE_TRACK = 'color-mix(in srgb, #448361 28%, #191919)'
-const HIST_TRACK = 'color-mix(in srgb, #c4554d 28%, #191919)'
+const CACHE_TRACK = 'color-mix(in srgb, #448361 22%, #191919)'
+const HIST_TRACK = 'color-mix(in srgb, #c4554d 22%, #191919)'
 const RING_R = 4.5
 const RING_C = 2 * Math.PI * RING_R
 
@@ -31,6 +31,7 @@ function UsageRing({
       height="12"
       viewBox="0 0 12 12"
       aria-hidden
+      style={{ color }}
     >
       <circle cx="6" cy="6" r={RING_R} fill="none" stroke={track} strokeWidth="2.5" />
       {pct > 0 ? (
@@ -39,7 +40,7 @@ function UsageRing({
           cy="6"
           r={RING_R}
           fill="none"
-          stroke={color}
+          stroke="currentColor"
           strokeWidth="2.5"
           strokeDasharray={`${(pct / 100) * RING_C} ${RING_C}`}
           transform="rotate(-90 6 6)"
@@ -64,8 +65,8 @@ function isHistPct(v: unknown): v is number {
 }
 
 /**
- * 绿色圆环 = cache hit（旁注 input 数量）；红色圆环 = 历史占比。
- * cache / 历史的百分比数字放在悬浮 title。histPct 默认取 usage.histPct。
+ * SuperTag 绿环 = cache hit；SuperTag 红环 = 历史占比。
+ * 百分比数字放在悬浮 title。histPct 默认取 usage.histPct。
  */
 export function UsageInline({
   usage,

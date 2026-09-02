@@ -33,7 +33,7 @@ function statusMeta(status: LiveDispatchTaskRow['status'], reason?: string) {
   }
   return {
     label: reason ? `结束(${reason})` : '已结束',
-    className: 'text-(--dsw-label-2)',
+    className: 'text-(--dsw-danger,#c4554d)',
     icon: <XCircleIcon className="size-3.5" aria-hidden />,
   }
 }

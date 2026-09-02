@@ -2955,6 +2955,14 @@ body {
   overflow: visible;
 }
 
+.traj-usage-ring.is-cache {
+  color: #448361;
+}
+
+.traj-usage-ring.is-hist {
+  color: #c4554d;
+}
+
 .traj-usage-card {
   border: 1px solid var(--dsw-border);
   border-radius: 12px;
@@ -3508,8 +3516,8 @@ body {
 }
 
 .traj-tag-user {
-  color: var(--dsw-ok);
-  background: rgba(34, 140, 90, 0.12);
+  color: #448361;
+  background: color-mix(in srgb, #448361 22%, transparent);
 }
 
 .traj-tag-assistant {
@@ -3518,8 +3526,8 @@ body {
 }
 
 .traj-tag-tool {
-  color: rgb(180, 110, 20);
-  background: rgba(180, 110, 20, 0.12);
+  color: #d9730d;
+  background: color-mix(in srgb, #d9730d 22%, transparent);
 }
 
 .traj-tag-system {
@@ -4203,10 +4211,12 @@ body {
 
 .tool-call-status.is-ok {
   color: #448361;
+  background: color-mix(in srgb, #448361 22%, transparent);
 }
 
 .tool-call-status.is-fail {
   color: #c4554d;
+  background: color-mix(in srgb, #c4554d 22%, transparent);
 }
 
 .tool-call-status.is-running {
