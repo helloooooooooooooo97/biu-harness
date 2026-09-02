@@ -15,6 +15,11 @@ import {
 import type { AppModule } from '@biu/web-app-modules'
 import type { DockService } from '@biu/core-dock'
 import { requestInspectorOpen, requestInspectorTab, setChatOverlay } from './chat-overlay.ts'
+import {
+  inspectorTabCollectionPath,
+  inspectorTabIsOpen,
+  pruneOpenedForCollections,
+} from './inspector-panels.ts'
 
 const INSPECTOR_DOCK_TOOLS = [
   { id: 'inspector:pages', title: '页面', tabId: 'database:/pages', order: 40, Icon: DocumentIcon },
@@ -109,21 +114,43 @@ function ShellDockUpdate({ dock }: { dock: DockService }) {
   )
 }
 
+function inspectorOpenedKey(sid: string | null | undefined) {
+  return sid ? `inspector.opened:${sid}` : 'inspector.opened:home'
+}
+
+function readInspectorOpened(sid: string | null | undefined): string[] {
+  try {
+    const raw = localStorage.getItem(inspectorOpenedKey(sid))
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
+  } catch {
+    return []
+  }
+}
+
 export function ShellDockNav({
   dock,
   modules,
   activeId,
   agentHref,
+  inspectorOpen,
+  sessionId,
+  collections,
   onSettings,
 }: {
   dock: DockService
   modules: AppModule[]
   activeId: string
   agentHref: string
+  inspectorOpen: boolean
+  sessionId: string | null
+  collections?: Array<{ path: string }>
   onSettings: () => void
 }) {
   const navigate = useNavigate()
   const moduleKey = modules.map((item) => `${item.id}:${item.path}:${item.order ?? 0}`).join('|')
+  const [opened, setOpened] = useState(() => readInspectorOpened(sessionId))
 
   useEffect(() => {
     const offs = modules.map((mod) => {
@@ -149,7 +176,7 @@ export function ShellDockNav({
     for (const mod of modules) {
       dock.patch(`module:${mod.id}`, {
         focused: mod.id === activeId,
-        running: false,
+        running: mod.id === activeId,
       })
     }
   }, [dock, moduleKey, activeId, modules])
@@ -157,6 +184,28 @@ export function ShellDockNav({
   useEffect(() => {
     if (activeId === 'agent') setChatOverlay(false)
   }, [activeId])
+
+  useEffect(() => {
+    setOpened(readInspectorOpened(sessionId))
+  }, [sessionId])
+
+  useEffect(() => {
+    const onOpened = (event: Event) => {
+      const detail = (event as CustomEvent<{ sessionId?: string | null; opened?: string[] }>).detail
+      if (detail && 'sessionId' in detail && detail.sessionId !== sessionId) return
+      if (detail?.opened && Array.isArray(detail.opened)) {
+        setOpened(detail.opened.filter((item): item is string => typeof item === 'string'))
+        return
+      }
+      setOpened(readInspectorOpened(sessionId))
+    }
+    window.addEventListener('biu:inspector-opened', onOpened)
+    window.addEventListener('storage', onOpened)
+    return () => {
+      window.removeEventListener('biu:inspector-opened', onOpened)
+      window.removeEventListener('storage', onOpened)
+    }
+  }, [sessionId])
 
   useEffect(() => {
     const offs = INSPECTOR_DOCK_TOOLS.map((item) => {
@@ -178,6 +227,19 @@ export function ShellDockNav({
       for (const off of offs) off()
     }
   }, [dock])
+
+  useEffect(() => {
+    const liveOpened = pruneOpenedForCollections(opened, collections)
+    for (const item of INSPECTOR_DOCK_TOOLS) {
+      const path = inspectorTabCollectionPath(item.tabId)
+      const alive = !path || Boolean(collections?.some((row) => row.path === path))
+      dock.patch(item.id, {
+        visible: collections == null ? true : alive,
+        running: Boolean(inspectorOpen && alive && inspectorTabIsOpen(item.tabId, liveOpened)),
+        focused: false,
+      })
+    }
+  }, [dock, inspectorOpen, opened, collections])
 
   useEffect(() => {
     const Icon = () => <Cog6ToothIcon className="size-5" />

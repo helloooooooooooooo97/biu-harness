@@ -51,6 +51,24 @@ export function slotTabId(openedId: string) {
   return split === -1 ? openedId : openedId.slice(0, split)
 }
 
+export function inspectorTabCollectionPath(tabId: string) {
+  const slot = slotTabId(tabId)
+  return slot.startsWith('database:') ? slot.slice('database:'.length) : null
+}
+
+export function pruneOpenedForCollections(opened: string[], collections: Array<{ path: string }> | undefined) {
+  if (!collections) return opened
+  const live = new Set(collections.map((item) => item.path))
+  return opened.filter((id) => {
+    const path = inspectorTabCollectionPath(id)
+    return !path || live.has(path)
+  })
+}
+
+export function inspectorTabIsOpen(tabId: string, opened: string[]) {
+  return opened.some((id) => slotTabId(id) === tabId)
+}
+
 export function nextRepeatableTabId(tabId: string) {
   return `${tabId}::${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 }

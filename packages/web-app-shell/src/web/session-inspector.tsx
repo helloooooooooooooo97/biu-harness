@@ -24,7 +24,7 @@ import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import { inspectorTabFromEvent, requestInspectorAction } from './chat-overlay.ts'
 import { getInspectorCaption, getInspectorCaptionVersion, subscribeInspectorCaptions } from './inspector-captions.ts'
-import { inspectorPanelMatches, inspectorViewProps, nextRepeatableTabId, resolveInspectorTab, slotTabId } from './inspector-panels.ts'
+import { inspectorPanelMatches, inspectorViewProps, nextRepeatableTabId, pruneOpenedForCollections, resolveInspectorTab, slotTabId } from './inspector-panels.ts'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 
 function captionTableIcon(icon?: string) {
@@ -77,6 +77,7 @@ export type SessionInspectorProps = {
   sessionView: SessionViewService
   slots: SlotsService
   renderSlot: (name: string) => ReactNode
+  collections?: Array<{ path: string }>
 }
 
 function inspectorTabStorageKey(sid: string | null | undefined) {
@@ -106,6 +107,7 @@ export const SessionInspector = memo(function SessionInspector({
   sessionView,
   slots,
   renderSlot,
+  collections,
 }: SessionInspectorProps) {
   const sessionId = useSessionView((state) => state.sessionId)
   const sessions = useSessionView((state) => state.sessions)
@@ -165,9 +167,16 @@ export const SessionInspector = memo(function SessionInspector({
       } catch {
         /* ignore */
       }
+      window.dispatchEvent(new CustomEvent('biu:inspector-opened', { detail: { sessionId, opened: next } }))
     },
     [sessionId],
   )
+
+  useEffect(() => {
+    const next = pruneOpenedForCollections(opened, collections)
+    if (next.length === opened.length) return
+    persistOpened(next)
+  }, [collections, opened, persistOpened])
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { inspectorPanelMatches, inspectorViewProps, resolveInspectorTab } from './inspector-panels.ts'
+import { inspectorPanelMatches, inspectorViewProps, inspectorTabCollectionPath, inspectorTabIsOpen, pruneOpenedForCollections, resolveInspectorTab } from './inspector-panels.ts'
 
 test('inspector only offers session panels when a session is selected', () => {
   const extra = { centerKinds: ['session'], requiresSession: true }
@@ -57,4 +57,19 @@ test('inspector view props drop tab chrome and databaseUi', () => {
     repeatable: true,
   })
   assert.deepEqual(next, { paneId: 'x' })
+})
+
+test('opened database tabs drop when the collection is gone', () => {
+  assert.equal(inspectorTabCollectionPath('database:/pages'), '/pages')
+  assert.equal(inspectorTabCollectionPath('database:/pages::a1'), '/pages')
+  assert.equal(inspectorTabCollectionPath('traj'), null)
+  assert.equal(inspectorTabIsOpen('database:/pages', ['database:/pages::a1', 'traj']), true)
+  assert.deepEqual(
+    pruneOpenedForCollections(['database:/pages', 'traj', 'database:/tasks::x'], [{ path: '/tasks' }]),
+    ['traj', 'database:/tasks::x'],
+  )
+  assert.deepEqual(
+    pruneOpenedForCollections(['database:/pages'], undefined),
+    ['database:/pages'],
+  )
 })

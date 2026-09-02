@@ -34,4 +34,5 @@ test('os dock auto-hides behind a peek bar and opens on hover', () => {
   assert.match(css, /\.os-dock-tile\s*\{[^}]*width:\s*42px/s)
   assert.match(src, /os-dock-below/)
   assert.match(src, /innerHeight - 32/)
+  assert.match(src, /app.id.startsWith\('inspector:'\)/)
 })

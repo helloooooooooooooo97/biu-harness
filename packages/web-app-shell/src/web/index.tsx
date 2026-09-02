@@ -226,6 +226,7 @@ function Shell(props: SlotProps) {
   const pluginModules = modules.filter((item) => item.id !== 'agent')
   const railModules = navReady ? modules : modules.filter((item) => item.id === 'agent')
   const sessionId = useSessionView((state) => state.sessionId)
+  const collections = useSnapshot((state) => state.collections)
   const danceSessions = useSessionView((state) => state.sessions)
   const dancing = useSyncExternalStore(
     subscribeMascotDance,
@@ -645,6 +646,9 @@ function Shell(props: SlotProps) {
         modules={railModules}
         activeId={activeModule}
         agentHref={agentHref}
+        inspectorOpen={inspectorVisible}
+        sessionId={sessionId}
+        collections={collections}
         onSettings={openSettings}
       />
 
@@ -674,6 +678,7 @@ function Shell(props: SlotProps) {
         sessionView={sessionView}
         slots={slots}
         renderSlot={props.renderSlot}
+        collections={collections}
       />
 
       <SessionConfigDialog

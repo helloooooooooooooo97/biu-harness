@@ -10,7 +10,7 @@ function DockTile({ app, dock }: { app: DockApp; dock: DockService }) {
   const Tile = app.Tile as (() => ReactNode) | undefined
   const Icon = app.Icon as (() => ReactNode) | undefined
   const activate = () => {
-    if (app.kind === 'module') {
+    if (app.kind === 'module' || app.id.startsWith('inspector:')) {
       app.onOpen?.()
       return
     }
