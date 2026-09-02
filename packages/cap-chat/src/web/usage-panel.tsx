@@ -12,10 +12,10 @@ export interface UsagePanelProps {
   sessionView?: SessionViewService
 }
 
-const IN = '#4d8de0'
+const IN = '#5b9fd6'
 const OUT = '#9aa0a8'
-const CACHE = '#4caf7d'
-const COMPACT = '#e2a938'
+const CACHE = '#448361'
+const COMPACT = '#c2920a'
 
 async function loadUsageTrend(sessionId: string): Promise<UsageTrend> {
   const res = await fetch(`/api/sessions/${sessionId}/usage-trend`)

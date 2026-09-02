@@ -79,7 +79,10 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\.composer-tool-chip\.is-pick,\s*\n\.user-pick-chip\s*\{[^}]*--biu-tag/s)
     expect(chip).toMatch(/pickKindTone/)
     expect(chip).toMatch(/tagTone\(kind\)/)
+    expect(chip).toMatch(/onRemove/)
+    expect(chip).toMatch(/biu-tag-x/)
     expect(node).toMatch(/<PickChip pick=/)
+    expect(node).toMatch(/onRemove=\{remove\}/)
   })
 
   it('uses the specified chrome palette and pick highlight', () => {
@@ -97,10 +100,14 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\.pick-overlay-marquee[\s\S]*background:\s*var\(--dsw-pick-fill\)/)
   })
 
-  it('paints the context-clear hist fill as opaque cherry red without blend or color-scheme overrides', () => {
+  it('paints the context-clear hist fill with SuperTag red', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const approvals = readFileSync(resolve(root, 'packages/cap-chat/src/web/approvals.tsx'), 'utf8')
-    expect(css).toMatch(/--dsw-chat-hist-fill:\s*#ff3e51/)
+    expect(css).toMatch(/--dsw-chat-hist-fill:\s*#c4554d/)
+    expect(css).toMatch(/\.chat-pane\s*\{[^}]*--dsw-ok:\s*#448361/s)
+    expect(css).toMatch(/\.chat-pane\s*\{[^}]*--dsw-danger:\s*#c4554d/s)
+    expect(css).toMatch(/\.tool-call-status\.is-ok\s*\{[^}]*color:\s*#448361/s)
+    expect(css).toMatch(/\.tool-call-status\.is-fail\s*\{[^}]*color:\s*#c4554d/s)
     expect(css).toMatch(/\.project-chip-hist-bar\s*\{[^}]*background:\s*var\(--dsw-chat-hist-fill\)/s)
     expect(css).not.toMatch(/\.project-chip-hist-bar\s*\{[^}]*color-scheme:/s)
     expect(css).not.toMatch(/\.project-chip-hist-bar\s*\{[^}]*mix-blend-mode:/s)

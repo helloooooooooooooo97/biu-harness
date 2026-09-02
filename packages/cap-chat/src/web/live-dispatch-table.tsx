@@ -13,7 +13,7 @@ function statusMeta(status: LiveDispatchTaskRow['status'], reason?: string) {
   if (status === 'complete') {
     return {
       label: '已完成',
-      className: 'text-(--dsw-ok,#34d399)',
+      className: 'text-(--dsw-ok,#448361)',
       icon: <CheckCircleIcon className="size-3.5" aria-hidden />,
     }
   }

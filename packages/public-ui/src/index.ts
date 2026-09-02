@@ -3,7 +3,17 @@ export { ChatCount } from './chat-count.tsx'
 export { BoolBox } from './bool-box.tsx'
 export { AnchorMenu } from './anchor-menu.tsx'
 export { RecordEmojiBoard } from './emoji-board.tsx'
-export { TagChip, TagChips, tagTone, TAG_TONES, TAG_TONE_ROSE, ensureTagChipStyle } from './tag-chip.tsx'
+export {
+  TagChip,
+  TagChips,
+  TagChipCloseMark,
+  tagTone,
+  TAG_TONES,
+  TAG_TONE_ROSE,
+  TAG_TONE_GREEN,
+  TAG_TONE_RED,
+  ensureTagChipStyle,
+} from './tag-chip.tsx'
 export {
   ChatPane,
   ChatStage,

@@ -311,7 +311,7 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
                     </span>
                     <span
                       className={`ml-auto shrink-0 text-[10px] font-semibold ${
-                        tool.active ? 'text-(--dsw-ok,#34d399)' : 'text-(--dsw-label-3)'
+                        tool.active ? 'text-(--dsw-ok,#448361)' : 'text-(--dsw-label-3)'
                       }`}
                     >
                       {tool.active ? '可用' : '未开'}

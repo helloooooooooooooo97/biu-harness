@@ -43,9 +43,9 @@ function DiffBlock({ lines, path }: { lines: DiffLine[]; path?: string }) {
           const prefix = line.type === 'add' ? '+' : line.type === 'remove' ? '−' : ' '
           const rowClass =
             line.type === 'add'
-              ? 'bg-[rgba(34,140,90,0.12)] text-[rgb(20,110,70)]'
+              ? 'bg-[color-mix(in_srgb,#448361_22%,transparent)] text-[#448361]'
               : line.type === 'remove'
-                ? 'bg-[rgba(220,80,80,0.12)] text-[rgb(170,50,50)]'
+                ? 'bg-[color-mix(in_srgb,#c4554d_22%,transparent)] text-[#c4554d]'
                 : 'text-(--dsw-label-2)'
           return (
             <div key={`${index}-${line.type}`} className={`flex whitespace-pre-wrap break-all px-2 ${rowClass}`}>

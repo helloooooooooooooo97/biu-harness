@@ -13,7 +13,7 @@ import {
   WrenchScrewdriverIcon,
 } from '@heroicons/react/16/solid'
 import type { ComponentType } from 'react'
-import { ensureTagChipStyle, tagTone } from '@biu/public-ui'
+import { ensureTagChipStyle, TagChipCloseMark, tagTone } from '@biu/public-ui'
 import type { PickRef } from './types.ts'
 import { chipLabel } from './types.ts'
 
@@ -58,17 +58,34 @@ export function PickChipLabel({ pick }: { pick: PickRef }) {
   )
 }
 
-export function PickChip({ pick }: { pick: PickRef }) {
+export function PickChip({ pick, onRemove }: { pick: PickRef; onRemove?: () => void }) {
   ensureTagChipStyle()
+  const label = chipLabel(pick)
   return (
     <span
       className="biu-tag composer-tool-chip is-pick"
       data-testid="user-pick-chip"
       data-pick-kind={pick.kind}
-      title={`${pick.kind} · ${chipLabel(pick)}`}
+      title={`${pick.kind} · ${label}`}
       style={{ ['--biu-tag' as string]: pickKindTone(pick.kind) }}
     >
       <PickChipLabel pick={pick} />
+      {onRemove ? (
+        <button
+          type="button"
+          className="biu-tag-x"
+          aria-label={`移除 ${label}`}
+          contentEditable={false}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            onRemove()
+          }}
+        >
+          <TagChipCloseMark />
+        </button>
+      ) : null}
     </span>
   )
 }

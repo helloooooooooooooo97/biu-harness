@@ -11,8 +11,8 @@ function refFromAttrs(attrs: Record<string, unknown>): PickRef {
   return { kind, id, label, route, ...(action ? { action } : {}) }
 }
 
-function PickChipView({ attrs }: { attrs: Record<string, unknown> }) {
-  return <PickChip pick={refFromAttrs(attrs)} />
+function PickChipView({ attrs, onRemove }: { attrs: Record<string, unknown>; onRemove?: () => void }) {
+  return <PickChip pick={refFromAttrs(attrs)} onRemove={onRemove} />
 }
 
 export const PickChipNode = Node.create({
@@ -44,16 +44,22 @@ export const PickChipNode = Node.create({
     ]
   },
   addNodeView() {
-    return ({ node }) => {
+    return ({ editor, getPos, node }) => {
       const dom = document.createElement('span')
       dom.className = 'composer-inline-chip'
       dom.setAttribute('data-pick-chip', '')
       let attrs = node.attrs as Record<string, unknown>
       let root: Root | null = createRoot(dom)
       let paintQueued = false
+      const remove = () => {
+        const pos = typeof getPos === 'function' ? getPos() : undefined
+        if (typeof pos !== 'number') return
+        const size = editor.state.doc.nodeAt(pos)?.nodeSize ?? 1
+        editor.chain().focus().deleteRange({ from: pos, to: pos + size }).run()
+      }
       const paint = () => {
         paintQueued = false
-        root?.render(<PickChipView attrs={attrs} />)
+        root?.render(<PickChipView attrs={attrs} onRemove={remove} />)
       }
       const schedulePaint = () => {
         if (paintQueued || !root) return

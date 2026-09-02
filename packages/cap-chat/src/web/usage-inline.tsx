@@ -3,11 +3,12 @@ import {
   formatTrajectoryUsage,
   type TrajectoryUsage,
 } from '@biu/web-session-view'
+import { TAG_TONE_GREEN, TAG_TONE_RED } from '@biu/public-ui'
 
-const CACHE_RING = '#00c972'
-const HIST_RING = '#ff3e51'
-const CACHE_TRACK = '#0a3d28'
-const HIST_TRACK = '#4a1218'
+const CACHE_RING = TAG_TONE_GREEN
+const HIST_RING = TAG_TONE_RED
+const CACHE_TRACK = 'color-mix(in srgb, #448361 28%, #191919)'
+const HIST_TRACK = 'color-mix(in srgb, #c4554d 28%, #191919)'
 const RING_R = 4.5
 const RING_C = 2 * Math.PI * RING_R
 

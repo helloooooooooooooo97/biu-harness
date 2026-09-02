@@ -15,6 +15,8 @@ const CSS = `
 export const TAG_TONES = ['#5b9fd6', '#9a6dd7', '#d9730d', '#448361', '#c4554d', '#e255a1', '#c2920a', '#787774'] as const
 /** SuperTag 色板里的玫红，给输入框左侧加号等固定控件用。 */
 export const TAG_TONE_ROSE = '#e255a1' as const
+export const TAG_TONE_GREEN = '#448361' as const
+export const TAG_TONE_RED = '#c4554d' as const
 
 export function tagTone(id: string) {
   let hash = 0
@@ -34,7 +36,7 @@ export function ensureTagChipStyle() {
   if (style.textContent !== CSS) style.textContent = CSS
 }
 
-function CloseMark() {
+export function TagChipCloseMark() {
   return (
     <svg aria-hidden viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
       <path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 1 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06z" />
@@ -73,7 +75,7 @@ export function TagChip({
             onRemove()
           }}
         >
-          <CloseMark />
+          <TagChipCloseMark />
         </button>
       ) : null}
     </span>
