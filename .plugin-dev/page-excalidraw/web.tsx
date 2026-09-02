@@ -30,6 +30,11 @@ type DrawApi = {
 
 const DARK_BG = '#121212'
 
+function isLightCanvas(color: unknown) {
+  const value = String(color ?? '').trim().toLowerCase()
+  return !value || value === '#fff' || value === '#ffffff' || value === 'white' || value === 'rgb(255, 255, 255)'
+}
+
 function emptyScene(): Scene {
   return { elements: [], appState: { theme: 'dark', viewBackgroundColor: DARK_BG }, files: {} }
 }
@@ -38,10 +43,12 @@ function parseScene(raw: unknown): Scene {
   if (!raw || typeof raw !== 'object') return emptyScene()
   const o = raw as Scene
   const appState = o.appState && typeof o.appState === 'object' ? { ...o.appState } : {}
-  if (!appState.theme) appState.theme = 'dark'
-  if (!appState.viewBackgroundColor) appState.viewBackgroundColor = DARK_BG
+  const elements = Array.isArray(o.elements) ? o.elements : []
+  appState.theme = 'dark'
+  if (isLightCanvas(appState.viewBackgroundColor) && elements.length === 0) appState.viewBackgroundColor = DARK_BG
+  else if (!appState.viewBackgroundColor) appState.viewBackgroundColor = DARK_BG
   return {
-    elements: Array.isArray(o.elements) ? o.elements : [],
+    elements,
     appState,
     files: o.files && typeof o.files === 'object' ? o.files : {},
   }
@@ -155,6 +162,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSaved = useRef('')
   const live = useRef<Scene | null>(null)
+  const boot = useRef(true)
   const expandedRef = useRef(expanded)
   expandedRef.current = expanded
 
@@ -173,6 +181,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
       if (gone) return
       lastSaved.current = JSON.stringify(next)
       live.current = next
+      boot.current = true
       setScene(next)
     })
     return () => {
@@ -198,9 +207,17 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
 
   const onChange = useCallback((elements: unknown[], appState: Record<string, unknown>, files: Record<string, unknown>) => {
     if (!file) return
+    const forceDarkCanvas = boot.current
+    boot.current = false
     const next: Scene = {
       elements,
-      appState: { ...appState, collaborators: undefined },
+      appState: {
+        ...appState,
+        collaborators: undefined,
+        theme: 'dark',
+        viewBackgroundColor:
+          forceDarkCanvas && isLightCanvas(appState.viewBackgroundColor) ? DARK_BG : appState.viewBackgroundColor || DARK_BG,
+      },
       files,
     }
     live.current = next
@@ -231,7 +248,15 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
         theme="dark"
         initialData={{
           elements: start.elements as never,
-          appState: { ...start.appState, theme: 'dark', collaborators: new Map() },
+          appState: {
+            ...start.appState,
+            theme: 'dark',
+            viewBackgroundColor:
+              isLightCanvas(start.appState?.viewBackgroundColor) && !(start.elements && start.elements.length)
+                ? DARK_BG
+                : start.appState?.viewBackgroundColor || DARK_BG,
+            collaborators: new Map(),
+          },
           files: start.files as never,
         }}
         viewModeEnabled={!expanded}

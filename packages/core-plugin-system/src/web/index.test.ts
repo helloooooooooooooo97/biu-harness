@@ -145,6 +145,8 @@ test('packed page-excalidraw plugin stores scenes as page assets', async () => {
   assert.doesNotMatch(onChange, /setScene/)
   assert.match(onChange, /saveScene/)
   assert.match(src, /theme="dark"/)
+  assert.match(src, /viewBackgroundColor: DARK_BG/)
+  assert.match(src, /forceDarkCanvas/)
   assert.match(src, /zIndex: 9990/)
   assert.match(src, /scrollToContent/)
   assert.match(src, /aria-label="画板名称"/)
