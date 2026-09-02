@@ -62,10 +62,9 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\.chat-pane-embed\s*\{[^}]*background:\s*#191919/s)
     expect(css).not.toMatch(/\.chat-overlay-panel\.is-autohide/)
     expect(css).toMatch(/\.composer-pill/)
-    expect(css).toMatch(
-      /\.composer-pill\s*\{[^}]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.1\)/s,
-    )
-    expect(css).toMatch(/\.composer-pill\s*\{[^}]*backdrop-filter:\s*blur\(16px\) saturate\(1\.2\)/s)
+    expect(css).toMatch(/\.composer-pill\s*\{[^}]*background:\s*#202020/s)
+    expect(css).not.toMatch(/\.composer-pill\s*\{[^}]*backdrop-filter:\s*blur/s)
+    expect(css).not.toMatch(/\.composer-pill\s*\{[^}]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.1\)/s)
     expect(css).not.toMatch(/\.composer-pill\s*\{[^}]*background:\s*var\(--dsw-sidebar\)/s)
   })
 
