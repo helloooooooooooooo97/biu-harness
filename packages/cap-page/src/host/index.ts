@@ -2,7 +2,7 @@ import type { Context } from 'cordis'
 import type { CollectionSpec } from '@biu/type-file-system'
 import { PagesStore, STATUS, type WorkspaceFs } from './store.ts'
 
-export { PAGE_ROOT, PAGE_ASSETS, PagesStore } from './store.ts'
+export { PAGE_ROOT, PAGE_ASSETS, ASSET_GC_GRACE_MS, collectPageAssetNames, PagesStore } from './store.ts'
 
 const COLORS = ['red', 'orange', 'yellow', 'green', 'blue'] as const
 

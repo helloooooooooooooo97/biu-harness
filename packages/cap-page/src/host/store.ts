@@ -1,4 +1,4 @@
-import { mkdir, readFile, unlink } from 'node:fs/promises'
+import { mkdir, readFile, stat, unlink } from 'node:fs/promises'
 import { basename, dirname } from 'node:path'
 import type { DbRecord, SchemaFieldValue } from '@biu/type-file-system'
 import { emptySchemaValue, normalizeSchemaValue } from '@biu/type-file-system'
@@ -6,6 +6,27 @@ import { dumpMarkdown, splitMarkdown } from './markdown.ts'
 
 export const PAGE_ROOT = '.page'
 export const PAGE_ASSETS = '.page/assets'
+/** 正文不再引用后，附件再留一天，避免撤销/未落盘指针误删。 */
+export const ASSET_GC_GRACE_MS = 24 * 60 * 60 * 1000
+
+const ID_RE = /^[A-Za-z0-9._-]+$/
+const ASSET_REF_RE = /(?:(?:\.page\/)?assets\/|\/api\/page\/file\/)([A-Za-z0-9._-]+)/g
+
+export function collectPageAssetNames(...chunks: unknown[]): Set<string> {
+  const names = new Set<string>()
+  const eat = (text: string) => {
+    for (const match of text.matchAll(ASSET_REF_RE)) {
+      const name = basename(match[1] ?? '')
+      if (name && name !== '.gitkeep' && ID_RE.test(name)) names.add(name)
+    }
+  }
+  for (const chunk of chunks) {
+    if (chunk == null) continue
+    if (typeof chunk === 'string') eat(chunk)
+    else eat(JSON.stringify(chunk))
+  }
+  return names
+}
 
 const STATUS = ['draft', 'live', 'archived'] as const
 
@@ -36,8 +57,6 @@ export type WorkspaceFs = {
   write: (rel: string, content: string) => Promise<unknown>
   list: (rel?: string) => Promise<string[]>
 }
-
-const ID_RE = /^[A-Za-z0-9._-]+$/
 
 function asStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return []
@@ -293,6 +312,7 @@ export class PagesStore {
     if (!current) throw new Error(`unknown page: ${id}`)
     const next = applyPatch(current, patch)
     await this.write(next)
+    await this.gcAssets()
     return (await this.get(id))!
   }
 
@@ -313,6 +333,7 @@ export class PagesStore {
     row.updatedAt = ts
     if (typeof fields.title === 'string' && fields.title.trim()) row.title = fields.title.trim()
     await this.write(row)
+    await this.gcAssets()
     return (await this.get(id))!
   }
 
@@ -324,17 +345,7 @@ export class PagesStore {
     } catch {
       throw new Error(`unknown page: ${id}`)
     }
-    try {
-      const assets = await this.fs.list(PAGE_ASSETS)
-      for (const name of assets) {
-        if (name === '.gitkeep') continue
-        if (name.startsWith(`${id}-`) || name.startsWith(`${id}.`)) {
-          await unlink(this.fs.resolve(`${PAGE_ASSETS}/${name}`)).catch(() => undefined)
-        }
-      }
-    } catch {
-      // assets dir may be empty
-    }
+    await this.gcAssets()
   }
 
   async writeAsset(name: string, content: string) {
@@ -350,6 +361,32 @@ export class PagesStore {
     if (!file || file !== name.replace(/\\/g, '/')) throw new Error('invalid asset')
     const bytes = await readFile(this.fs.resolve(`${PAGE_ASSETS}/${file}`))
     return { bytes, type: mimeOf(file) }
+  }
+
+  async gcAssets(opts?: { graceMs?: number; now?: number }) {
+    const graceMs = opts?.graceMs ?? ASSET_GC_GRACE_MS
+    const now = opts?.now ?? Date.now()
+    let names: string[] = []
+    try {
+      names = await this.fs.list(PAGE_ASSETS)
+    } catch {
+      return
+    }
+    const live = new Set<string>()
+    for (const row of await this.list()) {
+      for (const name of collectPageAssetNames(dumpMarkdown(matterOf(row), row.notes ?? ''))) live.add(name)
+    }
+    for (const name of names) {
+      if (name === '.gitkeep' || live.has(name) || !ID_RE.test(name)) continue
+      const full = this.fs.resolve(`${PAGE_ASSETS}/${name}`)
+      try {
+        const info = await stat(full)
+        if (now - info.mtimeMs < graceMs) continue
+        await unlink(full)
+      } catch {
+        // gone or unreadable
+      }
+    }
   }
 
   private async write(row: PageRow) {
