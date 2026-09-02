@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { CheckCircleIcon, ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/16/solid'
 import { AnchorMenu } from '@biu/public-ui'
@@ -336,6 +336,7 @@ export function LocalText({
   placeholder,
   title,
   onCommit,
+  onKeyDown,
 }: {
   as?: 'input' | 'textarea'
   className?: string
@@ -344,6 +345,7 @@ export function LocalText({
   placeholder?: string
   title?: string
   onCommit: (next: string) => void
+  onKeyDown?: (event: ReactKeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => void
 }) {
   const [draft, setDraft] = useState(value)
   const draftRef = useRef(draft)
@@ -361,6 +363,7 @@ export function LocalText({
     placeholder,
     onChange: (event: { target: { value: string } }) => setDraft(event.target.value),
     onBlur: commit,
+    onKeyDown,
   }
   if (as === 'textarea') return <textarea {...shared} rows={rows} />
   return <input {...shared} />

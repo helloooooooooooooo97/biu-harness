@@ -2,8 +2,10 @@ import { useEffect, useRef, type MouseEvent } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import type { Editor } from '@tiptap/core'
+import { Selection } from '@tiptap/pm/state'
 import type { FsContentProps } from '@biu/type-file-system/ui'
 import { pageEditorExtensions } from './kit.ts'
+import { FOCUS_RECORD_CONTENT, FOCUS_RECORD_TITLE, isDocStartSelection } from './title-content-nav.ts'
 
 function asMarkdown(value: unknown) {
   if (value == null) return ''
@@ -60,6 +62,16 @@ export function PageEditor({ record, value, writable, onChange }: FsContentProps
           'aria-label': '页面正文',
           'data-testid': 'page-editor',
         },
+        handleKeyDown: (view, event) => {
+          if (event.key !== 'ArrowUp' || event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) return false
+          if (event.isComposing) return false
+          const sel = view.state.selection
+          const start = Selection.atStart(view.state.doc).from
+          if (!isDocStartSelection(sel.from, sel.empty, start)) return false
+          event.preventDefault()
+          window.dispatchEvent(new Event(FOCUS_RECORD_TITLE))
+          return true
+        },
       },
       onUpdate: ({ editor: current }) => {
         if (hydratedId.current !== record.id) return
@@ -114,6 +126,16 @@ export function PageEditor({ record, value, writable, onChange }: FsContentProps
     },
     [],
   )
+
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return
+    const onFocus = () => {
+      if (editor.isDestroyed) return
+      editor.commands.focus('start')
+    }
+    window.addEventListener(FOCUS_RECORD_CONTENT, onFocus)
+    return () => window.removeEventListener(FOCUS_RECORD_CONTENT, onFocus)
+  }, [editor])
 
   if (!editor) return <div className="page-editor" data-testid="page-editor-pending" />
 

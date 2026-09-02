@@ -82,6 +82,16 @@ test('page editor paints a registered algorithm block', async () => {
   assert.equal(container.querySelector('[data-testid="algo-view"]')?.textContent, 'Two Sum')
 })
 
+test('page editor bridges cursor to the record title', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const { resolve } = await import('node:path')
+  const src = await readFile(resolve(import.meta.dirname, './page-editor.tsx'), 'utf8')
+  assert.match(src, /handleKeyDown/)
+  assert.match(src, /FOCUS_RECORD_TITLE/)
+  assert.match(src, /FOCUS_RECORD_CONTENT/)
+  assert.match(src, /Selection\.atStart/)
+})
+
 test('page editor hydrates markdown after content fetch', async () => {
   const ctx = new Context()
   new PageEditorService(ctx)

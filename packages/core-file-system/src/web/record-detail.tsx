@@ -1,4 +1,4 @@
-import { useState, type ReactNode, type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useState, type ReactNode, type Dispatch, type SetStateAction } from 'react'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import type { CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
 import { HashtagIcon } from '@heroicons/react/16/solid'
@@ -10,6 +10,7 @@ import { SchemaFieldEditor } from './schema-field.tsx'
 import { RecordEmojiBoard } from '@biu/public-ui'
 import { TableGlyph } from './nav-glyphs.tsx'
 import { normalizeRecordEmoji, recordPreviewEmoji } from './sidebar-preview.ts'
+import { FOCUS_RECORD_CONTENT, FOCUS_RECORD_TITLE, shouldLeaveTitleForContent } from './title-content-nav.ts'
 
 function DetailTitleIcon({
   emoji,
@@ -115,6 +116,18 @@ export function RecordDetail({
   onOpenRecord?: (recordId: string, collection?: string) => void
   onDelete?: () => void
 }) {
+  useEffect(() => {
+    const onTitle = () => {
+      const el = document.querySelector<HTMLTextAreaElement>('.fsdb-detail-title-input')
+      if (!el) return
+      el.focus()
+      const n = el.value.length
+      el.setSelectionRange(n, n)
+    }
+    window.addEventListener(FOCUS_RECORD_TITLE, onTitle)
+    return () => window.removeEventListener(FOCUS_RECORD_TITLE, onTitle)
+  }, [])
+
   return (
 <div className="fsdb-detail-stage">
           <div className="fsdb-detail-screen" role="main" aria-label="记录详情">
@@ -140,6 +153,14 @@ export function RecordDetail({
                       className="fsdb-detail-title-input"
                       value={draft[schema.labelField] ?? ''}
                       rows={(draft[schema.labelField] ?? '').length > 48 ? 2 : 1}
+                      onKeyDown={(event) => {
+                        const el = event.currentTarget
+                        if (!(el instanceof HTMLTextAreaElement)) return
+                        if (event.nativeEvent.isComposing) return
+                        if (!shouldLeaveTitleForContent(event.key, event.shiftKey, el.value, el.selectionEnd)) return
+                        event.preventDefault()
+                        window.dispatchEvent(new Event(FOCUS_RECORD_CONTENT))
+                      }}
                       onCommit={(raw) => {
                         const next = raw.trim()
                         setDraft((prev) => ({ ...prev, [schema.labelField!]: next }))
@@ -250,6 +271,14 @@ export function RecordDetail({
                         value={draft[key] ?? saved}
                         rows={12}
                         placeholder="内容：文本，或 JSON 文件"
+                        onKeyDown={(event) => {
+                          const el = event.currentTarget
+                          if (!(el instanceof HTMLTextAreaElement)) return
+                          if (event.key !== 'ArrowUp' || event.shiftKey || event.nativeEvent.isComposing) return
+                          if (el.selectionStart !== 0 || el.selectionEnd !== 0) return
+                          event.preventDefault()
+                          window.dispatchEvent(new Event(FOCUS_RECORD_TITLE))
+                        }}
                         onCommit={(next) => {
                           setDraft((prev) => ({ ...prev, [key]: next }))
                           if (next !== saved) void writeOne(selected, key, spec, next)
