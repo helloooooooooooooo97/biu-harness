@@ -25,6 +25,7 @@ import {
 import { SavedViewsStore, viewsCollection, type StoredView } from './saved-views.ts'
 import { SchemaTagsStore, SUPER_TAGS_SQLITE } from './schema-tags.ts'
 import { superTagsCollection } from './super-tags-collection.ts'
+import { currentSessionId } from '@biu/host-sessions/scope'
 import { databaseRevealForTool, normalizeCollectionPath } from '../paths.ts'
 
 function publicAction(action: CollectionAction): CollectionActionInfo {
@@ -740,7 +741,12 @@ function broadcastInspectorReveal(
   const reveal = databaseRevealForTool({ path, result, dropRecord })
   if (!reveal) return
   const http = ctx.get('http') as { broadcast?: (type: string, payload: unknown) => void } | undefined
-  http?.broadcast?.(DATABASE_CHANNEL, { ts: Date.now(), reveal, phase })
+  http?.broadcast?.(DATABASE_CHANNEL, {
+    ts: Date.now(),
+    reveal,
+    phase,
+    sessionId: currentSessionId(),
+  })
 }
 
 async function withInspectorReveal<T>(

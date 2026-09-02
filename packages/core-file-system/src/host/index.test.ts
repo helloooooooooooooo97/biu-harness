@@ -6,6 +6,7 @@ import { DatabaseService, apply as applyFileSystem } from './index.ts'
 import type { CollectionSpec } from '@biu/type-file-system'
 import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 import { superTagsCollection } from './super-tags-collection.ts'
+import { runWithSession } from '@biu/host-sessions/scope'
 
 function notesCollection(): CollectionSpec {
   const rows = new Map<string, { id: string; title: string; status: string; pinned: boolean }>()
@@ -294,13 +295,15 @@ test('db_list on a table broadcasts inspector working then done', async () => {
   }
   new HttpStub(ctx)
   await ctx.plugin({ inject: ['tools', 'http'], apply: applyFileSystem })
-  await ctx.tools.invoke('db_list', { path: '/views' })
+  await runWithSession('s1', () => ctx.tools.invoke('db_list', { path: '/views' }))
   const reveals = seen.filter((item) => {
     const payload = item.payload as { reveal?: { collection?: string }; phase?: string }
     return item.type === 'database' && payload?.reveal?.collection === '/views'
   })
-  assert.equal((reveals[0]?.payload as { phase?: string }).phase, 'working')
-  assert.equal((reveals.at(-1)?.payload as { phase?: string }).phase, 'done')
+  assert.equal((reveals[0]?.payload as { phase?: string; sessionId?: string }).phase, 'working')
+  assert.equal((reveals[0]?.payload as { sessionId?: string }).sessionId, 's1')
+  assert.equal((reveals.at(-1)?.payload as { phase?: string; sessionId?: string }).phase, 'done')
+  assert.equal((reveals.at(-1)?.payload as { sessionId?: string }).sessionId, 's1')
   const before = seen.length
   await ctx.tools.invoke('db_list', { path: '/' })
   const extra = seen.slice(before).filter((item) => {

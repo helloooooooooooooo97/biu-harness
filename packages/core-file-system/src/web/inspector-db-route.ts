@@ -104,9 +104,11 @@ export function applyDatabaseReveal(reveal: unknown) {
   showInInspector(collection, databaseAllViewPath(collection))
 }
 
-/** Agent 工具推送：先切过去并标成干活中，完成后停 busy。中间主界面不动。 */
-export function applyDatabaseChannelPayload(payload: unknown) {
+/** Agent 工具推送：只跟当前主 Session。表格刷新仍走 fsdb:change。 */
+export function applyDatabaseChannelPayload(payload: unknown, currentSessionId?: string | null) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return
+  const sessionId = String((payload as { sessionId?: unknown }).sessionId ?? '').trim()
+  if (!sessionId || !currentSessionId || sessionId !== String(currentSessionId)) return
   const reveal = (payload as { reveal?: unknown }).reveal
   if (!reveal || typeof reveal !== 'object' || Array.isArray(reveal)) return
   const collection = normalizeCollectionPath(String((reveal as { collection?: unknown }).collection ?? ''))

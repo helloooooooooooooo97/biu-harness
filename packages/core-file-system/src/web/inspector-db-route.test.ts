@@ -88,9 +88,31 @@ test('applyDatabaseReveal opens the table, or the record when an id is present',
 
 test('applyDatabaseChannelPayload marks the table as agent-working until done', () => {
   setInspectorAgentWorking('/tasks', false)
-  applyDatabaseChannelPayload({ phase: 'working', reveal: { collection: '/tasks' } })
+  applyDatabaseChannelPayload(
+    { phase: 'working', sessionId: 'main', reveal: { collection: '/tasks' } },
+    'main',
+  )
   assert.equal(isInspectorAgentWorking('/tasks'), true)
-  applyDatabaseChannelPayload({ phase: 'done', reveal: { collection: '/tasks', recordId: 't1' } })
+  applyDatabaseChannelPayload(
+    { phase: 'done', sessionId: 'main', reveal: { collection: '/tasks', recordId: 't1' } },
+    'main',
+  )
   assert.equal(isInspectorAgentWorking('/tasks'), false)
   assert.equal(getInspectorDbPath('database:/tasks'), '/database/tasks/record/t1')
+})
+
+test('applyDatabaseChannelPayload ignores other sessions and unsigned broadcasts', () => {
+  setInspectorDbPath('database:/tasks', '/database/tasks')
+  setInspectorAgentWorking('/tasks', false)
+  applyDatabaseChannelPayload(
+    { phase: 'working', sessionId: 'other', reveal: { collection: '/tasks', recordId: 'x' } },
+    'main',
+  )
+  applyDatabaseChannelPayload({ phase: 'working', reveal: { collection: '/tasks', recordId: 'y' } }, 'main')
+  applyDatabaseChannelPayload(
+    { phase: 'working', sessionId: 'main', reveal: { collection: '/tasks', recordId: 'z' } },
+    null,
+  )
+  assert.equal(isInspectorAgentWorking('/tasks'), false)
+  assert.equal(getInspectorDbPath('database:/tasks'), '/database/tasks')
 })

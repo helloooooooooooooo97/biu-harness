@@ -367,7 +367,10 @@ export function apply(ctx: Context) {
     let debounce = 0
     const off = snapshot.onMessage(DATABASE_CHANNEL, (payload) => {
       window.dispatchEvent(new Event('fsdb:change'))
-      applyDatabaseChannelPayload(payload)
+      const sessionId = (
+        ctx.get('sessionView') as { get?: () => { sessionId?: string | null } } | undefined
+      )?.get?.()?.sessionId
+      applyDatabaseChannelPayload(payload, sessionId)
       window.clearTimeout(debounce)
       debounce = window.setTimeout(() => void sync(), 40)
     })
