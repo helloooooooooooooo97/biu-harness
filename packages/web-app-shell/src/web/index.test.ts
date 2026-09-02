@@ -43,7 +43,7 @@ test('update button does not download when already current', () => {
   assert.match(nav, /相对于主分支暂时无最新提交版本/)
   assert.match(nav, /if \(behind <= 0\)/)
   assert.match(nav, /os-dock-update-toast/)
-  assert.match(nav, /activeId !== 'agent'/)
+  assert.match(nav, /if \(activeId === 'agent'\) setChatOverlay\(false\)/)
   assert.match(nav, /setChatOverlay\(false\)/)
 })
 
