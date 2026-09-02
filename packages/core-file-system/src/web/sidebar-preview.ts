@@ -1,4 +1,4 @@
-import type { DbRecord } from '@biu/type-file-system'
+import type { CollectionSchema, DbRecord } from '@biu/type-file-system'
 import type { SavedView } from './saved-view.ts'
 import { listCollection, readJson } from './db-client.ts'
 
@@ -8,6 +8,7 @@ export const SIDEBAR_PREVIEW_MAX = 100
 export type PreviewPage = {
   items: DbRecord[]
   total: number
+  schema?: CollectionSchema
 }
 
 export function previewCacheKey(path: string, view: Pick<SavedView, 'id' | 'sortField' | 'sortDir' | 'filters' | 'query'>) {

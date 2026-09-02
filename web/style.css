@@ -1747,6 +1747,14 @@ body {
   padding-left: 22px;
 }
 
+.fsdb-view-preview .fsdb-view-preview-records .chat-session-row > .chat-session-row-main {
+  padding-left: 22px;
+}
+
+.sidebar-session-list .fsdb-view-preview .fsdb-view-preview-records .chat-session-row > .chat-session-row-main {
+  padding-left: 33px;
+}
+
 .fsdb-view-preview-hint,
 .fsdb-view-preview-more {
   display: block;

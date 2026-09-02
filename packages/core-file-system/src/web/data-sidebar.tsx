@@ -8,10 +8,12 @@ import {
   PencilSquareIcon,
   PlusIcon,
   Square2StackIcon,
+  Squares2X2Icon,
   StarIcon,
 } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
-import type { CollectionInfo, DbRecord } from '@biu/type-file-system'
+import type { CollectionInfo, CollectionSchema, DbRecord } from '@biu/type-file-system'
+import { groupField, groupRecords } from './fields.ts'
 import { builtinAllViewId } from '../catalog-views.ts'
 import { isSystemCollection, sortDataCollections } from './database-path.ts'
 import { viewsForRegisteredCollection } from './collection-nav.ts'
@@ -51,9 +53,17 @@ import { RecordMark } from './record-mark.tsx'
 const SIDEBAR_BRAND_GRADIENT =
   'linear-gradient(105deg, color-mix(in srgb, #0066B0 42%, var(--dsw-hover)), color-mix(in srgb, #5B3E90 40%, var(--dsw-hover)) 52%, color-mix(in srgb, #E22726 42%, var(--dsw-hover)))'
 
-type PreviewState = { items: DbRecord[]; total: number; loading: boolean; error: string }
+type PreviewState = {
+  items: DbRecord[]
+  total: number
+  schema?: CollectionSchema
+  loading: boolean
+  error: string
+}
 
-const previewCache = new Map<string, { items: DbRecord[]; total: number }>()
+type PreviewCache = { items: DbRecord[]; total: number; schema?: CollectionSchema }
+
+const previewCache = new Map<string, PreviewCache>()
 
 function ViewRecordPreview({
   path,
@@ -75,9 +85,11 @@ function ViewRecordPreview({
   const [state, setState] = useState<PreviewState>(() => ({
     items: cached?.items ?? [],
     total: cached?.total ?? 0,
+    schema: cached?.schema,
     loading: !cached,
     error: '',
   }))
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const [pickerId, setPickerId] = useState<string | null>(null)
   const [pickerAnchor, setPickerAnchor] = useState<HTMLElement | null>(null)
   const [emojiDraft, setEmojiDraft] = useState('')
@@ -87,7 +99,7 @@ function ViewRecordPreview({
     if (!open) return
     const hit = previewCache.get(key)
     if (hit) {
-      setState({ items: hit.items, total: hit.total, loading: false, error: '' })
+      setState({ items: hit.items, total: hit.total, schema: hit.schema, loading: false, error: '' })
       return
     }
     let cancelled = false
@@ -95,9 +107,9 @@ function ViewRecordPreview({
     void fetchViewPreview(path, view, 0).then(
       (page) => {
         if (cancelled) return
-        previewCache.set(key, { items: page.items, total: page.total })
+        previewCache.set(key, { items: page.items, total: page.total, schema: page.schema })
         rememberPreviewTotal(key, page.total)
-        setState({ items: page.items, total: page.total, loading: false, error: '' })
+        setState({ items: page.items, total: page.total, schema: page.schema, loading: false, error: '' })
       },
       (err: unknown) => {
         if (cancelled) return
@@ -107,7 +119,7 @@ function ViewRecordPreview({
     return () => {
       cancelled = true
     }
-  }, [key, open, path, view.query, view.sortField, view.sortDir, view.filters])
+  }, [key, open, path, view.query, view.sortField, view.sortDir, view.filters, view.groupBy])
 
   async function loadMore() {
     const more = nextPreviewLimit(state.items.length, state.total)
@@ -117,9 +129,10 @@ function ViewRecordPreview({
       const page = await fetchViewPreview(path, view, state.items.length, more)
       const items = [...state.items, ...page.items]
       const total = page.total
-      previewCache.set(key, { items, total })
+      const schema = page.schema ?? state.schema
+      previewCache.set(key, { items, total, schema })
       rememberPreviewTotal(key, total)
-      setState({ items, total, loading: false, error: '' })
+      setState({ items, total, schema, loading: false, error: '' })
     } catch (err) {
       setState((prev) => ({ ...prev, loading: false, error: String(err) }))
     }
@@ -129,7 +142,7 @@ function ViewRecordPreview({
     try {
       const emoji = await writeRecordEmoji(path, row.id, next)
       const items = state.items.map((item) => (item.id === row.id ? { ...item, emoji } : item))
-      previewCache.set(key, { items, total: state.total })
+      previewCache.set(key, { items, total: state.total, schema: state.schema })
       setState((prev) => ({ ...prev, items }))
       setPickerId(null)
       setPickerAnchor(null)
@@ -141,73 +154,130 @@ function ViewRecordPreview({
 
   const remaining = Math.max(0, state.total - state.items.length)
   const capped = state.items.length >= SIDEBAR_PREVIEW_MAX && remaining > 0
-  return (
-    <div className="fsdb-view-preview" role="list">
-      {state.items.map((row) => {
-        const emoji = recordPreviewEmoji(row)
-        return (
-          <div
-            key={row.id}
-            className="chat-session-row"
-            role="listitem"
-            {...pickDomAttrs(recordKind, row.id, recordPreviewLabel(row))}
-          >
-            <div className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5">
-              <span className="fsdb-record-icon relative grid size-6 shrink-0 place-items-center">
-                <button
-                  type="button"
-                  className="grid size-6 place-items-center border-0 bg-transparent p-0 text-[16px] leading-none text-inherit"
-                  title={emoji ? '更换图标' : '设置图标'}
-                  aria-label={emoji ? `更换 ${recordPreviewLabel(row)} 的图标` : `设置 ${recordPreviewLabel(row)} 的图标`}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    const btn = event.currentTarget
-                    setPickerId((prev) => {
-                      if (prev === row.id) {
-                        setPickerAnchor(null)
-                        return null
-                      }
-                      setPickerAnchor(btn)
-                      return row.id
-                    })
-                    setEmojiDraft(emoji)
-                  }}
-                >
-                  {emoji ? (
-                    <span className="fsdb-record-emoji">{emoji}</span>
-                  ) : (
-                    <RecordMark record={row} tableIcon={tableIcon} Icon={chromeIcon} />
-                  )}
-                </button>
-                {pickerId === row.id && pickerAnchor ? (
-                  <RecordEmojiBoard
-                    anchor={pickerAnchor}
-                    draft={emojiDraft}
-                    onDraft={setEmojiDraft}
-                    onPick={(next) => void saveEmoji(row, next)}
-                    onClear={() => void saveEmoji(row, '')}
-                    onClose={() => {
-                      setPickerId(null)
-                      setPickerAnchor(null)
-                    }}
-                  />
-                ) : null}
-              </span>
+  const grouping = Boolean(groupField(state.schema, view.groupBy))
+  const buckets = useMemo(() => {
+    if (!grouping) return null
+    return groupRecords(state.items, state.schema, view.groupBy).filter((bucket) => bucket.rows.length)
+  }, [grouping, state.items, state.schema, view.groupBy])
+
+  function renderRecords(rows: DbRecord[]) {
+    return rows.map((row) => {
+      const emoji = recordPreviewEmoji(row)
+      return (
+        <div
+          key={row.id}
+          className="chat-session-row"
+          role="listitem"
+          {...pickDomAttrs(recordKind, row.id, recordPreviewLabel(row))}
+        >
+          <div className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5">
+            <span className="fsdb-record-icon relative grid size-6 shrink-0 place-items-center">
               <button
                 type="button"
-                className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit"
-                title={recordPreviewLabel(row)}
+                className="grid size-6 place-items-center border-0 bg-transparent p-0 text-[16px] leading-none text-inherit"
+                title={emoji ? '更换图标' : '设置图标'}
+                aria-label={emoji ? `更换 ${recordPreviewLabel(row)} 的图标` : `设置 ${recordPreviewLabel(row)} 的图标`}
                 onClick={(event) => {
                   event.stopPropagation()
-                  onOpenRecord?.(row.id, row)
+                  const btn = event.currentTarget
+                  setPickerId((prev) => {
+                    if (prev === row.id) {
+                      setPickerAnchor(null)
+                      return null
+                    }
+                    setPickerAnchor(btn)
+                    return row.id
+                  })
+                  setEmojiDraft(emoji)
                 }}
               >
-                {recordPreviewLabel(row)}
+                {emoji ? (
+                  <span className="fsdb-record-emoji">{emoji}</span>
+                ) : (
+                  <RecordMark record={row} tableIcon={tableIcon} Icon={chromeIcon} />
+                )}
               </button>
-            </div>
+              {pickerId === row.id && pickerAnchor ? (
+                <RecordEmojiBoard
+                  anchor={pickerAnchor}
+                  draft={emojiDraft}
+                  onDraft={setEmojiDraft}
+                  onPick={(next) => void saveEmoji(row, next)}
+                  onClear={() => void saveEmoji(row, '')}
+                  onClose={() => {
+                    setPickerId(null)
+                    setPickerAnchor(null)
+                  }}
+                />
+              ) : null}
+            </span>
+            <button
+              type="button"
+              className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit"
+              title={recordPreviewLabel(row)}
+              onClick={(event) => {
+                event.stopPropagation()
+                onOpenRecord?.(row.id, row)
+              }}
+            >
+              {recordPreviewLabel(row)}
+            </button>
           </div>
-        )
-      })}
+        </div>
+      )
+    })
+  }
+
+  return (
+    <div className="fsdb-view-preview" role="list">
+      {buckets?.length ? (
+        buckets.map((bucket, index) => {
+          const groupKey = bucket.key || 'unset'
+          const expanded = openGroups[groupKey] ?? index === 0
+          return (
+            <div key={groupKey} className="min-w-0" data-testid="sidebar-view-group">
+              <div className="chat-session-row fsdb-view-preview-group">
+                <div className="chat-session-row-main flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[14px] leading-5">
+                  <button
+                    type="button"
+                    className="grid size-6 shrink-0 place-items-center border-0 bg-transparent p-0 text-inherit"
+                    title={expanded ? '收起分组' : '展开分组'}
+                    aria-expanded={expanded}
+                    onClick={() => setOpenGroups((prev) => ({ ...prev, [groupKey]: !expanded }))}
+                  >
+                    <span className="sidebar-rail-icon sidebar-group-fold">
+                      <span className="sidebar-group-fold-face">
+                        <Squares2X2Icon className="size-4 shrink-0" />
+                      </span>
+                      <span className="sidebar-group-fold-chevron">
+                        {expanded ? (
+                          <ChevronDownIcon className="size-4 shrink-0 opacity-80" />
+                        ) : (
+                          <ChevronRightIcon className="size-4 shrink-0 opacity-80" />
+                        )}
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-left font-medium text-inherit"
+                    title={bucket.label}
+                    onClick={() => setOpenGroups((prev) => ({ ...prev, [groupKey]: !expanded }))}
+                  >
+                    {bucket.label}
+                  </button>
+                </div>
+                <ChatCount count={bucket.rows.length} />
+              </div>
+              <SidebarFold open={expanded}>
+                <div className="fsdb-view-preview-records">{renderRecords(bucket.rows)}</div>
+              </SidebarFold>
+            </div>
+          )
+        })
+      ) : (
+        renderRecords(state.items)
+      )}
       {state.loading && !state.items.length ? (
         <div className="fsdb-view-preview-hint">加载中…</div>
       ) : null}

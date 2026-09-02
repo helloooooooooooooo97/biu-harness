@@ -32,6 +32,15 @@ test('user and system collection sections fold independently', () => {
   assert.doesNotMatch(sidebar, /\{favOpen \?/)
 })
 
+test('grouped views nest a foldable group layer in the sidebar', () => {
+  const sidebar = readFileSync(resolve(import.meta.dirname, './data-sidebar.tsx'), 'utf8')
+  const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
+  assert.match(sidebar, /groupRecords\(state\.items, state\.schema, view\.groupBy\)/)
+  assert.match(sidebar, /data-testid="sidebar-view-group"/)
+  assert.match(sidebar, /fsdb-view-preview-records/)
+  assert.match(css, /\.fsdb-view-preview-records \.chat-session-row > \.chat-session-row-main/)
+})
+
 test('table and view rows only expand from the fold column', () => {
   const sidebar = readFileSync(resolve(import.meta.dirname, './data-sidebar.tsx'), 'utf8')
   const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
