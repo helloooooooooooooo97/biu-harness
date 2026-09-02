@@ -5,7 +5,8 @@ import { HashtagIcon } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { contentFieldKey, formatField, resolveFieldType, uniqueValues } from './fields.ts'
 import { LocalText } from './controls.tsx'
-import { FieldEditor, FieldGlyph, FilePreview } from './fsdb-cells.tsx'
+import { FieldEditor, FilePreview } from './fsdb-cells.tsx'
+import { PropertyRow } from './property-row.tsx'
 import { SchemaFieldEditor } from './schema-field.tsx'
 import { RecordEmojiBoard } from '@biu/public-ui'
 import { TableGlyph } from './nav-glyphs.tsx'
@@ -197,11 +198,7 @@ export function RecordDetail({
                     if (kind === 'schema' && !field.writable) return null
                     if (kind === 'schema') {
                       return (
-                        <div key={key} className="fsdb-prop is-stack">
-                          <span title={field.label ?? key}>
-                            <FieldGlyph kind={kind} />
-                            {field.label ?? key}
-                          </span>
+                        <PropertyRow key={key} field={field} fieldKey={key} stacked>
                           <div className="fsdb-prop-val is-schema">
                             <SchemaFieldEditor
                               collectionPath={collectionPath}
@@ -211,15 +208,11 @@ export function RecordDetail({
                               onChange={(next) => void writePatch(selected, { [key]: next })}
                             />
                           </div>
-                        </div>
+                        </PropertyRow>
                       )
                     }
                     return (
-                      <div key={key} className="fsdb-prop">
-                        <span title={field.label ?? key}>
-                          <FieldGlyph kind={kind} />
-                          {field.label ?? key}
-                        </span>
+                      <PropertyRow key={key} field={field} fieldKey={key}>
                         <div className="fsdb-prop-val" title={formatField(field, selected[key])}>
                         {field.writable ? (
                           <FieldEditor
@@ -236,7 +229,7 @@ export function RecordDetail({
                           renderCell(selected, key, field)
                         )}
                         </div>
-                      </div>
+                      </PropertyRow>
                     )
                   })}
                 </div>

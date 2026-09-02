@@ -51,7 +51,9 @@ import {
   fieldHasValue,
   type ViewMode,
 } from './fields.ts'
+import { DbMenu, DbSearchOption } from '@biu/database-ui'
 import { AppDialog, CellSelect, CheckRow, LocalText } from './controls.tsx'
+import { PropertyRow } from './property-row.tsx'
 import { DataSidebar } from './data-sidebar.tsx'
 import { buildCrumbs, type CrumbTarget } from './sidebar-nav.ts'
 import { CrumbTrail } from './crumb-trail.tsx'
@@ -1348,31 +1350,66 @@ export function CollectionBrowser({
 
   function RecordActions({ row, place }: { row: DbRecord; place: 'row' | 'detail' }) {
     const actions = visibleActions(schema, row, place)
+    const [moreOpen, setMoreOpen] = useState(false)
+    const moreRef = useRef<HTMLButtonElement>(null)
     if (!actions.length) return null
     const Action = chrome?.Action
+    const shown = actions.filter((action) => action.id === 'open-split' || action.id === 'open-page')
+    const overflow = actions.filter((action) => action.id !== 'open-split' && action.id !== 'open-page')
+    const busy = Boolean(busyKey?.endsWith(`:${row.id}`))
+    const renderOne = (action: CollectionActionInfo) => {
+      const run = () => void runAction(row, action)
+      if (Action) return <Action key={action.id} action={action} record={row} busy={busy} run={run} />
+      const glyph = actionIcon(action.id)
+      return (
+        <button
+          key={action.id}
+          type="button"
+          className={`tasks-icon-btn${action.tone === 'danger' ? ' is-danger' : ''}`}
+          title={action.label}
+          aria-label={`${action.label} ${labelOf(row)}`}
+          disabled={busy}
+          onClick={run}
+        >
+          {glyph ?? action.label}
+        </button>
+      )
+    }
     return (
       <div className="tasks-row-actions" data-biu-ignore onClick={(event) => event.stopPropagation()}>
-        {actions.map((action) => {
-          const busy = Boolean(busyKey?.endsWith(`:${row.id}`))
-          const run = () => void runAction(row, action)
-          if (Action) {
-            return <Action key={action.id} action={action} record={row} busy={busy} run={run} />
-          }
-          const glyph = actionIcon(action.id)
-          return (
+        {shown.map(renderOne)}
+        {overflow.length ? (
+          <>
             <button
-              key={action.id}
+              ref={moreRef}
               type="button"
-              className={`tasks-icon-btn${action.tone === 'danger' ? ' is-danger' : ''}`}
-              title={action.label}
-              aria-label={`${action.label} ${labelOf(row)}`}
+              className="tasks-icon-btn"
+              title="更多"
+              aria-label="更多操作"
+              aria-expanded={moreOpen}
               disabled={busy}
-              onClick={run}
+              onClick={() => setMoreOpen((open) => !open)}
             >
-              {glyph ?? action.label}
+              <EllipsisHorizontalIcon aria-hidden className="size-[14px]" />
             </button>
-          )
-        })}
+            {moreOpen ? (
+              <DbMenu anchor={moreRef.current} onClose={() => setMoreOpen(false)}>
+                {overflow.map((action) => (
+                  <DbSearchOption
+                    key={action.id}
+                    onClick={() => {
+                      setMoreOpen(false)
+                      void runAction(row, action)
+                    }}
+                  >
+                    {actionIcon(action.id)}
+                    {action.label}
+                  </DbSearchOption>
+                ))}
+              </DbMenu>
+            ) : null}
+          </>
+        ) : null}
       </div>
     )
   }
@@ -1387,9 +1424,9 @@ export function CollectionBrowser({
     return (
       <div className="fsdb-proplist">
         {cols.map((col) => (
-          <span key={col.key} className="fsdb-propchip">
-            <span className="fsdb-propchip-v">{renderCell(row, col.key, col.field)}</span>
-          </span>
+          <PropertyRow key={col.key} field={col.field} fieldKey={col.key}>
+            {renderCell(row, col.key, col.field)}
+          </PropertyRow>
         ))}
       </div>
     )

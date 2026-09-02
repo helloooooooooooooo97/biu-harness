@@ -13,6 +13,7 @@ import {
   XMarkIcon,
 } from '@heroicons/react/16/solid'
 import { TagChip, TagChips } from '@biu/public-ui'
+import { CellSelect } from '@biu/database-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import type { DbRecord } from '@biu/type-file-system'
 import type { CollectionChrome, FsCellProps } from '@biu/type-file-system/ui'
@@ -169,43 +170,14 @@ function ChipSelect({
   valueClass?: string
   onSelect: (value: string) => void
 }) {
-  const [open, setOpen] = useState(false)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const current = options.find((item) => item.value === value)
   return (
-    <div className="tasks-cellselect" onClick={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()}>
-      <button
-        ref={triggerRef}
-        type="button"
-        className={`tasks-cellselect-trigger ${valueClass ?? ''}`}
-        data-open={open || undefined}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
-      >
-        {current?.icon}
-        <span className="tasks-chip-text">{current?.label ?? value}</span>
-      </button>
-      {open ? (
-        <FloatMenu anchor={triggerRef.current} onClose={() => setOpen(false)}>
-          {options.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              className={`tasks-cellselect-option${item.value === value ? ' is-selected' : ''}`}
-              role="option"
-              onClick={() => {
-                if (item.value !== value) onSelect(item.value)
-                setOpen(false)
-              }}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-        </FloatMenu>
-      ) : null}
-    </div>
+    <CellSelect
+      className="tasks-cellselect"
+      value={value}
+      options={options}
+      onSelect={onSelect}
+      triggerClassName={`tasks-cellselect-trigger ${valueClass ?? ''}`}
+    />
   )
 }
 

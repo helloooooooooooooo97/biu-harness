@@ -1,0 +1,16 @@
+{
+  "name": "@biu/database-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Database 共用 cell / 搜索弹出层",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@biu/public-ui": "0.1.0"
+  },
+  "peerDependencies": {
+    "react": "^19.1.1"
+  }
+}
