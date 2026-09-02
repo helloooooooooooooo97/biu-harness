@@ -6,7 +6,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from 'cordis'
 import { PluginStoreService } from './index.ts'
-import { compileStoreModule, registerPluginCreate } from './plugin-create.ts'
+import { compileStoreModule } from './plugin-create.ts'
+import { pluginsCollection } from './collection.ts'
+import type { PluginStoreService as Store } from './store.ts'
 
 function stubHub(ctx: Context) {
   ;(ctx as unknown as { hub: unknown }).hub = {
@@ -235,30 +237,27 @@ test('pack bundles relative imports from sandbox', async () => {
   }
 })
 
-test('registers plugin_create, plugin_sandbox, plugin_pack', () => {
-  const ctx = new Context()
-  const names: string[] = []
-  const descriptions: string[] = []
-  ;(ctx as unknown as { tools: { register: (spec: { name: string; description?: string }) => void } }).tools = {
-    register(spec) {
-      names.push(spec.name)
-      if (spec.description) descriptions.push(spec.description)
-    },
-  }
-  const store = new PluginStoreService(
-    ctx,
-    '/tmp/plugin-store-tools/.plugin',
-    '/tmp/plugin-store-tools/store.json',
-    '/tmp/plugin-store-tools/.plugin-dev',
-  )
-  registerPluginCreate(ctx, store)
-  assert.deepEqual(names, ['plugin_create', 'plugin_sandbox', 'plugin_pack'])
-  assert.match(descriptions.join('\n'), /storeShellFromRecord/)
-  assert.match(descriptions.join('\n'), /listing\.shell/)
-  assert.match(descriptions.join('\n'), /shellWidth/)
-  assert.match(descriptions.join('\n'), /无头/)
-  assert.match(descriptions.join('\n'), /可以 import npm/)
-  assert.match(descriptions.join('\n'), /ReactJSXRuntime/)
+test('create/sandbox/pack live on the plugins collection, not as tools', () => {
+  const spec = pluginsCollection({
+    list: () => Promise.resolve([]),
+    listSandboxes: () => Promise.resolve([]),
+    openPlugin() {},
+    close() {},
+    pack() {},
+    uninstall() {},
+    create: async () => ({ id: 'x', pluginPath: '/tmp/x' }),
+    initSandbox: async () => ({ id: 'x', sandboxPath: '/tmp/x' }),
+  } as Store)
+  const ids = spec.actions?.map((item) => item.id) ?? []
+  assert.deepEqual(ids, ['create', 'sandbox', 'start', 'stop', 'pack', 'uninstall'])
+  const create = spec.actions?.find((item) => item.id === 'create')
+  const sandbox = spec.actions?.find((item) => item.id === 'sandbox')
+  const pack = spec.actions?.find((item) => item.id === 'pack')
+  assert.equal(create?.allowMissing, true)
+  assert.equal(sandbox?.allowMissing, true)
+  assert.match(JSON.stringify(create?.parameters), /storeShellFromRecord/)
+  assert.match(JSON.stringify(sandbox?.parameters), /listing\.shell/)
+  assert.match(String(pack?.parameters?.description ?? ''), /host\.ts/)
 })
 
 test('pack web jsx uses globalThis.React instead of bundling npm react', async () => {

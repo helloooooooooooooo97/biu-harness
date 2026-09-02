@@ -11,7 +11,6 @@ import {
   findEntry,
   HOST_ENTRIES,
   parseStoreManifest,
-  registerPluginCreate,
   WEB_ENTRIES,
   type PluginCreateInput,
   type StoreManifestFields,
@@ -211,8 +210,8 @@ export class PluginStoreService extends Service {
     if (!name) throw new Error('plugin name required')
     const hostJs = String(input.hostJs ?? '').trim()
     const webSrc = input.webJs != null ? String(input.webJs).trim() : ''
-    if (!hostJs && !webSrc) throw new Error('plugin_create needs hostJs and/or webJs')
-    requireDeclaredShell(input.shell, Boolean(webSrc), 'plugin_create', Boolean(input.headless))
+    if (!hostJs && !webSrc) throw new Error('create needs hostJs and/or webJs')
+    requireDeclaredShell(input.shell, Boolean(webSrc), 'create', Boolean(input.headless))
     this.invalidateList()
     const dest = this.pluginPath(id)
     mkdirSync(dest, { recursive: true })
@@ -239,7 +238,7 @@ export class PluginStoreService extends Service {
     const webSrc = input.webJs != null ? String(input.webJs).trim() : ''
     const hasWeb = Boolean(webSrc) || Boolean(findEntry(dest, WEB_ENTRIES))
     const existing = existsSync(join(dest, 'manifest.json')) ? await readManifest(dest).catch(() => undefined) : undefined
-    requireDeclaredShell(input.shell, hasWeb, 'plugin_sandbox', Boolean(input.headless) || Boolean(existing?.headless))
+    requireDeclaredShell(input.shell, hasWeb, 'sandbox', Boolean(input.headless) || Boolean(existing?.headless))
     const manifest = buildStoreManifest(input, existing)
     await writeFile(join(dest, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
     if (hostJs) await writeFile(join(dest, 'host.ts'), hostJs.endsWith('\n') ? hostJs : `${hostJs}\n`)
@@ -260,7 +259,7 @@ export class PluginStoreService extends Service {
     requireDeclaredShell(
       raw && typeof raw === 'object' ? (raw as { shell?: unknown }).shell : undefined,
       Boolean(webEntry),
-      'plugin_pack',
+      'pack',
       Boolean(manifest.headless),
     )
     this.invalidateList()
@@ -449,7 +448,6 @@ export async function openStore(ctx: Context) {
   } catch (error) {
     ctx.logger('core-plugin-system').error(error)
   }
-  registerPluginCreate(ctx, store)
 
   ctx.http.route('GET', '/api/plugin-store/files/:id/:file', async (route) => {
     try {

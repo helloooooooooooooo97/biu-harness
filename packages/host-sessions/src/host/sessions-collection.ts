@@ -1,11 +1,13 @@
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
 import {
+  isSessionCompactPoint,
   nameFromSessionMascot,
   normalizeSessionType,
   type SessionConfig,
   type SessionEvent,
   type SessionSummary,
 } from '@biu/type-session'
+import { COMPACT_GUIDE, lastUsageBeforeCompact, retrieveHistory } from './session-compact.ts'
 import { GROK_COLORS, GROK_SHAPES, ensureSessionMascot, isSessionMascot, mascotFromSessionId } from './session-mascot.ts'
 
 type SessionRecordLike = {
@@ -122,7 +124,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       route: '/db-sessions',
       title: '会话',
       inspector: true,
-      blurb: '会话元数据可改、可删；聊天记录本身不能从这张表改。进度/检查走 db_action。',
+      blurb: '会话元数据可改、可删；聊天记录本身不能从这张表改。进度/检查/压缩走 db_action。',
       order: 18,
       icon: 'chat-bubble',
     },
@@ -303,6 +305,108 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
             await sessions.setProject(id, path ? { path } : null)
           }
           return (await list()).find((row) => row.id === id)
+        },
+      },
+      {
+        id: 'compact',
+        label: '压缩上下文',
+        placement: [],
+        parameters: {
+          type: 'object',
+          properties: {
+            text: {
+              type: 'string',
+              description:
+                '第 2 次调用必填。压缩摘要：当前位置/进度、关键决策、约束偏好、未完成事项。不传则只返回指南。',
+            },
+          },
+        },
+        run: async (id, _record, args) => {
+          const text = String(args?.text ?? '').trim()
+          if (!text) {
+            return {
+              kind: 'guide',
+              note: '尚未压缩。按指南写摘要后，再 db_action action=compact 并传 args.text。',
+              guide: COMPACT_GUIDE,
+            }
+          }
+          if (!sessions.require) throw new Error('session compact unavailable')
+          await sessions.require(id)
+          return {
+            ok: true,
+            kind: 'compacted',
+            sessionId: id,
+            note: '已提交压缩点：本次 db_action 即新前缀。旧细节用 action=retrieve。',
+          }
+        },
+      },
+      {
+        id: 'clear',
+        label: '清空上下文',
+        placement: [],
+        run: async (id) => {
+          if (!sessions.require) throw new Error('session clear unavailable')
+          await sessions.require(id)
+          return {
+            ok: true,
+            sessionId: id,
+            note: '已清空上下文：本次 db_action 即压缩点，不保留摘要。旧细节用 action=retrieve。',
+          }
+        },
+      },
+      {
+        id: 'retrieve',
+        label: '检索历史',
+        placement: [],
+        parameters: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: '关键词' },
+            limit: { type: 'number', description: '最多几条，默认 5，最大 10' },
+          },
+          required: ['query'],
+        },
+        run: async (id, _record, args) => {
+          if (!sessions.require) throw new Error('session retrieve unavailable')
+          const query = String(args?.query ?? '')
+          const limit = Math.min(10, Math.max(1, Number(args?.limit ?? 5) || 5))
+          const hits = retrieveHistory((await sessions.require(id)).events, query, limit)
+          if (hits.length === 0) {
+            return { ok: true, hits: 0, sessionId: id, results: [], note: '未找到与查询相关的内容。' }
+          }
+          return {
+            ok: true,
+            hits: hits.length,
+            sessionId: id,
+            results: hits.map((item) => ({ kind: item.kind, ts: item.ts, excerpt: item.text.slice(0, 800) })),
+          }
+        },
+      },
+      {
+        id: 'status',
+        label: '上下文占用',
+        placement: [],
+        run: async (id) => {
+          if (!sessions.require) throw new Error('session status unavailable')
+          const events = (await sessions.require(id)).events
+          const usage = lastUsageBeforeCompact(events)
+          const tokens = usage.inputTokens
+          const budget = Number(process.env.CTX_BUDGET ?? 1000000)
+          const compacted = events.some((event) => isSessionCompactPoint(event))
+          return {
+            ok: true,
+            sessionId: id,
+            events: events.length,
+            usage,
+            budget,
+            overBudget: tokens > budget,
+            compactedAlready: compacted,
+            note: !usage.found
+              ? '当前会话暂无 LLM 调用 usage 数据。'
+              : tokens > budget
+                ? `最近一次输入上下文 ${tokens} token > 预算 ${budget}，已超界，建议按需压缩。`
+                : `最近一次输入上下文 ${tokens} / ${budget} token，${budget - tokens} 余量，${tokens / budget > 0.8 ? '接近上限，可考虑尽早压缩' : '暂不紧迫'}`,
+          }
         },
       },
     ],

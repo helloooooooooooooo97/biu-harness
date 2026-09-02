@@ -240,6 +240,8 @@ export type CollectionActionInfo = {
   when?: Record<string, unknown>
   /** 给 db_action 的 args；不进按钮 UI。 */
   parameters?: Record<string, unknown>
+  /** 记录还不存在时也能跑（例如新建插件）。 */
+  allowMissing?: boolean
 }
 
 export type CollectionSchema = {
