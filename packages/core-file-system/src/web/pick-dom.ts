@@ -7,9 +7,32 @@ export function pickDomAttrs(kind: string, id: string, label?: string) {
   }
 }
 
+/** 登记 moduleId / 表 id 对到 CAP 芯片用的 kind（单数、和 icon 表一致）。 */
+const RECORD_PICK_KIND: Record<string, string> = {
+  tasks: 'task',
+  task: 'task',
+  page: 'page',
+  pages: 'page',
+  plugins: 'plugin',
+  plugin: 'plugin',
+  sessions: 'session',
+  session: 'session',
+  'sessions-db': 'session',
+  events: 'event',
+  event: 'event',
+  'events-db': 'event',
+  views: 'view',
+  view: 'view',
+  'views-db': 'view',
+  supertags: 'tag',
+  tag: 'tag',
+  'supertags-db': 'tag',
+}
+
 export function recordPickKind(moduleId?: string | null) {
   const kind = String(moduleId ?? '').trim()
-  return kind || 'record'
+  if (!kind) return 'record'
+  return RECORD_PICK_KIND[kind] ?? kind.replace(/-db$/, '')
 }
 
 export function viewPickId(path: string, viewId: string) {

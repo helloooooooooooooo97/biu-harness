@@ -9,6 +9,9 @@ test('pickDomAttrs writes the same handles cap-pick reads', () => {
     'data-biu-label': '页面 1',
   })
   assert.equal(recordPickKind('page'), 'page')
+  assert.equal(recordPickKind('tasks'), 'task')
+  assert.equal(recordPickKind('plugins'), 'plugin')
+  assert.equal(recordPickKind('sessions-db'), 'session')
   assert.equal(recordPickKind(''), 'record')
   assert.equal(viewPickId('/pages', 'v1'), '/pages::v1')
 })

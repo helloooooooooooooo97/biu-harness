@@ -1209,7 +1209,7 @@ export function CollectionBrowser({
     [activeView?.name, activeViewId, collectionPath, items, routeViewId, schema?.labelField, selected, tables, title, views],
   )
   const currentTable = tables.find((item) => item.path === collectionPath)
-  const recordKind = recordPickKind(currentTable?.view?.moduleId)
+  const recordKind = recordPickKind(currentTable?.view?.moduleId || currentTable?.id)
   const recordPick = (row: DbRecord) => pickDomAttrs(recordKind, row.id, labelOf(row))
 
   function renderCell(row: DbRecord, key: string, field: FieldSpec) {

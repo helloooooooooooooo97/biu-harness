@@ -564,7 +564,7 @@ export const DataSidebar = memo(function DataSidebar({
                     path={table.path}
                     view={view}
                     open={expanded}
-                    recordKind={recordPickKind(table.view?.moduleId)}
+                    recordKind={recordPickKind(table.view?.moduleId || table.id)}
                     tableIcon={table.view?.icon}
                     onOpenRecord={(id, row) => openRecord(table.path, view, id, row)}
                   />
@@ -688,7 +688,7 @@ export const DataSidebar = memo(function DataSidebar({
                           path={table.path}
                           view={view}
                           open={expanded}
-                          recordKind={recordPickKind(table.view?.moduleId)}
+                          recordKind={recordPickKind(table.view?.moduleId || table.id)}
                           tableIcon={table.view?.icon}
                           onOpenRecord={(id, row) => openRecord(table.path, view, id, row)}
                         />

@@ -15,6 +15,7 @@ test('kind maps to distinct heroicons', () => {
     'Square3Stack3DIcon',
     'RectangleStackIcon',
     'ClipboardDocumentCheckIcon',
+    'CheckCircleIcon',
     'ChatBubbleLeftIcon',
     'PuzzlePieceIcon',
     'TagIcon',
@@ -27,16 +28,19 @@ test('kind maps to distinct heroicons', () => {
   assert.equal(pickKindIcon('session'), lu.CpuChipIcon)
   assert.equal(pickKindIcon('message'), lu.ChatBubbleLeftIcon)
   assert.notEqual(pickKindIcon('session'), pickKindIcon('message'))
-  assert.equal(pickKindIcon('task'), lu.ClipboardDocumentCheckIcon)
+  assert.equal(pickKindIcon('task'), lu.CheckCircleIcon)
+  assert.equal(pickKindIcon('tasks'), lu.CheckCircleIcon)
   assert.equal(pickKindIcon('page'), lu.DocumentIcon)
   assert.notEqual(pickKindIcon('collection'), pickKindIcon('usage'))
   assert.equal(pickKindIcon('plugin'), lu.PuzzlePieceIcon)
+  assert.equal(pickKindIcon('plugins'), lu.PuzzlePieceIcon)
   assert.equal(pickKindIcon('unknown'), lu.TagIcon)
 })
 
 test('pick kind maps to the SuperTag palette by string', () => {
   assert.equal(pickKindTone('session'), tagTone('session'))
   assert.equal(pickKindTone('task'), tagTone('task'))
+  assert.equal(pickKindTone('tasks'), tagTone('task'))
   assert.notEqual(pickKindTone('session'), pickKindTone('task'))
 })
 

@@ -7,6 +7,7 @@ import {
   RectangleStackIcon,
   DocumentIcon,
   ClipboardDocumentCheckIcon,
+  CheckCircleIcon,
   ChatBubbleLeftIcon,
   PuzzlePieceIcon,
   TagIcon,
@@ -17,16 +18,37 @@ import { ensureTagChipStyle, TagChipCloseMark, tagTone } from '@biu/public-ui'
 import type { PickRef } from './types.ts'
 import { chipLabel } from './types.ts'
 
+/** 注入侧可能写 tasks / sessions-db，芯片按规范 kind 取色和图标。 */
+const PICK_KIND_ALIAS: Record<string, string> = {
+  tasks: 'task',
+  pages: 'page',
+  plugins: 'plugin',
+  sessions: 'session',
+  'sessions-db': 'session',
+  events: 'event',
+  'events-db': 'event',
+  views: 'view',
+  'views-db': 'view',
+  tags: 'tag',
+  supertags: 'tag',
+  'supertags-db': 'tag',
+}
+
+export function canonicalPickKind(kind: string) {
+  const key = String(kind ?? '').trim()
+  return PICK_KIND_ALIAS[key] ?? key.replace(/-db$/, '')
+}
+
 /** 采集点 kind 字符串映射到 SuperTag 色板。 */
 export function pickKindTone(kind: string) {
-  return tagTone(kind)
+  return tagTone(canonicalPickKind(kind))
 }
 
 type Glyph = ComponentType<{ className?: string }>
 
 const KIND_ICONS: Record<string, Glyph> = {
   session: CpuChipIcon,
-  task: ClipboardDocumentCheckIcon,
+  task: CheckCircleIcon,
   page: DocumentIcon,
   collection: RectangleStackIcon,
   view: Square3Stack3DIcon,
@@ -38,10 +60,12 @@ const KIND_ICONS: Record<string, Glyph> = {
   event: StopCircleIcon,
   turn: HashtagIcon,
   usage: CircleStackIcon,
+  tag: TagIcon,
+  record: ClipboardDocumentCheckIcon,
 }
 
 export function pickKindIcon(kind: string): Glyph {
-  return KIND_ICONS[kind] ?? TagIcon
+  return KIND_ICONS[canonicalPickKind(kind)] ?? TagIcon
 }
 
 export function PickKindGlyph({ kind }: { kind: string }) {
