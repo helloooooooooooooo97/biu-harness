@@ -1,7 +1,7 @@
 <div align="center">
 
 <p>
-  <img src="public/brand-lockup.svg" width="300" height="54" alt="Biu Agent OS" />
+  <img src="public/favicon.svg" width="96" height="96" alt="Biu" />
 </p>
 
 # Biu Agent OS
@@ -228,7 +228,7 @@ biu-harness
 ├── scripts/
 │   └── link-cordis-plugins.mjs
 ├── public/
-│   ├── favicon.svg            # Brand mascot (sidebar gradient)
+│   ├── favicon.svg            # Brand mascot on a white square
 │   ├── brand-lockup.svg       # README: mascot + Biu Agent OS tag
 │   ├── mascot-blue.svg        # README mascots (BMW M tricolor)
 │   ├── mascot-violet.svg
