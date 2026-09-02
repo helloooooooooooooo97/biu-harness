@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { ChatDockStack, ChatPane, ChatStage } from '@biu/public-ui'
+import { ChatPane, ChatStage } from '@biu/public-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { MASCOT_COLOR_NAME, MASCOT_EYE_NAME, MASCOT_SHAPE_NAME } from '@biu/type-session'
 import type { CollectionChrome, FsCellProps, FsContentProps } from '@biu/type-file-system/ui'
@@ -66,12 +66,6 @@ function SessionRecordChat({ record, slots, sessionView, useSessionView }: FsCon
       embed
       thread={
         <ChatStage variant="pane">{liveId === sessionId ? <SlotOutlet slots={slots} name="stage" /> : null}</ChatStage>
-      }
-      dock={
-        <ChatDockStack>
-          <SlotOutlet slots={slots} name="dock" />
-          <SlotOutlet slots={slots} name="composer" />
-        </ChatDockStack>
       }
     />
   )

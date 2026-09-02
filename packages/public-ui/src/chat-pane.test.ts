@@ -4,11 +4,11 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { CHAT_DOCK_STACK, CHAT_STAGE_PANE } from './chat-pane.tsx'
 
-test('ChatPane is the overlay interior: thread plus composer dock', () => {
+test('ChatPane is the overlay interior: thread, optional composer dock', () => {
   const src = readFileSync(resolve(import.meta.dirname, './chat-pane.tsx'), 'utf8')
   assert.match(src, /export function ChatPane/)
   assert.match(src, /chat-overlay-thread/)
-  assert.match(src, /chat-composer-dock/)
+  assert.match(src, /dock \? <div className="chat-composer-dock">/)
   assert.match(src, /chat-pane-embed/)
   assert.match(src, /export function ChatStage/)
   assert.match(src, /export function ChatDockStack/)

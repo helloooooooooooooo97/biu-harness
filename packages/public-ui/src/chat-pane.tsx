@@ -35,7 +35,7 @@ export function ChatPane({
   embed,
 }: {
   thread: ReactNode
-  dock: ReactNode
+  dock?: ReactNode
   embed?: boolean
 }) {
   return (
@@ -44,7 +44,7 @@ export function ChatPane({
       data-testid={embed ? 'session-record-chat' : 'chat-pane'}
     >
       <div className="chat-overlay-thread">{thread}</div>
-      <div className="chat-composer-dock">{dock}</div>
+      {dock ? <div className="chat-composer-dock">{dock}</div> : null}
     </div>
   )
 }
