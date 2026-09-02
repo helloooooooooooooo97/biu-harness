@@ -121,12 +121,13 @@ export function superTagsCollection(
       }
       return tagRows().find((row) => row.id === id) ?? null
     },
-    create: (fields = {}) => {
-      const title = String(fields.title ?? '').trim() || '未命名标签'
-      const id = slugSuperTagId(title, new Set(store.list().map((tag) => tag.id)))
-      const pack = store.upsert({ id, label: title, fields: parseFields(fields.fields) })
-      return asTag(pack.id, pack.label, pack.fields, 0)
-    },
+    create: (rows) =>
+      rows.map((fields = {}) => {
+        const title = String(fields.title ?? '').trim() || '未命名标签'
+        const id = slugSuperTagId(title, new Set(store.list().map((tag) => tag.id)))
+        const pack = store.upsert({ id, label: title, fields: parseFields(fields.fields) })
+        return asTag(pack.id, pack.label, pack.fields, 0)
+      }),
     update: (id, patch) => {
       if (parseStampRecordId(id)) throw new Error(`cannot update collected row: ${id}`)
       const current = store.get(id)
@@ -136,9 +137,13 @@ export function superTagsCollection(
       const pack = store.upsert({ id: current.id, label, fields })
       return asTag(pack.id, pack.label, pack.fields, store.stampCounts()[pack.id] ?? 0)
     },
-    remove: (id) => {
-      if (parseStampRecordId(id)) throw new Error(`cannot delete collected row: ${id}`)
-      if (!store.removeTag(id)) throw new Error(`unknown tag: ${id}`)
+    remove: (query) => {
+      const ids = query.ids ?? []
+      for (const id of ids) {
+        if (parseStampRecordId(id)) throw new Error(`cannot delete collected row: ${id}`)
+        if (!store.removeTag(id)) throw new Error(`unknown tag: ${id}`)
+      }
+      return ids
     },
   }
 }

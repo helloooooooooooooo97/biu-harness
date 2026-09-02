@@ -15,16 +15,16 @@ test('superTagsCollection lists tags with stamp counts and supports create/updat
   assert.equal(listed[0]?.fieldCount, 1)
   assert.equal(listed[0]?.stampCount, 1)
 
-  const created = await spec.create!({ title: 'IO' })
-  assert.equal(created.id, 'io')
+  const created = await spec.create!([{ title: 'IO' }])
+  assert.equal(created[0]?.id, 'io')
   assert.equal(store.get('io')?.label, 'IO')
 
-  const updated = await spec.update!(created.id, { title: 'I/O', fields: [{ key: 'format', type: 'string', label: '格式' }] })
+  const updated = await spec.update!(created[0]!.id, { title: 'I/O', fields: [{ key: 'format', type: 'string', label: '格式' }] })
   assert.equal(updated.title, 'I/O')
   assert.equal(updated.fieldCount, 1)
   assert.equal(store.get('io')?.fields[0]?.key, 'format')
 
-  await spec.remove!(created.id)
+  await spec.remove!({ ids: [created[0]!.id] })
   assert.equal(store.get('io'), null)
   assert.equal((await spec.list()).length, 1)
 

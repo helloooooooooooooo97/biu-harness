@@ -321,6 +321,16 @@ export type CollectionListQuery = {
   filter?: Record<string, unknown>
 }
 
+export function hasCollectionDeleteQuery(query?: CollectionListQuery | null): boolean {
+  if (!query) return false
+  if (Array.isArray(query.ids) && query.ids.some((id) => String(id).trim())) return true
+  if (String(query.q ?? '').trim()) return true
+  if (query.filter && Object.keys(query.filter).some((key) => query.filter?.[key] != null && query.filter[key] !== '')) {
+    return true
+  }
+  return false
+}
+
 export type CollectionSpec = {
   id: string
   path: string
@@ -337,8 +347,8 @@ export type CollectionSpec = {
   get: (id: string) => DbRecord | null | undefined | Promise<DbRecord | null | undefined>
   /** 更新已有记录的可写字段。不要叫 write。 */
   update?: (id: string, patch: Record<string, unknown>) => DbRecord | Promise<DbRecord>
-  create?: (fields?: Record<string, unknown>) => DbRecord | Promise<DbRecord>
-  remove?: (id: string) => void | boolean | Promise<void | boolean>
+  create?: (rows: Record<string, unknown>[]) => DbRecord[] | Promise<DbRecord[]>
+  remove?: (query: CollectionListQuery) => string[] | void | boolean | Promise<string[] | void | boolean>
   actions?: CollectionAction[]
 }
 
@@ -367,8 +377,8 @@ export interface Database {
   list(path: string, filter?: Record<string, unknown>, page?: ListPage): Promise<unknown>
   read(path: string): Promise<unknown>
   update(path: string, content: unknown): Promise<unknown>
-  create(path: string, content?: unknown): Promise<unknown>
-  remove(path: string): Promise<unknown>
+  create(path: string, records: unknown): Promise<unknown>
+  remove(path: string, query: CollectionListQuery): Promise<unknown>
   action(path: string, actionId: string, args?: Record<string, unknown>): Promise<unknown>
   stat(path: string): Promise<unknown>
   /** 单独读写记录正文（content 字段），不走 list/read。 */

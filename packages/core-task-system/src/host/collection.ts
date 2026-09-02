@@ -208,13 +208,18 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
       const rows = tasks.list().map((row) => (row.id === id ? { ...row, ...next, id } : row))
       return recordsWithUsage(rows).find((row) => row.id === id) ?? taskRecord(next, (pid) => tasks.get(pid), ZERO_USAGE, false)
     },
-    create: (fields = {}) => {
-      const title = typeof fields.title === 'string' && fields.title.trim() ? fields.title.trim() : '未命名任务'
-      const row = tasks.create({ ...fields, title, creator: { kind: 'user', name: '用户' } })
-      return recordsWithUsage(tasks.list()).find((item) => item.id === row.id) ?? taskRecord(row, (pid) => tasks.get(pid), ZERO_USAGE, false)
-    },
-    remove: (id) => {
-      if (!tasks.delete(id)) throw new Error(`unknown task: ${id}`)
+    create: (rows) =>
+      rows.map((fields = {}) => {
+        const title = typeof fields.title === 'string' && fields.title.trim() ? fields.title.trim() : '未命名任务'
+        const row = tasks.create({ ...fields, title, creator: { kind: 'user', name: '用户' } })
+        return recordsWithUsage(tasks.list()).find((item) => item.id === row.id) ?? taskRecord(row, (pid) => tasks.get(pid), ZERO_USAGE, false)
+      }),
+    remove: (query) => {
+      const ids = query.ids ?? []
+      for (const id of ids) {
+        if (!tasks.delete(id)) throw new Error(`unknown task: ${id}`)
+      }
+      return ids
     },
     actions: recordActions
       ? [

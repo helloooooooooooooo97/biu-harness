@@ -156,8 +156,10 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
     },
     list,
     get: find,
-    remove: async (id) => {
-      await store.uninstall(id)
+    remove: async (query) => {
+      const ids = query.ids ?? []
+      for (const id of ids) await store.uninstall(id)
+      return ids
     },
     actions: [
       {

@@ -348,14 +348,19 @@ test('create and delete follow records caps declared at register', async () => {
     records: { create: true, delete: true },
     list: () => [...rows.values()],
     get: (id) => rows.get(id) ?? null,
-    create: (fields = {}) => {
-      const id = `n${rows.size + 1}`
-      const row = { id, title: typeof fields.title === 'string' ? fields.title : '未命名' }
-      rows.set(id, row)
-      return row
-    },
-    remove: (id) => {
-      if (!rows.delete(id)) throw new Error('unknown')
+    create: (incoming) =>
+      incoming.map((fields) => {
+        const id = `n${rows.size + 1}`
+        const row = { id, title: typeof fields.title === 'string' ? fields.title : '未命名' }
+        rows.set(id, row)
+        return row
+      }),
+    remove: (query) => {
+      const ids = query.ids ?? []
+      for (const id of ids) {
+        if (!rows.delete(id)) throw new Error('unknown')
+      }
+      return ids
     },
   })
   const stat = await db.stat('/notes')
@@ -365,15 +370,21 @@ test('create and delete follow records caps declared at register', async () => {
   assert.equal(stat.schema.records?.delete, true)
   assert.equal((stat.caps as string[]).includes('create'), true)
   assert.equal((stat.caps as string[]).includes('delete'), true)
-  const created = await db.create('/notes', { title: '新笔记' })
-  assert.equal(created.value.title, '新笔记')
+  const created = await db.create('/notes', [{ title: '新笔记' }, { title: '第二篇' }])
+  assert.equal(created.items.length, 2)
+  assert.equal(created.items[0]?.value.title, '新笔记')
   const listed = await db.list('/notes')
   if (listed.kind !== 'collection') return
-  assert.equal(listed.items.length, 2)
-  await db.remove(`${created.path}`)
+  assert.equal(listed.items.length, 3)
+  await db.remove('/notes', { ids: [String(created.items[0]?.value.id)] })
+  const afterOne = await db.list('/notes')
+  if (afterOne.kind !== 'collection') return
+  assert.equal(afterOne.items.length, 2)
+  await db.remove('/notes', { q: '第二篇' })
   const after = await db.list('/notes')
   if (after.kind !== 'collection') return
   assert.equal(after.items.length, 1)
+  await assert.rejects(() => db.remove('/notes', {}), /delete requires/)
 })
 
 test('SuperTag catalog is workspace-wide and collect uses sqlite stamps', async () => {
@@ -469,7 +480,7 @@ test('tables without records.create/delete reject create and delete', async () =
   assert.equal(stat.schema.records?.create, false)
   assert.equal(stat.schema.records?.delete, false)
   await assert.rejects(() => db.create('/notes'), /cannot create/)
-  await assert.rejects(() => db.remove('/notes/n1'), /cannot delete/)
+  await assert.rejects(() => db.remove('/notes', { ids: ['n1'] }), /cannot delete/)
   assert.throws(
     () =>
       db.register({

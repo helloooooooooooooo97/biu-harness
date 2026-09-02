@@ -169,18 +169,26 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       return next
     },
     create: sessions.create
-      ? async (fields = {}) => {
-          const rec = await sessions.create!({
-            ...(typeof fields.title === 'string' ? { title: fields.title } : {}),
-            ...(fields.type === 'live' || fields.type === 'chat' ? { type: String(fields.type) } : {}),
-          })
-          const next = (await list()).find((row) => row.id === rec.id)
-          if (!next) throw new Error(`unknown session: ${rec.id}`)
-          return next
+      ? async (rows) => {
+          const out = []
+          for (const fields of rows) {
+            const rec = await sessions.create!({
+              ...(typeof fields.title === 'string' ? { title: fields.title } : {}),
+              ...(fields.type === 'live' || fields.type === 'chat' ? { type: String(fields.type) } : {}),
+            })
+            const next = (await list()).find((row) => row.id === rec.id)
+            if (!next) throw new Error(`unknown session: ${rec.id}`)
+            out.push(next)
+          }
+          return out
         }
       : undefined,
-    remove: async (id) => {
-      if (!(await sessions.delete(id))) throw new Error(`unknown session: ${id}`)
+    remove: async (query) => {
+      const ids = query.ids ?? []
+      for (const id of ids) {
+        if (!(await sessions.delete(id))) throw new Error(`unknown session: ${id}`)
+      }
+      return ids
     },
     actions: [
       {
