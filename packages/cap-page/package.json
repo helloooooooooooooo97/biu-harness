@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@biu/type-file-system": "0.1.0",
-    "@floating-ui/dom": "^1.8.0",
     "yaml": "^2.9.0"
   }
 }

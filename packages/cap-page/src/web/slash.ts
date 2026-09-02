@@ -1,9 +1,9 @@
-import { flip, shift, size } from '@floating-ui/dom'
 import { Extension } from '@tiptap/core'
 import type { Editor, Range } from '@tiptap/core'
 import { ReactRenderer } from '@tiptap/react'
 import Suggestion, { type SuggestionOptions } from '@tiptap/suggestion'
 import { SlashList } from './slash-list.tsx'
+import { placeSlashInWindow } from './slash-place.ts'
 import { getPageEditor, type SlashInsert } from './service.ts'
 
 export type SlashItem = {
@@ -182,7 +182,8 @@ function renderSlash() {
           editor: pending.editor,
         })
         const el = component.element as HTMLElement
-        el.style.zIndex = '20000'
+        el.style.zIndex = '10000'
+        el.style.maxHeight = `${Math.min(420, Math.max(120, window.innerHeight - 16))}px`
         unmount = pending.mount(el)
       })
     },
@@ -221,24 +222,27 @@ export const slashCommand = Extension.create({
         command: ({ editor, range, props }) => {
           props.command({ editor, range })
         },
-        placement: 'top-start',
+        placement: 'bottom-start',
         flip: false,
         floatingUi: {
           strategy: 'fixed',
           middleware: [
-            flip({
-              padding: 8,
-              fallbackPlacements: ['top-end', 'bottom-start', 'bottom-end'],
-            }),
-            shift({ padding: 8 }),
-            size({
-              padding: 8,
-              apply({ availableHeight, elements }) {
-                Object.assign(elements.floating.style, {
-                  maxHeight: `${Math.max(160, availableHeight)}px`,
+            {
+              name: 'keepInWindow',
+              fn({ rects, elements }) {
+                const placed = placeSlashInWindow({
+                  caret: {
+                    top: rects.reference.y,
+                    bottom: rects.reference.y + rects.reference.height,
+                    left: rects.reference.x,
+                  },
+                  menu: { width: rects.floating.width, height: rects.floating.height },
+                  viewport: { width: window.innerWidth, height: window.innerHeight },
                 })
+                elements.floating.style.maxHeight = `${placed.maxHeight}px`
+                return { x: placed.left, y: placed.top }
               },
-            }),
+            },
           ],
         },
         render: renderSlash,
