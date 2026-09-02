@@ -59,7 +59,8 @@ if (typeof document !== 'undefined') {
 .tasks-assignee-option:hover,.tasks-cellselect-option:hover{background:var(--dsw-hover)}
 .tasks-assignee-option.is-selected,.tasks-cellselect-option.is-selected{background:color-mix(in srgb,var(--dsw-business) 14%,transparent)}
 .tasks-assignee-loading{display:flex;align-items:center;gap:6px;padding:6px;color:var(--dsw-label-3);font-size:11px}
-.tasks-cellselect{position:relative;display:inline-flex;min-width:0;width:100%}
+.tasks-cellselect{position:relative;display:inline-flex;min-width:0;width:100%;max-width:none}
+.tasks-cellselect .db-cell-select-trigger,.tasks-cellselect.db-cell-select .db-cell-select-trigger{max-width:none;width:100%;height:auto;background:transparent}
 .tasks-cellselect-trigger{display:inline-flex;align-items:center;gap:5px;width:100%;min-width:0;border:0;border-radius:6px;padding:3px 7px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-align:left}
 .tasks-cellselect-trigger:hover,.tasks-cellselect-trigger[data-open]{background:var(--dsw-hover)}
 .tasks-cellselect-trigger.is-todo{color:var(--dsw-label-3)}

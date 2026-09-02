@@ -25,8 +25,8 @@ test('list and detail share the chat column max width with side padding', () => 
   assert.match(css, /\.tasks-queue-item-body > \.fsdb-proplist\{[^}]*flex-wrap:wrap/)
   assert.match(css, /\.tasks-queue-item-body > \.fsdb-proplist\{[^}]*flex:1 1 12rem/)
   assert.match(css, /\.tasks-queue-item-body > \.fsdb-proplist\{[^}]*min-width:0/)
-  assert.match(css, /\.tasks-queue-item-body \.fsdb-propchip\{[^}]*white-space:nowrap/)
-  assert.match(css, /\.tasks-queue-item-body \.fsdb-propchip-v\{[^}]*white-space:nowrap/)
+  assert.match(css, /\.tasks-queue-item-body \.fsdb-proprow\{[^}]*white-space:nowrap/)
+  assert.match(css, /\.tasks-queue-item-body \.fsdb-proprow-v\{[^}]*white-space:nowrap/)
   assert.match(css, /\.tasks-board-col\{[^}]*background:transparent/)
   assert.match(css, /\.tasks-board-col \.tasks-minicard\{[^}]*background:#202020/)
   assert.match(css, /\.fsdb-cards\{[^}]*align-items:stretch/)
@@ -36,6 +36,12 @@ test('list and detail share the chat column max width with side padding', () => 
   assert.match(css, /\.tasks-viewtabs\{[^}]*overflow:hidden/)
   assert.match(css, /\.tasks-viewdd-item-actions\{[^}]*visibility:hidden/)
   assert.match(css, /\.tasks-viewdd-act\{[^}]*width:26px/)
+})
+
+test('list and detail properties share key and value colors', () => {
+  assert.match(css, /\.fsdb-proprow-k,\.fsdb-prop>span:first-child\{[^}]*color:#7B7B79/)
+  assert.match(css, /\.fsdb-proprow-v,\.fsdb-prop-val,\.fsdb-detail-id\{[^}]*color:#7C7A76/)
+  assert.match(css, /\.fsdb-schema-prop-k\{[^}]*color:#7B7B79/)
 })
 
 test('usage figures in collection cells match the table font size', () => {

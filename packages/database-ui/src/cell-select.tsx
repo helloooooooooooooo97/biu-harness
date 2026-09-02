@@ -1,0 +1,105 @@
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { DbSearchMenu, DbSearchOption, ensureDbSearchStyle } from './search-menu.tsx'
+
+function CheckMark() {
+  return (
+    <svg aria-hidden viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+      <path d="M12.207 4.793a1 1 0 0 1 0 1.414l-5 5a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L6.5 9.086l4.293-4.293a1 1 0 0 1 1.414 0Z" />
+    </svg>
+  )
+}
+
+function CaretMark() {
+  return (
+    <svg aria-hidden viewBox="0 0 16 16" width="14" height="14" fill="currentColor" className="db-cell-select-caret">
+      <path d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" />
+    </svg>
+  )
+}
+
+export type CellSelectOption = { value: string; label: string; icon?: ReactNode }
+
+export function CellSelect({
+  value,
+  options,
+  onSelect,
+  placeholder = '选择',
+  variant = 'cell',
+  triggerClassName,
+  className,
+}: {
+  value: string
+  options: CellSelectOption[]
+  onSelect: (value: string) => void
+  placeholder?: string
+  variant?: 'cell' | 'field'
+  triggerClassName?: string
+  className?: string
+}) {
+  ensureDbSearchStyle()
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const current = options.find((item) => item.value === value)
+  const q = query.trim().toLowerCase()
+  const filtered = options.filter(
+    (item) => !q || item.label.toLowerCase().includes(q) || item.value.toLowerCase().includes(q),
+  )
+  useEffect(() => {
+    if (!open) setQuery('')
+  }, [open])
+  const close = () => setOpen(false)
+  return (
+    <div
+      className={`db-cell-select fsdb-cellselect is-${variant}${open ? ' is-open' : ''}${className ? ` ${className}` : ''}`}
+      onClick={(event) => event.stopPropagation()}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <button
+        ref={triggerRef}
+        type="button"
+        className={`db-cell-select-trigger fsdb-cellselect-trigger${current ? '' : ' is-empty'}${triggerClassName ? ` ${triggerClassName}` : ''}`}
+        data-open={open || undefined}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={(event) => {
+          event.stopPropagation()
+          setOpen((v) => !v)
+        }}
+      >
+        {current?.icon}
+        <span className={`db-cell-select-label fsdb-cellselect-label${current ? '' : ' is-empty'}`}>{current?.label ?? placeholder}</span>
+        {variant === 'field' ? <CaretMark /> : null}
+      </button>
+      {open ? (
+        <DbSearchMenu
+          anchor={triggerRef.current}
+          onClose={close}
+          query={query}
+          onQuery={setQuery}
+          onEnter={() => {
+            if (!filtered[0]) return
+            onSelect(filtered[0].value)
+            close()
+          }}
+          empty={!filtered.length ? <div className="db-search-empty">没有匹配项</div> : null}
+        >
+          {filtered.map((item) => (
+            <DbSearchOption
+              key={item.value}
+              selected={item.value === value}
+              mark={item.value === value ? <CheckMark /> : null}
+              onClick={() => {
+                onSelect(item.value)
+                close()
+              }}
+            >
+              {item.icon}
+              {item.label}
+            </DbSearchOption>
+          ))}
+        </DbSearchMenu>
+      ) : null}
+    </div>
+  )
+}
