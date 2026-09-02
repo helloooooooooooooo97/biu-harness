@@ -54,7 +54,9 @@ function DetailTitleIcon({
         {emoji ? (
           <span className="fsdb-record-emoji">{emoji}</span>
         ) : Icon ? (
-          <Icon record={record} />
+          <span className="fsdb-record-mark is-lg">
+            <Icon record={record} />
+          </span>
         ) : (
           <TableGlyph icon={tableIcon} className="size-8" />
         )}

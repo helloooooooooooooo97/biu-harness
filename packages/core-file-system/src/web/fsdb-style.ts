@@ -138,7 +138,7 @@ const CSS = `
 .fsdb-page .tasks-tree-toggle.is-empty{cursor:default;pointer-events:none}
 .fsdb-page .tasks-tree-toggle.is-empty:hover{background:transparent}
 .fsdb-page .fsdb-title-text{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-.fsdb-page .fsdb-title-host{position:relative;display:inline-flex;align-items:center;min-width:0;max-width:100%;flex:1}
+.fsdb-page .fsdb-title-host{position:relative;display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;flex:1}
 .fsdb-page .tasks-table.is-wrap .fsdb-title-text{white-space:normal}
 .fsdb-page .tasks-title-aside{position:relative;flex:none;display:inline-flex;align-items:center}
 .fsdb-page .tasks-title-zoom{position:relative;display:grid;place-items:center;width:24px;height:24px}
@@ -324,6 +324,11 @@ const CSS = `
 button.fsdb-detail-title-icon{cursor:pointer}
 button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-label)}
 .fsdb-detail-title-icon .fsdb-record-emoji{font-size:28px;line-height:1}
+.fsdb-record-mark{display:inline-grid;place-items:center;flex:none;overflow:hidden;line-height:0}
+.fsdb-record-mark.is-sm{width:16px;height:16px}
+.fsdb-record-mark.is-lg{width:32px;height:32px}
+.fsdb-crumbs .fsdb-record-mark.is-sm,.fsdb-crumb-option .fsdb-record-mark.is-sm{width:14px;height:14px}
+.fsdb-record-mark .sidebar-mascot{display:block}
 .fsdb-detail-title{flex:1;min-width:0;margin:0;color:var(--dsw-label);font-size:32px;font-weight:700;line-height:1.2}
 .fsdb-detail-title-input{display:block;width:100%;margin:0;border:0;background:transparent;color:inherit;font:inherit;font-size:inherit;font-weight:inherit;line-height:inherit;outline:none;padding:0;resize:none}
 .fsdb-detail-title-row .fsdb-detail-title-input{flex:none}

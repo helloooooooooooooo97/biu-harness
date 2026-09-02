@@ -26,17 +26,11 @@ function sessionMascot(record: DbRecord) {
 
 function SessionIcon({ record }: { record: DbRecord }) {
   const identity = resolveSessionMascot(String(record.id), sessionMascot(record))
-  return <SidebarMascot size={32} sessionId={String(record.id)} identity={identity} animate={false} title="" />
+  return <SidebarMascot size={20} sessionId={String(record.id)} identity={identity} animate={false} title="" />
 }
 
-function SessionTitle({ record, label }: { record: DbRecord; label: string }) {
-  const identity = resolveSessionMascot(String(record.id), sessionMascot(record))
-  return (
-    <span className="sessions-title">
-      <SidebarMascot size={20} sessionId={String(record.id)} identity={identity} animate={false} title={label} />
-      <span className="sessions-title-label">{label}</span>
-    </span>
-  )
+function SessionTitle({ label }: { record: DbRecord; label: string }) {
+  return <span className="sessions-title-label">{label}</span>
 }
 
 function MascotShapeCell({ value }: FsCellProps) {
@@ -128,8 +122,6 @@ if (typeof document !== 'undefined') {
   const style = document.getElementById(id) ?? document.createElement('style')
   style.id = id
   style.textContent = `
-.sessions-title{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;vertical-align:middle}
-.sessions-title .sidebar-mascot{flex:none}
 .sessions-title-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .sessions-log{display:flex;flex-direction:column;gap:16px;min-width:0;padding:8px 0 24px}
 .sessions-log-empty{margin:0;padding:8px 0;color:var(--dsw-label-3)}

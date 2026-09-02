@@ -45,6 +45,8 @@ import {
 import { pickDomAttrs, recordPickKind, viewPickId } from './pick-dom.ts'
 import { toggleExpandedViewKey } from './sidebar-nav.ts'
 import { TableGlyph, ViewModeGlyph } from './nav-glyphs.tsx'
+import { getDatabaseUi } from './database-ui.ts'
+import { RecordMark } from './record-mark.tsx'
 
 const SIDEBAR_BRAND_GRADIENT =
   'linear-gradient(105deg, color-mix(in srgb, #0066B0 42%, var(--dsw-hover)), color-mix(in srgb, #5B3E90 40%, var(--dsw-hover)) 52%, color-mix(in srgb, #E22726 42%, var(--dsw-hover)))'
@@ -79,6 +81,7 @@ function ViewRecordPreview({
   const [pickerId, setPickerId] = useState<string | null>(null)
   const [pickerAnchor, setPickerAnchor] = useState<HTMLElement | null>(null)
   const [emojiDraft, setEmojiDraft] = useState('')
+  const chromeIcon = getDatabaseUi()?.chrome(path).Icon
 
   useEffect(() => {
     if (!open) return
@@ -170,7 +173,11 @@ function ViewRecordPreview({
                     setEmojiDraft(emoji)
                   }}
                 >
-                  {emoji ? <span className="fsdb-record-emoji">{emoji}</span> : <TableGlyph icon={tableIcon} />}
+                  {emoji ? (
+                    <span className="fsdb-record-emoji">{emoji}</span>
+                  ) : (
+                    <RecordMark record={row} tableIcon={tableIcon} Icon={chromeIcon} />
+                  )}
                 </button>
                 {pickerId === row.id && pickerAnchor ? (
                   <RecordEmojiBoard

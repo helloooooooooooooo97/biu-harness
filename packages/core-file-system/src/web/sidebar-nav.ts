@@ -60,6 +60,7 @@ export type CrumbChoice = {
   icon?: string
   mode?: ViewMode
   emoji?: string
+  mascot?: unknown
 }
 
 export type Crumb = {
@@ -69,6 +70,8 @@ export type Crumb = {
   target: CrumbTarget
   choices: CrumbChoice[]
   icon?: string
+  emoji?: string
+  mascot?: unknown
 }
 
 export function pathForCenter(center: Pick<DataCenter, 'collection' | 'viewId' | 'recordId'>) {
@@ -94,7 +97,7 @@ export function buildCrumbs(input: {
   views?: Array<{ id: string; name: string; mode?: ViewMode }>
   recordId?: string
   recordLabel?: string
-  records?: Array<{ id: string; label: string; emoji?: string }>
+  records?: Array<{ id: string; label: string; emoji?: string; mascot?: unknown }>
 }): Crumb[] {
   const crumbs: Crumb[] = []
   if (!input.collection) return crumbs
@@ -130,15 +133,21 @@ export function buildCrumbs(input: {
   }
   if (input.recordId) {
     const tableIcon = input.tables.find((item) => item.path === input.collection)?.icon
+    const current = (input.records ?? []).find((row) => row.id === input.recordId)
     crumbs.push({
       kind: 'record',
       id: input.recordId,
       label: input.recordLabel || input.recordId,
+      icon: tableIcon,
+      emoji: current?.emoji,
+      mascot: current?.mascot,
       target: { kind: 'record', collection: input.collection, recordId: input.recordId },
       choices: (input.records ?? [{ id: input.recordId, label: input.recordLabel || input.recordId }]).map((row) => ({
         id: row.id,
         label: row.label,
         icon: tableIcon,
+        emoji: row.emoji,
+        mascot: row.mascot,
         target: { kind: 'record', collection: input.collection, recordId: row.id },
       })),
     })

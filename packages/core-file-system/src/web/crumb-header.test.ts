@@ -12,6 +12,7 @@ describe('顶栏三级标题', () => {
     expect(trail).toContain("aria-haspopup={canPick ? 'menu' : undefined}")
     expect(trail).toContain('allowMenu')
     expect(trail).toContain('icon={crumb.icon ?? current?.icon}')
+    expect(trail).toContain('emoji={current?.emoji ?? crumb.emoji}')
     expect(trail).toContain('tableCrumb?.icon')
     expect(nav).toContain('builtinAllViewId(target.collection)')
     expect(browser).not.toContain('{ catalog: true }')

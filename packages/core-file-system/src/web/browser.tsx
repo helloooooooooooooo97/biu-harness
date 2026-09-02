@@ -59,6 +59,7 @@ import { buildCrumbs, type CrumbTarget } from './sidebar-nav.ts'
 import { CrumbTrail } from './crumb-trail.tsx'
 import { pickDomAttrs, recordPickKind } from './pick-dom.ts'
 import { recordPreviewEmoji, crumbRecordLabel } from './sidebar-preview.ts'
+import { recordPreviewMascot, RecordMark } from './record-mark.tsx'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
 import {
   actionIcon,
@@ -744,12 +745,14 @@ export function CollectionBrowser({
       id: row.id,
       label: crumbRecordLabel(row, schema?.labelField),
       emoji: recordPreviewEmoji(row),
+      mascot: recordPreviewMascot(row),
     }))
     if (selected && !rows.some((row) => row.id === selected.id)) {
       rows.push({
         id: selected.id,
         label: crumbRecordLabel(selected, schema?.labelField),
         emoji: recordPreviewEmoji(selected),
+        mascot: recordPreviewMascot(selected),
       })
     }
     rememberRecords(collectionPath, rows)
@@ -1201,6 +1204,7 @@ export function CollectionBrowser({
           id: row.id,
           label: crumbRecordLabel(row, schema?.labelField),
           emoji: recordPreviewEmoji(row),
+          mascot: recordPreviewMascot(row),
         })),
       }),
     [activeView?.name, activeViewId, collectionPath, items, routeViewId, schema?.labelField, selected, tables, title, views],
@@ -1266,6 +1270,11 @@ export function CollectionBrowser({
     const host = (
       <span className="fsdb-title-host">
         {openDetail ? <RowCheck id={row.id} /> : null}
+        <RecordMark
+          record={row}
+          tableIcon={currentTable?.view?.icon}
+          Icon={chrome?.Icon}
+        />
         <span className="fsdb-title-text">{body}</span>
       </span>
     )

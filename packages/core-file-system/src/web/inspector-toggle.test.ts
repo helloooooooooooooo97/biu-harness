@@ -210,6 +210,7 @@ test('database extras sit after the record detail, not in the inspector', () => 
   assert.match(detail, /<Icon record=\{record\} \/>/)
   assert.match(detail, /writePatch\(selected, \{ emoji: next \}\)/)
   assert.match(detail, /fsdb:change/)
+  assert.match(browser, /<RecordMark/)
   assert.match(browser, /tableIcon=\{currentTable\?\.view\?\.icon\}/)
   assert.match(detail, /data-testid=\{`fsdb-pane-\$\{pane\.id\}`\}/)
   assert.match(style, /\.fsdb-fileview\{[^}]*min-height:0/)
@@ -253,7 +254,7 @@ test('collection reload does not follow callback identity', () => {
 })
 
 test('page collection uses a document glyph, not the table/database icon', () => {
-  const glyphs = readFileSync(resolve(import.meta.dirname, './nav-glyphs.tsx'), 'utf8')
+  const glyphs = readFileSync(resolve(import.meta.dirname, './table-glyph.tsx'), 'utf8')
   assert.match(glyphs, /name === 'document' \|\| name === 'document-text' \|\| name === 'page'/)
   assert.match(glyphs, /<DocumentIcon/)
 })

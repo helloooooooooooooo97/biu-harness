@@ -44,6 +44,7 @@ function PaneLeafIcon({
   kind,
   mode,
   icon,
+  emoji,
   Fallback,
 }: {
   kind?: string
@@ -52,6 +53,9 @@ function PaneLeafIcon({
   emoji?: string
   Fallback?: ComponentType<{ className?: string }>
 }) {
+  if (kind === 'record' && emoji) {
+    return <span className="fsdb-record-emoji">{emoji}</span>
+  }
   if (kind === 'record' || kind === 'collection') {
     const Glyph = captionTableIcon(icon)
     return <Glyph {...chromeIcon} />
@@ -418,7 +422,7 @@ export const SessionInspector = memo(function SessionInspector({
                       onClick={() => setTab(item.id)}
                       data-testid={`inspector-offer-${item.id}`}
                     >
-                      <PaneLeafIcon kind={caption?.kind} mode={caption?.mode} icon={caption?.icon} Fallback={item.Icon} />
+                      <PaneLeafIcon kind={caption?.kind} mode={caption?.mode} icon={caption?.icon} emoji={caption?.emoji} Fallback={item.Icon} />
                       <span className="min-w-0 flex-1 truncate">{caption?.label || item.label}</span>
                       <CheckCircleIcon aria-hidden className="size-4 shrink-0 inspector-add-check" />
                     </button>
