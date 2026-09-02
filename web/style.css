@@ -18,9 +18,9 @@
   --dsw-danger: #cf2d56;
   --dsw-danger-soft: rgba(207, 45, 86, 0.14);
   --dsw-ok: #1f8a65;
-  --dsw-pick: #2383e2;
-  --dsw-pick-fill: rgba(35, 131, 226, 0.18);
-  --dsw-pick-stroke: rgba(35, 131, 226, 0.4);
+  --dsw-pick: #5b9fd6;
+  --dsw-pick-fill: color-mix(in srgb, #5b9fd6 22%, transparent);
+  --dsw-pick-stroke: color-mix(in srgb, #5b9fd6 40%, transparent);
   --dsw-hover: #2c2c2c;
   --dsw-hover-strong: #2c2c2c;
   --dsw-sidebar-fg: #bcbab6;
@@ -2274,14 +2274,24 @@ body {
   color: #e255a1;
 }
 
-.project-chip.project-chip-clear-ctx.has-ctx {
-  --biu-tag: #e255a1;
-  background: color-mix(in srgb, var(--biu-tag, #e255a1) 22%, transparent);
+.project-chip-hist {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
 }
 
-.project-chip.project-chip-clear-ctx.has-ctx:hover:not(:disabled) {
-  color: #e255a1;
-  background: color-mix(in srgb, var(--biu-tag, #e255a1) 34%, transparent);
+.project-chip-hist-bar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  transform-origin: bottom;
+  --biu-tag: #e255a1;
+  background: color-mix(in srgb, var(--biu-tag, #e255a1) 22%, transparent);
+  transition: height 0.2s ease;
 }
 
 .project-chip.project-chip-pick-toggle {
