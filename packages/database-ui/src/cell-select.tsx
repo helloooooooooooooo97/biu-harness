@@ -23,7 +23,7 @@ export function CellSelect({
   value,
   options,
   onSelect,
-  placeholder = '选择',
+  placeholder = '',
   variant = 'cell',
   triggerClassName,
   className,

@@ -349,7 +349,7 @@ export function FieldEditor({
       <LocalText
         className="fsdb-plain-input"
         value={toDatetimeLocal(value)}
-        placeholder="YYYY-MM-DDTHH:mm"
+        placeholder=""
         onCommit={(next) => onChange(fromDatetimeLocal(next))}
       />
     )
@@ -368,12 +368,12 @@ export function FieldEditor({
       <LocalText
         className="fsdb-plain-input"
         value={value}
-        placeholder={kind === 'image' ? 'https://…、/cover.png 或 data:image' : 'https://'}
+        placeholder=""
         onCommit={onChange}
       />
     )
   }
-  return <LocalText className="fsdb-plain-input" value={value} title={value} placeholder={fieldKey} onCommit={onChange} />
+  return <LocalText className="fsdb-plain-input" value={value} title={value} placeholder="" onCommit={onChange} />
 }
 
 export function visibleActions(schema: CollectionSchema | undefined, row: DbRecord, place: 'row' | 'detail') {

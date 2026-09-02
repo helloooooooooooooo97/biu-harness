@@ -54,5 +54,7 @@ test('task tags use public-ui TagChip', async () => {
   const css = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
   assert.match(chrome, /TagChip/)
   assert.doesNotMatch(chrome, /className="tasks-tag"/)
+  assert.doesNotMatch(chrome, /placeholder=\{tags\.length \? '\+' : '添加标签'\}/)
+  assert.doesNotMatch(chrome, /placeholder="项目"/)
   assert.doesNotMatch(css, /\.tasks-tag\{/)
 })

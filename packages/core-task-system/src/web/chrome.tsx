@@ -414,7 +414,7 @@ function TagsCell({ record, value }: FsCellProps) {
       <input
         className="tasks-tag-input"
         value={draft}
-        placeholder={tags.length ? '+' : '添加标签'}
+        placeholder=""
         aria-label="添加标签"
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => {
@@ -443,7 +443,7 @@ function ProjectCell({ record, value }: FsCellProps) {
       defaultValue={text}
       key={`${record.id}-${record.updatedAt ?? ''}-project`}
       aria-label="项目"
-      placeholder="项目"
+      placeholder=""
       onClick={(event) => event.stopPropagation()}
       onBlur={(event) => {
         const next = event.target.value.trim()

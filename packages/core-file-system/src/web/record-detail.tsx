@@ -232,7 +232,7 @@ export function RecordDetail({
                         className="fsdb-detail-doc"
                         value={draft[key] ?? saved}
                         rows={12}
-                        placeholder="内容：文本，或 JSON 文件"
+                        placeholder=""
                         onKeyDown={(event) => {
                           const el = event.currentTarget
                           if (!(el instanceof HTMLTextAreaElement)) return
