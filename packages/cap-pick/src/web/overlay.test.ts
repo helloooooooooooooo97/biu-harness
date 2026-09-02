@@ -35,6 +35,12 @@ test('Escape blurs the focused control so the UA focus ring does not linger', ()
   assert.match(overlay, /active.blur\(\)/)
 })
 
+test('pointerup prefers a text selection over object picks', () => {
+  assert.match(overlay, /textPickFromSelection/)
+  assert.match(overlay, /inReadable/)
+  assert.match(overlay, /\.chat-stage/)
+})
+
 test('pointerup does not attach picks after pick mode has exited', () => {
   assert.match(overlay, /if \(!pick.picking\) return/)
 })

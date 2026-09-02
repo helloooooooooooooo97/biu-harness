@@ -122,6 +122,21 @@ export function pickPreview(text: string, max = 48) {
   return value.length > max ? `${value.slice(0, max)}…` : value
 }
 
+/** 选取态下划到的一段正文；空选区返回 null。 */
+export function textPickFromSelection(
+  route: string,
+  selection: Pick<Selection, 'isCollapsed' | 'toString' | 'rangeCount'> | null = typeof window === 'undefined' ? null : window.getSelection(),
+): PickRef | null {
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null
+  const raw = selection.toString()
+  const label = pickPreview(raw, 80)
+  if (!label) return null
+  let hash = 0
+  const key = raw.replace(/\s+/g, ' ').trim()
+  for (let i = 0; i < key.length; i += 1) hash = (hash * 33 + key.charCodeAt(i)) >>> 0
+  return { kind: 'text', id: hash.toString(16), label, route }
+}
+
 export function pickDomAttrs(kind: string, id: string, label?: string) {
   return {
     'data-biu-kind': kind,

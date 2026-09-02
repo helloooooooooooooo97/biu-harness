@@ -8,7 +8,6 @@ import { pickKindIcon, pickKindTone } from './chip.tsx'
 
 test('kind maps to distinct heroicons', () => {
   const needed = [
-    'CpuChipIcon',
     'CircleStackIcon',
     'StopCircleIcon',
     'HashtagIcon',
@@ -16,6 +15,7 @@ test('kind maps to distinct heroicons', () => {
     'RectangleStackIcon',
     'ClipboardDocumentCheckIcon',
     'CheckCircleIcon',
+    'DocumentTextIcon',
     'ChatBubbleLeftIcon',
     'PuzzlePieceIcon',
     'TagIcon',
@@ -25,9 +25,10 @@ test('kind maps to distinct heroicons', () => {
   for (const name of needed) {
     assert.ok(name in lu, `${name} missing`)
   }
-  assert.equal(pickKindIcon('session'), lu.CpuChipIcon)
+  assert.equal(pickKindIcon('session'), lu.ChatBubbleLeftIcon)
   assert.equal(pickKindIcon('message'), lu.ChatBubbleLeftIcon)
-  assert.notEqual(pickKindIcon('session'), pickKindIcon('message'))
+  assert.equal(pickKindIcon('text'), lu.DocumentTextIcon)
+  assert.notEqual(pickKindIcon('text'), pickKindIcon('session'))
   assert.equal(pickKindIcon('task'), lu.CheckCircleIcon)
   assert.equal(pickKindIcon('tasks'), lu.CheckCircleIcon)
   assert.equal(pickKindIcon('page'), lu.DocumentIcon)

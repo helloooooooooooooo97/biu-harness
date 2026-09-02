@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import type { SlotProps } from '@biu/type-slots'
 import { getPick, usePickState } from './service.ts'
 import { boxFromPoints, resolvePickAtPoint, resolvePicksInRect, visiblePickBox } from './resolve.ts'
+import { textPickFromSelection } from './types.ts'
 
 const DRAG_PX = 6
 
@@ -57,7 +58,9 @@ export function PickOverlay(_props: SlotProps) {
     const onDown = (event: PointerEvent) => {
       if (event.button !== 0) return
       if (ignorePickCapture(event.target, event)) return
-      event.preventDefault()
+      const inReadable =
+        event.target instanceof Element && Boolean(event.target.closest('.chat-stage'))
+      if (!inReadable) event.preventDefault()
       drag = { x: event.clientX, y: event.clientY, boxed: false }
     }
 
@@ -66,6 +69,12 @@ export function PickOverlay(_props: SlotProps) {
       const started = drag
       drag = null
       if (!pick.picking) return
+      const snippet = textPickFromSelection(route())
+      if (snippet) {
+        pick.add(snippet)
+        window.getSelection()?.removeAllRanges()
+        return
+      }
       if (started.boxed) {
         const box = boxFromPoints(started.x, started.y, event.clientX, event.clientY)
         pick.addMany(resolvePicksInRect(box, route()).map((hit) => hit.ref))
