@@ -47,4 +47,8 @@ test('sessionsCollection maps summaries and writes title/pinned/tags', async () 
     ['patch', 's1', { pinned: true, tags: ['b', 'c'] }],
     ['delete', 's1'],
   ])
+  assert.equal(spec.actions?.some((item) => item.id === 'progress'), true)
+  assert.equal(spec.actions?.some((item) => item.id === 'star'), true)
+  const starred = await spec.actions?.find((item) => item.id === 'star')?.run('s1', rows[0]!, { pinned: true })
+  assert.deepEqual(starred, { id: 's1', pinned: true })
 })
