@@ -9,6 +9,7 @@ export type {
 export { SlotEvent } from '@biu/type-slots'
 export { SlotsService, disposeSlot } from './service.ts'
 export { useSlotEntries } from './use-slots.ts'
+export { SlotOutlet } from './slot-outlet.tsx'
 
 import type { Context } from 'cordis'
 import { SlotsService } from './service.ts'

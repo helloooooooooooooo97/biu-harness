@@ -1,8 +1,11 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { Context } from 'cordis'
 import * as slots from './index.ts'
 import { disposeSlot } from './service.ts'
+import { SlotOutlet } from './slot-outlet.tsx'
 
 const Dummy = () => null
 
@@ -63,4 +66,15 @@ test('place().dispose unregisters so React remount can place again', async () =>
   await Promise.resolve(disposeSlot(first))
   ctx.slots.place('stage', Dummy, { key: 'fsdb-pane-script' })
   assert.equal(ctx.slots.list('stage').length, 1)
+})
+
+test('SlotOutlet injects renderSlot into placed components', async () => {
+  function Probe(props: { renderSlot?: (name: string) => unknown }) {
+    return props.renderSlot ? 'has-render-slot' : 'missing'
+  }
+  const ctx = await boot()
+  ctx.slots.fill('root', Dummy, { children: { stage: { kind: 'list' } } })
+  ctx.slots.fill('stage', Probe, { key: 'p' })
+  const html = renderToStaticMarkup(createElement(SlotOutlet, { slots: ctx.slots, name: 'stage' }))
+  assert.match(html, /has-render-slot/)
 })

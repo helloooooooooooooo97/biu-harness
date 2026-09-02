@@ -10,8 +10,10 @@ import * as sessionView from '@biu/web-session-view'
 import * as projectView from '@biu/web-project-view'
 import * as shell from '@biu/web-app-shell'
 import { renderRoot } from './renderer.tsx'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
-test('list sorts by order; shell has no activity bar', async () => {
+test('shell renderer paints slot tree through SlotOutlet', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
   await ctx.plugin(dock)
@@ -23,4 +25,7 @@ test('list sorts by order; shell has no activity bar', async () => {
   const html = renderToStaticMarkup(renderRoot(ctx.slots, ctx.appModules))
   assert.doesNotMatch(html, /Activity bar/)
   assert.match(html, /data-testid="app-shell"/)
+  const src = readFileSync(resolve(import.meta.dirname, './renderer.tsx'), 'utf8')
+  assert.match(src, /SlotOutlet/)
+  assert.doesNotMatch(src, /function Outlet/)
 })

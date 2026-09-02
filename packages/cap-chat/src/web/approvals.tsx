@@ -310,7 +310,7 @@ export function ApprovalsRail(props: SlotProps) {
             ) : null}
             <PaintBrushIcon className="size-4 relative z-1" aria-hidden />
           </button>
-          {props.renderSlot('header-tools')}
+          {typeof props.renderSlot === 'function' ? props.renderSlot('header-tools') : null}
             {visibleWorkers.length ? (
             <span className="dock-agent-stack" data-testid="dock-agent-stack">
               {visibleWorkers.map((worker, index) => {

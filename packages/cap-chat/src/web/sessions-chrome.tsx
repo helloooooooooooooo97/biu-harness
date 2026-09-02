@@ -1,18 +1,12 @@
 import { useEffect } from 'react'
-import { ChatDockStack, ChatPane, ChatStage } from '@biu/public-ui'
+import { ChatPane, ChatStage } from '@biu/public-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { MASCOT_COLOR_NAME, MASCOT_EYE_NAME, MASCOT_SHAPE_NAME } from '@biu/type-session'
 import type { CollectionChrome, FsCellProps, FsContentProps } from '@biu/type-file-system/ui'
 import type { DbRecord } from '@biu/type-file-system'
-import type { SlotProps } from '@biu/web-slots'
+import { SlotOutlet, type SlotsService } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
-import type { PickService } from '@biu/cap-pick/web'
-import { ApprovalsRail } from './approvals.tsx'
-import { ChatComposer } from './composer.tsx'
-import { ChatConfigBanner } from './config-banner.tsx'
-import { ChatLiveHud } from './live-hud.tsx'
-import { ChatThread } from './thread.tsx'
 
 function sessionMascot(record: DbRecord) {
   const raw = record.mascot
@@ -53,34 +47,25 @@ function MascotEyeCell({ value }: FsCellProps) {
 }
 
 type SessionChatProps = {
+  slots: SlotsService
   useSessionView: ReturnType<typeof bindSessionView>
   sessionView: SessionViewService
   useProjectView: ReturnType<typeof bindProjectView>
   projectView: ProjectViewService
-  pick?: PickService
 }
 
-function SessionRecordChat({ record, ...slot }: FsContentProps & SessionChatProps) {
+function SessionRecordChat({ record, slots, sessionView, useSessionView }: FsContentProps & SessionChatProps) {
   const sessionId = String(record.id)
-  const liveId = slot.useSessionView((state) => state.sessionId)
+  const liveId = useSessionView((state) => state.sessionId)
   useEffect(() => {
-    if (slot.sessionView.get().sessionId === sessionId) return
-    void slot.sessionView.load(sessionId, { view: 'chat' }).catch(() => undefined)
-  }, [sessionId, slot.sessionView])
-  const props = slot as SlotProps
+    if (sessionView.get().sessionId === sessionId) return
+    void sessionView.load(sessionId, { view: 'chat' }).catch(() => undefined)
+  }, [sessionId, sessionView])
   return (
     <ChatPane
       embed
       thread={
-        <ChatStage variant="pane">{liveId === sessionId ? <ChatThread {...props} /> : null}</ChatStage>
-      }
-      dock={
-        <ChatDockStack>
-          <ChatConfigBanner {...props} />
-          <ApprovalsRail {...props} />
-          <ChatLiveHud {...props} />
-          <ChatComposer {...props} pick={slot.pick} />
-        </ChatDockStack>
+        <ChatStage variant="pane">{liveId === sessionId ? <SlotOutlet slots={slots} name="stage" /> : null}</ChatStage>
       }
     />
   )
