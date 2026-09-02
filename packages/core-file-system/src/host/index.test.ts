@@ -455,6 +455,45 @@ test('SuperTag list filter asks the collection only for stamped ids', async () =
   assert.equal(filtered.items[0]?.id, 'a')
 })
 
+test('SuperTag mapping lives in File System even when the collection drops schema', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  const rows = new Map<string, Record<string, unknown>>([['t1', { id: 't1', title: '任务' }]])
+  const seenPatches: Record<string, unknown>[] = []
+  db.register({
+    id: 'tasks',
+    path: '/tasks',
+    schema: { fields: { title: { type: 'string', writable: true } } },
+    records: { update: true },
+    list: () => [...rows.values()] as { id: string }[],
+    get: (id) => rows.get(id) as { id: string } | undefined,
+    update: (id, patch) => {
+      seenPatches.push({ ...patch })
+      const current = rows.get(id)
+      if (!current) throw new Error('missing')
+      const { schema: _schema, ...rest } = patch
+      const next = { ...current, ...rest, id }
+      delete next.schema
+      rows.set(id, next)
+      return next as { id: string }
+    },
+  })
+  db.schemaTags.replace([{ id: 'dp', label: '动态规划', fields: [{ key: 'complexity', type: 'string' }] }])
+  const written = await db.update('/tasks/t1', {
+    schema: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } },
+  })
+  assert.equal('schema' in (seenPatches[0] ?? {}), false)
+  assert.deepEqual(written.value.schema, { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } })
+  assert.equal('schema' in (rows.get('t1') ?? {}), false)
+  const read = await db.read('/tasks/t1')
+  if (read.kind !== 'record') return
+  assert.deepEqual(read.value.schema, { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } })
+  const listed = await db.list('/tasks', { schema: 'dp' })
+  if (listed.kind !== 'collection') return
+  assert.equal(listed.items.length, 1)
+  assert.deepEqual(listed.items[0]?.schema, { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } })
+})
+
 test('tables without records.create/delete reject create and delete', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)

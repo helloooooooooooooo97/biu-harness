@@ -1,7 +1,13 @@
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { createRequire } from 'node:module'
-import { normalizeSchemaPack, type CollectionSchemaPack } from '@biu/type-file-system'
+import {
+  emptySchemaValue,
+  normalizeSchemaPack,
+  normalizeSchemaValue,
+  type CollectionSchemaPack,
+  type SchemaFieldValue,
+} from '@biu/type-file-system'
 
 type DatabaseSync = import('node:sqlite').DatabaseSync
 
@@ -18,6 +24,7 @@ export type SuperTagStamp = {
 
 type TagRow = { id: string; label: string; fields_json: string; updated_at?: number }
 type StampRow = { tag_id: string; collection: string; record_id: string; title: string }
+type BindingRow = { collection: string; record_id: string; schema_json: string; title: string }
 
 export function slugSuperTagId(label: string, used: Set<string>) {
   const base =
@@ -47,7 +54,7 @@ function packFromRow(row: TagRow): CollectionSchemaPack | null {
   return normalizeSchemaPack({ id: row.id, label: row.label, fields })
 }
 
-/** SuperTag 由 File System 用 SQLite 管：目录 + 跨表倒排，查询不扫全表。 */
+/** SuperTag 由 File System 用 SQLite 管：目录、记录绑定（含字段值）和跨表倒排。登记方不存映射。 */
 export class SchemaTagsStore {
   private db: DatabaseSync | null = null
 
@@ -75,6 +82,13 @@ export class SchemaTagsStore {
       );
       CREATE INDEX IF NOT EXISTS super_tag_stamps_tag ON super_tag_stamps(tag_id);
       CREATE INDEX IF NOT EXISTS super_tag_stamps_record ON super_tag_stamps(collection, record_id);
+      CREATE TABLE IF NOT EXISTS super_tag_bindings (
+        collection TEXT NOT NULL,
+        record_id TEXT NOT NULL,
+        schema_json TEXT NOT NULL,
+        title TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (collection, record_id)
+      );
     `)
     return this
   }
@@ -131,6 +145,30 @@ export class SchemaTagsStore {
         db.prepare('DELETE FROM super_tag_stamps WHERE tag_id = ?').run(row.id)
         db.prepare('DELETE FROM super_tags WHERE id = ?').run(row.id)
       }
+      const bindings = db.prepare('SELECT collection, record_id, schema_json FROM super_tag_bindings').all() as Array<{
+        collection: string
+        record_id: string
+        schema_json: string
+      }>
+      const rewrite = db.prepare(
+        'UPDATE super_tag_bindings SET schema_json = ? WHERE collection = ? AND record_id = ?',
+      )
+      for (const row of bindings) {
+        let parsed: unknown = {}
+        try {
+          parsed = JSON.parse(row.schema_json) as unknown
+        } catch {
+          parsed = {}
+        }
+        const schema = normalizeSchemaValue(parsed)
+        const tags = schema.tags.filter((id) => keep.has(id))
+        const values: SchemaFieldValue['values'] = {}
+        for (const [key, bag] of Object.entries(schema.values)) {
+          if (keep.has(key)) values[key] = bag
+        }
+        if (tags.length === schema.tags.length && Object.keys(values).length === Object.keys(schema.values).length) continue
+        rewrite.run(JSON.stringify({ tags, values }), row.collection, row.record_id)
+      }
       db.exec('COMMIT')
     } catch (error) {
       db.exec('ROLLBACK')
@@ -159,6 +197,26 @@ export class SchemaTagsStore {
     db.exec('BEGIN IMMEDIATE')
     try {
       db.prepare('DELETE FROM super_tag_stamps WHERE tag_id = ?').run(want)
+      const bindings = db.prepare('SELECT collection, record_id, schema_json, title FROM super_tag_bindings').all() as BindingRow[]
+      const rewrite = db.prepare(
+        'UPDATE super_tag_bindings SET schema_json = ? WHERE collection = ? AND record_id = ?',
+      )
+      for (const row of bindings) {
+        let parsed: unknown = {}
+        try {
+          parsed = JSON.parse(row.schema_json) as unknown
+        } catch {
+          parsed = {}
+        }
+        const schema = normalizeSchemaValue(parsed)
+        if (!schema.tags.includes(want) && !(want in schema.values)) continue
+        const next = {
+          tags: schema.tags.filter((id) => id !== want),
+          values: { ...schema.values },
+        }
+        delete next.values[want]
+        rewrite.run(JSON.stringify(next), row.collection, row.record_id)
+      }
       const result = db.prepare('DELETE FROM super_tags WHERE id = ?').run(want)
       db.exec('COMMIT')
       return Number(result.changes) > 0
@@ -177,11 +235,44 @@ export class SchemaTagsStore {
     return out
   }
 
-  indexRecord(collection: string, recordId: string, title: string, tagIds: string[]) {
+  getRecordSchema(collection: string, recordId: string): SchemaFieldValue | null {
+    const row = this.ensure()
+      .prepare('SELECT schema_json FROM super_tag_bindings WHERE collection = ? AND record_id = ?')
+      .get(collection, recordId) as { schema_json: string } | undefined
+    if (!row) return null
+    try {
+      return normalizeSchemaValue(JSON.parse(row.schema_json) as unknown)
+    } catch {
+      return emptySchemaValue()
+    }
+  }
+
+  bindingsFor(collection: string): Map<string, SchemaFieldValue> {
+    const rows = this.ensure()
+      .prepare('SELECT record_id, schema_json FROM super_tag_bindings WHERE collection = ?')
+      .all(collection) as Array<{ record_id: string; schema_json: string }>
+    const out = new Map<string, SchemaFieldValue>()
+    for (const row of rows) {
+      try {
+        out.set(row.record_id, normalizeSchemaValue(JSON.parse(row.schema_json) as unknown))
+      } catch {
+        out.set(row.record_id, emptySchemaValue())
+      }
+    }
+    return out
+  }
+
+  bindRecord(collection: string, recordId: string, title: string, raw: unknown) {
+    const schema = normalizeSchemaValue(raw)
     const db = this.ensure()
-    const ids = [...new Set(tagIds.map((id) => String(id).trim()).filter(Boolean))]
+    const ids = schema.tags
     db.exec('BEGIN IMMEDIATE')
     try {
+      db.prepare(
+        `INSERT INTO super_tag_bindings (collection, record_id, schema_json, title)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(collection, record_id) DO UPDATE SET schema_json = excluded.schema_json, title = excluded.title`,
+      ).run(collection, recordId, JSON.stringify(schema), title)
       db.prepare('DELETE FROM super_tag_stamps WHERE collection = ? AND record_id = ?').run(collection, recordId)
       const insert = db.prepare(
         'INSERT INTO super_tag_stamps (tag_id, collection, record_id, title) VALUES (?, ?, ?, ?)',
@@ -192,12 +283,42 @@ export class SchemaTagsStore {
       db.exec('ROLLBACK')
       throw error
     }
+    return schema
+  }
+
+  indexRecord(collection: string, recordId: string, title: string, tagIds: string[]) {
+    const prev = this.getRecordSchema(collection, recordId) ?? emptySchemaValue()
+    const ids = [...new Set(tagIds.map((id) => String(id).trim()).filter(Boolean))]
+    const keep = new Set(ids)
+    const values: SchemaFieldValue['values'] = {}
+    for (const [key, bag] of Object.entries(prev.values)) {
+      if (keep.has(key)) values[key] = bag
+    }
+    this.bindRecord(collection, recordId, title, { tags: ids, values })
+  }
+
+  touchTitle(collection: string, recordId: string, title: string) {
+    const db = this.ensure()
+    const bound = db
+      .prepare('SELECT record_id FROM super_tag_bindings WHERE collection = ? AND record_id = ?')
+      .get(collection, recordId) as { record_id: string } | undefined
+    if (!bound) return
+    db.prepare('UPDATE super_tag_bindings SET title = ? WHERE collection = ? AND record_id = ?').run(
+      title,
+      collection,
+      recordId,
+    )
+    db.prepare('UPDATE super_tag_stamps SET title = ? WHERE collection = ? AND record_id = ?').run(
+      title,
+      collection,
+      recordId,
+    )
   }
 
   removeRecord(collection: string, recordId: string) {
-    this.ensure()
-      .prepare('DELETE FROM super_tag_stamps WHERE collection = ? AND record_id = ?')
-      .run(collection, recordId)
+    const db = this.ensure()
+    db.prepare('DELETE FROM super_tag_stamps WHERE collection = ? AND record_id = ?').run(collection, recordId)
+    db.prepare('DELETE FROM super_tag_bindings WHERE collection = ? AND record_id = ?').run(collection, recordId)
   }
 
   stampedIds(collection: string, tagIdOrLabel: string): Set<string> {

@@ -6,6 +6,7 @@ import {
   asHttpHref,
   asImageSrc,
   normalizeSchemaValue,
+  emptySchemaValue,
   schemaSearchHaystack,
   withBuiltinFields,
   type CollectionAction,
@@ -19,11 +20,32 @@ import {
   type DbRecord,
   type FieldSpec,
   type ListPage,
+  type SchemaFieldValue,
 } from '@biu/type-file-system'
 import { SavedViewsStore, viewsCollection, type StoredView } from './saved-views.ts'
 import { SchemaTagsStore, SUPER_TAGS_SQLITE } from './schema-tags.ts'
 import { superTagsCollection } from './super-tags-collection.ts'
 import { normalizeCollectionPath } from '../paths.ts'
+
+function takeSchemaPatch(patch: Record<string, unknown>): {
+  rest: Record<string, unknown>
+  schema?: SchemaFieldValue
+  hasSchema: boolean
+} {
+  if (!('schema' in patch)) return { rest: patch, hasSchema: false }
+  const { schema, ...rest } = patch
+  return { rest, schema: normalizeSchemaValue(schema), hasSchema: true }
+}
+
+function recordTitle(spec: CollectionSpec, record: DbRecord) {
+  const key = schemaFor(spec).labelField ?? 'title'
+  return String(record[key] ?? record.id)
+}
+
+function canStampSuperTags(spec: CollectionSpec) {
+  const field = schemaFor(spec).fields.schema
+  return spec.path !== '/supertags' && Boolean(field) && field?.computed !== true
+}
 
 function publicAction(action: CollectionAction): CollectionActionInfo {
   const { run: _run, ...info } = action
@@ -389,18 +411,44 @@ export class DatabaseService extends Service implements Database {
     return rows.filter((row) => allow.has(row.id))
   }
 
-  private async hydrateSuperTagStamps(rows: DbRecord[], pack: CollectionSchemaPack | null) {
+  private attachSuperTag(spec: CollectionSpec, record: DbRecord): DbRecord {
+    if (!canStampSuperTags(spec)) return record
+    const stored = this.schemaTags.getRecordSchema(spec.path, record.id)
+    if (stored) return { ...record, schema: stored }
+    const leftover = normalizeSchemaValue(record.schema)
+    if (leftover.tags.length || Object.keys(leftover.values).length) {
+      this.schemaTags.bindRecord(spec.path, record.id, recordTitle(spec, record), leftover)
+      return { ...record, schema: leftover }
+    }
+    return { ...record, schema: emptySchemaValue() }
+  }
+
+  private attachSuperTags(spec: CollectionSpec, rows: DbRecord[]): DbRecord[] {
+    if (!canStampSuperTags(spec)) return rows
+    const map = this.schemaTags.bindingsFor(spec.path)
+    return rows.map((row) => {
+      const stored = map.get(row.id)
+      if (stored) return { ...row, schema: stored }
+      return this.attachSuperTag(spec, row)
+    })
+  }
+
+  private persistSuperTag(spec: CollectionSpec, record: DbRecord, schema: SchemaFieldValue | undefined, hasSchema: boolean) {
+    if (!canStampSuperTags(spec)) return
+    const title = recordTitle(spec, record)
+    if (hasSchema) this.schemaTags.bindRecord(spec.path, record.id, title, schema ?? emptySchemaValue())
+    else this.schemaTags.touchTitle(spec.path, record.id, title)
+  }
+
+  private hydrateSuperTagStamps(rows: DbRecord[], pack: CollectionSchemaPack | null) {
     if (!pack?.fields.length) return
     const wanted = pack.fields.filter((field) => !STAMP_FIELD_BLOCKLIST.has(field.key))
     if (!wanted.length) return
     for (const row of rows) {
       const collection = String(row.tablePath ?? '')
       const id = String(row.sourceId ?? '')
-      const spec = collection ? this.collection(collection) : undefined
-      if (!spec || !id) continue
-      const record = await spec.get(id)
-      if (!record) continue
-      const bag = normalizeSchemaValue(record.schema).values[pack.id] ?? {}
+      if (!collection || !id) continue
+      const bag = (this.schemaTags.getRecordSchema(collection, id) ?? emptySchemaValue()).values[pack.id] ?? {}
       for (const field of wanted) {
         if (bag[field.key] !== undefined) row[field.key] = bag[field.key]
       }
@@ -443,7 +491,7 @@ export class DatabaseService extends Service implements Database {
         label: spec.label ?? spec.id,
         schema: schemaFor(spec),
         caps,
-        value: withoutContent(spec, record),
+        value: withoutContent(spec, this.attachSuperTag(spec, record)),
       }
     }
     throw new Error(`path too deep: ${normalizeCollectionPath(path)}`)
@@ -486,12 +534,12 @@ export class DatabaseService extends Service implements Database {
       }
       query.ids = [...stamped]
     }
-    const rows = await this.loadCollectionRows(spec, query)
+    const rows = this.attachSuperTags(spec, await this.loadCollectionRows(spec, query))
     const tagFilter = spec.path === '/supertags' ? String(filter?.tag ?? '').trim() : ''
     const tagPack = tagFilter ? this.schemaTags.get(tagFilter) : null
     if (tagFilter) {
       schema = schemaWithTagPack(schema, tagPack)
-      await this.hydrateSuperTagStamps(rows, tagPack)
+      this.hydrateSuperTagStamps(rows, tagPack)
     }
     const matched = rows.filter((row) => matchListFilter(row, filter, schema, packs) && matchQuery(row, q, packs))
     const sorted = sortRecords(matched, sortField, sortDir)
@@ -526,17 +574,6 @@ export class DatabaseService extends Service implements Database {
     }
   }
 
-  private indexSuperTagRecord(spec: CollectionSpec, record: DbRecord) {
-    if (spec.path === '/supertags' || !schemaFor(spec).fields.schema) return
-    const labelKey = schemaFor(spec).labelField ?? 'title'
-    this.schemaTags.indexRecord(
-      spec.path,
-      record.id,
-      String(record[labelKey] ?? record.id),
-      normalizeSchemaValue(record.schema).tags,
-    )
-  }
-
   async read(path: string) {
     const parts = splitPath(path)
     if (parts.length === 0) return this.stat('/')
@@ -546,7 +583,12 @@ export class DatabaseService extends Service implements Database {
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     const record = await spec.get(parts[1]!)
     if (!record) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
-    return { kind: 'record' as const, path: `${spec.path}/${record.id}`, schema: schemaFor(spec), value: withoutContent(spec, record) }
+    return {
+      kind: 'record' as const,
+      path: `${spec.path}/${record.id}`,
+      schema: schemaFor(spec),
+      value: withoutContent(spec, this.attachSuperTag(spec, record)),
+    }
   }
 
   async update(path: string, content: unknown) {
@@ -555,11 +597,15 @@ export class DatabaseService extends Service implements Database {
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     if (!spec.records?.update || !spec.update) throw new Error(`collection cannot update: ${spec.path}`)
-    const patch = pickWritablePatch(schemaFor(spec), parseContent(content))
-    const record = await spec.update(parts[1]!, patch)
-    this.indexSuperTagRecord(spec, record)
+    const { rest, schema, hasSchema } = takeSchemaPatch(pickWritablePatch(schemaFor(spec), parseContent(content)))
+    const record = await spec.update(parts[1]!, rest)
+    this.persistSuperTag(spec, record, schema, hasSchema)
     this.bump()
-    return { kind: 'record' as const, path: `${spec.path}/${record.id}`, value: withoutContent(spec, record) }
+    return {
+      kind: 'record' as const,
+      path: `${spec.path}/${record.id}`,
+      value: withoutContent(spec, this.attachSuperTag(spec, record)),
+    }
   }
 
   async create(path: string, content?: unknown) {
@@ -569,10 +615,15 @@ export class DatabaseService extends Service implements Database {
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     if (!spec.records?.create || !spec.create) throw new Error(`collection cannot create: ${spec.path}`)
     const fields = content == null || content === '' ? {} : pickWritablePatch(schemaFor(spec), parseContent(content))
-    const record = await spec.create(fields)
-    this.indexSuperTagRecord(spec, record)
+    const { rest, schema, hasSchema } = takeSchemaPatch(fields)
+    const record = await spec.create(rest)
+    this.persistSuperTag(spec, record, schema, hasSchema)
     this.bump()
-    return { kind: 'record' as const, path: `${spec.path}/${record.id}`, value: withoutContent(spec, record) }
+    return {
+      kind: 'record' as const,
+      path: `${spec.path}/${record.id}`,
+      value: withoutContent(spec, this.attachSuperTag(spec, record)),
+    }
   }
 
   async remove(path: string) {
@@ -601,12 +652,12 @@ export class DatabaseService extends Service implements Database {
     if (!matchActionWhen(record, action.when)) throw new Error(`action not available: ${actionId}`)
     const result = await action.run(parts[1]!, record, args)
     const next = (await spec.get(parts[1]!)) ?? record
-    this.indexSuperTagRecord(spec, next)
+    this.persistSuperTag(spec, next, undefined, false)
     this.bump()
     return {
       kind: 'record' as const,
       path: `${spec.path}/${next.id}`,
-      value: withoutContent(spec, next),
+      value: withoutContent(spec, this.attachSuperTag(spec, next)),
       ...(result !== undefined ? { result } : {}),
     }
   }

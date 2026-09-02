@@ -32,7 +32,7 @@ test('sqlite file round-trips SuperTag catalog and stamp index', async () => {
   const store = new SchemaTagsStore()
   store.open(path)
   store.replace([{ id: 'dp', label: '动态规划', fields: [{ key: 'complexity', type: 'string' }] }])
-  store.indexRecord('/pages', 'home', '首页', ['dp'])
+  store.bindRecord('/pages', 'home', '首页', { tags: ['dp'], values: { dp: { complexity: 'O(1)' } } })
   store.indexRecord('/notes', 'n1', '草稿', ['dp'])
 
   const again = new SchemaTagsStore()
@@ -42,9 +42,23 @@ test('sqlite file round-trips SuperTag catalog and stamp index', async () => {
   assert.equal(collected.tag?.id, 'dp')
   assert.deepEqual(collected.items.map((item) => item.path).sort(), ['/notes/n1', '/pages/home'])
   assert.equal(again.stampedIds('/pages', 'dp').has('home'), true)
+  assert.deepEqual(again.getRecordSchema('/pages', 'home')?.values.dp, { complexity: 'O(1)' })
   assert.equal(again.stampCounts().dp, 2)
   again.upsert({ id: 'dp', label: 'DP', fields: [{ key: 'complexity', type: 'string' }] })
   assert.equal(again.get('dp')?.label, 'DP')
   assert.equal(again.removeTag('dp'), true)
   assert.equal(again.list().length, 0)
+})
+
+test('bindings store SuperTag values without the source collection', () => {
+  const store = new SchemaTagsStore()
+  store.replace([{ id: 'dp', label: '动态规划', fields: [{ key: 'complexity', type: 'string' }] }])
+  store.bindRecord('/tasks', 't1', '修 bug', { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } })
+  assert.deepEqual(store.getRecordSchema('/tasks', 't1'), {
+    tags: ['dp'],
+    values: { dp: { complexity: 'O(n)' } },
+  })
+  assert.equal(store.stampedIds('/tasks', 'dp').has('t1'), true)
+  store.touchTitle('/tasks', 't1', '修好了')
+  assert.equal(store.collect('dp').items[0]?.title, '修好了')
 })

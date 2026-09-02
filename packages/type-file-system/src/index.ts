@@ -84,7 +84,7 @@ export const BUILTIN_FIELDS = {
   schema: { type: 'schema', label: 'SuperTag', writable: true },
 } as const satisfies Record<string, FieldSpec>
 
-/** 表格默认不展开这些内置列（标题除外）。SuperTag 作为默认业务列留下。 */
+/** 表格默认不展开这些内置列（标题除外）。SuperTag 作为默认业务列留下；值与跨表映射由 File System 存。 */
 export const BUILTIN_FIELD_KEYS = ['id', 'createdAt', 'updatedAt', 'content', 'emoji'] as const
 
 /** Schema 包内允许的原子类型，不能再套 schema。 */
