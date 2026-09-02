@@ -62,3 +62,14 @@ test('center stage keeps modules mounted and crossfades', () => {
   assert.match(css, /\.app-stage-pane\.is-active[\s\S]*?opacity:\s*1/)
   assert.match(css, /\.app-pane-in\s*\{[^}]*animation:\s*app-pane-in/s)
 })
+
+test('left sidebar keeps chat and database lists mounted and folds smoothly', () => {
+  const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  const chat = readFileSync(resolve(import.meta.dirname, './chat-sidebar.tsx'), 'utf8')
+  const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
+  assert.match(shell, /embedded/)
+  assert.match(shell, /id="shell-module-sidebar"/)
+  assert.match(chat, /SidebarFold/)
+  assert.match(chat, /embedded/)
+  assert.match(css, /\.chat-session-row::before[\s\S]*?transition:\s*background-color/)
+})

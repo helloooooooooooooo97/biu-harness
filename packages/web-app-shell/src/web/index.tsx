@@ -616,19 +616,7 @@ function Shell(props: SlotProps) {
         } as CSSProperties
       }
     >
-      {showChatSidebar ? (
-        <ChatSidebar
-          visible={!leftHidden}
-          narrow={sidebarNarrow}
-          showTags={sidebarShowTags}
-          routeSessionId={routeSessionId}
-          useSessionView={useSessionView}
-          sessionView={sessionView}
-          onCollapse={collapseSidebar}
-          onExpand={expandSidebar}
-          onWidthChange={onSidebarWidthChange}
-        />
-      ) : leftPane ? (
+      {leftPane ? (
         <ShellSidebarFrame
           visible={!leftHidden}
           narrow={sidebarNarrow}
@@ -636,12 +624,32 @@ function Shell(props: SlotProps) {
           onCollapse={collapseSidebar}
           onExpand={expandSidebar}
           onWidthChange={onSidebarWidthChange}
-          testId="module-sidebar"
+          testId={showChatSidebar ? 'chat-sidebar' : 'module-sidebar'}
         >
-          <div
-            id="shell-module-sidebar"
-            className="app-side-bar-module-slot min-h-0 flex min-w-0 flex-1 flex-col overflow-hidden"
-          />
+          <div className="app-stage">
+            <div
+              className={`app-stage-pane${showChatSidebar ? ' is-active' : ''}`}
+              aria-hidden={!showChatSidebar}
+              inert={!showChatSidebar || undefined}
+            >
+              <ChatSidebar
+                embedded
+                visible
+                narrow={sidebarNarrow}
+                showTags={sidebarShowTags}
+                routeSessionId={routeSessionId}
+                useSessionView={useSessionView}
+                sessionView={sessionView}
+              />
+            </div>
+            <div
+              id="shell-module-sidebar"
+              className={`app-stage-pane app-side-bar-module-slot min-h-0 flex min-w-0 flex-1 flex-col overflow-hidden${showChatSidebar ? '' : ' is-active'}`}
+              data-testid="module-sidebar"
+              aria-hidden={showChatSidebar}
+              inert={showChatSidebar || undefined}
+            />
+          </div>
         </ShellSidebarFrame>
       ) : null}
 

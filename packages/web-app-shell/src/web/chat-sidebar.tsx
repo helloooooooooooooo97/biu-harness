@@ -2,7 +2,7 @@ import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncE
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { isMascotDancing, subscribeMascotDance } from '@biu/public-mascot'
-import { ChatCount } from '@biu/public-ui'
+import { ChatCount, SidebarFold } from '@biu/public-ui'
 import {
   bindSessionView,
   type SessionListItem,
@@ -186,6 +186,7 @@ export type ChatSidebarProps = {
   onExpand?: () => void
   onWidthChange?: (width: number) => void
   onActivate?: () => void
+  embedded?: boolean
 }
 
 /**
@@ -203,6 +204,7 @@ export const ChatSidebar = memo(function ChatSidebar({
   onExpand,
   onWidthChange,
   onActivate,
+  embedded = false,
 }: ChatSidebarProps) {
   const navigate = useNavigate()
   const sessions = useSessionView((state) => state.sessions)
@@ -406,7 +408,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                     />
                   </div>
 
-                  {!sectionCollapsed ? (
+                  <SidebarFold open={!sectionCollapsed}>
                     <div className="min-w-0 space-y-1.5 pt-0.5">
                       {section.sessions
                         ? section.sessions.map((item) => (
@@ -485,7 +487,7 @@ export const ChatSidebar = memo(function ChatSidebar({
                                 </div>
                                 <ChatCount count={group.sessions.length} />
                               </div>
-                              <div className={`sidebar-session-list min-w-0 ${collapsed ? 'hidden' : ''}`} aria-hidden={collapsed}>
+                              <SidebarFold open={!collapsed} className="sidebar-session-list min-w-0">
                                 {group.sessions.map((item) => (
                                   <SessionRow
                                     key={`${group.key}:${item.id}`}
@@ -498,13 +500,13 @@ export const ChatSidebar = memo(function ChatSidebar({
                                     onOpen={variant === 'popover' ? openSession : undefined}
                                   />
                                 ))}
-                              </div>
+                              </SidebarFold>
                             </div>
                           )
                         })
                       }
                     </div>
-                  ) : null}
+                  </SidebarFold>
                 </section>
               )
             })
@@ -569,6 +571,15 @@ export const ChatSidebar = memo(function ChatSidebar({
         {body}
         {deleteDialog}
       </div>
+    )
+  }
+
+  if (embedded) {
+    return (
+      <>
+        {body}
+        {deleteDialog}
+      </>
     )
   }
 

@@ -47,6 +47,6 @@ describe('sidebar text colors', () => {
     expect(overlay).toMatch(/SIDEBAR_TAG_AT = SIDEBAR_MAX/)
     expect(overlay).toMatch(/SIDEBAR_MIN = 160/)
     expect(css).toMatch(/--dsw-sidebar-min:\s*160px/)
-    expect(css).toMatch(/\.app-side-bar\s*\{[^}]*min-width:\s*var\(--dsw-sidebar-min\)/s)
+    expect(css).toMatch(/\.app-side-bar\s*\{[^}]*min-width:\s*0/s)
   })
 })

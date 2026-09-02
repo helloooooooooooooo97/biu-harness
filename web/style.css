@@ -1162,7 +1162,9 @@ body {
   .app-shell-module,
   .inspector-stage-pane,
   .app-stage-pane,
-  .app-pane-in {
+  .app-pane-in,
+  .chat-session-row::before,
+  .chat-session-row.is-active {
     transition: none;
     animation: none;
   }
@@ -1719,6 +1721,7 @@ body {
   border-radius: inherit;
   pointer-events: none;
   background: transparent;
+  transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .chat-session-row>* {
@@ -1727,11 +1730,13 @@ body {
 }
 
 .chat-session-row:hover:not(.is-active)::before {
+  transition: none;
   background: var(--dsw-hover);
 }
 
 .chat-session-row.is-active {
   color: var(--dsw-sidebar-fg-active);
+  transition: color 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .chat-session-row.is-active::before {
