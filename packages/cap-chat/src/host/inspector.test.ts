@@ -5,8 +5,8 @@ import { buildInspectorTools, isToolActiveForSession, toolSourceOf } from './ins
 test('toolSourceOf tags minimal / live / plugin / store', () => {
   assert.equal(toolSourceOf('bash'), 'minimal')
   assert.equal(toolSourceOf('str_replace_editor'), 'minimal')
-  assert.equal(toolSourceOf('session_list'), 'live')
-  assert.equal(toolSourceOf('session_progress'), 'live')
+  assert.equal(toolSourceOf('db_action'), 'live')
+  assert.equal(toolSourceOf('db_list'), 'live')
   assert.equal(toolSourceOf('fs_read'), 'plugin')
   assert.equal(toolSourceOf('gomoku_move', 'store'), 'store')
 })
@@ -23,7 +23,7 @@ test('minimal live session unlocks live tools; pinned extras unlock built-in plu
   )
   assert.equal(
     isToolActiveForSession({
-      name: 'session_list',
+      name: 'db_action',
       mode: 'minimal',
       sessionType: 'chat',
       pinnedExtras: [],
@@ -32,7 +32,7 @@ test('minimal live session unlocks live tools; pinned extras unlock built-in plu
   )
   assert.equal(
     isToolActiveForSession({
-      name: 'session_list',
+      name: 'db_action',
       mode: 'minimal',
       sessionType: 'live',
       pinnedExtras: [],
@@ -74,7 +74,7 @@ test('buildInspectorTools marks configurable plugin tools in minimal mode', () =
   const rows = buildInspectorTools(
     [
       { name: 'bash', description: 'shell' },
-      { name: 'session_list', description: 'list sessions' },
+      { name: 'db_action', description: 'run collection action' },
       { name: 'fs_read', description: 'read file' },
       { name: 'gomoku_move', description: 'play', origin: 'store' },
     ],
@@ -82,8 +82,8 @@ test('buildInspectorTools marks configurable plugin tools in minimal mode', () =
   )
   assert.equal(rows.find((row) => row.name === 'bash')?.active, true)
   assert.equal(rows.find((row) => row.name === 'bash')?.configurable, false)
-  assert.equal(rows.find((row) => row.name === 'session_list')?.active, true)
-  assert.equal(rows.find((row) => row.name === 'session_list')?.configurable, false)
+  assert.equal(rows.find((row) => row.name === 'db_action')?.active, true)
+  assert.equal(rows.find((row) => row.name === 'db_action')?.configurable, false)
   assert.equal(rows.find((row) => row.name === 'fs_read')?.active, false)
   assert.equal(rows.find((row) => row.name === 'fs_read')?.configurable, true)
   assert.equal(rows.find((row) => row.name === 'gomoku_move')?.active, false)

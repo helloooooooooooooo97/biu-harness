@@ -41,6 +41,11 @@ export type TasksLike = {
   delete: (id: string) => boolean
 }
 
+export type TaskRecordActions = {
+  report: (id: string, record: DbRecord, args?: Record<string, unknown>) => unknown | Promise<unknown>
+  deliver: (id: string, record: DbRecord, args?: Record<string, unknown>) => unknown | Promise<unknown>
+}
+
 const ZERO_USAGE: Usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, totalTokens: 0 }
 
 function asUsage(value: unknown): Usage | null {
@@ -150,7 +155,7 @@ function recordsWithUsage(rows: TaskRow[]): DbRecord[] {
   )
 }
 
-export function tasksCollection(tasks: TasksLike): CollectionSpec {
+export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActions): CollectionSpec {
   return {
     id: 'tasks',
     path: '/tasks',
@@ -208,5 +213,35 @@ export function tasksCollection(tasks: TasksLike): CollectionSpec {
     remove: (id) => {
       if (!tasks.delete(id)) throw new Error(`unknown task: ${id}`)
     },
+    actions: recordActions
+      ? [
+          {
+            id: 'report',
+            label: '汇报进度',
+            placement: ['row', 'detail'],
+            parameters: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', enum: ['doing', 'done'] },
+                note: { type: 'string' },
+              },
+            },
+            run: (id, record, args) => recordActions.report(id, record, args),
+          },
+          {
+            id: 'deliver',
+            label: '派工',
+            placement: ['row', 'detail'],
+            parameters: {
+              type: 'object',
+              properties: {
+                text: { type: 'string' },
+                wait: { type: 'boolean' },
+              },
+            },
+            run: (id, record, args) => recordActions.deliver(id, record, args),
+          },
+        ]
+      : undefined,
   }
 }

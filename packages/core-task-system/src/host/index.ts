@@ -720,7 +720,7 @@ function actorsEqual(a: TaskActor | null, b: TaskActor | null): boolean {
 export const DELIVER_COLLABORATION_NOTE = [
   '',
   '【协作规范】请优先使用本系统的任务体系进行后续任务派发与协作：',
-  '新需求请用 tasks_create 创建、用 task_deliver 派给负责 session、用 task_report 上报进度。',
+  '新需求请用 db_create 在 /tasks 建记录、用 db_action path=/tasks/<id> action=deliver 派工、action=report 上报进度。',
   '这样需求可被跟踪、进度可回传、派发人会收到回执。避免绕过任务系统直接 dispatch 子 session。',
 ].join('\n')
 
@@ -1563,558 +1563,72 @@ export function apply(ctx: Context) {
     kind: 'tasks',
   })
 
-  host.tools.register({
-    name: 'tasks_list',
-    description: '列出任务（含创建人、分配人、执行情况；可按 status / 关键词筛选）',
-    parameters: {
-      type: 'object',
-      properties: {
-        status: { type: 'string', enum: ['todo', 'doing', 'done'], description: '状态筛选' },
-        q: { type: 'string', description: '标题/备注/负责人/创建人关键词' },
-      },
-    },
-    execute: async (args) =>
-      presentMany(
-        tasks.list({
-          ...(args.status ? { status: asStatus(args.status) } : {}),
-          ...(args.q ? { q: String(args.q) } : {}),
-        }),
-      ),
-  })
 
-  host.tools.register({
-    name: 'tasks_get',
-    description: '按 id 获取任务详情（含执行情况）',
-    parameters: {
-      type: 'object',
-      properties: { id: { type: 'string', description: '任务 id' } },
-      required: ['id'],
-    },
-    execute: async (args) => {
-      const row = tasks.get(String(args.id ?? ''))
-      if (!row) throw new Error('unknown task')
-      return present(row)
-    },
-  })
-
-  host.tools.register({
-    name: 'tasks_create',
-    description: '创建任务（自动记录创建 Agent；可用 assigneeSessionId 分配给某 session）',
-    parameters: {
-      type: 'object',
-      properties: {
-        title: { type: 'string' },
-        status: { type: 'string', enum: ['todo', 'doing', 'done'] },
-        priority: { type: 'string', enum: ['low', 'med', 'high'] },
-        difficulty: { type: 'string', enum: ['low', 'med', 'high'], description: '难度（low=低, med=中, high=高）' },
-        assigneeSessionId: ASSIGNEE_SESSION_PARAM,
-        assignee: ASSIGNEE_PARAM,
-        dueAt: { type: 'number', description: '截止时间戳 ms' },
-        description: { type: 'string', description: '任务描述' },
-        notes: { type: 'string', description: '备忘' },
-        project: { type: 'string', description: '归属项目（如 cordis-web）' },
-        tags: { type: 'array', items: { type: 'string' }, description: '标签（类型/性质）' },
-        parentId: { type: 'string', description: '父任务 id（树层级，深度上限 3）' },
-        dependsOn: { type: 'array', items: { type: 'string' }, description: '依赖的任务 id 列表（DAG，自动防环）' },
-        reportIntervalSec: { type: 'number', description: '进度汇报提醒间隔（秒），默认 60' },
-      },
-      required: ['title'],
-    },
-    execute: async (args) => {
-      const creator = await resolveCreator(host)
-      let assignee: TaskActor | null = null
-      if (args.assigneeSessionId !== undefined && args.assigneeSessionId !== null && String(args.assigneeSessionId).trim()) {
-        const resolved = await resolveAssignee(host, { assigneeSessionId: String(args.assigneeSessionId) })
-        assignee = resolved.assignee
-      } else if (args.assignee !== undefined) {
-        assignee = await coerceAssigneeArg(host, args.assignee)
-      }
-      const row = tasks.create({
-        title: String(args.title ?? ''),
-        ...(args.status != null ? { status: asStatus(args.status) } : {}),
-        ...(args.priority != null ? { priority: asPriority(args.priority) } : {}),
-        ...(args.difficulty != null ? { difficulty: asDifficulty(args.difficulty) } : {}),
-        ...(args.dueAt != null ? { dueAt: Number(args.dueAt) } : {}),
-        ...(args.description != null ? { description: String(args.description) } : {}),
-        ...(args.notes != null ? { notes: String(args.notes) } : {}),
-        ...(args.project != null ? { project: String(args.project) } : {}),
-        ...(Array.isArray(args.tags) ? { tags: args.tags.map(String).filter(Boolean) } : {}),
-        ...(args.parentId != null ? { parentId: String(args.parentId) || null } : {}),
-        ...(Array.isArray(args.dependsOn) ? { dependsOn: args.dependsOn.map(String).filter(Boolean) } : {}),
-        ...(args.reportIntervalSec != null ? { reportIntervalSec: Number(args.reportIntervalSec) } : {}),
-        creator,
-        assignee,
-      })
-      return present(row)
-    },
-  })
-
-  host.tools.register({
-    name: 'tasks_update',
-    description:
-      '更新任务字段。分配人请用 assigneeSessionId，或 assignee（人名 / sessionId / actor 对象）；改 status 即换状态。',
-    parameters: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        title: { type: 'string' },
-        status: { type: 'string', enum: ['todo', 'doing', 'done'] },
-        priority: { type: 'string', enum: ['low', 'med', 'high'] },
-        difficulty: { type: 'string', enum: ['low', 'med', 'high'], description: '难度（low=低, med=中, high=高）' },
-        assigneeSessionId: ASSIGNEE_SESSION_PARAM,
-        assignee: ASSIGNEE_PARAM,
-        dueAt: { type: ['number', 'null'] },
-        description: { type: 'string', description: '任务描述' },
-        notes: { type: 'string', description: '备忘' },
-        sort: { type: 'number' },
-        project: { type: ['string', 'null'], description: '归属项目（如 cordis-web），传 null 清除' },
-        tags: { type: 'array', items: { type: 'string' }, description: '标签（类型/性质），替换整个列表' },
-        parentId: { type: ['string', 'null'], description: '父任务 id（树层级，深度上限 3），传 null 移到根' },
-        dependsOn: { type: 'array', items: { type: 'string' }, description: '依赖的任务 id 列表（DAG，自动防环），替换整个列表' },
-        reportIntervalSec: { type: 'number', description: '进度汇报提醒间隔（秒），默认 60' },
-        trigger: {
-          type: 'object',
-          description: '自动触发配置（partial，与现有合并）：{ enabled, cron, at, on[], state, lastRun }',
-          properties: {
-            enabled: { type: 'boolean', description: '是否开启自动触发' },
-            cron: { type: ['string', 'null'], description: '定时 cron 表达式（5 字段：分 时 日 月 周）' },
-            at: { type: ['number', 'null'], description: '特定时间戳（一次性触发）' },
-            on: { type: 'array', items: { type: 'string' }, description: "自动触发事件：如 dep:done(依赖完成) / turn:end(回合结束)" },
-            state: { type: 'string', enum: ['idle', 'pending', 'delivered', 'done', 'cancelled'], description: '调度状态' },
-            lastRun: { type: ['number', 'null'], description: '上次触发时间戳' },
-          },
-        },
-      },
-      required: ['id'],
-    },
-    execute: async (args) => {
-      const id = String(args.id ?? '')
-      const patch: TaskUpdateInput & { assignee?: TaskActor | null } = {}
-      if (args.title != null) patch.title = String(args.title)
-      if (args.status != null) patch.status = asStatus(args.status)
-      if (args.priority != null) patch.priority = asPriority(args.priority)
-      if (args.difficulty != null) patch.difficulty = asDifficulty(args.difficulty)
-      if (args.dueAt !== undefined) patch.dueAt = args.dueAt == null ? null : Number(args.dueAt)
-      if (args.description != null) patch.description = String(args.description)
-      if (args.notes != null) patch.notes = String(args.notes)
-      if (args.sort != null) patch.sort = Number(args.sort)
-      if (args.project !== undefined) {
-        patch.project = args.project == null ? null : String(args.project).trim() || null
-      }
-      if (Array.isArray(args.tags)) patch.tags = args.tags.map(String).filter(Boolean)
-      if (args.parentId !== undefined) {
-        patch.parentId = args.parentId == null ? null : String(args.parentId) || null
-      }
-      if (Array.isArray(args.dependsOn)) patch.dependsOn = args.dependsOn.map(String).filter(Boolean)
-      if (args.reportIntervalSec !== undefined) patch.reportIntervalSec = Number(args.reportIntervalSec)
-      if (args.trigger !== undefined && args.trigger !== null && typeof args.trigger === 'object') {
-        patch.trigger = args.trigger as Partial<TaskTrigger>
-      }
-      if (args.assigneeSessionId !== undefined) {
-        const resolved = await resolveAssignee(host, {
-          assigneeSessionId: args.assigneeSessionId == null ? null : String(args.assigneeSessionId),
-        })
-        patch.assignee = resolved.assignee
-      } else if (args.assignee !== undefined) {
-        patch.assignee = await coerceAssigneeArg(host, args.assignee)
-      }
-      return present(tasks.update(id, patch))
-    },
-  })
-
-  host.tools.register({
-    name: 'task_report',
-    description:
-      'agent 在执行任务时主动上报进度。每完成一轮(一个 turn)，调用一次并关联到任务：未搞定传 status=doing，彻底搞定传 status=done。任务执行视图会累积这份报告历史（次数、每次的 turn/状态/说明）。任务当前状态 = 最新一次 report 的 status。上报后会通过 session 机制把子 agent(上报方)的进度/info 返回给分配该任务的人(任务的 creator session)。',
-    parameters: {
-      type: 'object',
-      properties: {
-        taskId: { type: 'string', description: '任务 id' },
-        status: { type: 'string', enum: ['doing', 'done'], description: 'doing=还在做；done=本任务已彻底完成' },
-        note: { type: 'string', description: '本轮做了什么/当前进度（可选 payload）' },
-      },
-      required: ['taskId'],
-    },
-    execute: async (args) => {
-      const id = String(args.taskId ?? '')
-      const row = tasks.get(id)
-      if (!row) throw new Error('unknown task')
-      const status = args.status === 'done' ? 'done' : 'doing'
-      const sessionId = currentSessionId()
-      // 取当前 session 最新 turn
-      let turn: number | null = null
-      if (sessionId) {
-        const record = host.sessions?.peek(sessionId) ?? (await host.sessions?.get?.(sessionId))
-        if (record?.events?.length) {
-          for (const ev of record.events) {
-            if (ev.type === 'turn/start' || ev.type === 'turn/end') {
-              if (typeof ev.turn === 'number') turn = ev.turn
-            }
+  async function runTaskReport(id: string, args: Record<string, unknown> = {}) {
+    const row = tasks.get(id)
+    if (!row) throw new Error('unknown task')
+    const status = args.status === 'done' ? 'done' : 'doing'
+    const sessionId = currentSessionId()
+    let turn: number | null = null
+    if (sessionId) {
+      const record = host.sessions?.peek(sessionId) ?? (await host.sessions?.get?.(sessionId))
+      if (record?.events?.length) {
+        for (const ev of record.events) {
+          if (ev.type === 'turn/start' || ev.type === 'turn/end') {
+            if (typeof ev.turn === 'number') turn = ev.turn
           }
         }
       }
-      // 持久化该 report 当回合的消耗：取 (sessionId, turn) 的 turn-stats 固化进 usage，删 session 也不丢。
-      // 若 session 仍存在可从事件流计算出 usage（assistant/message 的 usage 汇总）；否则 use 保持 undefined。
-      let usage: TaskUsage | undefined
-      if (sessionId && turn != null) {
-        const rec: { events?: Array<Record<string, unknown>> } | undefined =
-          (host.sessions?.get ? await host.sessions.get(sessionId) : undefined) ??
-          (host.sessions?.peek(sessionId) as { events?: Array<Record<string, unknown>> } | undefined)
-        usage = computeTurnUsage(rec?.events, turn)
-      }
-      const report: TaskReport = {
-        sessionId: sessionId ?? 'unknown',
-        ...(sessionId ? { sessionName: sessionId.slice(0, 8) } : {}),
-        turn,
-        status,
-        ...(typeof args.note === 'string' && args.note.trim() ? { note: String(args.note).trim() } : {}),
-        ...(usage ? { usage } : {}),
-        ts: now(),
-      }
-      tasks.report(id, report)
-      // report 同时推进完成状态（doing/done），last-write-wins
-      tasks.update(id, { status })
-      // 把子 agent 的信息返回给分配任务的人（creator session）——通过 session inject 机制
-      const delivered = await reportBackToCreator(host, row, report)
-      return { ...(await present(tasks.get(id)!)), delivered }
-    },
-  })
-
-  host.tools.register({
-    name: 'task_deliver',
-    description:
-      '把已经分配了 session 的任务作为 wake 消息发送到被分配 session 的队列里去（派工）。任务需已用 assigneeSessionId 分配好负责 session；无负责人 session 时需先 tasks_update 指派。text 可自定义派工措辞（默认带上任务标题/描述/优先级等）。wait=false 时入队后立即返回 queued，不阻塞当前回合。',
-    parameters: {
-      type: 'object',
-      properties: {
-        taskId: { type: 'string', description: '任务 id' },
-        text: {
-          type: 'string',
-          description:
-            '可选自定义 wake 内容；缺省时自动生成：把任务标题/描述/优先级/难度/截止/父任务等整理成派工消息发给执行的 agent session',
-        },
-        wait: {
-          type: 'boolean',
-          description: '默认 true 等目标 session 回合结束；false 则入队后立即返回 queued',
-        },
-      },
-      required: ['taskId'],
-    },
-    execute: async (args) => {
-      const id = String(args.taskId ?? '')
-      const row = tasks.get(id)
-      if (!row) throw new Error('unknown task')
-      const targetSessionId = row.assignee?.sessionId
-      if (!targetSessionId) {
-        throw new Error(`task ${id} 未分配负责 session（assignee 无 sessionId），请先用 tasks_update 的 assigneeSessionId 指派`)
-      }
-      if (!host.sessions?.sendMessage) {
-        throw new Error('sessions.sendMessage 不可用：sessions 服务未就绪')
-      }
-      const text = String(args.text ?? '').trim() || buildDeliverText(row)
-      const sender = { type: 'session' as const, sessionId: currentSessionId() ?? 'unknown' }
-      const wait = args.wait !== false && args.wait !== 'false'
-      if (!wait) {
-        void host.sessions.sendMessage(targetSessionId, text, { wait: false, sender })
-        return { taskId: id, sessionId: targetSessionId, queued: true, wait: false, text }
-      }
-      const turn = await host.sessions.sendMessage(targetSessionId, text, { wait: true, sender })
-      return {
-        taskId: id,
-        sessionId: targetSessionId,
-        queued: false,
-        wait: true,
-        text: turn.text.slice(0, 1200),
-        steps: turn.steps.length,
-      }
-    },
-  })
-
-  host.tools.register({
-    name: 'tasks_delete',
-    description: '删除任务',
-    parameters: {
-      type: 'object',
-      properties: { id: { type: 'string' } },
-      required: ['id'],
-    },
-    execute: (args) => {
-      const ok = tasks.delete(String(args.id ?? ''))
-      if (!ok) throw new Error('unknown task')
-      return { ok: true }
-    },
-  })
-
-  host.tools.register({
-    name: 'tasks_update_many',
-    description:
-      '批量更新任务（一次更新多个任务）。每个 update 含 id 与要更新的字段（title/status/priority/difficulty/description/notes/project/tags/parentId/dependsOn/dueAt），未传字段保持不变。',
-    parameters: {
-      type: 'object',
-      properties: {
-        updates: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              title: { type: 'string' },
-              status: { type: 'string', enum: ['todo', 'doing', 'done'] },
-              priority: { type: 'string', enum: ['low', 'med', 'high'] },
-              difficulty: { type: 'string', enum: ['low', 'med', 'high'], description: '难度（low=低, med=中, high=高）' },
-              dueAt: { type: ['number', 'null'] },
-              description: { type: 'string' },
-              notes: { type: 'string' },
-              project: { type: ['string', 'null'] },
-              tags: { type: 'array', items: { type: 'string' } },
-              parentId: { type: ['string', 'null'] },
-              dependsOn: { type: 'array', items: { type: 'string' } },
-              assigneeSessionId: ASSIGNEE_SESSION_PARAM,
-            },
-            required: ['id'],
-          },
-          description: '更新项列表',
-        },
-      },
-      required: ['updates'],
-    },
-    execute: async (args) => {
-      const updates = (Array.isArray(args.updates) ? args.updates : []) as Array<Record<string, unknown>>
-      const updated: TaskRow[] = []
-      const errors: { id: string; error: string }[] = []
-      for (const u of updates) {
-        const id = String(u.id ?? '')
-        if (!tasks.get(id)) {
-          errors.push({ id, error: 'unknown task' })
-          continue
-        }
-        const patch: TaskUpdateInput & { assignee?: TaskActor | null } = {}
-        if (u.title != null) patch.title = String(u.title)
-        if (u.status != null) patch.status = asStatus(u.status as TaskStatus)
-        if (u.priority != null) patch.priority = asPriority(u.priority as TaskPriority)
-        if (u.difficulty != null) patch.difficulty = asDifficulty(u.difficulty as TaskDifficulty)
-        if (u.dueAt !== undefined) patch.dueAt = u.dueAt == null ? null : Number(u.dueAt)
-        if (u.description != null) patch.description = String(u.description)
-        if (u.notes != null) patch.notes = String(u.notes)
-        if (u.project !== undefined) patch.project = u.project == null ? null : String(u.project).trim() || null
-        if (Array.isArray(u.tags)) patch.tags = u.tags.map(String).filter(Boolean)
-        if (u.parentId !== undefined) patch.parentId = u.parentId == null ? null : String(u.parentId) || null
-        if (Array.isArray(u.dependsOn)) patch.dependsOn = u.dependsOn.map(String).filter(Boolean)
-        if (u.assigneeSessionId !== undefined) {
-          const resolved = await resolveAssignee(host, {
-            assigneeSessionId: u.assigneeSessionId == null ? null : String(u.assigneeSessionId),
-          })
-          patch.assignee = resolved.assignee
-        }
-        try {
-          updated.push(await present(tasks.update(id, patch)))
-        } catch (error) {
-          errors.push({ id, error: String(error) })
-        }
-      }
-      return { ok: true, updated, errors }
-    },
-  })
-
-  host.tools.register({
-    name: 'tasks_delete_many',
-    description: '批量删除任务（一次可删多个）',
-    parameters: {
-      type: 'object',
-      properties: { ids: { type: 'array', items: { type: 'string' }, description: '要删除的任务 id 列表' } },
-      required: ['ids'],
-    },
-    execute: (args) => {
-      const ids = (Array.isArray(args.ids) ? args.ids : []).map(String)
-      let deleted = 0
-      const missing: string[] = []
-      for (const id of ids) {
-        if (tasks.delete(id)) deleted++
-        else missing.push(id)
-      }
-      return { ok: true, deleted, missing }
-    },
-  })
-
-  host.tools.register({
-    name: 'tasks_create_many',
-    description: '批量创建任务（一次建多个，各任务可独立设置 项目/标签/父任务/依赖/分配人/状态/优先级/难度/截止）',
-    parameters: {
-      type: 'object',
-      properties: {
-        tasks: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              title: { type: 'string' },
-              status: { type: 'string', enum: ['todo', 'doing', 'done'] },
-              priority: { type: 'string', enum: ['low', 'med', 'high'] },
-              difficulty: { type: 'string', enum: ['low', 'med', 'high'], description: '难度（low=低, med=中, high=高）' },
-              assigneeSessionId: ASSIGNEE_SESSION_PARAM,
-              project: { type: 'string' },
-              tags: { type: 'array', items: { type: 'string' } },
-              parentId: { type: 'string' },
-              dependsOn: { type: 'array', items: { type: 'string' } },
-              dueAt: { type: 'number' },
-              description: { type: 'string' },
-              notes: { type: 'string' },
-            },
-            required: ['title'],
-          },
-          description: '任务列表',
-        },
-      },
-      required: ['tasks'],
-    },
-    execute: async (args) => {
-      const items = (Array.isArray(args.tasks) ? args.tasks : []) as Array<Record<string, unknown>>
-      const creator = await resolveCreator(host)
-      const created: TaskRow[] = []
-      for (const item of items) {
-        let assignee: TaskActor | null = null
-        if (item.assigneeSessionId) {
-          const resolved = await resolveAssignee(host, { assigneeSessionId: String(item.assigneeSessionId) })
-          assignee = resolved.assignee
-        } else if (item.assignee !== undefined) {
-          assignee = await coerceAssigneeArg(host, item.assignee as unknown)
-        }
-        const row = tasks.create({
-          title: String(item.title ?? ''),
-          ...(item.status != null ? { status: asStatus(item.status as TaskStatus) } : {}),
-          ...(item.priority != null ? { priority: asPriority(item.priority as TaskPriority) } : {}),
-          ...(item.difficulty != null ? { difficulty: asDifficulty(item.difficulty as TaskDifficulty) } : {}),
-          ...(item.dueAt != null ? { dueAt: Number(item.dueAt) } : {}),
-          ...(item.project != null ? { project: String(item.project) } : {}),
-          ...(Array.isArray(item.tags) ? { tags: item.tags.map(String).filter(Boolean) } : {}),
-          ...(item.parentId != null ? { parentId: String(item.parentId) || null } : {}),
-          ...(Array.isArray(item.dependsOn) ? { dependsOn: item.dependsOn.map(String).filter(Boolean) } : {}),
-          ...(item.description != null ? { description: String(item.description) } : {}),
-          ...(item.notes != null ? { notes: String(item.notes) } : {}),
-          creator,
-          assignee,
-        })
-        created.push(row)
-      }
-      return { created: presentMany(created) }
-    },
-  })
-
-  // ==================== 视图（task_views）Agent 工具：新建视图 / 筛选 / 排序 ====================
-  const VIEW_MODE_PARAM = { type: 'string', enum: ['queue', 'table', 'cards', 'board', 'graph'] as const, description: '呈现方式：列表 / 表格 / 卡片 / 看板 / 依赖图' }
-  const VIEW_FILTER_PARAM = {
-    type: 'object',
-    properties: {
-      project: { type: 'string', description: '按项目筛选（空串=全部）' },
-      tags: { type: 'array', items: { type: 'string' }, description: '按标签筛选（至少命中一个）' },
-      time: { type: 'string', enum: ['', '1h', '24h', '7d', '30d'], description: '按更新时间筛选：空=全部 | 1h | 24h | 7d | 30d' },
-    },
-    description: '筛选条件',
-  }
-  const VIEW_SORT_PARAM = {
-    type: 'object',
-    properties: {
-      field: { type: 'string', enum: ['priority', 'due', 'updated', 'created', 'status'] as const, description: '排序字段（status 为「状态→优先级→截止」复合排序）' },
-      dir: { type: 'string', enum: ['asc', 'desc'] as const, description: '升序 asc / 降序 desc' },
-    },
-    description: '排序规则',
+    }
+    let usage: TaskUsage | undefined
+    if (sessionId && turn != null) {
+      const rec: { events?: Array<Record<string, unknown>> } | undefined =
+        (host.sessions?.get ? await host.sessions.get(sessionId) : undefined) ??
+        (host.sessions?.peek(sessionId) as { events?: Array<Record<string, unknown>> } | undefined)
+      usage = computeTurnUsage(rec?.events, turn)
+    }
+    const report: TaskReport = {
+      sessionId: sessionId ?? 'unknown',
+      ...(sessionId ? { sessionName: sessionId.slice(0, 8) } : {}),
+      turn,
+      status,
+      ...(typeof args.note === 'string' && args.note.trim() ? { note: String(args.note).trim() } : {}),
+      ...(usage ? { usage } : {}),
+      ts: now(),
+    }
+    tasks.report(id, report)
+    tasks.update(id, { status })
+    const delivered = await reportBackToCreator(host, row, report)
+    return { ...(await present(tasks.get(id)!)), delivered }
   }
 
-  host.tools.register({
-    name: 'tasks_view_list',
-    description: '列出任务面板已保存的视图及其筛选、排序、呈现方式',
-    parameters: { type: 'object', properties: {} },
-    execute: () => ({ views: tasks.listTaskViews() }),
-  })
-
-  host.tools.register({
-    name: 'tasks_view_create',
-    description: '新建一个任务面板视图：名称 + 呈现方式 mode + 筛选 filter + 排序 sort',
-    parameters: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', description: '视图名称' },
-        mode: VIEW_MODE_PARAM,
-        filter: VIEW_FILTER_PARAM,
-        sort: VIEW_SORT_PARAM,
-      },
-      required: ['name'],
-    },
-    execute: async (args) => {
-      const view = tasks.createTaskView({
-        name: normalizeViewName(args.name),
-        config: normalizeViewConfig({
-          ...(args.mode !== undefined ? { mode: args.mode } : {}),
-          ...(args.filter !== undefined ? { filter: args.filter } : {}),
-          ...(args.sort !== undefined ? { sort: args.sort } : {}),
-        }),
-      })
-      return { view }
-    },
-  })
-
-  host.tools.register({
-    name: 'tasks_view_update',
-    description: '更新任务面板视图：可重命名，或修改筛选/排序/呈现方式（只传要改的字段，其余保持不变）',
-    parameters: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: '视图 id' },
-        name: { type: 'string', description: '新名称' },
-        mode: VIEW_MODE_PARAM,
-        filter: VIEW_FILTER_PARAM,
-        sort: VIEW_SORT_PARAM,
-      },
-      required: ['id'],
-    },
-    execute: async (args) => {
-      const id = String(args.id ?? '')
-      const current = tasks.getTaskView(id)
-      if (!current) throw new Error('unknown view')
-      const config: TaskViewConfig = {
-        mode: args.mode !== undefined ? (args.mode as TaskViewMode) : current.config.mode,
-        filter: args.filter !== undefined ? (args.filter as TaskViewFilter) : current.config.filter,
-        sort: args.sort !== undefined ? (args.sort as TaskViewSort) : current.config.sort,
-      }
-      const view = tasks.updateTaskView(id, {
-        ...(args.name !== undefined ? { name: String(args.name) } : {}),
-        ...(args.mode !== undefined || args.filter !== undefined || args.sort !== undefined ? { config } : {}),
-      })
-      return { view }
-    },
-  })
-
-  host.tools.register({
-    name: 'tasks_view_delete',
-    description: '删除任务面板的已保存视图',
-    parameters: {
-      type: 'object',
-      properties: { id: { type: 'string', description: '视图 id' } },
-      required: ['id'],
-    },
-    execute: async (args) => {
-      const ok = tasks.deleteTaskView(String(args.id ?? ''))
-      if (!ok) throw new Error('unknown view')
-      return { ok: true }
-    },
-  })
-
-  host.tools.register({
-    name: 'tasks_view_switch',
-    description: '切换任务面板前端当前显示的视图（即把看板切到指定视图；通过后端广播事件，前端 WS 收到后立即切换）',
-    parameters: {
-      type: 'object',
-      properties: { id: { type: 'string', description: '视图 id（可用 tasks_view_list 查询）' } },
-      required: ['id'],
-    },
-    execute: async (args) => {
-      const id = String(args.id ?? '')
-      const view = tasks.getTaskView(id)
-      if (!view) throw new Error('unknown view')
-      tasks.emitViewSwitch(id)
-      return { ok: true, viewId: id, view: view.name }
-    },
-  })
+  async function runTaskDeliver(id: string, args: Record<string, unknown> = {}) {
+    const row = tasks.get(id)
+    if (!row) throw new Error('unknown task')
+    const targetSessionId = row.assignee?.sessionId
+    if (!targetSessionId) {
+      throw new Error(`task ${id} 未分配负责 session（assignee 无 sessionId），请先用 db_update 写入 assigneeSessionId`)
+    }
+    if (!host.sessions?.sendMessage) {
+      throw new Error('sessions.sendMessage 不可用：sessions 服务未就绪')
+    }
+    const text = String(args.text ?? '').trim() || buildDeliverText(row)
+    const sender = { type: 'session' as const, sessionId: currentSessionId() ?? 'unknown' }
+    const wait = args.wait !== false && args.wait !== 'false'
+    if (!wait) {
+      void host.sessions.sendMessage(targetSessionId, text, { wait: false, sender })
+      return { taskId: id, sessionId: targetSessionId, queued: true, wait: false, text }
+    }
+    const turn = await host.sessions.sendMessage(targetSessionId, text, { wait: true, sender })
+    return {
+      taskId: id,
+      sessionId: targetSessionId,
+      queued: false,
+      wait: true,
+      text: turn.text.slice(0, 1200),
+      steps: turn.steps.length,
+    }
+  }
 
   host.http.route('GET', '/api/tasks', async (route) => {
     const statusRaw = route.query.get('status')
@@ -2447,7 +1961,7 @@ export function apply(ctx: Context) {
   // 简化为：监听 task_report（tools/post-execute 中 name==='task_report'），若报告 done 则触发其下游。
   ctx.on('tools/post-execute', (payload) => {
     try {
-      if (payload?.name !== 'task_report') return
+      if (payload?.name !== 'db_action') return
       const rows = tasks.list()
       // 找所有已完成的任务 id 集合（作为 dep:done 的候选依赖源）
       for (const row of rows) {
@@ -2465,7 +1979,12 @@ export function apply(ctx: Context) {
   })
 
   ctx.inject(['database'], (inner) => {
-    inner.database.register(tasksCollection(tasks))
+    inner.database.register(
+      tasksCollection(tasks, {
+        report: (id, _record, args) => runTaskReport(id, args),
+        deliver: (id, _record, args) => runTaskDeliver(id, args),
+      }),
+    )
   })
 }
 

@@ -98,13 +98,14 @@ export class ToolsService extends Service {
 
   setPinnedExtras(names: readonly string[]) {
     const liveSet = new Set<string>([
-      'session_list',
-      'session_inspect',
-      'session_progress',
-      'session_create',
-      'session_rename',
-      'session_configure',
-      'session_delete',
+      'db_list',
+      'db_read',
+      'db_update',
+      'db_create',
+      'db_delete',
+      'db_stat',
+      'db_action',
+      'db_content',
     ])
     const cleaned = [
       ...new Set(

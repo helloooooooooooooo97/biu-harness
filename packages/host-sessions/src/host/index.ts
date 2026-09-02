@@ -282,7 +282,31 @@ export class SessionsService extends Service {
   constructor(ctx: Context) {
     super(ctx, 'sessions')
     ctx.inject(['database'], (inner) => {
-      inner.database.register(sessionsCollection(this))
+      inner.database.register(
+        sessionsCollection({
+          listSummaries: () => this.listSummaries(),
+          rename: (id, title) => this.rename(id, title),
+          patchConfig: (id, patch) => this.patchConfig(id, patch),
+          delete: (id) => this.delete(id),
+          create: (opts) => this.create(undefined, opts),
+          require: (id) => this.require(id),
+          setProject: (id, project) => this.setProject(id, project),
+          isBusy: (id) => {
+            try {
+              return Boolean(this.ctx.agents?.isBusy(id))
+            } catch {
+              return false
+            }
+          },
+          inboxPending: (id) => {
+            try {
+              return Number(this.ctx.agents?.inboxPending(id) ?? 0)
+            } catch {
+              return 0
+            }
+          },
+        }),
+      )
     })
   }
 

@@ -317,9 +317,9 @@ test('buildDeliverText renders a派工 message with task key fields', () => {
   assert.match(text, /明天跟进/)
   assert.match(text, /task_x/)
   assert.match(text, /协作规范/)
-  assert.match(text, /tasks_create/)
-  assert.match(text, /task_deliver/)
-  assert.match(text, /task_report/)
+  assert.match(text, /db_create/)
+  assert.match(text, /action=deliver/)
+  assert.match(text, /action=report/)
 })
 
 test('reportBackToCreator sends a progress message to the assigner session via sendMessage (wake-first)', async () => {
