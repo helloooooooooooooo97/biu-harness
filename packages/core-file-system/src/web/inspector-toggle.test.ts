@@ -146,6 +146,16 @@ test('create record sits at the right of the toolbar with a blue label', () => {
   assert.match(css, /\.tasks-th\{[^}]*white-space:nowrap/)
 })
 
+test('card and queue rows expose split and expand like the table', () => {
+  assert.match(browser, /function RecordOpenControls/)
+  assert.match(browser, /function MiniCard[\s\S]*RecordOpenControls row=\{row\}/)
+  assert.match(browser, /function QueueRow[\s\S]*RecordOpenControls row=\{row\}/)
+  assert.match(browser, /tasks-minicard-tools/)
+  const style = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8')
+  assert.match(style, /tasks-minicard-tools/)
+  assert.match(style, /tasks-queue-item-tools/)
+})
+
 test('filesystem header expands the shared left sidebar and toggles the right inspector', () => {
   assert.match(browser, /cordis\.sidebar\.collapsed/)
   assert.match(browser, /!viewsOpen \?/)

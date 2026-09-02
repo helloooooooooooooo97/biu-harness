@@ -1259,45 +1259,47 @@ export function CollectionBrowser({
           )
         ) : null}
         <span className="fsdb-title-text">{body}</span>
-        {openDetail ? (
-          <span className="tasks-title-aside">
-            {!nested ? (
-              <button
-                type="button"
-                className="tasks-title-open"
-                data-testid="record-title-split"
-                aria-label="在右侧打开"
-                title="在右侧打开"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  showRecordInInspector(collectionPath, row.id)
-                }}
-              >
-                <ViewColumnsIcon aria-hidden className="size-[14px]" />
-              </button>
-            ) : null}
-            <span className="tasks-title-zoom">
-              {tree && kidCount > 0 ? (
-                <ChatCount count={kidCount} className="tasks-tree-count" title={`${kidCount} 项`} />
-              ) : null}
-              <button
-                type="button"
-                className="tasks-title-open"
-                data-testid="record-title-open"
-                data-biu-action="open"
-                aria-label="查看详情"
-                title="查看详情"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  openRow(row)
-                }}
-              >
-                <ArrowsPointingOutIcon aria-hidden className="size-[14px]" />
-              </button>
-            </span>
-          </span>
-        ) : null}
+        {openDetail ? <RecordOpenControls row={row} kidCount={tree ? kidCount : 0} /> : null}
       </div>
+    )
+  }
+
+  function RecordOpenControls({ row, kidCount = 0 }: { row: DbRecord; kidCount?: number }) {
+    return (
+      <span className="tasks-title-aside">
+        {!nested ? (
+          <button
+            type="button"
+            className="tasks-title-open"
+            data-testid="record-title-split"
+            aria-label="在右侧打开"
+            title="在右侧打开"
+            onClick={(event) => {
+              event.stopPropagation()
+              showRecordInInspector(collectionPath, row.id)
+            }}
+          >
+            <ViewColumnsIcon aria-hidden className="size-[14px]" />
+          </button>
+        ) : null}
+        <span className="tasks-title-zoom">
+          {kidCount > 0 ? <ChatCount count={kidCount} className="tasks-tree-count" title={`${kidCount} 项`} /> : null}
+          <button
+            type="button"
+            className="tasks-title-open"
+            data-testid="record-title-open"
+            data-biu-action="open"
+            aria-label="查看详情"
+            title="查看详情"
+            onClick={(event) => {
+              event.stopPropagation()
+              openRow(row)
+            }}
+          >
+            <ArrowsPointingOutIcon aria-hidden className="size-[14px]" />
+          </button>
+        </span>
+      </span>
     )
   }
 
@@ -1424,7 +1426,10 @@ export function CollectionBrowser({
             </span>
           </button>
           <RecordProperties row={row} />
-          <RecordActions row={row} place="row" />
+          <div className="tasks-queue-item-tools">
+            <RecordActions row={row} place="row" />
+            <RecordOpenControls row={row} />
+          </div>
         </div>
       </li>
     )
@@ -1440,7 +1445,10 @@ export function CollectionBrowser({
               <RecordTitle row={row} openDetail={false} />
             </span>
           </button>
-          <RecordActions row={row} place="row" />
+          <div className="tasks-minicard-tools">
+            <RecordActions row={row} place="row" />
+            <RecordOpenControls row={row} />
+          </div>
         </div>
         <div className="tasks-minicard-foot">
           <RecordProperties row={row} />
