@@ -1,7 +1,7 @@
 import { Excalidraw } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import { createPortal } from 'react-dom'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 
 export const name = 'page-excalidraw'
 export const inject = ['pageEditor']
@@ -94,6 +94,42 @@ function fitView(api: DrawApi | null) {
 
 const UI_OPTIONS = { canvasActions: { loadScene: false, saveToActiveFile: false } } as const
 
+const BAR: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  height: 36,
+  padding: '0 8px',
+  background: 'var(--dsw-sidebar)',
+  borderBottom: '1px solid var(--dsw-border)',
+  color: 'var(--dsw-label-2)',
+  fontSize: 12,
+}
+
+const ICON_BTN: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flex: 'none',
+  width: 28,
+  height: 28,
+  margin: 0,
+  padding: 0,
+  border: 0,
+  borderRadius: 8,
+  background: 'transparent',
+  color: 'var(--dsw-label-2)',
+  cursor: 'pointer',
+}
+
+function Glyph(props: { d: string; evenodd?: boolean }) {
+  return (
+    <svg width={16} height={16} viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <path d={props.d} fillRule={props.evenodd ? 'evenodd' : undefined} clipRule={props.evenodd ? 'evenodd' : undefined} />
+    </svg>
+  )
+}
+
 function BoardBar(props: {
   file: string
   expanded: boolean
@@ -114,11 +150,29 @@ function BoardBar(props: {
   }
 
   return (
-    <div className="flex items-center gap-2 px-1 py-1 text-xs text-[var(--muted-foreground)]">
-      <span className="shrink-0">画板</span>
+    <div style={BAR}>
+      <span style={{ display: 'inline-flex', color: 'var(--dsw-label)' }} title="画板">
+        <Glyph
+          evenodd
+          d="M2 12V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2Zm1.5-5.5V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V6.5A.5.5 0 0 0 12 6H4a.5.5 0 0 0-.5.5Zm.75-1.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM7 4a.75.75 0 1 1-1.5 0A.75.75 0 0 1 7 4Zm1.25.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+        />
+      </span>
       <input
         data-page-block-capture=""
-        className="min-w-0 flex-1 rounded bg-transparent px-1 py-0.5 text-center text-[var(--foreground)] outline-none hover:bg-[var(--muted)] focus:bg-[var(--muted)]"
+        style={{
+          minWidth: 0,
+          flex: 1,
+          height: 28,
+          margin: 0,
+          border: 0,
+          borderRadius: 8,
+          padding: '0 8px',
+          background: 'transparent',
+          color: 'var(--dsw-label)',
+          font: 'inherit',
+          textAlign: 'center',
+          outline: 'none',
+        }}
         value={draft}
         disabled={!props.writable}
         aria-label="画板名称"
@@ -133,10 +187,22 @@ function BoardBar(props: {
       />
       <button
         type="button"
-        className="shrink-0 rounded px-2 py-0.5 hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+        style={ICON_BTN}
+        title={props.expanded ? '缩小' : '放大'}
+        aria-label={props.expanded ? '缩小' : '放大'}
         onClick={props.onToggle}
       >
-        {props.expanded ? '缩小' : '放大'}
+        {props.expanded ? (
+          <Glyph
+            evenodd
+            d="M2.22 2.22a.75.75 0 0 1 1.06 0L5.5 4.44V2.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-.75.75h-3.5a.75.75 0 0 1 0-1.5h1.69L2.22 3.28a.75.75 0 0 1 0-1.06Zm10.5 0a.75.75 0 1 1 1.06 1.06L11.56 5.5h1.69a.75.75 0 0 1 0 1.5h-3.5A.75.75 0 0 1 9 6.25v-3.5a.75.75 0 0 1 1.5 0v1.69l2.22-2.22ZM2.75 9h3.5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-1.69l-2.22 2.22a.75.75 0 0 1-1.06-1.06l2.22-2.22H2.75a.75.75 0 0 1 0-1.5ZM9 9.75A.75.75 0 0 1 9.75 9h3.5a.75.75 0 0 1 0 1.5h-1.69l2.22 2.22a.75.75 0 1 1-1.06 1.06l-2.22-2.22v1.69a.75.75 0 0 1-1.5 0v-3.5Z"
+          />
+        ) : (
+          <Glyph
+            evenodd
+            d="M2.75 9a.75.75 0 0 1 .75.75v1.69l2.22-2.22a.75.75 0 0 1 1.06 1.06L4.56 12.5h1.69a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75v-3.5A.75.75 0 0 1 2.75 9ZM2.75 7a.75.75 0 0 0 .75-.75V4.56l2.22 2.22a.75.75 0 0 0 1.06-1.06L4.56 3.5h1.69a.75.75 0 0 0 0-1.5h-3.5a.75.75 0 0 0-.75.75v3.5c0 .414.336.75.75.75ZM13.25 9a.75.75 0 0 0-.75.75v1.69l-2.22-2.22a.75.75 0 1 0-1.06 1.06l2.22 2.22H9.75a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 .75-.75v-3.5a.75.75 0 0 0-.75-.75ZM13.25 7a.75.75 0 0 1-.75-.75V4.56l-2.22 2.22a.75.75 0 1 1-1.06-1.06l2.22-2.22H9.75a.75.75 0 0 1 0-1.5h3.5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-.75.75Z"
+          />
+        )}
       </button>
     </div>
   )
@@ -239,7 +305,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
   )
 
   return (
-    <div className="overflow-hidden bg-transparent">
+    <div style={{ overflow: 'hidden', background: 'var(--dsw-bg)' }}>
       <BoardBar
         file={file}
         expanded={expanded}
