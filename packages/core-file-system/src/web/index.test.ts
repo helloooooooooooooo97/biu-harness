@@ -44,6 +44,7 @@ test('collection browser renders extra views registered for that path', () => {
   assert.match(schemaUi, /from '@biu\/public-ui'/)
   assert.match(schemaUi, /<TagChip /)
   assert.match(schemaUi, /placeholder=""/)
+  assert.doesNotMatch(schemaUi, /placeholder="属性名"/)
   assert.doesNotMatch(schemaUi, /placeholder=\{selected\.length/)
   assert.doesNotMatch(schemaUi, /搜索 SuperTag/)
   assert.doesNotMatch(schemaUi, /SuperTag 是工作区全局的/)

@@ -253,7 +253,7 @@ export function AddProperty({ onAdd }: { onAdd: (label: string, type: AtomicFiel
         ref={inputRef}
         className="fsdb-schema-addprop-input"
         value={label}
-        placeholder="属性名"
+        placeholder=""
         onChange={(event) => setLabel(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') {

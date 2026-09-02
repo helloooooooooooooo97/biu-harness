@@ -55,7 +55,7 @@ export function CellMulti({
         <input
           className="db-cell-multi-input fsdb-tokens-input"
           value={query}
-          placeholder={placeholder ?? (values.length ? '' : '搜索或添加')}
+          placeholder={placeholder ?? ''}
           onFocus={() => setOpen(true)}
           onChange={(event) => {
             setQuery(event.target.value)
