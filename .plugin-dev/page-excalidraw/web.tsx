@@ -29,34 +29,19 @@ type DrawApi = {
   updateScene?: (opts: { appState?: Record<string, unknown> }) => void
 }
 
-function appCanvasColor() {
-  const fromCss =
-    typeof document === 'undefined' ? '' : getComputedStyle(document.documentElement).getPropertyValue('--dsw-bg').trim()
-  return fromCss || '#191919'
-}
+/** 夜间模式会对 canvas 做 invert(93%)。底色必须是浅色，#191919 会被反成灰 #d8d8d8。 */
+const CANVAS_BG = '#ffffff'
 
-function parseRgb(color: unknown): [number, number, number] | null {
+function isForcedDarkCanvas(color: unknown) {
   const value = String(color ?? '').trim().toLowerCase()
-  if (!value) return null
-  if (value === 'white') return [255, 255, 255]
-  if (value === 'black') return [0, 0, 0]
-  const hex = value.startsWith('#') ? value.slice(1) : ''
-  if (/^[0-9a-f]{3}$/.test(hex)) {
-    return [parseInt(hex[0] + hex[0], 16), parseInt(hex[1] + hex[1], 16), parseInt(hex[2] + hex[2], 16)]
-  }
-  if (/^[0-9a-f]{6}$/.test(hex)) {
-    return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)]
-  }
-  const rgb = value.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
-  if (rgb) return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])]
-  return null
-}
-
-function isLightCanvas(color: unknown) {
-  const rgb = parseRgb(color)
-  if (!rgb) return !String(color ?? '').trim()
-  const [r, g, b] = rgb.map((channel) => channel / 255)
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45
+  return (
+    value === '#191919' ||
+    value === '#121212' ||
+    value === '#0a0a0a' ||
+    value === '#000' ||
+    value === '#000000' ||
+    value === 'black'
+  )
 }
 
 function isStockLight(color: unknown) {
@@ -64,13 +49,13 @@ function isStockLight(color: unknown) {
   return value === '#d8d8d8' || value === '#ffffff' || value === '#fff' || value === 'white'
 }
 
-function resolveCanvas(color: unknown, empty: boolean) {
-  if (!String(color ?? '').trim() || isStockLight(color) || (empty && isLightCanvas(color))) return appCanvasColor()
+function resolveCanvas(color: unknown) {
+  if (!String(color ?? '').trim() || isForcedDarkCanvas(color) || isStockLight(color)) return CANVAS_BG
   return String(color)
 }
 
 function emptyScene(): Scene {
-  return { elements: [], appState: { theme: 'dark', viewBackgroundColor: appCanvasColor() }, files: {} }
+  return { elements: [], appState: { theme: 'dark', viewBackgroundColor: CANVAS_BG }, files: {} }
 }
 
 function parseScene(raw: unknown): Scene {
@@ -79,7 +64,7 @@ function parseScene(raw: unknown): Scene {
   const appState = o.appState && typeof o.appState === 'object' ? { ...o.appState } : {}
   const elements = Array.isArray(o.elements) ? o.elements : []
   appState.theme = 'dark'
-  appState.viewBackgroundColor = resolveCanvas(appState.viewBackgroundColor, elements.length === 0)
+  appState.viewBackgroundColor = resolveCanvas(appState.viewBackgroundColor)
   return {
     elements,
     appState,
@@ -195,7 +180,6 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSaved = useRef('')
   const live = useRef<Scene | null>(null)
-  const boot = useRef(true)
   const expandedRef = useRef(expanded)
   expandedRef.current = expanded
 
@@ -204,11 +188,9 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
     if (!api) return
     requestAnimationFrame(() => {
       if (apiRef.current !== api) return
-      const current = live.current
-      const empty = !(current?.elements && current.elements.length)
-      if (api.updateScene && (empty || isLightCanvas(current?.appState?.viewBackgroundColor))) {
-        api.updateScene({ appState: { theme: 'dark', viewBackgroundColor: appCanvasColor() } })
-      }
+      api.updateScene?.({
+        appState: { theme: 'dark', viewBackgroundColor: resolveCanvas(live.current?.appState?.viewBackgroundColor) },
+      })
       fitView(api)
     })
   }, [])
@@ -223,7 +205,6 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
       if (gone) return
       lastSaved.current = JSON.stringify(next)
       live.current = next
-      boot.current = true
       setScene(next)
     })
     return () => {
@@ -249,18 +230,13 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
 
   const onChange = useCallback((elements: unknown[], appState: Record<string, unknown>, files: Record<string, unknown>) => {
     if (!file) return
-    const forceAppCanvas = boot.current
-    boot.current = false
     const next: Scene = {
       elements,
       appState: {
         ...appState,
         collaborators: undefined,
         theme: 'dark',
-        viewBackgroundColor: resolveCanvas(
-          appState.viewBackgroundColor,
-          forceAppCanvas || !elements.length,
-        ),
+        viewBackgroundColor: resolveCanvas(appState.viewBackgroundColor),
       },
       files,
     }
@@ -295,10 +271,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
           appState: {
             ...start.appState,
             theme: 'dark',
-            viewBackgroundColor: resolveCanvas(
-              start.appState?.viewBackgroundColor,
-              !(start.elements && start.elements.length),
-            ),
+            viewBackgroundColor: resolveCanvas(start.appState?.viewBackgroundColor),
             collaborators: new Map(),
           },
           files: start.files as never,
