@@ -2288,6 +2288,17 @@ body {
   color: var(--dsw-sidebar-fg-active);
 }
 
+.project-chip.project-chip-clear-ctx {
+  border: 0;
+  background: color-mix(in srgb, #e255a1 22%, transparent);
+  color: #e255a1;
+}
+
+.project-chip.project-chip-clear-ctx:hover:not(:disabled) {
+  color: #e255a1;
+  background: color-mix(in srgb, #e255a1 34%, transparent);
+}
+
 .project-chip:disabled,
 .project-chip.is-busy {
   opacity: 0.55;
@@ -4415,10 +4426,12 @@ body {
 .composer-pill {
   position: relative;
   width: 100%;
-  border: 1px solid var(--dsw-bubble);
+  border: 0;
   border-radius: 999px;
-  background: var(--dsw-sidebar);
-  box-shadow: none;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 1px 2px rgba(15, 15, 15, 0.04), 0 10px 32px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
   transition: border-radius 0.12s ease;
 }
 
@@ -4458,16 +4471,16 @@ body {
   width: 28px;
   height: 28px;
   margin: 0;
-  border: 0;
+  border: 1px solid var(--dsw-border);
   border-radius: 999px;
-  background: color-mix(in srgb, #e255a1 22%, transparent);
-  color: #e255a1;
+  background: transparent;
+  color: var(--dsw-sidebar-fg);
   cursor: pointer;
 }
 
 .composer-plus:hover {
-  color: #e255a1;
-  background: color-mix(in srgb, #e255a1 34%, transparent);
+  color: var(--dsw-sidebar-fg-active);
+  background: var(--dsw-hover);
 }
 
 .composer-editor {

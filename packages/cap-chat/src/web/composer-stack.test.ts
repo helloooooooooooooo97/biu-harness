@@ -61,6 +61,11 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\.chat-pane-embed\s*\{[^}]*background:\s*#191919/s)
     expect(css).not.toMatch(/\.chat-overlay-panel\.is-autohide/)
     expect(css).toMatch(/\.composer-pill/)
+    expect(css).toMatch(
+      /\.composer-pill\s*\{[^}]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.1\)/s,
+    )
+    expect(css).toMatch(/\.composer-pill\s*\{[^}]*backdrop-filter:\s*blur\(16px\) saturate\(1\.2\)/s)
+    expect(css).not.toMatch(/\.composer-pill\s*\{[^}]*background:\s*var\(--dsw-sidebar\)/s)
   })
 
   it('squares the composer when pick chips are present', () => {
@@ -70,12 +75,17 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\.composer-pill\.has-chips[\s\S]*border-radius:\s*var\(--dsw-radius-bubble\)/)
   })
 
-  it('uses SuperTag tones for pick chips and the composer plus', () => {
+  it('uses SuperTag tones for pick chips and the clear-context control, not the plus', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const chip = readFileSync(resolve(root, 'packages/cap-pick/src/web/chip.tsx'), 'utf8')
     const node = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer-pick-node.tsx'), 'utf8')
-    expect(css).toMatch(/\.composer-plus\s*\{[^}]*background:\s*color-mix\(in srgb, #e255a1 22%, transparent\)/s)
-    expect(css).toMatch(/\.composer-plus\s*\{[^}]*color:\s*#e255a1/s)
+    const approvals = readFileSync(resolve(root, 'packages/cap-chat/src/web/approvals.tsx'), 'utf8')
+    expect(css).toMatch(/\.project-chip\.project-chip-clear-ctx\s*\{[^}]*background:\s*color-mix\(in srgb, #e255a1 22%, transparent\)/s)
+    expect(css).toMatch(/\.project-chip\.project-chip-clear-ctx\s*\{[^}]*color:\s*#e255a1/s)
+    expect(css).toMatch(/\.composer-plus\s*\{[^}]*background:\s*transparent/s)
+    expect(css).toMatch(/\.composer-plus\s*\{[^}]*color:\s*var\(--dsw-sidebar-fg\)/s)
+    expect(css).not.toMatch(/\.composer-plus\s*\{[^}]*color:\s*#e255a1/s)
+    expect(approvals).toMatch(/project-chip-clear-ctx/)
     expect(css).toMatch(/\.composer-tool-chip\.is-pick,\s*\n\.user-pick-chip\s*\{[^}]*--biu-tag/s)
     expect(chip).toMatch(/pickKindTone/)
     expect(chip).toMatch(/tagTone\(kind\)/)

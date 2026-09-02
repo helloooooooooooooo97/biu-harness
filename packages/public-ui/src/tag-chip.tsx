@@ -13,7 +13,7 @@ const CSS = `
 `
 
 export const TAG_TONES = ['#5b9fd6', '#9a6dd7', '#d9730d', '#448361', '#c4554d', '#e255a1', '#c2920a', '#787774'] as const
-/** SuperTag 色板里的玫红，给输入框左侧加号等固定控件用。 */
+/** SuperTag 色板里的玫红，给清空上下文等固定控件用。 */
 export const TAG_TONE_ROSE = '#e255a1' as const
 export const TAG_TONE_GREEN = '#448361' as const
 export const TAG_TONE_RED = '#c4554d' as const

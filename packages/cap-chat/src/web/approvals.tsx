@@ -295,7 +295,7 @@ export function ApprovalsRail(props: SlotProps) {
             type="button"
             disabled={!sessionId || clearBusy}
             aria-label="清空上下文"
-            className="project-chip project-chip-icon-only relative"
+            className="project-chip project-chip-icon-only project-chip-clear-ctx relative"
             data-dock-tip={
               histRatio != null
                 ? `清空上下文 · 上下文占输入文字 ${Math.round(histRatio * 100)}%`
