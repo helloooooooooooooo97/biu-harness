@@ -91,6 +91,8 @@ describe('composer dock stacking above sticky user', () => {
     expect(approvals).toContain('上下文占输入文字')
     expect(approvals).not.toMatch(/清空上下文 · 历史/)
     expect(approvals).not.toMatch(/backgroundColor/)
+    expect(approvals).not.toMatch(/<ChatLiveMetrics/)
+    expect(approvals).toMatch(/aria-label="清空上下文"[\s\S]*renderSlot\('header-tools'\)/)
   })
 
   it('paints inspector trajectory and usage on the same sidebar token as the left rail', () => {

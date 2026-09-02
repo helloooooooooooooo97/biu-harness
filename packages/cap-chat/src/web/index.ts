@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import type { Context } from 'cordis'
-import { SignalIcon, MapIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/react/16/solid'
+import { SignalIcon, MapIcon } from '@heroicons/react/16/solid'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import type { SlotProps } from '@biu/web-slots'
 import { ApprovalsRail } from './approvals.tsx'
@@ -13,12 +13,11 @@ import { TrajectoryView } from './trajectory.tsx'
 import { UsagePanel } from './usage-panel.tsx'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
 import type { PickService } from '@biu/cap-pick/web'
-import { getChatOverlay, subscribeChatOverlay, setChatOverlay, closeChatOverlay, requestOverlayFocus } from '@biu/web-app-shell/chat-overlay'
 import type { DatabaseUi } from '@biu/type-file-system/ui'
 import { sessionsChrome } from './sessions-chrome.tsx'
 
 export const name = 'chat-ui'
-export const inject = ['slots', 'sessionView', 'projectView', 'dock']
+export const inject = ['slots', 'sessionView', 'projectView']
 
 function InspectorTrajectory(props: SlotProps) {
   return createElement(
@@ -86,28 +85,6 @@ export function apply(ctx: Context) {
       centerKinds: ['session'],
     }),
   })
-  ctx.dock.register({
-    id: 'composer',
-    title: '对话',
-    kind: 'composer',
-    group: 'tools',
-    order: 30,
-    Icon: () => createElement(ChatBubbleBottomCenterTextIcon, { className: 'size-5' }),
-    onOpen: () => {
-      if (getChatOverlay()) {
-        closeChatOverlay()
-        return
-      }
-      setChatOverlay(true)
-      requestOverlayFocus()
-    },
-  })
-  ctx.effect(() =>
-    subscribeChatOverlay(() => {
-      const open = getChatOverlay()
-      ctx.dock.patch('composer', { running: open, focused: open, minimized: false })
-    }),
-  )
   ctx.inject(['databaseUi'], (inner) => {
     const ui = inner.get('databaseUi') as DatabaseUi
     return ui.decorate('/sessions', sessionsChrome).dispose

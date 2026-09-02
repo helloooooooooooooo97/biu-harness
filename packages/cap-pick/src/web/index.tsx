@@ -1,7 +1,7 @@
 import type { Context } from 'cordis'
 import type { SlotsService } from '@biu/web-slots'
 import { CursorArrowRaysIcon } from '@heroicons/react/16/solid'
-import { PickService } from './service.ts'
+import { PickService, getPick, usePickState } from './service.ts'
 import { PickOverlay } from './overlay.tsx'
 
 export { PickService, usePickState } from './service.ts'
@@ -10,38 +10,37 @@ export { PickChipLabel, PickKindGlyph, pickKindIcon } from './chip.tsx'
 export { resolvePickFromNode, resolvePickAtPoint, resolvePicksInRect, visiblePickBox } from './resolve.ts'
 
 export const name = 'pick-ui'
-export const inject = ['slots', 'dock']
+export const inject = ['slots']
 
-function PickDockIcon() {
-  return <CursorArrowRaysIcon className="size-5" />
+function PickToggle() {
+  const pick = getPick()
+  const state = usePickState(pick)
+  return (
+    <button
+      type="button"
+      className="project-chip project-chip-icon-only relative"
+      aria-pressed={state.picking}
+      aria-label="选取"
+      data-dock-tip="选取"
+      data-testid="pick-toggle"
+      onClick={() => pick?.toggle()}
+    >
+      <CursorArrowRaysIcon className="size-4" aria-hidden />
+    </button>
+  )
 }
 
 export function apply(ctx: Context) {
-  const pick = new PickService(ctx)
+  new PickService(ctx)
   const slots = ctx.slots as SlotsService
   slots.place('root-overlays', PickOverlay, {
     key: 'pick-overlay',
     order: 10,
   })
-  ctx.dock.register({
-    id: 'pick',
-    title: '选取',
-    kind: 'tool',
-    group: 'tools',
-    order: 31,
-    Icon: PickDockIcon,
-    onOpen: () => pick.toggle(),
+  slots.place('header-tools', PickToggle, {
+    key: 'pick-toggle',
+    order: 10,
   })
-  ctx.effect(() =>
-    pick.subscribe(() => {
-      ctx.dock.patch('pick', { running: pick.picking, focused: pick.picking })
-    }),
-  )
-  ctx.effect(() =>
-    ctx.dock.subscribe(() => {
-      if (!ctx.dock.list().some((app) => app.id === 'pick') && pick.picking) pick.exit()
-    }),
-  )
 }
 
 declare module 'cordis' {

@@ -13,7 +13,6 @@ import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type ChatNode, type DispatchedTaskRow, type SessionViewService } from '@biu/web-session-view'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { SessionProjectPanel } from './project-panel.tsx'
-import { ChatLiveMetrics } from './live-hud.tsx'
 
 type AgentMode = 'minimal' | 'standard' | 'create'
 
@@ -292,7 +291,6 @@ export function ApprovalsRail(props: SlotProps) {
         aria-label="Session controls"
       >
         <div className="chat-dock-toolbar-start flex min-w-0 items-center gap-1">
-          {props.renderSlot('header-tools')}
           <button
             type="button"
             disabled={!sessionId || clearBusy}
@@ -312,6 +310,7 @@ export function ApprovalsRail(props: SlotProps) {
             ) : null}
             <PaintBrushIcon className="size-4 relative z-1" aria-hidden />
           </button>
+          {props.renderSlot('header-tools')}
             {visibleWorkers.length ? (
             <span className="dock-agent-stack" data-testid="dock-agent-stack">
               {visibleWorkers.map((worker, index) => {
@@ -349,7 +348,6 @@ export function ApprovalsRail(props: SlotProps) {
             </span>
           ) : null}
         </div>
-        <ChatLiveMetrics useSessionView={useSessionView} />
         <div className="chat-dock-toolbar-end flex shrink-0 items-center justify-end gap-1">
           <SessionProjectPanel {...props} />
           <DockIconMenu

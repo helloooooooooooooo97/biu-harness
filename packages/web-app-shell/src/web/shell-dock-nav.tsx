@@ -155,10 +155,8 @@ export function ShellDockNav({
   }, [dock, moduleKey, activeId, modules])
 
   useEffect(() => {
-    const showComposer = activeId !== 'agent'
-    dock.patch('composer', { visible: showComposer })
-    if (!showComposer) setChatOverlay(false)
-  }, [dock, activeId])
+    if (activeId === 'agent') setChatOverlay(false)
+  }, [activeId])
 
   useEffect(() => {
     const offs = INSPECTOR_DOCK_TOOLS.map((item) => {
