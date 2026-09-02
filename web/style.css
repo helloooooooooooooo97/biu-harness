@@ -879,6 +879,41 @@ body {
   padding: 28px 20px 40px;
 }
 
+.inspector-stage {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.inspector-stage-pane {
+  grid-area: 1 / 1;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 220ms;
+}
+
+.inspector-stage-pane.is-active {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  visibility: visible;
+  z-index: 1;
+  transition-delay: 0s;
+}
+
 .inspector-empty-list {
   display: flex;
   width: min(100%, 240px);
@@ -1107,7 +1142,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .app-shell-agent,
-  .app-shell-module {
+  .app-shell-module,
+  .inspector-stage-pane {
     transition: none;
   }
 }

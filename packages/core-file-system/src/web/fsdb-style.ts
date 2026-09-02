@@ -40,8 +40,10 @@ const CSS = `
 .fsdb-page.is-full-width .fsdb-main,.fsdb-page.is-full-width .fsdb-detail-main{max-width:none}
 .fsdb-page:not(.inspector-database-page) .fsdb-main{padding-bottom:var(--brand-corner-clearance,60px)}
 .inspector-database-page .fsdb-main{padding-bottom:0}
-.fsdb-agent-follow{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden}
+.fsdb-agent-follow{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:hidden;animation:fsdb-inspector-in 220ms cubic-bezier(.22,1,.36,1)}
 .fsdb-agent-follow.is-working{box-shadow:inset 0 2px 0 #5b9fd6}
+@keyframes fsdb-inspector-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.fsdb-agent-follow{animation:none}}
 .fsdb-main > .fsdb-detail-title-row{flex:none}
 .fsdb-page .tasks-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;min-width:0}
 .fsdb-page .tasks-toolbar-left{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:0}
