@@ -305,7 +305,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
   )
 
   return (
-    <div style={{ overflow: 'hidden', background: 'var(--dsw-bg)' }}>
+    <div style={{ overflow: 'hidden', background: 'var(--dsw-bg)', borderRadius: 8 }}>
       <BoardBar
         file={file}
         expanded={expanded}
