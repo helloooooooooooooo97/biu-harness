@@ -1,5 +1,5 @@
 import type { CollectionInfo, CollectionSpec, DbRecord } from '@biu/type-file-system'
-import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
+import { normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 import { builtinAllView, isReadOnlyViewId } from '../catalog-views.ts'
 import type { SavedView } from '../web/saved-view.ts'
 import { isViewModeId } from '../web/fields.ts'
@@ -67,6 +67,10 @@ export class SavedViewsStore {
         ...(patch.sortDir === 'asc' || patch.sortDir === 'desc' ? { sortDir: patch.sortDir } : {}),
         ...(typeof patch.query === 'string' ? { query: patch.query } : {}),
         ...(typeof patch.groupBy === 'string' ? { groupBy: patch.groupBy } : {}),
+        ...('emoji' in patch ? { emoji: String(patch.emoji ?? '') } : {}),
+        ...('schema' in patch ? { schema: normalizeSchemaValue(patch.schema) } : {}),
+        updatedAt: Date.now(),
+        createdAt: Number((cur as { createdAt?: number }).createdAt) || Date.now(),
       }
       views[idx] = next
       return asRecord(path, path, next)
@@ -103,6 +107,7 @@ function asRecord(path: string, tableName: string, view: StoredView): DbRecord {
     pageSize: Number(view.pageSize) || 50,
     columns: Array.isArray(view.columns) ? view.columns.map(String) : [],
     filters: JSON.stringify(filters),
+    ...recordBuiltinValues(view as Record<string, unknown>),
   }
 }
 

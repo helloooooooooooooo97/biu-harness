@@ -1,5 +1,5 @@
 import type { CollectionInfo, CollectionListQuery, CollectionSpec, DbRecord } from '@biu/type-file-system'
-import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
+import { recordBuiltinValues, REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 import { SchemaTagsStore, slugSuperTagId } from './schema-tags.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
@@ -40,6 +40,7 @@ export function superTagsCollection(
     title: label,
     fieldCount: fields.length,
     stampCount,
+    ...recordBuiltinValues(),
   })
 
   const tableLabel = (path: string) => {
@@ -62,6 +63,7 @@ export function superTagsCollection(
       tablePath: item.collection,
       sourceId: item.id,
       tag: id,
+      ...recordBuiltinValues(),
     }))
   }
 

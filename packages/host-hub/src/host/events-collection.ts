@@ -1,5 +1,5 @@
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
-import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
+import { recordBuiltinValues, REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 
 export type HubEventRow = {
   id: string
@@ -29,6 +29,7 @@ export function eventsCollection(hub: HubLike): CollectionSpec {
     mode: row.mode,
     name: row.name,
     args: stringifyArgs(row.args),
+    ...recordBuiltinValues({ createdAt: row.ts, updatedAt: row.ts }),
   })
   const list = () => hub.listEvents().map(asRecord)
   return {

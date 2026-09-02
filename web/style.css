@@ -1100,7 +1100,11 @@ body {
   overflow: visible;
   box-sizing: border-box;
   padding-bottom: var(--brand-corner-clearance);
-  background: #202020;
+  background: #191919;
+}
+
+.session-inspector .app-side-bar-head {
+  background: #191919;
 }
 
 .app-shell-agent.is-chat-overlay .session-inspector {

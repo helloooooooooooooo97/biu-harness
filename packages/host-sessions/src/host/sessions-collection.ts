@@ -1,5 +1,5 @@
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
-import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
+import { recordBuiltinValues, REQUIRED_RECORD_FIELDS, normalizeSchemaValue } from '@biu/type-file-system'
 import {
   isSessionCompactPoint,
   nameFromSessionMascot,
@@ -42,12 +42,17 @@ function asRecord(row: SessionSummary): DbRecord {
     tags: Array.isArray(row.config?.tags) ? row.config.tags.map(String) : [],
     eventCount: row.eventCount,
     project: row.project?.name ?? '',
-    updatedAt: row.updatedAt,
     mascot,
     mascotName: nameFromSessionMascot(mascot),
     mascotShape: mascot.shape,
     mascotColor: mascot.color,
     mascotEye: mascot.eye,
+    ...recordBuiltinValues({
+      createdAt: row.config?.createdAt,
+      updatedAt: row.updatedAt,
+      emoji: row.config?.emoji,
+      schema: row.config?.schema,
+    }),
   }
 }
 
@@ -155,6 +160,9 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       const config: SessionConfig = {}
       if (typeof patch.pinned === 'boolean') config.pinned = patch.pinned
       if (Array.isArray(patch.tags)) config.tags = patch.tags.map((item) => String(item))
+      if ('emoji' in patch) config.emoji = String(patch.emoji ?? '')
+      if ('schema' in patch) config.schema = normalizeSchemaValue(patch.schema)
+      if (typeof patch.createdAt === 'number') config.createdAt = patch.createdAt
       if (Object.keys(config).length) await sessions.patchConfig(id, config)
       const next = (await list()).find((row) => row.id === id)
       if (!next) throw new Error(`unknown session: ${id}`)

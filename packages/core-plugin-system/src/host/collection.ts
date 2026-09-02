@@ -1,5 +1,5 @@
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
-import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
+import { recordBuiltinValues, REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 import {
   createArgs,
   PLUGIN_CREATE_DESCRIPTION,
@@ -20,7 +20,7 @@ function omitEmpty(row: DbRecord): DbRecord {
     if (Array.isArray(value) && value.length === 0) continue
     next[key] = value
   }
-  return next
+  return { ...next, ...recordBuiltinValues(row) }
 }
 
 function asInstalledRecord(row: StoreListing): DbRecord {

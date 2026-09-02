@@ -52,6 +52,7 @@ export type PageRow = DbRecord & {
   score: number
   parentId: string | null
   schema: SchemaFieldValue
+  emoji: string
   createdAt: number
   updatedAt: number
 }
@@ -175,6 +176,7 @@ function matterOf(row: PageRow): Record<string, unknown> {
     score: row.score,
     parentId: row.parentId,
     schema: row.schema,
+    emoji: row.emoji,
     createdAt: new Date(row.createdAt).toISOString(),
     updatedAt: new Date(row.updatedAt).toISOString(),
   }
@@ -208,6 +210,7 @@ function rowFromFile(id: string, raw: string): PageRow {
     score: Number(matter.score) || 0,
     parentId: matter.parentId == null || matter.parentId === '' ? null : String(matter.parentId),
     schema: normalizeSchemaValue(matter.schema),
+    emoji: String(matter.emoji ?? ''),
     createdAt,
     updatedAt,
   }
@@ -232,6 +235,7 @@ function emptyRow(id: string, ts: number): PageRow {
     score: 0,
     parentId: null,
     schema: emptySchemaValue(),
+    emoji: '',
     createdAt: ts,
     updatedAt: ts,
   }
@@ -259,6 +263,7 @@ function applyPatch(current: PageRow, patch: Record<string, unknown>): PageRow {
       ? patch.parentId == null || patch.parentId === '' ? null : String(patch.parentId)
       : current.parentId,
     schema: 'schema' in patch ? normalizeSchemaValue(patch.schema) : current.schema,
+    emoji: 'emoji' in patch ? String(patch.emoji ?? '') : current.emoji,
     score: current.score,
     createdAt: current.createdAt,
     updatedAt: Date.now(),

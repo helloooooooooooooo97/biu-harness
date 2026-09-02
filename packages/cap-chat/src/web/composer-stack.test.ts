@@ -103,7 +103,8 @@ describe('composer dock stacking above sticky user', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     expect(css).toMatch(/\.traj-root\s*\{[^}]*background:\s*var\(--dsw-sidebar\)/s)
     expect(css).toMatch(/\[data-testid='session-inspector'\] \.usage-panel\s*\{[^}]*background:\s*var\(--dsw-sidebar\)/s)
-    expect(css).toMatch(/\.session-inspector\s*\{[^}]*background:\s*#202020/s)
+    expect(css).toMatch(/\.session-inspector\s*\{[^}]*background:\s*#191919/s)
+    expect(css).toMatch(/\.session-inspector \.app-side-bar-head\s*\{[^}]*background:\s*#191919/s)
     expect(css).toMatch(/\[data-testid='session-inspector'\] \.traj-root[\s\S]*background:\s*var\(--dsw-sidebar\)/)
   })
 

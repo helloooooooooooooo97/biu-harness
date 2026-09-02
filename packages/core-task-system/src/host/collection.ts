@@ -1,5 +1,5 @@
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
-import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
+import { recordBuiltinValues, REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 
 type Actor = {
   name?: string
@@ -129,6 +129,7 @@ function taskRecord(row: TaskRow, lookup: (id: string) => TaskRow | undefined, u
     nextTriggerAt: row.nextTriggerAt ?? null,
     createdAt: row.createdAt ?? 0,
     updatedAt: row.updatedAt ?? 0,
+    ...recordBuiltinValues(row),
   }
 }
 

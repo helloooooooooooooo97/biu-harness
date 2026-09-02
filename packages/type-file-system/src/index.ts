@@ -198,6 +198,19 @@ export function normalizeSchemaValue(raw: unknown): SchemaFieldValue {
   return { tags, values }
 }
 
+export function recordBuiltinValues(row: Record<string, unknown> = {}) {
+  const createdAt = Number(row.createdAt)
+  const updatedAt = Number(row.updatedAt)
+  const created = Number.isFinite(createdAt) && createdAt > 0 ? createdAt : 0
+  const updated = Number.isFinite(updatedAt) && updatedAt > 0 ? updatedAt : created
+  return {
+    createdAt: created,
+    updatedAt: updated,
+    emoji: String(row.emoji ?? ''),
+    schema: normalizeSchemaValue(row.schema),
+  }
+}
+
 /** 全文检索：Tag id、显示名、以及包内已填的值。 */
 export function schemaSearchHaystack(raw: unknown, packs: CollectionSchemaPack[] = []): string {
   const parsed = normalizeSchemaValue(raw)

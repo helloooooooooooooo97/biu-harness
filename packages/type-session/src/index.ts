@@ -84,6 +84,11 @@ export interface SessionConfig {
   tags?: string[]
   /** 侧栏置顶 */
   pinned?: boolean
+  /** 记录图标 */
+  emoji?: string
+  /** SuperTag */
+  schema?: { tags: string[]; values: Record<string, Record<string, unknown>> }
+  createdAt?: number
 }
 
 export function normalizeSessionConfig(value: unknown): SessionConfig | undefined {
@@ -102,6 +107,19 @@ export function normalizeSessionConfig(value: unknown): SessionConfig | undefine
     next.tags = [...new Set(raw.tags.map((name) => String(name).trim()).filter(Boolean))].slice(0, 24)
   }
   if (typeof raw.pinned === 'boolean') next.pinned = raw.pinned
+  if (typeof raw.emoji === 'string') next.emoji = raw.emoji
+  if (typeof raw.createdAt === 'number' && Number.isFinite(raw.createdAt) && raw.createdAt > 0) next.createdAt = raw.createdAt
+  if (raw.schema && typeof raw.schema === 'object' && !Array.isArray(raw.schema)) {
+    const rec = raw.schema as Record<string, unknown>
+    const tags = Array.isArray(rec.tags) ? [...new Set(rec.tags.map((item) => String(item).trim()).filter(Boolean))] : []
+    const values: Record<string, Record<string, unknown>> = {}
+    if (rec.values && typeof rec.values === 'object' && !Array.isArray(rec.values)) {
+      for (const [key, bag] of Object.entries(rec.values as Record<string, unknown>)) {
+        if (bag && typeof bag === 'object' && !Array.isArray(bag)) values[key] = { ...bag }
+      }
+    }
+    next.schema = { tags, values }
+  }
   return Object.keys(next).length ? next : undefined
 }
 
@@ -135,6 +153,17 @@ export function mergeSessionConfig(
   if (typeof patch.pinned === 'boolean') {
     if (patch.pinned) next.pinned = true
     else delete next.pinned
+  }
+  if ('emoji' in patch) {
+    if (patch.emoji == null || !String(patch.emoji)) delete next.emoji
+    else next.emoji = String(patch.emoji)
+  }
+  if ('schema' in patch) {
+    if (patch.schema == null) delete next.schema
+    else next.schema = patch.schema
+  }
+  if (typeof patch.createdAt === 'number' && Number.isFinite(patch.createdAt) && patch.createdAt > 0) {
+    next.createdAt = patch.createdAt
   }
   return Object.keys(next).length ? next : undefined
 }
