@@ -28,15 +28,29 @@ type DrawApi = {
   scrollToContent?: (target?: unknown, opts?: { fitToContent?: boolean; animate?: boolean }) => void
 }
 
-const DARK_BG = '#121212'
+function appCanvasColor() {
+  const fromCss =
+    typeof document === 'undefined' ? '' : getComputedStyle(document.documentElement).getPropertyValue('--dsw-bg').trim()
+  return fromCss || '#191919'
+}
 
 function isLightCanvas(color: unknown) {
   const value = String(color ?? '').trim().toLowerCase()
   return !value || value === '#fff' || value === '#ffffff' || value === 'white' || value === 'rgb(255, 255, 255)'
 }
 
+function isStockDarkCanvas(color: unknown) {
+  return String(color ?? '').trim().toLowerCase() === '#121212'
+}
+
+function resolveCanvas(color: unknown, empty: boolean) {
+  if (isStockDarkCanvas(color) || !String(color ?? '').trim()) return appCanvasColor()
+  if (empty && isLightCanvas(color)) return appCanvasColor()
+  return String(color)
+}
+
 function emptyScene(): Scene {
-  return { elements: [], appState: { theme: 'dark', viewBackgroundColor: DARK_BG }, files: {} }
+  return { elements: [], appState: { theme: 'dark', viewBackgroundColor: appCanvasColor() }, files: {} }
 }
 
 function parseScene(raw: unknown): Scene {
@@ -45,8 +59,7 @@ function parseScene(raw: unknown): Scene {
   const appState = o.appState && typeof o.appState === 'object' ? { ...o.appState } : {}
   const elements = Array.isArray(o.elements) ? o.elements : []
   appState.theme = 'dark'
-  if (isLightCanvas(appState.viewBackgroundColor) && elements.length === 0) appState.viewBackgroundColor = DARK_BG
-  else if (!appState.viewBackgroundColor) appState.viewBackgroundColor = DARK_BG
+  appState.viewBackgroundColor = resolveCanvas(appState.viewBackgroundColor, elements.length === 0)
   return {
     elements,
     appState,
@@ -207,7 +220,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
 
   const onChange = useCallback((elements: unknown[], appState: Record<string, unknown>, files: Record<string, unknown>) => {
     if (!file) return
-    const forceDarkCanvas = boot.current
+    const forceAppCanvas = boot.current
     boot.current = false
     const next: Scene = {
       elements,
@@ -215,8 +228,10 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
         ...appState,
         collaborators: undefined,
         theme: 'dark',
-        viewBackgroundColor:
-          forceDarkCanvas && isLightCanvas(appState.viewBackgroundColor) ? DARK_BG : appState.viewBackgroundColor || DARK_BG,
+        viewBackgroundColor: resolveCanvas(
+          appState.viewBackgroundColor,
+          forceAppCanvas || !elements.length,
+        ),
       },
       files,
     }
@@ -251,10 +266,10 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
           appState: {
             ...start.appState,
             theme: 'dark',
-            viewBackgroundColor:
-              isLightCanvas(start.appState?.viewBackgroundColor) && !(start.elements && start.elements.length)
-                ? DARK_BG
-                : start.appState?.viewBackgroundColor || DARK_BG,
+            viewBackgroundColor: resolveCanvas(
+              start.appState?.viewBackgroundColor,
+              !(start.elements && start.elements.length),
+            ),
             collaborators: new Map(),
           },
           files: start.files as never,
@@ -280,7 +295,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
       <div className="h-[280px]">{expanded ? null : canvas}</div>
       {expanded
         ? createPortal(
-            <div className="fixed inset-0 flex flex-col bg-[#121212]" style={{ zIndex: 9990 }}>
+            <div className="fixed inset-0 flex flex-col bg-[var(--dsw-bg,#191919)]" style={{ zIndex: 9990 }}>
               <BoardBar
                 file={file}
                 expanded={expanded}

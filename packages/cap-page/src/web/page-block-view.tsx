@@ -11,7 +11,7 @@ async function copyPageAsset(from: string, to: string) {
   const src = assetName(from)
   const dest = assetName(to)
   const res = await fetch(`/api/page/file/${encodeURIComponent(src)}`)
-  let payload: unknown = { elements: [], appState: { theme: 'dark', viewBackgroundColor: '#121212' }, files: {} }
+  let payload: unknown = { elements: [], appState: { theme: 'dark' }, files: {} }
   if (res.ok) {
     try {
       payload = JSON.parse(await res.text())

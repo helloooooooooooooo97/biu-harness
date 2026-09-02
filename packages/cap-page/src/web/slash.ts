@@ -1,3 +1,4 @@
+import { flip, shift, size } from '@floating-ui/dom'
 import { Extension } from '@tiptap/core'
 import type { Editor, Range } from '@tiptap/core'
 import { ReactRenderer } from '@tiptap/react'
@@ -220,7 +221,26 @@ export const slashCommand = Extension.create({
         command: ({ editor, range, props }) => {
           props.command({ editor, range })
         },
-        floatingUi: { strategy: 'fixed' },
+        placement: 'bottom-start',
+        flip: false,
+        floatingUi: {
+          strategy: 'fixed',
+          middleware: [
+            flip({
+              padding: 8,
+              fallbackPlacements: ['top-start', 'top-end', 'bottom-end'],
+            }),
+            shift({ padding: 8 }),
+            size({
+              padding: 8,
+              apply({ availableHeight, elements }) {
+                Object.assign(elements.floating.style, {
+                  maxHeight: `${Math.max(160, availableHeight)}px`,
+                })
+              },
+            }),
+          ],
+        },
         render: renderSlash,
       } satisfies Partial<SuggestionOptions<SlashItem, SlashItem>>,
     }
