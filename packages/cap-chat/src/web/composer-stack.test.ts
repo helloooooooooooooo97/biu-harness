@@ -70,6 +70,18 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\.composer-pill\.has-chips[\s\S]*border-radius:\s*var\(--dsw-radius-bubble\)/)
   })
 
+  it('uses SuperTag tones for pick chips and the composer plus', () => {
+    const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
+    const chip = readFileSync(resolve(root, 'packages/cap-pick/src/web/chip.tsx'), 'utf8')
+    const node = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer-pick-node.tsx'), 'utf8')
+    expect(css).toMatch(/\.composer-plus\s*\{[^}]*background:\s*color-mix\(in srgb, #e255a1 22%, transparent\)/s)
+    expect(css).toMatch(/\.composer-plus\s*\{[^}]*color:\s*#e255a1/s)
+    expect(css).toMatch(/\.composer-tool-chip\.is-pick,\s*\n\.user-pick-chip\s*\{[^}]*--biu-tag/s)
+    expect(chip).toMatch(/pickKindTone/)
+    expect(chip).toMatch(/tagTone\(kind\)/)
+    expect(node).toMatch(/<PickChip pick=/)
+  })
+
   it('uses the specified chrome palette and pick highlight', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     expect(css).toMatch(/--dsw-bg:\s*#191919/)
@@ -115,7 +127,7 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\.composer-inline-chip\s*\{[^}]*align-items:\s*center/s)
     expect(css).toMatch(/\.composer-inline-chip\s*\{[^}]*vertical-align:\s*middle/s)
     expect(css).toMatch(/\.composer-inline-chip\s*\{[^}]*line-height:\s*1/s)
-    expect(css).toMatch(/\.composer-tool-chip\.is-pick,\s*\n\.user-pick-chip\s*\{[^}]*line-height:\s*1/s)
+    expect(css).toMatch(/\.composer-tool-chip\.is-pick,\s*\n\.user-pick-chip\s*\{[^}]*line-height:\s*20px/s)
     expect(css).toMatch(/\.pick-kind-icon\s*\{[^}]*display:\s*block/s)
     expect(css).toMatch(
       /\.composer-pill\.has-chips \.composer-tiptap p,\s*\n\.composer-tiptap\.is-readonly p \{\s*line-height:\s*1\.45/,

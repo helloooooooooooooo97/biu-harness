@@ -16,4 +16,6 @@ test('TagChip ships the tinted chip markup', () => {
   assert.match(src, /className=\{\`biu-tag/)
   assert.match(src, /color-mix\(in srgb,var\(--biu-tag/)
   assert.match(src, /function TagChips/)
+  assert.match(src, /TAG_TONE_ROSE/)
+  assert.equal(TAG_TONES.includes('#e255a1' as (typeof TAG_TONES)[number]), true)
 })

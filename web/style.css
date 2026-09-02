@@ -4452,16 +4452,16 @@ body {
   width: 28px;
   height: 28px;
   margin: 0;
-  border: 1px solid var(--dsw-border);
+  border: 0;
   border-radius: 999px;
-  background: transparent;
-  color: var(--dsw-sidebar-fg);
+  background: color-mix(in srgb, #e255a1 22%, transparent);
+  color: #e255a1;
   cursor: pointer;
 }
 
 .composer-plus:hover {
-  color: var(--dsw-sidebar-fg-active);
-  background: var(--dsw-hover);
+  color: #e255a1;
+  background: color-mix(in srgb, #e255a1 34%, transparent);
 }
 
 .composer-editor {
@@ -4966,20 +4966,21 @@ body {
 .user-pick-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   box-sizing: border-box;
   max-width: 100%;
   overflow: hidden;
+  height: 20px;
   border: 0;
-  border-radius: 6px;
-  background: var(--dsw-pick-fill);
-  padding: 3px 6px;
-  color: #b8c0de;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--biu-tag, #5b9fd6) 22%, transparent);
+  padding: 0 6px;
+  color: var(--biu-tag, #5b9fd6);
   font-family: var(--font-sans);
-  font-size: var(--dsw-chat-chip-font-size);
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  line-height: 1;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 20px;
   white-space: nowrap;
   vertical-align: middle;
 }
@@ -4998,8 +4999,7 @@ body {
 }
 
 .composer-tool-chip.is-pick:hover {
-  background: color-mix(in srgb, var(--dsw-pick) 28%, transparent);
-  color: #c5cee8;
+  background: color-mix(in srgb, var(--biu-tag, #5b9fd6) 34%, transparent);
 }
 
 .pick-kind-icon-wrap {
@@ -5022,7 +5022,7 @@ body {
 .user-pick-chip .pick-kind-icon {
   width: 12px;
   height: 12px;
-  color: color-mix(in srgb, #3bc9d9 48%, var(--dsw-label-3));
+  color: inherit;
 }
 
 .tool-artifacts {

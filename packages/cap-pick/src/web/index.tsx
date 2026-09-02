@@ -6,7 +6,7 @@ import { PickOverlay } from './overlay.tsx'
 
 export { PickService, usePickState } from './service.ts'
 export { formatPicks, formatPick, parsePicks, splitPickStream, dedupePicks, chipLabel, pickKey, pickPreview, pickDomAttrs, type PickRef } from './types.ts'
-export { PickChipLabel, PickKindGlyph, pickKindIcon } from './chip.tsx'
+export { PickChip, PickChipLabel, PickKindGlyph, pickKindIcon, pickKindTone } from './chip.tsx'
 export { resolvePickFromNode, resolvePickAtPoint, resolvePicksInRect, visiblePickBox } from './resolve.ts'
 
 export const name = 'pick-ui'

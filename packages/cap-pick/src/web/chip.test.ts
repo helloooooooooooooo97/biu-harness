@@ -1,7 +1,8 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import * as lu from '@heroicons/react/16/solid'
-import { pickKindIcon } from './chip.tsx'
+import { tagTone } from '@biu/public-ui'
+import { pickKindIcon, pickKindTone } from './chip.tsx'
 
 test('kind maps to distinct heroicons', () => {
   const needed = [
@@ -29,4 +30,10 @@ test('kind maps to distinct heroicons', () => {
   assert.notEqual(pickKindIcon('collection'), pickKindIcon('usage'))
   assert.equal(pickKindIcon('plugin'), lu.PuzzlePieceIcon)
   assert.equal(pickKindIcon('unknown'), lu.TagIcon)
+})
+
+test('pick kind maps to the SuperTag palette by string', () => {
+  assert.equal(pickKindTone('session'), tagTone('session'))
+  assert.equal(pickKindTone('task'), tagTone('task'))
+  assert.notEqual(pickKindTone('session'), pickKindTone('task'))
 })

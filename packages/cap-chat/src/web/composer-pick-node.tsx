@@ -1,6 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { createRoot, type Root } from 'react-dom/client'
-import { PickChipLabel, chipLabel, type PickRef } from '@biu/cap-pick/web'
+import { PickChip, type PickRef } from '@biu/cap-pick/web'
 
 function refFromAttrs(attrs: Record<string, unknown>): PickRef {
   const kind = String(attrs.kind ?? '')
@@ -12,16 +12,7 @@ function refFromAttrs(attrs: Record<string, unknown>): PickRef {
 }
 
 function PickChipView({ attrs }: { attrs: Record<string, unknown> }) {
-  const pick = refFromAttrs(attrs)
-  return (
-    <span
-      className="composer-tool-chip is-pick"
-      data-testid="user-pick-chip"
-      title={`${pick.kind} · ${chipLabel(pick)}`}
-    >
-      <PickChipLabel pick={pick} />
-    </span>
-  )
+  return <PickChip pick={refFromAttrs(attrs)} />
 }
 
 export const PickChipNode = Node.create({

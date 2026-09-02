@@ -13,8 +13,14 @@ import {
   WrenchScrewdriverIcon,
 } from '@heroicons/react/16/solid'
 import type { ComponentType } from 'react'
+import { ensureTagChipStyle, tagTone } from '@biu/public-ui'
 import type { PickRef } from './types.ts'
 import { chipLabel } from './types.ts'
+
+/** 采集点 kind 字符串映射到 SuperTag 色板。 */
+export function pickKindTone(kind: string) {
+  return tagTone(kind)
+}
 
 type Glyph = ComponentType<{ className?: string }>
 
@@ -49,5 +55,20 @@ export function PickChipLabel({ pick }: { pick: PickRef }) {
       <PickKindGlyph kind={pick.kind} />
       <span>{chipLabel(pick)}</span>
     </>
+  )
+}
+
+export function PickChip({ pick }: { pick: PickRef }) {
+  ensureTagChipStyle()
+  return (
+    <span
+      className="biu-tag composer-tool-chip is-pick"
+      data-testid="user-pick-chip"
+      data-pick-kind={pick.kind}
+      title={`${pick.kind} · ${chipLabel(pick)}`}
+      style={{ ['--biu-tag' as string]: pickKindTone(pick.kind) }}
+    >
+      <PickChipLabel pick={pick} />
+    </span>
   )
 }

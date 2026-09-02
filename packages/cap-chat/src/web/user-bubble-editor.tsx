@@ -1,5 +1,5 @@
 import { Fragment, memo, useMemo } from 'react'
-import { PickChipLabel, chipLabel, splitPickStream } from '@biu/cap-pick/web'
+import { PickChip, splitPickStream } from '@biu/cap-pick/web'
 
 /** 已发送用户消息：静态渲染，不挂 Tiptap，避免切回聊天时每条消息都新建编辑器。 */
 export const UserBubbleEditor = memo(function UserBubbleEditor({ text }: { text: string }) {
@@ -11,13 +11,7 @@ export const UserBubbleEditor = memo(function UserBubbleEditor({ text }: { text:
           const pick = part.ref
           return (
             <span key={`p${index}`} className="composer-inline-chip">
-              <span
-                className="composer-tool-chip is-pick"
-                data-testid="user-pick-chip"
-                title={`${pick.kind} · ${chipLabel(pick)}`}
-              >
-                <PickChipLabel pick={pick} />
-              </span>
+              <PickChip pick={pick} />
             </span>
           )
         }
