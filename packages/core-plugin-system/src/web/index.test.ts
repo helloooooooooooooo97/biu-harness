@@ -62,6 +62,16 @@ test('plugin system web passes name/tags/action chrome into databaseUi', async (
   assert.equal(typeof ui.last?.chrome.Action, 'function')
 })
 
+test('plugin title is the name only and tags use public-ui TagChip', async () => {
+  const { readFileSync } = await import('node:fs')
+  const { resolve } = await import('node:path')
+  const chrome = readFileSync(resolve(import.meta.dirname, './chrome.tsx'), 'utf8')
+  assert.match(chrome, /TagChip/)
+  assert.match(chrome, /TagChips/)
+  assert.doesNotMatch(chrome, /已装/)
+  assert.doesNotMatch(chrome, /rounded-full/)
+})
+
 test('plugin window sizes from manifest.shell instead of measuring DOM', async () => {
   const { readFile } = await import('node:fs/promises')
   const { resolve } = await import('node:path')

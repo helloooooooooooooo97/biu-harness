@@ -1,30 +1,12 @@
 import { ArchiveBoxArrowDownIcon, PlayIcon, StopIcon } from '@heroicons/react/16/solid'
+import { TagChip, TagChips } from '@biu/public-ui'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { asHttpHref } from '@biu/type-file-system'
 import type { CollectionChrome, FsActionProps, FsCellProps } from '@biu/type-file-system/ui'
 import type { DbRecord } from '@biu/type-file-system'
 
-function PluginTitle({ record, label }: { record: DbRecord; label: string }) {
-  return (
-    <span className="inline-flex min-w-0 items-center gap-1.5">
-      <span className="truncate font-medium">{label}</span>
-      {record.sandbox ? (
-        <span className="shrink-0 rounded px-1 text-[10px] font-semibold tracking-wide text-(--dsw-label-3)">沙箱</span>
-      ) : null}
-      {record.installed ? (
-        <span className="shrink-0 rounded px-1 text-[10px] font-semibold tracking-wide text-(--dsw-label-3)">已装</span>
-      ) : null}
-      {record.hasHost ? (
-        <span className="shrink-0 rounded px-1 text-[10px] font-semibold tracking-wide text-(--dsw-label-3)">Host</span>
-      ) : null}
-      {record.hasWeb ? (
-        <span className="shrink-0 rounded px-1 text-[10px] font-semibold tracking-wide text-(--dsw-label-3)">Web</span>
-      ) : null}
-      {record.headless ? (
-        <span className="shrink-0 rounded px-1 text-[10px] font-semibold tracking-wide text-(--dsw-label-3)">无头</span>
-      ) : null}
-    </span>
-  )
+function PluginTitle({ label }: { record: DbRecord; label: string }) {
+  return <span className="truncate font-medium">{label}</span>
 }
 
 function PluginAuthorCell({ record, fallback }: FsCellProps) {
@@ -49,13 +31,11 @@ function PluginTagsCell({ value, fallback }: FsCellProps) {
   const tags = Array.isArray(value) ? value.map(String) : fallback === '—' ? [] : fallback.split(', ')
   if (!tags.length) return <span className="text-(--dsw-label-3)">—</span>
   return (
-    <span className="inline-flex flex-wrap gap-1">
+    <TagChips>
       {tags.map((tag) => (
-        <span key={tag} className="rounded-full bg-(--dsw-hover) px-1.5 py-0.5 text-[11px] text-(--dsw-label)">
-          #{tag}
-        </span>
+        <TagChip key={tag} id={tag} label={tag} />
       ))}
-    </span>
+    </TagChips>
   )
 }
 

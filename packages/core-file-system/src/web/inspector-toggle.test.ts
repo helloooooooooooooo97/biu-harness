@@ -147,13 +147,16 @@ test('create record sits at the right of the toolbar with a blue label', () => {
 })
 
 test('card and queue rows expose split and expand like the table', () => {
-  assert.match(browser, /function RecordOpenControls/)
-  assert.match(browser, /function MiniCard[\s\S]*RecordOpenControls row=\{row\}/)
-  assert.match(browser, /function QueueRow[\s\S]*RecordOpenControls row=\{row\}/)
-  assert.match(browser, /tasks-minicard-tools/)
+  assert.match(browser, /function RecordRowTools/)
+  assert.match(browser, /function MiniCard[\s\S]*RecordRowTools row=\{row\}/)
+  assert.match(browser, /function QueueRow[\s\S]*RecordRowTools row=\{row\}/)
+  assert.match(browser, /function RecordTitle[\s\S]*RecordRowTools row=\{row\}/)
+  assert.match(browser, /tasks-minicard-bar/)
+  assert.doesNotMatch(browser, /<th>操作<\/th>/)
   const style = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8')
-  assert.match(style, /tasks-minicard-tools/)
+  assert.match(style, /tasks-minicard-bar/)
   assert.match(style, /tasks-queue-item-tools/)
+  assert.match(style, /tasks-row-tools/)
 })
 
 test('filesystem header expands the shared left sidebar and toggles the right inspector', () => {
