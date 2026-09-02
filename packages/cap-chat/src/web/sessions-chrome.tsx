@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { ChatDockStack, ChatPane, ChatStage } from '@biu/public-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { MASCOT_COLOR_NAME, MASCOT_EYE_NAME, MASCOT_SHAPE_NAME } from '@biu/type-session'
 import type { CollectionChrome, FsCellProps, FsContentProps } from '@biu/type-file-system/ui'
@@ -68,19 +69,20 @@ function SessionRecordChat({ record, ...slot }: FsContentProps & SessionChatProp
   }, [sessionId, slot.sessionView])
   const props = slot as SlotProps
   return (
-    <div className="session-record-chat" data-testid="session-record-chat">
-      <div className="chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-1 py-1">
-        {liveId === sessionId ? <ChatThread {...props} /> : null}
-      </div>
-      <div className="chat-composer-dock">
-        <div className="pointer-events-auto w-full space-y-2 bg-transparent">
+    <ChatPane
+      embed
+      thread={
+        <ChatStage variant="pane">{liveId === sessionId ? <ChatThread {...props} /> : null}</ChatStage>
+      }
+      dock={
+        <ChatDockStack>
           <ChatConfigBanner {...props} />
           <ApprovalsRail {...props} />
           <ChatLiveHud {...props} />
           <ChatComposer {...props} pick={slot.pick} />
-        </div>
-      </div>
-    </div>
+        </ChatDockStack>
+      }
+    />
   )
 }
 
@@ -103,9 +105,8 @@ if (typeof document !== 'undefined') {
   style.id = id
   style.textContent = `
 .sessions-title-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-.session-record-chat{display:flex;flex-direction:column;min-width:0;min-height:min(72vh,720px);flex:1}
-.fsdb-fileview:has(.session-record-chat){display:flex;flex-direction:column;flex:1;min-height:min(72vh,720px)}
-.inspector-database-page .fsdb-fileview:has(.session-record-chat){min-height:0;flex:1}
+.fsdb-fileview:has(.chat-pane-embed){display:flex;flex-direction:column;flex:1;min-height:min(72vh,720px)}
+.inspector-database-page .fsdb-fileview:has(.chat-pane-embed){min-height:0;flex:1}
 `
   document.head.appendChild(style)
 }

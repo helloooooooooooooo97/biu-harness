@@ -8,6 +8,9 @@
     ".": "./src/web/index.tsx",
     "./chat-overlay": "./src/web/chat-overlay.ts"
   },
+  "dependencies": {
+    "@biu/public-ui": "0.1.0"
+  },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8",
     "react": "^19.1.1",

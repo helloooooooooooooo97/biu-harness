@@ -1144,6 +1144,22 @@ body {
   pointer-events: auto;
 }
 
+.chat-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+.chat-pane-embed {
+  min-height: min(72vh, 720px);
+  padding: 0 10px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: #202020;
+}
+
 .chat-overlay-drag {
   cursor: grab;
   flex: none;
@@ -1219,7 +1235,8 @@ body {
   justify-self: end;
 }
 
-.chat-overlay-panel .chat-stage {
+.chat-overlay-panel .chat-stage,
+.chat-pane .chat-stage {
   visibility: visible;
   flex: 1;
   min-height: 0;
@@ -1227,17 +1244,20 @@ body {
   overflow-y: auto;
 }
 
-.chat-overlay-panel .chat-stage .sticky {
+.chat-overlay-panel .chat-stage .sticky,
+.chat-pane .chat-stage .sticky {
   position: static;
 }
 
-.chat-overlay-panel .chat-composer-dock {
+.chat-overlay-panel .chat-composer-dock,
+.chat-pane .chat-composer-dock {
   position: relative;
   z-index: 10;
   flex: none;
 }
 
-.chat-overlay-panel .chat-composer-dock > * {
+.chat-overlay-panel .chat-composer-dock > *,
+.chat-pane .chat-composer-dock > * {
   width: 100%;
   max-width: none;
 }
@@ -1264,7 +1284,8 @@ body {
   pointer-events: none;
 }
 
-.chat-overlay-panel .chat-live-hud-metrics {
+.chat-overlay-panel .chat-live-hud-metrics,
+.chat-pane .chat-live-hud-metrics {
   display: flex;
   max-width: min(100%, 28rem);
   align-items: center;
@@ -1283,21 +1304,25 @@ body {
   gap: 8px;
 }
 
-.chat-overlay-panel .chat-live-hud-metrics .chat-reply-meta-icon svg {
+.chat-overlay-panel .chat-live-hud-metrics .chat-reply-meta-icon svg,
+.chat-pane .chat-live-hud-metrics .chat-reply-meta-icon svg {
   width: 12px;
   height: 12px;
 }
 
-.chat-overlay-panel .chat-live-hud-metrics .traj-usage-ring {
+.chat-overlay-panel .chat-live-hud-metrics .traj-usage-ring,
+.chat-pane .chat-live-hud-metrics .traj-usage-ring {
   width: 12px;
   height: 12px;
 }
 
-.chat-overlay-panel .chat-live-hud-metrics .traj-usage {
+.chat-overlay-panel .chat-live-hud-metrics .traj-usage,
+.chat-pane .chat-live-hud-metrics .traj-usage {
   font-size: 11px;
 }
 
-.chat-overlay-panel .chat-live-hud-metrics .traj-usage-arrow {
+.chat-overlay-panel .chat-live-hud-metrics .traj-usage-arrow,
+.chat-pane .chat-live-hud-metrics .traj-usage-arrow {
   color: var(--dsw-sidebar-fg);
   opacity: 1;
 }
@@ -1306,7 +1331,8 @@ body {
   display: none;
 }
 
-.chat-overlay-panel .chat-live-hud {
+.chat-overlay-panel .chat-live-hud,
+.chat-pane .chat-live-hud {
   display: none !important;
 }
 

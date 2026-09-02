@@ -46,6 +46,7 @@ import { ShellDockNav } from './shell-dock-nav.tsx'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import { chromeIcon } from './chrome-icon.ts'
+import { ChatDockStack, ChatStage } from '@biu/public-ui'
 import {
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
@@ -114,29 +115,24 @@ const AgentMainPanels = memo(function AgentMainPanels({
   }, [overlayOpen])
 
   const centerStage = (
-    <div className="chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 py-3 pb-44 md:px-8 lg:px-10">
-      {renderSlot('stage')}
-    </div>
+    <ChatStage variant="center">{renderSlot('stage')}</ChatStage>
   )
   const overlayStage = (
-    <div
-      ref={stageRef}
-      className="chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-1 py-1"
-    >
+    <ChatStage variant="pane" stageRef={stageRef}>
       {renderSlot('stage')}
-    </div>
+    </ChatStage>
   )
   const centerDock = (
-    <div className="pointer-events-auto w-full space-y-2 bg-transparent">
+    <ChatDockStack>
       {renderSlot('dock')}
       {renderSlot('composer')}
-    </div>
+    </ChatDockStack>
   )
   const overlayDock = (
-    <div className="pointer-events-auto w-full space-y-2 bg-transparent">
+    <ChatDockStack>
       {renderSlot('dock')}
       {renderSlot('composer')}
-    </div>
+    </ChatDockStack>
   )
 
   const overlayNode =

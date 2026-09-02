@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { ChatPane } from '@biu/public-ui'
 import { Squares2X2Icon } from '@heroicons/react/16/solid'
 import {
   clampOverlayWinGeom,
@@ -228,8 +229,7 @@ export function OverlayChatWindow({
           </>
         )}
       </div>
-      <div className="chat-overlay-thread">{thread}</div>
-      <div className="chat-composer-dock">{dock}</div>
+      <ChatPane thread={thread} dock={dock} />
       {handles.map((item) => (
         <div
           key={item.key}
