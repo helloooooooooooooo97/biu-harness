@@ -87,6 +87,9 @@ export function apply(ctx: Context) {
   })
   ctx.inject(['databaseUi'], (inner) => {
     const ui = inner.get('databaseUi') as DatabaseUi
-    return ui.decorate('/sessions', sessionsChrome).dispose
+    return ui.decorate('/sessions', sessionsChrome({
+      ...slotProps,
+      pick: ctx.get('pick') as PickService | undefined,
+    })).dispose
   })
 }

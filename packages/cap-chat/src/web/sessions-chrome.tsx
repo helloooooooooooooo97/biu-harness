@@ -1,16 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { MASCOT_COLOR_NAME, MASCOT_EYE_NAME, MASCOT_SHAPE_NAME } from '@biu/type-session'
 import type { CollectionChrome, FsCellProps, FsContentProps } from '@biu/type-file-system/ui'
 import type { DbRecord } from '@biu/type-file-system'
-import {
-  compactSessionEvents,
-  projectNodes,
-  SESSION_LOAD_TURNS,
-  type ChatNode,
-  type SessionEvent,
-} from '@biu/web-session-view'
-import { MarkdownBody } from './markdown.tsx'
+import type { SlotProps } from '@biu/web-slots'
+import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
+import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
+import type { PickService } from '@biu/cap-pick/web'
+import { ApprovalsRail } from './approvals.tsx'
+import { ChatComposer } from './composer.tsx'
+import { ChatConfigBanner } from './config-banner.tsx'
+import { ChatLiveHud } from './live-hud.tsx'
+import { ChatThread } from './thread.tsx'
 
 function sessionMascot(record: DbRecord) {
   const raw = record.mascot
@@ -50,71 +51,50 @@ function MascotEyeCell({ value }: FsCellProps) {
   return <span>{name}</span>
 }
 
-function SessionTranscript({ record }: FsContentProps) {
+type SessionChatProps = {
+  useSessionView: ReturnType<typeof bindSessionView>
+  sessionView: SessionViewService
+  useProjectView: ReturnType<typeof bindProjectView>
+  projectView: ProjectViewService
+  pick?: PickService
+}
+
+function SessionRecordChat({ record, ...slot }: FsContentProps & SessionChatProps) {
   const sessionId = String(record.id)
-  const [nodes, setNodes] = useState<ChatNode[]>([])
-  const [status, setStatus] = useState<'loading' | 'empty' | 'ready' | 'error'>('loading')
+  const liveId = slot.useSessionView((state) => state.sessionId)
   useEffect(() => {
-    let gone = false
-    setStatus('loading')
-    setNodes([])
-    void (async () => {
-      try {
-        const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}?turns=${SESSION_LOAD_TURNS}`)
-        if (!res.ok) throw new Error(String(res.status))
-        const body = (await res.json()) as { events?: SessionEvent[] }
-        const events = compactSessionEvents(Array.isArray(body.events) ? body.events : [])
-        const next = projectNodes(events).filter((node) => node.kind !== 'turn')
-        if (gone) return
-        setNodes(next)
-        setStatus(next.length ? 'ready' : 'empty')
-      } catch {
-        if (!gone) setStatus('error')
-      }
-    })()
-    return () => {
-      gone = true
-    }
-  }, [sessionId])
-  if (status === 'loading') return <p className="sessions-log-empty">加载聊天记录…</p>
-  if (status === 'error') return <p className="sessions-log-empty">无法加载聊天记录</p>
-  if (status === 'empty') return <p className="sessions-log-empty">还没有聊天记录</p>
+    if (slot.sessionView.get().sessionId === sessionId) return
+    void slot.sessionView.load(sessionId, { view: 'chat' }).catch(() => undefined)
+  }, [sessionId, slot.sessionView])
+  const props = slot as SlotProps
   return (
-    <div className="sessions-log" data-testid="session-record-log">
-      {nodes.map((node) => {
-        if (node.kind === 'user') {
-          return (
-            <div key={node.id} className="chat-user-card">
-              <div className="chat-user-card-body text-(--dsw-label)">
-                <div className="whitespace-pre-wrap break-words">{node.text}</div>
-              </div>
-            </div>
-          )
-        }
-        if (node.kind === 'reply') {
-          return (
-            <div key={node.id} className="chat-reply-block">
-              <div className="chat-reply-body">
-                <MarkdownBody text={node.copyText} />
-              </div>
-            </div>
-          )
-        }
-        return null
-      })}
+    <div className="session-record-chat" data-testid="session-record-chat">
+      <div className="chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-1 py-1">
+        {liveId === sessionId ? <ChatThread {...props} /> : null}
+      </div>
+      <div className="chat-composer-dock">
+        <div className="pointer-events-auto w-full space-y-2 bg-transparent">
+          <ChatConfigBanner {...props} />
+          <ApprovalsRail {...props} />
+          <ChatLiveHud {...props} />
+          <ChatComposer {...props} pick={slot.pick} />
+        </div>
+      </div>
     </div>
   )
 }
 
-export const sessionsChrome: CollectionChrome = {
-  Title: SessionTitle,
-  Icon: SessionIcon,
-  Content: SessionTranscript,
-  cells: {
-    mascotShape: MascotShapeCell,
-    mascotColor: MascotColorCell,
-    mascotEye: MascotEyeCell,
-  },
+export function sessionsChrome(slot: SessionChatProps): CollectionChrome {
+  return {
+    Title: SessionTitle,
+    Icon: SessionIcon,
+    Content: (props) => <SessionRecordChat {...props} {...slot} />,
+    cells: {
+      mascotShape: MascotShapeCell,
+      mascotColor: MascotColorCell,
+      mascotEye: MascotEyeCell,
+    },
+  }
 }
 
 if (typeof document !== 'undefined') {
@@ -123,9 +103,9 @@ if (typeof document !== 'undefined') {
   style.id = id
   style.textContent = `
 .sessions-title-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-.sessions-log{display:flex;flex-direction:column;gap:16px;min-width:0;padding:8px 0 24px}
-.sessions-log-empty{margin:0;padding:8px 0;color:var(--dsw-label-3)}
-.inspector-database-page .fsdb-fileview:has(.sessions-log),.inspector-database-page .fsdb-fileview:has(.sessions-log-empty){min-height:0}
+.session-record-chat{display:flex;flex-direction:column;min-width:0;min-height:min(72vh,720px);flex:1}
+.fsdb-fileview:has(.session-record-chat){display:flex;flex-direction:column;flex:1;min-height:min(72vh,720px)}
+.inspector-database-page .fsdb-fileview:has(.session-record-chat){min-height:0;flex:1}
 `
   document.head.appendChild(style)
 }

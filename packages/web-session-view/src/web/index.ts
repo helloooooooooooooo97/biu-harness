@@ -358,7 +358,7 @@ export class SessionViewService extends Service {
   }
 
   /** URL → 状态：只由路由层调用，不回写 URL。
-   * `/s/:id` 打开该会话；其它页面（含首页、数据库等）打开最近一条对话，供全局悬浮窗使用。 */
+   * `/s/:id` 打开该会话；会话表记录详情打开该行；其它页面打开最近一条对话，供全局悬浮窗使用。 */
   async applyRoute(route: AppRoute) {
     if (route.kind === 'session') {
       if (this.value.sessionId !== route.sessionId) {
@@ -389,6 +389,16 @@ export class SessionViewService extends Service {
         })
       }
       if (this.wantsTrajectory(route.view)) void this.ensureTrajectory()
+      return
+    }
+    if (route.kind === 'record' && route.collection === '/sessions') {
+      if (this.value.sessionId !== route.recordId) {
+        try {
+          await this.load(route.recordId, { view: 'chat' })
+        } catch {
+          /* 详情页仍画表格，会话加载失败时留给界面自己提示 */
+        }
+      }
       return
     }
     await this.loadMostRecentSession()
