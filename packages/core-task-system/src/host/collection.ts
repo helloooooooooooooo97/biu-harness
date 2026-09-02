@@ -1,4 +1,5 @@
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
+import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 
 type Actor = {
   name?: string
@@ -175,6 +176,7 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
       parentField: 'parentId',
       columns: ['title', 'status', 'priority', 'difficulty', 'usage', 'creator', 'assignee', 'project', 'tags', 'dueAt'],
       fields: {
+        ...REQUIRED_RECORD_FIELDS,
         title: { type: 'string', label: '标题', writable: true },
         status: { type: 'select', label: '状态', writable: true, enum: ['todo', 'doing', 'done'] },
         priority: { type: 'select', label: '优先级', writable: true, enum: ['low', 'med', 'high'] },

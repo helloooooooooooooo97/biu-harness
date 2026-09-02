@@ -1,4 +1,5 @@
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
+import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 import {
   isSessionCompactPoint,
   nameFromSessionMascot,
@@ -133,6 +134,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       labelField: 'title',
       columns: ['title', 'type', 'pinned', 'tags', 'eventCount', 'project', 'updatedAt'],
       fields: {
+        ...REQUIRED_RECORD_FIELDS,
         title: { type: 'string', label: '标题', writable: true },
         type: { type: 'select', label: '类型', enum: ['chat', 'live'] },
         pinned: { type: 'boolean', label: '置顶', writable: true },

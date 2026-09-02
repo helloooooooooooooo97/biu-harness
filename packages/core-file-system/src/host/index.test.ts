@@ -4,6 +4,7 @@ import { Context, Service } from 'cordis'
 import * as tools from '@biu/host-tools'
 import { DatabaseService, apply as applyFileSystem } from './index.ts'
 import type { CollectionSpec } from '@biu/type-file-system'
+import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 import { superTagsCollection } from './super-tags-collection.ts'
 
 function notesCollection(): CollectionSpec {
@@ -17,6 +18,7 @@ function notesCollection(): CollectionSpec {
     schema: {
       labelField: 'title',
       fields: {
+        ...REQUIRED_RECORD_FIELDS,
         title: { type: 'string', writable: true },
         status: { type: 'string', writable: true, enum: ['open', 'done'] },
         pinned: { type: 'boolean' },
@@ -85,6 +87,7 @@ test('computed fields come from list and cannot be written', async () => {
     path: '/stats',
     schema: {
       fields: {
+        ...REQUIRED_RECORD_FIELDS,
         title: { type: 'string', writable: true },
         score: { type: 'number', computed: true },
       },
@@ -156,6 +159,7 @@ test('update accepts url image and attachment values', async () => {
     path: '/media',
     schema: {
       fields: {
+        ...REQUIRED_RECORD_FIELDS,
         title: { type: 'string', writable: true },
         link: { type: 'url', writable: true },
         cover: { type: 'image', writable: true },
@@ -196,6 +200,7 @@ test('content is omitted from list/read and served on its own path', async () =>
     path: '/docs',
     schema: {
       fields: {
+        ...REQUIRED_RECORD_FIELDS,
         title: { type: 'string', writable: true },
         content: { type: 'file', writable: true },
       },
@@ -229,7 +234,7 @@ test('list paginates collection records and reports total', async () => {
   db.register({
     id: 'paged',
     path: '/paged',
-    schema: { fields: { title: { type: 'string', writable: true } } },
+    schema: { fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string', writable: true } } },
     list: () => [...rows.values()],
     get: (id) => rows.get(id) ?? null,
   })
@@ -297,7 +302,7 @@ test('allowMissing actions can run before the record exists', async () => {
   db.register({
     id: 'notes',
     path: '/notes',
-    schema: { fields: { title: { type: 'string' } } },
+    schema: { fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string' } } },
     list: () => [...rows.values()],
     get: (id) => rows.get(id) ?? null,
     actions: [
@@ -339,7 +344,7 @@ test('create and delete follow records caps declared at register', async () => {
   db.register({
     id: 'notes',
     path: '/notes',
-    schema: { fields: { title: { type: 'string', writable: true } } },
+    schema: { fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string', writable: true } } },
     records: { create: true, delete: true },
     list: () => [...rows.values()],
     get: (id) => rows.get(id) ?? null,
@@ -379,7 +384,7 @@ test('SuperTag catalog is workspace-wide and collect uses sqlite stamps', async 
   db.register({
     id: 'pages',
     path: '/pages',
-    schema: { fields: { title: { type: 'string', writable: true } } },
+    schema: { fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string', writable: true } } },
     records: { update: true },
     list: () => [...pages.values()] as { id: string }[],
     get: (id) => pages.get(id) as { id: string } | undefined,
@@ -427,7 +432,7 @@ test('SuperTag list filter asks the collection only for stamped ids', async () =
   db.register({
     id: 'notes',
     path: '/notes',
-    schema: { fields: { title: { type: 'string', writable: true } } },
+    schema: { fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string', writable: true } } },
     records: { update: true },
     list: (query) => {
       listed = query?.ids
@@ -470,7 +475,7 @@ test('tables without records.create/delete reject create and delete', async () =
       db.register({
         id: 'broken',
         path: '/broken',
-        schema: { fields: {} },
+        schema: { fields: { ...REQUIRED_RECORD_FIELDS } },
         records: { create: true },
         list: () => [],
         get: () => null,

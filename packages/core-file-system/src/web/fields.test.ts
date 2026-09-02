@@ -1,6 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import type { CollectionSchema } from '@biu/type-file-system'
+import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 import { defaultColumnKeys, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, isViewModeId, matchActionWhen, matchesFilters, parentFieldKey, resolveFieldType, sortRows } from './fields'
 
 test('isViewModeId accepts builtin and custom slugs', () => {
@@ -12,6 +13,7 @@ test('isViewModeId accepts builtin and custom slugs', () => {
 const schema: CollectionSchema = {
   labelField: 'title',
   fields: {
+    ...REQUIRED_RECORD_FIELDS,
     title: { type: 'string' },
     status: { type: 'select', enum: ['todo', 'doing', 'done'] },
     tags: { type: 'multi-select' },
@@ -88,7 +90,7 @@ test('contentFieldKey prefers content then contentField then notes', () => {
   assert.equal(
     contentFieldKey({
       labelField: 'title',
-      fields: { title: { type: 'string' }, content: { type: 'file' } },
+      fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string' }, content: { type: 'file' } },
     }),
     'content',
   )
@@ -96,7 +98,7 @@ test('contentFieldKey prefers content then contentField then notes', () => {
     contentFieldKey({
       labelField: 'title',
       contentField: 'notes',
-      fields: { title: { type: 'string' }, notes: { type: 'string' } },
+      fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string' }, notes: { type: 'string' } },
     }),
     'notes',
   )
@@ -126,7 +128,7 @@ test('groupRecords puts multi-select rows in every matching column', () => {
     rows,
     {
       labelField: 'title',
-      fields: { title: { type: 'string' }, tags: { type: 'multi-select', enum: ['game', 'web'] } },
+      fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string' }, tags: { type: 'multi-select', enum: ['game', 'web'] } },
     },
     'tags',
   )
@@ -146,20 +148,20 @@ test('parentFieldKey reads schema then parentId then data links', () => {
     parentFieldKey({
       labelField: 'title',
       parentField: 'owner',
-      fields: { title: { type: 'string' }, owner: { type: 'string' } },
+      fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string' }, owner: { type: 'string' } },
     }),
     'owner',
   )
   assert.equal(
     parentFieldKey({
       labelField: 'title',
-      fields: { title: { type: 'string' }, parentId: { type: 'string' } },
+      fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string' }, parentId: { type: 'string' } },
     }),
     'parentId',
   )
   assert.equal(
     parentFieldKey(
-      { labelField: 'title', fields: { title: { type: 'string' }, folder: { type: 'string' } } },
+      { labelField: 'title', fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string' }, folder: { type: 'string' } } },
       [
         { id: 'a', title: 'root', folder: '' },
         { id: 'b', title: 'child', folder: 'a' },
@@ -194,7 +196,7 @@ test('flattenTree keeps sibling order, indents children, and hides collapsed sub
 test('defaultColumnKeys omits parentId', () => {
   const treeSchema: CollectionSchema = {
     labelField: 'title',
-    fields: { title: { type: 'string' }, parentId: { type: 'string' }, status: { type: 'select' } },
+    fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string' }, parentId: { type: 'string' }, status: { type: 'select' } },
   }
   assert.deepEqual(defaultColumnKeys(treeSchema, ['title', 'parentId', 'status', 'createdAt']), ['title', 'status'])
 })

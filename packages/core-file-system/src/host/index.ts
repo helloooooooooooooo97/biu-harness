@@ -14,6 +14,7 @@ import {
   type CollectionListQuery,
   type CollectionSchema,
   type CollectionSchemaPack,
+  type CollectionFields,
   type CollectionSpec,
   type Database,
   type DbRecord,
@@ -73,7 +74,7 @@ function schemaFor(spec: CollectionSpec): CollectionSchema {
   const contentField = spec.schema.contentField ?? 'content'
   const labelField = spec.schema.labelField ?? 'title'
   const raw = withBuiltinFields(spec.schema.fields, contentField, labelField)
-  const fields: Record<string, FieldSpec> = {}
+  const fields: CollectionFields = { ...raw }
   for (const [key, field] of Object.entries(raw)) {
     fields[key] = field.computed ? { ...field, writable: false } : field
   }

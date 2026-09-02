@@ -1,4 +1,5 @@
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
+import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 import {
   createArgs,
   PLUGIN_CREATE_DESCRIPTION,
@@ -129,6 +130,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         'headless',
       ],
       fields: {
+        ...REQUIRED_RECORD_FIELDS,
         name: { type: 'string', label: '名称' },
         blurb: { type: 'string', label: '简介' },
         installed: { type: 'boolean', label: '已安装' },

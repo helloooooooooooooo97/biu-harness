@@ -1,5 +1,6 @@
 import type { Context } from 'cordis'
 import type { CollectionSpec } from '@biu/type-file-system'
+import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 import { PagesStore, STATUS, type WorkspaceFs } from './store.ts'
 
 export { PAGE_ROOT, PAGE_ASSETS, ASSET_GC_GRACE_MS, collectPageAssetNames, PagesStore } from './store.ts'
@@ -39,6 +40,7 @@ export function pagesCollection(store: PagesStore): CollectionSpec {
         'publishedAt',
       ],
       fields: {
+        ...REQUIRED_RECORD_FIELDS,
         title: { type: 'string', label: '标题', writable: true },
         blurb: { type: 'string', label: '摘要', writable: true },
         count: { type: 'number', label: '计数', writable: true },

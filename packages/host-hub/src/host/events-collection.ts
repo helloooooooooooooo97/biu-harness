@@ -1,4 +1,5 @@
 import type { CollectionSpec, DbRecord } from '@biu/type-file-system'
+import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 
 export type HubEventRow = {
   id: string
@@ -48,6 +49,7 @@ export function eventsCollection(hub: HubLike): CollectionSpec {
       labelField: 'title',
       columns: ['title', 'mode', 'ts', 'args'],
       fields: {
+        ...REQUIRED_RECORD_FIELDS,
         title: { type: 'string', label: '事件' },
         mode: { type: 'string', label: '模式' },
         name: { type: 'string', label: '名称' },

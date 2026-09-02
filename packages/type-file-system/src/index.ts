@@ -73,7 +73,7 @@ export function asAttachment(value: unknown): AttachmentValue | null {
   return { name: href.split('/').filter(Boolean).pop() || href, href }
 }
 
-/** 每张表都有：登记方不必再写。可覆盖 label；id / 时间列默认不可写，表格默认不展开 id 与时间列。标题列始终存在。 */
+/** 每张表都有。id / 时间列默认不可写，表格默认不展开 id 与时间列。标题列始终存在。 */
 export const BUILTIN_FIELDS = {
   id: { type: 'string', label: 'ID' },
   title: { type: 'string', label: '标题', writable: true },
@@ -83,6 +83,22 @@ export const BUILTIN_FIELDS = {
   emoji: { type: 'string', label: '图标', writable: true },
   schema: { type: 'schema', label: 'SuperTag', writable: true },
 } as const satisfies Record<string, FieldSpec>
+
+/** 登记 CollectionSpec.schema.fields 必须声明：图标、创建/更新时间、SuperTag。由登记方自己存。 */
+export const REQUIRED_RECORD_FIELD_KEYS = ['createdAt', 'updatedAt', 'emoji', 'schema'] as const
+
+export type RequiredRecordFieldKey = (typeof REQUIRED_RECORD_FIELD_KEYS)[number]
+
+export type RequiredRecordFields = { [K in RequiredRecordFieldKey]: FieldSpec }
+
+export type CollectionFields = RequiredRecordFields & Record<string, FieldSpec>
+
+export const REQUIRED_RECORD_FIELDS: RequiredRecordFields = {
+  createdAt: BUILTIN_FIELDS.createdAt,
+  updatedAt: BUILTIN_FIELDS.updatedAt,
+  emoji: BUILTIN_FIELDS.emoji,
+  schema: BUILTIN_FIELDS.schema,
+}
 
 /** 表格默认不展开这些内置列（标题除外）。SuperTag 作为默认业务列留下。 */
 export const BUILTIN_FIELD_KEYS = ['id', 'createdAt', 'updatedAt', 'content', 'emoji'] as const
@@ -207,7 +223,7 @@ export function withBuiltinFields(
   fields: Record<string, FieldSpec>,
   contentField = 'content',
   labelField = 'title',
-): Record<string, FieldSpec> {
+): CollectionFields {
   const next = { ...fields }
   next.id = { ...BUILTIN_FIELDS.id, ...next.id, writable: false }
   if (!next[labelField]) next[labelField] = { ...BUILTIN_FIELDS.title, label: labelField === 'title' ? '标题' : labelField }
@@ -224,7 +240,7 @@ export function withBuiltinFields(
     if (key === 'id' || key === labelField) continue
     ordered[key] = field
   }
-  return ordered
+  return ordered as CollectionFields
 }
 
 /** 登记方可序列化的动作声明。图标与按钮长什么样由前端 decorate，不进这份契约。 */
@@ -247,7 +263,8 @@ export type CollectionSchema = {
   labelField?: string
   /** 记录正文：真正存的文件内容。默认 `content`。结构由登记方自定。 */
   contentField?: string
-  fields: Record<string, FieldSpec>
+  /** 必须包含图标、创建/更新时间、SuperTag；登记方自己持久化。 */
+  fields: CollectionFields
   /** 表格默认可见列（须为 fields 的键）。不写则列出全部列表列。详情仍显示全部字段。 */
   columns?: string[]
   /** 指向本表另一条记录 id 的字段。有则表格可按树展示；不写则按 parentId / parent 或数据里的父子引用推断。 */

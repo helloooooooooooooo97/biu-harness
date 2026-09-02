@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { asImageSrc, emptySchemaValue, normalizeSchemaPack, normalizeSchemaValue, schemaSearchHaystack, withBuiltinFields } from './index.ts'
+import { asImageSrc, emptySchemaValue, normalizeSchemaPack, normalizeSchemaValue, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, schemaSearchHaystack, withBuiltinFields } from './index.ts'
 
 test('asImageSrc keeps http, data:image, and same-origin image paths', () => {
   assert.equal(asImageSrc('https://example.com/a.png'), 'https://example.com/a.png')
@@ -44,4 +44,12 @@ test('withBuiltinFields always includes writable SuperTag schema', () => {
   assert.equal(fields.schema?.type, 'schema')
   assert.equal(fields.schema?.writable, true)
   assert.equal(fields.schema?.label, 'SuperTag')
+})
+
+test('required record fields are icon, timestamps, and SuperTag', () => {
+  assert.deepEqual([...REQUIRED_RECORD_FIELD_KEYS].sort(), ['createdAt', 'emoji', 'schema', 'updatedAt'])
+  assert.equal(REQUIRED_RECORD_FIELDS.emoji.type, 'string')
+  assert.equal(REQUIRED_RECORD_FIELDS.schema.type, 'schema')
+  assert.equal(REQUIRED_RECORD_FIELDS.createdAt.type, 'datetime')
+  assert.equal(REQUIRED_RECORD_FIELDS.updatedAt.type, 'datetime')
 })

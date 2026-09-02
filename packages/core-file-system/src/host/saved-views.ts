@@ -1,4 +1,5 @@
 import type { CollectionInfo, CollectionSpec, DbRecord } from '@biu/type-file-system'
+import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 import { builtinAllView, isReadOnlyViewId } from '../catalog-views.ts'
 import type { SavedView } from '../web/saved-view.ts'
 import { isViewModeId } from '../web/fields.ts'
@@ -125,6 +126,7 @@ export function viewsCollection(store: SavedViewsStore, tables: () => Collection
       labelField: 'title',
       columns: ['title', 'table', 'mode', 'sortField', 'sortDir', 'query', 'groupBy', 'pageSize'],
       fields: {
+        ...REQUIRED_RECORD_FIELDS,
         title: { type: 'string', label: '视图', writable: true },
         table: { type: 'string', label: '来源表' },
         tablePath: { type: 'string', label: '表路径' },
