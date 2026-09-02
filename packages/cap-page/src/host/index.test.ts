@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context, Service } from 'cordis'
@@ -9,7 +9,7 @@ import * as tools from '@biu/host-tools'
 import * as fsPlugin from '@biu/host-fs'
 import * as page from './index.ts'
 import { dumpMarkdown, splitMarkdown } from './markdown.ts'
-import { PAGE_ASSETS, PAGE_ROOT, PagesStore } from './store.ts'
+import { ASSET_GC_GRACE_MS, PAGE_ASSETS, PAGE_ROOT, PagesStore, collectPageAssetNames } from './store.ts'
 
 const FIELD_TYPES: FieldType[] = [
   'string',
@@ -129,4 +129,60 @@ test('PagesStore reads existing markdown files from .page', async () => {
   const onlyHome = await store.list(['home'])
   assert.equal(onlyHome.length, 1)
   assert.equal(onlyHome[0]?.id, 'home')
+})
+
+test('collectPageAssetNames picks page asset pointers', () => {
+  const names = collectPageAssetNames(
+    'cover: assets/hero.png\n',
+    ':::pageBlock {kind=excalidraw}\n{"file":"assets/excalidraw-aa.json"}\n:::\n',
+    { href: '/api/page/file/pack.zip' },
+  )
+  assert.equal(names.has('hero.png'), true)
+  assert.equal(names.has('excalidraw-aa.json'), true)
+  assert.equal(names.has('pack.zip'), true)
+  assert.equal(ASSET_GC_GRACE_MS, 24 * 60 * 60 * 1000)
+})
+
+test('gcAssets deletes unreferenced files after one day', async () => {
+  const ctx = new Context()
+  await ctx.plugin(tools)
+  const root = await mkdtemp(join(tmpdir(), 'page-gc-'))
+  await ctx.plugin(fsPlugin, { root })
+  const store = new PagesStore(ctx.fs.workspace as never)
+  const a = await store.create({
+    title: 'A',
+    notes: ':::pageBlock {kind=excalidraw}\n{"file":"assets/excalidraw-keep.json"}\n:::\n',
+  })
+  const b = await store.create({
+    title: 'B',
+    notes: ':::pageBlock {kind=excalidraw}\n{"file":"assets/excalidraw-drop.json"}\n:::\n',
+  })
+  await store.writeAsset('excalidraw-keep.json', '{"ok":1}')
+  await store.writeAsset('excalidraw-drop.json', '{"ok":2}')
+  await store.writeAsset('orphan.json', '{"ok":3}')
+  const stale = Date.now() / 1000 - 2 * 24 * 60 * 60
+  await utimes(join(root, PAGE_ASSETS, 'excalidraw-drop.json'), stale, stale)
+  await utimes(join(root, PAGE_ASSETS, 'orphan.json'), stale, stale)
+
+  await store.update(b.id, { notes: 'gone\n' })
+  await store.gcAssets({ now: Date.now() })
+
+  const dropGone = await readFile(join(root, PAGE_ASSETS, 'excalidraw-drop.json'), 'utf8').then(
+    () => false,
+    () => true,
+  )
+  const orphanGone = await readFile(join(root, PAGE_ASSETS, 'orphan.json'), 'utf8').then(
+    () => false,
+    () => true,
+  )
+  const kept = await readFile(join(root, PAGE_ASSETS, 'excalidraw-keep.json'), 'utf8')
+  assert.equal(dropGone, true)
+  assert.equal(orphanGone, true)
+  assert.match(kept, /ok/)
+
+  await store.writeAsset('fresh-orphan.json', '{}')
+  await store.gcAssets()
+  const fresh = await readFile(join(root, PAGE_ASSETS, 'fresh-orphan.json'), 'utf8')
+  assert.equal(fresh, '{}')
+  assert.equal(a.title, 'A')
 })
