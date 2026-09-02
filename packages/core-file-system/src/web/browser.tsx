@@ -2064,8 +2064,9 @@ export function CollectionBrowser({
                 {columnCustom ? <span className="tasks-sort-dot" aria-hidden /> : null}
               </button>
               {columnMenuOpen ? (
-                <div className="tasks-sort-menu" role="menu">
+                <div className="tasks-sort-menu fsdb-col-menu" role="menu">
                   <div className="tasks-sort-head">可见列</div>
+                  <div className="fsdb-col-menu-list">
                   {allColumns.map((item) => {
                     const on = columns.some((col) => col.key === item.key)
                     return (
@@ -2079,6 +2080,7 @@ export function CollectionBrowser({
                       />
                     )
                   })}
+                  </div>
                 </div>
               ) : null}
             </div>

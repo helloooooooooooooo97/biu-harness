@@ -47,3 +47,11 @@ test('list and detail properties share key and value colors', () => {
 test('usage figures in collection cells match the table font size', () => {
   assert.match(css, /\.fsdb-page \.traj-usage,\.fsdb-page \.traj-usage-empty\{[^}]*font-size:14px/)
 })
+
+test('visible column menu scrolls inside a max height', () => {
+  const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf8')
+  assert.match(browser, /className="tasks-sort-menu fsdb-col-menu"/)
+  assert.match(browser, /className="fsdb-col-menu-list"/)
+  assert.match(css, /\.fsdb-page \.fsdb-col-menu\{[^}]*max-height:min\(60vh,360px\)/)
+  assert.match(css, /\.fsdb-page \.fsdb-col-menu-list\{[^}]*overflow:auto/)
+})
