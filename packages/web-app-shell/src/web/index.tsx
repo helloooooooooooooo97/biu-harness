@@ -5,6 +5,7 @@ import {
   subscribeChatOverlay,
   setChatOverlay,
   closeChatOverlay,
+  requestOverlayFocus,
   requestInspectorClose,
   allocateShellColumns,
   clampSidebarWidth,
@@ -57,69 +58,47 @@ export const inject = ['slots', 'dock', 'snapshot', 'sessionView', 'projectView'
 
 function DockSessionMascot({
   useSessionView,
-  sessionView,
 }: {
   useSessionView: ReturnType<typeof bindSessionView>
-  sessionView: SessionViewService
 }) {
   const agents = useSessionView((state) => state.sessions)
   const activeId = useSessionView((state) => state.sessionId)
+  const overlayOpen = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
   return (
     <BrandCornerMascot
       agents={agents}
       activeId={activeId}
-      menu={(close) => (
-        <ChatSidebar
-          variant="popover"
-          visible
-          routeSessionId={activeId}
-          useSessionView={useSessionView}
-          sessionView={sessionView}
-          onActivate={close}
-        />
-      )}
+      open={overlayOpen}
+      onToggle={() => {
+        if (getChatOverlay()) {
+          closeChatOverlay()
+          return
+        }
+        setChatOverlay(true)
+        requestOverlayFocus()
+      }}
     />
   )
 }
 
 function ShellDockPins({
-  dock,
   useSessionView,
-  sessionView,
 }: {
-  dock: DockService
   useSessionView: ReturnType<typeof bindSessionView>
-  sessionView: SessionViewService
 }) {
-  useEffect(() => {
-    const Tile = () => (
-      <DockSessionMascot useSessionView={useSessionView} sessionView={sessionView} />
-    )
-    return dock.register({
-      id: 'session',
-      title: 'Session',
-      kind: 'session',
-      group: 'places',
-      order: 10,
-      Tile,
-    })
-  }, [dock, useSessionView, sessionView])
-  return null
+  return <DockSessionMascot useSessionView={useSessionView} />
 }
 
 /** 主区固定聊天；轨迹改在右侧检查器。悬浮形态可挂到任意页面最顶层。 */
 const AgentMainPanels = memo(function AgentMainPanels({
   renderSlot,
   header,
-  floating,
   showCenter,
 }: {
   renderSlot: SlotProps['renderSlot']
   header: ReactNode | ((layoutTools: ReactNode) => ReactNode)
-  floating: boolean
   showCenter: boolean
 }) {
-  const overlay = floating
   const overlayOpen = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
   const [overlayMounted, setOverlayMounted] = useState(false)
   const [heldCenter, setHeldCenter] = useState(showCenter)
@@ -129,10 +108,10 @@ const AgentMainPanels = memo(function AgentMainPanels({
   }, [])
   const stageRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (!overlay) return
+    if (!overlayOpen) return
     const el = stageRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [overlay])
+  }, [overlayOpen])
 
   const centerStage = (
     <div className="chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-6 py-3 pb-44 md:px-8 lg:px-10">
@@ -161,7 +140,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
   )
 
   const overlayNode =
-    overlay && overlayMounted && overlayOpen
+    overlayMounted && overlayOpen
       ? createPortal(
         <OverlayChatWindow
           header={header}
@@ -172,7 +151,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
       )
       : null
 
-  const mountCenter = showCenter || (heldCenter && !overlayOpen)
+  const mountCenter = (showCenter || heldCenter) && !overlayOpen
   if (!mountCenter) return overlayNode
 
   return (
@@ -660,7 +639,7 @@ function Shell(props: SlotProps) {
       ) : null}
 
       <DanceStage sessions={danceSessions} on={dancing} shape={danceShape} />
-      <ShellDockPins dock={dock} useSessionView={useSessionView} sessionView={sessionView} />
+      <ShellDockPins useSessionView={useSessionView} />
       <ShellDockNav
         dock={dock}
         modules={railModules}
@@ -677,7 +656,6 @@ function Shell(props: SlotProps) {
           <AgentMainPanels
             renderSlot={props.renderSlot}
             header={overlayHeader}
-            floating={activeModule !== 'agent'}
             showCenter={activeModule === 'agent'}
           />
         </div>
