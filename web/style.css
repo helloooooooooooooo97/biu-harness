@@ -1100,6 +1100,7 @@ body {
   overflow: visible;
   box-sizing: border-box;
   padding-bottom: var(--brand-corner-clearance);
+  background: #202020;
 }
 
 .app-shell-agent.is-chat-overlay .session-inspector {
@@ -1138,7 +1139,7 @@ body {
   padding: 0 10px 10px;
   border: 0;
   border-radius: 14px;
-  background: #191919;
+  background: #202020;
   box-shadow: 0 1px 2px rgba(15, 15, 15, 0.04), 0 10px 32px rgba(0, 0, 0, 0.28);
   pointer-events: auto;
 }
@@ -2554,7 +2555,7 @@ body {
 [data-testid='session-inspector'] .traj-meta,
 [data-testid='session-inspector'] .traj-head,
 [data-testid='session-inspector'] .traj-detail {
-  background: var(--dsw-bg);
+  background: var(--dsw-sidebar);
   box-shadow: none;
 }
 

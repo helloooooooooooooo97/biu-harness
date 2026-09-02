@@ -49,7 +49,7 @@ describe('composer dock stacking above sticky user', () => {
     expect(overlayWin).toContain("key: 'se'")
     expect(overlayWin).toContain('chat-overlay-resize-')
     expect(css).toMatch(/\.chat-overlay-panel \{/)
-    expect(css).toMatch(/\.chat-overlay-panel\s*\{[^}]*background:\s*#191919/s)
+    expect(css).toMatch(/\.chat-overlay-panel\s*\{[^}]*background:\s*#202020/s)
     expect(css).not.toMatch(/\.chat-overlay-panel\s*\{[^}]*backdrop-filter:\s*blur\(16px\)\s*saturate\(1\.2\)/s)
     expect(css).not.toMatch(/\.chat-overlay-panel\s*\{[^}]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.1\)/s)
     expect(css).toMatch(/\.chat-overlay-drag\s*\{[^}]*z-index:\s*30/s)
@@ -99,6 +99,8 @@ describe('composer dock stacking above sticky user', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     expect(css).toMatch(/\.traj-root\s*\{[^}]*background:\s*var\(--dsw-sidebar\)/s)
     expect(css).toMatch(/\[data-testid='session-inspector'\] \.usage-panel\s*\{[^}]*background:\s*var\(--dsw-sidebar\)/s)
+    expect(css).toMatch(/\.session-inspector\s*\{[^}]*background:\s*#202020/s)
+    expect(css).toMatch(/\[data-testid='session-inspector'\] \.traj-root[\s\S]*background:\s*var\(--dsw-sidebar\)/)
   })
 
   it('keeps pick chips from inheriting the composer line-height', () => {
