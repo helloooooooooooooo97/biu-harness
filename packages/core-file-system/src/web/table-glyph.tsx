@@ -1,5 +1,5 @@
 import {
-  ClipboardDocumentListIcon,
+  CheckCircleIcon,
   ChatBubbleLeftRightIcon,
   BoltIcon,
   DocumentIcon,
@@ -12,7 +12,9 @@ import {
 export function TableGlyph({ icon, className = 'size-4' }: { icon?: string; className?: string }) {
   const name = (icon ?? '').trim().toLowerCase()
   if (name === 'puzzle-piece' || name === 'puzzle') return <PuzzlePieceIcon aria-hidden className={className} />
-  if (name === 'clipboard-document-list' || name === 'clipboard') return <ClipboardDocumentListIcon aria-hidden className={className} />
+  if (name === 'check-circle' || name === 'check' || name === 'clipboard-document-list' || name === 'clipboard') {
+    return <CheckCircleIcon aria-hidden className={className} />
+  }
   if (name === 'chat-bubble' || name === 'chat-bubble-left-right') return <ChatBubbleLeftRightIcon aria-hidden className={className} />
   if (name === 'document' || name === 'document-text' || name === 'page') return <DocumentIcon aria-hidden className={className} />
   if (name === 'bolt') return <BoltIcon aria-hidden className={className} />

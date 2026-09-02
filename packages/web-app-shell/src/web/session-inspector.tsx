@@ -8,7 +8,6 @@ import {
   XMarkIcon,
   TableCellsIcon,
   ViewColumnsIcon,
-  ClipboardDocumentListIcon,
   ChatBubbleLeftRightIcon,
   DocumentIcon,
   PuzzlePieceIcon,
@@ -32,7 +31,7 @@ function captionTableIcon(icon?: string) {
   const name = (icon ?? '').trim().toLowerCase()
   if (name === 'puzzle-piece' || name === 'puzzle') return PuzzlePieceIcon
   if (name === 'tag') return TagIcon
-  if (name === 'clipboard-document-list' || name === 'clipboard') return ClipboardDocumentListIcon
+  if (name === 'check-circle' || name === 'check' || name === 'clipboard-document-list' || name === 'clipboard') return CheckCircleIcon
   if (name === 'chat-bubble' || name === 'chat-bubble-left-right') return ChatBubbleLeftRightIcon
   if (name === 'document' || name === 'document-text' || name === 'page') return DocumentIcon
   if (name === 'bolt') return BoltIcon
