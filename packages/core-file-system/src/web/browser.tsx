@@ -63,17 +63,16 @@ import { recordPreviewMascot, RecordMark } from './record-mark.tsx'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
 import {
   actionIcon,
-  BoolCell,
   DefaultCell,
   draftFromRecord,
   FieldEditor,
   FieldGlyph,
   FilePreview,
+  fieldDraftValue,
   ModeGlyph,
   parseFieldValue,
   VIEW_MODES,
   visibleActions,
-  boolOn,
 } from './fsdb-cells.tsx'
 import { ensureFsdbStyle } from './fsdb-style.ts'
 import { RecordDetail } from './record-detail.tsx'
@@ -110,7 +109,7 @@ import { listCollection, readJson } from './db-client.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 import { mergeTableViews } from '../catalog-views.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
-import { SchemaChips } from './schema-field.tsx'
+import { SchemaChips, SchemaFieldEditor } from './schema-field.tsx'
 import { loadSchemaTags, pullSchemaTags } from './schema-tags.ts'
 
 type StatResult = { schema?: CollectionSchema }
@@ -1217,28 +1216,29 @@ export function CollectionBrowser({
     const Custom = chrome?.cells?.[key]
     const fallback = formatField(field, row[key])
     if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={fallback} />
-    if (resolveFieldType(field) === 'schema') {
+    const kind = resolveFieldType(field)
+    if (kind === 'schema') {
+      if (field.writable) {
+        return (
+          <SchemaFieldEditor
+            collectionPath={collectionPath}
+            record={row}
+            value={row[key]}
+            writable
+            onChange={(next) => void writePatch(row, { [key]: next })}
+          />
+        )
+      }
       return <SchemaChips value={row[key]} tags={loadSchemaTags()} />
     }
-    if (resolveFieldType(field) === 'select' && field.writable && field.enum?.length) {
+    if (field.writable && kind !== 'file') {
       return (
-        <CellSelect
-          value={String(row[key] ?? '')}
-          options={field.enum.map((item) => ({ value: item, label: item }))}
-          onSelect={(next) => void writeOne(row, key, field, next)}
-        />
-      )
-    }
-    if (resolveFieldType(field) === 'boolean') {
-      return (
-        <BoolCell
-          on={boolOn(row[key])}
-          writable={field.writable}
-          onToggle={
-            field.writable
-              ? () => void writeOne(row, key, field, boolOn(row[key]) ? 'false' : 'true')
-              : undefined
-          }
+        <FieldEditor
+          fieldKey={key}
+          field={field}
+          value={fieldDraftValue(field, row[key])}
+          options={uniqueValues(items, key, field)}
+          onChange={(next) => void writeOne(row, key, field, next)}
         />
       )
     }

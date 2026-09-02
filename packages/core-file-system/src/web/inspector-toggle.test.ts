@@ -121,6 +121,9 @@ test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.match(boolBox, /fsdb-boolbox/)
   assert.doesNotMatch(browser, /type="checkbox"/)
   assert.match(browser, /const canDelete = Boolean\(schema\?\.records\?\.delete\) && !subsetLocked/)
+  assert.match(browser, /if \(field.writable && kind !== 'file'\)/)
+  assert.match(browser, /<FieldEditor/)
+  assert.match(browser, /fieldDraftValue\(field, row\[key\]\)/)
 })
 
 test('create record sits at the right of the toolbar with a blue label', () => {

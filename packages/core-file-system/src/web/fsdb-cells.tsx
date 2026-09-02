@@ -67,23 +67,27 @@ export const VIEW_MODES: Array<{ id: ViewMode; label: string }> = [
   { id: 'board', label: '看板' },
 ]
 
+export function fieldDraftValue(field: FieldSpec, value: unknown): string {
+  const kind = resolveFieldType(field)
+  if (kind === 'multi-select') return asStringList(value).join(', ')
+  if (kind === 'boolean') return value === true || value === 'true' ? 'true' : 'false'
+  if (kind === 'url') return asHttpHref(value)
+  if (kind === 'image') return asImageSrc(value)
+  if (kind === 'attachment') return asAttachment(value)?.href ?? ''
+  if (kind === 'file') {
+    if (value == null || value === '') return ''
+    if (typeof value === 'string') return value
+    return JSON.stringify(value, null, 2)
+  }
+  if (value == null) return ''
+  return String(value)
+}
+
 export function draftFromRecord(schema: CollectionSchema, row: DbRecord, bodyKey: string | null | undefined, detailBody: unknown) {
   const next: Record<string, string> = {}
   for (const [key, field] of Object.entries(schema.fields)) {
     const value = key === bodyKey ? detailBody : row[key]
-    const kind = resolveFieldType(field)
-    if (kind === 'multi-select') next[key] = asStringList(value).join(', ')
-    else if (kind === 'boolean') next[key] = value === true || value === 'true' ? 'true' : 'false'
-    else if (kind === 'url') next[key] = asHttpHref(value)
-    else if (kind === 'image') next[key] = asImageSrc(value)
-    else if (kind === 'attachment') next[key] = asAttachment(value)?.href ?? ''
-    else if (kind === 'file') {
-      if (value == null || value === '') next[key] = ''
-      else if (typeof value === 'string') next[key] = value
-      else next[key] = JSON.stringify(value, null, 2)
-    }
-    else if (value == null) next[key] = ''
-    else next[key] = String(value)
+    next[key] = fieldDraftValue(field, value)
   }
   return next
 }
