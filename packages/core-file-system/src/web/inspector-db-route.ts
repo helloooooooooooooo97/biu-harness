@@ -1,7 +1,9 @@
 /** 检查器里每个数据库 Tab 有自己的路径，不改中间主界面。 */
 
 import { normalizeCollectionPath } from '../paths.ts'
-import { DATA_MODULE_PATH, databaseAllViewPath, databaseRecordPath } from './database-path.ts'
+import { DATA_MODULE_PATH, databaseAllViewPath, databaseRecordPath, databaseViewPath } from './database-path.ts'
+import { upsertSavedView } from './view-storage.ts'
+import { normalizeSavedView, type SavedView } from './saved-view.ts'
 
 const DEFAULT_PANE = 'database'
 const listeners = new Set<() => void>()
@@ -101,6 +103,11 @@ export function applyDatabaseReveal(reveal: unknown) {
     showRecordInInspector(collection, recordId)
     return
   }
+  const viewId = String((reveal as { viewId?: unknown }).viewId ?? '').trim()
+  if (viewId) {
+    showInInspector(collection, databaseViewPath(collection, viewId))
+    return
+  }
   showInInspector(collection, databaseAllViewPath(collection))
 }
 
@@ -113,9 +120,38 @@ export function applyDatabaseChannelPayload(payload: unknown, currentSessionId?:
   if (!reveal || typeof reveal !== 'object' || Array.isArray(reveal)) return
   const collection = normalizeCollectionPath(String((reveal as { collection?: unknown }).collection ?? ''))
   if (!collection || collection === '/') return
+  const savedView = savedViewFromPayload((payload as { savedView?: unknown }).savedView, (reveal as { viewId?: unknown }).viewId)
+  if (savedView) upsertSavedView(collection, savedView)
   const phase = String((payload as { phase?: unknown }).phase ?? '')
   applyDatabaseReveal(reveal)
   setInspectorAgentWorking(collection, phase !== 'done')
+}
+
+function savedViewFromPayload(raw: unknown, revealViewId: unknown): SavedView | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const rec = raw as Record<string, unknown>
+  const id = String(rec.id ?? revealViewId ?? '').trim()
+  if (!id) return null
+  let filters: Record<string, string> = {}
+  if (rec.filters && typeof rec.filters === 'object' && !Array.isArray(rec.filters)) {
+    filters = Object.fromEntries(Object.entries(rec.filters).map(([key, item]) => [key, String(item)]))
+  }
+  return normalizeSavedView({
+    id,
+    name: String(rec.name ?? rec.title ?? '新视图'),
+    mode: rec.mode as SavedView['mode'],
+    sortField: String(rec.sortField ?? 'id'),
+    sortDir: rec.sortDir === 'desc' ? 'desc' : 'asc',
+    filters,
+    columns: Array.isArray(rec.columns) ? rec.columns.map((item) => String(item)) : [],
+    groupBy: String(rec.groupBy ?? ''),
+    tree: rec.tree !== false,
+    wrap: Boolean(rec.wrap),
+    truncate: rec.truncate !== false,
+    query: String(rec.query ?? ''),
+    pageSize: Number(rec.pageSize) || 50,
+    builtin: false,
+  })
 }
 
 export function seedInspectorDbPath(paneId: string, pathname?: string) {

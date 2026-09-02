@@ -116,3 +116,43 @@ test('applyDatabaseChannelPayload ignores other sessions and unsigned broadcasts
   assert.equal(isInspectorAgentWorking('/tasks'), false)
   assert.equal(getInspectorDbPath('database:/tasks'), '/database/tasks')
 })
+
+test('applyDatabaseReveal opens a saved view when viewId is present', () => {
+  applyDatabaseReveal({ collection: '/tasks', viewId: 'board-1' })
+  assert.equal(getInspectorDbPath('database:/tasks'), '/database/tasks/view/board-1')
+})
+
+test('applyDatabaseChannelPayload upserts a created view then opens it', () => {
+  const mem: Record<string, string> = {}
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => mem[key] ?? null,
+      setItem: (key: string, value: string) => {
+        mem[key] = value
+      },
+      removeItem: (key: string) => {
+        delete mem[key]
+      },
+      key: (index: number) => Object.keys(mem)[index] ?? null,
+      get length() {
+        return Object.keys(mem).length
+      },
+    },
+  })
+  applyDatabaseChannelPayload(
+    {
+      phase: 'done',
+      sessionId: 'main',
+      reveal: { collection: '/tasks', viewId: 'board-1' },
+      savedView: { id: 'board-1', name: '看板', mode: 'board', filters: { status: 'doing' } },
+    },
+    'main',
+  )
+  assert.equal(getInspectorDbPath('database:/tasks'), '/database/tasks/view/board-1')
+  assert.equal(isInspectorAgentWorking('/tasks'), false)
+  const stored = JSON.parse(mem['fsdb.views:/tasks'] ?? '[]') as Array<{ id: string; name: string; mode: string }>
+  assert.equal(stored[0]?.id, 'board-1')
+  assert.equal(stored[0]?.name, '看板')
+  assert.equal(stored[0]?.mode, 'board')
+})

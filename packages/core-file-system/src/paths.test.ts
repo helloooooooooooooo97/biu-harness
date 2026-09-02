@@ -26,3 +26,23 @@ test('databaseRevealForTool follows result path and drops deleted records', () =
   )
   assert.equal(databaseRevealForTool({ path: '/' }), null)
 })
+
+test('databaseRevealForTool opens the source table view after creating a saved view', () => {
+  assert.deepEqual(
+    databaseRevealForTool({
+      path: '/views',
+      result: {
+        kind: 'created',
+        items: [{ value: { tablePath: '/tasks', viewId: 'board-1', title: '看板' } }],
+      },
+    }),
+    { collection: '/tasks', viewId: 'board-1' },
+  )
+  assert.deepEqual(
+    databaseRevealForTool({
+      path: '/views',
+      result: { kind: 'created', items: [{ value: { title: '普通行' } }] },
+    }),
+    { collection: '/views' },
+  )
+})

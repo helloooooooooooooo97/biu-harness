@@ -313,6 +313,48 @@ test('db_list on a table broadcasts inspector working then done', async () => {
   assert.equal(extra.length, 0)
 })
 
+test('db_create /views reveals the source table and view', async () => {
+  const seen: Array<{ type: string; payload: unknown }> = []
+  const ctx = new Context()
+  await ctx.plugin(tools)
+  class HttpStub extends Service {
+    constructor(c: Context) {
+      super(c, 'http')
+    }
+    route() {}
+    broadcast(type: string, payload: unknown) {
+      seen.push({ type, payload })
+    }
+  }
+  new HttpStub(ctx)
+  await ctx.plugin({ inject: ['tools', 'http'], apply: applyFileSystem })
+  const db = ctx.get('database') as DatabaseService
+  db.register(notesCollection())
+  const created = await runWithSession('s1', () =>
+    ctx.tools.invoke('db_create', {
+      path: '/views',
+      records: [{ tablePath: '/notes', title: '看板', mode: 'board' }],
+    }),
+  )
+  const row = (created as { items: Array<{ value: { tablePath?: string; viewId?: string; title?: string } }> }).items[0]?.value
+  assert.equal(row?.tablePath, '/notes')
+  assert.equal(row?.title, '看板')
+  assert.equal(typeof row?.viewId, 'string')
+  const done = [...seen].reverse().find((item) => {
+    const payload = item.payload as { phase?: string; reveal?: { collection?: string; viewId?: string } }
+    return item.type === 'database' && payload?.phase === 'done' && payload.reveal?.collection === '/notes'
+  })
+  const payload = done?.payload as {
+    sessionId?: string
+    reveal?: { collection?: string; viewId?: string }
+    savedView?: { name?: string; mode?: string }
+  }
+  assert.equal(payload.sessionId, 's1')
+  assert.equal(payload.reveal?.viewId, row?.viewId)
+  assert.equal(payload.savedView?.name, '看板')
+  assert.equal(payload.savedView?.mode, 'board')
+})
+
 test('register rejects duplicate view route and nav title', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)

@@ -125,6 +125,19 @@ export function pushSavedViews(collectionPath: string, views: SavedView[]) {
   }).catch(() => undefined)
 }
 
+export function upsertSavedView(collectionPath: string, view: SavedView) {
+  const next = normalizeSavedView({ ...view, builtin: false })
+  const stored = loadViews(collectionPath).filter((item) => item.id !== next.id && !item.builtin)
+  stored.push(next)
+  rememberViews(collectionPath, stored)
+  try {
+    localStorage.setItem(viewsKey(collectionPath), JSON.stringify(stored))
+  } catch {
+    /* ignore */
+  }
+  pushSavedViews(collectionPath, stored)
+}
+
 export function pushAllSavedViews() {
   try {
     for (let i = 0; i < localStorage.length; i++) {

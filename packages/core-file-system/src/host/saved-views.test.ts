@@ -36,6 +36,27 @@ test('viewsCollection lists saved views with source table', async () => {
   assert.equal(graphed.mode, 'graph')
 })
 
+test('viewsCollection creates and deletes user views on a registered table', async () => {
+  const store = new SavedViewsStore()
+  const spec = viewsCollection(store, () => [
+    { path: '/tasks', id: 'tasks', kind: 'collection', label: 'Task', view: { moduleId: 'tasks', route: '/tasks', title: 'Task' } },
+  ])
+  assert.equal(spec.records?.create, true)
+  assert.equal(spec.records?.delete, true)
+  const [row] = await spec.create!([{ tablePath: '/tasks', title: '看板', mode: 'board', filters: '{"status":"doing"}' }])
+  assert.equal(row?.tablePath, '/tasks')
+  assert.equal(row?.title, '看板')
+  assert.equal(row?.mode, 'board')
+  assert.equal(row?.filters, '{"status":"doing"}')
+  assert.equal(typeof row?.viewId, 'string')
+  assert.throws(() => spec.create!([{ tablePath: '/nope', title: 'x' }]), /unknown collection/)
+  assert.throws(() => spec.create!([{ title: '无表' }]), /tablePath required/)
+  const ids = await spec.remove!({ ids: [String(row?.id)] })
+  assert.deepEqual(ids, [String(row?.id)])
+  const listed = await spec.list()
+  assert.equal(listed.some((item) => item.id === row?.id), false)
+})
+
 test('every registered table gets a builtin all-view even before the client syncs', async () => {
   const store = new SavedViewsStore()
   const spec = viewsCollection(store, () => [

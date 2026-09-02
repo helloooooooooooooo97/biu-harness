@@ -9,6 +9,7 @@ export function normalizeCollectionPath(path: string) {
 export type DatabaseReveal = {
   collection: string
   recordId?: string
+  viewId?: string
 }
 
 function resultPathOf(result: unknown): string {
@@ -28,7 +29,7 @@ export function databaseRevealFromPath(path: string): DatabaseReveal | null {
   return recordId ? { collection, recordId } : { collection }
 }
 
-/** 删除后记录没了只切表；创建/读取可跟结果 path。 */
+/** 删除后记录没了只切表；创建/读取可跟结果 path。新建视图切到来源表的该视图。 */
 export function databaseRevealForTool(opts: {
   path: string
   result?: unknown
@@ -38,5 +39,23 @@ export function databaseRevealForTool(opts: {
     const fromPath = databaseRevealFromPath(opts.path)
     return fromPath ? { collection: fromPath.collection } : null
   }
+  const created = revealFromCreatedView(opts.result)
+  if (created) return created
   return databaseRevealFromPath(resultPathOf(opts.result) || opts.path)
+}
+
+function revealFromCreatedView(result: unknown): DatabaseReveal | null {
+  if (!result || typeof result !== 'object' || Array.isArray(result)) return null
+  if ((result as { kind?: unknown }).kind !== 'created') return null
+  const items = (result as { items?: unknown }).items
+  if (!Array.isArray(items) || !items.length) return null
+  const first = items[0]
+  if (!first || typeof first !== 'object' || Array.isArray(first)) return null
+  const value = (first as { value?: unknown }).value
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const row = value as { tablePath?: unknown; viewId?: unknown }
+  const collection = normalizeCollectionPath(String(row.tablePath ?? ''))
+  const viewId = String(row.viewId ?? '').trim()
+  if (!collection || collection === '/' || !viewId) return null
+  return { collection, viewId }
 }
