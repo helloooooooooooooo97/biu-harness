@@ -9,6 +9,7 @@ import { isLegacyDatabasePath, parseAppPath } from '@biu/web-session-view'
 import { pathForCenter, pathForCrumbTarget, type CrumbTarget } from './sidebar-nav.ts'
 import { CollectionBrowser } from './browser.tsx'
 import { DatabaseInspectorBrowse, DatabaseInspectorTab, bindInspectorSnapshot, collectionTabIcon } from './inspector-database.tsx'
+import { applyDatabaseChannelPayload } from './inspector-db-route.ts'
 import { DatabaseUiService, getDatabaseUi } from './database-ui.ts'
 import {
   bootLoadCollections,
@@ -364,8 +365,9 @@ export function apply(ctx: Context) {
     fromSnap()
     const offSnap = snapshot.subscribe?.(fromSnap)
     let debounce = 0
-    const off = snapshot.onMessage(DATABASE_CHANNEL, () => {
+    const off = snapshot.onMessage(DATABASE_CHANNEL, (payload) => {
       window.dispatchEvent(new Event('fsdb:change'))
+      applyDatabaseChannelPayload(payload)
       window.clearTimeout(debounce)
       debounce = window.setTimeout(() => void sync(), 40)
     })
