@@ -35,7 +35,7 @@
   --dsw-shadow-lv2: 0 0 0 1px rgba(242, 241, 237, 0.06), 0 8px 24px rgba(0, 0, 0, 0.35);
   --dsw-chat-width: 748px;
   /* 右侧对话正文字号 */
-  --dsw-chat-font-size: 16px;
+  --dsw-chat-font-size: 14px;
   --dsw-chat-line-height: 1.6;
   --dsw-chat-composer-font-size: 16px;
   /* 聊天窗内控件：工具条、回合栏、排队、slash、模型、工具卡 */
