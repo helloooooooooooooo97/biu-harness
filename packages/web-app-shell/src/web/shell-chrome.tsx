@@ -121,7 +121,7 @@ export function ShellSidePlaces({
   return (
     <div className="app-side-actions shell-side-places" role="navigation" aria-label="面板" data-testid="shell-side-places">
       <SideAction
-        title="聊天面板"
+        title="聊天"
         active={activeId === 'agent'}
         testId="chrome-chat-panel"
         icon={<ChatBubbleLeftIcon {...chromeIcon} />}
@@ -131,7 +131,7 @@ export function ShellSidePlaces({
         }}
       />
       <SideAction
-        title="数据面板"
+        title="数据"
         active={activeId === 'database'}
         testId="chrome-data-panel"
         icon={<CircleStackIcon {...chromeIcon} />}

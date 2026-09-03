@@ -27,6 +27,6 @@ test('boots into #app', async () => {
     await webBoot
   })
   assert.match(document.body.innerHTML, /data-testid="shell-side-places"/)
-  assert.match(document.body.innerHTML, /聊天面板/)
+  assert.match(document.body.innerHTML, /聊天/)
   assert.match(document.body.innerHTML, /设置/)
 })
