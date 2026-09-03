@@ -237,9 +237,9 @@ if (typeof document !== 'undefined') {
 .inspector-database-page .fsdb-detail-main:has(.chat-pane-embed){padding-bottom:12px}
 .session-outline-host{position:absolute;inset:0;z-index:20;pointer-events:none}
 main:has(.session-composer-host){position:relative}
-.session-composer-host{position:absolute;inset-inline:0;bottom:0;z-index:20;padding:0 60px calc(1rem + 25px);pointer-events:none}
+.session-composer-host{position:absolute;inset-inline:0;bottom:0;z-index:25;padding:0 60px calc(1rem + 25px);pointer-events:none}
 .session-composer-host .chat-composer-dock{position:static;padding:0;background:transparent}
-.session-composer-host .chat-composer-dock>*{width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto}
+.session-composer-host .chat-composer-dock>*{pointer-events:auto;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto}
 .fsdb-right:has(.session-outline-host){position:relative}
 .session-outline-host .chat-outline{left:8px;top:50%}
 `

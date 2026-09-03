@@ -4185,6 +4185,10 @@ body {
   pointer-events: none;
 }
 
+.chat-composer-dock.is-composer-faded > * {
+  pointer-events: auto;
+}
+
 .chat-composer-dock>* {
   box-sizing: border-box;
   width: 100%;
