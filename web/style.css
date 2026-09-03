@@ -1510,12 +1510,8 @@ body {
 
 .chat-pane-embed {
   position: relative;
-  display: flex;
-  flex-direction: column;
   min-height: 0;
-  flex: 1 1 0;
-  height: 0;
-  overflow: hidden;
+  flex: 1;
   padding: 0;
   border: 0;
   border-radius: 14px;
@@ -1523,38 +1519,7 @@ body {
 }
 
 .chat-pane-embed .chat-overlay-thread {
-  display: flex;
-  flex: 1 1 0;
-  min-height: 0;
-  height: 0;
-  overflow: hidden;
-  flex-direction: column;
   padding-bottom: 5.5rem;
-}
-
-.chat-pane-embed .chat-stage {
-  flex: 1 1 0;
-  min-height: 0;
-  height: 0;
-  overflow-y: auto;
-}
-
-.chat-pane.chat-pane-embed .chat-composer-dock {
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  z-index: 20;
-  flex: none;
-  padding: 0 12px 12px;
-  background: transparent;
-  pointer-events: none;
-}
-
-.chat-pane.chat-pane-embed .chat-composer-dock > * {
-  pointer-events: auto;
-  width: 100%;
-  max-width: var(--dsw-chat-max-width);
-  margin-inline: auto;
 }
 
 .chat-overlay-head {
@@ -4215,7 +4180,7 @@ body {
   transition: opacity 160ms ease;
 }
 
-.chat-composer-dock.is-scroll-faded {
+.chat-composer-dock.is-composer-faded {
   opacity: 0;
   pointer-events: none;
 }
