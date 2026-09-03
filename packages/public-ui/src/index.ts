@@ -25,4 +25,5 @@ export {
   CHAT_STAGE_PANE,
   CHAT_DOCK_STACK,
 } from './chat-pane.tsx'
+export { bindComposerBlurFade, COMPOSER_BLUR_FADE_MS } from './composer-blur-fade.ts'
 export { OutlineNav, type OutlineNavItem } from './outline-nav.tsx'
