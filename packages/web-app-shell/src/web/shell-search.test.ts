@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { SEARCH_SCOPES, openSearchHit, searchCollection } from './shell-search.tsx'
+import { SEARCH_SCOPES, openSearchHit, searchCollection, searchHref } from './shell-search.tsx'
 
 test('search opens inspector collections, not chat or database routes', () => {
   assert.equal(searchCollection('session'), '/sessions')
@@ -28,4 +28,12 @@ test('openSearchHit reveals the record in the inspector', () => {
     { collection: '/pages', recordId: 'p1' },
     { collection: '/sessions', recordId: 'abc' },
   ])
+})
+
+test('searchHref opens the left main pane by changing the route', () => {
+  assert.equal(searchHref({ kind: 'session', id: 'abc' }), '/s/abc')
+  assert.equal(searchHref({ kind: 'page', id: 'p1' }), '/database/pages/record/p1')
+  assert.equal(searchHref({ kind: 'task', id: 't1' }), '/database/tasks/record/t1')
+  assert.equal(searchHref({ kind: 'plugin', id: 'g1' }), '/database/plugins/record/g1')
+  assert.equal(searchHref({ kind: 'facet', id: 'f1' }), '/database/facets/record/f1')
 })
