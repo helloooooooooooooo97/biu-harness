@@ -16,6 +16,7 @@ describe('composer dock stacking above sticky user', () => {
     const thread = readFileSync(resolve(root, 'packages/cap-chat/src/web/thread.tsx'), 'utf8')
 
     expect(css).toMatch(/--dsw-chat-font-size:\s*14px/)
+    expect(css).toMatch(/--dsw-chat-composer-font-size:\s*14px/)
     expect(css).toMatch(/\.chat-stage\s*\{[^}]*isolation:\s*isolate/s)
     expect(css).toMatch(/\.chat-composer-dock\s*\{[^}]*z-index:\s*20/s)
     expect(thread).toMatch(/sticky top-0 z-1 bg-transparent/)

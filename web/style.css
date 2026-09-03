@@ -37,7 +37,7 @@
   /* 右侧对话正文字号 */
   --dsw-chat-font-size: 14px;
   --dsw-chat-line-height: 1.6;
-  --dsw-chat-composer-font-size: 16px;
+  --dsw-chat-composer-font-size: 14px;
   /* 聊天窗内控件：工具条、回合栏、排队、slash、模型、工具卡 */
   --dsw-chat-ui-font-size: 12px;
   --dsw-chat-chip-font-size: 12px;
