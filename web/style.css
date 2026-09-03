@@ -222,7 +222,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   border-radius: 16px;
-  background: var(--dsw-surface);
+  background: #202020;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32);
 }
 
