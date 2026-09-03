@@ -305,7 +305,8 @@ const CSS = `
 .fsdb-schema-prop-del:hover{color:var(--dsw-danger);background:color-mix(in srgb,var(--dsw-danger) 12%,transparent)}
 .fsdb-schema-addprop{display:inline-flex;align-items:center;gap:4px;margin:2px 4px 0;height:28px;padding:0 6px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);font:inherit;font-size:14px;cursor:pointer}
 .fsdb-schema-addprop:hover{background:var(--dsw-hover);color:var(--dsw-label)}
-.fsdb-schema-addprop-form{display:flex;align-items:center;gap:6px;margin:2px 4px 0;min-width:0}
+.fsdb-schema-addprop-form{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:2px 4px 0;min-width:0}
+.fsdb-schema-addprop-err{flex:1 1 100%;font-size:12px;color:var(--dsw-danger)}
 .fsdb-schema-addprop-input{flex:1;min-width:0;border:0;border-radius:6px;padding:4px 6px;background:var(--dsw-hover);color:var(--dsw-label);font:inherit;font-size:14px;outline:none}
 .fsdb-schema-addprop-ok{border:0;border-radius:6px;padding:4px 8px;background:transparent;color:var(--dsw-label-2);font:inherit;font-size:13px;font-weight:650;cursor:pointer}
 .fsdb-schema-type{position:relative;flex:none}

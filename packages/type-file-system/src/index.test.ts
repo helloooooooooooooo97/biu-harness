@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { asImageSrc, emptySchemaValue, hasCollectionDeleteQuery, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, schemaSearchHaystack, withBuiltinFields } from './index.ts'
+import { asImageSrc, emptySchemaValue, hasCollectionDeleteQuery, isReservedSchemaFieldKey, isReservedSchemaFieldLabel, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, schemaSearchHaystack, withBuiltinFields } from './index.ts'
 
 test('asImageSrc keeps http, data:image, and same-origin image paths', () => {
   assert.equal(asImageSrc('https://example.com/a.png'), 'https://example.com/a.png')
@@ -26,6 +26,15 @@ test('schemaSearchHaystack includes facet labels and field values', () => {
   assert.match(text, /O\(n\)/)
 })
 
+test('reserved schema fields include 类型 / facet by key or label', () => {
+  assert.equal(isReservedSchemaFieldKey('facet'), true)
+  assert.equal(isReservedSchemaFieldKey('title'), true)
+  assert.equal(isReservedSchemaFieldLabel('类型'), true)
+  assert.equal(isReservedSchemaFieldLabel('标题'), true)
+  assert.equal(isReservedSchemaFieldLabel('facet'), true)
+  assert.equal(isReservedSchemaFieldLabel('复杂度'), false)
+})
+
 test('normalizeSchemaPack drops nested facet fields and keeps action', () => {
   const pack = normalizeSchemaPack({
     id: 'dp',
@@ -38,6 +47,21 @@ test('normalizeSchemaPack drops nested facet fields and keeps action', () => {
   })
   assert.equal(pack?.id, 'dp')
   assert.deepEqual(pack?.fields.map((field) => field.key), ['complexity', 'run'])
+})
+
+test('normalizeSchemaPack drops fields that reuse file-system keys or labels', () => {
+  const pack = normalizeSchemaPack({
+    id: 'dp',
+    label: '动态规划',
+    fields: [
+      { key: 'facet', type: 'string', label: '别的名字' },
+      { key: 'extra', type: 'string', label: '类型' },
+      { key: 'title', type: 'string', label: '题目' },
+      { key: 'complexity', type: 'string', label: '复杂度' },
+      { key: 'dup', type: 'string', label: '复杂度' },
+    ],
+  })
+  assert.deepEqual(pack?.fields.map((field) => field.key), ['complexity'])
 })
 
 test('withBuiltinFields always includes writable facet', () => {

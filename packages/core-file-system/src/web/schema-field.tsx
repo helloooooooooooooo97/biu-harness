@@ -15,7 +15,7 @@ import { TagChip, TagChips, tagTone, listenOutsideDismiss } from '@biu/public-ui
 import { CellMulti } from '@biu/database-ui'
 import { asStringList } from './fields.ts'
 import { FieldEditor, FieldGlyph, parseFieldValue } from './fsdb-cells.tsx'
-import { loadFacets, persistFacets, fieldKeyFromLabel, slugFacetId, subscribeFacets } from './facet-catalog.ts'
+import { loadFacets, persistFacets, registerFacetFieldKey, slugFacetId, subscribeFacets } from './facet-catalog.ts'
 
 const TYPE_LABEL: Partial<Record<FieldType, string>> = {
   string: '文本',
@@ -110,10 +110,11 @@ function TypeMenu({ value, onChange }: { value: AtomicFieldType; onChange: (next
   )
 }
 
-export function AddProperty({ onAdd }: { onAdd: (label: string, type: AtomicFieldType) => void }) {
+export function AddProperty({ onAdd }: { onAdd: (label: string, type: AtomicFieldType) => boolean | void }) {
   const [open, setOpen] = useState(false)
   const [label, setLabel] = useState('')
   const [type, setType] = useState<AtomicFieldType>('string')
+  const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -124,11 +125,16 @@ export function AddProperty({ onAdd }: { onAdd: (label: string, type: AtomicFiel
     const name = label.trim()
     if (!name) {
       setOpen(false)
+      setError('')
       return
     }
-    onAdd(name, type)
+    if (onAdd(name, type) === false) {
+      setError('不能与系统字段或已有属性重名')
+      return
+    }
     setLabel('')
     setType('string')
+    setError('')
     setOpen(false)
   }
 
@@ -157,6 +163,7 @@ export function AddProperty({ onAdd }: { onAdd: (label: string, type: AtomicFiel
           if (event.key === 'Escape') {
             setOpen(false)
             setLabel('')
+            setError('')
           }
         }}
         onBlur={(event) => {
@@ -168,6 +175,7 @@ export function AddProperty({ onAdd }: { onAdd: (label: string, type: AtomicFiel
       <button type="button" className="fsdb-schema-addprop-ok" disabled={!label.trim()} onClick={commit}>
         添加
       </button>
+      {error ? <span className="fsdb-schema-addprop-err">{error}</span> : null}
     </div>
   )
 }
@@ -186,10 +194,14 @@ export function FacetPackEditor({ facetId }: { facetId: string }) {
   const pack = tag
 
   function addField(name: string, type: AtomicFieldType) {
-    const key = fieldKeyFromLabel(name, new Set(pack.fields.map((item) => item.key)))
-    if (pack.fields.some((item) => item.key === key)) return
-    const field: SchemaPackField = { key, type, label: name, writable: true }
+    const key = registerFacetFieldKey(name, {
+      keys: pack.fields.map((item) => item.key),
+      labels: pack.fields.map((item) => item.label ?? item.key),
+    })
+    if (!key) return false
+    const field: SchemaPackField = { key, type, label: name.trim(), writable: true }
     saveCatalog(catalog.map((item) => (item.id === pack.id ? { ...item, fields: [...item.fields, field] } : item)))
+    return true
   }
 
   function removeField(key: string) {
@@ -277,10 +289,14 @@ export function SchemaFieldEditor({
   }
 
   function addField(tag: CollectionSchemaPack, name: string, type: AtomicFieldType) {
-    const key = fieldKeyFromLabel(name, new Set(tag.fields.map((item) => item.key)))
-    if (tag.fields.some((item) => item.key === key)) return
-    const field: SchemaPackField = { key, type, label: name, writable: true }
+    const key = registerFacetFieldKey(name, {
+      keys: tag.fields.map((item) => item.key),
+      labels: tag.fields.map((item) => item.label ?? item.key),
+    })
+    if (!key) return false
+    const field: SchemaPackField = { key, type, label: name.trim(), writable: true }
     saveCatalog(catalog.map((item) => (item.id === tag.id ? { ...item, fields: [...item.fields, field] } : item)))
+    return true
   }
 
   function removeField(tagId: string, key: string) {

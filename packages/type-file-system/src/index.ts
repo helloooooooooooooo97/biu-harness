@@ -106,6 +106,19 @@ export const REQUIRED_RECORD_FIELDS: RequiredRecordFields = {
 /** 表格默认不展开这些内置列（标题除外）。分面作为默认业务列留下。 */
 export const BUILTIN_FIELD_KEYS = ['id', 'createdAt', 'updatedAt', 'content', 'emoji'] as const
 
+export const RESERVED_SCHEMA_FIELD_KEYS = Object.keys(BUILTIN_FIELDS)
+
+export function isReservedSchemaFieldKey(key: string) {
+  return Object.prototype.hasOwnProperty.call(BUILTIN_FIELDS, String(key ?? '').trim())
+}
+
+export function isReservedSchemaFieldLabel(label: string) {
+  const want = String(label ?? '').trim().toLowerCase()
+  if (!want) return false
+  if (isReservedSchemaFieldKey(want)) return true
+  return Object.values(BUILTIN_FIELDS).some((field) => String(field.label ?? '').trim().toLowerCase() === want)
+}
+
 /** 分面包内允许的原子类型；不能再套一层分面。 */
 export const ATOMIC_FIELD_TYPES = [
   'string',
@@ -150,18 +163,22 @@ export function normalizeSchemaPack(raw: unknown): CollectionSchemaPack | null {
   const label = String(rec.label ?? id).trim() || id
   const fields: SchemaPackField[] = []
   const seen = new Set<string>()
+  const seenLabels = new Set<string>()
   const listed = Array.isArray(rec.fields) ? rec.fields : []
   for (const item of listed) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) continue
     const row = item as Record<string, unknown>
     const key = String(row.key ?? '').trim()
-    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key) || seen.has(key)) continue
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key) || seen.has(key) || isReservedSchemaFieldKey(key)) continue
     if (isFacetFieldType(row.type) || !isAtomicFieldType(row.type)) continue
+    const fieldLabel = String(row.label ?? key).trim() || key
+    if (isReservedSchemaFieldLabel(fieldLabel) || seenLabels.has(fieldLabel.toLowerCase())) continue
     seen.add(key)
+    seenLabels.add(fieldLabel.toLowerCase())
     const field: SchemaPackField = {
       key,
       type: row.type,
-      label: String(row.label ?? key).trim() || key,
+      label: fieldLabel,
       writable: row.writable !== false,
     }
     if (Array.isArray(row.enum)) field.enum = row.enum.map((option) => String(option)).filter(Boolean)

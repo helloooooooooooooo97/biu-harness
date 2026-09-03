@@ -1,4 +1,12 @@
-import { isAtomicFieldType, normalizeSchemaPack, type AtomicFieldType, type CollectionSchemaPack } from '@biu/type-file-system'
+import {
+  BUILTIN_FIELDS,
+  isAtomicFieldType,
+  isReservedSchemaFieldKey,
+  isReservedSchemaFieldLabel,
+  normalizeSchemaPack,
+  type AtomicFieldType,
+  type CollectionSchemaPack,
+} from '@biu/type-file-system'
 
 export const FACETS_KEY = 'fsdb.facets'
 
@@ -94,16 +102,37 @@ export function slugFacetId(label: string, used: Set<string>) {
 }
 
 export function fieldKeyFromLabel(label: string, used: Set<string>) {
-  const slug = slugFacetId(label || 'field', new Set()).replace(/-/g, '_')
-  let key = /^[A-Za-z]/.test(slug) ? slug : `f_${slug.replace(/^f_?/, '') || 'field'}`
+  const slug = label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 32)
+  let key = /^[A-Za-z]/.test(slug) ? slug : `f_${slug || 'field'}`
   if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key)) key = 'field'
+  const blocked = new Set([...used, ...Object.keys(BUILTIN_FIELDS)])
   let n = 2
   let next = key
-  while (used.has(next)) {
+  while (blocked.has(next)) {
     next = `${key}_${n}`
     n += 1
   }
   return next
+}
+
+export function registerFacetFieldKey(
+  label: string,
+  used: { keys?: Iterable<string>; labels?: Iterable<string> } = {},
+): string | null {
+  const name = label.trim()
+  if (!name) return null
+  if (isReservedSchemaFieldKey(name) || isReservedSchemaFieldLabel(name)) return null
+  const usedLabels = new Set([...used.labels ?? []].map((item) => String(item).trim().toLowerCase()).filter(Boolean))
+  if (usedLabels.has(name.toLowerCase())) return null
+  const usedKeys = new Set(used.keys ?? [])
+  const key = fieldKeyFromLabel(name, usedKeys)
+  if (isReservedSchemaFieldKey(key) || usedKeys.has(key)) return null
+  return key
 }
 
 export function addFacetField(facetId: string, name: string, type: AtomicFieldType) {
@@ -113,7 +142,11 @@ export function addFacetField(facetId: string, name: string, type: AtomicFieldTy
   const catalog = loadFacets()
   const facet = catalog.find((item) => item.id === facetId)
   if (!facet) return false
-  const key = fieldKeyFromLabel(label, new Set(facet.fields.map((item) => item.key)))
+  const key = registerFacetFieldKey(label, {
+    keys: facet.fields.map((item) => item.key),
+    labels: facet.fields.map((item) => item.label ?? item.key),
+  })
+  if (!key) return false
   persistFacets(
     catalog.map((item) =>
       item.id === facet.id ? { ...item, fields: [...item.fields, { key, type, label, writable: true }] } : item,
