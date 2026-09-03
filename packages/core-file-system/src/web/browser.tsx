@@ -34,7 +34,7 @@ import {
 import type { CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
 import type { CollectionChrome, CollectionViewType, DatabaseUi } from '@biu/type-file-system/ui'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
-import { BoolBox, ChatCount, listenOutsideDismiss } from '@biu/public-ui'
+import { BoolBox, ChatCount, RecordEmojiBoard, listenOutsideDismiss } from '@biu/public-ui'
 import {
   contentFieldKey,
   defaultColumnKeys,
@@ -64,7 +64,7 @@ import { DataSidebar } from './data-sidebar.tsx'
 import { buildCrumbs, type CrumbTarget } from './sidebar-nav.ts'
 import { CrumbTrail } from './crumb-trail.tsx'
 import { pickDomAttrs, recordPickKind } from './pick-dom.ts'
-import { recordPreviewEmoji, crumbRecordLabel } from './sidebar-preview.ts'
+import { normalizeRecordEmoji, recordPreviewEmoji, crumbRecordLabel } from './sidebar-preview.ts'
 import { recordPreviewMascot, RecordMark } from './record-mark.tsx'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
 import {
@@ -1368,11 +1368,15 @@ export function CollectionBrowser({
             <span className="tasks-tree-toggle is-empty" aria-hidden />
           )
         ) : null}
-        <RecordMark
-          record={row}
-          tableIcon={currentTable?.view?.icon}
-          Icon={chrome?.Icon}
-        />
+        {openDetail ? (
+          <TableRecordIcon row={row} />
+        ) : (
+          <RecordMark
+            record={row}
+            tableIcon={currentTable?.view?.icon}
+            Icon={chrome?.Icon}
+          />
+        )}
         <span className="fsdb-title-text">{body}</span>
       </span>
     )
@@ -1384,6 +1388,64 @@ export function CollectionBrowser({
           <RecordRowTools row={row} kidCount={tree ? kidCount : 0} />
         </span>
       </>
+    )
+  }
+
+  function TableRecordIcon({ row }: { row: DbRecord }) {
+    const emoji = recordPreviewEmoji(row)
+    const [open, setOpen] = useState(false)
+    const [draft, setDraft] = useState(emoji)
+    const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+    return (
+      <span className="fsdb-table-record-icon">
+        <button
+          type="button"
+          className="fsdb-table-emoji-btn"
+          title={emoji ? '更换图标' : '设置图标'}
+          aria-label={emoji ? `更换 ${labelOf(row)} 的图标` : `设置 ${labelOf(row)} 的图标`}
+          onClick={(event) => {
+            event.stopPropagation()
+            const btn = event.currentTarget
+            setOpen((prev) => {
+              if (prev) {
+                setAnchor(null)
+                return false
+              }
+              setDraft(emoji)
+              setAnchor(btn)
+              return true
+            })
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <RecordMark
+            record={row}
+            tableIcon={currentTable?.view?.icon}
+            Icon={chrome?.Icon}
+          />
+        </button>
+        {open && anchor ? (
+          <RecordEmojiBoard
+            anchor={anchor}
+            draft={draft}
+            onDraft={setDraft}
+            onPick={(next) => {
+              void writePatch(row, { emoji: normalizeRecordEmoji(next) })
+              setOpen(false)
+              setAnchor(null)
+            }}
+            onClear={() => {
+              void writePatch(row, { emoji: '' })
+              setOpen(false)
+              setAnchor(null)
+            }}
+            onClose={() => {
+              setOpen(false)
+              setAnchor(null)
+            }}
+          />
+        ) : null}
+      </span>
     )
   }
 
