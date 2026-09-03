@@ -352,6 +352,11 @@ export class SessionViewService extends Service {
     void this.ensureTrajectory()
   }
 
+  clearInspectCall() {
+    if (this.value.focusCallId == null) return
+    this.replace({ focusCallId: undefined })
+  }
+
   /** URL → 状态：只由路由层调用，不回写 URL。
    * `/s/:id` 打开该会话；其它页面打开最近一条对话，供全局悬浮窗使用。
    * 会话表记录详情不切换主 session，详情自己 peek 该行日志。 */

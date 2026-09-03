@@ -41,6 +41,8 @@ test('plus menu can add another database tab', () => {
   assert.match(inspector, /XMarkIcon/)
   assert.match(inspector, /onClose=\{\(\) => closeOpenedTab\(item.id\)\}/)
   assert.match(inspector, /closeOpenedTab/)
+  assert.match(inspector, /slotTabId\(id\) === focusTabId\) sessionView.clearInspectCall/)
+  assert.match(inspector, /if \(!focusCallId \|\| !focusTabId\) return/)
   assert.match(inspector, /inspector-tab-remove-\$\{item.id\}/)
   assert.doesNotMatch(inspector, /item\.repeatable \? \(/)
   assert.match(inspector, /getInspectorCaption/)

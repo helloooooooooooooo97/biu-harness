@@ -208,6 +208,8 @@ test('inspectCall switches to trajectory with focus', async () => {
   view.inspectCall('c1')
   assert.equal(view.get().view, 'chat')
   assert.equal(view.get().focusCallId, 'c1')
+  view.clearInspectCall()
+  assert.equal(view.get().focusCallId, undefined)
 })
 
 test('ingest coalesces consecutive chunks and skips trajectory on chat view', async () => {

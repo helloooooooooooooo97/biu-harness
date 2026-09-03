@@ -190,11 +190,23 @@ export const SessionInspector = memo(function SessionInspector({
 
   const focusTabId = extraTabs.find((item) => item.focusOnCall)?.id
   useEffect(() => {
-    if (focusCallId && focusTabId) {
-      persistOpened(opened.includes(focusTabId) ? opened : [...opened, focusTabId])
-      setTab(focusTabId)
-      return
-    }
+    if (!focusCallId || !focusTabId) return
+    setOpened((prev) => {
+      if (prev.includes(focusTabId)) return prev
+      const next = [...prev, focusTabId]
+      try {
+        localStorage.setItem(inspectorOpenedKey(sessionId), JSON.stringify(next))
+      } catch {
+        /* ignore */
+      }
+      window.dispatchEvent(new CustomEvent('biu:inspector-opened', { detail: { sessionId, opened: next } }))
+      return next
+    })
+    setTab(focusTabId)
+  }, [focusCallId, focusTabId, sessionId, setTab])
+
+  useEffect(() => {
+    if (focusCallId && focusTabId) return
     setTabState((current) => {
       const next = resolveInspectorTab(current, allowedTabs, opened)
       if (next !== current) {
@@ -206,7 +218,7 @@ export const SessionInspector = memo(function SessionInspector({
       }
       return next
     })
-  }, [sessionId, focusCallId, focusTabId, allowedTabs.join('|'), opened, setTab])
+  }, [sessionId, focusCallId, focusTabId, allowedTabs.join('|'), opened])
 
   useEffect(() => {
     const onTab = (event: Event) => {
@@ -300,6 +312,7 @@ export const SessionInspector = memo(function SessionInspector({
   }
 
   function closeOpenedTab(id: string) {
+    if (slotTabId(id) === focusTabId) sessionView.clearInspectCall()
     const next = opened.filter((item) => item !== id)
     persistOpened(next)
     if (tab === id) setTab(next.at(-1) ?? '')
