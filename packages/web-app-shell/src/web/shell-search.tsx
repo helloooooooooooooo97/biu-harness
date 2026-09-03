@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ChatBubbleLeftRightIcon,
   CheckCircleIcon,
   DocumentIcon,
+  MagnifyingGlassIcon,
   PuzzlePieceIcon,
   Squares2X2Icon,
   TagIcon,
@@ -87,6 +88,7 @@ export function ShellSearchPanel({
   onClose: () => void
 }) {
   const navigate = useNavigate()
+  const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<'all' | SearchKind>('all')
   const [hits, setHits] = useState<SearchHit[]>([])
@@ -185,38 +187,50 @@ export function ShellSearchPanel({
         aria-label="搜索"
         onClick={(event) => event.stopPropagation()}
       >
-        <input
-          className="shell-search-input"
-          autoFocus
-          placeholder="搜索会话、任务、页面、插件、类型"
-          value={query}
-          data-testid="shell-search-input"
-          onChange={(event) => {
-            setQuery(event.target.value)
-            setActive(0)
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.preventDefault()
-              onClose()
-              return
-            }
-            if (event.key === 'ArrowDown') {
-              event.preventDefault()
-              setActive((prev) => Math.min(prev + 1, Math.max(0, flat.length - 1)))
-              return
-            }
-            if (event.key === 'ArrowUp') {
-              event.preventDefault()
-              setActive((prev) => Math.max(prev - 1, 0))
-              return
-            }
-            if (event.key === 'Enter' && current) {
-              event.preventDefault()
-              openHit(current)
-            }
-          }}
-        />
+        <div className="shell-search-field">
+          <button
+            type="button"
+            className="shell-search-go"
+            title="搜索"
+            aria-label="搜索"
+            onClick={() => inputRef.current?.focus()}
+          >
+            <MagnifyingGlassIcon className="size-4 shrink-0" />
+          </button>
+          <input
+            ref={inputRef}
+            className="shell-search-input"
+            autoFocus
+            placeholder="搜索会话、任务、页面、插件、类型"
+            value={query}
+            data-testid="shell-search-input"
+            onChange={(event) => {
+              setQuery(event.target.value)
+              setActive(0)
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                onClose()
+                return
+              }
+              if (event.key === 'ArrowDown') {
+                event.preventDefault()
+                setActive((prev) => Math.min(prev + 1, Math.max(0, flat.length - 1)))
+                return
+              }
+              if (event.key === 'ArrowUp') {
+                event.preventDefault()
+                setActive((prev) => Math.max(prev - 1, 0))
+                return
+              }
+              if (event.key === 'Enter' && current) {
+                event.preventDefault()
+                openHit(current)
+              }
+            }}
+          />
+        </div>
         <div className="shell-search-scopes" role="tablist" aria-label="搜索范围">
           <TagChips>
             <TagChip

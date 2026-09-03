@@ -221,19 +221,40 @@ body {
   max-height: min(72vh, 640px);
   flex-direction: column;
   overflow: hidden;
-  border-radius: 16px;
+  border: 1px solid #383836;
+  border-radius: 8px;
   background: #202020;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32);
 }
 
-.shell-search-input {
+.shell-search-field {
+  display: flex;
   flex: none;
-  width: 100%;
-  height: 48px;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 1px solid #383836;
+  padding: 0 8px 0 4px;
+}
+
+.shell-search-go {
+  display: grid;
+  width: 36px;
+  height: 40px;
+  flex: none;
+  place-items: center;
   border: 0;
-  border-bottom: 1px solid var(--dsw-border);
   background: transparent;
-  padding: 0 16px;
+  color: var(--dsw-label-2);
+  cursor: pointer;
+}
+
+.shell-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  padding: 0 4px 0 0;
   color: var(--dsw-label);
   font-size: 15px;
   outline: none;
