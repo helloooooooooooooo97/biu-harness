@@ -265,9 +265,6 @@ export function ToolCard({
           <span className="tool-call-title">{title}</span>
           {open ? null : <span className="tool-call-summary">{summary}</span>}
         </button>
-        <span className={status.className} title={status.label} aria-label={status.label}>
-          {status.icon}
-        </span>
         <button
           type="button"
           className="tool-call-inspect"
@@ -277,6 +274,9 @@ export function ToolCard({
         >
           <MapIcon className="size-3.5" aria-hidden />
         </button>
+        <span className={status.className} title={status.label} aria-label={status.label}>
+          {status.icon}
+        </span>
       </div>
       {!open && previewLines && previewLines.length > 0 ? (
         <div className="tool-call-body">
