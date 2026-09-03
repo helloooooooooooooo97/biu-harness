@@ -229,7 +229,7 @@ export function ToolCard({
 
   return (
     <div className="tool-call" {...pickDomAttrs('tool', node.callId, title)}>
-      <div className={`tool-call-head${open ? ' is-open' : ''}`}>
+      <div className={`tool-call-head${open ? ' is-open' : ''} ${status.className}`}>
         <button
           type="button"
           className="tool-call-toggle"

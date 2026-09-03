@@ -4082,6 +4082,16 @@ body {
   background: color-mix(in srgb, var(--dsw-sidebar) 42%, var(--dsw-bg));
 }
 
+.chat-reply-details .tool-call-head.is-open.is-ok::before,
+.chat-reply-details .tool-call-head.is-open.is-ok:hover::before {
+  background: color-mix(in srgb, #448361 22%, transparent);
+}
+
+.chat-reply-details .tool-call-head.is-open.is-fail::before,
+.chat-reply-details .tool-call-head.is-open.is-fail:hover::before {
+  background: color-mix(in srgb, #c4554d 22%, transparent);
+}
+
 .chat-reply-details[hidden] {
   display: none !important;
 }
@@ -4252,6 +4262,16 @@ body {
 .tool-call-head:hover::before,
 .tool-call-head.is-open::before {
   background: var(--dsw-sidebar);
+}
+
+.tool-call-head.is-open.is-ok::before,
+.tool-call-head.is-open.is-ok:hover::before {
+  background: color-mix(in srgb, #448361 22%, transparent);
+}
+
+.tool-call-head.is-open.is-fail::before,
+.tool-call-head.is-open.is-fail:hover::before {
+  background: color-mix(in srgb, #c4554d 22%, transparent);
 }
 
 .tool-call-toggle {
