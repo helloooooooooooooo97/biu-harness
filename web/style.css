@@ -2351,6 +2351,11 @@ body {
 .project-chip.project-chip-pick-toggle {
   border: 0;
   background: transparent;
+  color: #5b9fd6;
+}
+
+.project-chip.project-chip-pick-toggle:hover:not(:disabled) {
+  color: #5b9fd6;
 }
 
 .project-chip.project-chip-pick-toggle.is-active {
@@ -2362,6 +2367,7 @@ body {
 
 .project-chip.project-chip-pick-toggle.is-active:hover:not(:disabled) {
   background: color-mix(in srgb, var(--biu-tag, #5b9fd6) 34%, transparent);
+  color: #5b9fd6;
 }
 
 .project-chip:disabled,
@@ -2432,6 +2438,13 @@ body {
 
 [data-dock-tip][aria-expanded='true']::after {
   opacity: 0;
+}
+
+.project-chip-clear-ctx[data-dock-tip]::after,
+[data-dock-tip-at='ne']::after {
+  left: 100%;
+  bottom: calc(100% + 6px);
+  transform: none;
 }
 
 .dock-icon-btn {
