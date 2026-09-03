@@ -45,6 +45,7 @@ import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import { OverlayChatWindow } from './overlay-window.tsx'
 import { ShellDockNav } from './shell-dock-nav.tsx'
 import { ShellSettingsUpdate } from './shell-chrome.tsx'
+import { ShellSearchPanel } from './shell-search.tsx'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import { chromeIcon } from './chrome-icon.ts'
@@ -249,6 +250,7 @@ function Shell(props: SlotProps) {
   const focusCallId = useSessionView((state) => state.focusCallId)
   const routeView = useSessionView((state) => state.view)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<string>('plugins')
   const [configOpen, setConfigOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -318,6 +320,18 @@ function Shell(props: SlotProps) {
     [persistSidebar, sidebarWidth],
   )
   const openSettings = useCallback(() => setSettingsOpen(true), [])
+  const openSearch = useCallback(() => setSearchOpen(true), [])
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.isComposing) return
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return
+      if (event.key !== 'f' && event.key !== 'F') return
+      event.preventDefault()
+      setSearchOpen(true)
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [])
   const [inspectorOpen, setInspectorOpen] = useState(() => {
     try {
       return localStorage.getItem('cordis.inspector.open') === '1'
@@ -639,7 +653,8 @@ function Shell(props: SlotProps) {
           activeId={activeModule}
           agentHref={agentHref}
           onSettings={openSettings}
-          sessions={danceSessions.map((item) => ({ id: item.id, title: item.title }))}
+          onSearch={openSearch}
+          searchOpen={searchOpen}
         >
           <div className="app-stage">
             <div
@@ -778,6 +793,15 @@ function Shell(props: SlotProps) {
           </div>
         </div>
       </div>
+      {searchOpen
+        ? createPortal(
+          <ShellSearchPanel
+            sessions={danceSessions.map((item) => ({ id: item.id, title: item.title }))}
+            onClose={() => setSearchOpen(false)}
+          />,
+          document.body,
+        )
+        : null}
       {props.renderSlot('root-overlays')}
     </div>
   )

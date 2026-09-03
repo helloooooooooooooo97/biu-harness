@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowDownTrayIcon,
@@ -10,7 +9,6 @@ import {
   MagnifyingGlassIcon,
 } from '@heroicons/react/16/solid'
 import { setChatOverlay } from './chat-overlay.ts'
-import { ShellSearchPanel, type SessionHint } from './shell-search.tsx'
 
 export function ShellSettingsUpdate() {
   const [behind, setBehind] = useState(0)
@@ -109,15 +107,16 @@ export function ShellSidePlaces({
   activeId,
   agentHref,
   onSettings,
-  sessions = [],
+  onSearch,
+  searchOpen = false,
 }: {
   activeId: string
   agentHref: string
   onSettings: () => void
-  sessions?: SessionHint[]
+  onSearch?: () => void
+  searchOpen?: boolean
 }) {
   const navigate = useNavigate()
-  const [searchOpen, setSearchOpen] = useState(false)
   const [notifyOpen, setNotifyOpen] = useState(false)
 
   return (
@@ -146,15 +145,9 @@ export function ShellSidePlaces({
         icon={<MagnifyingGlassIcon className="size-5 shrink-0" />}
         onClick={() => {
           setNotifyOpen(false)
-          setSearchOpen((open) => !open)
+          onSearch?.()
         }}
       />
-      {searchOpen && typeof document !== 'undefined'
-        ? createPortal(
-          <ShellSearchPanel sessions={sessions} onClose={() => setSearchOpen(false)} />,
-          document.body,
-        )
-        : null}
       <div className="shell-side-pop-wrap">
         <SideAction
           title="通知"
@@ -162,7 +155,6 @@ export function ShellSidePlaces({
           testId="chrome-notify"
           icon={<BellIcon className="size-5 shrink-0" />}
           onClick={() => {
-            setSearchOpen(false)
             setNotifyOpen((open) => !open)
           }}
         />

@@ -268,6 +268,7 @@ export function ShellSearchPanel({
           ) : null}
         </div>
         <div className="shell-search-foot">
+          <span>⌘F 搜索</span>
           <span>↑↓ 选择</span>
           <span>↵ 打开</span>
           <span>esc 关闭</span>
