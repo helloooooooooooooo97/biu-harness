@@ -213,11 +213,7 @@ function coerce(field: FieldSpec, value: unknown) {
   }
   if (kind === 'action') return value == null ? '' : value
   if (isFacetFieldType(kind)) return normalizeSchemaValue(value)
-  const text = String(value ?? '')
-  if ((kind === 'select' || field.enum) && field.enum && !field.enum.includes(text)) {
-    throw new Error(`expected one of ${field.enum.join(', ')}`)
-  }
-  return text
+  return String(value ?? '')
 }
 
 function pickWritablePatch(schema: CollectionSchema, patch: Record<string, unknown>) {

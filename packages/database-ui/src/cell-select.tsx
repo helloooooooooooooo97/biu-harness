@@ -27,6 +27,7 @@ export function CellSelect({
   variant = 'cell',
   triggerClassName,
   className,
+  allowCreate = false,
 }: {
   value: string
   options: CellSelectOption[]
@@ -35,6 +36,7 @@ export function CellSelect({
   variant?: 'cell' | 'field'
   triggerClassName?: string
   className?: string
+  allowCreate?: boolean
 }) {
   ensureDbSearchStyle()
   const [open, setOpen] = useState(false)
@@ -45,10 +47,20 @@ export function CellSelect({
   const filtered = options.filter(
     (item) => !q || item.label.toLowerCase().includes(q) || item.value.toLowerCase().includes(q),
   )
+  const draft = query.trim()
+  const canCreate =
+    allowCreate &&
+    Boolean(draft) &&
+    draft !== value &&
+    !options.some((item) => item.value === draft || item.label === draft)
   useEffect(() => {
     if (!open) setQuery('')
   }, [open])
   const close = () => setOpen(false)
+  const pick = (next: string) => {
+    onSelect(next)
+    close()
+  }
   return (
     <div
       className={`db-cell-select fsdb-cellselect is-${variant}${open ? ' is-open' : ''}${className ? ` ${className}` : ''}`}
@@ -78,26 +90,25 @@ export function CellSelect({
           query={query}
           onQuery={setQuery}
           onEnter={() => {
-            if (!filtered[0]) return
-            onSelect(filtered[0].value)
-            close()
+            if (filtered[0]) pick(filtered[0].value)
+            else if (canCreate) pick(draft)
           }}
-          empty={!filtered.length ? <div className="db-search-empty">没有匹配项</div> : null}
+          empty={!filtered.length && !canCreate ? <div className="db-search-empty">没有匹配项</div> : null}
         >
           {filtered.map((item) => (
             <DbSearchOption
               key={item.value}
               selected={item.value === value}
               mark={item.value === value ? <CheckMark /> : null}
-              onClick={() => {
-                onSelect(item.value)
-                close()
-              }}
+              onClick={() => pick(item.value)}
             >
               {item.icon}
               {item.label}
             </DbSearchOption>
           ))}
+          {canCreate ? (
+            <DbSearchOption onClick={() => pick(draft)}>添加「{draft}」</DbSearchOption>
+          ) : null}
         </DbSearchMenu>
       ) : null}
     </div>

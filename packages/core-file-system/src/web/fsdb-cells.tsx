@@ -366,16 +366,15 @@ export function FieldEditor({
     return <ActionCell field={field} fieldKey={fieldKey} onRun={onAction} />
   }
   if (kind === 'select') {
-    const list = [...(field.enum ?? []), ...(options ?? [])].filter((item, index, all) => all.indexOf(item) === index)
-    if (list.length) {
-      return (
-        <CellSelect
-          value={value}
-          options={[{ value: '', label: '未选择' }, ...list.map((item) => ({ value: item, label: item }))]}
-          onSelect={onChange}
-        />
-      )
-    }
+    const list = [...new Set([...(options ?? []), ...(value ? [value] : [])])].filter(Boolean)
+    return (
+      <CellSelect
+        value={value}
+        options={[{ value: '', label: '未选择' }, ...list.map((item) => ({ value: item, label: item }))]}
+        allowCreate
+        onSelect={onChange}
+      />
+    )
   }
   if (kind === 'boolean') {
     return <BoolCell on={value === 'true'} writable onToggle={() => onChange(value === 'true' ? 'false' : 'true')} />
@@ -394,7 +393,7 @@ export function FieldEditor({
     return (
       <TokenMultiSelect
         values={asStringList(value)}
-        options={[...(field.enum ?? []), ...(options ?? [])].filter((item, index, list) => list.indexOf(item) === index)}
+        options={[...(options ?? [])]}
         onChange={(next) => onChange(next.join(', '))}
       />
     )

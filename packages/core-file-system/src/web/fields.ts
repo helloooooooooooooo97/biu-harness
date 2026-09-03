@@ -302,7 +302,6 @@ export function uniqueValues(rows: DbRecord[], key: string, field: FieldSpec): s
       set.add(String(row[key]))
     }
   }
-  if (field.enum?.length) return [...field.enum]
   return [...set].sort((a, b) => a.localeCompare(b, 'zh'))
 }
 
@@ -332,7 +331,7 @@ export function groupRecords(rows: DbRecord[], schema: CollectionSchema | undefi
   const known =
     kind === 'boolean'
       ? ['true', 'false']
-      : [...new Set([...(group.field.enum ?? []), ...uniqueValues(rows, group.key, group.field)])]
+      : uniqueValues(rows, group.key, group.field)
   const buckets = new Map<string, DbRecord[]>(known.map((key) => [key, []]))
   const unset: DbRecord[] = []
   for (const row of rows) {
