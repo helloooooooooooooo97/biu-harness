@@ -90,7 +90,7 @@ test('toggleExpandedViewKey 点两次回到原状，不会卡在展开', () => {
   assert.equal(toggleExpandedViewKey(key, previewKey('/pages', 'default')), previewKey('/pages', 'default'))
 })
 
-test('点记录只换记录路由，不带 view，也不收起预览', () => {
+test('点记录带着当前视图，也不收起预览', () => {
   const before: SidebarNavState = {
     ...seedState(),
     expandedViewKey: previewKey('/tasks', '1787983501816'),
@@ -104,7 +104,8 @@ test('点记录只换记录路由，不带 view，也不收起预览', () => {
   const after = applySidebarAction(before, action)
   assertSidebarInvariants(before, action, after)
   assert.equal(after.expandedViewKey, before.expandedViewKey)
-  assert.equal(pathForCenter(after), '/database/tasks/record/task_mtdbgnqj_5022je')
+  assert.equal(after.viewId, 'board')
+  assert.equal(pathForCenter(after), '/database/tasks/view/board/record/task_mtdbgnqj_5022je')
   assert.equal(parseAppPath(pathForCenter(after), plugins).kind, 'record')
 })
 
@@ -130,9 +131,9 @@ test('从记录返回回到上次视图，展开状态仍在', () => {
   const closed = applySidebarAction(state, { type: 'close-record' })
   assertSidebarInvariants(state, { type: 'close-record' }, closed)
   assert.equal(closed.recordId, undefined)
-  assert.equal(closed.viewId, '1787983501816')
+  assert.equal(closed.viewId, 'board')
   assert.equal(closed.expandedViewKey, previewKey('/tasks', '1787983501816'))
-  assert.equal(pathForCenter(closed), '/database/tasks/view/1787983501816')
+  assert.equal(pathForCenter(closed), '/database/tasks/view/board')
 })
 
 test('面包屑点上级会清掉后面几级', () => {
@@ -186,6 +187,7 @@ test('记录页面包屑是表 / 视图 / 记录，点表回到全部视图', ()
   )
   assert.equal(pathForCrumbTarget(crumbs[0]!.target), `/database/tasks/view/${encodeURIComponent(builtinAllViewId('/tasks'))}`)
   assert.equal(pathForCrumbTarget(crumbs[1]!.target), '/database/tasks/view/1787983501816')
+  assert.ok(pathForCrumbTarget(crumbs[2]!.target).includes('/view/1787983501816/record/'))
   assert.ok(!pathForCrumbTarget(crumbs[0]!.target).includes('/record/'))
   assert.ok(!pathForCrumbTarget(crumbs[1]!.target).includes('/record/'))
 })

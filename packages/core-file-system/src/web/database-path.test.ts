@@ -9,9 +9,13 @@ test('view and record helpers match the database URL scheme', () => {
   assert.equal(databaseViewPath('/pages', 'default'), '/database/pages/view/default')
   assert.equal(databaseViewPath('/sessions'), '/database/sessions')
   assert.equal(databaseRecordPath('/pages', 'rec-1'), '/database/pages/record/rec-1')
+  assert.equal(databaseRecordPath('/pages', 'rec-1', 'board'), '/database/pages/view/board/record/rec-1')
   assert.equal(parseAppPath(databaseViewPath('/pages', 'default'), plugins).kind, 'collection-view')
   assert.equal(parseAppPath(databaseViewPath('/sessions'), plugins).kind, 'collection-view')
   assert.equal(parseAppPath(databaseRecordPath('/pages', 'rec-1'), plugins).kind, 'record')
+  const nested = parseAppPath(databaseRecordPath('/pages', 'rec-1', 'board'), plugins)
+  assert.equal(nested.kind, 'record')
+  if (nested.kind === 'record') assert.equal(nested.viewId, 'board')
 })
 
 test('builtin all-view helpers keep the database URL scheme', () => {

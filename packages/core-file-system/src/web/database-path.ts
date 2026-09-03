@@ -22,12 +22,13 @@ export function databaseAllViewPath(collection: string): string {
   return databaseViewPath(collection, builtinAllViewId(collection))
 }
 
-export function databaseRecordPath(collection: string, recordId: string): string {
+export function databaseRecordPath(collection: string, recordId: string, viewId?: string): string {
   return buildAppPath({
     kind: 'record',
     ...ROUTE,
     collection,
     recordId,
+    ...(viewId ? { viewId } : {}),
   } satisfies AppRoute)
 }
 

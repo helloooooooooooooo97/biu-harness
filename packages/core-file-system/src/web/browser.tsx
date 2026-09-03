@@ -1712,6 +1712,7 @@ export function CollectionBrowser({
           onCopyView={copyView}
           onOpenRecord={(path, view, recordId, row) => {
             if (path === collectionPath) {
+              applyView(view)
               flushSync(() => {
                 setOpenDetailId(recordId)
                 if (row) setDetailRow(row)

@@ -76,7 +76,8 @@ function CollectionPage(props: SlotProps) {
   const parsed = useMemo(() => parseAppPath(location.pathname, [DATA_MODULE]), [location.pathname])
   const collectionFromRoute =
     parsed.kind === 'collection-view' || parsed.kind === 'record' ? parsed.collection : ''
-  const viewFromRoute = parsed.kind === 'collection-view' ? parsed.viewId : undefined
+  const viewFromRoute =
+    parsed.kind === 'collection-view' || parsed.kind === 'record' ? parsed.viewId : undefined
   const recordFromRoute = parsed.kind === 'record' ? parsed.recordId : null
   const currentPath = collectionFromRoute || orderedTables[0]?.path || ''
   const row = orderedTables.find((item) => item.path === currentPath)
@@ -109,7 +110,7 @@ function CollectionPage(props: SlotProps) {
       go(
         {
           collection: parsed.collection,
-          viewId: parsed.kind === 'collection-view' ? parsed.viewId : undefined,
+          viewId: parsed.kind === 'record' ? parsed.viewId : parsed.kind === 'collection-view' ? parsed.viewId : undefined,
           recordId: parsed.kind === 'record' ? parsed.recordId : null,
         },
         { replace: true },
@@ -156,12 +157,12 @@ function CollectionPage(props: SlotProps) {
       onExpandedViewKeyChange={setExpandedViewKey}
       onOpenTable={(path, viewId) => go({ collection: path, viewId: viewId ?? builtinAllViewId(path) })}
       onOpenView={(viewId) => go({ collection: currentPath, viewId })}
-      onOpenRecord={(recordId, _viewId, collection) =>
-        go({ collection: collection ?? currentPath, recordId })
+      onOpenRecord={(recordId, viewId, collection) =>
+        go({ collection: collection ?? currentPath, viewId: viewId ?? viewFromRoute, recordId })
       }
       resolveViews={(path, user) => viewsForRegisteredCollection(path, orderedTables, user)}
       onCloseRecord={() =>
-        go({ collection: currentPath, viewId: defaultViewId(currentPath) }, { replace: true })
+        go({ collection: currentPath, viewId: viewFromRoute ?? defaultViewId(currentPath) }, { replace: true })
       }
       onCrumbTarget={(target: CrumbTarget) => navigate(pathForCrumbTarget(target))}
     />

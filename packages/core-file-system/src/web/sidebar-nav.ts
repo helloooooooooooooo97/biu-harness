@@ -51,7 +51,7 @@ export type CrumbTarget =
   | { kind: 'root' }
   | { kind: 'collection'; collection: string }
   | { kind: 'view'; collection: string; viewId: string }
-  | { kind: 'record'; collection: string; recordId: string }
+  | { kind: 'record'; collection: string; recordId: string; viewId?: string }
 
 export type CrumbChoice = {
   id: string
@@ -75,7 +75,7 @@ export type Crumb = {
 }
 
 export function pathForCenter(center: Pick<DataCenter, 'collection' | 'viewId' | 'recordId'>) {
-  if (center.recordId) return databaseRecordPath(center.collection, center.recordId)
+  if (center.recordId) return databaseRecordPath(center.collection, center.recordId, center.viewId)
   return databaseViewPath(center.collection, center.viewId)
 }
 
@@ -85,6 +85,9 @@ export function pathForCrumbTarget(target: CrumbTarget) {
     return pathForCenter({ collection: target.collection, viewId: builtinAllViewId(target.collection) })
   }
   if (target.kind === 'view') return pathForCenter({ collection: target.collection, viewId: target.viewId })
+  if (target.kind === 'record') {
+    return pathForCenter({ collection: target.collection, viewId: target.viewId, recordId: target.recordId })
+  }
   return pathForCenter({ collection: target.collection, recordId: target.recordId })
 }
 
@@ -141,14 +144,14 @@ export function buildCrumbs(input: {
       icon: tableIcon,
       emoji: current?.emoji,
       mascot: current?.mascot,
-      target: { kind: 'record', collection: input.collection, recordId: input.recordId },
+      target: { kind: 'record', collection: input.collection, recordId: input.recordId, viewId: input.viewId },
       choices: (input.records ?? [{ id: input.recordId, label: input.recordLabel || input.recordId }]).map((row) => ({
         id: row.id,
         label: row.label,
         icon: tableIcon,
         emoji: row.emoji,
         mascot: row.mascot,
-        target: { kind: 'record', collection: input.collection, recordId: row.id },
+        target: { kind: 'record', collection: input.collection, recordId: row.id, viewId: input.viewId },
       })),
     })
   }
@@ -170,7 +173,7 @@ export function crumbButtonAction(crumb: Crumb, parent?: Crumb): 'menu' | CrumbT
 export function parseCenterPath(pathname: string): DataCenter | null {
   const parsed = parseAppPath(pathname, DATABASE)
   if (parsed.kind === 'record') {
-    return { collection: parsed.collection, recordId: parsed.recordId }
+    return { collection: parsed.collection, viewId: parsed.viewId, recordId: parsed.recordId }
   }
   if (parsed.kind === 'collection-view') {
     return { collection: parsed.collection, viewId: parsed.viewId }
@@ -212,21 +215,19 @@ export function applySidebarAction(state: SidebarNavState, action: SidebarNavAct
     }
   }
   if (action.type === 'open-record') {
-    const sameCollection = action.path === state.collection
     return {
       ...state,
       collection: action.path,
       recordId: action.recordId,
-      viewId: undefined,
-      lastViewId: sameCollection ? (state.recordId ? state.lastViewId : state.viewId) : undefined,
+      viewId: action.viewId,
+      lastViewId: action.viewId,
       openTables: { ...state.openTables, [action.path]: true },
     }
   }
-  const backTo = state.lastViewId
   return {
     ...state,
     recordId: undefined,
-    viewId: backTo,
+    viewId: state.viewId ?? state.lastViewId,
   }
 }
 
@@ -235,9 +236,10 @@ export function assertSidebarInvariants(before: SidebarNavState, action: Sidebar
   const parsed = parseCenterPath(path)
   if (!parsed) throw new Error(`无法解析路径 ${path}`)
   if (after.recordId) {
-    if (path.includes('/view/')) throw new Error(`记录路径不应带 view：${path}`)
+    if (after.viewId && !path.includes('/view/')) throw new Error(`记录路径应带打开时的 view：${path}`)
     if (parsed.recordId !== after.recordId) throw new Error(`记录 id 与路径不一致：${path}`)
     if (parsed.collection !== after.collection) throw new Error(`记录集合与路径不一致：${path}`)
+    if (after.viewId && parsed.viewId !== after.viewId) throw new Error(`记录视图与路径不一致：${path}`)
   } else if (after.viewId) {
     if (path.includes('/record/')) throw new Error(`视图路径不应带 record：${path}`)
     if (parsed.viewId !== after.viewId) throw new Error(`视图 id 与路径不一致：${path}`)

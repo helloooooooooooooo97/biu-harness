@@ -3,9 +3,10 @@
  * 数据模块（默认 `/database`）：
  *   `/database` 入口
  *   `/database/:type` 某张表
- *   `/database/:type/view/:viewId` 某个视图（看记录时不要这一段）
- *   `/database/:type/record/:recordId` 某条记录
- * 旧写法 `/c/` `/v/` `/r/` 以及 view+record 叠在一起的路径仍能解析，写入时改成上面这种。
+ *   `/database/:type/view/:viewId` 某个视图
+ *   `/database/:type/record/:recordId` 某条记录（无视图时）
+ *   `/database/:type/view/:viewId/record/:recordId` 从某个视图打开的记录
+ * 旧写法 `/c/` `/v/` `/r/` 仍能解析，写入时改成上面这种。
  * `:type` 为集合 path 去掉前导 `/` 再 encode（`/pages` → `pages`）。
  */
 import { matchRegisteredModule, type AppModule } from '@biu/web-app-modules'
@@ -19,11 +20,11 @@ export type AppRoute =
   | { kind: 'session'; sessionId: string; view: RouteView }
   | { kind: 'module'; moduleId: string; path: string }
   | { kind: 'collection-view'; moduleId: string; path: string; collection: string; viewId?: string }
-  | { kind: 'record'; moduleId: string; path: string; collection: string; recordId: string }
+  | { kind: 'record'; moduleId: string; path: string; collection: string; recordId: string; viewId?: string }
 
 const DATABASE_FLAT = /^\/(?:c\/)?([^/]+)(?:\/(?:view|v)\/([^/]+)|\/(?:record|r)\/([^/]+))?$/
 const DATABASE_NESTED_RECORD =
-  /^\/(?:c\/)?([^/]+)\/(?:view|v)\/[^/]+\/(?:record|r)\/([^/]+)$/
+  /^\/(?:c\/)?([^/]+)\/(?:view|v)\/([^/]+)\/(?:record|r)\/([^/]+)$/
 
 export function encodeCollectionSeg(path: string) {
   return encodeURIComponent(normalizeCollectionKey(path).replace(/^\//, ''))
@@ -47,7 +48,7 @@ export function isLegacyDatabasePath(pathname: string, modulePath = '/database')
   const base = normalizePath(modulePath)
   if (path === base || !path.startsWith(`${base}/`)) return false
   const rest = path.slice(base.length)
-  return /^\/c\//.test(rest) || /\/(?:v|r)\//.test(rest) || /\/view\/[^/]+\/record\//.test(rest)
+  return /^\/c\//.test(rest) || /\/(?:v|r)\//.test(rest)
 }
 
 export function parseDatabaseRest(pathname: string, module: AppModule): AppRoute | null {
@@ -57,13 +58,14 @@ export function parseDatabaseRest(pathname: string, module: AppModule): AppRoute
   if (!path.startsWith(`${base}/`)) return null
   const rest = path.slice(base.length)
   const nested = rest.match(DATABASE_NESTED_RECORD)
-  if (nested?.[1] && nested[2]) {
+  if (nested?.[1] && nested[2] && nested[3]) {
     return {
       kind: 'record',
       moduleId: module.id,
       path: base,
       collection: decodeCollectionSeg(nested[1]),
-      recordId: decodeURIComponent(nested[2]),
+      viewId: decodeURIComponent(nested[2]),
+      recordId: decodeURIComponent(nested[3]),
     }
   }
   const match = rest.match(DATABASE_FLAT)
@@ -109,7 +111,11 @@ export function buildAppPath(route: AppRoute): string {
   if (route.kind === 'collection-view' || route.kind === 'record') {
     const base = route.path || `/${route.moduleId}`
     const next = `${normalizePath(base)}/${encodeCollectionSeg(route.collection)}`
-    if (route.kind === 'record') return `${next}/record/${encodeURIComponent(route.recordId)}`
+    if (route.kind === 'record') {
+      const rec = `${next}/record/${encodeURIComponent(route.recordId)}`
+      if (route.viewId) return `${next}/view/${encodeURIComponent(route.viewId)}/record/${encodeURIComponent(route.recordId)}`
+      return rec
+    }
     if (route.viewId) return `${next}/view/${encodeURIComponent(route.viewId)}`
     return next
   }

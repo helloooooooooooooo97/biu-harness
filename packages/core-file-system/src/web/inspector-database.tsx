@@ -143,7 +143,8 @@ function crumbsForRoute(
   const table = tables.find((item) => item.path === collection)
   const stored = collection ? loadViews(collection) : []
   const views = viewsForRegisteredCollection(collection, tables, stored)
-  const urlViewId = parsed.kind === 'collection-view' ? parsed.viewId : undefined
+  const urlViewId =
+    parsed.kind === 'collection-view' || parsed.kind === 'record' ? parsed.viewId : undefined
   const recordId = parsed.kind === 'record' ? parsed.recordId : undefined
   const resolvedView = collection ? viewForPath(collection, urlViewId) : null
   const activeViewId = resolvedView?.id ?? urlViewId
@@ -354,8 +355,11 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
         setInspectorDbPath(id, databaseViewPath(path, nextViewId ?? builtinAllViewId(path)))
       }}
       onOpenView={(nextViewId) => setInspectorDbPath(id, databaseViewPath(currentPath, nextViewId))}
-      onOpenRecord={(recordIdNext, _viewId, nextCollection) => {
-        setInspectorDbPath(id, databaseRecordPath(nextCollection ?? currentPath, recordIdNext))
+      onOpenRecord={(recordIdNext, nextViewId, nextCollection) => {
+        setInspectorDbPath(
+          id,
+          databaseRecordPath(nextCollection ?? currentPath, recordIdNext, nextViewId ?? viewId),
+        )
       }}
       resolveViews={(path, user) => viewsForRegisteredCollection(path, tables, user)}
       onCloseRecord={() => {
