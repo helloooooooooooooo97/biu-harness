@@ -3,12 +3,12 @@ import {
   formatTrajectoryUsage,
   type TrajectoryUsage,
 } from '@biu/web-session-view'
-import { TAG_TONE_GREEN, TAG_TONE_RED } from '@biu/public-ui'
+import { TAG_TONE_GREEN, TAG_TONE_ORANGE } from '@biu/public-ui'
 
 const CACHE_RING = TAG_TONE_GREEN
-const HIST_RING = TAG_TONE_RED
+const HIST_RING = TAG_TONE_ORANGE
 const CACHE_TRACK = 'color-mix(in srgb, #448361 22%, #191919)'
-const HIST_TRACK = 'color-mix(in srgb, #c4554d 22%, #191919)'
+const HIST_TRACK = 'color-mix(in srgb, #d9730d 22%, #191919)'
 const RING_R = 4.5
 const RING_C = 2 * Math.PI * RING_R
 
@@ -65,7 +65,7 @@ function isHistPct(v: unknown): v is number {
 }
 
 /**
- * 分面绿环 = cache hit；分面红环 = 历史占比。
+ * 分面绿环 = cache hit；分面橙环 = 历史占比。
  * 百分比数字放在悬浮 title。histPct 默认取 usage.histPct。
  */
 export function UsageInline({

@@ -12,6 +12,7 @@ export {
   TAG_TONES,
   TAG_TONE_ROSE,
   TAG_TONE_BLUE,
+  TAG_TONE_ORANGE,
   TAG_TONE_GREEN,
   TAG_TONE_RED,
   ensureTagChipStyle,
