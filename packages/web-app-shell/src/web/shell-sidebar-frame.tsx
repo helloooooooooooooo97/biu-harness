@@ -15,6 +15,7 @@ export type ShellSidebarFrameProps = {
   activeId?: string
   agentHref?: string
   onSettings?: () => void
+  sessions?: Array<{ id: string; title: string }>
   children: ReactNode
 }
 
@@ -30,6 +31,7 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
   activeId,
   agentHref,
   onSettings,
+  sessions,
   children,
 }: ShellSidebarFrameProps) {
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
@@ -103,7 +105,7 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
       </div>
       {onSettings && agentHref && activeId != null ? (
         <div className="shrink-0 px-2 pt-1">
-          <ShellSidePlaces activeId={activeId} agentHref={agentHref} onSettings={onSettings} />
+          <ShellSidePlaces activeId={activeId} agentHref={agentHref} onSettings={onSettings} sessions={sessions} />
         </div>
       ) : null}
       {children}

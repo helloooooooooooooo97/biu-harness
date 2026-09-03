@@ -10,6 +10,7 @@ import {
   MagnifyingGlassIcon,
 } from '@heroicons/react/16/solid'
 import { setChatOverlay } from './chat-overlay.ts'
+import { ShellSearchPanel, type SessionHint } from './shell-search.tsx'
 
 export function ShellSettingsUpdate() {
   const [behind, setBehind] = useState(0)
@@ -108,15 +109,16 @@ export function ShellSidePlaces({
   activeId,
   agentHref,
   onSettings,
+  sessions = [],
 }: {
   activeId: string
   agentHref: string
   onSettings: () => void
+  sessions?: SessionHint[]
 }) {
   const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
   const [notifyOpen, setNotifyOpen] = useState(false)
-  const [query, setQuery] = useState('')
 
   return (
     <div className="app-side-actions shell-side-places" role="navigation" aria-label="面板" data-testid="shell-side-places">
@@ -149,31 +151,7 @@ export function ShellSidePlaces({
       />
       {searchOpen && typeof document !== 'undefined'
         ? createPortal(
-          <div
-            className="shell-search-overlay"
-            data-testid="shell-search-overlay"
-            onClick={() => setSearchOpen(false)}
-          >
-            <div
-              className="shell-search-dialog"
-              role="dialog"
-              aria-modal="true"
-              aria-label="搜索"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <input
-                className="shell-chrome-search-input"
-                autoFocus
-                placeholder="搜索…"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape') setSearchOpen(false)
-                }}
-              />
-              <p className="shell-chrome-pop-empty">输入关键字以搜索会话与数据</p>
-            </div>
-          </div>,
+          <ShellSearchPanel sessions={sessions} onClose={() => setSearchOpen(false)} />,
           document.body,
         )
         : null}

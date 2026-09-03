@@ -209,17 +209,131 @@ body {
   inset: 0;
   z-index: 40;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding: min(18vh, 120px) 16px 24px;
   background: var(--dsw-overlay);
 }
 
 .shell-search-dialog {
-  width: min(480px, calc(100vw - 48px));
-  padding: 16px;
+  display: flex;
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(72vh, 640px);
+  flex-direction: column;
+  overflow: hidden;
   border-radius: 16px;
   background: var(--dsw-surface);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32);
+}
+
+.shell-search-input {
+  flex: none;
+  width: 100%;
+  height: 48px;
+  border: 0;
+  border-bottom: 1px solid var(--dsw-border);
+  background: transparent;
+  padding: 0 16px;
+  color: var(--dsw-label);
+  font-size: 15px;
+  outline: none;
+}
+
+.shell-search-scopes {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px 8px;
+}
+
+.shell-search-chip {
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--dsw-hover);
+  padding: 0 10px;
+  color: var(--dsw-label-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.shell-search-chip.is-on {
+  background: var(--dsw-business-soft);
+  color: var(--dsw-business);
+}
+
+.shell-search-body {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 0 8px 8px;
+}
+
+.shell-search-group {
+  padding-bottom: 8px;
+}
+
+.shell-search-group-title {
+  margin: 0;
+  padding: 8px 8px 4px;
+  color: var(--dsw-label-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.shell-search-hit {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 8px;
+  color: var(--dsw-label);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.shell-search-hit.is-active,
+.shell-search-hit:hover {
+  background: var(--dsw-hover);
+}
+
+.shell-search-hit-icon {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  place-items: center;
+  color: var(--dsw-label-2);
+}
+
+.shell-search-hit-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shell-search-hint {
+  margin: 8px;
+  color: var(--dsw-label-3);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.shell-search-foot {
+  display: flex;
+  flex: none;
+  gap: 12px;
+  border-top: 1px solid var(--dsw-border);
+  padding: 8px 14px;
+  color: var(--dsw-label-3);
+  font-size: 11px;
 }
 
 .shell-chrome-search-input {

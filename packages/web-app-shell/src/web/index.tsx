@@ -639,6 +639,7 @@ function Shell(props: SlotProps) {
           activeId={activeModule}
           agentHref={agentHref}
           onSettings={openSettings}
+          sessions={danceSessions.map((item) => ({ id: item.id, title: item.title }))}
         >
           <div className="app-stage">
             <div
