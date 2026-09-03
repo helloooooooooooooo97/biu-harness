@@ -94,6 +94,7 @@ export function ShellSearchPanel({
   const [hits, setHits] = useState<SearchHit[]>([])
   const [busy, setBusy] = useState(false)
   const [active, setActive] = useState(0)
+  const cacheRef = useRef(new Map<string, SearchHit[]>())
 
   const needle = query.trim().toLowerCase()
 
@@ -110,10 +111,23 @@ export function ShellSearchPanel({
   }, [needle, sessions])
 
   useEffect(() => {
+    const keyOf = (kind: SearchKind) => `${kind}\0${needle}`
     const remote = SEARCH_SCOPES.filter((item) => item.path && (scope === 'all' || item.id === scope))
-    const skipNetwork = !remote.length || (!needle && scope === 'all')
-    if (skipNetwork) {
+    const allRemote = SEARCH_SCOPES.filter((item) => item.path)
+    const fromCache = allRemote.flatMap((item) => cacheRef.current.get(keyOf(item.id)) ?? [])
+    if (!needle && scope === 'all') {
       setHits([])
+      setBusy(false)
+      return
+    }
+    if (fromCache.length) setHits(fromCache)
+    if (!remote.length) {
+      setBusy(false)
+      return
+    }
+    const missing = remote.filter((item) => !cacheRef.current.has(keyOf(item.id)))
+    if (!missing.length) {
+      setHits(fromCache)
       setBusy(false)
       return
     }
@@ -121,7 +135,7 @@ export function ShellSearchPanel({
     const timer = window.setTimeout(() => {
       setBusy(true)
       void Promise.all(
-        remote.map(async (item) => {
+        missing.map(async (item) => {
           try {
             const rows = await listKind(item.path!, needle, ac.signal)
             return rows.map((row) => {
@@ -139,9 +153,12 @@ export function ShellSearchPanel({
         }),
       ).then((groups) => {
         if (ac.signal.aborted) return
-        setHits(groups.flat())
+        groups.forEach((rows, index) => {
+          const kind = missing[index]?.id
+          if (kind) cacheRef.current.set(keyOf(kind), rows)
+        })
+        setHits(allRemote.flatMap((item) => cacheRef.current.get(keyOf(item.id)) ?? []))
         setBusy(false)
-        setActive(0)
       })
     }, needle ? DEBOUNCE_MS : 0)
     return () => {
@@ -193,6 +210,7 @@ export function ShellSearchPanel({
             className="shell-search-go"
             title="搜索"
             aria-label="搜索"
+            aria-busy={busy}
             onClick={() => inputRef.current?.focus()}
           >
             <MagnifyingGlassIcon className="size-4 shrink-0" />
@@ -252,8 +270,8 @@ export function ShellSearchPanel({
             ))}
           </TagChips>
         </div>
-        <div className="shell-search-body">
-          {!needle && !flat.length && !busy ? (
+        <div className="shell-search-body" aria-busy={busy}>
+          {!needle && scope === 'all' && !flat.length ? (
             <p className="shell-search-hint">
               会话用已加载的列表即时筛；其它类型并行各取最多 {PER_KIND} 条，输入后再请求。
             </p>
@@ -281,7 +299,6 @@ export function ShellSearchPanel({
               })}
             </section>
           ))}
-          {busy ? <p className="shell-search-hint">正在检索…</p> : null}
           {!busy && needle && !flat.length ? (
             <p className="shell-search-hint">没有匹配「{query.trim()}」的结果</p>
           ) : null}

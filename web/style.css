@@ -218,6 +218,7 @@ body {
 .shell-search-dialog {
   display: flex;
   width: min(560px, calc(100vw - 32px));
+  height: min(72vh, 640px);
   max-height: min(72vh, 640px);
   flex-direction: column;
   overflow: hidden;
@@ -273,6 +274,7 @@ body {
 }
 
 .shell-search-body {
+  position: relative;
   min-height: 0;
   flex: 1;
   overflow: auto;
