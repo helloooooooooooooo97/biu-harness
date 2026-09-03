@@ -1,11 +1,7 @@
 import { useCallback, useLayoutEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { OutlineNav } from '@biu/public-ui'
-import { headingsFromRoot } from './heading-outline.ts'
-
-function escapeId(id: string) {
-  return typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(id) : id
-}
+import { headingElById, headingsFromRoot, sameOutlineItems } from './heading-outline.ts'
 
 export function HeadingOutline({ enabled }: { enabled: boolean }) {
   const [host, setHost] = useState<HTMLElement | null>(null)
@@ -15,17 +11,19 @@ export function HeadingOutline({ enabled }: { enabled: boolean }) {
     const stage = document.querySelector('.fsdb-detail-stage')
     const main = document.querySelector('.fsdb-detail-main')
     if (!(main instanceof HTMLElement)) {
-      setItems([])
+      setItems((prev) => (prev.length ? [] : prev))
       return
     }
     const root = main.closest('.fsdb-right') ?? main.closest('.fsdb-right-body') ?? stage
-    setHost(root instanceof HTMLElement ? root : main)
-    setItems(headingsFromRoot(main))
+    const nextHost = root instanceof HTMLElement ? root : main
+    setHost((prev) => (prev === nextHost ? prev : nextHost))
+    const next = headingsFromRoot(main)
+    setItems((prev) => (sameOutlineItems(prev, next) ? prev : next))
   }, [])
 
   useLayoutEffect(() => {
     if (!enabled) {
-      setItems([])
+      setItems((prev) => (prev.length ? [] : prev))
       setHost(null)
       return
     }
@@ -38,8 +36,9 @@ export function HeadingOutline({ enabled }: { enabled: boolean }) {
   }, [enabled, scan])
 
   const go = useCallback((id: string) => {
-    const el = document.querySelector<HTMLElement>(`[data-heading-outline="${escapeId(id)}"]`)
-    el?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    const main = document.querySelector('.fsdb-detail-main')
+    if (!(main instanceof HTMLElement)) return
+    headingElById(main, id)?.scrollIntoView({ block: 'start', behavior: 'smooth' })
   }, [])
 
   if (!enabled || !host || !items.length) return null

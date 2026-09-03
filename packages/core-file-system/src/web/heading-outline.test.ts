@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { headingsFromHtml, headingsFromRoot } from './heading-outline.ts'
+import { headingElById, headingsFromHtml, headingsFromRoot } from './heading-outline.ts'
 
 test('headingsFromHtml extracts h1–h3 and skips chrome titles', () => {
   const html = `
@@ -22,17 +22,26 @@ test('headingsFromHtml extracts h1–h3 and skips chrome titles', () => {
   ])
 })
 
-test('headingsFromRoot stamps data-heading-outline on live nodes', () => {
+test('headingsFromRoot is read-only so TipTap headings do not trip MutationObserver', () => {
   const root = document.createElement('div')
-  root.innerHTML = '<h1>A</h1><h2>B</h2><h3>C</h3>'
+  root.innerHTML = '<div class="tiptap"><h1>A</h1><h2>B</h2><h3>C</h3></div>'
+  let fires = 0
+  const mo = new MutationObserver(() => {
+    fires += 1
+    headingsFromRoot(root)
+  })
+  mo.observe(root, { subtree: true, childList: true, characterData: true, attributes: true })
   const items = headingsFromRoot(root)
   assert.deepEqual(
-    items.map((item) => [item.text, item.level]),
+    items.map((item) => [item.id, item.text, item.level]),
     [
-      ['A', 1],
-      ['B', 2],
-      ['C', 3],
+      ['heading-0', 'A', 1],
+      ['heading-1', 'B', 2],
+      ['heading-2', 'C', 3],
     ],
   )
-  assert.equal(root.querySelector('[data-heading-outline="heading-2"]')?.textContent, 'C')
+  assert.equal(root.querySelector('[data-heading-outline]'), null)
+  assert.equal(fires, 0)
+  mo.disconnect()
+  assert.equal(headingElById(root, 'heading-2')?.textContent, 'C')
 })
