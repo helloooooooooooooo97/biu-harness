@@ -320,18 +320,23 @@ function Shell(props: SlotProps) {
     [persistSidebar, sidebarWidth],
   )
   const openSettings = useCallback(() => setSettingsOpen(true), [])
-  const openSearch = useCallback(() => setSearchOpen(true), [])
+  const [searchFocusSeq, setSearchFocusSeq] = useState(0)
+  const openSearch = useCallback(() => {
+    setSearchOpen(true)
+    setSearchFocusSeq((seq) => seq + 1)
+  }, [])
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.isComposing) return
       if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return
       if (event.key !== 'f' && event.key !== 'F') return
       event.preventDefault()
-      setSearchOpen(true)
+      event.stopPropagation()
+      openSearch()
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [])
+  }, [openSearch])
   const [inspectorOpen, setInspectorOpen] = useState(() => {
     try {
       return localStorage.getItem('cordis.inspector.open') === '1'
@@ -798,6 +803,7 @@ function Shell(props: SlotProps) {
           <ShellSearchPanel
             sessions={danceSessions.map((item) => ({ id: item.id, title: item.title }))}
             onClose={() => setSearchOpen(false)}
+            focusSeq={searchFocusSeq}
           />,
           document.body,
         )

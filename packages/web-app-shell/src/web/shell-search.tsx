@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ChatBubbleLeftRightIcon,
@@ -83,9 +83,11 @@ function KindGlyph({ kind, compact }: { kind: SearchKind | 'all'; compact?: bool
 export function ShellSearchPanel({
   sessions,
   onClose,
+  focusSeq = 0,
 }: {
   sessions: SessionHint[]
   onClose: () => void
+  focusSeq?: number
 }) {
   const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -95,6 +97,12 @@ export function ShellSearchPanel({
   const [busy, setBusy] = useState(false)
   const [active, setActive] = useState(0)
   const cacheRef = useRef(new Map<string, SearchHit[]>())
+
+  useLayoutEffect(() => {
+    const node = inputRef.current
+    if (!node) return
+    node.focus()
+  }, [focusSeq])
 
   const needle = query.trim().toLowerCase()
 
