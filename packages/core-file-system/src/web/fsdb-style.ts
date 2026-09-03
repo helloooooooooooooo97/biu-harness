@@ -248,10 +248,10 @@ const CSS = `
 .fsdb-detail-stage{display:flex;min-width:0;min-height:min-content;flex:1 0 auto;flex-direction:row;overflow:visible;background:var(--dsw-bg)}
 .fsdb-detail-screen{display:flex;min-width:0;min-height:min-content;flex:1;flex-direction:column;overflow:visible}
 .fsdb-detail-screen .fsdb-detail-split,.fsdb-detail-screen > :not(header){flex:none;min-height:min-content;overflow:visible}
-.fsdb-detail-float-nav{position:sticky;top:50%;align-self:flex-start;flex:none;z-index:24;display:flex;flex-direction:column;gap:4px;margin:0 8px 0 6px;padding:4px;border:0;border-radius:8px;background:rgba(255,255,255,.10);box-shadow:0 1px 2px rgba(15,15,15,.04);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transform:translateY(-50%)}
-.fsdb-detail-float-btn{display:flex;width:32px;height:32px;align-items:center;justify-content:center;margin:0;border:0;border-radius:6px;padding:0;background:transparent;color:#737373;cursor:pointer}
-.fsdb-detail-float-btn svg{width:20px;height:20px}
-.fsdb-detail-float-btn:hover:not(:disabled){background:rgba(0,0,0,.05);color:#262626}
+.fsdb-detail-float-nav{position:sticky;top:50%;align-self:flex-start;flex:none;z-index:24;display:flex;flex-direction:column;gap:2px;margin:0 10px 0 4px;padding:3px;border:0;border-radius:6px;background:rgba(255,255,255,.10);box-shadow:0 1px 2px rgba(15,15,15,.04);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transform:translateY(-50%)}
+.fsdb-detail-float-btn{display:flex;width:24px;height:24px;align-items:center;justify-content:center;margin:0;border:0;border-radius:5px;padding:0;background:transparent;color:#a3a3a3;cursor:pointer}
+.fsdb-detail-float-btn svg{width:14px;height:14px}
+.fsdb-detail-float-btn:hover:not(:disabled){background:rgba(255,255,255,.08);color:#f0efed}
 .fsdb-detail-float-btn:disabled{opacity:.3;cursor:default}
 .fsdb-detail-rail{height:100%;flex:none;border-right:0;border-left:1px solid var(--dsw-border)}
 .fsdb-detail-rail .app-activity-indicator{left:auto;right:0;border-radius:2px 0 0 2px}
