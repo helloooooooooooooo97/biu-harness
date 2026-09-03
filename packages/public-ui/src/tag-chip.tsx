@@ -4,9 +4,11 @@ const STYLE_ID = 'biu-public-ui-tag-chip'
 const CSS = `
 .biu-tag-wrap{border:0;background:transparent;padding:0;cursor:pointer;font:inherit}
 .biu-tags{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:0;max-width:100%}
-.biu-tag{display:inline-flex;align-items:center;gap:2px;height:20px;padding:0 6px;border-radius:4px;font-size:13px;font-weight:500;line-height:20px;background:color-mix(in srgb,var(--biu-tag,#5b9fd6) 22%,transparent);color:var(--biu-tag,#5b9fd6);max-width:160px}
+.biu-tag{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:4px;font-size:13px;font-weight:500;line-height:20px;background:color-mix(in srgb,var(--biu-tag,#5b9fd6) 22%,transparent);color:var(--biu-tag,#5b9fd6);max-width:160px}
 .biu-tag.is-btn{cursor:pointer}
 .biu-tag.is-on{background:color-mix(in srgb,var(--biu-tag,#5b9fd6) 34%,transparent)}
+.biu-tag-icon{display:inline-flex;width:12px;height:12px;flex:none;align-items:center;justify-content:center}
+.biu-tag-icon svg{width:12px;height:12px;display:block}
 .biu-tag-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .biu-tag-x{border:0;background:transparent;padding:0;margin:0;color:inherit;opacity:.55;cursor:pointer;display:inline-flex;line-height:0}
 .biu-tag-x:hover{opacity:1}
@@ -52,12 +54,14 @@ export function TagChip({
   onRemove,
   onClick,
   active,
+  icon,
 }: {
   id: string
   label: string
   onRemove?: () => void
   onClick?: () => void
   active?: boolean
+  icon?: ReactNode
 }) {
   ensureTagChipStyle()
   const chip = (
@@ -66,6 +70,7 @@ export function TagChip({
       style={{ ['--biu-tag' as string]: tagTone(id) }}
       title={label}
     >
+      {icon ? <span className="biu-tag-icon">{icon}</span> : null}
       <span className="biu-tag-label">{label}</span>
       {onRemove ? (
         <button

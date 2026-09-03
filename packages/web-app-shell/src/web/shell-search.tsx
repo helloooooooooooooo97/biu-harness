@@ -5,8 +5,10 @@ import {
   CheckCircleIcon,
   DocumentIcon,
   PuzzlePieceIcon,
+  Squares2X2Icon,
   TagIcon,
 } from '@heroicons/react/16/solid'
+import { TagChip, TagChips } from '@biu/public-ui'
 import { setChatOverlay } from './chat-overlay.ts'
 
 export type SearchKind = 'session' | 'task' | 'page' | 'plugin' | 'facet'
@@ -67,8 +69,9 @@ async function listKind(path: string, query: string, signal: AbortSignal) {
   return Array.isArray(body.items) ? body.items : []
 }
 
-function KindGlyph({ kind }: { kind: SearchKind }) {
-  const className = 'size-4 shrink-0'
+function KindGlyph({ kind, compact }: { kind: SearchKind | 'all'; compact?: boolean }) {
+  const className = compact ? 'size-3 shrink-0' : 'size-4 shrink-0'
+  if (kind === 'all') return <Squares2X2Icon className={className} />
   if (kind === 'session') return <ChatBubbleLeftRightIcon className={className} />
   if (kind === 'task') return <CheckCircleIcon className={className} />
   if (kind === 'page') return <DocumentIcon className={className} />
@@ -215,23 +218,25 @@ export function ShellSearchPanel({
           }}
         />
         <div className="shell-search-scopes" role="tablist" aria-label="搜索范围">
-          <button
-            type="button"
-            className={`shell-search-chip${scope === 'all' ? ' is-on' : ''}`}
-            onClick={() => setScope('all')}
-          >
-            全部
-          </button>
-          {SEARCH_SCOPES.map((item) => (
-            <button
-              type="button"
-              key={item.id}
-              className={`shell-search-chip${scope === item.id ? ' is-on' : ''}`}
-              onClick={() => setScope(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
+          <TagChips>
+            <TagChip
+              id="all"
+              label="全部"
+              active={scope === 'all'}
+              icon={<KindGlyph kind="all" compact />}
+              onClick={() => setScope('all')}
+            />
+            {SEARCH_SCOPES.map((item) => (
+              <TagChip
+                key={item.id}
+                id={item.id}
+                label={item.label}
+                active={scope === item.id}
+                icon={<KindGlyph kind={item.id} compact />}
+                onClick={() => setScope(item.id)}
+              />
+            ))}
+          </TagChips>
         </div>
         <div className="shell-search-body">
           {!needle && !flat.length && !busy ? (
