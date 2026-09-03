@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { BoolBox } from '@biu/public-ui'
+import { BoolBox, TagChip, TagChips } from '@biu/public-ui'
 import {
   ArchiveBoxArrowDownIcon,
   ArrowPathIcon,
@@ -35,7 +35,7 @@ import {
   resolveFieldType,
   type ViewMode,
 } from './fields.ts'
-import { CellSelect, LocalText, TokenMultiSelect } from './controls.tsx'
+import { LocalText, TokenMultiSelect } from './controls.tsx'
 
 export function actionIcon(id: string) {
   const cls = 'size-[14px]'
@@ -288,26 +288,15 @@ export function DefaultCell({ field, value, fieldKey, onRun }: { field: FieldSpe
   if (kind === 'action') {
     return <ActionCell field={field} fieldKey={fieldKey ?? ''} onRun={onRun} />
   }
-  if (kind === 'select') {
-    const text = String(value ?? '')
-    if (!text) return <span className="fsdb-muted">—</span>
-    return (
-      <span className="fsdb-tag">
-        {text}
-      </span>
-    )
-  }
-  if (kind === 'multi-select') {
-    const tags = asStringList(value)
+  if (kind === 'select' || kind === 'multi-select') {
+    const tags = kind === 'multi-select' ? asStringList(value) : String(value ?? '') ? [String(value)] : []
     if (!tags.length) return <span className="fsdb-muted">—</span>
     return (
-      <span className="fsdb-tags">
+      <TagChips>
         {tags.map((tag) => (
-          <span key={tag} className="fsdb-tag">
-            {tag}
-          </span>
+          <TagChip key={tag} id={tag} label={tag} />
         ))}
-      </span>
+      </TagChips>
     )
   }
   if (kind === 'url' || kind === 'image' || kind === 'attachment' || kind === 'file') {
@@ -365,15 +354,15 @@ export function FieldEditor({
   if (kind === 'action') {
     return <ActionCell field={field} fieldKey={fieldKey} onRun={onAction} />
   }
-  if (kind === 'select') {
-    const list = [...new Set([...(options ?? []), ...(value ? [value] : [])])].filter(Boolean)
+  if (kind === 'select' || kind === 'multi-select') {
+    const selected = kind === 'multi-select' ? asStringList(value) : value ? [value] : []
+    const list = [...new Set([...(options ?? []), ...selected])].filter(Boolean)
     return (
-      <CellSelect
-        value={value}
-        options={[{ value: '', label: '未选择' }, ...list.map((item) => ({ value: item, label: item }))]}
-        allowCreate
-        chips
-        onSelect={onChange}
+      <TokenMultiSelect
+        values={selected}
+        options={list}
+        multiple={kind === 'multi-select'}
+        onChange={(next) => onChange(kind === 'multi-select' ? next.join(', ') : (next[0] ?? ''))}
       />
     )
   }
@@ -387,15 +376,6 @@ export function FieldEditor({
         value={toDatetimeLocal(value)}
         placeholder=""
         onCommit={(next) => onChange(fromDatetimeLocal(next))}
-      />
-    )
-  }
-  if (kind === 'multi-select') {
-    return (
-      <TokenMultiSelect
-        values={asStringList(value)}
-        options={[...(options ?? [])]}
-        onChange={(next) => onChange(next.join(', '))}
       />
     )
   }

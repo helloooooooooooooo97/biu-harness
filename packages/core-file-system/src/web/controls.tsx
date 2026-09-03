@@ -10,11 +10,13 @@ export function TokenMultiSelect({
   options,
   onChange,
   allowCreate = true,
+  multiple = true,
 }: {
   values: string[]
   options: string[]
   onChange: (next: string[]) => void
   allowCreate?: boolean
+  multiple?: boolean
 }) {
   return (
     <CellMulti
@@ -22,6 +24,7 @@ export function TokenMultiSelect({
       options={options.map((item) => ({ value: item, label: item }))}
       onChange={onChange}
       allowCreate={allowCreate}
+      multiple={multiple}
     />
   )
 }

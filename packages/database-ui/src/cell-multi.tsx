@@ -8,12 +8,14 @@ export function CellMulti({
   onChange,
   allowCreate = true,
   placeholder,
+  multiple = true,
 }: {
   values: string[]
   options: Array<{ value: string; label: string }>
   onChange: (next: string[]) => void
   allowCreate?: boolean
   placeholder?: string
+  multiple?: boolean
 }) {
   ensureDbSearchStyle()
   const [open, setOpen] = useState(false)
@@ -28,7 +30,12 @@ export function CellMulti({
     allowCreate && Boolean(query.trim()) && !values.includes(query.trim()) && !options.some((item) => item.value === query.trim() || item.label === query.trim())
   const close = () => setOpen(false)
   const add = (value: string) => {
-    if (!values.includes(value)) onChange([...values, value])
+    if (multiple) {
+      if (!values.includes(value)) onChange([...values, value])
+    } else {
+      onChange([value])
+      close()
+    }
     setQuery('')
   }
   return (
