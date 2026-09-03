@@ -4830,12 +4830,12 @@ body {
 }
 
 .composer-send {
-  background: var(--dsw-sidebar-fg-active);
+  background: #EFEEEC;
   color: var(--dsw-bg);
 }
 
 .composer-send:disabled {
-  background: var(--dsw-sidebar-fg);
+  background: #EFEEEC;
   color: var(--dsw-bg);
   opacity: 1;
   cursor: default;
