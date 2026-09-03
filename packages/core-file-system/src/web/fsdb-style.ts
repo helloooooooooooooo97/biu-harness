@@ -31,6 +31,15 @@ const CSS = `
 .fsdb-right-body:has(.fsdb-pager)>*,.fsdb-right-body:has(.fsdb-pager) .fsdb-main{display:flex;flex-direction:column;min-height:0;flex:1;height:100%;overflow:hidden}
 .fsdb-right-body:has(.chat-pane-embed){overflow:hidden}
 .fsdb-right-body:has(.chat-pane-embed)>*{display:flex;flex-direction:column;min-height:0;flex:1;height:100%;overflow:hidden}
+.fsdb-right-body:has(.chat-pane-embed) .fsdb-detail-stage{display:flex;min-height:0;flex:1;overflow:hidden}
+.fsdb-detail-stage:has(.chat-pane-embed),
+.fsdb-detail-screen:has(.chat-pane-embed){min-height:0;flex:1;overflow:hidden}
+.fsdb-detail-screen:has(.chat-pane-embed) .fsdb-detail-split,
+.fsdb-detail-main:has(.chat-pane-embed){min-height:0;flex:1;overflow:hidden;display:flex;flex-direction:column}
+.fsdb-fileview:has(.chat-pane-embed){display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.fsdb-detail-main:has(.chat-pane-embed){padding-bottom:12px;background:#191919}
+.fsdb-detail-main:has(.chat-pane-embed) .fsdb-detail-title-row,
+.fsdb-detail-main:has(.chat-pane-embed) .fsdb-detail-aside{flex:none}
 .fsdb-views{display:flex;width:100%;max-width:none;min-width:0;flex:1;flex-direction:column;min-height:0;overflow:hidden;box-sizing:border-box}
 .fsdb-page>.fsdb-views{width:var(--sidebar-col,var(--dsw-sidebar-min,160px));max-width:var(--dsw-sidebar-max,360px);flex:none}
 .fsdb-nav-chevron{flex:none;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
