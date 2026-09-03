@@ -59,6 +59,7 @@ test('page plugin stores markdown under .page and assets for images', async () =
   assert.equal(registered[0]?.view?.icon, 'document')
   const types = new Set(Object.values(registered[0]!.schema.fields).map((field) => field.type))
   for (const type of FIELD_TYPES) assert.equal(types.has(type), true, type)
+  assert.equal(registered[0]?.schema.fields.tags?.enum, undefined)
   assert.deepEqual(registered[0]?.records, { update: true, create: true, delete: true })
 
   const spec = registered[0]!
@@ -71,8 +72,9 @@ test('page plugin stores markdown under .page and assets for images', async () =
     title: '新页面',
     notes: '# 标题\n内容',
     cover: 'assets/hero.png',
-    tags: ['blue'],
+    tags: ['docs', 'wip'],
   }])
+  assert.deepEqual(created[0]?.tags, ['docs', 'wip'])
   assert.equal(created[0]?.title, '新页面')
   assert.equal(created[0]?.notes, '# 标题\n内容')
   assert.equal(created[0]?.cover, '/api/page/file/hero.png')

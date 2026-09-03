@@ -5,8 +5,6 @@ import { PagesStore, STATUS, type WorkspaceFs } from './store.ts'
 
 export { PAGE_ROOT, PAGE_ASSETS, ASSET_GC_GRACE_MS, collectPageAssetNames, PagesStore } from './store.ts'
 
-const COLORS = ['red', 'orange', 'yellow', 'green', 'blue'] as const
-
 export function pagesCollection(store: PagesStore): CollectionSpec {
   return {
     id: 'pages',
@@ -46,7 +44,7 @@ export function pagesCollection(store: PagesStore): CollectionSpec {
         count: { type: 'number', label: '计数', writable: true },
         enabled: { type: 'boolean', label: '启用', writable: true },
         status: { type: 'select', label: '状态', writable: true, enum: [...STATUS] },
-        tags: { type: 'multi-select', label: '标签', writable: true, enum: [...COLORS, 'prod', 'lab'] },
+        tags: { type: 'multi-select', label: '标签', writable: true },
         aliases: { type: 'string[]', label: '别名', writable: true },
         publishedAt: { type: 'datetime', label: '发布时间', writable: true },
         size: { type: 'number', label: '体积', writable: true },
