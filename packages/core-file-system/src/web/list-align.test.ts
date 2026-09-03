@@ -39,6 +39,13 @@ test('list and detail share the chat column max width with side padding', () => 
   assert.match(css, /\.fsdb-right-body:has\(\.fsdb-pager\)\{[^}]*overflow:hidden/)
   assert.match(css, /\.fsdb-pager\{[^}]*margin-top:auto/)
   assert.match(css, /\.inspector-database-page \.fsdb-pager\{[^}]*1rem \+ 44px \+ 25px - 30px/)
+  assert.match(css, /\.fsdb-page \.tasks-table\{[^}]*border-left:0|border:0/)
+  assert.match(css, /\.fsdb-page \.tasks-table th,\.fsdb-page \.tasks-table td\{[^}]*border-right:1px solid color-mix\(in srgb,var\(--dsw-border\) 80%,transparent\)/)
+  assert.match(css, /\.fsdb-page \.tasks-table th:last-child,\.fsdb-page \.tasks-table td:last-child\{[^}]*border-right:0/)
+  assert.match(css, /\.fsdb-page \.tasks-minicard-bar \.tasks-row-tools[\s\S]*opacity:0/)
+  assert.match(css, /\.fsdb-page \.tasks-queue-item \.tasks-row-tools[\s\S]*opacity:0/)
+  assert.match(css, /\.fsdb-page \.tasks-minicard:hover \.tasks-title-open/)
+  assert.match(css, /\.fsdb-page \.tasks-queue-item:hover \.tasks-title-open/)
 })
 
 test('list and detail properties share key and value colors', () => {

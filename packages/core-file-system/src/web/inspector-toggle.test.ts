@@ -205,6 +205,8 @@ test('card and queue rows expose split and expand like the table', () => {
   assert.match(style, /tasks-minicard-bar/)
   assert.match(style, /tasks-queue-item-tools/)
   assert.match(style, /tasks-row-tools/)
+  assert.match(style, /\.tasks-minicard-bar \.tasks-row-tools[\s\S]*opacity:0/)
+  assert.match(style, /\.tasks-queue-item \.tasks-row-tools[\s\S]*opacity:0/)
 })
 
 test('filesystem header expands the shared left sidebar and toggles the right inspector', () => {
