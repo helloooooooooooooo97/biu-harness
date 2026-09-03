@@ -189,7 +189,7 @@ if (typeof document !== 'undefined') {
   style.id = id
   style.textContent = `
 .sessions-title-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-.session-record-chat-host{display:flex;flex-direction:column;flex:1;min-height:0}
+.session-record-chat-host{display:flex;flex-direction:column;flex:1 1 0;min-height:0;height:0}
 .session-outline-host{position:absolute;inset:0;z-index:20;pointer-events:none}
 .fsdb-right:has(.session-outline-host),.fsdb-right-body:has(.session-outline-host),.fsdb-detail-stage:has(.session-outline-host){position:relative}
 .session-outline-host .chat-outline{left:8px;top:50%}

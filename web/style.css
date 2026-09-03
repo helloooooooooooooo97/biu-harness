@@ -1513,7 +1513,8 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  flex: 1;
+  flex: 1 1 0;
+  height: 0;
   overflow: hidden;
   padding: 0;
   border: 0;
@@ -1522,11 +1523,20 @@ body {
 }
 
 .chat-pane-embed .chat-overlay-thread {
-  flex: 1;
+  display: flex;
+  flex: 1 1 0;
   min-height: 0;
+  height: 0;
   overflow: hidden;
   flex-direction: column;
   padding-bottom: 5.5rem;
+}
+
+.chat-pane-embed .chat-stage {
+  flex: 1 1 0;
+  min-height: 0;
+  height: 0;
+  overflow-y: auto;
 }
 
 .chat-pane.chat-pane-embed .chat-composer-dock {
