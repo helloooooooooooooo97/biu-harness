@@ -2,6 +2,7 @@ import { memo, useEffect, useRef, type ReactNode } from 'react'
 import { ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from '@heroicons/react/16/solid'
 import { SidebarBrandLockup } from '@biu/public-mascot'
 import { chromeIcon } from './chrome-icon.ts'
+import { ShellSidePlaces } from './shell-chrome.tsx'
 
 export type ShellSidebarFrameProps = {
   visible: boolean
@@ -11,6 +12,9 @@ export type ShellSidebarFrameProps = {
   onExpand?: () => void
   onWidthChange?: (width: number) => void
   testId?: string
+  activeId?: string
+  agentHref?: string
+  onSettings?: () => void
   children: ReactNode
 }
 
@@ -23,6 +27,9 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
   onExpand,
   onWidthChange,
   testId = 'shell-sidebar',
+  activeId,
+  agentHref,
+  onSettings,
   children,
 }: ShellSidebarFrameProps) {
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
@@ -94,6 +101,11 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
           </button>
         )}
       </div>
+      {onSettings && agentHref && activeId != null ? (
+        <div className="shrink-0 px-2 pt-1">
+          <ShellSidePlaces activeId={activeId} agentHref={agentHref} onSettings={onSettings} />
+        </div>
+      ) : null}
       {children}
     </aside>
     </div>

@@ -24,7 +24,7 @@ test('paints shell into el', async () => {
     await ctx.plugin(reactHost, { el })
     await ctx.plugin(shell)
   })
-  assert.match(el.innerHTML, /data-testid="shell-chrome-bar"/)
+  assert.match(el.innerHTML, /data-testid="shell-side-places"/)
   assert.match(el.innerHTML, /聊天面板/)
   assert.match(el.innerHTML, /设置/)
 })

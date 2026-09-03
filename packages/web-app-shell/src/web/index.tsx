@@ -44,7 +44,7 @@ import { SessionConfigDialog } from '@biu/web-session-view/dialog'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import { OverlayChatWindow } from './overlay-window.tsx'
 import { ShellDockNav } from './shell-dock-nav.tsx'
-import { ShellChromeBar, ShellSettingsUpdate } from './shell-chrome.tsx'
+import { ShellSettingsUpdate } from './shell-chrome.tsx'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import { chromeIcon } from './chrome-icon.ts'
@@ -636,6 +636,9 @@ function Shell(props: SlotProps) {
           onExpand={expandSidebar}
           onWidthChange={onSidebarWidthChange}
           testId={showChatSidebar ? 'chat-sidebar' : 'module-sidebar'}
+          activeId={activeModule}
+          agentHref={agentHref}
+          onSettings={openSettings}
         >
           <div className="app-stage">
             <div
@@ -674,31 +677,24 @@ function Shell(props: SlotProps) {
         collections={collections}
       />
 
-      <main className="app-main">
-        <ShellChromeBar
-          activeId={activeModule}
-          agentHref={agentHref}
-          onSettings={openSettings}
-        />
-        <div className="app-stage">
-          <div
-            className={`app-stage-pane${activeModule === 'agent' ? ' is-active' : ''}`}
-            aria-hidden={activeModule !== 'agent'}
-            inert={activeModule !== 'agent' || undefined}
-          >
-            {chatHeader}
-            <AgentMainPanels
-              renderSlot={props.renderSlot}
-              header={overlayHeader}
-              showCenter={activeModule === 'agent'}
-            />
-          </div>
-          <PluginModuleStage
-            slots={slots}
-            activeId={activeModule === 'agent' ? '' : activeModule}
+      <main className="app-stage">
+        <div
+          className={`app-stage-pane${activeModule === 'agent' ? ' is-active' : ''}`}
+          aria-hidden={activeModule !== 'agent'}
+          inert={activeModule !== 'agent' || undefined}
+        >
+          {chatHeader}
+          <AgentMainPanels
             renderSlot={props.renderSlot}
+            header={overlayHeader}
+            showCenter={activeModule === 'agent'}
           />
         </div>
+        <PluginModuleStage
+          slots={slots}
+          activeId={activeModule === 'agent' ? '' : activeModule}
+          renderSlot={props.renderSlot}
+        />
       </main>
 
       <SessionInspector

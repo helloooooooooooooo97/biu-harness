@@ -3,8 +3,9 @@ import { resolve } from 'node:path'
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 
-test('activity bar is gone; chat chrome switches agent and database', () => {
+test('activity bar is gone; shared sidebar places switch agent and database', () => {
   const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  const frame = readFileSync(resolve(import.meta.dirname, './shell-sidebar-frame.tsx'), 'utf8')
   const chrome = readFileSync(resolve(import.meta.dirname, './shell-chrome.tsx'), 'utf8')
   const nav = readFileSync(resolve(import.meta.dirname, './shell-dock-nav.tsx'), 'utf8')
   const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
@@ -13,7 +14,8 @@ test('activity bar is gone; chat chrome switches agent and database', () => {
   assert.doesNotMatch(shell, /cordis\.rail\.pinned/)
   assert.doesNotMatch(shell, /app-activity-bar/)
   assert.match(shell, /ShellDockNav/)
-  assert.match(shell, /ShellChromeBar/)
+  assert.doesNotMatch(shell, /ShellChromeBar/)
+  assert.match(frame, /ShellSidePlaces/)
   assert.match(chrome, /聊天面板/)
   assert.match(chrome, /数据面板/)
   assert.match(chrome, /navigate\('\/database'\)/)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowDownTrayIcon,
@@ -69,7 +69,42 @@ export function ShellSettingsUpdate() {
   )
 }
 
-export function ShellChromeBar({
+function SideAction({
+  title,
+  active,
+  testId,
+  onClick,
+  icon,
+  children,
+}: {
+  title: string
+  active?: boolean
+  testId: string
+  onClick: () => void
+  icon: ReactNode
+  children?: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      className={`app-side-actions-item${active ? ' is-active' : ''}`}
+      title={title}
+      aria-label={title}
+      aria-pressed={active}
+      data-testid={testId}
+      onClick={onClick}
+    >
+      <span className="app-side-actions-icon" aria-hidden>
+        {icon}
+      </span>
+      <span className="app-side-actions-label">{title}</span>
+      {children}
+    </button>
+  )
+}
+
+/** 公共入口：聊天与数据侧栏共用，堆在「添加聊天 / 添加视图」上方。 */
+export function ShellSidePlaces({
   activeId,
   agentHref,
   onSettings,
@@ -83,99 +118,71 @@ export function ShellChromeBar({
   const [notifyOpen, setNotifyOpen] = useState(false)
   const [query, setQuery] = useState('')
 
-  const openChat = () => {
-    setChatOverlay(false)
-    navigate(agentHref)
-  }
-  const openData = () => {
-    navigate('/database')
-  }
-
   return (
-    <div className="shell-chrome-bar" data-testid="shell-chrome-bar">
-      <div className="shell-chrome-bar-left">
-        <button
-          type="button"
-          className={`shell-chrome-btn${activeId === 'agent' ? ' is-active' : ''}`}
-          aria-pressed={activeId === 'agent'}
-          data-testid="chrome-chat-panel"
-          onClick={openChat}
-        >
-          <ChatBubbleLeftIcon {...chromeIcon} />
-          聊天面板
-        </button>
-        <button
-          type="button"
-          className={`shell-chrome-btn${activeId === 'database' ? ' is-active' : ''}`}
-          aria-pressed={activeId === 'database'}
-          data-testid="chrome-data-panel"
-          onClick={openData}
-        >
-          <CircleStackIcon {...chromeIcon} />
-          数据面板
-        </button>
+    <div className="app-side-actions shell-side-places" role="navigation" aria-label="面板" data-testid="shell-side-places">
+      <SideAction
+        title="聊天面板"
+        active={activeId === 'agent'}
+        testId="chrome-chat-panel"
+        icon={<ChatBubbleLeftIcon {...chromeIcon} />}
+        onClick={() => {
+          setChatOverlay(false)
+          navigate(agentHref)
+        }}
+      />
+      <SideAction
+        title="数据面板"
+        active={activeId === 'database'}
+        testId="chrome-data-panel"
+        icon={<CircleStackIcon {...chromeIcon} />}
+        onClick={() => navigate('/database')}
+      />
+      <SideAction
+        title="设置"
+        testId="chrome-settings"
+        icon={<Cog6ToothIcon {...chromeIcon} />}
+        onClick={onSettings}
+      />
+      <div className="shell-side-pop-wrap">
+        <SideAction
+          title="搜索"
+          active={searchOpen}
+          testId="chrome-search"
+          icon={<MagnifyingGlassIcon {...chromeIcon} />}
+          onClick={() => {
+            setNotifyOpen(false)
+            setSearchOpen((open) => !open)
+          }}
+        />
+        {searchOpen ? (
+          <div className="shell-side-pop" role="dialog" aria-label="搜索">
+            <input
+              className="shell-chrome-search-input"
+              autoFocus
+              placeholder="搜索…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <p className="shell-chrome-pop-empty">输入关键字以搜索会话与数据</p>
+          </div>
+        ) : null}
       </div>
-      <div className="shell-chrome-bar-right">
-        <div className="shell-chrome-pop-wrap">
-          <button
-            type="button"
-            className={`shell-chrome-btn icon-only${searchOpen ? ' is-active' : ''}`}
-            title="搜索"
-            aria-label="搜索"
-            aria-expanded={searchOpen}
-            data-testid="chrome-search"
-            onClick={() => {
-              setNotifyOpen(false)
-              setSearchOpen((open) => !open)
-            }}
-          >
-            <MagnifyingGlassIcon {...chromeIcon} />
-          </button>
-          {searchOpen ? (
-            <div className="shell-chrome-pop" role="dialog" aria-label="搜索">
-              <input
-                className="shell-chrome-search-input"
-                autoFocus
-                placeholder="搜索…"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-              <p className="shell-chrome-pop-empty">输入关键字以搜索会话与数据</p>
-            </div>
-          ) : null}
-        </div>
-        <div className="shell-chrome-pop-wrap">
-          <button
-            type="button"
-            className={`shell-chrome-btn icon-only${notifyOpen ? ' is-active' : ''}`}
-            title="通知"
-            aria-label="通知"
-            aria-expanded={notifyOpen}
-            data-testid="chrome-notify"
-            onClick={() => {
-              setSearchOpen(false)
-              setNotifyOpen((open) => !open)
-            }}
-          >
-            <BellIcon {...chromeIcon} />
-          </button>
-          {notifyOpen ? (
-            <div className="shell-chrome-pop" role="dialog" aria-label="通知">
-              <p className="shell-chrome-pop-empty">暂无通知</p>
-            </div>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          className="shell-chrome-btn"
-          title="设置"
-          aria-label="设置"
-          data-testid="chrome-settings"
-          onClick={onSettings}
-        >
-          <Cog6ToothIcon {...chromeIcon} />
-          设置
-        </button>
+      <div className="shell-side-pop-wrap">
+        <SideAction
+          title="通知"
+          active={notifyOpen}
+          testId="chrome-notify"
+          icon={<BellIcon {...chromeIcon} />}
+          onClick={() => {
+            setSearchOpen(false)
+            setNotifyOpen((open) => !open)
+          }}
+        />
+        {notifyOpen ? (
+          <div className="shell-side-pop" role="dialog" aria-label="通知">
+            <p className="shell-chrome-pop-empty">暂无通知</p>
+          </div>
+        ) : null}
       </div>
     </div>
   )

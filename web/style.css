@@ -188,79 +188,15 @@ body {
   padding: 0 12px;
 }
 
-.app-main {
-  display: flex;
-  min-height: 0;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.app-main > .app-stage {
-  flex: 1;
-}
-
-.shell-chrome-bar {
-  display: flex;
-  height: 44px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--dsw-border);
-}
-
-.shell-chrome-bar-left,
-.shell-chrome-bar-right {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 4px;
-}
-
-.shell-chrome-btn {
-  display: inline-flex;
-  height: 28px;
-  align-items: center;
-  gap: 6px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  padding: 0 8px;
-  color: var(--dsw-label-2);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.shell-chrome-btn.icon-only {
-  width: 28px;
-  justify-content: center;
-  padding: 0;
-}
-
-.shell-chrome-btn:hover {
-  background: var(--dsw-hover);
-  color: var(--dsw-label);
-}
-
-.shell-chrome-btn.is-active {
-  background: var(--dsw-business-soft);
-  color: var(--dsw-business);
-}
-
-.shell-chrome-pop-wrap {
+.shell-side-pop-wrap {
   position: relative;
 }
 
-.shell-chrome-pop {
+.shell-side-pop {
   position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 30;
+  top: 0;
+  left: calc(100% + 8px);
+  z-index: 40;
   width: 240px;
   padding: 10px;
   border-radius: 12px;
@@ -1812,6 +1748,14 @@ body {
   margin: 2px 0 4px;
 }
 
+.shell-side-places {
+  margin-bottom: 0;
+}
+
+.app-stage .app-side-actions {
+  margin-top: 0;
+}
+
 .app-side-actions-item {
   position: relative;
   isolation: isolate;
@@ -1846,11 +1790,13 @@ body {
   z-index: 1;
 }
 
-.app-side-actions-item:hover {
+.app-side-actions-item:hover,
+.app-side-actions-item.is-active {
   color: var(--dsw-sidebar-fg-active);
 }
 
-.app-side-actions-item:hover::before {
+.app-side-actions-item:hover::before,
+.app-side-actions-item.is-active::before {
   background: var(--dsw-hover);
 }
 

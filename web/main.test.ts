@@ -26,7 +26,7 @@ test('boots into #app', async () => {
     const { webBoot } = await import('./main.tsx')
     await webBoot
   })
-  assert.match(document.body.innerHTML, /data-testid="shell-chrome-bar"/)
+  assert.match(document.body.innerHTML, /data-testid="shell-side-places"/)
   assert.match(document.body.innerHTML, /聊天面板/)
   assert.match(document.body.innerHTML, /设置/)
 })
