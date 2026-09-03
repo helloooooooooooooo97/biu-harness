@@ -226,6 +226,8 @@ const CSS = `
 .fsdb-page .fsdb-proplist .fsdb-pill,.fsdb-page .fsdb-proplist .fsdb-tag{padding:0;background:transparent;max-width:none}
 .fsdb-workspace{display:flex;flex-direction:column;min-width:0;min-height:0;flex:1;overflow:hidden}
 .fsdb-pager{display:flex;align-items:center;gap:8px;flex:none;margin-top:auto;min-height:28px;padding:4px 0 0;color:var(--dsw-label-3);font-size:13px;font-weight:500}
+/* 检查器：上边沿对齐输入胶囊顶，再上移 25px。胶囊距底 = dock pb-4 + 行高 44；检查器已有 --brand-corner-clearance */
+.inspector-database-page .fsdb-pager{margin-bottom:calc(1rem + 44px + 25px - 30px - var(--brand-corner-clearance,1.25rem))}
 .fsdb-pager-meta{display:inline-flex;align-items:center;gap:4px;min-width:0;flex:1;overflow:hidden;white-space:nowrap;color:var(--dsw-label-3)}
 .fsdb-pager-meta svg{flex:none}
 .fsdb-pager-nav{display:inline-flex;align-items:center;gap:2px;flex:none;margin-left:auto}
