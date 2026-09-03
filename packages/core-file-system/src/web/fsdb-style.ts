@@ -248,6 +248,9 @@ const CSS = `
 .fsdb-boolbox.is-locked.is-on{background:var(--dsw-pick,#2383e2);border-color:transparent;color:var(--dsw-bg)}
 .fsdb-boolbtn:hover .fsdb-boolbox:not(.is-on){border-color:var(--dsw-label-2)}
 .fsdb-detail-stage{display:flex;min-width:0;min-height:min-content;flex:1 0 auto;flex-direction:row;overflow:visible;background:var(--dsw-bg)}
+.heading-outline-host{position:absolute;inset:0;z-index:20;pointer-events:none}
+.fsdb-right:has(.heading-outline-host),.fsdb-right-body:has(.heading-outline-host),.fsdb-detail-stage:has(.heading-outline-host){position:relative}
+.heading-outline-host .chat-outline{left:8px;top:50%}
 .fsdb-detail-screen{display:flex;min-width:0;min-height:min-content;flex:1;flex-direction:column;overflow:visible}
 .fsdb-detail-screen .fsdb-detail-split,.fsdb-detail-screen > :not(header){flex:none;min-height:min-content;overflow:visible}
 .fsdb-detail-float-nav{position:sticky;top:50%;align-self:flex-start;flex:none;z-index:24;display:flex;flex-direction:column;gap:4px;margin:0 8px 0 6px;padding:4px;border:0;border-radius:8px;background:#202020;box-shadow:0 1px 2px rgba(15,15,15,.04);transform:translateY(-50%)}

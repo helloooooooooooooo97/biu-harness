@@ -11,6 +11,7 @@ import { RecordEmojiBoard } from '@biu/public-ui'
 import { TableGlyph } from './nav-glyphs.tsx'
 import { normalizeRecordEmoji, recordPreviewEmoji } from './sidebar-preview.ts'
 import { FOCUS_RECORD_CONTENT, FOCUS_RECORD_TITLE, shouldLeaveTitleForContent } from './title-content-nav.ts'
+import { HeadingOutline } from './heading-outline.tsx'
 
 function DetailTitleIcon({
   emoji,
@@ -103,6 +104,7 @@ export function RecordDetail({
   onNext,
   canPrev,
   canNext,
+  headingOutline = true,
 }: {
   selected: DbRecord
   schema: CollectionSchema
@@ -121,6 +123,7 @@ export function RecordDetail({
   onNext?: () => void
   canPrev?: boolean
   canNext?: boolean
+  headingOutline?: boolean
 }) {
   useEffect(() => {
     const onTitle = () => {
@@ -282,6 +285,7 @@ export function RecordDetail({
               </div>
             </div>
           </div>
+          <HeadingOutline enabled={headingOutline} />
           {onPrev || onNext ? (
             <nav className="fsdb-detail-float-nav" aria-label="按视图顺序切换记录">
               <button

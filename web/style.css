@@ -3916,6 +3916,14 @@ body {
   opacity: 0.3;
 }
 
+.chat-outline-tick.is-h2 {
+  padding-left: 6px;
+}
+
+.chat-outline-tick.is-h2::after {
+  width: 4px;
+}
+
 .chat-outline-tick.is-robot::after {
   opacity: 0.2;
 }
@@ -3979,6 +3987,17 @@ body {
 .chat-outline-item.is-active {
   background: rgba(242, 241, 237, 0.12);
   color: var(--dsw-sidebar-fg-active);
+}
+
+.chat-outline-item.is-h1 {
+  font-weight: 650;
+}
+
+.chat-outline-item.is-h2 {
+  padding-left: 22px;
+  font-size: 12px;
+  font-weight: 450;
+  opacity: 0.88;
 }
 
 .chat-outline-item.is-robot {

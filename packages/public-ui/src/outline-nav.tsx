@@ -4,6 +4,8 @@ export type OutlineNavItem = {
   id: string
   text: string
   robot?: boolean
+  /** 1 = 一级标题，2 = 二级（缩进） */
+  level?: 1 | 2
 }
 
 function escapeId(id: string) {
@@ -70,7 +72,7 @@ export function OutlineNav({
           <button
             key={item.id}
             type="button"
-            className={`chat-outline-tick${item.robot ? ' is-robot' : ''}${hoverId === item.id ? ' is-active' : ''}`}
+            className={`chat-outline-tick${item.robot ? ' is-robot' : ''}${item.level === 2 ? ' is-h2' : ''}${hoverId === item.id ? ' is-active' : ''}`}
             title={item.text}
             aria-label={item.text}
             data-outline-tick={item.id}
@@ -87,7 +89,7 @@ export function OutlineNav({
             <button
               key={item.id}
               type="button"
-              className={`chat-outline-item${item.robot ? ' is-robot' : ''}${hoverId === item.id ? ' is-active' : ''}`}
+              className={`chat-outline-item${item.robot ? ' is-robot' : ''}${item.level === 2 ? ' is-h2' : item.level === 1 ? ' is-h1' : ''}${hoverId === item.id ? ' is-active' : ''}`}
               title={item.text}
               data-outline-row={item.id}
               data-testid={`${testId}-item-${item.id}`}

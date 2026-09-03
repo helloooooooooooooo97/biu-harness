@@ -9,5 +9,8 @@ test('OutlineNav is the shared tick rail and hover panel', () => {
   assert.match(src, /chat-outline-tick/)
   assert.match(src, /chat-outline-panel/)
   assert.match(src, /hoverTick/)
+  assert.match(src, /level\?: 1 \| 2/)
+  assert.match(src, /item\.level === 2 \? ' is-h2'/)
+  assert.match(src, /item\.level === 1 \? ' is-h1'/)
   assert.doesNotMatch(src, /requestChatOutlineGo/)
 })
