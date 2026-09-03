@@ -17,7 +17,7 @@ test('asImageSrc rejects scripts and non-image paths', () => {
   assert.equal(asImageSrc('../secret.png'), '')
 })
 
-test('schemaSearchHaystack includes SuperTag labels and field values', () => {
+test('schemaSearchHaystack includes facet labels and field values', () => {
   const text = schemaSearchHaystack(
     { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } },
     [{ id: 'dp', label: '动态规划', fields: [] }],
@@ -26,14 +26,13 @@ test('schemaSearchHaystack includes SuperTag labels and field values', () => {
   assert.match(text, /O\(n\)/)
 })
 
-test('normalizeSchemaPack drops nested SuperTag fields and keeps action', () => {
+test('normalizeSchemaPack drops nested facet fields and keeps action', () => {
   const pack = normalizeSchemaPack({
     id: 'dp',
     label: '动态规划',
     fields: [
       { key: 'complexity', type: 'string' },
-      { key: 'nested', type: 'schema' },
-      { key: 'tag', type: 'supertag' },
+      { key: 'nested', type: 'facet' },
       { key: 'run', type: 'action' },
     ],
   })
@@ -41,11 +40,11 @@ test('normalizeSchemaPack drops nested SuperTag fields and keeps action', () => 
   assert.deepEqual(pack?.fields.map((field) => field.key), ['complexity', 'run'])
 })
 
-test('withBuiltinFields always includes writable SuperTag schema', () => {
+test('withBuiltinFields always includes writable facet', () => {
   const fields = withBuiltinFields({ title: { type: 'string', writable: true } })
-  assert.equal(fields.schema?.type, 'supertag')
-  assert.equal(fields.schema?.writable, true)
-  assert.equal(fields.schema?.label, '模式')
+  assert.equal(fields.facet?.type, 'facet')
+  assert.equal(fields.facet?.writable, true)
+  assert.equal(fields.facet?.label, '分面')
 })
 
 test('recordBuiltinValues fills required record columns', () => {
@@ -53,15 +52,15 @@ test('recordBuiltinValues fills required record columns', () => {
     createdAt: 0,
     updatedAt: 0,
     emoji: '',
-    schema: { tags: [], values: {} },
+    facet: { tags: [], values: {} },
   })
   assert.equal(recordBuiltinValues({ createdAt: 10, emoji: '📄' }).emoji, '📄')
 })
 
-test('required record fields are icon, timestamps, and SuperTag', () => {
-  assert.deepEqual([...REQUIRED_RECORD_FIELD_KEYS].sort(), ['createdAt', 'emoji', 'schema', 'updatedAt'])
+test('required record fields are icon, timestamps, and facet', () => {
+  assert.deepEqual([...REQUIRED_RECORD_FIELD_KEYS].sort(), ['createdAt', 'emoji', 'facet', 'updatedAt'])
   assert.equal(REQUIRED_RECORD_FIELDS.emoji.type, 'string')
-  assert.equal(REQUIRED_RECORD_FIELDS.schema.type, 'supertag')
+  assert.equal(REQUIRED_RECORD_FIELDS.facet.type, 'facet')
   assert.equal(REQUIRED_RECORD_FIELDS.createdAt.type, 'datetime')
   assert.equal(REQUIRED_RECORD_FIELDS.updatedAt.type, 'datetime')
 })

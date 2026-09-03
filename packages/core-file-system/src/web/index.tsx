@@ -16,8 +16,8 @@ import {
   collectionNavKey,
 } from './nav-boot.ts'
 import { defaultViewId, pullSavedViews, pushAllSavedViews } from './view-storage.ts'
-import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, SUPERTAGS_COLLECTION_PATH, VIEWS_COLLECTION_PATH, sortDataCollections } from './database-path.ts'
-import { superTagsChrome } from './super-tags-chrome.tsx'
+import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, FACETS_COLLECTION_PATH, VIEWS_COLLECTION_PATH, sortDataCollections } from './database-path.ts'
+import { facetsChrome } from './facet-chrome.tsx'
 import { viewsChrome } from './views-chrome.ts'
 import { viewsForRegisteredCollection } from './collection-nav.ts'
 import { builtinAllViewId } from '../catalog-views.ts'
@@ -215,10 +215,10 @@ export function apply(ctx: Context) {
     const ui = getDatabaseUi()
     if (!ui) return () => undefined
     const views = ui.decorate(VIEWS_COLLECTION_PATH, viewsChrome)
-    const tags = ui.decorate(SUPERTAGS_COLLECTION_PATH, superTagsChrome)
+    const facetsUi = ui.decorate(FACETS_COLLECTION_PATH, facetsChrome)
     return () => {
       views.dispose()
-      tags.dispose()
+      facetsUi.dispose()
     }
   })
   const slots = ctx.get('slots') as SlotsService

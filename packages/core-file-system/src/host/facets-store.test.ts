@@ -3,58 +3,58 @@ import assert from 'node:assert/strict'
 import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { SchemaTagsStore } from './schema-tags.ts'
+import { FacetStore } from './facets-store.ts'
 
-test('SchemaTagsStore keeps SuperTag packs in sqlite and drops nested schema types', () => {
-  const store = new SchemaTagsStore()
+test('FacetStore keeps packs in sqlite and drops nested facet types', () => {
+  const store = new FacetStore()
   store.replace([
     {
       id: 'dp',
       label: '动态规划',
       fields: [
         { key: 'complexity', type: 'string', label: '复杂度' },
-        { key: 'nested', type: 'schema', label: '套一层' },
+        { key: 'nested', type: 'facet', label: '套一层' },
       ],
     },
     { id: '??', label: '坏的', fields: [] },
   ])
-  const tags = store.list()
-  assert.equal(tags.length, 1)
-  assert.equal(tags[0]?.id, 'dp')
-  assert.deepEqual(tags[0]?.fields.map((field) => field.key), ['complexity'])
+  const facets = store.list()
+  assert.equal(facets.length, 1)
+  assert.equal(facets[0]?.id, 'dp')
+  assert.deepEqual(facets[0]?.fields.map((field) => field.key), ['complexity'])
   assert.equal(store.list('动态').length, 1)
   assert.equal(store.list('nope').length, 0)
 })
 
-test('sqlite file round-trips SuperTag catalog and stamp index', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'fs-supertag-'))
+test('sqlite file round-trips facet catalog and stamp index', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'fs-facet-'))
   const path = join(dir, 'file-system.sqlite')
-  const store = new SchemaTagsStore()
+  const store = new FacetStore()
   store.open(path)
   store.replace([{ id: 'dp', label: '动态规划', fields: [{ key: 'complexity', type: 'string' }] }])
   store.indexRecord('/pages', 'home', '首页', ['dp'])
   store.indexRecord('/notes', 'n1', '草稿', ['dp'])
 
-  const again = new SchemaTagsStore()
+  const again = new FacetStore()
   again.open(path)
   assert.equal(again.list()[0]?.label, '动态规划')
   const collected = again.collect('动态规划')
-  assert.equal(collected.tag?.id, 'dp')
+  assert.equal(collected.facet?.id, 'dp')
   assert.deepEqual(collected.items.map((item) => item.path).sort(), ['/notes/n1', '/pages/home'])
   assert.equal(again.stampedIds('/pages', 'dp').has('home'), true)
   assert.equal(again.stampCounts().dp, 2)
   again.upsert({ id: 'dp', label: 'DP', fields: [{ key: 'complexity', type: 'string' }] })
   assert.equal(again.get('dp')?.label, 'DP')
-  assert.equal(again.removeTag('dp'), true)
+  assert.equal(again.removeFacet('dp'), true)
   assert.equal(again.list().length, 0)
 })
 
-test('sqlite stores SuperTag schema overlay for records that cannot update', async () => {
-  const store = new SchemaTagsStore()
-  store.writeRecordSchema('/plugins', 'demo', { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } }, 'Demo')
-  assert.deepEqual(store.recordSchema('/plugins', 'demo')?.tags, ['dp'])
+test('sqlite stores facet overlay for records that cannot update', async () => {
+  const store = new FacetStore()
+  store.writeRecordFacet('/plugins', 'demo', { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } }, 'Demo')
+  assert.deepEqual(store.recordFacet('/plugins', 'demo')?.tags, ['dp'])
   assert.equal(store.stampedIds('/plugins', 'dp').has('demo'), true)
   store.removeRecord('/plugins', 'demo')
-  assert.equal(store.recordSchema('/plugins', 'demo'), null)
+  assert.equal(store.recordFacet('/plugins', 'demo'), null)
   assert.equal(store.stampedIds('/plugins', 'dp').has('demo'), false)
 })

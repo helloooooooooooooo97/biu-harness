@@ -63,21 +63,21 @@ test('views catalog href is filtered by table source', () => {
 
 test('views and events are system collections; tags sort with user tables', () => {
   assert.equal(isSystemCollection('/views'), true)
-  assert.equal(isSystemCollection('/supertags'), false)
+  assert.equal(isSystemCollection('/facets'), false)
   assert.equal(isSystemCollection('/events'), true)
   assert.equal(isSystemCollection('/sessions'), false)
   const { user, system } = sortDataCollections([
     { path: '/events' },
     { path: '/plugins' },
     { path: '/views' },
-    { path: '/supertags' },
+    { path: '/facets' },
     { path: '/sessions' },
     { path: '/pages' },
     { path: '/tasks' },
   ])
   assert.deepEqual(
     user.map((item) => item.path),
-    ['/sessions', '/tasks', '/pages', '/plugins', '/supertags'],
+    ['/sessions', '/tasks', '/pages', '/plugins', '/facets'],
   )
   assert.deepEqual(
     system.map((item) => item.path),

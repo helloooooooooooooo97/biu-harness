@@ -123,7 +123,7 @@ export type TaskRow = {
   doneCount?: number
   sort: number
   emoji: string
-  schema: SchemaFieldValue
+  facet: SchemaFieldValue
   createdAt: number
   updatedAt: number
   creator: TaskActor
@@ -241,7 +241,7 @@ export type TaskCreateInput = {
   /** 进度汇报提醒间隔（秒），默认 60。 */
   reportIntervalSec?: number
   emoji?: string
-  schema?: SchemaFieldValue
+  facet?: SchemaFieldValue
 }
 
 export type TaskUpdateInput = Partial<{
@@ -267,7 +267,7 @@ export type TaskUpdateInput = Partial<{
   /** 上次进度追问时间戳（ms），仅供内部监测更新。 */
   lastReportPromptAt: number | null
   emoji: string
-  schema: SchemaFieldValue
+  facet: SchemaFieldValue
 }>
 
 export type TaskListFilter = {
@@ -890,12 +890,12 @@ function mapRow(row: Record<string, unknown>): TaskRow {
     }
   }
 
-  let schema = emptySchemaValue()
-  if (typeof row.schema_json === 'string' && row.schema_json) {
+  let facet = emptySchemaValue()
+  if (typeof row.facet_json === 'string' && row.facet_json) {
     try {
-      schema = normalizeSchemaValue(JSON.parse(row.schema_json))
+      facet = normalizeSchemaValue(JSON.parse(row.facet_json))
     } catch {
-      schema = emptySchemaValue()
+      facet = emptySchemaValue()
     }
   }
 
@@ -915,7 +915,7 @@ function mapRow(row: Record<string, unknown>): TaskRow {
     depth: typeof row.depth === 'number' ? Number(row.depth) : 0,
     sort: Number(row.sort ?? 0),
     emoji: String(row.emoji ?? ''),
-    schema,
+    facet,
     createdAt: Number(row.created_at ?? 0),
     updatedAt: Number(row.updated_at ?? 0),
     creator,
@@ -1149,7 +1149,7 @@ export class TasksService extends Service {
       "ALTER TABLE tasks ADD COLUMN trigger_json TEXT NOT NULL DEFAULT '{}'",
       'ALTER TABLE tasks ADD COLUMN report_interval_sec INTEGER NOT NULL DEFAULT 60',
       'ALTER TABLE tasks ADD COLUMN last_report_prompt_at INTEGER',
-      "ALTER TABLE tasks ADD COLUMN schema_json TEXT NOT NULL DEFAULT '{}'",
+      "ALTER TABLE tasks ADD COLUMN facet_json TEXT NOT NULL DEFAULT '{}'",
       "ALTER TABLE tasks ADD COLUMN emoji TEXT NOT NULL DEFAULT ''",
     ]) {
       try {
@@ -1280,7 +1280,7 @@ export class TasksService extends Service {
           id, title, status, priority, difficulty, assignee, due_at, description, notes, sort,
           created_at, updated_at, creator_json, assignee_json, assigned_at,
           project, tags_json, parent_id, depends_on, depth, trigger_json,
-          report_interval_sec, schema_json, emoji
+          report_interval_sec, facet_json, emoji
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
@@ -1306,7 +1306,7 @@ export class TasksService extends Service {
         depth,
         JSON.stringify(trigger),
         reportIntervalSec,
-        JSON.stringify(normalizeSchemaValue(input.schema)),
+        JSON.stringify(normalizeSchemaValue(input.facet)),
         typeof input.emoji === 'string' ? input.emoji : '',
       )
     this.emitChange()
@@ -1402,7 +1402,7 @@ export class TasksService extends Service {
           ? null
           : Number(patch.lastReportPromptAt)
     const emoji = patch.emoji !== undefined ? String(patch.emoji ?? '') : current.emoji
-    const schema = patch.schema !== undefined ? normalizeSchemaValue(patch.schema) : current.schema
+    const facet = patch.facet !== undefined ? normalizeSchemaValue(patch.facet) : current.facet
 
     const ts = now()
     this.db
@@ -1411,7 +1411,7 @@ export class TasksService extends Service {
           title = ?, status = ?, priority = ?, difficulty = ?, assignee = ?, due_at = ?, description = ?, notes = ?, sort = ?,
           updated_at = ?, creator_json = ?, assignee_json = ?, assigned_at = ?, project = ?, tags_json = ?,
           parent_id = ?, depends_on = ?, depth = ?, trigger_json = ?,
-          report_interval_sec = ?, last_report_prompt_at = ?, schema_json = ?, emoji = ?
+          report_interval_sec = ?, last_report_prompt_at = ?, facet_json = ?, emoji = ?
          WHERE id = ?`,
       )
       .run(
@@ -1436,7 +1436,7 @@ export class TasksService extends Service {
         JSON.stringify(trigger),
         reportIntervalSec,
         lastReportPromptAt,
-        JSON.stringify(schema),
+        JSON.stringify(facet),
         emoji,
         id,
       )

@@ -38,14 +38,14 @@ test('kind maps to distinct heroicons', () => {
   assert.equal(pickKindIcon('unknown'), lu.TagIcon)
 })
 
-test('pick kind maps to the SuperTag palette by string', () => {
+test('pick kind maps to the facet palette by string', () => {
   assert.equal(pickKindTone('session'), tagTone('session'))
   assert.equal(pickKindTone('task'), tagTone('task'))
   assert.equal(pickKindTone('tasks'), tagTone('task'))
   assert.notEqual(pickKindTone('session'), pickKindTone('task'))
 })
 
-test('pick chips can show the SuperTag close mark', () => {
+test('pick chips can show the facet close mark', () => {
   const src = readFileSync(resolve(import.meta.dirname, './chip.tsx'), 'utf8')
   assert.match(src, /onRemove/)
   assert.match(src, /biu-tag-x/)

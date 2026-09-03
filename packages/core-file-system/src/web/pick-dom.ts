@@ -24,9 +24,9 @@ const RECORD_PICK_KIND: Record<string, string> = {
   views: 'view',
   view: 'view',
   'views-db': 'view',
-  supertags: 'tag',
-  tag: 'tag',
-  'supertags-db': 'tag',
+  facets: 'facet',
+  facet: 'facet',
+  'facets-db': 'facet',
 }
 
 export function recordPickKind(moduleId?: string | null) {

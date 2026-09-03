@@ -86,8 +86,8 @@ export interface SessionConfig {
   pinned?: boolean
   /** 记录图标 */
   emoji?: string
-  /** 模式 */
-  schema?: { tags: string[]; values: Record<string, Record<string, unknown>> }
+  /** 分面 */
+  facet?: { tags: string[]; values: Record<string, Record<string, unknown>> }
   createdAt?: number
 }
 
@@ -109,8 +109,8 @@ export function normalizeSessionConfig(value: unknown): SessionConfig | undefine
   if (typeof raw.pinned === 'boolean') next.pinned = raw.pinned
   if (typeof raw.emoji === 'string') next.emoji = raw.emoji
   if (typeof raw.createdAt === 'number' && Number.isFinite(raw.createdAt) && raw.createdAt > 0) next.createdAt = raw.createdAt
-  if (raw.schema && typeof raw.schema === 'object' && !Array.isArray(raw.schema)) {
-    const rec = raw.schema as Record<string, unknown>
+  if (raw.facet && typeof raw.facet === 'object' && !Array.isArray(raw.facet)) {
+    const rec = raw.facet as Record<string, unknown>
     const tags = Array.isArray(rec.tags) ? [...new Set(rec.tags.map((item) => String(item).trim()).filter(Boolean))] : []
     const values: Record<string, Record<string, unknown>> = {}
     if (rec.values && typeof rec.values === 'object' && !Array.isArray(rec.values)) {
@@ -118,7 +118,7 @@ export function normalizeSessionConfig(value: unknown): SessionConfig | undefine
         if (bag && typeof bag === 'object' && !Array.isArray(bag)) values[key] = { ...bag }
       }
     }
-    next.schema = { tags, values }
+    next.facet = { tags, values }
   }
   return Object.keys(next).length ? next : undefined
 }
@@ -158,9 +158,9 @@ export function mergeSessionConfig(
     if (patch.emoji == null || !String(patch.emoji)) delete next.emoji
     else next.emoji = String(patch.emoji)
   }
-  if ('schema' in patch) {
-    if (patch.schema == null) delete next.schema
-    else next.schema = patch.schema
+  if ('facet' in patch) {
+    if (patch.facet == null) delete next.facet
+    else next.facet = patch.facet
   }
   if (typeof patch.createdAt === 'number' && Number.isFinite(patch.createdAt) && patch.createdAt > 0) {
     next.createdAt = patch.createdAt

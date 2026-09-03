@@ -65,7 +65,7 @@ function isHistPct(v: unknown): v is number {
 }
 
 /**
- * SuperTag 绿环 = cache hit；SuperTag 红环 = 历史占比。
+ * 分面绿环 = cache hit；分面红环 = 历史占比。
  * 百分比数字放在悬浮 title。histPct 默认取 usage.histPct。
  */
 export function UsageInline({

@@ -12,9 +12,9 @@ type DatabaseSync = import('node:sqlite').DatabaseSync
 
 const require = createRequire(import.meta.url)
 
-export const SUPER_TAGS_SQLITE = '.cordis/file-system.sqlite'
+export const FILE_SYSTEM_SQLITE = '.cordis/file-system.sqlite'
 
-export type SuperTagStamp = {
+export type FacetStamp = {
   collection: string
   id: string
   path: string
@@ -22,16 +22,16 @@ export type SuperTagStamp = {
 }
 
 type TagRow = { id: string; label: string; fields_json: string; updated_at?: number }
-type StampRow = { tag_id: string; collection: string; record_id: string; title: string }
+type StampRow = { facet_id: string; collection: string; record_id: string; title: string }
 
-export function slugSuperTagId(label: string, used: Set<string>) {
+export function slugFacetId(label: string, used: Set<string>) {
   const base =
     label
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
-      .slice(0, 24) || 'tag'
+      .slice(0, 24) || 'facet'
   let id = /^[a-z]/.test(base) ? base : `t-${base}`
   let n = 2
   while (used.has(id) || !/^[a-z][a-z0-9-]{0,31}$/.test(id)) {
@@ -52,8 +52,8 @@ function packFromRow(row: TagRow): CollectionSchemaPack | null {
   return normalizeSchemaPack({ id: row.id, label: row.label, fields })
 }
 
-/** 模式目录由 File System 用 SQLite 管：目录 + 跨表倒排，查询不扫全表。 */
-export class SchemaTagsStore {
+/** 分面目录由 File System 用 SQLite 管：目录 + 跨表倒排，查询不扫全表。 */
+export class FacetStore {
   private db: DatabaseSync | null = null
 
   open(path = ':memory:') {
@@ -64,26 +64,26 @@ export class SchemaTagsStore {
     this.db.exec('PRAGMA synchronous = NORMAL')
     this.db.exec('PRAGMA foreign_keys = ON')
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS super_tags (
+      CREATE TABLE IF NOT EXISTS facets (
         id TEXT PRIMARY KEY,
         label TEXT NOT NULL,
         fields_json TEXT NOT NULL DEFAULT '[]',
         updated_at INTEGER NOT NULL
       );
-      CREATE INDEX IF NOT EXISTS super_tags_label ON super_tags(label);
-      CREATE TABLE IF NOT EXISTS super_tag_stamps (
-        tag_id TEXT NOT NULL,
+      CREATE INDEX IF NOT EXISTS facets_label ON facets(label);
+      CREATE TABLE IF NOT EXISTS facet_stamps (
+        facet_id TEXT NOT NULL,
         collection TEXT NOT NULL,
         record_id TEXT NOT NULL,
         title TEXT NOT NULL DEFAULT '',
-        PRIMARY KEY (tag_id, collection, record_id)
+        PRIMARY KEY (facet_id, collection, record_id)
       );
-      CREATE INDEX IF NOT EXISTS super_tag_stamps_tag ON super_tag_stamps(tag_id);
-      CREATE INDEX IF NOT EXISTS super_tag_stamps_record ON super_tag_stamps(collection, record_id);
-      CREATE TABLE IF NOT EXISTS super_tag_record_schema (
+      CREATE INDEX IF NOT EXISTS facet_stamps_facet ON facet_stamps(facet_id);
+      CREATE INDEX IF NOT EXISTS facet_stamps_record ON facet_stamps(collection, record_id);
+      CREATE TABLE IF NOT EXISTS facet_record_values (
         collection TEXT NOT NULL,
         record_id TEXT NOT NULL,
-        schema_json TEXT NOT NULL,
+        facet_json TEXT NOT NULL,
         PRIMARY KEY (collection, record_id)
       );
     `)
@@ -102,12 +102,12 @@ export class SchemaTagsStore {
       q
         ? (db
             .prepare(
-              `SELECT id, label, fields_json, updated_at FROM super_tags
+              `SELECT id, label, fields_json, updated_at FROM facets
                WHERE instr(lower(id), ?) > 0 OR instr(lower(label), ?) > 0
                ORDER BY label`,
             )
             .all(q, q) as TagRow[])
-        : (db.prepare('SELECT id, label, fields_json, updated_at FROM super_tags ORDER BY label').all() as TagRow[])
+        : (db.prepare('SELECT id, label, fields_json, updated_at FROM facets ORDER BY label').all() as TagRow[])
     )
     return rows.map((row) => packFromRow(row)).filter((item): item is CollectionSchemaPack => Boolean(item))
   }
@@ -117,7 +117,7 @@ export class SchemaTagsStore {
     if (!want) return null
     const db = this.ensure()
     const row = db
-      .prepare('SELECT id, label, fields_json, updated_at FROM super_tags WHERE id = ? OR label = ? LIMIT 1')
+      .prepare('SELECT id, label, fields_json, updated_at FROM facets WHERE id = ? OR label = ? LIMIT 1')
       .get(want, want) as TagRow | undefined
     return row ? packFromRow(row) : null
   }
@@ -127,7 +127,7 @@ export class SchemaTagsStore {
     const next = tags.map((item) => normalizeSchemaPack(item)).filter((item): item is CollectionSchemaPack => Boolean(item))
     const keep = new Set(next.map((tag) => tag.id))
     const upsert = db.prepare(
-      `INSERT INTO super_tags (id, label, fields_json, updated_at)
+      `INSERT INTO facets (id, label, fields_json, updated_at)
        VALUES (?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET label = excluded.label, fields_json = excluded.fields_json, updated_at = excluded.updated_at`,
     )
@@ -136,11 +136,11 @@ export class SchemaTagsStore {
       for (const tag of next) {
         upsert.run(tag.id, tag.label, JSON.stringify(tag.fields), Date.now())
       }
-      const existing = db.prepare('SELECT id FROM super_tags').all() as Array<{ id: string }>
+      const existing = db.prepare('SELECT id FROM facets').all() as Array<{ id: string }>
       for (const row of existing) {
         if (keep.has(row.id)) continue
-        db.prepare('DELETE FROM super_tag_stamps WHERE tag_id = ?').run(row.id)
-        db.prepare('DELETE FROM super_tags WHERE id = ?').run(row.id)
+        db.prepare('DELETE FROM facet_stamps WHERE facet_id = ?').run(row.id)
+        db.prepare('DELETE FROM facets WHERE id = ?').run(row.id)
       }
       db.exec('COMMIT')
     } catch (error) {
@@ -152,10 +152,10 @@ export class SchemaTagsStore {
 
   upsert(raw: unknown): CollectionSchemaPack {
     const pack = normalizeSchemaPack(raw)
-    if (!pack) throw new Error('invalid 模式')
+    if (!pack) throw new Error('invalid 分面')
     this.ensure()
       .prepare(
-        `INSERT INTO super_tags (id, label, fields_json, updated_at)
+        `INSERT INTO facets (id, label, fields_json, updated_at)
          VALUES (?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET label = excluded.label, fields_json = excluded.fields_json, updated_at = excluded.updated_at`,
       )
@@ -163,14 +163,14 @@ export class SchemaTagsStore {
     return pack
   }
 
-  removeTag(id: string): boolean {
+  removeFacet(id: string): boolean {
     const db = this.ensure()
     const want = String(id ?? '').trim()
     if (!want) return false
     db.exec('BEGIN IMMEDIATE')
     try {
-      db.prepare('DELETE FROM super_tag_stamps WHERE tag_id = ?').run(want)
-      const result = db.prepare('DELETE FROM super_tags WHERE id = ?').run(want)
+      db.prepare('DELETE FROM facet_stamps WHERE facet_id = ?').run(want)
+      const result = db.prepare('DELETE FROM facets WHERE id = ?').run(want)
       db.exec('COMMIT')
       return Number(result.changes) > 0
     } catch (error) {
@@ -181,10 +181,10 @@ export class SchemaTagsStore {
 
   stampCounts(): Record<string, number> {
     const rows = this.ensure()
-      .prepare('SELECT tag_id, COUNT(*) AS n FROM super_tag_stamps GROUP BY tag_id')
-      .all() as Array<{ tag_id: string; n: number | bigint }>
+      .prepare('SELECT facet_id, COUNT(*) AS n FROM facet_stamps GROUP BY facet_id')
+      .all() as Array<{ facet_id: string; n: number | bigint }>
     const out: Record<string, number> = {}
-    for (const row of rows) out[row.tag_id] = Number(row.n)
+    for (const row of rows) out[row.facet_id] = Number(row.n)
     return out
   }
 
@@ -193,9 +193,9 @@ export class SchemaTagsStore {
     const ids = [...new Set(tagIds.map((id) => String(id).trim()).filter(Boolean))]
     db.exec('BEGIN IMMEDIATE')
     try {
-      db.prepare('DELETE FROM super_tag_stamps WHERE collection = ? AND record_id = ?').run(collection, recordId)
+      db.prepare('DELETE FROM facet_stamps WHERE collection = ? AND record_id = ?').run(collection, recordId)
       const insert = db.prepare(
-        'INSERT INTO super_tag_stamps (tag_id, collection, record_id, title) VALUES (?, ?, ?, ?)',
+        'INSERT INTO facet_stamps (facet_id, collection, record_id, title) VALUES (?, ?, ?, ?)',
       )
       for (const tagId of ids) insert.run(tagId, collection, recordId, title)
       db.exec('COMMIT')
@@ -205,21 +205,21 @@ export class SchemaTagsStore {
     }
   }
 
-  recordSchema(collection: string, recordId: string): SchemaFieldValue | null {
+  recordFacet(collection: string, recordId: string): SchemaFieldValue | null {
     const row = this.ensure()
-      .prepare('SELECT schema_json FROM super_tag_record_schema WHERE collection = ? AND record_id = ?')
-      .get(collection, recordId) as { schema_json: string } | undefined
+      .prepare('SELECT facet_json FROM facet_record_values WHERE collection = ? AND record_id = ?')
+      .get(collection, recordId) as { facet_json: string } | undefined
     if (!row) return null
-    return normalizeSchemaValue(row.schema_json)
+    return normalizeSchemaValue(row.facet_json)
   }
 
-  writeRecordSchema(collection: string, recordId: string, schema: unknown, title: string) {
-    const value = normalizeSchemaValue(schema)
+  writeRecordFacet(collection: string, recordId: string, facet: unknown, title: string) {
+    const value = normalizeSchemaValue(facet)
     this.ensure()
       .prepare(
-        `INSERT INTO super_tag_record_schema (collection, record_id, schema_json)
+        `INSERT INTO facet_record_values (collection, record_id, facet_json)
          VALUES (?, ?, ?)
-         ON CONFLICT(collection, record_id) DO UPDATE SET schema_json = excluded.schema_json`,
+         ON CONFLICT(collection, record_id) DO UPDATE SET facet_json = excluded.facet_json`,
       )
       .run(collection, recordId, JSON.stringify(value))
     this.indexRecord(collection, recordId, title, value.tags)
@@ -228,30 +228,30 @@ export class SchemaTagsStore {
 
   removeRecord(collection: string, recordId: string) {
     const db = this.ensure()
-    db.prepare('DELETE FROM super_tag_stamps WHERE collection = ? AND record_id = ?').run(collection, recordId)
-    db.prepare('DELETE FROM super_tag_record_schema WHERE collection = ? AND record_id = ?').run(collection, recordId)
+    db.prepare('DELETE FROM facet_stamps WHERE collection = ? AND record_id = ?').run(collection, recordId)
+    db.prepare('DELETE FROM facet_record_values WHERE collection = ? AND record_id = ?').run(collection, recordId)
   }
 
   stampedIds(collection: string, tagIdOrLabel: string): Set<string> {
     const tag = this.get(tagIdOrLabel)
     const tagId = tag?.id ?? tagIdOrLabel
     const rows = this.ensure()
-      .prepare('SELECT record_id FROM super_tag_stamps WHERE collection = ? AND tag_id = ?')
+      .prepare('SELECT record_id FROM facet_stamps WHERE collection = ? AND facet_id = ?')
       .all(collection, tagId) as Array<{ record_id: string }>
     return new Set(rows.map((row) => row.record_id))
   }
 
-  collect(idOrLabel: string): { tag: CollectionSchemaPack | null; items: SuperTagStamp[] } {
+  collect(idOrLabel: string): { facet: CollectionSchemaPack | null; items: FacetStamp[] } {
     const tag = this.get(idOrLabel)
     const tagId = tag?.id ?? String(idOrLabel ?? '').trim()
-    if (!tagId) return { tag: null, items: [] }
+    if (!tagId) return { facet: null, items: [] }
     const rows = this.ensure()
       .prepare(
-        'SELECT tag_id, collection, record_id, title FROM super_tag_stamps WHERE tag_id = ? ORDER BY collection, record_id',
+        'SELECT facet_id, collection, record_id, title FROM facet_stamps WHERE facet_id = ? ORDER BY collection, record_id',
       )
       .all(tagId) as StampRow[]
     return {
-      tag,
+      facet: tag,
       items: rows.map((row) => ({
         collection: row.collection,
         id: row.record_id,

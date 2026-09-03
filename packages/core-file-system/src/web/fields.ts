@@ -1,6 +1,6 @@
 import type { CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
-import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS, isSuperTagFieldType, normalizeSchemaValue, schemaSearchHaystack } from '@biu/type-file-system'
-import { loadSchemaTags } from './schema-tags.ts'
+import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS, isFacetFieldType, normalizeSchemaValue, schemaSearchHaystack } from '@biu/type-file-system'
+import { loadFacets } from './facet-catalog.ts'
 
 export const BUILTIN_VIEW_MODES = ['queue', 'table', 'cards', 'board'] as const
 export type BuiltinViewMode = (typeof BUILTIN_VIEW_MODES)[number]
@@ -16,7 +16,7 @@ export function isViewModeId(mode: unknown): mode is ViewMode {
 }
 
 export function resolveFieldType(field: FieldSpec): FieldType {
-  if (isSuperTagFieldType(field.type)) return 'supertag'
+  if (isFacetFieldType(field.type)) return 'facet'
   if (field.type === 'string[]') return 'multi-select'
   if (field.type === 'string' && field.enum?.length) return 'select'
   if (field.type === 'number' && field.format === 'datetime') return 'datetime'
@@ -179,7 +179,7 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
     return tags.length ? tags.join(', ') : '—'
   }
   if (kind === 'action') return field.label || '动作'
-  if (kind === 'supertag') {
+  if (kind === 'facet') {
     const parsed = normalizeSchemaValue(value)
     return parsed.tags.length ? parsed.tags.join(', ') : '—'
   }
@@ -195,7 +195,7 @@ export function fieldHasValue(field: FieldSpec | undefined, value: unknown): boo
   if (!field) return true
   const kind = resolveFieldType(field)
   if (kind === 'boolean') return value === true || value === 'true'
-  if (kind === 'supertag') return normalizeSchemaValue(value).tags.length > 0
+  if (kind === 'facet') return normalizeSchemaValue(value).tags.length > 0
   return formatField(field, value) !== '—'
 }
 
@@ -226,8 +226,8 @@ export function matchesQuery(row: DbRecord, query: string, schema: CollectionSch
   if (!q) return true
   if (String(row.id).toLowerCase().includes(q)) return true
   for (const [key, field] of Object.entries(schema.fields)) {
-    if (resolveFieldType(field) === 'supertag') {
-      if (schemaSearchHaystack(row[key], loadSchemaTags()).toLowerCase().includes(q)) return true
+    if (resolveFieldType(field) === 'facet') {
+      if (schemaSearchHaystack(row[key], loadFacets()).toLowerCase().includes(q)) return true
       continue
     }
     const text = formatField(field, row[key]).toLowerCase()
@@ -254,9 +254,9 @@ export function matchesFilters(row: DbRecord, filters: Record<string, string>, s
       if (!asStringList(row[key]).includes(expected)) return false
       continue
     }
-    if (kind === 'supertag') {
+    if (kind === 'facet') {
       const parsed = normalizeSchemaValue(row[key])
-      if (!parsed.tags.includes(expected) && !loadSchemaTags().some((tag) => parsed.tags.includes(tag.id) && tag.label === expected)) {
+      if (!parsed.tags.includes(expected) && !loadFacets().some((tag) => parsed.tags.includes(tag.id) && tag.label === expected)) {
         return false
       }
       continue
@@ -296,7 +296,7 @@ export function uniqueValues(rows: DbRecord[], key: string, field: FieldSpec): s
   for (const row of rows) {
     if (resolveFieldType(field) === 'multi-select') {
       for (const item of asStringList(row[key])) set.add(item)
-    } else if (resolveFieldType(field) === 'supertag') {
+    } else if (resolveFieldType(field) === 'facet') {
       for (const item of normalizeSchemaValue(row[key]).tags) set.add(item)
     } else if (row[key] != null && row[key] !== '') {
       set.add(String(row[key]))
@@ -307,7 +307,7 @@ export function uniqueValues(rows: DbRecord[], key: string, field: FieldSpec): s
 }
 
 export function isGroupableKind(kind: FieldType) {
-  return kind === 'select' || kind === 'multi-select' || kind === 'supertag'
+  return kind === 'select' || kind === 'multi-select' || kind === 'facet'
 }
 
 export function groupableFields(schema: CollectionSchema | undefined) {
@@ -341,8 +341,8 @@ export function groupRecords(rows: DbRecord[], schema: CollectionSchema | undefi
       buckets.set(flag ? 'true' : 'false', [...(buckets.get(flag ? 'true' : 'false') ?? []), row])
       continue
     }
-    if (kind === 'multi-select' || kind === 'supertag') {
-      const tags = kind === 'supertag' ? normalizeSchemaValue(row[group.key]).tags : asStringList(row[group.key])
+    if (kind === 'multi-select' || kind === 'facet') {
+      const tags = kind === 'facet' ? normalizeSchemaValue(row[group.key]).tags : asStringList(row[group.key])
       if (!tags.length) {
         unset.push(row)
         continue

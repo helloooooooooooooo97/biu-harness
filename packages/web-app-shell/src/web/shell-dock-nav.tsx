@@ -26,7 +26,7 @@ const INSPECTOR_DOCK_TOOLS = [
   { id: 'inspector:sessions', title: '会话', tabId: 'database:/sessions', order: 41, Icon: ChatBubbleLeftRightIcon },
   { id: 'inspector:tasks', title: '任务', tabId: 'database:/tasks', order: 42, Icon: CheckCircleIcon },
   { id: 'inspector:plugins', title: '插件', tabId: 'database:/plugins', order: 43, Icon: PuzzlePieceIcon },
-  { id: 'inspector:tags', title: '模式', tabId: 'database:/supertags', order: 44, Icon: TagIcon },
+  { id: 'inspector:facets', title: '分面', tabId: 'database:/facets', order: 44, Icon: TagIcon },
   { id: 'inspector:traj', title: '轨迹', tabId: 'traj', order: 45, Icon: MapIcon },
   { id: 'inspector:usage', title: '用量', tabId: 'usage', order: 46, Icon: SignalIcon },
 ] as const

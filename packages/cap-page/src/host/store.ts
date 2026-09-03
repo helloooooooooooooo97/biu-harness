@@ -51,7 +51,7 @@ export type PageRow = DbRecord & {
   notes: string
   score: number
   parentId: string | null
-  schema: SchemaFieldValue
+  facet: SchemaFieldValue
   emoji: string
   createdAt: number
   updatedAt: number
@@ -175,7 +175,7 @@ function matterOf(row: PageRow): Record<string, unknown> {
     },
     score: row.score,
     parentId: row.parentId,
-    schema: row.schema,
+    facet: row.facet,
     emoji: row.emoji,
     createdAt: new Date(row.createdAt).toISOString(),
     updatedAt: new Date(row.updatedAt).toISOString(),
@@ -209,7 +209,7 @@ function rowFromFile(id: string, raw: string): PageRow {
     notes: body,
     score: Number(matter.score) || 0,
     parentId: matter.parentId == null || matter.parentId === '' ? null : String(matter.parentId),
-    schema: normalizeSchemaValue(matter.schema),
+    facet: normalizeSchemaValue(matter.facet),
     emoji: String(matter.emoji ?? ''),
     createdAt,
     updatedAt,
@@ -234,7 +234,7 @@ function emptyRow(id: string, ts: number): PageRow {
     notes: '',
     score: 0,
     parentId: null,
-    schema: emptySchemaValue(),
+    facet: emptySchemaValue(),
     emoji: '',
     createdAt: ts,
     updatedAt: ts,
@@ -262,7 +262,7 @@ function applyPatch(current: PageRow, patch: Record<string, unknown>): PageRow {
     parentId: 'parentId' in patch
       ? patch.parentId == null || patch.parentId === '' ? null : String(patch.parentId)
       : current.parentId,
-    schema: 'schema' in patch ? normalizeSchemaValue(patch.schema) : current.schema,
+    facet: 'facet' in patch ? normalizeSchemaValue(patch.facet) : current.facet,
     emoji: 'emoji' in patch ? String(patch.emoji ?? '') : current.emoji,
     score: current.score,
     createdAt: current.createdAt,

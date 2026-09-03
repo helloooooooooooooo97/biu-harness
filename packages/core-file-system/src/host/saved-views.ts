@@ -197,7 +197,7 @@ export class SavedViewsStore {
         ...(typeof patch.wrap === 'boolean' ? { wrap: patch.wrap } : {}),
         ...(typeof patch.truncate === 'boolean' ? { truncate: patch.truncate } : {}),
         ...('emoji' in patch ? { emoji: String(patch.emoji ?? '') } : {}),
-        ...('schema' in patch ? { schema: normalizeSchemaValue(patch.schema) } : {}),
+        ...('facet' in patch ? { facet: normalizeSchemaValue(patch.facet) } : {}),
         updatedAt: Date.now(),
         createdAt: Number((cur as { createdAt?: number }).createdAt) || Date.now(),
       }

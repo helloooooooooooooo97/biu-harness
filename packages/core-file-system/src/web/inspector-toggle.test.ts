@@ -287,8 +287,8 @@ test('collection reload does not follow callback identity', () => {
   assert.doesNotMatch(browser, /void reload\(\)\s*\n\s*\}, \[reload\]/)
   assert.match(browser, /const EMPTY_FILTERS/)
   assert.doesNotMatch(browser, /lockedFilters = \{\}/)
-  assert.match(browser, /void pullSchemaTags\(\)/)
-  assert.doesNotMatch(browser, /pullSchemaTags\(\),\s*\n\s*\]\)/)
+  assert.match(browser, /void pullFacets\(\)/)
+  assert.doesNotMatch(browser, /pullFacets\(\),\s*\n\s*\]\)/)
 })
 
 test('page collection uses a document glyph, not the table/database icon', () => {

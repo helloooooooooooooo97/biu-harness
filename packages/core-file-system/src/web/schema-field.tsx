@@ -14,7 +14,7 @@ import { ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
 import { TagChip, TagChips, tagTone } from '@biu/public-ui'
 import { asStringList } from './fields.ts'
 import { FieldEditor, FieldGlyph, parseFieldValue } from './fsdb-cells.tsx'
-import { loadSchemaTags, persistSchemaTags, fieldKeyFromLabel, slugTagId, subscribeSchemaTags } from './schema-tags.ts'
+import { loadFacets, persistFacets, fieldKeyFromLabel, slugFacetId, subscribeFacets } from './facet-catalog.ts'
 
 const TYPE_LABEL: Partial<Record<FieldType, string>> = {
   string: '文本',
@@ -28,8 +28,7 @@ const TYPE_LABEL: Partial<Record<FieldType, string>> = {
   attachment: '附件',
   file: '正文',
   action: '动作',
-  schema: '模式',
-  supertag: '模式',
+  facet: '分面',
 }
 
 export const schemaTagTone = tagTone
@@ -209,10 +208,10 @@ function TagPicker({
               }}
             >
               <PlusIcon aria-hidden className="size-3.5" />
-              创建模式 <SchemaChip id={draft.trim()} label={draft.trim()} />
+              创建分面 <SchemaChip id={draft.trim()} label={draft.trim()} />
             </button>
           ) : null}
-          {!available.length && !canCreate ? <div className="fsdb-schema-tokens-empty">没有匹配的模式</div> : null}
+          {!available.length && !canCreate ? <div className="fsdb-schema-tokens-empty">没有匹配的分面</div> : null}
         </div>
       ) : null}
     </div>
@@ -281,17 +280,17 @@ export function AddProperty({ onAdd }: { onAdd: (label: string, type: AtomicFiel
   )
 }
 
-export function SuperTagPackEditor({ tagId }: { tagId: string }) {
-  const [catalog, setCatalog] = useState(() => loadSchemaTags())
-  useEffect(() => subscribeSchemaTags(undefined, () => setCatalog(loadSchemaTags())), [])
-  const tag = catalog.find((item) => item.id === tagId)
+export function FacetPackEditor({ facetId }: { facetId: string }) {
+  const [catalog, setCatalog] = useState(() => loadFacets())
+  useEffect(() => subscribeFacets(undefined, () => setCatalog(loadFacets())), [])
+  const tag = catalog.find((item) => item.id === facetId)
 
   function saveCatalog(next: CollectionSchemaPack[]) {
-    persistSchemaTags(next)
+    persistFacets(next)
     setCatalog(next)
   }
 
-  if (!tag) return <p className="fsdb-muted">这条模式已不在目录里。</p>
+  if (!tag) return <p className="fsdb-muted">这条分面已不在目录里。</p>
   const pack = tag
 
   function addField(name: string, type: AtomicFieldType) {
@@ -340,9 +339,9 @@ export function SchemaFieldEditor({
   onChange: (next: SchemaFieldValue) => void
 }) {
   const parsed = normalizeSchemaValue(value)
-  const [catalog, setCatalog] = useState(() => loadSchemaTags())
+  const [catalog, setCatalog] = useState(() => loadFacets())
 
-  useEffect(() => subscribeSchemaTags(undefined, () => setCatalog(loadSchemaTags())), [])
+  useEffect(() => subscribeFacets(undefined, () => setCatalog(loadFacets())), [])
 
   const selected = useMemo(
     () =>
@@ -351,7 +350,7 @@ export function SchemaFieldEditor({
   )
 
   function saveCatalog(next: CollectionSchemaPack[]) {
-    persistSchemaTags(next)
+    persistFacets(next)
     setCatalog(next)
   }
 
@@ -370,7 +369,7 @@ export function SchemaFieldEditor({
   function createTag(label: string) {
     const name = label.trim()
     if (!name) return
-    const id = slugTagId(name, new Set(catalog.map((tag) => tag.id)))
+    const id = slugFacetId(name, new Set(catalog.map((tag) => tag.id)))
     saveCatalog([...catalog, { id, label: name, fields: [] }])
     patchValue({ tags: [...parsed.tags, id], values: parsed.values })
   }

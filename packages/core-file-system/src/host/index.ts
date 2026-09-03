@@ -5,7 +5,7 @@ import {
   asAttachment,
   asHttpHref,
   asImageSrc,
-  isSuperTagFieldType,
+  isFacetFieldType,
   normalizeSchemaValue,
   schemaSearchHaystack,
   withBuiltinFields,
@@ -24,8 +24,8 @@ import {
   type ListPage,
 } from '@biu/type-file-system'
 import { SavedViewsStore, viewsCollection, type StoredView } from './saved-views.ts'
-import { SchemaTagsStore, SUPER_TAGS_SQLITE } from './schema-tags.ts'
-import { superTagsCollection } from './super-tags-collection.ts'
+import { FacetStore, FILE_SYSTEM_SQLITE } from './facets-store.ts'
+import { facetsCollection } from './facets-collection.ts'
 import { currentSessionId } from '@biu/host-sessions/scope'
 import { databaseRevealForTool, normalizeCollectionPath } from '../paths.ts'
 
@@ -40,10 +40,11 @@ const STAMP_FIELD_BLOCKLIST = new Set([
   'table',
   'tablePath',
   'sourceId',
+  'facetId',
   'tag',
   'fieldCount',
   'stampCount',
-  'schema',
+  'facetId',
   'content',
   'emoji',
   'createdAt',
@@ -87,12 +88,12 @@ function schemaFor(spec: CollectionSpec): CollectionSchema {
     contentField,
     fields,
     columns:
-      spec.path === '/supertags'
+      spec.path === '/facets'
         ? spec.schema.columns
-        : spec.schema.columns?.includes('schema')
+        : spec.schema.columns?.includes('facet')
           ? spec.schema.columns
           : spec.schema.columns
-            ? [...spec.schema.columns, 'schema']
+            ? [...spec.schema.columns, 'facet']
             : spec.schema.columns,
     actions: (spec.actions ?? []).map(publicAction),
     records: {
@@ -211,7 +212,7 @@ function coerce(field: FieldSpec, value: unknown) {
     throw new Error('expected file')
   }
   if (kind === 'action') return value == null ? '' : value
-  if (isSuperTagFieldType(kind)) return normalizeSchemaValue(value)
+  if (isFacetFieldType(kind)) return normalizeSchemaValue(value)
   const text = String(value ?? '')
   if ((kind === 'select' || field.enum) && field.enum && !field.enum.includes(text)) {
     throw new Error(`expected one of ${field.enum.join(', ')}`)
@@ -269,7 +270,7 @@ function matchQuery(record: DbRecord, q: string, packs: CollectionSchemaPack[] =
   if (String(record.id).toLowerCase().includes(needle)) return true
   for (const [key, value] of Object.entries(record)) {
     if (value == null || value === '') continue
-    if (key === 'schema' || (value && typeof value === 'object' && !Array.isArray(value) && 'tags' in (value as object))) {
+    if (key === 'facet' || (value && typeof value === 'object' && !Array.isArray(value) && 'tags' in (value as object))) {
       if (schemaSearchHaystack(value, packs).toLowerCase().includes(needle)) return true
       continue
     }
@@ -286,7 +287,7 @@ function matchListFilter(record: DbRecord, filter: Record<string, unknown> | und
     const want = String(expected)
     const actual = record[key]
     const field = schema.fields[key]
-    if (isSuperTagFieldType(field?.type)) {
+    if (isFacetFieldType(field?.type)) {
       const parsed = normalizeSchemaValue(actual)
       const hit = parsed.tags.some((id) => {
         if (id === want) return true
@@ -343,7 +344,7 @@ export function clampPage(limit?: number, offset?: number) {
 
 export class DatabaseService extends Service implements Database {
   private collections = new Map<string, CollectionSpec>()
-  schemaTags = new SchemaTagsStore()
+  facets = new FacetStore()
 
   private bumpQueued = false
 
@@ -389,7 +390,7 @@ export class DatabaseService extends Service implements Database {
   private async loadCollectionRows(spec: CollectionSpec, query: CollectionListQuery) {
     const rows = await spec.list(query)
     const listed = !query.ids?.length ? rows : rows.filter((row) => query.ids!.includes(row.id))
-    return listed.map((row) => this.applySchemaOverlay(spec, row))
+    return listed.map((row) => this.applyFacetOverlay(spec, row))
   }
 
   private async matchCollectionRows(
@@ -399,18 +400,18 @@ export class DatabaseService extends Service implements Database {
     q: string,
   ) {
     let schema = schemaFor(spec)
-    const packs = this.schemaTags.list()
+    const packs = this.facets.list()
     const rows = await this.loadCollectionRows(spec, query)
-    const tagFilter = spec.path === '/supertags' ? String(filter?.tag ?? '').trim() : ''
-    const tagPack = tagFilter ? this.schemaTags.get(tagFilter) : null
+    const tagFilter = spec.path === '/facets' ? String(filter?.facetId ?? '').trim() : ''
+    const tagPack = tagFilter ? this.facets.get(tagFilter) : null
     if (tagFilter) {
       schema = schemaWithTagPack(schema, tagPack)
-      await this.hydrateSuperTagStamps(rows, tagPack)
+      await this.hydrateFacetStamps(rows, tagPack)
     }
     return rows.filter((row) => matchListFilter(row, filter, schema, packs) && matchQuery(row, q, packs))
   }
 
-  private async hydrateSuperTagStamps(rows: DbRecord[], pack: CollectionSchemaPack | null) {
+  private async hydrateFacetStamps(rows: DbRecord[], pack: CollectionSchemaPack | null) {
     if (!pack?.fields.length) return
     const wanted = pack.fields.filter((field) => !STAMP_FIELD_BLOCKLIST.has(field.key))
     if (!wanted.length) return
@@ -421,8 +422,8 @@ export class DatabaseService extends Service implements Database {
       if (!spec || !id) continue
       const found = await spec.get(id)
       if (!found) continue
-      const record = this.applySchemaOverlay(spec, found)
-      const bag = normalizeSchemaValue(record.schema).values[pack.id] ?? {}
+      const record = this.applyFacetOverlay(spec, found)
+      const bag = normalizeSchemaValue(record.facet).values[pack.id] ?? {}
       for (const field of wanted) {
         if (bag[field.key] !== undefined) row[field.key] = bag[field.key]
       }
@@ -465,7 +466,7 @@ export class DatabaseService extends Service implements Database {
         label: spec.label ?? spec.id,
         schema: schemaFor(spec),
         caps,
-        value: withoutContent(spec, this.applySchemaOverlay(spec, record)),
+        value: withoutContent(spec, this.applyFacetOverlay(spec, record)),
       }
     }
     throw new Error(`path too deep: ${normalizeCollectionPath(path)}`)
@@ -488,10 +489,10 @@ export class DatabaseService extends Service implements Database {
     const q = page?.q ?? ''
     const sortField = page?.sortField ?? ''
     const sortDir = page?.sortDir === 'desc' ? 'desc' : 'asc'
-    const schemaFilter = filter?.schema != null && filter.schema !== '' ? String(filter.schema) : ''
+    const schemaFilter = filter?.facet != null && filter.facet !== '' ? String(filter.facet) : ''
     const query: CollectionListQuery = { q, filter }
-    if (schemaFilter && schema.fields.schema && spec.path !== '/supertags') {
-      const stamped = this.schemaTags.stampedIds(spec.path, schemaFilter)
+    if (schemaFilter && schema.fields.facet && spec.path !== '/facets') {
+      const stamped = this.facets.stampedIds(spec.path, schemaFilter)
       if (!stamped.size) {
         return {
           kind: 'collection' as const,
@@ -508,8 +509,8 @@ export class DatabaseService extends Service implements Database {
       query.ids = [...stamped]
     }
     const matched = await this.matchCollectionRows(spec, query, filter, q)
-    const tagFilter = spec.path === '/supertags' ? String(filter?.tag ?? '').trim() : ''
-    if (tagFilter) schema = schemaWithTagPack(schema, this.schemaTags.get(tagFilter))
+    const tagFilter = spec.path === '/facets' ? String(filter?.facetId ?? '').trim() : ''
+    if (tagFilter) schema = schemaWithTagPack(schema, this.facets.get(tagFilter))
     const sorted = sortRecords(matched, sortField, sortDir)
     const total = sorted.length
     const slice = sorted.slice(offset, offset + limit)
@@ -530,11 +531,11 @@ export class DatabaseService extends Service implements Database {
     }
   }
 
-  async collectSuperTag(id: string) {
-    const found = this.schemaTags.collect(id)
+  async collectFacet(id: string) {
+    const found = this.facets.collect(id)
     const labels = new Map(this.collectionsList().map((spec) => [spec.path, spec.label ?? spec.id]))
     return {
-      tag: found.tag,
+      facet: found.facet,
       items: found.items.map((item) => ({
         ...item,
         collectionLabel: labels.get(item.collection) ?? item.collection,
@@ -542,25 +543,25 @@ export class DatabaseService extends Service implements Database {
     }
   }
 
-  private applySchemaOverlay(spec: CollectionSpec, row: DbRecord): DbRecord {
-    if (spec.path === '/supertags' || !schemaFor(spec).fields.schema) return row
-    const overlay = this.schemaTags.recordSchema(spec.path, row.id)
+  private applyFacetOverlay(spec: CollectionSpec, row: DbRecord): DbRecord {
+    if (spec.path === '/facets' || !schemaFor(spec).fields.facet) return row
+    const overlay = this.facets.recordFacet(spec.path, row.id)
     if (!overlay) return row
-    return { ...row, schema: overlay }
+    return { ...row, facet: overlay }
   }
 
   private collectionCanUpdate(spec: CollectionSpec) {
     return Boolean(spec.records?.update && spec.update)
   }
 
-  private indexSuperTagRecord(spec: CollectionSpec, record: DbRecord) {
-    if (spec.path === '/supertags' || !schemaFor(spec).fields.schema) return
+  private indexFacetRecord(spec: CollectionSpec, record: DbRecord) {
+    if (spec.path === '/facets' || !schemaFor(spec).fields.facet) return
     const labelKey = schemaFor(spec).labelField ?? 'title'
-    this.schemaTags.indexRecord(
+    this.facets.indexRecord(
       spec.path,
       record.id,
       String(record[labelKey] ?? record.id),
-      normalizeSchemaValue(record.schema).tags,
+      normalizeSchemaValue(record.facet).tags,
     )
   }
 
@@ -573,7 +574,7 @@ export class DatabaseService extends Service implements Database {
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     const record = await spec.get(parts[1]!)
     if (!record) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
-    return { kind: 'record' as const, path: `${spec.path}/${record.id}`, schema: schemaFor(spec), value: withoutContent(spec, this.applySchemaOverlay(spec, record)) }
+    return { kind: 'record' as const, path: `${spec.path}/${record.id}`, schema: schemaFor(spec), value: withoutContent(spec, this.applyFacetOverlay(spec, record)) }
   }
 
   async update(path: string, content: unknown) {
@@ -585,24 +586,24 @@ export class DatabaseService extends Service implements Database {
     const raw = parseContent(content)
     if (!this.collectionCanUpdate(spec)) {
       const keys = Object.keys(raw)
-      if (keys.length !== 1 || keys[0] !== 'schema' || !schema.fields.schema?.writable || schema.fields.schema.computed) {
+      if (keys.length !== 1 || keys[0] !== 'facet' || !schema.fields.facet?.writable || schema.fields.facet.computed) {
         throw new Error(`collection cannot update: ${spec.path}`)
       }
       const current = await spec.get(parts[1]!)
       if (!current) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
-      const nextSchema = coerce(schema.fields.schema, raw.schema)
+      const nextSchema = coerce(schema.fields.facet, raw.facet)
       const labelKey = schema.labelField ?? 'title'
-      this.schemaTags.writeRecordSchema(spec.path, current.id, nextSchema, String(current[labelKey] ?? current.id))
+      this.facets.writeRecordFacet(spec.path, current.id, nextSchema, String(current[labelKey] ?? current.id))
       this.bump()
       return {
         kind: 'record' as const,
         path: `${spec.path}/${current.id}`,
-        value: withoutContent(spec, { ...current, schema: nextSchema }),
+        value: withoutContent(spec, { ...current, facet: nextSchema }),
       }
     }
     const patch = pickWritablePatch(schema, raw)
     const record = await spec.update(parts[1]!, patch)
-    this.indexSuperTagRecord(spec, record)
+    this.indexFacetRecord(spec, record)
     this.bump()
     return { kind: 'record' as const, path: `${spec.path}/${record.id}`, value: withoutContent(spec, record) }
   }
@@ -616,7 +617,7 @@ export class DatabaseService extends Service implements Database {
     const schema = schemaFor(spec)
     const records = parseRecords(content).map((row) => pickWritablePatch(schema, row))
     const created = await spec.create(records)
-    for (const record of created) this.indexSuperTagRecord(spec, record)
+    for (const record of created) this.indexFacetRecord(spec, record)
     this.bump()
     return {
       kind: 'created' as const,
@@ -640,9 +641,9 @@ export class DatabaseService extends Service implements Database {
     const q = query.q ?? ''
     const filter = query.filter
     const listQuery: CollectionListQuery = { q, filter, ids: query.ids }
-    const schemaFilter = filter?.schema != null && filter.schema !== '' ? String(filter.schema) : ''
-    if (schemaFilter && schema.fields.schema && spec.path !== '/supertags') {
-      const stamped = this.schemaTags.stampedIds(spec.path, schemaFilter)
+    const schemaFilter = filter?.facet != null && filter.facet !== '' ? String(filter.facet) : ''
+    if (schemaFilter && schema.fields.facet && spec.path !== '/facets') {
+      const stamped = this.facets.stampedIds(spec.path, schemaFilter)
       if (!stamped.size) return { kind: 'deleted' as const, path: spec.path, ids: [] as string[] }
       listQuery.ids = query.ids?.length ? query.ids.filter((id) => stamped.has(id)) : [...stamped]
     }
@@ -650,7 +651,7 @@ export class DatabaseService extends Service implements Database {
     const ids = [...new Set(matched.map((row) => row.id))]
     if (!ids.length) return { kind: 'deleted' as const, path: spec.path, ids }
     await spec.remove({ ids })
-    for (const id of ids) this.schemaTags.removeRecord(spec.path, id)
+    for (const id of ids) this.facets.removeRecord(spec.path, id)
     this.bump()
     return { kind: 'deleted' as const, path: spec.path, ids }
   }
@@ -667,7 +668,7 @@ export class DatabaseService extends Service implements Database {
     if (!matchActionWhen(record, action.when)) throw new Error(`action not available: ${actionId}`)
     const result = await action.run(parts[1]!, record, args)
     const next = (await spec.get(parts[1]!)) ?? record
-    this.indexSuperTagRecord(spec, next)
+    this.indexFacetRecord(spec, next)
     this.bump()
     return {
       kind: 'record' as const,
@@ -841,10 +842,10 @@ export const inject = ['tools', 'http']
 
 export function apply(ctx: Context) {
   const db = new DatabaseService(ctx)
-  db.schemaTags.open(join(process.cwd(), SUPER_TAGS_SQLITE))
+  db.facets.open(join(process.cwd(), FILE_SYSTEM_SQLITE))
   const savedViews = new SavedViewsStore()
-  savedViews.open(process.env.VITEST ? ':memory:' : join(process.cwd(), SUPER_TAGS_SQLITE))
-  const schemaTags = db.schemaTags
+  savedViews.open(process.env.VITEST ? ':memory:' : join(process.cwd(), FILE_SYSTEM_SQLITE))
+  const facets = db.facets
   db.register(viewsCollection(savedViews, () => db.collectionsList().map((item) => ({
     id: item.id,
     path: item.path,
@@ -852,7 +853,7 @@ export function apply(ctx: Context) {
     label: item.label ?? item.id,
     view: item.view ?? null,
   }))))
-  db.register(superTagsCollection(schemaTags, () => db.collectionsList().map((item) => ({
+  db.register(facetsCollection(facets, () => db.collectionsList().map((item) => ({
     id: item.id,
     path: item.path,
     label: item.label ?? item.id,
@@ -894,7 +895,7 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_update',
-    description: '按 schema 可写字段更新一条已有记录，路径为 /<表>/<id>。模式（schema 字段）在所有表都可写，包括 records.update 为 false 的表（如 /plugins）；其它字段仍看 caps。新建用 db_create，正文用 db_content。改模式属性用 db_update path=/supertags/<id> content.fields。',
+    description: '按表结构 schema 的可写字段更新一条已有记录，路径为 /<表>/<id>。分面（facet 字段）在所有表都可写，包括 records.update 为 false 的表（如 /plugins）；其它字段仍看 caps。新建用 db_create，正文用 db_content。改分面属性用 db_update path=/facets/<id> content.fields。',
     parameters: {
       type: 'object',
       properties: {
@@ -907,7 +908,7 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_create',
-    description: '在已登记且允许新建的表中批量新增记录。路径为 /<表>，records 为对象数组。能否新建看 db_stat 的 caps 与 schema.records。新建模式用 db_create path=/supertags records=[{title}]。',
+    description: '在已登记且允许新建的表中批量新增记录。路径为 /<表>，records 为对象数组。能否新建看 db_stat 的 caps 与 schema.records。新建分面用 db_create path=/facets records=[{title}]。',
     parameters: {
       type: 'object',
       properties: {
@@ -1053,25 +1054,25 @@ export function apply(ctx: Context) {
       route.send(400, { error: String(error) })
     }
   })
-  ctx.http.route('GET', '/api/db/schema-tags', async (route) => {
+  ctx.http.route('GET', '/api/db/facets', async (route) => {
     try {
       const collect = route.query.get('collect') || ''
       if (collect) {
-        route.send(200, await db.collectSuperTag(collect))
+        route.send(200, await db.collectFacet(collect))
         return
       }
       const q = route.query.get('q') || ''
-      route.send(200, { tags: schemaTags.list(q) })
+      route.send(200, { facets: facets.list(q) })
     } catch (error) {
       route.send(400, { error: String(error) })
     }
   })
-  ctx.http.route('POST', '/api/db/schema-tags', async (route) => {
+  ctx.http.route('POST', '/api/db/facets', async (route) => {
     try {
-      const body = (await route.json()) as { path?: string; tags?: unknown[] }
-      schemaTags.replace(Array.isArray(body.tags) ? body.tags : [])
+      const body = (await route.json()) as { path?: string; facets?: unknown[] }
+      facets.replace(Array.isArray(body.facets) ? body.facets : [])
       ctx.emit('database/change')
-      route.send(200, { ok: true, tags: schemaTags.list() })
+      route.send(200, { ok: true, facets: facets.list() })
     } catch (error) {
       route.send(400, { error: String(error) })
     }

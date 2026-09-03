@@ -113,7 +113,7 @@ import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 import { mergeTableViews } from '../catalog-views.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
 import { SchemaChips, SchemaFieldEditor } from './schema-field.tsx'
-import { loadSchemaTags, pullSchemaTags } from './schema-tags.ts'
+import { loadFacets, pullFacets } from './facet-catalog.ts'
 
 type StatResult = { schema?: CollectionSchema }
 
@@ -603,7 +603,7 @@ export function CollectionBrowser({
   }, [collectionPath, dataPath, nested])
 
   useEffect(() => {
-    void pullSchemaTags()
+    void pullFacets()
   }, [collectionPath])
 
   useEffect(() => {
@@ -1244,7 +1244,7 @@ export function CollectionBrowser({
 
   function renderCell(row: DbRecord, key: string, field: FieldSpec) {
     const kind = resolveFieldType(field)
-    if (kind === 'supertag') {
+    if (kind === 'facet') {
       if (field.writable) {
         return (
           <SchemaFieldEditor
@@ -1256,7 +1256,7 @@ export function CollectionBrowser({
           />
         )
       }
-      return <SchemaChips value={row[key]} tags={loadSchemaTags()} />
+      return <SchemaChips value={row[key]} tags={loadFacets()} />
     }
     if (kind === 'action') {
       const actionId = fieldActionId(key, field)
@@ -2158,10 +2158,10 @@ export function CollectionBrowser({
                               { value: 'true', label: '是' },
                               { value: 'false', label: '否' },
                             ]
-                        : item.kind === 'supertag'
+                        : item.kind === 'facet'
                           ? uniqueValues(items, item.key, item.field).map((option) => ({
                               value: option,
-                              label: loadSchemaTags().find((tag) => tag.id === option)?.label ?? option,
+                              label: loadFacets().find((tag) => tag.id === option)?.label ?? option,
                             }))
                           : uniqueValues(items, item.key, item.field).map((option) => ({ value: option, label: option }))
                     return (

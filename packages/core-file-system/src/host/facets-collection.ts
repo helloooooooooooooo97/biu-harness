@@ -1,6 +1,6 @@
 import type { CollectionInfo, CollectionListQuery, CollectionSpec, DbRecord } from '@biu/type-file-system'
 import { recordBuiltinValues, REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
-import { SchemaTagsStore, slugSuperTagId } from './schema-tags.ts'
+import { FacetStore, slugFacetId } from './facets-store.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
 function parseFields(raw: unknown) {
@@ -31,11 +31,11 @@ export function parseStampRecordId(id: string) {
   return { collection: `/${table}`, recordId }
 }
 
-export function superTagsCollection(
-  store: SchemaTagsStore,
+export function facetsCollection(
+  store: FacetStore,
   tables: () => Array<Pick<CollectionInfo, 'path' | 'label' | 'id'>> = () => [],
 ): CollectionSpec {
-  const asTag = (id: string, label: string, fields: unknown[], stampCount: number): DbRecord => ({
+  const asFacet = (id: string, label: string, fields: unknown[], stampCount: number): DbRecord => ({
     id,
     title: label,
     fieldCount: fields.length,
@@ -49,35 +49,35 @@ export function superTagsCollection(
     return hit?.label ?? hit?.id ?? path
   }
 
-  const tagRows = () => {
+  const facetRows = () => {
     const counts = store.stampCounts()
-    return store.list().map((tag) => asTag(tag.id, tag.label, tag.fields, counts[tag.id] ?? 0))
+    return store.list().map((facet) => asFacet(facet.id, facet.label, facet.fields, counts[facet.id] ?? 0))
   }
 
-  const stampRows = (tagId: string) => {
-    const found = store.collect(tagId)
-    const id = found.tag?.id ?? tagId
+  const stampRows = (facetId: string) => {
+    const found = store.collect(facetId)
+    const id = found.facet?.id ?? facetId
     return found.items.map((item) => ({
       id: stampRecordId(item.collection, item.id),
       title: item.title || item.id,
       table: tableLabel(item.collection),
       tablePath: item.collection,
       sourceId: item.id,
-      tag: id,
+      facetId: id,
       ...recordBuiltinValues(),
     }))
   }
 
   return {
-    id: 'supertags',
-    path: '/supertags',
-    label: '模式',
+    id: 'facets',
+    path: '/facets',
+    label: '分面',
     view: {
-      moduleId: 'supertags-db',
-      route: '/db-supertags',
-      title: '模式',
+      moduleId: 'facets-db',
+      route: '/db-facets',
+      title: '分面',
       inspector: true,
-      blurb: '工作区全局模式，谁都可以改属性和贴到任意表的记录上（含插件）。新建用 db_create，改名/属性用 db_update（fields 为属性 JSON 数组）。',
+      blurb: '工作区全局分面，谁都可以改属性和贴到任意表的记录上（含插件）。新建用 db_create，改名/属性用 db_update（fields 为属性 JSON 数组）。',
       order: 31,
       icon: 'tag',
     },
@@ -88,20 +88,19 @@ export function superTagsCollection(
       columns: ['title', 'fieldCount', 'stampCount'],
       fields: {
         ...REQUIRED_RECORD_FIELDS,
-        title: { type: 'string', label: '模式', writable: true },
+        title: { type: 'string', label: '分面', writable: true },
         fieldCount: { type: 'number', label: '字段', computed: true },
         stampCount: { type: 'number', label: '收集', computed: true, sortable: true },
         fields: { type: 'string', label: '属性', writable: true },
         table: { type: 'string', label: '来源表', computed: true },
         tablePath: { type: 'string', label: '表路径', computed: true },
         sourceId: { type: 'string', label: '记录', computed: true },
-        tag: { type: 'string', label: '模式' },
-        schema: { type: 'schema', label: '模式', writable: false, computed: true },
+        facetId: { type: 'string', label: '分面', computed: true },
       },
     },
     list: (query?: CollectionListQuery) => {
-      const tagFilter = String(query?.filter?.tag ?? '').trim()
-      let listed = tagFilter ? stampRows(tagFilter) : tagRows()
+      const facetFilter = String(query?.filter?.facetId ?? '').trim()
+      let listed = facetFilter ? stampRows(facetFilter) : facetRows()
       if (query?.ids?.length) {
         const want = new Set(query.ids)
         listed = listed.filter((row) => want.has(row.id))
@@ -115,35 +114,35 @@ export function superTagsCollection(
     get: (id) => {
       const stamp = parseStampRecordId(id)
       if (stamp) {
-        for (const tag of store.list()) {
-          const hit = stampRows(tag.id).find((row) => row.id === id)
+        for (const facet of store.list()) {
+          const hit = stampRows(facet.id).find((row) => row.id === id)
           if (hit) return hit
         }
         return null
       }
-      return tagRows().find((row) => row.id === id) ?? null
+      return facetRows().find((row) => row.id === id) ?? null
     },
     create: (rows) =>
       rows.map((fields = {}) => {
-        const title = String(fields.title ?? '').trim() || '未命名模式'
-        const id = slugSuperTagId(title, new Set(store.list().map((tag) => tag.id)))
+        const title = String(fields.title ?? '').trim() || '未命名分面'
+        const id = slugFacetId(title, new Set(store.list().map((facet) => facet.id)))
         const pack = store.upsert({ id, label: title, fields: parseFields(fields.fields) })
-        return asTag(pack.id, pack.label, pack.fields, 0)
+        return asFacet(pack.id, pack.label, pack.fields, 0)
       }),
     update: (id, patch) => {
       if (parseStampRecordId(id)) throw new Error(`cannot update collected row: ${id}`)
       const current = store.get(id)
-      if (!current) throw new Error(`unknown 模式: ${id}`)
+      if (!current) throw new Error(`unknown 分面: ${id}`)
       const label = patch.title != null ? String(patch.title).trim() || current.label : current.label
       const fields = patch.fields != null ? parseFields(patch.fields) : current.fields
       const pack = store.upsert({ id: current.id, label, fields })
-      return asTag(pack.id, pack.label, pack.fields, store.stampCounts()[pack.id] ?? 0)
+      return asFacet(pack.id, pack.label, pack.fields, store.stampCounts()[pack.id] ?? 0)
     },
     remove: (query) => {
       const ids = query.ids ?? []
       for (const id of ids) {
         if (parseStampRecordId(id)) throw new Error(`cannot delete collected row: ${id}`)
-        if (!store.removeTag(id)) throw new Error(`unknown 模式: ${id}`)
+        if (!store.removeFacet(id)) throw new Error(`unknown 分面: ${id}`)
       }
       return ids
     },

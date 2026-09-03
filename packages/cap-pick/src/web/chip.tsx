@@ -30,8 +30,8 @@ const PICK_KIND_ALIAS: Record<string, string> = {
   views: 'view',
   'views-db': 'view',
   tags: 'tag',
-  supertags: 'tag',
-  'supertags-db': 'tag',
+  facets: 'facet',
+  'facets-db': 'facet',
 }
 
 export function canonicalPickKind(kind: string) {
@@ -39,7 +39,7 @@ export function canonicalPickKind(kind: string) {
   return PICK_KIND_ALIAS[key] ?? key.replace(/-db$/, '')
 }
 
-/** 采集点 kind 字符串映射到 SuperTag 色板。 */
+/** 采集点 kind 字符串映射到分面色板。 */
 export function pickKindTone(kind: string) {
   return tagTone(canonicalPickKind(kind))
 }
@@ -62,6 +62,7 @@ const KIND_ICONS: Record<string, Glyph> = {
   turn: HashtagIcon,
   usage: CircleStackIcon,
   tag: TagIcon,
+  facet: TagIcon,
   record: ClipboardDocumentCheckIcon,
 }
 

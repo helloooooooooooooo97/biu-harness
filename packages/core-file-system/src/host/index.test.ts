@@ -5,7 +5,7 @@ import * as tools from '@biu/host-tools'
 import { DatabaseService, apply as applyFileSystem } from './index.ts'
 import type { CollectionSpec } from '@biu/type-file-system'
 import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
-import { superTagsCollection } from './super-tags-collection.ts'
+import { facetsCollection } from './facets-collection.ts'
 import { runWithSession } from '@biu/host-sessions/scope'
 
 function notesCollection(): CollectionSpec {
@@ -135,16 +135,16 @@ test('every collection schema includes id, title, createdAt and updatedAt', asyn
   assert.equal(stat.schema.fields.updatedAt?.label, '更新时间')
   assert.equal(stat.schema.fields.content?.type, 'file')
   assert.equal(stat.schema.fields.emoji?.writable, true)
-  assert.equal(stat.schema.fields.schema?.type, 'supertag')
-  assert.equal(stat.schema.fields.schema?.label, '模式')
-  assert.equal(stat.schema.fields.schema?.writable, true)
+  assert.equal(stat.schema.fields.facet?.type, 'facet')
+  assert.equal(stat.schema.fields.facet?.label, '分面')
+  assert.equal(stat.schema.fields.facet?.writable, true)
   assert.equal(stat.schema.contentField, 'content')
-  const tagged = await db.update('/notes/n1', { schema: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } } })
-  assert.deepEqual(tagged.value.schema, { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } })
-  db.schemaTags.replace([{ id: 'dp', label: '动态规划', fields: [] }])
+  const tagged = await db.update('/notes/n1', { facet: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } } })
+  assert.deepEqual(tagged.value.facet, { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } })
+  db.facets.replace([{ id: 'dp', label: '动态规划', fields: [] }])
   const byLabel = await db.list('/notes', undefined, { q: '动态规划' })
   assert.equal(byLabel.items.length, 1)
-  const byFilter = await db.list('/notes', { schema: 'dp' })
+  const byFilter = await db.list('/notes', { facet: 'dp' })
   assert.equal(byFilter.items.length, 1)
   await assert.rejects(() => db.update('/notes/n1', { createdAt: Date.now() }), /not writable/)
   await assert.rejects(() => db.update('/notes/n1', { id: 'other' }), /not writable/)
@@ -278,7 +278,7 @@ test('apply registers db_* tools', async () => {
   assert.equal((listed as { kind: string }).kind, 'root')
   const paths = ((listed as { items: Array<{ path: string }> }).items ?? []).map((item) => item.path)
   assert.equal(paths.includes('/views'), true)
-  assert.equal(paths.includes('/supertags'), true)
+  assert.equal(paths.includes('/facets'), true)
 })
 
 test('db_list on a table broadcasts inspector working then done', async () => {
@@ -464,7 +464,7 @@ test('create and delete follow records caps declared at register', async () => {
   await assert.rejects(() => db.remove('/notes', {}), /delete requires/)
 })
 
-test('SuperTag catalog is workspace-wide and collect uses sqlite stamps', async () => {
+test('facet catalog is workspace-wide and collect uses sqlite stamps', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)
   db.register(notesCollection())
@@ -482,23 +482,23 @@ test('SuperTag catalog is workspace-wide and collect uses sqlite stamps', async 
       return next as { id: string }
     },
   })
-  db.schemaTags.replace([{ id: 'dp', label: '动态规划', fields: [] }])
-  await db.update('/notes/n1', { schema: { tags: ['dp'], values: {} } })
-  await db.update('/pages/p1', { schema: { tags: ['dp'], values: {} } })
-  const collected = await db.collectSuperTag('动态规划')
-  assert.equal(collected.tag?.id, 'dp')
+  db.facets.replace([{ id: 'dp', label: '动态规划', fields: [] }])
+  await db.update('/notes/n1', { facet: { tags: ['dp'], values: {} } })
+  await db.update('/pages/p1', { facet: { tags: ['dp'], values: {} } })
+  const collected = await db.collectFacet('动态规划')
+  assert.equal(collected.facet?.id, 'dp')
   assert.equal(collected.items.length, 2)
   assert.deepEqual(collected.items.map((item) => item.path).sort(), ['/notes/n1', '/pages/p1'])
 })
 
-test('listing /supertags with tag filter returns stamped records as a table', async () => {
+test('listing /facets with tag filter returns stamped records as a table', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)
   db.register(notesCollection())
-  db.register(superTagsCollection(db.schemaTags, () => [{ id: 'notes', path: '/notes', label: '笔记' }]))
-  db.schemaTags.replace([{ id: 'dp', label: '动态规划', fields: [{ key: 'complexity', type: 'string', label: '复杂度' }] }])
-  await db.update('/notes/n1', { schema: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } } })
-  const listed = await db.list('/supertags', { tag: 'dp' })
+  db.register(facetsCollection(db.facets, () => [{ id: 'notes', path: '/notes', label: '笔记' }]))
+  db.facets.replace([{ id: 'dp', label: '动态规划', fields: [{ key: 'complexity', type: 'string', label: '复杂度' }] }])
+  await db.update('/notes/n1', { facet: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } } })
+  const listed = await db.list('/facets', { facetId: 'dp' })
   if (listed.kind !== 'collection') return
   assert.equal(listed.items.length, 1)
   assert.equal(listed.items[0]?.id, 'notes::n1')
@@ -509,7 +509,7 @@ test('listing /supertags with tag filter returns stamped records as a table', as
   assert.deepEqual(listed.schema.columns, ['title', 'table', 'complexity'])
 })
 
-test('SuperTag list filter asks the collection only for stamped ids', async () => {
+test('facet list filter asks the collection only for stamped ids', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)
   const rows = new Map<string, Record<string, unknown>>([
@@ -534,21 +534,21 @@ test('SuperTag list filter asks the collection only for stamped ids', async () =
       return next as { id: string }
     },
   })
-  const empty = await db.list('/notes', { schema: 'dp' })
+  const empty = await db.list('/notes', { facet: 'dp' })
   if (empty.kind !== 'collection') return
   assert.equal(empty.items.length, 0)
   assert.equal(listed, undefined)
-  db.schemaTags.replace([{ id: 'dp', label: '动态规划', fields: [] }])
-  await db.update('/notes/a', { schema: { tags: ['dp'], values: {} } })
+  db.facets.replace([{ id: 'dp', label: '动态规划', fields: [] }])
+  await db.update('/notes/a', { facet: { tags: ['dp'], values: {} } })
   listed = undefined
-  const filtered = await db.list('/notes', { schema: 'dp' })
+  const filtered = await db.list('/notes', { facet: 'dp' })
   if (filtered.kind !== 'collection') return
   assert.deepEqual(listed, ['a'])
   assert.equal(filtered.items.length, 1)
   assert.equal(filtered.items[0]?.id, 'a')
 })
 
-test('SuperTag schema can be written on tables that cannot update other fields', async () => {
+test('facet schema can be written on tables that cannot update other fields', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)
   const rows = new Map<string, Record<string, unknown>>([['p1', { id: 'p1', title: 'Demo' }]])
@@ -562,17 +562,17 @@ test('SuperTag schema can be written on tables that cannot update other fields',
     get: (id) => (rows.get(id) as { id: string } | undefined) ?? null,
     remove: (query) => query.ids ?? [],
   })
-  db.schemaTags.replace([{ id: 'dp', label: '动态规划', fields: [{ key: 'complexity', type: 'string', label: '复杂度' }] }])
+  db.facets.replace([{ id: 'dp', label: '动态规划', fields: [{ key: 'complexity', type: 'string', label: '复杂度' }] }])
   await assert.rejects(() => db.update('/plugins/p1', { title: '改名' }), /cannot update/)
-  const written = await db.update('/plugins/p1', { schema: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } } })
-  assert.deepEqual((written.value as { schema?: { tags?: string[] } }).schema?.tags, ['dp'])
+  const written = await db.update('/plugins/p1', { facet: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } } })
+  assert.deepEqual((written.value as { facet?: { tags?: string[] } }).facet?.tags, ['dp'])
   const read = await db.read('/plugins/p1')
   if (read.kind !== 'record') return
-  assert.equal((read.value.schema as { values?: { dp?: { complexity?: string } } }).values?.dp?.complexity, 'O(n)')
+  assert.equal((read.value.facet as { values?: { dp?: { complexity?: string } } }).values?.dp?.complexity, 'O(n)')
   const listed = await db.list('/plugins')
   if (listed.kind !== 'collection') return
-  assert.deepEqual((listed.items[0]?.schema as { tags?: string[] })?.tags, ['dp'])
-  const collected = await db.collectSuperTag('dp')
+  assert.deepEqual((listed.items[0]?.facet as { tags?: string[] })?.tags, ['dp'])
+  const collected = await db.collectFacet('dp')
   assert.equal(collected.items.length, 1)
   assert.equal(collected.items[0]?.path, '/plugins/p1')
 })
@@ -613,17 +613,17 @@ test('writeContent can persist intro on tables that cannot update other fields',
   assert.equal(body.value, '# Demo\n')
 })
 
-test('db_update /supertags writes SuperTag field packs', async () => {
+test('db_update /facets writes facet field packs', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)
-  db.register(superTagsCollection(db.schemaTags))
-  const created = await db.create('/supertags', [{ title: '动态规划' }])
+  db.register(facetsCollection(db.facets))
+  const created = await db.create('/facets', [{ title: '动态规划' }])
   const id = String(created.items[0]?.value.id)
-  const updated = await db.update(`/supertags/${id}`, {
+  const updated = await db.update(`/facets/${id}`, {
     fields: JSON.stringify([{ key: 'complexity', type: 'string', label: '复杂度' }]),
   })
   assert.equal(updated.value.fieldCount, 1)
-  assert.equal(db.schemaTags.get(id)?.fields[0]?.key, 'complexity')
+  assert.equal(db.facets.get(id)?.fields[0]?.key, 'complexity')
 })
 
 test('tables without records.create/delete reject create and delete', async () => {

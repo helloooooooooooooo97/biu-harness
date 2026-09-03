@@ -57,7 +57,7 @@ function asRecord(row: SessionSummary): DbRecord {
       createdAt: row.config?.createdAt,
       updatedAt: row.updatedAt,
       emoji: row.config?.emoji,
-      schema: row.config?.schema,
+      facet: row.config?.facet,
     }),
   }
 }
@@ -173,7 +173,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       if (typeof patch.pinned === 'boolean') config.pinned = patch.pinned
       if (Array.isArray(patch.tags)) config.tags = patch.tags.map((item) => String(item))
       if ('emoji' in patch) config.emoji = String(patch.emoji ?? '')
-      if ('schema' in patch) config.schema = normalizeSchemaValue(patch.schema)
+      if ('facet' in patch) config.facet = normalizeSchemaValue(patch.facet)
       if (typeof patch.createdAt === 'number') config.createdAt = patch.createdAt
       if (typeof patch.model === 'string') config.model = patch.model
       if (patch.provider === 'deepseek' || patch.provider === 'openai' || patch.provider === 'anthropic') {

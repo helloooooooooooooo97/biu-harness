@@ -1,25 +1,25 @@
 import { CollectionBrowser } from './browser.tsx'
 import { stampRowOpenTarget } from '../catalog-views.ts'
-import { SUPERTAGS_COLLECTION_PATH } from './database-path.ts'
+import { FACETS_COLLECTION_PATH } from './database-path.ts'
 
-export function SuperTagCollectBoard({
+export function FacetCollectBoard({
   record,
   openRecord,
 }: {
   record: { id: string; title?: unknown }
   openRecord?: (recordId: string, collection?: string) => void
 }) {
-  const tagId = String(record.id ?? '').trim()
-  if (!tagId || tagId.includes('::')) return null
+  const facetId = String(record.id ?? '').trim()
+  if (!facetId || facetId.includes('::')) return null
   return (
     <div className="fsdb-tag-collect" data-testid="fsdb-tag-collect">
       <CollectionBrowser
         embed
         sheet
-        collectionPath={SUPERTAGS_COLLECTION_PATH}
-        title={String(record.title ?? tagId)}
+        collectionPath={FACETS_COLLECTION_PATH}
+        title={String(record.title ?? facetId)}
         blurb=""
-        lockedFilters={{ tag: tagId }}
+        lockedFilters={{ facetId: facetId }}
         onOpenRow={(row) => {
           const stamp = stampRowOpenTarget({ tablePath: row.tablePath, sourceId: row.sourceId })
           if (stamp) openRecord?.(stamp.recordId, stamp.collection)

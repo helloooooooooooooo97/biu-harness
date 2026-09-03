@@ -75,7 +75,7 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\.composer-pill\.has-chips[\s\S]*border-radius:\s*var\(--dsw-radius-bubble\)/)
   })
 
-  it('uses SuperTag tones for pick chips and the clear-context control, not the plus', () => {
+  it('uses facet tones for pick chips and the clear-context control, not the plus', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const chip = readFileSync(resolve(root, 'packages/cap-pick/src/web/chip.tsx'), 'utf8')
     const node = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer-pick-node.tsx'), 'utf8')
@@ -117,7 +117,7 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\.pick-overlay-marquee[\s\S]*background:\s*var\(--dsw-pick-fill\)/)
   })
 
-  it('uses SuperTag rose fill on clear-context only when there is history', () => {
+  it('uses facet rose fill on clear-context only when there is history', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const approvals = readFileSync(resolve(root, 'packages/cap-chat/src/web/approvals.tsx'), 'utf8')
     expect(css).toMatch(/\.project-chip-hist-bar\s*\{[^}]*color-mix\(in srgb, var\(--biu-tag, #e255a1\) 22%, transparent\)/s)

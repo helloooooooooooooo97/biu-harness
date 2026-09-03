@@ -200,10 +200,10 @@ export function RecordDetail({
                   {Object.entries(schema.fields).map(([key, field]) => {
                     if (key === 'id' || key === schema.labelField || key === contentFieldKey(schema)) return null
                     const kind = resolveFieldType(field)
-                    if (kind === 'supertag' && !field.writable) return null
+                    if (kind === 'facet' && !field.writable) return null
                     return (
-                      <PropertyRow key={key} field={field} fieldKey={key} stacked={kind === 'supertag'}>
-                        <div className={kind === 'supertag' ? 'fsdb-prop-val is-schema' : 'fsdb-prop-val'} title={formatField(field, selected[key])}>
+                      <PropertyRow key={key} field={field} fieldKey={key} stacked={kind === 'facet'}>
+                        <div className={kind === 'facet' ? 'fsdb-prop-val is-schema' : 'fsdb-prop-val'} title={formatField(field, selected[key])}>
                           {renderCell(selected, key, field)}
                         </div>
                       </PropertyRow>

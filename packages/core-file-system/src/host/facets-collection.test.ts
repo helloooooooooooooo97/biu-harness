@@ -1,16 +1,16 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { SchemaTagsStore } from './schema-tags.ts'
-import { superTagsCollection } from './super-tags-collection.ts'
+import { FacetStore } from './facets-store.ts'
+import { facetsCollection } from './facets-collection.ts'
 
-test('superTagsCollection lists tags with stamp counts and supports create/update/delete', async () => {
-  const store = new SchemaTagsStore()
+test('facetsCollection lists facets with stamp counts and supports create/update/delete', async () => {
+  const store = new FacetStore()
   store.replace([{ id: 'dp', label: '动态规划', fields: [{ key: 'complexity', type: 'string' }] }])
   store.indexRecord('/pages', 'home', '首页', ['dp'])
-  const spec = superTagsCollection(store)
-  assert.equal(spec.path, '/supertags')
-  assert.equal(spec.label, '模式')
-  assert.equal(spec.view?.title, '模式')
+  const spec = facetsCollection(store)
+  assert.equal(spec.path, '/facets')
+  assert.equal(spec.label, '分面')
+  assert.equal(spec.view?.title, '分面')
   const listed = await spec.list()
   assert.equal(listed.length, 1)
   assert.equal(listed[0]?.title, '动态规划')
@@ -32,12 +32,12 @@ test('superTagsCollection lists tags with stamp counts and supports create/updat
   assert.equal(store.get('io'), null)
   assert.equal((await spec.list()).length, 1)
 
-  const specWithTables = superTagsCollection(store, () => [{ id: 'pages', path: '/pages', label: '页面' }])
-  const collected = await specWithTables.list({ filter: { tag: 'dp' } })
+  const specWithTables = facetsCollection(store, () => [{ id: 'pages', path: '/pages', label: '页面' }])
+  const collected = await specWithTables.list({ filter: { facetId: 'dp' } })
   assert.equal(collected.length, 1)
   assert.equal(collected[0]?.id, 'pages::home')
   assert.equal(collected[0]?.table, '页面')
   assert.equal(collected[0]?.tablePath, '/pages')
   assert.equal(collected[0]?.sourceId, 'home')
-  assert.equal(collected[0]?.tag, 'dp')
+  assert.equal(collected[0]?.facetId, 'dp')
 })
