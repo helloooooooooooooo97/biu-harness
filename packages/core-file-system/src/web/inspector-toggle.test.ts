@@ -175,6 +175,7 @@ test('create record sits at the right of the toolbar with a blue label', () => {
   assert.match(css, /\.fsdb-row-check\{[^}]*position:absolute/)
   assert.match(css, /\.fsdb-row-check\{[^}]*translate\(-100%/)
   assert.match(css, /\.fsdb-page \.tasks-row-tools-slot\{[^}]*width:0/)
+  assert.match(css, /\.fsdb-page \.tasks-row-tools-slot \.tasks-row-tools\{[^}]*right:8px/)
   assert.match(css, /\.fsdb-page \.tasks-row-tools-slot \.tasks-row-tools\{[^}]*background:transparent/)
   assert.doesNotMatch(css, /tasks-row-tools-slot \.tasks-row-tools\{[^}]*linear-gradient/)
   assert.match(css, /\.fsdb-page \.tasks-table td:has\(\.fsdb-title-host:focus-within\) \.tasks-row-tools-slot/)
