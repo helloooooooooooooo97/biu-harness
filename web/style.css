@@ -1174,6 +1174,70 @@ body {
   pointer-events: none;
 }
 
+.sidebar-flyout-host {
+  display: contents;
+}
+
+.sidebar-flyout-host.is-collapsed {
+  display: block;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 80;
+  width: 12px;
+  pointer-events: none;
+}
+
+.sidebar-edge-hot {
+  pointer-events: auto;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+}
+
+.sidebar-flyout-host.is-collapsed .app-side-bar.is-closed {
+  position: absolute;
+  left: 0;
+  top: 60px;
+  bottom: 60px;
+  width: var(--sidebar-flyout-width, 240px);
+  min-width: 0;
+  max-width: none;
+  overflow: hidden;
+  border: 1px solid var(--dsw-border);
+  border-left: 0;
+  border-radius: 0 12px 12px 0;
+  background: var(--dsw-sidebar);
+  box-shadow: var(--dsw-shadow-lv2);
+  contain: none;
+  transform: translateX(calc(-100% - 8px));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
+}
+
+.sidebar-flyout-host.is-collapsed:hover,
+.sidebar-flyout-host.is-collapsed:focus-within {
+  width: var(--sidebar-flyout-width, 240px);
+  pointer-events: auto;
+}
+
+.sidebar-flyout-host.is-collapsed:hover .app-side-bar.is-closed,
+.sidebar-flyout-host.is-collapsed:focus-within .app-side-bar.is-closed {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-flyout-host.is-collapsed .app-side-bar.is-closed {
+    transition: none;
+  }
+}
+
 .session-inspector {
   min-width: 0;
   width: 100%;

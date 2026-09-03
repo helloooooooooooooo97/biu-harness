@@ -46,10 +46,11 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
   }, [onWidthChange])
 
   return (
+    <div className={`sidebar-flyout-host${visible ? '' : ' is-collapsed'}`} data-testid="sidebar-flyout-host">
+      {visible ? null : <div className="sidebar-edge-hot" data-testid="sidebar-edge-hot" aria-hidden />}
     <aside
       className={`app-side-bar min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)${narrow ? ' is-narrow' : ''}${showTags ? ' is-wide' : ''}${visible ? ' flex' : ' is-closed flex'}`}
       aria-hidden={!visible}
-      inert={!visible || undefined}
       data-testid={testId}
     >
       {onWidthChange ? (
@@ -69,7 +70,7 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
       ) : null}
       <div className="app-side-bar-head app-side-bar-head-brand">
         <SidebarBrandLockup />
-        {narrow ? (
+        {!visible || narrow ? (
           <button
             type="button"
             className="chat-view-header-expand"
@@ -95,5 +96,6 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
       </div>
       {children}
     </aside>
+    </div>
   )
 })

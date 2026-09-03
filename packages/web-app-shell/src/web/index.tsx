@@ -422,8 +422,8 @@ function Shell(props: SlotProps) {
   const agentHref = sessionId ? `/s/${sessionId}` : '/'
   const showChatSidebar = activeModule === 'agent'
   const sidebarCol = sidebarCollapsed ? 0 : sidebarWidth
-  const sidebarNarrow = sidebarCol < SIDEBAR_LABEL_AT
-  const sidebarShowTags = sidebarCol >= SIDEBAR_TAG_AT
+  const sidebarNarrow = sidebarWidth < SIDEBAR_LABEL_AT
+  const sidebarShowTags = sidebarWidth >= SIDEBAR_TAG_AT
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1440 : window.innerWidth,
   )
@@ -622,6 +622,7 @@ function Shell(props: SlotProps) {
       style={
         {
           ['--sidebar-col' as string]: `${shellColumns.left}px`,
+          ['--sidebar-flyout-width' as string]: `${Math.max(SIDEBAR_MIN, sidebarWidth)}px`,
           ['--inspector-width' as string]: `${shellColumns.inspector}px`,
         } as CSSProperties
       }
