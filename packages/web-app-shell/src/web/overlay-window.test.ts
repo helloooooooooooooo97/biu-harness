@@ -54,7 +54,7 @@ test('clicking the overlay close button actually closes the overlay', () => {
   closeChatOverlay()
 })
 
-test('layout button docks the overlay to the right, vertically centered', () => {
+test('overlay opens docked to the right and vertically centered', () => {
   host = document.createElement('div')
   document.body.append(host)
   root = createRoot(host)
@@ -69,27 +69,22 @@ test('layout button docks the overlay to the right, vertically centered', () => 
       }),
     )
   })
-  const toggle = document.querySelector('[data-testid="chat-overlay-layout-toggle"]')
-  assert.ok(toggle)
-  act(() => {
-    toggle!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-  })
-  const menu = document.querySelector('[data-testid="chat-overlay-layout-menu"]')
-  assert.ok(menu)
-  assert.ok(document.querySelector('[data-testid="chat-overlay-layout-bottom"]'))
-  assert.ok(document.querySelector('[data-testid="chat-overlay-layout-free"]'))
-  const right = document.querySelector('[data-testid="chat-overlay-layout-right"]')
-  assert.ok(right)
-  act(() => {
-    right!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-  })
   const panel = document.querySelector('[data-testid="chat-overlay-panel"]') as HTMLElement
+  assert.ok(panel)
   assert.equal(panel.getAttribute('data-overlay-layout'), 'right')
+  assert.equal(document.querySelector('[data-testid="chat-overlay-drag"]'), null)
   assert.ok(Number.parseFloat(panel.style.left) > 700)
   const top = Number.parseFloat(panel.style.top)
   const height = Number.parseFloat(panel.style.height)
   assert.ok(top > 40)
   assert.ok(top + height < 800)
+  const toggle = document.querySelector('[data-testid="chat-overlay-layout-toggle"]')
+  assert.ok(toggle)
+  act(() => {
+    toggle!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+  assert.ok(document.querySelector('[data-testid="chat-overlay-layout-bottom"]'))
+  assert.equal(document.querySelector('[data-testid="chat-overlay-layout-free"]'), null)
 })
 
 test('layout button sits in the header next to close', () => {

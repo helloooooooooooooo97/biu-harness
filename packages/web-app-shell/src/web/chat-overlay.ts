@@ -326,7 +326,7 @@ export const OVERLAY_CHAT_HEIGHT_MIN = 96
 export const OVERLAY_CHAT_HEIGHT_DEFAULT = 200
 
 export type OverlayWinGeom = { x: number; y: number; w: number; h: number }
-export type OverlayLayout = 'free' | 'right' | 'bottom'
+export type OverlayLayout = 'right' | 'bottom'
 export type OverlayWinState = OverlayWinGeom & { layout: OverlayLayout }
 
 export const OVERLAY_WIN_MIN_W = 320
@@ -338,25 +338,19 @@ const OVERLAY_WIN_GEOM_KEY = 'cordis.overlay.geom'
 const OVERLAY_MARGIN = 12
 
 export const OVERLAY_LAYOUTS: Array<{ id: OverlayLayout; label: string }> = [
-  { id: 'bottom', label: '底部居中' },
   { id: 'right', label: '右侧居中' },
-  { id: 'free', label: '自由布局' },
+  { id: 'bottom', label: '底部居中' },
 ]
 
 export function parseOverlayLayout(value: unknown): OverlayLayout {
-  if (value === 'right' || value === 'bottom' || value === 'free') return value
-  return 'free'
+  if (value === 'bottom') return 'bottom'
+  return 'right'
 }
 
 export function defaultOverlayWinGeom(vw = 1280, vh = 800): OverlayWinGeom {
   const w = Math.min(OVERLAY_WIN_DEFAULT_W, Math.max(OVERLAY_WIN_MIN_W, vw - 40))
   const h = Math.min(OVERLAY_WIN_DEFAULT_H, Math.max(OVERLAY_WIN_MIN_H, vh - OVERLAY_DOCK_CLEARANCE - 24))
-  return {
-    w,
-    h,
-    x: Math.max(OVERLAY_MARGIN, vw - w - OVERLAY_MARGIN),
-    y: Math.max(OVERLAY_MARGIN, vh - h - OVERLAY_DOCK_CLEARANCE),
-  }
+  return overlayLayoutGeom('right', { x: 0, y: 0, w, h }, vw, vh)
 }
 
 export function clampOverlayWinGeom(geom: OverlayWinGeom, vw = 1280, vh = 800): OverlayWinGeom {
@@ -408,7 +402,7 @@ export function overlayLayoutGeom(
 export function readOverlayWinState(): OverlayWinState {
   const vw = typeof window === 'undefined' ? 1280 : window.innerWidth
   const vh = typeof window === 'undefined' ? 800 : window.innerHeight
-  const fallback = { ...defaultOverlayWinGeom(vw, vh), layout: 'free' as const }
+  const fallback = { ...defaultOverlayWinGeom(vw, vh), layout: 'right' as const }
   try {
     const raw = localStorage.getItem(OVERLAY_WIN_GEOM_KEY)
     if (!raw) return fallback
@@ -421,7 +415,7 @@ export function readOverlayWinState(): OverlayWinState {
       h: Number(parsed.h),
     }
     if (![prev.x, prev.y, prev.w, prev.h].every((n) => Number.isFinite(n))) return fallback
-    const geom = layout === 'free' ? clampOverlayWinGeom(prev, vw, vh) : overlayLayoutGeom(layout, prev, vw, vh)
+    const geom = overlayLayoutGeom(layout, prev, vw, vh)
     return { ...geom, layout }
   } catch {
     return fallback
@@ -441,7 +435,7 @@ export function writeOverlayWinState(state: OverlayWinState): void {
   }
 }
 
-export function writeOverlayWinGeom(geom: OverlayWinGeom, layout: OverlayLayout = 'free'): void {
+export function writeOverlayWinGeom(geom: OverlayWinGeom, layout: OverlayLayout = 'right'): void {
   writeOverlayWinState({ ...geom, layout })
 }
 

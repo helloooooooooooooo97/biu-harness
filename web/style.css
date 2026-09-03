@@ -1247,8 +1247,7 @@ body {
   background: #191919;
 }
 
-.chat-overlay-drag {
-  cursor: grab;
+.chat-overlay-head {
   flex: none;
   position: relative;
   z-index: 30;
@@ -1287,10 +1286,6 @@ body {
 .chat-overlay-layout-menu button.is-active {
   background: var(--dsw-hover);
   color: var(--dsw-sidebar-fg-active);
-}
-
-.chat-overlay-drag:active {
-  cursor: grabbing;
 }
 
 .chat-overlay-thread {
@@ -5279,10 +5274,6 @@ html.pick-mode .chat-overlay-panel,
 html.pick-mode .chat-overlay-panel * {
   cursor: auto !important;
   user-select: auto !important;
-}
-
-html.pick-mode .chat-overlay-drag {
-  cursor: grab !important;
 }
 
 .pick-overlay-box {

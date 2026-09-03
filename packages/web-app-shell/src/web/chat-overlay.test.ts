@@ -241,12 +241,13 @@ test('autohide resets when overlay closes', () => {
   assert.equal(getOverlayAutohide(), false)
 })
 
-test('overlay window geom clamps and sits above the corner mascot by default', () => {
+test('overlay window geom clamps and docks to the right, vertically centered', () => {
   const def = defaultOverlayWinGeom(1280, 800)
   assert.ok(def.w >= OVERLAY_WIN_MIN_W)
   assert.ok(def.h >= OVERLAY_WIN_MIN_H)
+  assert.equal(def.x, 1280 - def.w - 12)
+  assert.equal(def.y, Math.round((800 - OVERLAY_DOCK_CLEARANCE - def.h) / 2))
   assert.ok(def.y + def.h <= 800 - OVERLAY_DOCK_CLEARANCE)
-  assert.ok(def.x >= 1280 - def.w - 16)
   const tiny = clampOverlayWinGeom({ x: -400, y: -20, w: 10, h: 10 }, 1280, 800)
   assert.equal(tiny.w, OVERLAY_WIN_MIN_W)
   assert.equal(tiny.h, OVERLAY_WIN_MIN_H)
@@ -291,9 +292,9 @@ test('saved layout recomputes when the viewport changes', () => {
   assert.equal(bottom.layout, 'bottom')
   assert.equal(bottom.w, 500)
   assert.equal(bottom.x, Math.round((1400 - 500) / 2))
-  assert.equal(parseOverlayLayout('nope'), 'free')
-  assert.equal(parseOverlayLayout('center'), 'free')
-  assert.equal(parseOverlayLayout('left'), 'free')
+  assert.equal(parseOverlayLayout('nope'), 'right')
+  assert.equal(parseOverlayLayout('free'), 'right')
+  assert.equal(parseOverlayLayout('left'), 'right')
 })
 
 test('overlay chat height clamps', () => {
