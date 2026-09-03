@@ -51,8 +51,8 @@ test('collection browser renders extra views registered for that path', () => {
   assert.doesNotMatch(schemaUi, /超级标签/)
   assert.doesNotMatch(schemaUi, /创建 SuperTag/)
   assert.doesNotMatch(schemaUi, /没有匹配的 SuperTag/)
-  assert.match(schemaUi, /创建分面/)
-  assert.match(schemaUi, /没有匹配的分面/)
+  assert.match(schemaUi, /<CellMulti/)
+  assert.doesNotMatch(schemaUi, /function TagPicker/)
   assert.match(schemaUi, /这条分面已不在目录里/)
 })
 

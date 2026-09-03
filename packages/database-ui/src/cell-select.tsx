@@ -48,7 +48,9 @@ export function CellSelect({
   const current = options.find((item) => item.value === value)
   const q = query.trim().toLowerCase()
   const filtered = options.filter(
-    (item) => !q || item.label.toLowerCase().includes(q) || item.value.toLowerCase().includes(q),
+    (item) =>
+      Boolean(item.value) &&
+      (!q || item.label.toLowerCase().includes(q) || item.value.toLowerCase().includes(q)),
   )
   const draft = query.trim()
   const canCreate =

@@ -12,6 +12,7 @@ import {
 } from '@biu/type-file-system'
 import { ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
 import { TagChip, TagChips, tagTone, listenOutsideDismiss } from '@biu/public-ui'
+import { CellMulti } from '@biu/database-ui'
 import { asStringList } from './fields.ts'
 import { FieldEditor, FieldGlyph, parseFieldValue } from './fsdb-cells.tsx'
 import { loadFacets, persistFacets, fieldKeyFromLabel, slugFacetId, subscribeFacets } from './facet-catalog.ts'
@@ -103,113 +104,6 @@ function TypeMenu({ value, onChange }: { value: AtomicFieldType; onChange: (next
               {TYPE_LABEL[type]}
             </button>
           ))}
-        </div>
-      ) : null}
-    </div>
-  )
-}
-
-function TagPicker({
-  catalog,
-  selectedIds,
-  onToggle,
-  onCreate,
-}: {
-  catalog: CollectionSchemaPack[]
-  selectedIds: string[]
-  onToggle: (id: string) => void
-  onCreate: (label: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [draft, setDraft] = useState('')
-  const boxRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const q = draft.trim().toLowerCase()
-  const selected = catalog.filter((tag) => selectedIds.includes(tag.id))
-  const available = catalog.filter((tag) => !selectedIds.includes(tag.id) && (!q || tag.label.toLowerCase().includes(q) || tag.id.includes(q)))
-  const canCreate = Boolean(draft.trim()) && !catalog.some((tag) => tag.label === draft.trim())
-
-  useEffect(() => {
-    if (!open) return
-    return listenOutsideDismiss(
-      () => setOpen(false),
-      (target) => Boolean(boxRef.current?.contains(target)),
-    )
-  }, [open])
-
-  return (
-    <div className="fsdb-schema-tokens" ref={boxRef}>
-      <div
-        className="fsdb-schema-tokens-box"
-        onClick={() => {
-          setOpen(true)
-          inputRef.current?.focus()
-        }}
-      >
-        {selected.map((tag) => (
-          <SchemaChip key={tag.id} id={tag.id} label={tag.label} onRemove={() => onToggle(tag.id)} />
-        ))}
-        <input
-          ref={inputRef}
-          className="fsdb-schema-tokens-input"
-          value={draft}
-          placeholder=""
-          onFocus={() => setOpen(true)}
-          onChange={(event) => {
-            setDraft(event.target.value)
-            setOpen(true)
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              if (available[0]) {
-                onToggle(available[0].id)
-                setDraft('')
-              } else if (canCreate) {
-                onCreate(draft)
-                setDraft('')
-              }
-            } else if (event.key === 'Backspace' && !draft && selected.length) {
-              onToggle(selected[selected.length - 1]!.id)
-            } else if (event.key === 'Escape') {
-              setOpen(false)
-            }
-          }}
-        />
-      </div>
-      {open ? (
-        <div className="fsdb-schema-tokens-menu" role="listbox">
-          {available.map((tag) => (
-            <button
-              key={tag.id}
-              type="button"
-              className="fsdb-schema-tokens-option"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                onToggle(tag.id)
-                setDraft('')
-                inputRef.current?.focus()
-              }}
-            >
-              <SchemaChip id={tag.id} label={tag.label} />
-              <span className="fsdb-schema-tokens-hint">{tag.fields.length ? `${tag.fields.length} 个属性` : '还没有属性'}</span>
-            </button>
-          ))}
-          {canCreate ? (
-            <button
-              type="button"
-              className="fsdb-schema-tokens-option is-create"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                onCreate(draft)
-                setDraft('')
-              }}
-            >
-              <PlusIcon aria-hidden className="size-3.5" />
-              创建分面 <SchemaChip id={draft.trim()} label={draft.trim()} />
-            </button>
-          ) : null}
-          {!available.length && !canCreate ? <div className="fsdb-schema-tokens-empty">没有匹配的分面</div> : null}
         </div>
       ) : null}
     </div>
@@ -356,20 +250,27 @@ export function SchemaFieldEditor({
     onChange(next)
   }
 
-  function toggleTag(id: string) {
-    if (parsed.tags.includes(id)) {
-      patchValue({ tags: parsed.tags.filter((item) => item !== id), values: parsed.values })
-      return
+  function applyTags(nextIds: string[]) {
+    let packs = catalog
+    const used = new Set(packs.map((tag) => tag.id))
+    const resolved: string[] = []
+    for (const item of nextIds) {
+      if (used.has(item)) {
+        resolved.push(item)
+        continue
+      }
+      const hit = packs.find((tag) => tag.label === item)
+      if (hit) {
+        resolved.push(hit.id)
+        continue
+      }
+      const id = slugFacetId(item, used)
+      packs = [...packs, { id, label: item, fields: [] }]
+      used.add(id)
+      resolved.push(id)
     }
-    patchValue({ tags: [...parsed.tags, id], values: parsed.values })
-  }
-
-  function createTag(label: string) {
-    const name = label.trim()
-    if (!name) return
-    const id = slugFacetId(name, new Set(catalog.map((tag) => tag.id)))
-    saveCatalog([...catalog, { id, label: name, fields: [] }])
-    patchValue({ tags: [...parsed.tags, id], values: parsed.values })
+    if (packs !== catalog) saveCatalog(packs)
+    patchValue({ tags: resolved, values: parsed.values })
   }
 
   function addField(tag: CollectionSchemaPack, name: string, type: AtomicFieldType) {
@@ -393,7 +294,12 @@ export function SchemaFieldEditor({
 
   return (
     <div className="fsdb-schema" data-testid="fsdb-schema">
-      <TagPicker catalog={catalog} selectedIds={parsed.tags} onToggle={toggleTag} onCreate={createTag} />
+      <CellMulti
+        values={parsed.tags}
+        options={catalog.map((tag) => ({ value: tag.id, label: tag.label }))}
+        onChange={applyTags}
+        multiple
+      />
       {selected.map((tag) => {
         const bag = parsed.values[tag.id] ?? {}
         return (

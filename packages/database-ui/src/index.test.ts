@@ -19,4 +19,6 @@ test('database-ui ships one search menu for select and multi-select', () => {
   assert.match(multi, /multiple = true/)
   assert.match(multi, /<TagChip id=\{item\.value\}/)
   assert.doesNotMatch(select, /添加「/)
+  assert.doesNotMatch(select, /未选择/)
+  assert.match(select, /Boolean\(item\.value\)/)
 })
