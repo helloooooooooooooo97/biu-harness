@@ -1378,14 +1378,14 @@ export function CollectionBrowser({
           />
         )}
         <span className="fsdb-title-text">{body}</span>
+        <RecordOpenControls row={row} kidCount={tree ? kidCount : 0} />
       </span>
     )
-    if (!openDetail) return host
     return (
       <>
         {host}
         <span className="tasks-row-tools-slot">
-          <RecordRowTools row={row} kidCount={tree ? kidCount : 0} />
+          <RecordRowTools row={row} />
         </span>
       </>
     )
@@ -1488,11 +1488,10 @@ export function CollectionBrowser({
     )
   }
 
-  function RecordRowTools({ row, kidCount = 0 }: { row: DbRecord; kidCount?: number }) {
+  function RecordRowTools({ row }: { row: DbRecord }) {
     return (
       <span className="tasks-row-tools">
         <RecordActions row={row} place="row" />
-        <RecordOpenControls row={row} kidCount={kidCount} />
       </span>
     )
   }
@@ -1656,14 +1655,11 @@ export function CollectionBrowser({
       <li className={`tasks-queue-item${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
         <div className="tasks-queue-item-body">
           <RowCheck id={row.id} />
-          <span className="fsdb-title-host tasks-queue-item-lead">
+          <span className="tasks-queue-item-lead">
             <div className="tasks-queue-item-main">
               <span className="tasks-queue-item-title">
                 <RecordTitle row={row} openDetail={false} />
               </span>
-            </div>
-            <div className="tasks-queue-item-tools">
-              <RecordRowTools row={row} />
             </div>
           </span>
           <RecordProperties row={row} />
@@ -1675,16 +1671,9 @@ export function CollectionBrowser({
   function MiniCard({ row }: { row: DbRecord }) {
     return (
       <div className={`tasks-minicard${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
-        <div className="tasks-minicard-bar">
-          <RecordRowTools row={row} />
-        </div>
         <RowCheck id={row.id} />
-        <div className="tasks-minicard-title fsdb-title-host">
-          <div className="tasks-minicard-open">
-            <span className="tasks-minicard-titletext">
-              <RecordTitle row={row} openDetail={false} />
-            </span>
-          </div>
+        <div className="tasks-minicard-title">
+          <RecordTitle row={row} openDetail={false} />
         </div>
         <div className="tasks-minicard-foot">
           <RecordProperties row={row} />
