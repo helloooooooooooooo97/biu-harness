@@ -1822,7 +1822,6 @@ export function CollectionBrowser({
           onRenameView={renameView}
           onDeleteView={deleteView}
           onAddView={addEmptyView}
-          onCopyView={copyView}
           onOpenRecord={(path, view, recordId, row) => {
             if (path === collectionPath) {
               applyView(view)

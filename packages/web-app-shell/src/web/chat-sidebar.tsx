@@ -320,21 +320,6 @@ export const ChatSidebar = memo(function ChatSidebar({
 
   const body = (
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
-        <div className="app-side-actions" role="navigation" aria-label="Chat actions">
-          <button
-            type="button"
-            className="app-side-actions-item"
-            title="添加聊天"
-            aria-label="添加聊天"
-            onClick={() => createChat()}
-          >
-            <span className="app-side-actions-icon" aria-hidden>
-              <PlusIcon {...chromeIcon} />
-            </span>
-            <span className="app-side-actions-label">添加聊天</span>
-          </button>
-        </div>
-
         <div className="mt-2 space-y-1.5">
           {sessions.length === 0 ? (
             <p className="px-2 text-[11px] leading-4">No chats yet. Send a message or create one.</p>

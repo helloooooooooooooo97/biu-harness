@@ -103,7 +103,7 @@ function SideAction({
   )
 }
 
-/** 公共入口：聊天与数据侧栏共用，堆在「添加聊天 / 添加视图」上方。 */
+/** 公共入口：聊天与数据侧栏共用。 */
 export function ShellSidePlaces({
   activeId,
   agentHref,

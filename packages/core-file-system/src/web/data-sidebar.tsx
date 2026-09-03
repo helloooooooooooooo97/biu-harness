@@ -7,7 +7,6 @@ import {
   ChevronRightIcon,
   PencilSquareIcon,
   PlusIcon,
-  Square2StackIcon,
   Squares2X2Icon,
   StarIcon,
 } from '@heroicons/react/16/solid'
@@ -308,7 +307,6 @@ export const DataSidebar = memo(function DataSidebar({
   onRenameView,
   onDeleteView,
   onAddView,
-  onCopyView,
   onOpenRecord,
   expandedViewKey: expandedViewKeyProp,
   onExpandedViewKeyChange,
@@ -324,7 +322,6 @@ export const DataSidebar = memo(function DataSidebar({
   onRenameView: (view: SavedView) => void
   onDeleteView: (view: SavedView) => void
   onAddView: (path?: string) => void
-  onCopyView: () => void
   onOpenRecord?: (path: string, view: SavedView, recordId: string, row?: DbRecord) => void
   expandedViewKey?: string | null
   onExpandedViewKeyChange?: (key: string | null) => void
@@ -587,21 +584,6 @@ export const DataSidebar = memo(function DataSidebar({
 
   const body = (
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
-        <div className="app-side-actions" role="navigation" aria-label="视图操作" data-biu-ignore>
-          <button type="button" className="app-side-actions-item" title="添加视图" onClick={() => onAddView()}>
-            <span className="app-side-actions-icon" aria-hidden>
-              <PlusIcon className="size-4 shrink-0" />
-            </span>
-            <span className="app-side-actions-label">添加视图</span>
-          </button>
-          <button type="button" className="app-side-actions-item" title="拷贝视图" onClick={onCopyView}>
-            <span className="app-side-actions-icon" aria-hidden>
-              <Square2StackIcon className="size-4 shrink-0" />
-            </span>
-            <span className="app-side-actions-label">拷贝视图</span>
-          </button>
-        </div>
-
         <div className="mt-2 space-y-1.5">
           {starredRows.length ? (
             <section className="min-w-0">
