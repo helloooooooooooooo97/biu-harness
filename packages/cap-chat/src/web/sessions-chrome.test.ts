@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { sessionsChrome } from './sessions-chrome.tsx'
 
-const chrome = sessionsChrome()
+const chrome = sessionsChrome({ slotProps: {} })
 
 test('session table uses mascot as the standalone icon property, title is just the label', () => {
   assert.equal(typeof chrome.Title, 'function')
@@ -43,7 +43,11 @@ test('session table uses mascot as the standalone icon property, title is just t
   assert.doesNotMatch(src, /sessionView\.load/)
   assert.doesNotMatch(src, /SlotOutlet/)
   assert.doesNotMatch(src, /name="composer"/)
-  assert.doesNotMatch(src, /ApprovalsRail/)
+  assert.match(src, /ApprovalsRail/)
+  assert.match(src, /ChatConfigBanner/)
+  assert.match(src, /ChatLiveHud/)
+  assert.match(src, /boundSessionId={sessionId}/)
+  assert.match(src, /bottom:0;z-index:20;padding:0 60px calc\(1rem \+ 25px\)/)
   const composer = readFileSync(resolve(import.meta.dirname, './composer.tsx'), 'utf8')
   assert.match(composer, /boundSessionId/)
   assert.match(composer, /\/api\/sessions\/\$\{boundSessionId\}\/messages/)

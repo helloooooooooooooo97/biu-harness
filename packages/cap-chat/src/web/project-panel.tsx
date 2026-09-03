@@ -3,10 +3,11 @@ import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 
 /** 紧凑项目绑定：始终仅文件夹图标；未绑定虚线框，绑定后实线，无文字/高亮。 */
-export function SessionProjectPanel(props: SlotProps) {
+export function SessionProjectPanel(props: SlotProps & { boundSessionId?: string }) {
   const useProjectView = props.useProjectView as ReturnType<typeof bindProjectView>
   const projectView = props.projectView as ProjectViewService
-  const sessionId = useProjectView((state) => state.sessionId)
+  const liveSessionId = useProjectView((state) => state.sessionId)
+  const sessionId = props.boundSessionId ?? liveSessionId
   const project = useProjectView((state) => state.project)
   const busy = useProjectView((state) => state.busy)
   const error = useProjectView((state) => state.error)

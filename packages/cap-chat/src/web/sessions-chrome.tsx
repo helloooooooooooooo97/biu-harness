@@ -5,6 +5,8 @@ import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { MASCOT_COLOR_NAME, MASCOT_EYE_NAME, MASCOT_SHAPE_NAME } from '@biu/type-session'
 import type { CollectionChrome, FsCellProps, FsContentProps } from '@biu/type-file-system/ui'
 import type { DbRecord } from '@biu/type-file-system'
+import type { SlotProps } from '@biu/web-slots'
+import type { PickService } from '@biu/cap-pick/web'
 import {
   deriveChatOutline,
   getChatOutlineFilter,
@@ -18,6 +20,9 @@ import {
   type TrajectoryUsage,
   upsertSessionEvent,
 } from '@biu/web-session-view'
+import { ApprovalsRail } from './approvals.tsx'
+import { ChatConfigBanner } from './config-banner.tsx'
+import { ChatLiveHud } from './live-hud.tsx'
 import { ChatNodeList } from './thread.tsx'
 import { ChatComposer } from './composer.tsx'
 import type { SnapshotService } from '@biu/web-snapshot'
@@ -75,10 +80,18 @@ const idleSessionView = {
   get: () => ({ sessionId: '' }),
 } as never
 
+type SessionChromeDeps = {
+  snapshot?: SnapshotService
+  slotProps: Record<string, unknown>
+  pick?: PickService
+}
+
 function SessionRecordChat({
   record,
   snapshot,
-}: FsContentProps & { snapshot?: SnapshotService }) {
+  slotProps,
+  pick,
+}: FsContentProps & SessionChromeDeps) {
   const sessionId = String(record.id)
   const [events, setEvents] = useState<SessionEvent[]>([])
   const [nodes, setNodes] = useState<ChatNode[]>([])
@@ -89,22 +102,9 @@ function SessionRecordChat({
   const stageRef = useRef<HTMLDivElement>(null)
   const filter = useSyncExternalStore(subscribeChatOutline, getChatOutlineFilter, (): ChatOutlineFilter => 'user')
   const items = useMemo(() => deriveChatOutline(nodes, filter), [nodes, filter])
-  const go = useCallback((id: string) => {
-    const el = document.querySelector<HTMLElement>(
-      `[data-testid="session-record-chat"] [data-node-id="${escapeId(id)}"]`,
-    )
-    el?.scrollIntoView({ block: 'start', behavior: 'smooth' })
-  }, [])
-  useLayoutEffect(() => {
-    const el = anchorRef.current
-    const right = el?.closest('.fsdb-right')
-    const root = right instanceof HTMLElement ? right : null
-    setOutlineHost(root)
-    setComposerHost(root)
-  }, [])
-  useEffect(() => {
-    const ac = new AbortController()
-    void fetch(`/api/sessions/${sessionId}?turns=${SESSION_LOAD_TURNS}`, { signal: ac.signal })
+  const dockSlotProps = slotProps as SlotProps
+  const reloadSession = useCallback(() => {
+    void fetch(`/api/sessions/${sessionId}?turns=${SESSION_LOAD_TURNS}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((body) => {
         if (!body || !Array.isArray(body.events)) return
@@ -118,8 +118,24 @@ function SessionRecordChat({
         )
       })
       .catch(() => undefined)
-    return () => ac.abort()
   }, [sessionId])
+  const go = useCallback((id: string) => {
+    const el = document.querySelector<HTMLElement>(
+      `[data-testid="session-record-chat"] [data-node-id="${escapeId(id)}"]`,
+    )
+    el?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }, [])
+  useLayoutEffect(() => {
+    const el = anchorRef.current
+    const main = el?.closest('main')
+    const right = el?.closest('.fsdb-right')
+    const root = (main instanceof HTMLElement ? main : right instanceof HTMLElement ? right : null)
+    setOutlineHost(right instanceof HTMLElement ? right : root)
+    setComposerHost(root)
+  }, [])
+  useEffect(() => {
+    reloadSession()
+  }, [reloadSession])
   useEffect(() => {
     if (!snapshot) return
     const offSession = snapshot.onMessage('session', (payload) => {
@@ -148,7 +164,17 @@ function SessionRecordChat({
   const outline = <OutlineNav items={items} testId="session-outline" onSelect={go} />
   const dock = (
     <ChatDockStack>
+      <ChatLiveHud {...dockSlotProps} boundNodes={nodes} />
+      <ChatConfigBanner {...dockSlotProps} />
+      <ApprovalsRail
+        {...dockSlotProps}
+        boundSessionId={sessionId}
+        boundNodes={nodes}
+        onSessionRefresh={reloadSession}
+      />
       <ChatComposer
+        {...dockSlotProps}
+        pick={pick}
         boundSessionId={sessionId}
         boundPending={boundPending}
         useSessionView={useIdleSessionView}
@@ -161,7 +187,7 @@ function SessionRecordChat({
       {outlineHost ? createPortal(<div className="session-outline-host">{outline}</div>, outlineHost) : null}
       {composerHost ? createPortal(
         <div className="session-composer-host">
-          <div className="chat-composer-dock">{dock}</div>
+          <div className="chat-composer-dock pointer-events-none bg-transparent">{dock}</div>
         </div>,
         composerHost,
       ) : null}
@@ -179,11 +205,11 @@ function SessionRecordChat({
   )
 }
 
-export function sessionsChrome(snapshot?: SnapshotService): CollectionChrome {
+export function sessionsChrome(deps: SessionChromeDeps): CollectionChrome {
   return {
     Title: SessionTitle,
     Icon: SessionIcon,
-    Content: (props) => <SessionRecordChat {...props} snapshot={snapshot} />,
+    Content: (props) => <SessionRecordChat {...props} {...deps} />,
     cells: {
       mascotShape: MascotShapeCell,
       mascotColor: MascotColorCell,
@@ -210,10 +236,11 @@ if (typeof document !== 'undefined') {
 }
 .inspector-database-page .fsdb-detail-main:has(.chat-pane-embed){padding-bottom:12px}
 .session-outline-host{position:absolute;inset:0;z-index:20;pointer-events:none}
-.session-composer-host{position:absolute;inset-inline:0;bottom:calc(1rem + 25px);z-index:20;padding:0 60px;pointer-events:none}
-.session-composer-host .chat-composer-dock{position:static;padding:0;background:transparent;pointer-events:none}
-.session-composer-host .chat-composer-dock>*{pointer-events:auto;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto}
-.fsdb-right:has(.session-outline-host),.fsdb-right:has(.session-composer-host){position:relative}
+main:has(.session-composer-host){position:relative}
+.session-composer-host{position:absolute;inset-inline:0;bottom:0;z-index:20;padding:0 60px calc(1rem + 25px);pointer-events:none}
+.session-composer-host .chat-composer-dock{position:static;padding:0;background:transparent}
+.session-composer-host .chat-composer-dock>*{width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto}
+.fsdb-right:has(.session-outline-host){position:relative}
 .session-outline-host .chat-outline{left:8px;top:50%}
 `
   document.head.appendChild(style)

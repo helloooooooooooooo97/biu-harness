@@ -134,10 +134,11 @@ function activeWorkerAgents(
   }
   return [...latest.values()].sort((a, b) => workerRecency(b) - workerRecency(a))
 }
-export function ApprovalsRail(props: SlotProps) {
+export function ApprovalsRail(props: SlotProps & { boundSessionId?: string; boundNodes?: ChatNode[]; onSessionRefresh?: () => void }) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
-  const sessionId = useSessionView((state) => state.sessionId)
+  const liveSessionId = useSessionView((state) => state.sessionId)
+  const sessionId = props.boundSessionId ?? liveSessionId
   const sessions = useSessionView((state) => state.sessions)
   const dispatchedTasksByTurn = useSessionView((state) => state.dispatchedTasksByTurn)
   const workerAgents = useMemo(
@@ -148,7 +149,8 @@ export function ApprovalsRail(props: SlotProps) {
   const hiddenWorkerCount = Math.max(0, workerAgents.length - visibleWorkers.length)
   const approvals = useSessionView((state) => state.approvals)
   const approvalMode = useSessionView((state) => state.approvalMode)
-  const nodes = useSessionView((state) => state.nodes)
+  const liveNodes = useSessionView((state) => state.nodes)
+  const nodes = props.boundNodes ?? liveNodes
   const histRatio = useMemo(() => latestHistRatio(nodes), [nodes])
   const [agentMode, setAgentMode] = useState<AgentMode>('standard')
   const [modeBusy, setModeBusy] = useState(false)
@@ -244,8 +246,11 @@ export function ApprovalsRail(props: SlotProps) {
     try {
       const res = await fetch(`/api/sessions/${sessionId}/clear-context`, { method: 'POST' })
       if (!res.ok) return
-      // 后台校对拉取最新事件，使新插入的日志记录立即出现在会话视图中。
-      await sessionView.load(sessionId, { view: 'chat', wait: false })
+      if (props.onSessionRefresh) {
+        props.onSessionRefresh()
+      } else {
+        await sessionView.load(sessionId, { view: 'chat', wait: false })
+      }
     } finally {
       setClearBusy(false)
     }
@@ -349,7 +354,7 @@ export function ApprovalsRail(props: SlotProps) {
           ) : null}
         </div>
         <div className="chat-dock-toolbar-end flex shrink-0 items-center justify-end gap-1">
-          <SessionProjectPanel {...props} />
+          <SessionProjectPanel {...props} boundSessionId={props.boundSessionId} />
           <DockIconMenu
             label="Agent 模式"
             value={agentMode}

@@ -6,7 +6,7 @@ import {
   WrenchScrewdriverIcon,
 } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/web-slots'
-import { bindSessionView } from '@biu/web-session-view'
+import { bindSessionView, type ChatNode } from '@biu/web-session-view'
 import { UsageInline } from './usage-inline.tsx'
 import { MarkdownBody } from './markdown.tsx'
 import { splitReplyForDisplay } from './thread.tsx'
@@ -71,9 +71,10 @@ export function ChatLiveMetrics(props: { useSessionView: ReturnType<typeof bindS
   )
 }
 
-export const ChatLiveHud = memo(function ChatLiveHud(props: SlotProps) {
+export const ChatLiveHud = memo(function ChatLiveHud(props: SlotProps & { boundNodes?: ChatNode[] }) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
-  const nodes = useSessionView((state) => state.nodes)
+  const liveNodes = useSessionView((state) => state.nodes)
+  const nodes = props.boundNodes ?? liveNodes
   const agentStep = useSessionView((state) => state.agentStep)
   const replyId = useSyncExternalStore(subscribeHudReplyId, getHudReplyId, () => null)
   const hud = extractLiveHud(nodes, agentStep, replyId)
