@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowDownTrayIcon,
@@ -9,7 +10,6 @@ import {
   MagnifyingGlassIcon,
 } from '@heroicons/react/16/solid'
 import { setChatOverlay } from './chat-overlay.ts'
-import { chromeIcon } from './chrome-icon.ts'
 
 export function ShellSettingsUpdate() {
   const [behind, setBehind] = useState(0)
@@ -121,10 +121,10 @@ export function ShellSidePlaces({
   return (
     <div className="app-side-actions shell-side-places" role="navigation" aria-label="面板" data-testid="shell-side-places">
       <SideAction
-        title="聊天"
+        title="会话"
         active={activeId === 'agent'}
         testId="chrome-chat-panel"
-        icon={<ChatBubbleLeftIcon {...chromeIcon} />}
+        icon={<ChatBubbleLeftIcon className="size-5 shrink-0" />}
         onClick={() => {
           setChatOverlay(false)
           navigate(agentHref)
@@ -134,45 +134,55 @@ export function ShellSidePlaces({
         title="数据"
         active={activeId === 'database'}
         testId="chrome-data-panel"
-        icon={<CircleStackIcon {...chromeIcon} />}
+        icon={<CircleStackIcon className="size-5 shrink-0" />}
         onClick={() => navigate('/database')}
       />
       <SideAction
-        title="设置"
-        testId="chrome-settings"
-        icon={<Cog6ToothIcon {...chromeIcon} />}
-        onClick={onSettings}
+        title="搜索"
+        active={searchOpen}
+        testId="chrome-search"
+        icon={<MagnifyingGlassIcon className="size-5 shrink-0" />}
+        onClick={() => {
+          setNotifyOpen(false)
+          setSearchOpen((open) => !open)
+        }}
       />
-      <div className="shell-side-pop-wrap">
-        <SideAction
-          title="搜索"
-          active={searchOpen}
-          testId="chrome-search"
-          icon={<MagnifyingGlassIcon {...chromeIcon} />}
-          onClick={() => {
-            setNotifyOpen(false)
-            setSearchOpen((open) => !open)
-          }}
-        />
-        {searchOpen ? (
-          <div className="shell-side-pop" role="dialog" aria-label="搜索">
-            <input
-              className="shell-chrome-search-input"
-              autoFocus
-              placeholder="搜索…"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            <p className="shell-chrome-pop-empty">输入关键字以搜索会话与数据</p>
-          </div>
-        ) : null}
-      </div>
+      {searchOpen && typeof document !== 'undefined'
+        ? createPortal(
+          <div
+            className="shell-search-overlay"
+            data-testid="shell-search-overlay"
+            onClick={() => setSearchOpen(false)}
+          >
+            <div
+              className="shell-search-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-label="搜索"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <input
+                className="shell-chrome-search-input"
+                autoFocus
+                placeholder="搜索…"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') setSearchOpen(false)
+                }}
+              />
+              <p className="shell-chrome-pop-empty">输入关键字以搜索会话与数据</p>
+            </div>
+          </div>,
+          document.body,
+        )
+        : null}
       <div className="shell-side-pop-wrap">
         <SideAction
           title="通知"
           active={notifyOpen}
           testId="chrome-notify"
-          icon={<BellIcon {...chromeIcon} />}
+          icon={<BellIcon className="size-5 shrink-0" />}
           onClick={() => {
             setSearchOpen(false)
             setNotifyOpen((open) => !open)
@@ -184,6 +194,12 @@ export function ShellSidePlaces({
           </div>
         ) : null}
       </div>
+      <SideAction
+        title="设置"
+        testId="chrome-settings"
+        icon={<Cog6ToothIcon className="size-5 shrink-0" />}
+        onClick={onSettings}
+      />
     </div>
   )
 }

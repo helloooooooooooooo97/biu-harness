@@ -25,6 +25,6 @@ test('paints shell into el', async () => {
     await ctx.plugin(shell)
   })
   assert.match(el.innerHTML, /data-testid="shell-side-places"/)
-  assert.match(el.innerHTML, /聊天/)
+  assert.match(el.innerHTML, /会话/)
   assert.match(el.innerHTML, /设置/)
 })
