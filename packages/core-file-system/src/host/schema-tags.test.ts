@@ -48,3 +48,13 @@ test('sqlite file round-trips SuperTag catalog and stamp index', async () => {
   assert.equal(again.removeTag('dp'), true)
   assert.equal(again.list().length, 0)
 })
+
+test('sqlite stores SuperTag schema overlay for records that cannot update', async () => {
+  const store = new SchemaTagsStore()
+  store.writeRecordSchema('/plugins', 'demo', { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } }, 'Demo')
+  assert.deepEqual(store.recordSchema('/plugins', 'demo')?.tags, ['dp'])
+  assert.equal(store.stampedIds('/plugins', 'dp').has('demo'), true)
+  store.removeRecord('/plugins', 'demo')
+  assert.equal(store.recordSchema('/plugins', 'demo'), null)
+  assert.equal(store.stampedIds('/plugins', 'dp').has('demo'), false)
+})

@@ -547,6 +547,48 @@ test('SuperTag list filter asks the collection only for stamped ids', async () =
   assert.equal(filtered.items[0]?.id, 'a')
 })
 
+test('SuperTag schema can be written on tables that cannot update other fields', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  const rows = new Map<string, Record<string, unknown>>([['p1', { id: 'p1', title: 'Demo' }]])
+  db.register({
+    id: 'plugins',
+    path: '/plugins',
+    label: '插件',
+    schema: { fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string' } } },
+    records: { update: false, delete: true },
+    list: () => [...rows.values()] as { id: string }[],
+    get: (id) => (rows.get(id) as { id: string } | undefined) ?? null,
+    remove: (query) => query.ids ?? [],
+  })
+  db.schemaTags.replace([{ id: 'dp', label: '动态规划', fields: [{ key: 'complexity', type: 'string', label: '复杂度' }] }])
+  await assert.rejects(() => db.update('/plugins/p1', { title: '改名' }), /cannot update/)
+  const written = await db.update('/plugins/p1', { schema: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } } })
+  assert.deepEqual((written.value as { schema?: { tags?: string[] } }).schema?.tags, ['dp'])
+  const read = await db.read('/plugins/p1')
+  if (read.kind !== 'record') return
+  assert.equal((read.value.schema as { values?: { dp?: { complexity?: string } } }).values?.dp?.complexity, 'O(n)')
+  const listed = await db.list('/plugins')
+  if (listed.kind !== 'collection') return
+  assert.deepEqual((listed.items[0]?.schema as { tags?: string[] })?.tags, ['dp'])
+  const collected = await db.collectSuperTag('dp')
+  assert.equal(collected.items.length, 1)
+  assert.equal(collected.items[0]?.path, '/plugins/p1')
+})
+
+test('db_update /supertags writes SuperTag field packs', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  db.register(superTagsCollection(db.schemaTags))
+  const created = await db.create('/supertags', [{ title: '动态规划' }])
+  const id = String(created.items[0]?.value.id)
+  const updated = await db.update(`/supertags/${id}`, {
+    fields: JSON.stringify([{ key: 'complexity', type: 'string', label: '复杂度' }]),
+  })
+  assert.equal(updated.value.fieldCount, 1)
+  assert.equal(db.schemaTags.get(id)?.fields[0]?.key, 'complexity')
+})
+
 test('tables without records.create/delete reject create and delete', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)

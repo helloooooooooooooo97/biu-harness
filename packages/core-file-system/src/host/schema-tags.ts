@@ -1,7 +1,12 @@
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { createRequire } from 'node:module'
-import { normalizeSchemaPack, type CollectionSchemaPack } from '@biu/type-file-system'
+import {
+  normalizeSchemaPack,
+  normalizeSchemaValue,
+  type CollectionSchemaPack,
+  type SchemaFieldValue,
+} from '@biu/type-file-system'
 
 type DatabaseSync = import('node:sqlite').DatabaseSync
 
@@ -75,6 +80,12 @@ export class SchemaTagsStore {
       );
       CREATE INDEX IF NOT EXISTS super_tag_stamps_tag ON super_tag_stamps(tag_id);
       CREATE INDEX IF NOT EXISTS super_tag_stamps_record ON super_tag_stamps(collection, record_id);
+      CREATE TABLE IF NOT EXISTS super_tag_record_schema (
+        collection TEXT NOT NULL,
+        record_id TEXT NOT NULL,
+        schema_json TEXT NOT NULL,
+        PRIMARY KEY (collection, record_id)
+      );
     `)
     return this
   }
@@ -194,10 +205,31 @@ export class SchemaTagsStore {
     }
   }
 
-  removeRecord(collection: string, recordId: string) {
+  recordSchema(collection: string, recordId: string): SchemaFieldValue | null {
+    const row = this.ensure()
+      .prepare('SELECT schema_json FROM super_tag_record_schema WHERE collection = ? AND record_id = ?')
+      .get(collection, recordId) as { schema_json: string } | undefined
+    if (!row) return null
+    return normalizeSchemaValue(row.schema_json)
+  }
+
+  writeRecordSchema(collection: string, recordId: string, schema: unknown, title: string) {
+    const value = normalizeSchemaValue(schema)
     this.ensure()
-      .prepare('DELETE FROM super_tag_stamps WHERE collection = ? AND record_id = ?')
-      .run(collection, recordId)
+      .prepare(
+        `INSERT INTO super_tag_record_schema (collection, record_id, schema_json)
+         VALUES (?, ?, ?)
+         ON CONFLICT(collection, record_id) DO UPDATE SET schema_json = excluded.schema_json`,
+      )
+      .run(collection, recordId, JSON.stringify(value))
+    this.indexRecord(collection, recordId, title, value.tags)
+    return value
+  }
+
+  removeRecord(collection: string, recordId: string) {
+    const db = this.ensure()
+    db.prepare('DELETE FROM super_tag_stamps WHERE collection = ? AND record_id = ?').run(collection, recordId)
+    db.prepare('DELETE FROM super_tag_record_schema WHERE collection = ? AND record_id = ?').run(collection, recordId)
   }
 
   stampedIds(collection: string, tagIdOrLabel: string): Set<string> {

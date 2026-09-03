@@ -387,9 +387,8 @@ export class DatabaseService extends Service implements Database {
 
   private async loadCollectionRows(spec: CollectionSpec, query: CollectionListQuery) {
     const rows = await spec.list(query)
-    if (!query.ids?.length) return rows
-    const allow = new Set(query.ids)
-    return rows.filter((row) => allow.has(row.id))
+    const listed = !query.ids?.length ? rows : rows.filter((row) => query.ids!.includes(row.id))
+    return listed.map((row) => this.applySchemaOverlay(spec, row))
   }
 
   private async matchCollectionRows(
@@ -419,8 +418,9 @@ export class DatabaseService extends Service implements Database {
       const id = String(row.sourceId ?? '')
       const spec = collection ? this.collection(collection) : undefined
       if (!spec || !id) continue
-      const record = await spec.get(id)
-      if (!record) continue
+      const found = await spec.get(id)
+      if (!found) continue
+      const record = this.applySchemaOverlay(spec, found)
       const bag = normalizeSchemaValue(record.schema).values[pack.id] ?? {}
       for (const field of wanted) {
         if (bag[field.key] !== undefined) row[field.key] = bag[field.key]
@@ -464,7 +464,7 @@ export class DatabaseService extends Service implements Database {
         label: spec.label ?? spec.id,
         schema: schemaFor(spec),
         caps,
-        value: withoutContent(spec, record),
+        value: withoutContent(spec, this.applySchemaOverlay(spec, record)),
       }
     }
     throw new Error(`path too deep: ${normalizeCollectionPath(path)}`)
@@ -541,6 +541,17 @@ export class DatabaseService extends Service implements Database {
     }
   }
 
+  private applySchemaOverlay(spec: CollectionSpec, row: DbRecord): DbRecord {
+    if (spec.path === '/supertags' || !schemaFor(spec).fields.schema) return row
+    const overlay = this.schemaTags.recordSchema(spec.path, row.id)
+    if (!overlay) return row
+    return { ...row, schema: overlay }
+  }
+
+  private collectionCanUpdate(spec: CollectionSpec) {
+    return Boolean(spec.records?.update && spec.update)
+  }
+
   private indexSuperTagRecord(spec: CollectionSpec, record: DbRecord) {
     if (spec.path === '/supertags' || !schemaFor(spec).fields.schema) return
     const labelKey = schemaFor(spec).labelField ?? 'title'
@@ -561,7 +572,7 @@ export class DatabaseService extends Service implements Database {
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     const record = await spec.get(parts[1]!)
     if (!record) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
-    return { kind: 'record' as const, path: `${spec.path}/${record.id}`, schema: schemaFor(spec), value: withoutContent(spec, record) }
+    return { kind: 'record' as const, path: `${spec.path}/${record.id}`, schema: schemaFor(spec), value: withoutContent(spec, this.applySchemaOverlay(spec, record)) }
   }
 
   async update(path: string, content: unknown) {
@@ -569,8 +580,26 @@ export class DatabaseService extends Service implements Database {
     if (parts.length !== 2) throw new Error(`cannot update: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
-    if (!spec.records?.update || !spec.update) throw new Error(`collection cannot update: ${spec.path}`)
-    const patch = pickWritablePatch(schemaFor(spec), parseContent(content))
+    const schema = schemaFor(spec)
+    const raw = parseContent(content)
+    if (!this.collectionCanUpdate(spec)) {
+      const keys = Object.keys(raw)
+      if (keys.length !== 1 || keys[0] !== 'schema' || !schema.fields.schema?.writable || schema.fields.schema.computed) {
+        throw new Error(`collection cannot update: ${spec.path}`)
+      }
+      const current = await spec.get(parts[1]!)
+      if (!current) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
+      const nextSchema = coerce(schema.fields.schema, raw.schema)
+      const labelKey = schema.labelField ?? 'title'
+      this.schemaTags.writeRecordSchema(spec.path, current.id, nextSchema, String(current[labelKey] ?? current.id))
+      this.bump()
+      return {
+        kind: 'record' as const,
+        path: `${spec.path}/${current.id}`,
+        value: withoutContent(spec, { ...current, schema: nextSchema }),
+      }
+    }
+    const patch = pickWritablePatch(schema, raw)
     const record = await spec.update(parts[1]!, patch)
     this.indexSuperTagRecord(spec, record)
     this.bump()
@@ -861,7 +890,7 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_update',
-    description: '按 schema 可写字段更新一条已有记录，路径为 /<表>/<id>。新建用 db_create，正文用 db_content。',
+    description: '按 schema 可写字段更新一条已有记录，路径为 /<表>/<id>。SuperTag（schema 字段）在所有表都可写，包括 records.update 为 false 的表（如 /plugins）；其它字段仍看 caps。新建用 db_create，正文用 db_content。改标签属性用 db_update path=/supertags/<id> content.fields。',
     parameters: {
       type: 'object',
       properties: {

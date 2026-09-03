@@ -40,6 +40,7 @@ export function superTagsCollection(
     title: label,
     fieldCount: fields.length,
     stampCount,
+    fields: JSON.stringify(fields),
     ...recordBuiltinValues(),
   })
 
@@ -76,7 +77,7 @@ export function superTagsCollection(
       route: '/db-supertags',
       title: '标签',
       inspector: true,
-      blurb: '工作区全局标签。',
+      blurb: '工作区全局标签，谁都可以改属性和贴到任意表的记录上（含插件）。新建用 db_create，改名/属性用 db_update（fields 为属性 JSON 数组）。',
       order: 31,
       icon: 'tag',
     },
@@ -90,6 +91,7 @@ export function superTagsCollection(
         title: { type: 'string', label: '标签', writable: true },
         fieldCount: { type: 'number', label: '字段', computed: true },
         stampCount: { type: 'number', label: '收集', computed: true, sortable: true },
+        fields: { type: 'string', label: '属性', writable: true },
         table: { type: 'string', label: '来源表', computed: true },
         tablePath: { type: 'string', label: '表路径', computed: true },
         sourceId: { type: 'string', label: '记录', computed: true },

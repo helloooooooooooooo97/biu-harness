@@ -23,6 +23,8 @@ test('superTagsCollection lists tags with stamp counts and supports create/updat
   assert.equal(updated.title, 'I/O')
   assert.equal(updated.fieldCount, 1)
   assert.equal(store.get('io')?.fields[0]?.key, 'format')
+  assert.equal(spec.schema.fields.fields?.writable, true)
+  assert.match(String(updated.fields), /format/)
 
   await spec.remove!({ ids: [created[0]!.id] })
   assert.equal(store.get('io'), null)
