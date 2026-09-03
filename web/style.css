@@ -4189,6 +4189,15 @@ body {
   pointer-events: auto;
 }
 
+.composer-dock-zone {
+  pointer-events: auto;
+}
+
+.composer-dock-zone:hover > .chat-composer-dock.is-composer-faded,
+.composer-dock-zone:focus-within > .chat-composer-dock.is-composer-faded {
+  opacity: 1;
+}
+
 .chat-composer-dock>* {
   box-sizing: border-box;
   width: 100%;

@@ -67,7 +67,11 @@ export function ChatPane({
     >
       {aside}
       <div className="chat-overlay-thread">{thread}</div>
-      {dock ? <div className="chat-composer-dock">{dock}</div> : null}
+      {dock ? (
+        <div className="composer-dock-zone">
+          <div className="chat-composer-dock">{dock}</div>
+        </div>
+      ) : null}
     </div>
   )
 }

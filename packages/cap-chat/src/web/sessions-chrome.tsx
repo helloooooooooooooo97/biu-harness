@@ -186,7 +186,7 @@ function SessionRecordChat({
     <>
       {outlineHost ? createPortal(<div className="session-outline-host">{outline}</div>, outlineHost) : null}
       {composerHost ? createPortal(
-        <div className="session-composer-host">
+        <div className="session-composer-host composer-dock-zone">
           <div className="chat-composer-dock pointer-events-none bg-transparent">{dock}</div>
         </div>,
         composerHost,
@@ -228,16 +228,18 @@ if (typeof document !== 'undefined') {
 .fsdb-fileview:has(.chat-pane-embed){display:flex;flex-direction:column;flex:1;min-height:min(72vh,720px);overflow:hidden;background:#191919}
 .inspector-database-page .fsdb-fileview:has(.chat-pane-embed){min-height:0;flex:1}
 .fsdb-detail-main:has(.chat-pane-embed),.fsdb-detail-screen:has(.chat-pane-embed){background:#191919}
-.inspector-database-page .fsdb-detail-stage:has(.chat-pane-embed),
 .inspector-database-page .fsdb-detail-screen:has(.chat-pane-embed),
 .inspector-database-page .fsdb-detail-screen:has(.chat-pane-embed) .fsdb-detail-split,
 .inspector-database-page .fsdb-detail-main:has(.chat-pane-embed){
   min-height:0;flex:1;overflow:hidden;display:flex;flex-direction:column
 }
+.inspector-database-page .fsdb-detail-stage:has(.chat-pane-embed) .fsdb-detail-float-nav{
+  position:sticky;top:50%;align-self:flex-start;flex:none;z-index:24;transform:translateY(-50%)
+}
 .inspector-database-page .fsdb-detail-main:has(.chat-pane-embed){padding-bottom:12px}
 .session-outline-host{position:absolute;inset:0;z-index:20;pointer-events:none}
 main:has(.session-composer-host){position:relative}
-.session-composer-host{position:absolute;inset-inline:0;bottom:0;z-index:25;padding:0 60px calc(1rem + 25px);pointer-events:none}
+.session-composer-host{position:absolute;inset-inline:0;bottom:0;z-index:25;padding:0 60px calc(1rem + 25px);pointer-events:auto}
 .session-composer-host .chat-composer-dock{position:static;padding:0;background:transparent}
 .session-composer-host .chat-composer-dock>*{pointer-events:auto;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto}
 .fsdb-right:has(.session-outline-host){position:relative}

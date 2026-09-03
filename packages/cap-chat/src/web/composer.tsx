@@ -545,7 +545,10 @@ export const ChatComposer = memo(function ChatComposer(
   })
 
   useEffect(() => {
-    const onFocus = () => {
+    const onFocus = (event: Event) => {
+      const dock = (event as CustomEvent<{ dock?: Element | null }>).detail?.dock
+      const dom = editor?.view.dom
+      if (dock && dom && !dock.contains(dom)) return
       editor?.commands.focus('end')
     }
     window.addEventListener('biu:composer-focus', onFocus)
