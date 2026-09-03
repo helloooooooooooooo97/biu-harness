@@ -48,9 +48,8 @@ export function BrandMascot({ className, size = 28 }: { className?: string; size
 
 export function SidebarBrandLockup() {
   return (
-    <span className="sidebar-brand-lockup" data-testid="sidebar-brand-lockup">
+    <span className="sidebar-brand-lockup" data-testid="sidebar-brand-lockup" aria-hidden>
       <BrandMascot className="sidebar-brand-mascot" size={22} />
-      <span className="sidebar-brand-name">Biu Agent OS</span>
     </span>
   )
 }
