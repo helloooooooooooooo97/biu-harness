@@ -1396,8 +1396,8 @@ body {
   pointer-events: auto;
   position: fixed;
   left: 0;
-  top: 0;
-  bottom: 0;
+  top: 60px;
+  bottom: 60px;
   width: 12px;
   z-index: 80;
 }
@@ -1420,16 +1420,14 @@ body {
   transform: translateX(calc(-100% - 8px));
   opacity: 0;
   pointer-events: none;
-  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
+  transition: none;
 }
 
-.sidebar-flyout-host.is-collapsed:hover,
-.sidebar-flyout-host.is-collapsed:focus-within {
+.sidebar-flyout-host.is-collapsed:hover {
   pointer-events: auto;
 }
 
-.sidebar-flyout-host.is-collapsed:hover .app-side-bar.is-closed,
-.sidebar-flyout-host.is-collapsed:focus-within .app-side-bar.is-closed {
+.sidebar-flyout-host.is-collapsed:hover .app-side-bar.is-closed {
   transform: none;
   opacity: 1;
   pointer-events: auto;
