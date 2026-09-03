@@ -47,6 +47,14 @@ export type TaskRecordActions = {
   deliver: (id: string, record: DbRecord, args?: Record<string, unknown>) => unknown | Promise<unknown>
 }
 
+export type TaskPeople = {
+  resolveCreator?: () => Actor | Promise<Actor>
+  resolveAssignee?: (input: {
+    assignee?: unknown
+    assigneeSessionId?: string | null
+  }) => Actor | null | Promise<Actor | null>
+}
+
 const ZERO_USAGE: Usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, totalTokens: 0 }
 
 function asUsage(value: unknown): Usage | null {
@@ -157,7 +165,19 @@ function recordsWithUsage(rows: TaskRow[]): DbRecord[] {
   )
 }
 
-export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActions): CollectionSpec {
+async function resolvedAssignee(
+  people: TaskPeople | undefined,
+  fields: Record<string, unknown>,
+): Promise<Actor | null | undefined> {
+  if (!people?.resolveAssignee) return undefined
+  if (!('assignee' in fields) && !('assigneeSessionId' in fields)) return undefined
+  return people.resolveAssignee({
+    ...('assigneeSessionId' in fields ? { assigneeSessionId: fields.assigneeSessionId == null ? '' : String(fields.assigneeSessionId) } : {}),
+    ...('assignee' in fields ? { assignee: fields.assignee } : {}),
+  })
+}
+
+export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActions, people?: TaskPeople): CollectionSpec {
   return {
     id: 'tasks',
     path: '/tasks',
@@ -189,7 +209,8 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
         description: { type: 'file', label: '描述', writable: true },
         notes: { type: 'string', label: '备忘', writable: true },
         creator: { type: 'string', label: '创建人' },
-        assignee: { type: 'string', label: '承担者' },
+        assignee: { type: 'string', label: '承担者', writable: true },
+        assigneeSessionId: { type: 'string', label: '承担会话', writable: true },
         parentId: { type: 'string', label: '父任务', writable: true },
         dependsOn: { type: 'multi-select', label: '依赖' },
       },
@@ -203,17 +224,32 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
       return recordsWithUsage(tasks.list(query?.q ? { q: query.q } : {}))
     },
     get: (id) => recordsWithUsage(tasks.list()).find((row) => row.id === id) ?? null,
-    update: (id, patch) => {
-      const next = tasks.update(id, patch) as TaskRow
+    update: async (id, patch) => {
+      const nextPatch = { ...patch }
+      const assignee = await resolvedAssignee(people, patch)
+      if (assignee !== undefined) {
+        nextPatch.assignee = assignee
+        delete nextPatch.assigneeSessionId
+      }
+      const next = tasks.update(id, nextPatch) as TaskRow
       const rows = tasks.list().map((row) => (row.id === id ? { ...row, ...next, id } : row))
       return recordsWithUsage(rows).find((row) => row.id === id) ?? taskRecord(next, (pid) => tasks.get(pid), ZERO_USAGE, false)
     },
-    create: (rows) =>
-      rows.map((fields = {}) => {
-        const title = typeof fields.title === 'string' && fields.title.trim() ? fields.title.trim() : '未命名任务'
-        const row = tasks.create({ ...fields, title, creator: { kind: 'user', name: '用户' } })
-        return recordsWithUsage(tasks.list()).find((item) => item.id === row.id) ?? taskRecord(row, (pid) => tasks.get(pid), ZERO_USAGE, false)
-      }),
+    create: async (rows) =>
+      Promise.all(
+        rows.map(async (fields = {}) => {
+          const title = typeof fields.title === 'string' && fields.title.trim() ? fields.title.trim() : '未命名任务'
+          const creator = people?.resolveCreator ? await people.resolveCreator() : { kind: 'user', name: '用户' }
+          const assignee = await resolvedAssignee(people, fields)
+          const row = tasks.create({
+            ...fields,
+            title,
+            creator,
+            ...(assignee !== undefined ? { assignee } : {}),
+          })
+          return recordsWithUsage(tasks.list()).find((item) => item.id === row.id) ?? taskRecord(row, (pid) => tasks.get(pid), ZERO_USAGE, false)
+        }),
+      ),
     remove: (query) => {
       const ids = query.ids ?? []
       for (const id of ids) {

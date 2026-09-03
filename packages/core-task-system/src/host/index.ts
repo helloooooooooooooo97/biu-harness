@@ -2006,10 +2006,20 @@ export function apply(ctx: Context) {
 
   ctx.inject(['database'], (inner) => {
     inner.database.register(
-      tasksCollection(tasks, {
-        report: (id, _record, args) => runTaskReport(id, args),
-        deliver: (id, _record, args) => runTaskDeliver(id, args),
-      }),
+      tasksCollection(
+        tasks,
+        {
+          report: (id, _record, args) => runTaskReport(id, args),
+          deliver: (id, _record, args) => runTaskDeliver(id, args),
+        },
+        {
+          resolveCreator: () => resolveCreator(host),
+          resolveAssignee: async (input) => {
+            const resolved = await resolveAssignee(host, input)
+            return resolved.touchAssignedAt ? resolved.assignee : null
+          },
+        },
+      ),
     )
   })
 }

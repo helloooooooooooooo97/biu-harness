@@ -213,6 +213,10 @@ function coerce(field: FieldSpec, value: unknown) {
   }
   if (kind === 'action') return value == null ? '' : value
   if (isFacetFieldType(kind)) return normalizeSchemaValue(value)
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const rec = value as Record<string, unknown>
+    if (typeof rec.sessionId === 'string' || rec.kind === 'agent' || rec.kind === 'user') return value
+  }
   return String(value ?? '')
 }
 
