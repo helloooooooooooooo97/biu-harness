@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   ChatBubbleLeftRightIcon,
   CheckCircleIcon,
@@ -10,7 +9,6 @@ import {
   TagIcon,
 } from '@heroicons/react/16/solid'
 import { TagChip, TagChips } from '@biu/public-ui'
-import { setChatOverlay } from './chat-overlay.ts'
 
 export type SearchKind = 'session' | 'task' | 'page' | 'plugin' | 'facet'
 
@@ -33,7 +31,6 @@ export type SearchHit = {
   kind: SearchKind
   id: string
   title: string
-  href: string
 }
 
 export type SessionHint = { id: string; title: string }
@@ -44,10 +41,18 @@ function recordTitle(row: Record<string, unknown>) {
   return text || String(row.id ?? '')
 }
 
-export function searchHref(kind: SearchKind, id: string) {
-  if (kind === 'session') return `/s/${encodeURIComponent(id)}`
-  const type = SEARCH_SCOPES.find((item) => item.id === kind)?.path?.replace(/^\//, '') ?? kind
-  return `/database/${encodeURIComponent(type)}/record/${encodeURIComponent(id)}`
+export function searchCollection(kind: SearchKind) {
+  if (kind === 'session') return '/sessions'
+  return SEARCH_SCOPES.find((item) => item.id === kind)?.path ?? `/${kind}`
+}
+
+/** 在右侧检查器打开记录，不改路由、不换主 Session。 */
+export function openSearchHit(hit: { kind: SearchKind; id: string }) {
+  window.dispatchEvent(
+    new CustomEvent('biu:inspector-reveal', {
+      detail: { collection: searchCollection(hit.kind), recordId: hit.id },
+    }),
+  )
 }
 
 function matchLocal(title: string, id: string, needle: string) {
@@ -89,7 +94,6 @@ export function ShellSearchPanel({
   onClose: () => void
   focusSeq?: number
 }) {
-  const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<'all' | SearchKind>('all')
@@ -114,7 +118,6 @@ export function ShellSearchPanel({
         kind: 'session' as const,
         id: item.id,
         title: item.title || item.id,
-        href: searchHref('session', item.id),
       }))
   }, [needle, sessions])
 
@@ -152,7 +155,6 @@ export function ShellSearchPanel({
                 kind: item.id,
                 id,
                 title: recordTitle(row),
-                href: searchHref(item.id, id),
               } satisfies SearchHit
             })
           } catch {
@@ -192,8 +194,7 @@ export function ShellSearchPanel({
   const current = flat[Math.min(active, Math.max(0, flat.length - 1))]
 
   const openHit = (hit: SearchHit) => {
-    if (hit.kind === 'session') setChatOverlay(false)
-    navigate(hit.href)
+    openSearchHit(hit)
     onClose()
   }
 

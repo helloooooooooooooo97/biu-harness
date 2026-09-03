@@ -162,3 +162,13 @@ export function seedInspectorDbPath(paneId: string, pathname?: string) {
   paths.set(id, path)
   bump()
 }
+
+export const INSPECTOR_REVEAL_EVENT = 'biu:inspector-reveal'
+
+function onInspectorReveal(event: Event) {
+  applyDatabaseReveal((event as CustomEvent).detail)
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener(INSPECTOR_REVEAL_EVENT, onInspectorReveal)
+}

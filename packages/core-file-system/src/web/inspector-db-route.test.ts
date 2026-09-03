@@ -43,6 +43,25 @@ test('each inspector database pane keeps its own path', () => {
   assert.equal(getInspectorDbPath('database::a'), '/database/pages')
 })
 
+test('window reveal event opens the inspector record path', async () => {
+  const tabs: string[] = []
+  const onTab = (event: Event) => {
+    const detail = (event as CustomEvent).detail
+    if (typeof detail === 'string') tabs.push(detail)
+  }
+  window.addEventListener('biu:inspector-tab', onTab)
+  const opened = new Promise<void>((resolve) => {
+    window.addEventListener('biu:inspector-open', () => resolve(), { once: true })
+  })
+  window.dispatchEvent(
+    new CustomEvent('biu:inspector-reveal', { detail: { collection: '/pages', recordId: 'from-search' } }),
+  )
+  await opened
+  assert.equal(getInspectorDbPath('database:/pages'), '/database/pages/record/from-search')
+  assert.deepEqual(tabs, ['database:/pages'])
+  window.removeEventListener('biu:inspector-tab', onTab)
+})
+
 test('showRecordInInspector opens the inspector on this record', async () => {
   const tabs: string[] = []
   const onTab = (event: Event) => {
