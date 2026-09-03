@@ -183,6 +183,8 @@ test('create record sits at the right of the toolbar with a blue label', () => {
   assert.doesNotMatch(browser, /tasks-title-cell/)
   assert.doesNotMatch(css, /tasks-title-cell/)
   assert.match(css, /tbody tr:hover \.fsdb-row-check/)
+  assert.match(css, /td:first-child::before,[\s\S]*th:first-child::before\{[^}]*left:-26px/)
+  assert.match(css, /\.tasks-table:has\(\.fsdb-row-check\.is-on\) tbody \.fsdb-row-check/)
   assert.match(browser, /index === 0 \? <RowCheck id=\{row\.id\} \/> : null/)
   assert.match(browser, /index === 0 \? <RowCheck ids=\{pickableIds\} \/> : null/)
   const titleFn = browser.slice(browser.indexOf('function RecordTitle'), browser.indexOf('function RecordOpenControls'))

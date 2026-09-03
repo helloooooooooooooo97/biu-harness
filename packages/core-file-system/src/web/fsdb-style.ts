@@ -173,8 +173,10 @@ const CSS = `
 .fsdb-page .tasks-table th{padding:6px 6px;color:var(--dsw-label-2);font-size:14px;font-weight:600;position:sticky;top:0;background:var(--dsw-surface);z-index:1;white-space:nowrap}
 .fsdb-row-check{position:absolute;top:50%;left:0;z-index:3;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin:0;transform:translate(-100%,-50%);opacity:0;pointer-events:none}
 .fsdb-page .tasks-table td:first-child{position:relative}
+.fsdb-page .tasks-table td:first-child::before,.fsdb-page .tasks-table th:first-child::before{content:"";position:absolute;left:-26px;top:0;bottom:0;width:26px}
 .fsdb-page .tasks-table td:first-child > .fsdb-row-check,.fsdb-page .tasks-table th:first-child > .fsdb-row-check{left:0;margin-left:-4px}
 .tasks-table tbody tr:hover .fsdb-row-check,.tasks-queue-item:hover .fsdb-row-check,.tasks-minicard:hover .fsdb-row-check,.fsdb-row-check.is-on,.fsdb-row-check:focus-visible{opacity:1;pointer-events:auto}
+.fsdb-page .tasks-table:has(.fsdb-row-check.is-on) tbody .fsdb-row-check{opacity:1;pointer-events:auto}
 .fsdb-page .tasks-table thead .fsdb-row-check{opacity:1;pointer-events:auto}
 .fsdb-page .tasks-th{display:inline-flex;align-items:center;gap:5px;font-weight:600;white-space:nowrap;flex-wrap:nowrap}
 .fsdb-page .tasks-th svg{color:inherit}
