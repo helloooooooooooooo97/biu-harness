@@ -37,7 +37,7 @@
   /* 右侧对话正文字号 */
   --dsw-chat-font-size: 14px;
   --dsw-chat-line-height: 1.6;
-  --dsw-chat-composer-font-size: 14px;
+  --dsw-chat-composer-font-size: 16px;
   /* 聊天窗内控件：工具条、回合栏、排队、slash、模型、工具卡 */
   --dsw-chat-ui-font-size: 12px;
   --dsw-chat-chip-font-size: 12px;
@@ -1509,11 +1509,35 @@ body {
 }
 
 .chat-pane-embed {
-  min-height: min(72vh, 720px);
-  padding: 0 10px 10px;
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  padding: 0;
   border: 0;
   border-radius: 14px;
   background: #191919;
+}
+
+.chat-pane-embed .chat-overlay-thread {
+  padding-bottom: 5.5rem;
+}
+
+.chat-pane.chat-pane-embed .chat-composer-dock {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 20;
+  flex: none;
+  padding: 0 12px 12px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.chat-pane.chat-pane-embed .chat-composer-dock > * {
+  pointer-events: auto;
+  width: 100%;
+  max-width: var(--dsw-chat-max-width);
+  margin-inline: auto;
 }
 
 .chat-overlay-head {
