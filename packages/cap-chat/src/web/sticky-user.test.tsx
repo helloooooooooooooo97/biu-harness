@@ -92,6 +92,10 @@ describe('sticky user message markers', () => {
     const timeIdx = kids.findIndex((el) => el.getAttribute('data-testid') === 'user-sent-at')
     expect(senderIdx).toBeGreaterThanOrEqual(0)
     expect(timeIdx).toBeGreaterThan(senderIdx)
+    const statusIdx = kids.findIndex((el) => el.getAttribute('data-testid') === 'user-turn-end-status')
+    expect(statusIdx).toBeGreaterThan(timeIdx)
+    expect(end?.querySelector('[data-testid="user-turn-end-status"]')?.className).toMatch(/is-ok/)
+    expect(document.querySelector('.chat-reply-actions-row .chat-reply-end-status')).toBeNull()
     expect(document.querySelector('[data-testid="user-bubble"] [data-testid="user-sender-human"]')).toBeNull()
   })
 
@@ -106,7 +110,9 @@ describe('sticky user message markers', () => {
     expect(user1?.querySelector('[data-testid="user-tool-count"]')?.textContent).toBe('0')
     expect(user1?.querySelector('[data-testid="user-sent-at"]')?.textContent).toMatch(/\d{1,2}:\d{2}/)
     expect(user1?.querySelector('[aria-label="回合操作"]')).toBeNull()
+    expect(user1?.querySelector('[data-testid="user-turn-end-status"]')).toBeTruthy()
     expect(reply1?.querySelector('[aria-label="回合操作"]')).toBeTruthy()
+    expect(reply1?.querySelector('[data-testid="user-turn-end-status"]')).toBeNull()
     expect(document.querySelectorAll('.chat-reply-bar')).toHaveLength(0)
   })
 

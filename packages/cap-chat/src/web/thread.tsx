@@ -295,11 +295,9 @@ export function splitReplyForDisplay(node: Extract<ChatNode, { kind: 'reply' }>)
 function ReplyActions({
   text,
   onFork,
-  cancelled,
 }: {
   text: string
   onFork: () => void | Promise<void>
-  cancelled?: boolean
 }) {
   const [copied, setCopied] = useState(false)
   const [forkBusy, setForkBusy] = useState(false)
@@ -352,15 +350,6 @@ function ReplyActions({
           </>
         ) : null}
       </div>
-      {cancelled ? (
-        <span className="chat-reply-end-status tool-call-status is-fail" title="回合已取消" aria-label="回合已取消">
-          <XCircleIcon className="size-3.5" aria-hidden />
-        </span>
-      ) : (
-        <span className="chat-reply-end-status tool-call-status is-ok" title="回合完成" aria-label="回合完成">
-          <CheckCircleIcon className="size-3.5" aria-hidden />
-        </span>
-      )}
     </>
   )
 }
@@ -492,6 +481,27 @@ function UserTurnBar({
             <span>{sentLabel}</span>
           </span>
         ) : null}
+        {reply && !streaming ? (
+          reply.endReason && reply.endReason !== 'complete' ? (
+            <span
+              className="chat-reply-end-status tool-call-status is-fail"
+              title="回合已取消"
+              aria-label="回合已取消"
+              data-testid="user-turn-end-status"
+            >
+              <XCircleIcon className="size-3" aria-hidden />
+            </span>
+          ) : (
+            <span
+              className="chat-reply-end-status tool-call-status is-ok"
+              title="回合完成"
+              aria-label="回合完成"
+              data-testid="user-turn-end-status"
+            >
+              <CheckCircleIcon className="size-3" aria-hidden />
+            </span>
+          )
+        ) : null}
       </div>
     </div>
   )
@@ -619,11 +629,7 @@ function NodeView({
         </div>
         {!streaming ? (
           <div className="chat-reply-actions-row">
-            <ReplyActions
-              text={node.copyText}
-              onFork={onFork}
-              cancelled={Boolean(node.endReason && node.endReason !== 'complete')}
-            />
+            <ReplyActions text={node.copyText} onFork={onFork} />
           </div>
         ) : null}
       </div>

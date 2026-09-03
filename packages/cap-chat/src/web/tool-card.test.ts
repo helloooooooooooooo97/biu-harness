@@ -17,4 +17,6 @@ test('tool panels match the step bar: sidebar fill, no border', () => {
     /\.tool-call-head:hover::before,\s*\.tool-call-head\.is-open::before\s*\{[^}]*background:\s*var\(--dsw-sidebar\)/s,
   )
   assert.match(source, /tool-call-inspect[\s\S]*status\.className/)
+  assert.match(css, /\.tool-call-inspect\s*\{[^}]*opacity:\s*0/s)
+  assert.match(css, /\.tool-call-head:hover \.tool-call-inspect/s)
 })

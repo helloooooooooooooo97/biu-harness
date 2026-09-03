@@ -4113,7 +4113,11 @@ body {
 }
 
 .chat-reply-end-status {
-  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: auto;
+  height: auto;
+  background: transparent;
 }
 
 .chat-assistant-body {
@@ -4284,7 +4288,29 @@ body {
   white-space: nowrap;
 }
 
-.tool-call-status,
+.tool-call-status {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-sidebar-fg);
+}
+
+.tool-call-status.is-ok {
+  color: #448361;
+}
+
+.tool-call-status.is-fail {
+  color: #c4554d;
+}
+
+.tool-call-status.is-running {
+  color: var(--dsw-sidebar-fg);
+}
+
 .tool-call-inspect {
   display: grid;
   width: 24px;
@@ -4295,24 +4321,15 @@ body {
   border-radius: 6px;
   background: transparent;
   color: var(--dsw-sidebar-fg);
-}
-
-.tool-call-status.is-ok {
-  color: #448361;
-  background: color-mix(in srgb, #448361 22%, transparent);
-}
-
-.tool-call-status.is-fail {
-  color: #c4554d;
-  background: color-mix(in srgb, #c4554d 22%, transparent);
-}
-
-.tool-call-status.is-running {
-  color: var(--dsw-sidebar-fg);
-}
-
-.tool-call-inspect {
   cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tool-call-head:hover .tool-call-inspect,
+.tool-call-head:focus-within .tool-call-inspect {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .tool-call-inspect:hover {
