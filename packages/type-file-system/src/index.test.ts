@@ -45,7 +45,7 @@ test('withBuiltinFields always includes writable SuperTag schema', () => {
   const fields = withBuiltinFields({ title: { type: 'string', writable: true } })
   assert.equal(fields.schema?.type, 'supertag')
   assert.equal(fields.schema?.writable, true)
-  assert.equal(fields.schema?.label, 'SuperTag')
+  assert.equal(fields.schema?.label, '模式')
 })
 
 test('recordBuiltinValues fills required record columns', () => {

@@ -48,10 +48,12 @@ test('collection browser renders extra views registered for that path', () => {
   assert.match(schemaUi, /placeholder=""/)
   assert.doesNotMatch(schemaUi, /placeholder="属性名"/)
   assert.doesNotMatch(schemaUi, /placeholder=\{selected\.length/)
-  assert.doesNotMatch(schemaUi, /搜索 SuperTag/)
-  assert.doesNotMatch(schemaUi, /SuperTag 是工作区全局的/)
-  assert.doesNotMatch(schemaUi, /任意表都能搜到/)
-  assert.doesNotMatch(schemaUi, /选择或新建 SuperTag/)
+  assert.doesNotMatch(schemaUi, /超级标签/)
+  assert.doesNotMatch(schemaUi, /创建 SuperTag/)
+  assert.doesNotMatch(schemaUi, /没有匹配的 SuperTag/)
+  assert.match(schemaUi, /创建模式/)
+  assert.match(schemaUi, /没有匹配的模式/)
+  assert.match(schemaUi, /这条模式已不在目录里/)
 })
 
 test('tag collect table lives on the record board, not as sidebar views', () => {

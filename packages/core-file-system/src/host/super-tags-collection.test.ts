@@ -9,6 +9,8 @@ test('superTagsCollection lists tags with stamp counts and supports create/updat
   store.indexRecord('/pages', 'home', '首页', ['dp'])
   const spec = superTagsCollection(store)
   assert.equal(spec.path, '/supertags')
+  assert.equal(spec.label, '模式')
+  assert.equal(spec.view?.title, '模式')
   const listed = await spec.list()
   assert.equal(listed.length, 1)
   assert.equal(listed[0]?.title, '动态规划')

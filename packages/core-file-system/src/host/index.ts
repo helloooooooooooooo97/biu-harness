@@ -894,7 +894,7 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_update',
-    description: '按 schema 可写字段更新一条已有记录，路径为 /<表>/<id>。SuperTag（schema 字段）在所有表都可写，包括 records.update 为 false 的表（如 /plugins）；其它字段仍看 caps。新建用 db_create，正文用 db_content。改标签属性用 db_update path=/supertags/<id> content.fields。',
+    description: '按 schema 可写字段更新一条已有记录，路径为 /<表>/<id>。模式（schema 字段）在所有表都可写，包括 records.update 为 false 的表（如 /plugins）；其它字段仍看 caps。新建用 db_create，正文用 db_content。改模式属性用 db_update path=/supertags/<id> content.fields。',
     parameters: {
       type: 'object',
       properties: {
@@ -907,7 +907,7 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_create',
-    description: '在已登记且允许新建的表中批量新增记录。路径为 /<表>，records 为对象数组。能否新建看 db_stat 的 caps 与 schema.records。',
+    description: '在已登记且允许新建的表中批量新增记录。路径为 /<表>，records 为对象数组。能否新建看 db_stat 的 caps 与 schema.records。新建模式用 db_create path=/supertags records=[{title}]。',
     parameters: {
       type: 'object',
       properties: {

@@ -52,7 +52,7 @@ function packFromRow(row: TagRow): CollectionSchemaPack | null {
   return normalizeSchemaPack({ id: row.id, label: row.label, fields })
 }
 
-/** SuperTag 由 File System 用 SQLite 管：目录 + 跨表倒排，查询不扫全表。 */
+/** 模式目录由 File System 用 SQLite 管：目录 + 跨表倒排，查询不扫全表。 */
 export class SchemaTagsStore {
   private db: DatabaseSync | null = null
 
@@ -152,7 +152,7 @@ export class SchemaTagsStore {
 
   upsert(raw: unknown): CollectionSchemaPack {
     const pack = normalizeSchemaPack(raw)
-    if (!pack) throw new Error('invalid SuperTag')
+    if (!pack) throw new Error('invalid 模式')
     this.ensure()
       .prepare(
         `INSERT INTO super_tags (id, label, fields_json, updated_at)

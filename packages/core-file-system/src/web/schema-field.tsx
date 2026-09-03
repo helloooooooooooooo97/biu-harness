@@ -6,6 +6,7 @@ import {
   type CollectionSchemaPack,
   type DbRecord,
   type FieldSpec,
+  type FieldType,
   type SchemaFieldValue,
   type SchemaPackField,
 } from '@biu/type-file-system'
@@ -15,7 +16,7 @@ import { asStringList } from './fields.ts'
 import { FieldEditor, FieldGlyph, parseFieldValue } from './fsdb-cells.tsx'
 import { loadSchemaTags, persistSchemaTags, fieldKeyFromLabel, slugTagId, subscribeSchemaTags } from './schema-tags.ts'
 
-const TYPE_LABEL: Record<AtomicFieldType, string> = {
+const TYPE_LABEL: Partial<Record<FieldType, string>> = {
   string: '文本',
   number: '数字',
   boolean: '是/否',
@@ -27,6 +28,8 @@ const TYPE_LABEL: Record<AtomicFieldType, string> = {
   attachment: '附件',
   file: '正文',
   action: '动作',
+  schema: '模式',
+  supertag: '模式',
 }
 
 export const schemaTagTone = tagTone
@@ -206,10 +209,10 @@ function TagPicker({
               }}
             >
               <PlusIcon aria-hidden className="size-3.5" />
-              创建 SuperTag <SchemaChip id={draft.trim()} label={draft.trim()} />
+              创建模式 <SchemaChip id={draft.trim()} label={draft.trim()} />
             </button>
           ) : null}
-          {!available.length && !canCreate ? <div className="fsdb-schema-tokens-empty">没有匹配的 SuperTag</div> : null}
+          {!available.length && !canCreate ? <div className="fsdb-schema-tokens-empty">没有匹配的模式</div> : null}
         </div>
       ) : null}
     </div>
@@ -288,7 +291,7 @@ export function SuperTagPackEditor({ tagId }: { tagId: string }) {
     setCatalog(next)
   }
 
-  if (!tag) return <p className="fsdb-muted">这枚 SuperTag 已不在目录里。</p>
+  if (!tag) return <p className="fsdb-muted">这条模式已不在目录里。</p>
   const pack = tag
 
   function addField(name: string, type: AtomicFieldType) {

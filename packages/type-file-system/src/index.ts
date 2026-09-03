@@ -85,10 +85,10 @@ export const BUILTIN_FIELDS = {
   updatedAt: { type: 'datetime', label: '更新时间' },
   content: { type: 'file', label: '内容' },
   emoji: { type: 'string', label: '图标', writable: true },
-  schema: { type: 'supertag', label: 'SuperTag', writable: true },
+  schema: { type: 'supertag', label: '模式', writable: true },
 } as const satisfies Record<string, FieldSpec>
 
-/** 登记 CollectionSpec.schema.fields 必须声明：图标、创建/更新时间、SuperTag。由登记方自己存。 */
+/** 登记 CollectionSpec.schema.fields 必须声明：图标、创建/更新时间、模式。由登记方自己存。 */
 export const REQUIRED_RECORD_FIELD_KEYS = ['createdAt', 'updatedAt', 'emoji', 'schema'] as const
 
 export type RequiredRecordFieldKey = (typeof REQUIRED_RECORD_FIELD_KEYS)[number]
@@ -104,10 +104,10 @@ export const REQUIRED_RECORD_FIELDS: RequiredRecordFields = {
   schema: BUILTIN_FIELDS.schema,
 }
 
-/** 表格默认不展开这些内置列（标题除外）。SuperTag 作为默认业务列留下。 */
+/** 表格默认不展开这些内置列（标题除外）。模式作为默认业务列留下。 */
 export const BUILTIN_FIELD_KEYS = ['id', 'createdAt', 'updatedAt', 'content', 'emoji'] as const
 
-/** Schema 包内允许的原子类型；supertag / schema 不能再套一层 SuperTag。 */
+/** Schema 包内允许的原子类型；supertag / schema 不能再套一层模式。 */
 export const ATOMIC_FIELD_TYPES = [
   'string',
   'number',
@@ -285,7 +285,7 @@ export type CollectionSchema = {
   labelField?: string
   /** 记录正文：真正存的文件内容。默认 `content`。结构由登记方自定。 */
   contentField?: string
-  /** 必须包含图标、创建/更新时间、SuperTag；登记方自己持久化。 */
+  /** 必须包含图标、创建/更新时间、模式；登记方自己持久化。 */
   fields: CollectionFields
   /** 表格默认可见列（须为 fields 的键）。不写则列出全部列表列。详情仍显示全部字段。 */
   columns?: string[]
@@ -324,7 +324,7 @@ export type CollectionView = {
 }
 
 export type CollectionListQuery = {
-  /** 只取这些 id。File System 在 SuperTag 筛选时传入，避免整表 list。 */
+  /** 只取这些 id。File System 在模式筛选时传入，避免整表 list。 */
   ids?: string[]
   q?: string
   filter?: Record<string, unknown>

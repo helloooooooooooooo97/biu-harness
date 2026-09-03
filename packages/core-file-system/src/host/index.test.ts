@@ -136,6 +136,7 @@ test('every collection schema includes id, title, createdAt and updatedAt', asyn
   assert.equal(stat.schema.fields.content?.type, 'file')
   assert.equal(stat.schema.fields.emoji?.writable, true)
   assert.equal(stat.schema.fields.schema?.type, 'supertag')
+  assert.equal(stat.schema.fields.schema?.label, '模式')
   assert.equal(stat.schema.fields.schema?.writable, true)
   assert.equal(stat.schema.contentField, 'content')
   const tagged = await db.update('/notes/n1', { schema: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } } })

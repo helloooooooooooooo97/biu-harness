@@ -86,7 +86,7 @@ export interface SessionConfig {
   pinned?: boolean
   /** 记录图标 */
   emoji?: string
-  /** SuperTag */
+  /** 模式 */
   schema?: { tags: string[]; values: Record<string, Record<string, unknown>> }
   createdAt?: number
 }
