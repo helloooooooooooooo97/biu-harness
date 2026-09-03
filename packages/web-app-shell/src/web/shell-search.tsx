@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   ChatBubbleLeftRightIcon,
   CheckCircleIcon,
@@ -9,6 +10,7 @@ import {
   TagIcon,
 } from '@heroicons/react/16/solid'
 import { TagChip, TagChips } from '@biu/public-ui'
+import { setChatOverlay } from './chat-overlay.ts'
 
 export type SearchKind = 'session' | 'task' | 'page' | 'plugin' | 'facet'
 
@@ -46,13 +48,20 @@ export function searchCollection(kind: SearchKind) {
   return SEARCH_SCOPES.find((item) => item.id === kind)?.path ?? `/${kind}`
 }
 
-/** 在右侧检查器打开记录，不改路由、不换主 Session。 */
+/** Enter：右侧检查器打开，不改路由、不换主 Session。 */
 export function openSearchHit(hit: { kind: SearchKind; id: string }) {
   window.dispatchEvent(
     new CustomEvent('biu:inspector-reveal', {
       detail: { collection: searchCollection(hit.kind), recordId: hit.id },
     }),
   )
+}
+
+/** Shift+Enter：左侧主区打开并改路由；会话会换成主 Session。 */
+export function searchHref(hit: { kind: SearchKind; id: string }) {
+  if (hit.kind === 'session') return `/s/${encodeURIComponent(hit.id)}`
+  const collection = searchCollection(hit.kind)
+  return `/database${collection}/record/${encodeURIComponent(hit.id)}`
 }
 
 function matchLocal(title: string, id: string, needle: string) {
@@ -94,6 +103,7 @@ export function ShellSearchPanel({
   onClose: () => void
   focusSeq?: number
 }) {
+  const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<'all' | SearchKind>('all')
@@ -193,8 +203,14 @@ export function ShellSearchPanel({
   const flat = grouped.flatMap((group) => group.items)
   const current = flat[Math.min(active, Math.max(0, flat.length - 1))]
 
-  const openHit = (hit: SearchHit) => {
-    openSearchHit(hit)
+  const openHit = (hit: SearchHit, side: 'right' | 'left') => {
+    if (side === 'left') {
+      const href = searchHref(hit)
+      if (hit.kind === 'session') setChatOverlay(false)
+      navigate(href)
+    } else {
+      openSearchHit(hit)
+    }
     onClose()
   }
 
@@ -253,7 +269,7 @@ export function ShellSearchPanel({
               }
               if (event.key === 'Enter' && current) {
                 event.preventDefault()
-                openHit(current)
+                openHit(current, event.shiftKey ? 'left' : 'right')
               }
             }}
           />
@@ -297,7 +313,7 @@ export function ShellSearchPanel({
                     key={`${item.kind}:${item.id}`}
                     className={`shell-search-hit${index === active ? ' is-active' : ''}`}
                     onMouseEnter={() => setActive(index)}
-                    onClick={() => openHit(item)}
+                    onClick={(event) => openHit(item, event.shiftKey ? 'left' : 'right')}
                   >
                     <span className="shell-search-hit-icon" aria-hidden>
                       <KindGlyph kind={item.kind} />
@@ -315,7 +331,8 @@ export function ShellSearchPanel({
         <div className="shell-search-foot">
           <span>⌘F 搜索</span>
           <span>↑↓ 选择</span>
-          <span>↵ 打开</span>
+          <span>↵ 右侧</span>
+          <span>⇧↵ 左侧</span>
           <span>esc 关闭</span>
         </div>
       </div>
