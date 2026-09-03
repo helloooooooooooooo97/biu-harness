@@ -142,7 +142,7 @@ const CSS = `
 .fsdb-fileview{min-width:0;flex:none;height:auto;min-height:0;max-height:none;overflow:visible}
 .fsdb-fileview-pre{margin:0;padding:10px 12px;border-radius:8px;background:var(--dsw-input);color:var(--dsw-label);font:inherit;font-size:14px;font-family:var(--font-mono);white-space:pre-wrap;overflow:visible;height:auto;min-height:0;max-height:none}
 .fsdb-fileview-img{display:block;width:auto;max-width:100%;height:auto;max-height:none;object-fit:contain;border-radius:8px;background:var(--dsw-hover)}
-.fsdb-page .tasks-title-cell{position:relative;display:flex;align-items:center;gap:2px;min-width:0;overflow:visible}
+.fsdb-page .tasks-table td:has(.fsdb-title-host){position:relative}
 .fsdb-page .tasks-tree-toggle{width:20px;height:20px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--dsw-label-3);border-radius:4px;cursor:pointer;padding:0}
 .fsdb-page .tasks-tree-toggle:hover{background:var(--dsw-hover)}
 .fsdb-page .tasks-tree-toggle.is-empty{cursor:default;pointer-events:none}
@@ -154,13 +154,13 @@ const CSS = `
 .fsdb-page .tasks-title-zoom{position:relative;display:grid;place-items:center;width:24px;height:24px}
 .fsdb-page .tasks-title-zoom .tasks-tree-count,.fsdb-page .tasks-title-zoom .tasks-title-open{grid-area:1/1}
 .fsdb-page .tasks-title-open{flex:none;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--dsw-label-3);border-radius:6px;cursor:pointer;padding:0;opacity:0;z-index:1}
-.fsdb-page .tasks-title-cell .tasks-row-tools,.fsdb-page .tasks-title-cell .tasks-row-actions{opacity:0;pointer-events:none}
-.fsdb-page .tasks-title-cell:hover .tasks-title-open,.fsdb-page .tasks-title-open:focus-visible,.fsdb-page .tasks-title-cell:hover .tasks-row-actions,.fsdb-page .tasks-title-cell:hover .tasks-row-tools,.fsdb-page .tasks-title-cell:focus-within .tasks-row-tools{opacity:1;pointer-events:auto}
+.fsdb-page .tasks-table td:has(.fsdb-title-host) .tasks-row-tools,.fsdb-page .tasks-table td:has(.fsdb-title-host) .tasks-row-actions{opacity:0;pointer-events:none}
+.fsdb-page .tasks-table tr:hover td:has(.fsdb-title-host) .tasks-title-open,.fsdb-page .tasks-title-open:focus-visible,.fsdb-page .tasks-table tr:hover td:has(.fsdb-title-host) .tasks-row-actions,.fsdb-page .tasks-table tr:hover td:has(.fsdb-title-host) .tasks-row-tools,.fsdb-page .tasks-table td:has(.fsdb-title-host):focus-within .tasks-row-tools{opacity:1;pointer-events:auto}
 .fsdb-page .tasks-row-tools{display:inline-flex;align-items:center;gap:2px;flex:none}
-.fsdb-page .tasks-title-cell > .tasks-row-tools{position:absolute;right:0;top:50%;z-index:2;transform:translateY(-50%);padding-left:10px;background:linear-gradient(to right,transparent,var(--dsw-surface) 12px)}
-.fsdb-page .tasks-table tr:hover .tasks-title-cell > .tasks-row-tools{background:linear-gradient(to right,transparent,color-mix(in srgb,var(--dsw-hover) 55%,var(--dsw-surface)) 12px)}
-.fsdb-page .tasks-table tr.is-active .tasks-title-cell > .tasks-row-tools{background:linear-gradient(to right,transparent,color-mix(in srgb,var(--dsw-business) 8%,var(--dsw-surface)) 12px)}
-.fsdb-page .tasks-title-cell:hover .tasks-tree-count,.fsdb-page .tasks-title-zoom:has(.tasks-title-open:focus-visible) .tasks-tree-count{opacity:0}
+.fsdb-page .tasks-table td:has(.fsdb-title-host) > .tasks-row-tools{position:absolute;right:0;top:50%;z-index:2;transform:translateY(-50%);padding-left:10px;background:linear-gradient(to right,transparent,var(--dsw-surface) 12px)}
+.fsdb-page .tasks-table tr:hover td:has(.fsdb-title-host) > .tasks-row-tools{background:linear-gradient(to right,transparent,color-mix(in srgb,var(--dsw-hover) 55%,var(--dsw-surface)) 12px)}
+.fsdb-page .tasks-table tr.is-active td:has(.fsdb-title-host) > .tasks-row-tools{background:linear-gradient(to right,transparent,color-mix(in srgb,var(--dsw-business) 8%,var(--dsw-surface)) 12px)}
+.fsdb-page .tasks-table tr:hover .tasks-tree-count,.fsdb-page .tasks-title-zoom:has(.tasks-title-open:focus-visible) .tasks-tree-count{opacity:0}
 .fsdb-page .tasks-title-open:hover{opacity:1;color:var(--dsw-label);background:var(--dsw-hover)}
 .fsdb-page .tasks-tree-count{pointer-events:none}
 .fsdb-page .tasks-table.is-truncate:not(.is-wrap) .fsdb-cell{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

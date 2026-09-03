@@ -1341,20 +1341,9 @@ export function CollectionBrowser({
       ) : (
         <>{labelOf(row)}</>
       )
-    const host = (
-      <span className="fsdb-title-host">
-        <RecordMark
-          record={row}
-          tableIcon={currentTable?.view?.icon}
-          Icon={chrome?.Icon}
-        />
-        <span className="fsdb-title-text">{body}</span>
-      </span>
-    )
     const tree = openDetail && parentKey && showTree
-    if (!openDetail && !tree) return host
-    return (
-      <div className="tasks-title-cell" style={tree ? { paddingLeft: depth * 16 } : undefined}>
+    const host = (
+      <span className="fsdb-title-host" style={tree ? { paddingLeft: depth * 16 } : undefined}>
         {tree ? (
           hasKids ? (
             <button
@@ -1376,9 +1365,20 @@ export function CollectionBrowser({
             <span className="tasks-tree-toggle is-empty" aria-hidden />
           )
         ) : null}
+        <RecordMark
+          record={row}
+          tableIcon={currentTable?.view?.icon}
+          Icon={chrome?.Icon}
+        />
+        <span className="fsdb-title-text">{body}</span>
+      </span>
+    )
+    if (!openDetail) return host
+    return (
+      <>
         {host}
-        {openDetail ? <RecordRowTools row={row} kidCount={tree ? kidCount : 0} /> : null}
-      </div>
+        <RecordRowTools row={row} kidCount={tree ? kidCount : 0} />
+      </>
     )
   }
 
