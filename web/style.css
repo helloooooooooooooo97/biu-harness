@@ -1510,8 +1510,11 @@ body {
 
 .chat-pane-embed {
   position: relative;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   flex: 1;
+  overflow: hidden;
   padding: 0;
   border: 0;
   border-radius: 14px;
@@ -1519,6 +1522,10 @@ body {
 }
 
 .chat-pane-embed .chat-overlay-thread {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  flex-direction: column;
   padding-bottom: 5.5rem;
 }
 
