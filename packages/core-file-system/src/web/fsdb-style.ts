@@ -194,9 +194,9 @@ const CSS = `
 .fsdb-page .tasks-minicard-bar .tasks-row-tools{margin-left:0;pointer-events:auto}
 .fsdb-page .tasks-minicard-bar .tasks-row-tools,.fsdb-page .tasks-minicard-bar .tasks-title-open,.fsdb-page .tasks-minicard-bar .tasks-row-actions{opacity:0;pointer-events:none}
 .fsdb-page .tasks-minicard:hover .tasks-minicard-bar .tasks-row-tools,.fsdb-page .tasks-minicard:hover .tasks-title-open,.fsdb-page .tasks-minicard:hover .tasks-row-actions,.fsdb-page .tasks-minicard:focus-within .tasks-minicard-bar .tasks-row-tools,.fsdb-page .tasks-minicard:focus-within .tasks-title-open{opacity:1;pointer-events:auto}
-.fsdb-page .tasks-minicard-title{display:flex;align-items:flex-start;gap:6px;font-size:22px;font-weight:700;line-height:1.25}
-.fsdb-page .tasks-minicard-titletext{flex:1;min-width:0;overflow-wrap:anywhere;word-break:break-word;font-size:22px;font-weight:700;line-height:1.25}
-.fsdb-page .tasks-minicard-titletext .fsdb-title-text{font-weight:700;white-space:normal;overflow:visible;text-overflow:unset}
+.fsdb-page .tasks-minicard-title{display:flex;align-items:flex-start;gap:6px;font-size:14px;font-weight:600;line-height:1.25}
+.fsdb-page .tasks-minicard-titletext{flex:1;min-width:0;overflow-wrap:anywhere;word-break:break-word;font-size:14px;font-weight:600;line-height:1.25}
+.fsdb-page .tasks-minicard-titletext .fsdb-title-text{font-weight:600;white-space:normal;overflow:visible;text-overflow:unset}
 .fsdb-page .tasks-queue-item-tools{position:absolute;right:4px;top:50%;z-index:2;display:inline-flex;align-items:center;gap:2px;flex:none;transform:translateY(-50%)}
 .fsdb-page .tasks-queue-item .tasks-row-tools,.fsdb-page .tasks-queue-item .tasks-title-open,.fsdb-page .tasks-queue-item .tasks-row-actions{opacity:0;pointer-events:none}
 .fsdb-page .tasks-queue-item:hover .tasks-row-tools,.fsdb-page .tasks-queue-item:hover .tasks-title-open,.fsdb-page .tasks-queue-item:hover .tasks-row-actions,.fsdb-page .tasks-queue-item:focus-within .tasks-row-tools,.fsdb-page .tasks-queue-item:focus-within .tasks-title-open{opacity:1;pointer-events:auto}
