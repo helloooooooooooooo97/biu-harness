@@ -6,12 +6,7 @@ export const name = 'core-dock'
 export const inject = ['slots']
 
 export function apply(ctx: Context) {
-  const dock = new DockService(ctx)
-  ctx.slots.place('root-overlays', OsDock, {
-    key: 'os-dock',
-    order: 5,
-    props: () => ({ dock }),
-  })
+  new DockService(ctx)
 }
 
 export { DockService, OsDock }

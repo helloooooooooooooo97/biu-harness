@@ -39,10 +39,11 @@ test('declares generic module slots, not plugin ids', async () => {
 })
 
 test('update button does not download when already current', () => {
+  const chrome = readFileSync(resolve(import.meta.dirname, './shell-chrome.tsx'), 'utf8')
   const nav = readFileSync(resolve(import.meta.dirname, './shell-dock-nav.tsx'), 'utf8')
-  assert.match(nav, /相对于主分支暂时无最新提交版本/)
-  assert.match(nav, /if \(behind <= 0\)/)
-  assert.match(nav, /os-dock-update-toast/)
+  assert.match(chrome, /相对于主分支暂时无最新提交版本/)
+  assert.match(chrome, /if \(behind <= 0\)/)
+  assert.match(chrome, /data-testid="settings-update"/)
   assert.match(nav, /if \(activeId === 'agent'\) setChatOverlay\(false\)/)
   assert.match(nav, /setChatOverlay\(false\)/)
 })

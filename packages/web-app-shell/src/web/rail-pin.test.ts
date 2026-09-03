@@ -3,8 +3,9 @@ import { resolve } from 'node:path'
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 
-test('activity bar is gone; modules register on the os dock', () => {
+test('activity bar is gone; chat chrome switches agent and database', () => {
   const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  const chrome = readFileSync(resolve(import.meta.dirname, './shell-chrome.tsx'), 'utf8')
   const nav = readFileSync(resolve(import.meta.dirname, './shell-dock-nav.tsx'), 'utf8')
   const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
   assert.doesNotMatch(shell, /data-testid="activity-rail-pin"/)
@@ -12,9 +13,11 @@ test('activity bar is gone; modules register on the os dock', () => {
   assert.doesNotMatch(shell, /cordis\.rail\.pinned/)
   assert.doesNotMatch(shell, /app-activity-bar/)
   assert.match(shell, /ShellDockNav/)
-  assert.match(nav, /kind: 'module'/)
-  assert.match(nav, /PuzzlePieceIcon/)
-  assert.match(nav, /id: `module:\$\{mod\.id\}`/)
+  assert.match(shell, /ShellChromeBar/)
+  assert.match(chrome, /聊天面板/)
+  assert.match(chrome, /数据面板/)
+  assert.match(chrome, /navigate\('\/database'\)/)
+  assert.match(chrome, /setChatOverlay\(false\)/)
   assert.match(nav, /INSPECTOR_DOCK_TOOLS/)
   assert.match(nav, /requestInspectorOpen\(\)/)
   assert.match(nav, /requestInspectorTab\(item\.tabId\)/)
@@ -25,7 +28,6 @@ test('activity bar is gone; modules register on the os dock', () => {
   assert.match(nav, /Icon: MapIcon/)
   assert.doesNotMatch(nav, /QueueListIcon/)
   assert.match(nav, /tabId: 'usage'/)
-  assert.match(nav, /running: mod.id === activeId/)
   assert.match(nav, /pruneOpenedForCollections/)
   assert.match(nav, /inspectorTabIsOpen/)
   assert.match(nav, /visible: collections == null \? true : alive/)
@@ -34,5 +36,4 @@ test('activity bar is gone; modules register on the os dock', () => {
   assert.doesNotMatch(nav, /dock.patch\('composer'/)
   assert.doesNotMatch(css, /\.app-activity-bar\s*\{/)
   assert.doesNotMatch(css, /\.app-rail-hover\s*\{/)
-  assert.match(css, /\.os-dock-shelf-row\s*\{[^}]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.1\)/s)
 })

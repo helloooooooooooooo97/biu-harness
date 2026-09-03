@@ -44,6 +44,7 @@ import { SessionConfigDialog } from '@biu/web-session-view/dialog'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import { OverlayChatWindow } from './overlay-window.tsx'
 import { ShellDockNav } from './shell-dock-nav.tsx'
+import { ShellChromeBar, ShellSettingsUpdate } from './shell-chrome.tsx'
 import { useSlotEntries } from '@biu/web-slots'
 import type { SlotsService } from '@biu/web-slots'
 import { chromeIcon } from './chrome-icon.ts'
@@ -226,7 +227,6 @@ function Shell(props: SlotProps) {
   const modules = useAppModules()
   const navReady = useAppModulesNavReady ? useAppModulesNavReady() : true
   const pluginModules = modules.filter((item) => item.id !== 'agent')
-  const railModules = navReady ? modules : modules.filter((item) => item.id === 'agent')
   const sessionId = useSessionView((state) => state.sessionId)
   const collections = useSnapshot((state) => state.collections)
   const danceSessions = useSessionView((state) => state.sessions)
@@ -668,33 +668,37 @@ function Shell(props: SlotProps) {
       <ShellDockPins useSessionView={useSessionView} />
       <ShellDockNav
         dock={dock}
-        modules={railModules}
         activeId={activeModule}
-        agentHref={agentHref}
         inspectorOpen={inspectorVisible}
         sessionId={sessionId}
         collections={collections}
-        onSettings={openSettings}
       />
 
-      <main className="app-stage">
-        <div
-          className={`app-stage-pane${activeModule === 'agent' ? ' is-active' : ''}`}
-          aria-hidden={activeModule !== 'agent'}
-          inert={activeModule !== 'agent' || undefined}
-        >
-          {chatHeader}
-          <AgentMainPanels
+      <main className="app-main">
+        <ShellChromeBar
+          activeId={activeModule}
+          agentHref={agentHref}
+          onSettings={openSettings}
+        />
+        <div className="app-stage">
+          <div
+            className={`app-stage-pane${activeModule === 'agent' ? ' is-active' : ''}`}
+            aria-hidden={activeModule !== 'agent'}
+            inert={activeModule !== 'agent' || undefined}
+          >
+            {chatHeader}
+            <AgentMainPanels
+              renderSlot={props.renderSlot}
+              header={overlayHeader}
+              showCenter={activeModule === 'agent'}
+            />
+          </div>
+          <PluginModuleStage
+            slots={slots}
+            activeId={activeModule === 'agent' ? '' : activeModule}
             renderSlot={props.renderSlot}
-            header={overlayHeader}
-            showCenter={activeModule === 'agent'}
           />
         </div>
-        <PluginModuleStage
-          slots={slots}
-          activeId={activeModule === 'agent' ? '' : activeModule}
-          renderSlot={props.renderSlot}
-        />
       </main>
 
       <SessionInspector
@@ -734,6 +738,7 @@ function Shell(props: SlotProps) {
                 { key: 'plugins', label: 'Plugins' },
                 { key: 'routes', label: 'Routes' },
                 { key: 'events', label: 'Events' },
+                { key: 'update', label: '更新' },
               ].map((item) => (
                 <li key={item.key}>
                   <button
@@ -771,6 +776,7 @@ function Shell(props: SlotProps) {
               {settingsTab === 'events' ? (
                 <section>{props.renderSlot('log')}</section>
               ) : null}
+              {settingsTab === 'update' ? <ShellSettingsUpdate /> : null}
             </div>
           </div>
         </div>
