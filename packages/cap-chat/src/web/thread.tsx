@@ -724,22 +724,6 @@ export const ChatNodeList = memo(function ChatNodeList({
   )
 })
 
-function StatusRow({
-  agentStatus,
-  agentStep,
-}: {
-  agentStatus: 'idle' | 'running'
-  agentStep?: number
-}) {
-  if (agentStatus !== 'running') return null
-  return (
-    <div className="mb-4 flex items-center gap-2 text-xs text-(--dsw-label-3)">
-      <span className="inline-block size-1.5 animate-pulse rounded-full bg-(--dsw-ok)" />
-      Running{agentStep != null ? ` · step ${agentStep + 1}` : ''}
-    </div>
-  )
-}
-
 export const ChatThread = memo(function ChatThread(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const sessionView = props.sessionView as SessionViewService
@@ -765,8 +749,6 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
   }
   const mountedNodes = useMemo(() => sliceTurnsFrom(nodes, revealStart), [nodes, revealStart])
   const pending = useSessionView((state) => state.pending)
-  const agentStatus = useSessionView((state) => state.agentStatus)
-  const agentStep = useSessionView((state) => state.agentStep)
   const sessions = useSessionView((state) => state.sessions)
   const error = useSessionView((state) => state.error)
   const switchingSession = useSessionView((state) => state.switchingSession)
@@ -971,7 +953,6 @@ export const ChatThread = memo(function ChatThread(props: SlotProps) {
       data-switching={switchingSession ? '1' : undefined}
       style={switchingSession ? { opacity: 0.72, transition: 'opacity 120ms ease' } : undefined}
     >
-      <StatusRow agentStatus={agentStatus} agentStep={agentStep} />
       {loadingOlder ? (
         <div className="mb-3 text-center text-(length:--dsw-chat-ui-font-size) text-(--dsw-label-3)">加载更早消息…</div>
       ) : null}
