@@ -1,13 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Image } from 'antd'
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ArrowPathIcon,
-  MapIcon,
-} from '@heroicons/react/16/solid'
+import { ChevronDownIcon, ChevronRightIcon, MapIcon } from '@heroicons/react/16/solid'
 import type { ChatToolPart } from '@biu/web-session-view'
 import { pickDomAttrs } from '@biu/cap-pick/web'
 import {
@@ -228,27 +221,11 @@ export function ToolCard({
 
   const status = !node.result
     ? live
-      ? {
-          label: '运行中',
-          className: 'tool-call-status is-running',
-          icon: <ArrowPathIcon className="size-3.5 animate-spin" aria-hidden />,
-        }
-      : {
-          label: '成功',
-          className: 'tool-call-status is-ok',
-          icon: <CheckCircleIcon className="size-3.5" aria-hidden />,
-        }
+      ? { label: '运行中', className: 'is-running' }
+      : { label: '成功', className: 'is-ok' }
     : node.result.ok
-      ? {
-          label: '成功',
-          className: 'tool-call-status is-ok',
-          icon: <CheckCircleIcon className="size-3.5" aria-hidden />,
-        }
-      : {
-          label: '失败',
-          className: 'tool-call-status is-fail',
-          icon: <XCircleIcon className="size-3.5" aria-hidden />,
-        }
+      ? { label: '成功', className: 'is-ok' }
+      : { label: '失败', className: 'is-fail' }
 
   return (
     <div className="tool-call" {...pickDomAttrs('tool', node.callId, title)}>
@@ -257,9 +234,11 @@ export function ToolCard({
           type="button"
           className="tool-call-toggle"
           aria-expanded={open}
+          title={status.label}
+          aria-label={`${title}，${status.label}`}
           onClick={() => setOpen((value) => !value)}
         >
-          <span className="tool-call-chevron" aria-hidden>
+          <span className={`tool-call-chevron ${status.className}`} aria-hidden>
             {open ? <ChevronDownIcon className="size-3.5" /> : <ChevronRightIcon className="size-3.5" />}
           </span>
           <span className="tool-call-title">{title}</span>
@@ -274,9 +253,6 @@ export function ToolCard({
         >
           <MapIcon className="size-3.5" aria-hidden />
         </button>
-        <span className={status.className} title={status.label} aria-label={status.label}>
-          {status.icon}
-        </span>
       </div>
       {!open && previewLines && previewLines.length > 0 ? (
         <div className="tool-call-body">

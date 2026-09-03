@@ -2325,7 +2325,7 @@ body {
 .project-chip.project-chip-clear-ctx {
   border: 0;
   background: transparent;
-  color: #e255a1;
+  color: #d9730d;
 }
 
 .project-chip-hist {
@@ -2343,8 +2343,8 @@ body {
   left: 0;
   width: 100%;
   transform-origin: bottom;
-  --biu-tag: #e255a1;
-  background: color-mix(in srgb, var(--biu-tag, #e255a1) 22%, transparent);
+  --biu-tag: #d9730d;
+  background: color-mix(in srgb, var(--biu-tag, #d9730d) 22%, transparent);
   transition: height 0.2s ease;
 }
 
@@ -3000,7 +3000,7 @@ body {
   font-weight: 600;
 }
 
-/* 绿色 cache / 红色历史：SVG 描边圆环，不用 mask，取色能落到实色 */
+/* 绿色 cache / 橙色历史：SVG 描边圆环，不用 mask，取色能落到实色 */
 .traj-usage-ring {
   display: block;
   flex: none;
@@ -3014,7 +3014,7 @@ body {
 }
 
 .traj-usage-ring.is-hist {
-  color: #c4554d;
+  color: #d9730d;
 }
 
 .traj-usage-card {
@@ -4268,6 +4268,14 @@ body {
   flex-shrink: 0;
   place-items: center;
   color: var(--dsw-sidebar-fg);
+}
+
+.tool-call-chevron.is-ok {
+  color: #448361;
+}
+
+.tool-call-chevron.is-fail {
+  color: #c4554d;
 }
 
 .tool-call-title {
