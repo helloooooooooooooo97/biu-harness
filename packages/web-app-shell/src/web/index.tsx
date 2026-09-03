@@ -355,6 +355,7 @@ function Shell(props: SlotProps) {
   })
   const [columnResizing, setColumnResizing] = useState(false)
   const [windowResizing, setWindowResizing] = useState(false)
+  const shellRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const onDown = (event: PointerEvent) => {
       const target = event.target
@@ -449,10 +450,14 @@ function Shell(props: SlotProps) {
   useEffect(() => {
     let timer = 0
     const sync = () => {
+      shellRef.current?.classList.add('is-window-resizing')
       setViewportWidth(window.innerWidth)
       setWindowResizing(true)
       window.clearTimeout(timer)
-      timer = window.setTimeout(() => setWindowResizing(false), 120)
+      timer = window.setTimeout(() => {
+        shellRef.current?.classList.remove('is-window-resizing')
+        setWindowResizing(false)
+      }, 160)
     }
     sync()
     window.addEventListener('resize', sync)
@@ -632,6 +637,7 @@ function Shell(props: SlotProps) {
 
   return (
     <div
+      ref={shellRef}
       className={`app-shell${leftPane
           ? ` app-shell-agent${leftHidden ? ' is-sidebar-collapsed' : ''}${sidebarNarrow && !leftHidden ? ' is-sidebar-narrow' : ''}${inspectorVisible ? ' is-inspector-open' : ''
           }${columnResizing ? ' is-resizing' : ''}${windowResizing ? ' is-window-resizing' : ''}`

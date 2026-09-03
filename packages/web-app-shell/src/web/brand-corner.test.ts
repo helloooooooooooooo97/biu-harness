@@ -84,9 +84,9 @@ test('brand mascot lives at the corner; sidebar head is title plus collapse', ()
   assert.match(css, /\.inspector-tab\s*\{[^}]*color:\s*#F0EFED/s)
 })
 
-test('shell columns keep three tracks so sidebar and inspector can animate', () => {
-  assert.match(css, /\.app-shell-agent\s*\{[^}]*transition:\s*grid-template-columns/s)
-  assert.match(css, /\.app-shell-module\s*\{[^}]*transition:\s*grid-template-columns/s)
+test('shell columns stay three tracks without animating on window resize', () => {
+  assert.doesNotMatch(css, /\.app-shell-agent\s*\{[^}]*transition:\s*grid-template-columns/s)
+  assert.doesNotMatch(css, /\.app-shell-module\s*\{[^}]*transition:\s*grid-template-columns/s)
   assert.match(
     css,
     /\.app-shell-agent\s*\{[^}]*grid-template-columns:\s*var\(--sidebar-col, 0px\) minmax\(0, 1fr\) var\(--inspector-width, 0px\)/s,

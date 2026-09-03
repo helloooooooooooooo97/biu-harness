@@ -60,6 +60,7 @@ test('center stage keeps modules mounted and crossfades', () => {
   assert.match(shell, /className="app-stage"/)
   assert.match(shell, /app-stage-pane/)
   assert.match(shell, /is-window-resizing/)
+  assert.match(shell, /classList\.add\('is-window-resizing'\)/)
   assert.doesNotMatch(shell, /if \(moduleId !== activeId\) return null/)
   assert.match(css, /\.app-stage-pane\.is-active[\s\S]*?opacity:\s*1/)
   assert.match(css, /\.app-stage-pane[\s\S]*?content-visibility:\s*hidden/)
