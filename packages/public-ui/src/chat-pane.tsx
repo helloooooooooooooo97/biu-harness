@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode, type Ref } from 'react'
-import { bindChatScrollFade } from './composer-scroll-fade.ts'
+import { ensureComposerDockFade } from './composer-dock-fade.ts'
 
 export const CHAT_STAGE_CENTER =
   'chat-stage flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-[60px] py-3 pb-44'
@@ -26,9 +26,7 @@ export function ChatStage({
 }) {
   const localRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
-    const el = localRef.current
-    if (!el) return
-    return bindChatScrollFade(el)
+    ensureComposerDockFade()
   }, [])
   const base = variant === 'center' ? CHAT_STAGE_CENTER : CHAT_STAGE_PANE
   return (
@@ -45,6 +43,9 @@ export function ChatStage({
 }
 
 export function ChatDockStack({ children }: { children?: ReactNode }) {
+  useEffect(() => {
+    ensureComposerDockFade()
+  }, [])
   return <div className={CHAT_DOCK_STACK}>{children}</div>
 }
 

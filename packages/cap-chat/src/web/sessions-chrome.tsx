@@ -83,7 +83,8 @@ function SessionRecordChat({
   const [events, setEvents] = useState<SessionEvent[]>([])
   const [nodes, setNodes] = useState<ChatNode[]>([])
   const [boundPending, setBoundPending] = useState(false)
-  const [host, setHost] = useState<HTMLElement | null>(null)
+  const [outlineHost, setOutlineHost] = useState<HTMLElement | null>(null)
+  const [composerHost, setComposerHost] = useState<HTMLElement | null>(null)
   const anchorRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const filter = useSyncExternalStore(subscribeChatOutline, getChatOutlineFilter, (): ChatOutlineFilter => 'user')
@@ -96,8 +97,10 @@ function SessionRecordChat({
   }, [])
   useLayoutEffect(() => {
     const el = anchorRef.current
-    const root = el?.closest('.fsdb-right') ?? el?.closest('.fsdb-right-body') ?? el?.closest('.fsdb-detail-stage')
-    setHost(root instanceof HTMLElement ? root : null)
+    const right = el?.closest('.fsdb-right')
+    const root = right instanceof HTMLElement ? right : null
+    setOutlineHost(root)
+    setComposerHost(root)
   }, [])
   useEffect(() => {
     const ac = new AbortController()
@@ -143,9 +146,25 @@ function SessionRecordChat({
     if (el) el.scrollTop = el.scrollHeight
   }, [sessionId, nodes])
   const outline = <OutlineNav items={items} testId="session-outline" onSelect={go} />
+  const dock = (
+    <ChatDockStack>
+      <ChatComposer
+        boundSessionId={sessionId}
+        boundPending={boundPending}
+        useSessionView={useIdleSessionView}
+        sessionView={idleSessionView}
+      />
+    </ChatDockStack>
+  )
   return (
     <>
-      {host ? createPortal(<div className="session-outline-host">{outline}</div>, host) : null}
+      {outlineHost ? createPortal(<div className="session-outline-host">{outline}</div>, outlineHost) : null}
+      {composerHost ? createPortal(
+        <div className="session-composer-host">
+          <div className="chat-composer-dock">{dock}</div>
+        </div>,
+        composerHost,
+      ) : null}
       <div ref={anchorRef} className="session-record-chat-host">
         <ChatPane
           embed
@@ -153,16 +172,6 @@ function SessionRecordChat({
             <ChatStage variant="pane" stageRef={stageRef}>
               <ChatNodeList nodes={nodes} onInspect={() => undefined} onFork={() => undefined} />
             </ChatStage>
-          }
-          dock={
-            <ChatDockStack>
-              <ChatComposer
-                boundSessionId={sessionId}
-                boundPending={boundPending}
-                useSessionView={useIdleSessionView}
-                sessionView={idleSessionView}
-              />
-            </ChatDockStack>
           }
         />
       </div>
@@ -189,9 +198,22 @@ if (typeof document !== 'undefined') {
   style.id = id
   style.textContent = `
 .sessions-title-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-.session-record-chat-host{display:flex;flex-direction:column;flex:1 1 0;min-height:0;height:0}
+.session-record-chat-host{display:flex;flex-direction:column;flex:1;min-height:0}
+.fsdb-fileview:has(.chat-pane-embed){display:flex;flex-direction:column;flex:1;min-height:min(72vh,720px);overflow:hidden;background:#191919}
+.inspector-database-page .fsdb-fileview:has(.chat-pane-embed){min-height:0;flex:1}
+.fsdb-detail-main:has(.chat-pane-embed),.fsdb-detail-screen:has(.chat-pane-embed){background:#191919}
+.inspector-database-page .fsdb-detail-stage:has(.chat-pane-embed),
+.inspector-database-page .fsdb-detail-screen:has(.chat-pane-embed),
+.inspector-database-page .fsdb-detail-screen:has(.chat-pane-embed) .fsdb-detail-split,
+.inspector-database-page .fsdb-detail-main:has(.chat-pane-embed){
+  min-height:0;flex:1;overflow:hidden;display:flex;flex-direction:column
+}
+.inspector-database-page .fsdb-detail-main:has(.chat-pane-embed){padding-bottom:12px}
 .session-outline-host{position:absolute;inset:0;z-index:20;pointer-events:none}
-.fsdb-right:has(.session-outline-host),.fsdb-right-body:has(.session-outline-host),.fsdb-detail-stage:has(.session-outline-host){position:relative}
+.session-composer-host{position:absolute;inset-inline:0;bottom:calc(1rem + 25px);z-index:20;padding:0 60px;pointer-events:none}
+.session-composer-host .chat-composer-dock{position:static;padding:0;background:transparent;pointer-events:none}
+.session-composer-host .chat-composer-dock>*{pointer-events:auto;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto}
+.fsdb-right:has(.session-outline-host),.fsdb-right:has(.session-composer-host){position:relative}
 .session-outline-host .chat-outline{left:8px;top:50%}
 `
   document.head.appendChild(style)
