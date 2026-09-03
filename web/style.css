@@ -308,11 +308,13 @@ body {
 
 .os-dock-edge {
   position: fixed;
-  left: 0;
-  right: 0;
+  left: 50%;
+  right: auto;
   bottom: 0;
   z-index: 90;
-  height: 14px;
+  width: 72px;
+  height: 12px;
+  transform: translateX(-50%);
   pointer-events: auto;
 }
 

@@ -42,6 +42,7 @@ test('list and detail properties share key and value colors', () => {
   assert.match(css, /\.fsdb-proprow-k,\.fsdb-prop>span:first-child\{[^}]*color:#7B7B79/)
   assert.match(css, /\.fsdb-proprow-v,\.fsdb-prop-val,\.fsdb-detail-id\{[^}]*color:#7C7A76/)
   assert.match(css, /\.fsdb-schema-prop-k\{[^}]*color:#7B7B79/)
+  assert.match(css, /\.fsdb-proprow-k svg,\.fsdb-prop>span:first-child svg,\.fsdb-schema-prop-k svg\{[^}]*color:#F0EFED/)
 })
 
 test('usage figures in collection cells match the table font size', () => {

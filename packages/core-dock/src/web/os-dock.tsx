@@ -79,10 +79,6 @@ export function OsDock(props: SlotProps) {
     window.clearTimeout(hideTimer.current)
     hideTimer.current = window.setTimeout(() => {
       if (pointerOver.current) return
-      if (typeof y === 'number' && y >= window.innerHeight - 32) {
-        pointerOver.current = true
-        return
-      }
       if (typeof x === 'number' && typeof y === 'number') {
         const hit = document.elementFromPoint(x, y)
         if (hit?.closest('[data-os-dock]')) {
