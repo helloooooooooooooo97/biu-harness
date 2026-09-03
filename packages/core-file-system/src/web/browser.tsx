@@ -106,6 +106,7 @@ import {
   subscribePageWidth,
 } from './page-width.ts'
 import { listCollection, readJson } from './db-client.ts'
+import { findViewNeighbor, indexOnPage } from './view-adjacent.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 import { mergeTableViews } from '../catalog-views.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
@@ -514,6 +515,7 @@ export function CollectionBrowser({
   const reloadKey = `${dataPath}\0${page}\0${pageSize}\0${fetchQuery}\0${sortField}\0${sortDir}\0${JSON.stringify(queryFilters)}\0${activeViewId ?? ''}`
   const detailIdRef = useRef<string | null>(null)
   detailIdRef.current = detailId
+  const steppingView = useRef(false)
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -739,6 +741,34 @@ export function CollectionBrowser({
     (detailId &&
       (items.find((item) => item.id === detailId) ?? (detailRow?.id === detailId ? detailRow : null))) ||
     null
+  const viewIndex = selected ? indexOnPage(selected.id, items, page, pageSize) : null
+  const stepViewRecord = async (delta: -1 | 1) => {
+    if (!selected || steppingView.current) return
+    steppingView.current = true
+    try {
+      const hit = await findViewNeighbor({
+        currentId: selected.id,
+        delta,
+        items,
+        page,
+        pageSize,
+        total,
+        query: {
+          path: dataPath,
+          query: fetchQuery,
+          sortField,
+          sortDir,
+          filters: queryFilters,
+        },
+        list: listCollection,
+      })
+      if (!hit) return
+      if (hit.page !== page) setPage(hit.page)
+      setDetailId(hit.id, hit.row ?? null)
+    } finally {
+      steppingView.current = false
+    }
+  }
   useEffect(() => {
     const rows = items.map((row) => ({
       id: row.id,
@@ -2445,6 +2475,10 @@ export function CollectionBrowser({
           tableIcon={currentTable?.view?.icon}
           onOpenRecord={(recordId, collection) => onOpenRecord?.(recordId, activeViewId, collection)}
           onDelete={canDelete && selected ? () => setDlg({ kind: 'delete-record', row: selected }) : undefined}
+          onPrev={total > 1 ? () => void stepViewRecord(-1) : undefined}
+          onNext={total > 1 ? () => void stepViewRecord(1) : undefined}
+          canPrev={viewIndex == null ? total > 1 : viewIndex > 0}
+          canNext={viewIndex == null ? total > 1 : viewIndex < total - 1}
         />
       ) : null}
         </div>

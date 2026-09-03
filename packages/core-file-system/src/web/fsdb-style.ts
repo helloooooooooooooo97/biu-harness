@@ -248,6 +248,10 @@ const CSS = `
 .fsdb-detail-stage{display:flex;min-width:0;min-height:min-content;flex:1 0 auto;flex-direction:row;overflow:visible;background:var(--dsw-bg)}
 .fsdb-detail-screen{display:flex;min-width:0;min-height:min-content;flex:1;flex-direction:column;overflow:visible}
 .fsdb-detail-screen .fsdb-detail-split,.fsdb-detail-screen > :not(header){flex:none;min-height:min-content;overflow:visible}
+.fsdb-detail-float-nav{position:sticky;top:42%;align-self:flex-start;flex:none;z-index:24;display:flex;flex-direction:column;gap:2px;margin:16px 18px 16px 0;padding:4px;border-radius:999px;background:var(--dsw-surface);border:1px solid var(--dsw-border);box-shadow:0 8px 24px rgba(0,0,0,.16)}
+.fsdb-detail-float-btn{display:grid;place-items:center;width:32px;height:32px;margin:0;border:0;border-radius:999px;padding:0;background:transparent;color:var(--dsw-label-2);cursor:pointer}
+.fsdb-detail-float-btn:hover:not(:disabled){background:var(--dsw-hover);color:var(--dsw-label)}
+.fsdb-detail-float-btn:disabled{opacity:.32;cursor:default}
 .fsdb-detail-rail{height:100%;flex:none;border-right:0;border-left:1px solid var(--dsw-border)}
 .fsdb-detail-rail .app-activity-indicator{left:auto;right:0;border-radius:2px 0 0 2px}
 .fsdb-detail-rail .app-activity-item:disabled{opacity:.35;cursor:default}

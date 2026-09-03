@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode, type Dispatch, type SetStateAction } from 'react'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import type { CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
-import { HashtagIcon } from '@heroicons/react/16/solid'
+import { ChevronDownIcon, ChevronUpIcon, HashtagIcon } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { contentFieldKey, formatField, resolveFieldType } from './fields.ts'
 import { LocalText } from './controls.tsx'
@@ -99,6 +99,10 @@ export function RecordDetail({
   tableIcon,
   onOpenRecord,
   onDelete,
+  onPrev,
+  onNext,
+  canPrev,
+  canNext,
 }: {
   selected: DbRecord
   schema: CollectionSchema
@@ -113,6 +117,10 @@ export function RecordDetail({
   tableIcon?: string
   onOpenRecord?: (recordId: string, collection?: string) => void
   onDelete?: () => void
+  onPrev?: () => void
+  onNext?: () => void
+  canPrev?: boolean
+  canNext?: boolean
 }) {
   useEffect(() => {
     const onTitle = () => {
@@ -274,6 +282,30 @@ export function RecordDetail({
               </div>
             </div>
           </div>
+          {onPrev || onNext ? (
+            <nav className="fsdb-detail-float-nav" aria-label="按视图顺序切换记录">
+              <button
+                type="button"
+                className="fsdb-detail-float-btn"
+                title="上一条"
+                aria-label="上一条"
+                disabled={!canPrev}
+                onClick={onPrev}
+              >
+                <ChevronUpIcon aria-hidden className="size-[16px]" />
+              </button>
+              <button
+                type="button"
+                className="fsdb-detail-float-btn"
+                title="下一条"
+                aria-label="下一条"
+                disabled={!canNext}
+                onClick={onNext}
+              >
+                <ChevronDownIcon aria-hidden className="size-[16px]" />
+              </button>
+            </nav>
+          ) : null}
         </div>
   )
 }
