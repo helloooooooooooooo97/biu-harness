@@ -26,10 +26,13 @@ type SessionRow = {
   project_json: string | null
   mascot_json: string | null
   config_json: string | null
-  type: string | null
   event_count: number
   title: string
   updated_at: number
+}
+
+function tableColumns(db: DatabaseSync, table: string) {
+  return (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((row) => row.name)
 }
 
 function parseProject(raw: string | null): SessionProject | undefined {
@@ -93,24 +96,24 @@ export class SqliteSessionStore implements SessionStore {
       /* column already exists */
     }
     try {
-      this.db.exec(`ALTER TABLE sessions ADD COLUMN type TEXT NOT NULL DEFAULT 'chat'`)
-    } catch {
-      /* column already exists */
-    }
-    try {
       this.db.exec('ALTER TABLE sessions ADD COLUMN config_json TEXT')
     } catch {
       /* column already exists */
+    }
+    if (tableColumns(this.db, 'sessions').includes('type')) {
+      try {
+        this.db.exec('ALTER TABLE sessions DROP COLUMN type')
+      } catch {
+        /* older sqlite without DROP COLUMN */
+      }
     }
     return this
   }
 
   async load(id: string): Promise<SessionRecord | undefined> {
     const row = this.db
-      .prepare('SELECT id, version, project_json, mascot_json, config_json, type FROM sessions WHERE id = ?')
-      .get(id) as
-      | Pick<SessionRow, 'id' | 'version' | 'project_json' | 'mascot_json' | 'config_json' | 'type'>
-      | undefined
+      .prepare('SELECT id, version, project_json, mascot_json, config_json FROM sessions WHERE id = ?')
+      .get(id) as Pick<SessionRow, 'id' | 'version' | 'project_json' | 'mascot_json' | 'config_json'> | undefined
     if (!row) return undefined
     if (row.version !== SESSION_FORMAT_VERSION) {
       throw new Error(`unsupported session version ${row.version}`)
@@ -147,14 +150,13 @@ export class SqliteSessionStore implements SessionStore {
       'INSERT INTO events (session_id, seq, ts, type, event_json) VALUES (?, ?, ?, ?, ?)',
     )
     const upsertSession = this.db.prepare(`
-      INSERT INTO sessions (id, version, project_json, mascot_json, config_json, type, event_count, title, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO sessions (id, version, project_json, mascot_json, config_json, event_count, title, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         version = excluded.version,
         project_json = excluded.project_json,
         mascot_json = excluded.mascot_json,
         config_json = excluded.config_json,
-        type = excluded.type,
         event_count = excluded.event_count,
         title = excluded.title,
         updated_at = excluded.updated_at
@@ -187,7 +189,6 @@ export class SqliteSessionStore implements SessionStore {
         projectJson,
         mascotJson,
         configJson,
-        'chat',
         eventCount,
         title,
         updatedAt,
@@ -233,7 +234,7 @@ export class SqliteSessionStore implements SessionStore {
   async listSummaries(): Promise<SessionSummary[]> {
     const rows = this.db
       .prepare(
-        'SELECT id, version, project_json, mascot_json, config_json, type, event_count, title, updated_at FROM sessions ORDER BY updated_at DESC',
+        'SELECT id, version, project_json, mascot_json, config_json, event_count, title, updated_at FROM sessions ORDER BY updated_at DESC',
       )
       .all() as SessionRow[]
     return rows.map((row) => {

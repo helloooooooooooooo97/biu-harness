@@ -204,7 +204,7 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
             <span className="traj-meta-sep">·</span>
             {groups.length} turns
           </span>
-          <span className="traj-meta-usage" title="本会话 + Live 派工到其它 session 的 turn usage">
+          <span className="traj-meta-usage" title="本会话 + 派工到其它会话的用量">
             <span className="traj-meta-usage-label">usage</span>
             <UsageInline usage={cumulative} />
           </span>

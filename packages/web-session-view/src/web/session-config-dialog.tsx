@@ -6,7 +6,7 @@ import {
 } from './index.ts'
 import { ChatOutlineFilterFields } from './chat-outline-fields.tsx'
 
-type ToolSourceId = 'minimal' | 'live' | 'plugin' | 'store'
+type ToolSourceId = 'minimal' | 'db' | 'plugin' | 'store'
 type AgentMode = 'standard' | 'minimal'
 type ChatProvider = 'deepseek' | 'openai'
 
@@ -305,8 +305,8 @@ export const SessionConfigDialog = memo(function SessionConfigDialog({
                       </span>
                     )}
                     <span className="min-w-0 flex-1 truncate font-mono text-[11px] font-medium">{tool.name}</span>
-                    <span className="shrink-0 text-[10px] font-medium lowercase text-(--dsw-label-3)">
-                      {tool.source}
+                    <span className="shrink-0 text-[10px] font-medium text-(--dsw-label-3)">
+                      {sources.find((item) => item.id === tool.source)?.label ?? tool.source}
                     </span>
                     <span
                       className={`ml-auto shrink-0 text-[10px] font-semibold ${

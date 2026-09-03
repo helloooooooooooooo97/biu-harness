@@ -8,7 +8,7 @@ import {
 } from '@biu/host-live-sessions/usage'
 import type { SessionEvent } from '@biu/type-session'
 
-export type ToolSourceId = 'minimal' | 'live' | 'plugin' | 'store'
+export type ToolSourceId = 'minimal' | 'db' | 'plugin' | 'store'
 
 export interface InspectorToolRow {
   name: string
@@ -31,8 +31,8 @@ const SOURCE_INFO: InspectorSourceInfo[] = [
     description: 'agentMode=minimal 时的底座工具（bash、str_replace_editor）。',
   },
   {
-    id: 'live',
-    label: 'Live 调度',
+    id: 'db',
+    label: '数据库',
     description: '数据库读写与动作工具。',
   },
   {
@@ -49,7 +49,7 @@ const SOURCE_INFO: InspectorSourceInfo[] = [
 
 export function toolSourceOf(name: string, origin?: 'core' | 'store'): ToolSourceId {
   if ((MINIMAL_TOOL_NAMES as readonly string[]).includes(name)) return 'minimal'
-  if ((LIVE_TOOL_NAMES as readonly string[]).includes(name)) return 'live'
+  if ((LIVE_TOOL_NAMES as readonly string[]).includes(name)) return 'db'
   if (origin === 'store') return 'store'
   return 'plugin'
 }
@@ -87,7 +87,7 @@ export function buildInspectorTools(
       }
     })
     .sort((a, b) => {
-      const order = { minimal: 0, live: 1, plugin: 2, store: 3 } as const
+      const order = { minimal: 0, db: 1, plugin: 2, store: 3 } as const
       const diff = order[a.source] - order[b.source]
       return diff !== 0 ? diff : a.name.localeCompare(b.name)
     })

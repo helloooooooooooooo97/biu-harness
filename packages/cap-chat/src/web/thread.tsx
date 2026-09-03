@@ -510,7 +510,7 @@ function UserSenderAvatar({
     return (
       <span
         className="grid size-[18px] shrink-0 place-items-center text-(--dsw-label-3)"
-        title={hit?.title || 'Live session'}
+        title={hit?.title || '会话'}
         data-testid="user-sender-mascot"
       >
         <StaticMascotMark identity={identity} size={16} title={hit?.title || identity.shape} />

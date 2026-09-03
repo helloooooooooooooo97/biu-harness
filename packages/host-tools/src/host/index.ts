@@ -103,7 +103,7 @@ export class ToolsService extends Service {
   }
 
   setPinnedExtras(names: readonly string[]) {
-    const liveSet = new Set<string>([
+    const dbTools = new Set<string>([
       'db_list',
       'db_read',
       'db_update',
@@ -119,7 +119,7 @@ export class ToolsService extends Service {
           .map((name) => name.trim())
           .filter(Boolean)
           .filter((name) => !(MINIMAL_TOOL_NAMES as readonly string[]).includes(name))
-          .filter((name) => !liveSet.has(name)),
+          .filter((name) => !dbTools.has(name)),
       ),
     ]
     const same =

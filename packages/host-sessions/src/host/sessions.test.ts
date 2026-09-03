@@ -238,14 +238,54 @@ test('sqlite persists session records across reopen', async () => {
   const ctx = new Context()
   await ctx.plugin(sessionStore, { driver: 'sqlite', path })
   await ctx.plugin(sessions)
-  await ctx.sessions.create('live-sql', { title: 'saved' })
+  await ctx.sessions.create('persist-sql', { title: 'saved' })
   const ctx2 = new Context()
   await ctx2.plugin(sessionStore, { driver: 'sqlite', path })
   await ctx2.plugin(sessions)
-  const loaded = await ctx2.sessions.get('live-sql')
-  assert.equal(loaded?.id, 'live-sql')
+  const loaded = await ctx2.sessions.get('persist-sql')
+  assert.equal(loaded?.id, 'persist-sql')
   assert.equal('type' in (loaded ?? {}), false)
-  assert.equal((await ctx2.sessions.listSummaries())[0]?.id, 'live-sql')
+  assert.equal((await ctx2.sessions.listSummaries())[0]?.id, 'persist-sql')
+})
+
+test('sqlite drops leftover sessions.type column', async () => {
+  const { createRequire } = await import('node:module')
+  const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite') as typeof import('node:sqlite')
+  const dir = await mkdtemp(join(tmpdir(), 'cordis-drop-type-'))
+  const path = join(dir, 'sessions.sqlite')
+  const db = new DatabaseSync(path)
+  db.exec(`
+    CREATE TABLE sessions (
+      id TEXT PRIMARY KEY,
+      version INTEGER NOT NULL,
+      project_json TEXT,
+      event_count INTEGER NOT NULL DEFAULT 0,
+      title TEXT NOT NULL DEFAULT '',
+      updated_at INTEGER NOT NULL DEFAULT 0,
+      type TEXT NOT NULL DEFAULT 'live'
+    );
+    CREATE TABLE events (
+      session_id TEXT NOT NULL,
+      seq INTEGER NOT NULL,
+      ts INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      event_json TEXT NOT NULL,
+      PRIMARY KEY (session_id, seq)
+    );
+  `)
+  db.prepare(
+    'INSERT INTO sessions (id, version, title, type, event_count, updated_at) VALUES (?, 1, ?, ?, 0, 1)',
+  ).run('legacy', 'old', 'live')
+  db.close()
+
+  const ctx = new Context()
+  await ctx.plugin(sessionStore, { driver: 'sqlite', path })
+  await ctx.plugin(sessions)
+  const opened = new DatabaseSync(path)
+  const cols = (opened.prepare('PRAGMA table_info(sessions)').all() as Array<{ name: string }>).map((row) => row.name)
+  opened.close()
+  assert.equal(cols.includes('type'), false)
+  assert.equal('type' in ((await ctx.sessions.get('legacy')) ?? {}), false)
 })
 
 
