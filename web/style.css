@@ -4171,6 +4171,12 @@ body {
   flex-direction: column;
   align-items: center;
   font-size: var(--dsw-chat-ui-font-size);
+  transition: opacity 160ms ease;
+}
+
+.chat-composer-dock.is-scroll-faded {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .chat-composer-dock>* {
