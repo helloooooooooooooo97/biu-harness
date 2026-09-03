@@ -1,5 +1,5 @@
 import type { CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
-import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS, normalizeSchemaValue, schemaSearchHaystack } from '@biu/type-file-system'
+import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS, isSuperTagFieldType, normalizeSchemaValue, schemaSearchHaystack } from '@biu/type-file-system'
 import { loadSchemaTags } from './schema-tags.ts'
 
 export const BUILTIN_VIEW_MODES = ['queue', 'table', 'cards', 'board'] as const
@@ -16,6 +16,7 @@ export function isViewModeId(mode: unknown): mode is ViewMode {
 }
 
 export function resolveFieldType(field: FieldSpec): FieldType {
+  if (isSuperTagFieldType(field.type)) return 'supertag'
   if (field.type === 'string[]') return 'multi-select'
   if (field.type === 'string' && field.enum?.length) return 'select'
   if (field.type === 'number' && field.format === 'datetime') return 'datetime'
@@ -177,7 +178,8 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
     const tags = asStringList(value)
     return tags.length ? tags.join(', ') : '—'
   }
-  if (kind === 'schema') {
+  if (kind === 'action') return field.label || '动作'
+  if (kind === 'supertag') {
     const parsed = normalizeSchemaValue(value)
     return parsed.tags.length ? parsed.tags.join(', ') : '—'
   }
@@ -186,13 +188,14 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
 
 /** 列表 / 卡片 / 看板：没有实际内容的属性不渲染（表格单元格仍可显示空位）。 */
 export function fieldHasValue(field: FieldSpec | undefined, value: unknown): boolean {
+  if (field && resolveFieldType(field) === 'action') return true
   if (value == null) return false
   if (typeof value === 'string' && !value.trim()) return false
   if (Array.isArray(value) && asStringList(value).length === 0) return false
   if (!field) return true
   const kind = resolveFieldType(field)
   if (kind === 'boolean') return value === true || value === 'true'
-  if (kind === 'schema') return normalizeSchemaValue(value).tags.length > 0
+  if (kind === 'supertag') return normalizeSchemaValue(value).tags.length > 0
   return formatField(field, value) !== '—'
 }
 
@@ -223,7 +226,7 @@ export function matchesQuery(row: DbRecord, query: string, schema: CollectionSch
   if (!q) return true
   if (String(row.id).toLowerCase().includes(q)) return true
   for (const [key, field] of Object.entries(schema.fields)) {
-    if (resolveFieldType(field) === 'schema') {
+    if (resolveFieldType(field) === 'supertag') {
       if (schemaSearchHaystack(row[key], loadSchemaTags()).toLowerCase().includes(q)) return true
       continue
     }
@@ -251,7 +254,7 @@ export function matchesFilters(row: DbRecord, filters: Record<string, string>, s
       if (!asStringList(row[key]).includes(expected)) return false
       continue
     }
-    if (kind === 'schema') {
+    if (kind === 'supertag') {
       const parsed = normalizeSchemaValue(row[key])
       if (!parsed.tags.includes(expected) && !loadSchemaTags().some((tag) => parsed.tags.includes(tag.id) && tag.label === expected)) {
         return false
@@ -293,7 +296,7 @@ export function uniqueValues(rows: DbRecord[], key: string, field: FieldSpec): s
   for (const row of rows) {
     if (resolveFieldType(field) === 'multi-select') {
       for (const item of asStringList(row[key])) set.add(item)
-    } else if (resolveFieldType(field) === 'schema') {
+    } else if (resolveFieldType(field) === 'supertag') {
       for (const item of normalizeSchemaValue(row[key]).tags) set.add(item)
     } else if (row[key] != null && row[key] !== '') {
       set.add(String(row[key]))
@@ -304,7 +307,7 @@ export function uniqueValues(rows: DbRecord[], key: string, field: FieldSpec): s
 }
 
 export function isGroupableKind(kind: FieldType) {
-  return kind === 'select' || kind === 'multi-select' || kind === 'schema'
+  return kind === 'select' || kind === 'multi-select' || kind === 'supertag'
 }
 
 export function groupableFields(schema: CollectionSchema | undefined) {
@@ -338,8 +341,8 @@ export function groupRecords(rows: DbRecord[], schema: CollectionSchema | undefi
       buckets.set(flag ? 'true' : 'false', [...(buckets.get(flag ? 'true' : 'false') ?? []), row])
       continue
     }
-    if (kind === 'multi-select' || kind === 'schema') {
-      const tags = kind === 'schema' ? normalizeSchemaValue(row[group.key]).tags : asStringList(row[group.key])
+    if (kind === 'multi-select' || kind === 'supertag') {
+      const tags = kind === 'supertag' ? normalizeSchemaValue(row[group.key]).tags : asStringList(row[group.key])
       if (!tags.length) {
         unset.push(row)
         continue

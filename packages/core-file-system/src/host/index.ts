@@ -5,6 +5,7 @@ import {
   asAttachment,
   asHttpHref,
   asImageSrc,
+  isSuperTagFieldType,
   normalizeSchemaValue,
   schemaSearchHaystack,
   withBuiltinFields,
@@ -209,7 +210,8 @@ function coerce(field: FieldSpec, value: unknown) {
     if (typeof value === 'object') return value
     throw new Error('expected file')
   }
-  if (kind === 'schema') return normalizeSchemaValue(value)
+  if (kind === 'action') return value == null ? '' : value
+  if (isSuperTagFieldType(kind)) return normalizeSchemaValue(value)
   const text = String(value ?? '')
   if ((kind === 'select' || field.enum) && field.enum && !field.enum.includes(text)) {
     throw new Error(`expected one of ${field.enum.join(', ')}`)
@@ -284,7 +286,7 @@ function matchListFilter(record: DbRecord, filter: Record<string, unknown> | und
     const want = String(expected)
     const actual = record[key]
     const field = schema.fields[key]
-    if (field?.type === 'schema') {
+    if (isSuperTagFieldType(field?.type)) {
       const parsed = normalizeSchemaValue(actual)
       const hit = parsed.tags.some((id) => {
         if (id === want) return true

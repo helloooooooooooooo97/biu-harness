@@ -29,6 +29,9 @@ test('resolveFieldType maps legacy aliases', () => {
   assert.equal(resolveFieldType({ type: 'string', format: 'url' }), 'url')
   assert.equal(resolveFieldType({ type: 'image' }), 'image')
   assert.equal(resolveFieldType({ type: 'attachment' }), 'attachment')
+  assert.equal(resolveFieldType({ type: 'schema' }), 'supertag')
+  assert.equal(resolveFieldType({ type: 'supertag' }), 'supertag')
+  assert.equal(resolveFieldType({ type: 'action' }), 'action')
 })
 
 test('fieldHasValue hides missing list/card/board chips', () => {
@@ -46,6 +49,9 @@ test('fieldHasValue hides missing list/card/board chips', () => {
   assert.equal(fieldHasValue({ type: 'datetime' }, 0), false)
   assert.equal(fieldHasValue({ type: 'url' }, 'javascript:alert(1)'), false)
   assert.equal(fieldHasValue({ type: 'url' }, 'https://example.com'), true)
+  assert.equal(fieldHasValue({ type: 'action', label: '开始' }, null), true)
+  assert.equal(fieldHasValue({ type: 'supertag' }, { tags: [], values: {} }), false)
+  assert.equal(fieldHasValue({ type: 'schema' }, { tags: ['dp'], values: {} }), true)
 })
 
 test('formatField renders datetime tags and media', () => {
@@ -62,7 +68,7 @@ test('filters and sort follow declared column types', () => {
     { id: '2', title: 'b', status: 'todo', tags: ['x'], dueAt: 20, schema: { tags: ['dp'], values: {} } },
     { id: '1', title: 'a', status: 'doing', tags: ['x', 'y'], dueAt: 10, schema: { tags: [], values: {} } },
   ]
-  const withSchema = { ...schema, fields: { ...schema.fields, schema: { type: 'schema' as const } } }
+  const withSchema = { ...schema, fields: { ...schema.fields, schema: { type: 'supertag' as const } } }
   assert.equal(matchesFilters(rows[1]!, { status: 'doing' }, schema), true)
   assert.equal(matchesFilters(rows[0]!, { tags: 'y' }, schema), false)
   assert.equal(matchesFilters(rows[0]!, { schema: 'dp' }, withSchema), true)

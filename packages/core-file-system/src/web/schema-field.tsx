@@ -26,6 +26,7 @@ const TYPE_LABEL: Record<AtomicFieldType, string> = {
   image: '图片',
   attachment: '附件',
   file: '正文',
+  action: '动作',
 }
 
 export const schemaTagTone = tagTone

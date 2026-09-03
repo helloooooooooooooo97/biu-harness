@@ -415,6 +415,8 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-footnote{margin:0;font-size:14px;font-weight:400}
 .fsdb-tags{display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center}
 .fsdb-tag{display:inline-flex;align-items:center;height:22px;padding:0 6px;border-radius:4px;font-size:14px;font-weight:500;line-height:22px;color:var(--dsw-label);background:rgba(255,255,255,.08);white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+.fsdb-action-btn{display:inline-flex;align-items:center;justify-content:center;height:26px;margin:0;border:0;border-radius:6px;padding:0 8px;background:var(--dsw-hover);color:var(--dsw-label);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.fsdb-action-btn:hover{background:#2c2c2c}
 .fsdb-pill{display:inline-flex;align-items:center;gap:4px;height:22px;border-radius:4px;padding:0 6px;font-size:14px;font-weight:500;line-height:22px;color:var(--dsw-label);background:rgba(255,255,255,.08)}
 .fsdb-pill.is-doing,.fsdb-pill.is-high,.fsdb-pill.is-done,.fsdb-pill.is-todo,.fsdb-pill.is-low{background:rgba(255,255,255,.08);color:var(--dsw-label)}
 .fsdb-multi{display:flex;flex-wrap:wrap;gap:6px}

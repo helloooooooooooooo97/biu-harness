@@ -26,22 +26,24 @@ test('schemaSearchHaystack includes SuperTag labels and field values', () => {
   assert.match(text, /O\(n\)/)
 })
 
-test('normalizeSchemaPack drops nested schema fields', () => {
+test('normalizeSchemaPack drops nested SuperTag fields and keeps action', () => {
   const pack = normalizeSchemaPack({
     id: 'dp',
     label: '动态规划',
     fields: [
       { key: 'complexity', type: 'string' },
       { key: 'nested', type: 'schema' },
+      { key: 'tag', type: 'supertag' },
+      { key: 'run', type: 'action' },
     ],
   })
   assert.equal(pack?.id, 'dp')
-  assert.deepEqual(pack?.fields.map((field) => field.key), ['complexity'])
+  assert.deepEqual(pack?.fields.map((field) => field.key), ['complexity', 'run'])
 })
 
 test('withBuiltinFields always includes writable SuperTag schema', () => {
   const fields = withBuiltinFields({ title: { type: 'string', writable: true } })
-  assert.equal(fields.schema?.type, 'schema')
+  assert.equal(fields.schema?.type, 'supertag')
   assert.equal(fields.schema?.writable, true)
   assert.equal(fields.schema?.label, 'SuperTag')
 })
@@ -59,7 +61,7 @@ test('recordBuiltinValues fills required record columns', () => {
 test('required record fields are icon, timestamps, and SuperTag', () => {
   assert.deepEqual([...REQUIRED_RECORD_FIELD_KEYS].sort(), ['createdAt', 'emoji', 'schema', 'updatedAt'])
   assert.equal(REQUIRED_RECORD_FIELDS.emoji.type, 'string')
-  assert.equal(REQUIRED_RECORD_FIELDS.schema.type, 'schema')
+  assert.equal(REQUIRED_RECORD_FIELDS.schema.type, 'supertag')
   assert.equal(REQUIRED_RECORD_FIELDS.createdAt.type, 'datetime')
   assert.equal(REQUIRED_RECORD_FIELDS.updatedAt.type, 'datetime')
 })

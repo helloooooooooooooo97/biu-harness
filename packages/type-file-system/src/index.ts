@@ -12,6 +12,8 @@ export type FieldType =
   | 'file'
   | 'string[]'
   | 'schema'
+  | 'supertag'
+  | 'action'
 
 export type FieldSpec = {
   type: FieldType
@@ -21,6 +23,8 @@ export type FieldSpec = {
   format?: 'datetime' | 'url' | 'image' | 'attachment' | 'file'
   /** select / multi-select 的选项 */
   enum?: string[]
+  /** action 字段绑定的动作 id，缺省为字段 key */
+  action?: string
   /** 由 list/get 计算写入记录，不能 PATCH。例如任务消耗。 */
   computed?: boolean
 }
@@ -81,7 +85,7 @@ export const BUILTIN_FIELDS = {
   updatedAt: { type: 'datetime', label: '更新时间' },
   content: { type: 'file', label: '内容' },
   emoji: { type: 'string', label: '图标', writable: true },
-  schema: { type: 'schema', label: 'SuperTag', writable: true },
+  schema: { type: 'supertag', label: 'SuperTag', writable: true },
 } as const satisfies Record<string, FieldSpec>
 
 /** 登记 CollectionSpec.schema.fields 必须声明：图标、创建/更新时间、SuperTag。由登记方自己存。 */
@@ -103,7 +107,7 @@ export const REQUIRED_RECORD_FIELDS: RequiredRecordFields = {
 /** 表格默认不展开这些内置列（标题除外）。SuperTag 作为默认业务列留下。 */
 export const BUILTIN_FIELD_KEYS = ['id', 'createdAt', 'updatedAt', 'content', 'emoji'] as const
 
-/** Schema 包内允许的原子类型，不能再套 schema。 */
+/** Schema 包内允许的原子类型；supertag / schema 不能再套一层 SuperTag。 */
 export const ATOMIC_FIELD_TYPES = [
   'string',
   'number',
@@ -115,7 +119,12 @@ export const ATOMIC_FIELD_TYPES = [
   'image',
   'attachment',
   'file',
+  'action',
 ] as const satisfies readonly FieldType[]
+
+export function isSuperTagFieldType(type: unknown): boolean {
+  return type === 'schema' || type === 'supertag'
+}
 
 export type AtomicFieldType = (typeof ATOMIC_FIELD_TYPES)[number]
 
@@ -148,7 +157,7 @@ export function normalizeSchemaPack(raw: unknown): CollectionSchemaPack | null {
     const row = item as Record<string, unknown>
     const key = String(row.key ?? '').trim()
     if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key) || seen.has(key)) continue
-    if (!isAtomicFieldType(row.type)) continue
+    if (isSuperTagFieldType(row.type) || !isAtomicFieldType(row.type)) continue
     seen.add(key)
     const field: SchemaPackField = {
       key,

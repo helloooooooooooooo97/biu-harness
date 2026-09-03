@@ -63,9 +63,11 @@ import { recordPreviewMascot, RecordMark } from './record-mark.tsx'
 import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
 import {
   actionIcon,
+  ActionCell,
   DefaultCell,
   draftFromRecord,
   FieldEditor,
+  fieldActionId,
   FieldGlyph,
   FilePreview,
   fieldDraftValue,
@@ -1242,7 +1244,7 @@ export function CollectionBrowser({
 
   function renderCell(row: DbRecord, key: string, field: FieldSpec) {
     const kind = resolveFieldType(field)
-    if (kind === 'schema') {
+    if (kind === 'supertag') {
       if (field.writable) {
         return (
           <SchemaFieldEditor
@@ -1255,6 +1257,17 @@ export function CollectionBrowser({
         )
       }
       return <SchemaChips value={row[key]} tags={loadSchemaTags()} />
+    }
+    if (kind === 'action') {
+      const actionId = fieldActionId(key, field)
+      const action = (schema?.actions ?? []).find((item) => item.id === actionId)
+      return (
+        <ActionCell
+          field={field}
+          fieldKey={key}
+          onRun={action ? () => void runAction(row, action) : undefined}
+        />
+      )
     }
     if (field.writable && kind !== 'file') {
       return (
@@ -2145,7 +2158,7 @@ export function CollectionBrowser({
                               { value: 'true', label: '是' },
                               { value: 'false', label: '否' },
                             ]
-                        : item.kind === 'schema'
+                        : item.kind === 'supertag'
                           ? uniqueValues(items, item.key, item.field).map((option) => ({
                               value: option,
                               label: loadSchemaTags().find((tag) => tag.id === option)?.label ?? option,

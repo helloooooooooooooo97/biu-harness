@@ -116,7 +116,8 @@ export function FieldGlyph({ kind }: { kind: FieldType }) {
   if (kind === 'image') return <PhotoIcon aria-hidden className={cls} />
   if (kind === 'attachment') return <PaperClipIcon aria-hidden className={cls} />
   if (kind === 'file') return <DocumentTextIcon aria-hidden className={cls} />
-  if (kind === 'schema') return <Squares2X2Icon aria-hidden className={cls} />
+  if (kind === 'supertag' || kind === 'schema') return <Squares2X2Icon aria-hidden className={cls} />
+  if (kind === 'action') return <PlayIcon aria-hidden className={cls} />
   return <Bars3BottomLeftIcon aria-hidden className={cls} />
 }
 
@@ -211,7 +212,7 @@ export function parseFieldValue(field: FieldSpec, raw: string): unknown {
   if (kind === 'boolean') return raw === 'true'
   if (kind === 'number' || kind === 'datetime') return raw === '' ? null : Number(raw)
   if (kind === 'multi-select') return asStringList(raw)
-  if (kind === 'schema') {
+  if (kind === 'supertag' || kind === 'schema') {
     const trimmed = raw.trim()
     if (!trimmed) return { tags: [], values: {} }
     try {
@@ -282,8 +283,11 @@ export function FilePreview({
   return <pre className="fsdb-fileview-pre">{text || '—'}</pre>
 }
 
-export function DefaultCell({ field, value }: { field: FieldSpec; value: unknown }) {
+export function DefaultCell({ field, value, fieldKey, onRun }: { field: FieldSpec; value: unknown; fieldKey?: string; onRun?: () => void }) {
   const kind = resolveFieldType(field)
+  if (kind === 'action') {
+    return <ActionCell field={field} fieldKey={fieldKey ?? ''} onRun={onRun} />
+  }
   if (kind === 'select') {
     const text = String(value ?? '')
     if (!text) return <span className="fsdb-muted">—</span>
@@ -313,20 +317,54 @@ export function DefaultCell({ field, value }: { field: FieldSpec; value: unknown
   return <span className={kind === 'datetime' ? 'fsdb-meta' : undefined}>{text}</span>
 }
 
+export function fieldActionId(fieldKey: string, field: FieldSpec) {
+  return String(field.action ?? fieldKey).trim() || fieldKey
+}
+
+export function ActionCell({
+  field,
+  fieldKey,
+  onRun,
+}: {
+  field: FieldSpec
+  fieldKey: string
+  onRun?: () => void
+}) {
+  const label = field.label || fieldKey
+  return (
+    <button
+      type="button"
+      className="fsdb-action-btn"
+      title={label}
+      onClick={(event) => {
+        event.stopPropagation()
+        onRun?.()
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
 export function FieldEditor({
   fieldKey,
   field,
   value,
   onChange,
   options,
+  onAction,
 }: {
   fieldKey: string
   field: FieldSpec
   value: string
   onChange: (next: string) => void
   options?: string[]
+  onAction?: () => void
 }) {
   const kind = resolveFieldType(field)
+  if (kind === 'action') {
+    return <ActionCell field={field} fieldKey={fieldKey} onRun={onAction} />
+  }
   if (kind === 'select') {
     const list = [...(field.enum ?? []), ...(options ?? [])].filter((item, index, all) => all.indexOf(item) === index)
     if (list.length) {
