@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ChatBubbleLeftIcon,
+  ChatBubbleLeftRightIcon,
   CheckCircleIcon,
   DocumentIcon,
   PuzzlePieceIcon,
@@ -69,7 +69,7 @@ async function listKind(path: string, query: string, signal: AbortSignal) {
 
 function KindGlyph({ kind }: { kind: SearchKind }) {
   const className = 'size-4 shrink-0'
-  if (kind === 'session') return <ChatBubbleLeftIcon className={className} />
+  if (kind === 'session') return <ChatBubbleLeftRightIcon className={className} />
   if (kind === 'task') return <CheckCircleIcon className={className} />
   if (kind === 'page') return <DocumentIcon className={className} />
   if (kind === 'plugin') return <PuzzlePieceIcon className={className} />

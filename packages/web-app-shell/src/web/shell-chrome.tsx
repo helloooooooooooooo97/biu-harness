@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   ArrowDownTrayIcon,
   BellIcon,
-  ChatBubbleLeftIcon,
+  ChatBubbleLeftRightIcon,
   CircleStackIcon,
   Cog6ToothIcon,
   MagnifyingGlassIcon,
@@ -125,7 +125,7 @@ export function ShellSidePlaces({
         title="会话"
         active={activeId === 'agent'}
         testId="chrome-chat-panel"
-        icon={<ChatBubbleLeftIcon className="size-5 shrink-0" />}
+        icon={<ChatBubbleLeftRightIcon className="size-5 shrink-0" />}
         onClick={() => {
           setChatOverlay(false)
           navigate(agentHref)
