@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { EditorContent, useEditor } from '@tiptap/react'
 import Placeholder from '@tiptap/extension-placeholder'
 import type { SlotProps } from '@biu/web-slots'
+import { bindComposerBlurFade } from '@biu/public-ui'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import { pickKey, usePickState, type PickService } from '@biu/cap-pick/web'
 import { composerDocExtensions } from './composer-kit.ts'
@@ -551,6 +552,12 @@ export const ChatComposer = memo(function ChatComposer(
     window.addEventListener('biu:composer-focus', onFocus)
     return () => window.removeEventListener('biu:composer-focus', onFocus)
   }, [editor])
+
+  useEffect(() => {
+    const dock = formRef.current?.closest('.chat-composer-dock')
+    if (!(dock instanceof HTMLElement)) return
+    return bindComposerBlurFade(dock)
+  }, [])
 
   useEffect(
     () => () => {

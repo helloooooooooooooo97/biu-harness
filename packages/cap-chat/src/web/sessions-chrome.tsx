@@ -189,17 +189,13 @@ if (typeof document !== 'undefined') {
   style.id = id
   style.textContent = `
 .sessions-title-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-.session-record-chat-host{display:flex;flex-direction:column;flex:1;min-height:0}
+.session-record-chat-host{display:flex;flex-direction:column;flex:1;min-height:0;width:100%}
 .fsdb-fileview:has(.chat-pane-embed){display:flex;flex-direction:column;flex:1;min-height:min(72vh,720px);overflow:hidden;background:#191919}
 .inspector-database-page .fsdb-fileview:has(.chat-pane-embed){min-height:0;flex:1}
-.fsdb-detail-main:has(.chat-pane-embed),.fsdb-detail-screen:has(.chat-pane-embed){background:#191919}
-.inspector-database-page .fsdb-detail-stage:has(.chat-pane-embed),
-.inspector-database-page .fsdb-detail-screen:has(.chat-pane-embed),
-.inspector-database-page .fsdb-detail-screen:has(.chat-pane-embed) .fsdb-detail-split,
-.inspector-database-page .fsdb-detail-main:has(.chat-pane-embed){
-  min-height:0;flex:1;overflow:hidden;display:flex;flex-direction:column
-}
-.inspector-database-page .fsdb-detail-main:has(.chat-pane-embed){padding-bottom:12px}
+.fsdb-detail-main:has(.chat-pane-embed){display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:#191919;padding-bottom:0}
+.fsdb-detail-screen:has(.chat-pane-embed) .fsdb-detail-split,.fsdb-detail-screen:has(.chat-pane-embed){flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.fsdb-right-body:has(.chat-pane-embed){overflow:hidden}
+.inspector-database-page .fsdb-detail-stage:has(.chat-pane-embed){flex:1;min-height:0;align-self:stretch}
 .session-outline-host{position:absolute;inset:0;z-index:20;pointer-events:none}
 .fsdb-right:has(.session-outline-host),.fsdb-right-body:has(.session-outline-host),.fsdb-detail-stage:has(.session-outline-host){position:relative}
 .session-outline-host .chat-outline{left:8px;top:50%}

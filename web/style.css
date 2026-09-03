@@ -1510,6 +1510,8 @@ body {
 
 .chat-pane-embed {
   position: relative;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   flex: 1;
   padding: 0;
@@ -1519,6 +1521,10 @@ body {
 }
 
 .chat-pane-embed .chat-overlay-thread {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
   padding-bottom: 5.5rem;
 }
 
@@ -1528,7 +1534,7 @@ body {
   bottom: 0;
   z-index: 20;
   flex: none;
-  padding: 0 12px 12px;
+  padding: 0 60px calc(1rem + 25px);
   background: transparent;
   pointer-events: none;
 }
@@ -4198,7 +4204,7 @@ body {
   transition: opacity 160ms ease;
 }
 
-.chat-composer-dock.is-scroll-faded {
+.chat-composer-dock.is-blur-faded {
   opacity: 0;
   pointer-events: none;
 }
@@ -5041,6 +5047,7 @@ body {
 }
 
 .composer-tiptap.is-readonly {
+  font-size: var(--dsw-chat-font-size);
   cursor: default;
 }
 
