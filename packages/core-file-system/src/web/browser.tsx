@@ -2330,13 +2330,13 @@ export function CollectionBrowser({
                 <table className={`tasks-table${wrapCells ? ' is-wrap' : ''}${truncateCells ? ' is-truncate' : ''}`}>
             <thead>
               <tr>
-                {columns.map((col) => {
+                {columns.map((col, index) => {
                   const flat = parseFacetFlatColumnKey(col.key)
                   const tone = flat ? schemaTagTone(flat.packId) : undefined
                   return (
                   <th key={col.key}>
                     <span className="fsdb-title-host">
-                      {col.key === schema?.labelField ? <RowCheck ids={pickableIds} /> : null}
+                      {index === 0 ? <RowCheck ids={pickableIds} /> : null}
                       <span className="tasks-th" style={tone ? { color: tone } : undefined}>
                         <FieldGlyph kind={col.kind} />
                         {col.field.label ?? col.key}
