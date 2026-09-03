@@ -1355,7 +1355,6 @@ export function CollectionBrowser({
     if (!openDetail && !tree) return host
     return (
       <div className="tasks-title-cell" style={tree ? { paddingLeft: depth * 16 } : undefined}>
-        {openDetail ? <RowCheck id={row.id} /> : null}
         {tree ? (
           hasKids ? (
             <button
@@ -1643,8 +1642,9 @@ export function CollectionBrowser({
       <>
         {listed.map(({ row, depth, hasKids, kidCount }) => (
           <tr key={`${keyPrefix}${row.id}`} className={row.id === detailId ? 'is-active' : undefined} {...recordPick(row)}>
-            {columns.map((col) => (
+            {columns.map((col, index) => (
               <td key={col.key}>
+                {index === 0 ? <RowCheck id={row.id} /> : null}
                 {col.key === schema?.labelField ? (
                   <RecordTitle row={row} depth={depth} hasKids={hasKids} kidCount={kidCount} />
                 ) : (
