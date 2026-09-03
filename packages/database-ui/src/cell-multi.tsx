@@ -89,11 +89,13 @@ export function CellMulti({
         >
           {available.map((item) => (
             <DbSearchOption key={item.value} onClick={() => add(item.value)}>
-              {item.label}
+              <TagChip id={item.value} label={item.label} />
             </DbSearchOption>
           ))}
           {canCreate ? (
-            <DbSearchOption onClick={() => add(query.trim())}>添加「{query.trim()}」</DbSearchOption>
+            <DbSearchOption onClick={() => add(query.trim())}>
+              添加 <TagChip id={query.trim()} label={query.trim()} />
+            </DbSearchOption>
           ) : null}
         </DbSearchMenu>
       ) : null}

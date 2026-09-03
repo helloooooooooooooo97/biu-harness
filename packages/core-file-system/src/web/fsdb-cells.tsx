@@ -372,6 +372,7 @@ export function FieldEditor({
         value={value}
         options={[{ value: '', label: '未选择' }, ...list.map((item) => ({ value: item, label: item }))]}
         allowCreate
+        chips
         onSelect={onChange}
       />
     )

@@ -2173,6 +2173,7 @@ export function CollectionBrowser({
                           value={filters[item.key] ?? ''}
                           placeholder="全部"
                           variant="cell"
+                          chips={item.kind === 'select' || item.kind === 'multi-select' || item.kind === 'facet'}
                           options={[{ value: '', label: '全部' }, ...options]}
                           onSelect={(next) => setFilters((prev) => ({ ...prev, [item.key]: next }))}
                         />

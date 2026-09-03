@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { TagChip } from '@biu/public-ui'
 import { DbSearchMenu, DbSearchOption, ensureDbSearchStyle } from './search-menu.tsx'
 
 function CheckMark() {
@@ -28,6 +29,7 @@ export function CellSelect({
   triggerClassName,
   className,
   allowCreate = false,
+  chips = false,
 }: {
   value: string
   options: CellSelectOption[]
@@ -37,6 +39,7 @@ export function CellSelect({
   triggerClassName?: string
   className?: string
   allowCreate?: boolean
+  chips?: boolean
 }) {
   ensureDbSearchStyle()
   const [open, setOpen] = useState(false)
@@ -70,7 +73,7 @@ export function CellSelect({
       <button
         ref={triggerRef}
         type="button"
-        className={`db-cell-select-trigger fsdb-cellselect-trigger${current ? '' : ' is-empty'}${triggerClassName ? ` ${triggerClassName}` : ''}`}
+        className={`db-cell-select-trigger fsdb-cellselect-trigger${current ? '' : ' is-empty'}${chips && current?.value ? ' is-chip' : ''}${triggerClassName ? ` ${triggerClassName}` : ''}`}
         data-open={open || undefined}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -79,8 +82,14 @@ export function CellSelect({
           setOpen((v) => !v)
         }}
       >
-        {current?.icon}
-        <span className={`db-cell-select-label fsdb-cellselect-label${current ? '' : ' is-empty'}`}>{current?.label ?? placeholder}</span>
+        {chips && current?.value ? (
+          <TagChip id={current.value} label={current.label} />
+        ) : (
+          <>
+            {current?.icon}
+            <span className={`db-cell-select-label fsdb-cellselect-label${current ? '' : ' is-empty'}`}>{current?.label ?? placeholder}</span>
+          </>
+        )}
         {variant === 'field' ? <CaretMark /> : null}
       </button>
       {open ? (
@@ -102,12 +111,18 @@ export function CellSelect({
               mark={item.value === value ? <CheckMark /> : null}
               onClick={() => pick(item.value)}
             >
-              {item.icon}
-              {item.label}
+              {chips && item.value ? <TagChip id={item.value} label={item.label} /> : (
+                <>
+                  {item.icon}
+                  {item.label}
+                </>
+              )}
             </DbSearchOption>
           ))}
           {canCreate ? (
-            <DbSearchOption onClick={() => pick(draft)}>添加「{draft}」</DbSearchOption>
+            <DbSearchOption onClick={() => pick(draft)}>
+              添加 <TagChip id={draft} label={draft} />
+            </DbSearchOption>
           ) : null}
         </DbSearchMenu>
       ) : null}

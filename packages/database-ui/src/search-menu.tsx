@@ -17,6 +17,8 @@ const CSS = `
 .db-cell-select-trigger:hover,.db-cell-select-trigger[data-open]{background:rgba(255,255,255,.12)}
 .db-cell-select-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .db-cell-select-caret{flex:none;opacity:.55;color:var(--dsw-label-2)}
+.db-cell-select-trigger.is-chip{background:transparent;padding:0;height:auto;max-width:none}
+.db-cell-select-trigger.is-chip:hover,.db-cell-select-trigger.is-chip[data-open]{background:transparent}
 .db-cell-select-trigger.is-empty{max-width:none;color:var(--dsw-label-3);background:var(--dsw-hover);font-weight:500}
 .db-cell-select.is-field{display:block;width:100%}
 .db-cell-select.is-field .db-cell-select-trigger{display:flex;justify-content:space-between;gap:6px;width:100%;max-width:none;min-height:28px;border:1px solid var(--dsw-border);border-radius:7px;padding:5px 8px;background:var(--dsw-input);color:var(--dsw-label)}
