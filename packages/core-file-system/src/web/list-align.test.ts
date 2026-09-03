@@ -36,6 +36,8 @@ test('list and detail share the chat column max width with side padding', () => 
   assert.match(css, /\.tasks-viewtabs\{[^}]*overflow:hidden/)
   assert.match(css, /\.tasks-viewdd-item-actions\{[^}]*visibility:hidden/)
   assert.match(css, /\.tasks-viewdd-act\{[^}]*width:26px/)
+  assert.match(css, /\.fsdb-right-body:has\(\.fsdb-pager\)\{[^}]*overflow:hidden/)
+  assert.match(css, /\.fsdb-pager\{[^}]*margin-top:auto/)
 })
 
 test('list and detail properties share key and value colors', () => {
