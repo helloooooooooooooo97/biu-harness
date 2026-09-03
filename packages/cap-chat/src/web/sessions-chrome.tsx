@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
-import { ChatPane, ChatStage, OutlineNav } from '@biu/public-ui'
+import { ChatDockStack, ChatPane, ChatStage, OutlineNav } from '@biu/public-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { MASCOT_COLOR_NAME, MASCOT_EYE_NAME, MASCOT_SHAPE_NAME } from '@biu/type-session'
 import type { CollectionChrome, FsCellProps, FsContentProps } from '@biu/type-file-system/ui'
@@ -16,8 +16,11 @@ import {
   type ChatOutlineFilter,
   type SessionEvent,
   type TrajectoryUsage,
+  upsertSessionEvent,
 } from '@biu/web-session-view'
 import { ChatNodeList } from './thread.tsx'
+import { ChatComposer } from './composer.tsx'
+import type { SnapshotService } from '@biu/web-snapshot'
 
 function sessionMascot(record: DbRecord) {
   const raw = record.mascot
@@ -61,9 +64,25 @@ function escapeId(id: string) {
   return typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(id) : id
 }
 
-function SessionRecordChat({ record }: FsContentProps) {
+function useIdleSessionView<S>(sel: (state: { pending: boolean; inbox: never[]; sessionId: string }) => S): S {
+  return sel({ pending: false, inbox: [], sessionId: '' })
+}
+
+const idleSessionView = {
+  send: async () => undefined,
+  cancel: async () => undefined,
+  flushInbox: async () => undefined,
+  get: () => ({ sessionId: '' }),
+} as never
+
+function SessionRecordChat({
+  record,
+  snapshot,
+}: FsContentProps & { snapshot?: SnapshotService }) {
   const sessionId = String(record.id)
+  const [events, setEvents] = useState<SessionEvent[]>([])
   const [nodes, setNodes] = useState<ChatNode[]>([])
+  const [boundPending, setBoundPending] = useState(false)
   const [host, setHost] = useState<HTMLElement | null>(null)
   const anchorRef = useRef<HTMLDivElement>(null)
   const filter = useSyncExternalStore(subscribeChatOutline, getChatOutlineFilter, (): ChatOutlineFilter => 'user')
@@ -85,9 +104,11 @@ function SessionRecordChat({ record }: FsContentProps) {
       .then((res) => (res.ok ? res.json() : null))
       .then((body) => {
         if (!body || !Array.isArray(body.events)) return
+        const next = body.events as SessionEvent[]
+        setEvents(next)
         setNodes(
           mergeDispatchedUsageIntoNodes(
-            projectNodes(body.events as SessionEvent[]),
+            projectNodes(next),
             (body.dispatchedUsageByTurn as Record<string, TrajectoryUsage>) ?? {},
           ),
         )
@@ -95,6 +116,27 @@ function SessionRecordChat({ record }: FsContentProps) {
       .catch(() => undefined)
     return () => ac.abort()
   }, [sessionId])
+  useEffect(() => {
+    if (!snapshot) return
+    const offSession = snapshot.onMessage('session', (payload) => {
+      const detail = payload as { sessionId?: string; event?: SessionEvent }
+      if (detail.sessionId !== sessionId || !detail.event) return
+      setEvents((prev) => {
+        const next = upsertSessionEvent(prev, detail.event as SessionEvent)
+        setNodes(projectNodes(next))
+        return next
+      })
+    })
+    const offAgent = snapshot.onMessage('agent', (payload) => {
+      const status = payload as { sessionId?: string; status?: string }
+      if (status.sessionId !== sessionId) return
+      setBoundPending(status.status === 'running')
+    })
+    return () => {
+      offSession()
+      offAgent()
+    }
+  }, [snapshot, sessionId])
   const outline = <OutlineNav items={items} testId="session-outline" onSelect={go} />
   return (
     <>
@@ -107,17 +149,27 @@ function SessionRecordChat({ record }: FsContentProps) {
               <ChatNodeList nodes={nodes} onInspect={() => undefined} onFork={() => undefined} />
             </ChatStage>
           }
+          dock={
+            <ChatDockStack>
+              <ChatComposer
+                boundSessionId={sessionId}
+                boundPending={boundPending}
+                useSessionView={useIdleSessionView}
+                sessionView={idleSessionView}
+              />
+            </ChatDockStack>
+          }
         />
       </div>
     </>
   )
 }
 
-export function sessionsChrome(): CollectionChrome {
+export function sessionsChrome(snapshot?: SnapshotService): CollectionChrome {
   return {
     Title: SessionTitle,
     Icon: SessionIcon,
-    Content: SessionRecordChat,
+    Content: (props) => <SessionRecordChat {...props} snapshot={snapshot} />,
     cells: {
       mascotShape: MascotShapeCell,
       mascotColor: MascotColorCell,
