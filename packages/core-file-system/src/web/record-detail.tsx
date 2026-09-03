@@ -283,29 +283,26 @@ export function RecordDetail({
             </div>
           </div>
           {onPrev || onNext ? (
-            <nav
-              className="fsdb-detail-float-nav relative flex flex-col gap-1 rounded-lg bg-white/10 p-1 shadow-[0_1px_2px_rgba(15,15,15,.04)] backdrop-blur-sm"
-              aria-label="按视图顺序切换记录"
-            >
+            <nav className="fsdb-detail-float-nav" aria-label="按视图顺序切换记录">
               <button
                 type="button"
-                className="flex size-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800 disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-neutral-500"
+                className="fsdb-detail-float-btn"
                 title="上一条"
                 aria-label="上一条"
                 disabled={!canPrev}
                 onClick={onPrev}
               >
-                <ChevronUpIcon aria-hidden className="size-5" />
+                <ChevronUpIcon aria-hidden />
               </button>
               <button
                 type="button"
-                className="flex size-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-black/5 hover:text-neutral-800 disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-neutral-500"
+                className="fsdb-detail-float-btn"
                 title="下一条"
                 aria-label="下一条"
                 disabled={!canNext}
                 onClick={onNext}
               >
-                <ChevronDownIcon aria-hidden className="size-5" />
+                <ChevronDownIcon aria-hidden />
               </button>
             </nav>
           ) : null}
