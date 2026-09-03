@@ -2,7 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import type { CollectionSchema } from '@biu/type-file-system'
 import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
-import { defaultColumnKeys, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, isViewModeId, matchActionWhen, matchesFilters, parentFieldKey, resolveFieldType, sortRows, uniqueValues } from './fields'
+import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, isViewModeId, matchActionWhen, matchesFilters, parentFieldKey, readFacetFlatValue, resolveFieldType, sortRows, uniqueValues } from './fields'
 
 test('isViewModeId accepts builtin and custom slugs', () => {
   assert.equal(isViewModeId('table'), true)
@@ -88,6 +88,18 @@ test('default columns skip id and timestamps unless schema.columns lists them; t
   assert.deepEqual(defaultColumnKeys(schema, keys), ['title', 'status'])
   assert.deepEqual(defaultColumnKeys({ ...schema, columns: ['status', 'createdAt'] }, keys), ['title', 'status', 'createdAt'])
   assert.deepEqual(pinLabelColumn(schema, ['status', 'title']), ['title', 'status'])
+})
+
+test('default columns omit flattened type properties', () => {
+  const nested = facetFlatColumnKey('haohao', 'dede')
+  assert.deepEqual(defaultColumnKeys(schema, ['title', 'status', 'facet', nested]), ['title', 'status', 'facet'])
+  assert.equal(parseFacetFlatColumnKey(nested)?.packId, 'haohao')
+  assert.equal(parseFacetFlatColumnKey(nested)?.fieldKey, 'dede')
+  const cols = flattenFacetColumns([{ id: 'haohao', label: '好好哈', fields: [{ key: 'dede', type: 'string', label: '的的' }] }])
+  assert.equal(cols[0]?.key, nested)
+  const row = { id: '1', facet: { tags: ['haohao'], values: { haohao: { dede: 'v' } } } }
+  assert.equal(readFacetFlatValue(row, nested), 'v')
+  assert.deepEqual(patchFacetFlatValue(row, nested, 'next').values.haohao?.dede, 'next')
 })
 
 test('contentFieldKey prefers content then contentField then notes', () => {

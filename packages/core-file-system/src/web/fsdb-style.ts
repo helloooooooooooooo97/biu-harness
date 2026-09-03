@@ -167,6 +167,7 @@ const CSS = `
 .fsdb-row-check{position:absolute;top:50%;right:100%;z-index:2;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin:0 4px 0 0;transform:translateY(-50%);opacity:0;pointer-events:none}
 .tasks-table tbody tr:hover .fsdb-row-check,.tasks-table thead tr:hover .fsdb-row-check,.tasks-queue-item:hover .fsdb-row-check,.tasks-minicard:hover .fsdb-row-check,.fsdb-row-check.is-on,.fsdb-row-check:focus-visible{opacity:1;pointer-events:auto}
 .fsdb-page .tasks-th{display:inline-flex;align-items:center;gap:5px;font-weight:600;white-space:nowrap;flex-wrap:nowrap}
+.fsdb-page .tasks-th svg{color:inherit}
 .fsdb-page .tasks-table tr{cursor:default}
 .fsdb-page .tasks-table tr:hover td{background:color-mix(in srgb,var(--dsw-hover) 55%,transparent)}
 .fsdb-page .tasks-table tr.is-active td{background:color-mix(in srgb,var(--dsw-business) 8%,transparent)}

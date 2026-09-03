@@ -38,7 +38,8 @@ import { BoolBox, ChatCount, listenOutsideDismiss } from '@biu/public-ui'
 import {
   contentFieldKey,
   defaultColumnKeys,
-  pinLabelColumn,
+  facetSourceKey,
+  flattenFacetColumns,
   fieldEntries,
   flattenTree,
   formatField,
@@ -46,6 +47,10 @@ import {
   groupRecords,
   groupableFields,
   parentFieldKey,
+  parseFacetFlatColumnKey,
+  patchFacetFlatValue,
+  pinLabelColumn,
+  readFacetFlatValue,
   resolveFieldType,
   uniqueValues,
   fieldHasValue,
@@ -112,8 +117,8 @@ import { findViewNeighbor, indexOnPage } from './view-adjacent.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 import { mergeTableViews } from '../catalog-views.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
-import { SchemaChips, SchemaFieldEditor } from './schema-field.tsx'
-import { loadFacets, pullFacets } from './facet-catalog.ts'
+import { SchemaChips, SchemaFieldEditor, schemaTagTone } from './schema-field.tsx'
+import { loadFacets, pullFacets, subscribeFacets } from './facet-catalog.ts'
 
 type StatResult = { schema?: CollectionSchema }
 
@@ -214,6 +219,7 @@ export function CollectionBrowser({
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialView?.sortDir ?? 'asc')
   const [filters, setFilters] = useState<Record<string, string>>(initialView?.filters ?? {})
   const [columnKeys, setColumnKeys] = useState<string[]>(initialView?.columns ?? [])
+  const [facetCatalog, setFacetCatalog] = useState(() => loadFacets())
   const tablePathsKey = tables.map((table) => `${table.path}\t${table.view?.title ?? table.label ?? ''}`).join('\n')
   const [views, setViews] = useState<SavedView[]>(() => loadViews(collectionPath))
   const [activeViewId, setActiveViewId] = useState<string | null>(initialView?.id ?? null)
@@ -603,6 +609,8 @@ export function CollectionBrowser({
     void pullFacets()
   }, [collectionPath])
 
+  useEffect(() => subscribeFacets(undefined, () => setFacetCatalog(loadFacets())), [])
+
   useEffect(() => {
     void reloadRef.current()
   }, [reloadKey])
@@ -648,8 +656,11 @@ export function CollectionBrowser({
   const bodyKey = contentFieldKey(schema)
   const entries = useMemo(() => fieldEntries(schema), [schema])
   const allColumns = useMemo(
-    () => entries.filter((item) => isListColumn(item.key) && item.key !== bodyKey && resolveFieldType(item.field) !== 'file'),
-    [bodyKey, entries],
+    () => [
+      ...entries.filter((item) => isListColumn(item.key) && item.key !== bodyKey && resolveFieldType(item.field) !== 'file'),
+      ...flattenFacetColumns(facetCatalog),
+    ],
+    [bodyKey, entries, facetCatalog],
   )
   const allColumnKeys = useMemo(() => allColumns.map((item) => item.key), [allColumns])
   const schemaDefaultKeys = useMemo(() => defaultColumnKeys(schema, allColumnKeys), [schema, allColumnKeys])
@@ -1241,6 +1252,27 @@ export function CollectionBrowser({
 
   function renderCell(row: DbRecord, key: string, field: FieldSpec) {
     const kind = resolveFieldType(field)
+    const flat = parseFacetFlatColumnKey(key)
+    if (flat) {
+      const source = facetSourceKey(schema)
+      const value = readFacetFlatValue(row, key, source)
+      if (field.writable && kind !== 'file') {
+        return (
+          <FieldEditor
+            fieldKey={field.label ?? flat.fieldKey}
+            field={field}
+            value={fieldDraftValue(field, value)}
+            options={uniqueValues(
+              items.map((item) => ({ ...item, [key]: readFacetFlatValue(item, key, source) })),
+              key,
+              field,
+            )}
+            onChange={(next) => void writePatch(row, { [source]: patchFacetFlatValue(row, key, parseFieldValue(field, next), source) })}
+          />
+        )
+      }
+      return <DefaultCell field={field} value={value} />
+    }
     if (kind === 'facet') {
       if (field.writable) {
         return (
@@ -1249,6 +1281,7 @@ export function CollectionBrowser({
             record={row}
             value={row[key]}
             writable
+            compact
             onChange={(next) => void writePatch(row, { [key]: next })}
           />
         )
@@ -1470,8 +1503,11 @@ export function CollectionBrowser({
     const cols = (hide ? propColumns.filter((item) => item.key !== hide) : propColumns).filter((item) => {
       if (item.key === schema?.labelField || item.key === bodyKey) return false
       const kind = resolveFieldType(item.field)
+      const value = parseFacetFlatColumnKey(item.key)
+        ? readFacetFlatValue(row, item.key, facetSourceKey(schema))
+        : row[item.key]
       if (item.field.writable && kind !== 'file') return true
-      return fieldHasValue(item.field, row[item.key])
+      return fieldHasValue(item.field, value)
     })
     if (!cols.length) return null
     return (
@@ -2110,11 +2146,22 @@ export function CollectionBrowser({
                   <div className="fsdb-col-menu-list">
                   {allColumns.map((item) => {
                     const on = columns.some((col) => col.key === item.key)
+                    const flat = parseFacetFlatColumnKey(item.key)
+                    const packLabel = 'packLabel' in item ? String(item.packLabel ?? '') : ''
+                    const tone = flat ? schemaTagTone(flat.packId) : undefined
                     return (
                       <CheckRow
                         key={item.key}
                         icon={<FieldGlyph kind={item.kind} />}
-                        label={item.field.label ?? item.key}
+                        label={
+                          flat ? (
+                            <span style={tone ? { color: tone } : undefined}>
+                              {packLabel ? `${packLabel} · ${item.field.label ?? item.key}` : (item.field.label ?? item.key)}
+                            </span>
+                          ) : (
+                            item.field.label ?? item.key
+                          )
+                        }
                         on={on}
                         locked={item.key === schema?.labelField}
                         onToggle={() => toggleColumn(item.key)}
@@ -2283,17 +2330,21 @@ export function CollectionBrowser({
                 <table className={`tasks-table${wrapCells ? ' is-wrap' : ''}${truncateCells ? ' is-truncate' : ''}`}>
             <thead>
               <tr>
-                {columns.map((col) => (
+                {columns.map((col) => {
+                  const flat = parseFacetFlatColumnKey(col.key)
+                  const tone = flat ? schemaTagTone(flat.packId) : undefined
+                  return (
                   <th key={col.key}>
                     <span className="fsdb-title-host">
                       {col.key === schema?.labelField ? <RowCheck ids={pickableIds} /> : null}
-                      <span className="tasks-th">
+                      <span className="tasks-th" style={tone ? { color: tone } : undefined}>
                         <FieldGlyph kind={col.kind} />
                         {col.field.label ?? col.key}
                       </span>
                     </span>
                   </th>
-                ))}
+                  )
+                })}
               </tr>
             </thead>
             <tbody>

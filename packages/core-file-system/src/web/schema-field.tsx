@@ -223,12 +223,15 @@ export function SchemaFieldEditor({
   value,
   writable,
   onChange,
+  compact,
 }: {
   collectionPath: string
   record: DbRecord
   value: unknown
   writable?: boolean
   onChange: (next: SchemaFieldValue) => void
+  /** Table cells: chips only — pack fields flatten as their own columns. */
+  compact?: boolean
 }) {
   const parsed = normalizeSchemaValue(value)
   const [catalog, setCatalog] = useState(() => loadFacets())
@@ -300,7 +303,9 @@ export function SchemaFieldEditor({
         onChange={applyTags}
         multiple
       />
-      {selected.map((tag) => {
+      {compact
+        ? null
+        : selected.map((tag) => {
         const bag = parsed.values[tag.id] ?? {}
         return (
           <div key={tag.id} className="fsdb-schema-pack">

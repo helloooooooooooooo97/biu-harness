@@ -1,4 +1,4 @@
-import type { CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
+import type { CollectionSchema, CollectionSchemaPack, DbRecord, FieldSpec, FieldType, SchemaFieldValue } from '@biu/type-file-system'
 import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS, isFacetFieldType, normalizeSchemaValue, schemaSearchHaystack } from '@biu/type-file-system'
 import { loadFacets } from './facet-catalog.ts'
 
@@ -118,8 +118,66 @@ export function defaultColumnKeys(schema: CollectionSchema | undefined, allKeys:
   const raw = listed.length
     ? listed
     : allKeys.filter((key) => !(BUILTIN_FIELD_KEYS as readonly string[]).includes(key) && key !== parent)
-  const keys = raw.length ? raw : allKeys
+  const keys = (raw.length ? raw : allKeys).filter((key) => !isFacetFlatColumnKey(key))
   return pinLabelColumn(schema, keys)
+}
+
+export const FACET_FLAT_PREFIX = 'facet::'
+
+export function facetFlatColumnKey(packId: string, fieldKey: string) {
+  return `${FACET_FLAT_PREFIX}${packId}::${fieldKey}`
+}
+
+export function isFacetFlatColumnKey(key: string) {
+  return key.startsWith(FACET_FLAT_PREFIX)
+}
+
+export function parseFacetFlatColumnKey(key: string): { packId: string; fieldKey: string } | null {
+  if (!isFacetFlatColumnKey(key)) return null
+  const rest = key.slice(FACET_FLAT_PREFIX.length)
+  const split = rest.indexOf('::')
+  if (split <= 0) return null
+  const packId = rest.slice(0, split)
+  const fieldKey = rest.slice(split + 2)
+  if (!packId || !fieldKey) return null
+  return { packId, fieldKey }
+}
+
+export function facetSourceKey(schema: CollectionSchema | undefined) {
+  if (!schema) return 'facet'
+  const hit = Object.entries(schema.fields).find(([, field]) => resolveFieldType(field) === 'facet')
+  return hit?.[0] ?? 'facet'
+}
+
+export function flattenFacetColumns(catalog: CollectionSchemaPack[]) {
+  return catalog.flatMap((pack) =>
+    pack.fields.map((field) => ({
+      key: facetFlatColumnKey(pack.id, field.key),
+      field: { ...field, label: field.label ?? field.key },
+      kind: resolveFieldType(field),
+      packId: pack.id,
+      packLabel: pack.label,
+    })),
+  )
+}
+
+export function readFacetFlatValue(row: DbRecord, columnKey: string, sourceKey = 'facet') {
+  const parsed = parseFacetFlatColumnKey(columnKey)
+  if (!parsed) return undefined
+  return normalizeSchemaValue(row[sourceKey]).values[parsed.packId]?.[parsed.fieldKey]
+}
+
+export function patchFacetFlatValue(row: DbRecord, columnKey: string, next: unknown, sourceKey = 'facet'): SchemaFieldValue {
+  const parsed = parseFacetFlatColumnKey(columnKey)
+  const current = normalizeSchemaValue(row[sourceKey])
+  if (!parsed) return current
+  return {
+    tags: current.tags,
+    values: {
+      ...current.values,
+      [parsed.packId]: { ...(current.values[parsed.packId] ?? {}), [parsed.fieldKey]: next },
+    },
+  }
 }
 
 export function asStringList(value: unknown): string[] {
