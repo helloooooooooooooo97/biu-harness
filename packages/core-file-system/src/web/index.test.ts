@@ -53,7 +53,7 @@ test('collection browser renders extra views registered for that path', () => {
   assert.doesNotMatch(schemaUi, /没有匹配的 SuperTag/)
   assert.match(schemaUi, /<CellMulti/)
   assert.doesNotMatch(schemaUi, /function TagPicker/)
-  assert.match(schemaUi, /这条分面已不在目录里/)
+  assert.match(schemaUi, /这条类型已不在目录里/)
 })
 
 test('tag collect table lives on the record board, not as sidebar views', () => {

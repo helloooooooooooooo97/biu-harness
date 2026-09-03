@@ -20,7 +20,7 @@ test('activity bar is gone; modules register on the os dock', () => {
   assert.match(nav, /requestInspectorTab\(item\.tabId\)/)
   assert.match(nav, /database:\/pages/)
   assert.match(nav, /tabId: 'database:\/facets'/)
-  assert.match(nav, /title: '分面'/)
+  assert.match(nav, /title: '类型'/)
   assert.match(nav, /tabId: 'traj'/)
   assert.match(nav, /Icon: MapIcon/)
   assert.doesNotMatch(nav, /QueueListIcon/)

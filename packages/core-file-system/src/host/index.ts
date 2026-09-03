@@ -891,7 +891,7 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_update',
-    description: '按表结构 schema 的可写字段更新一条已有记录，路径为 /<表>/<id>。分面（facet 字段）在所有表都可写，包括 records.update 为 false 的表（如 /plugins）；其它字段仍看 caps。新建用 db_create，正文用 db_content。改分面属性用 db_update path=/facets/<id> content.fields。',
+    description: '按表结构 schema 的可写字段更新一条已有记录，路径为 /<表>/<id>。类型（facet 字段）在所有表都可写，包括 records.update 为 false 的表（如 /plugins）；其它字段仍看 caps。新建用 db_create，正文用 db_content。改类型属性用 db_update path=/facets/<id> content.fields。',
     parameters: {
       type: 'object',
       properties: {
@@ -904,7 +904,7 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_create',
-    description: '在已登记且允许新建的表中批量新增记录。路径为 /<表>，records 为对象数组。能否新建看 db_stat 的 caps 与 schema.records。新建分面用 db_create path=/facets records=[{title}]。',
+    description: '在已登记且允许新建的表中批量新增记录。路径为 /<表>，records 为对象数组。能否新建看 db_stat 的 caps 与 schema.records。新建类型用 db_create path=/facets records=[{title}]。',
     parameters: {
       type: 'object',
       properties: {

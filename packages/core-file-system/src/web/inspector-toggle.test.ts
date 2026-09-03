@@ -307,6 +307,17 @@ test('page collection uses a document glyph, not the table/database icon', () =>
   assert.match(glyphs, /<DocumentIcon/)
 })
 
+test('facet field glyph matches the sidebar type collection tag icon', () => {
+  const glyphs = readFileSync(resolve(import.meta.dirname, './table-glyph.tsx'), 'utf8')
+  const cells = readFileSync(resolve(import.meta.dirname, './fsdb-cells.tsx'), 'utf8')
+  const spec = readFileSync(resolve(import.meta.dirname, '../host/facets-collection.ts'), 'utf8')
+  assert.match(spec, /icon: 'tag'/)
+  assert.match(glyphs, /name === 'tag'/)
+  assert.match(glyphs, /<TagIcon/)
+  assert.match(cells, /kind === 'facet'\) return <TagIcon/)
+  assert.doesNotMatch(cells, /kind === 'facet'\) return <Squares2X2Icon/)
+})
+
 test('row actions reload even when updatedAt is unchanged', () => {
   assert.match(browser, /function recordsFingerprint\(rows/)
   assert.match(browser, /return JSON.stringify\(rows\)/)

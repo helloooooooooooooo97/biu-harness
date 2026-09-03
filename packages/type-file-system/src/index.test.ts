@@ -44,7 +44,7 @@ test('withBuiltinFields always includes writable facet', () => {
   const fields = withBuiltinFields({ title: { type: 'string', writable: true } })
   assert.equal(fields.facet?.type, 'facet')
   assert.equal(fields.facet?.writable, true)
-  assert.equal(fields.facet?.label, '分面')
+  assert.equal(fields.facet?.label, '类型')
 })
 
 test('recordBuiltinValues fills required record columns', () => {

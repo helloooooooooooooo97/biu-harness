@@ -152,7 +152,7 @@ export class FacetStore {
 
   upsert(raw: unknown): CollectionSchemaPack {
     const pack = normalizeSchemaPack(raw)
-    if (!pack) throw new Error('invalid 分面')
+    if (!pack) throw new Error('invalid 类型')
     this.ensure()
       .prepare(
         `INSERT INTO facets (id, label, fields_json, updated_at)
