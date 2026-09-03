@@ -24,12 +24,18 @@ export interface ToolRequest {
 
 export type ToolGuard = (req: ToolRequest) => ToolRequest | Promise<ToolRequest>
 
-/** 极简=底座；标准=内置工具；创造=内置 + 商店插件。 */
-export const AGENT_TOOL_MODES = ['minimal', 'standard', 'create'] as const
+/** 极简=底座；标准=内置 + 商店插件。旧创造配置并入标准。 */
+export const AGENT_TOOL_MODES = ['minimal', 'standard'] as const
 export type AgentToolMode = (typeof AGENT_TOOL_MODES)[number]
 
 export function isAgentToolMode(value: unknown): value is AgentToolMode {
-  return value === 'minimal' || value === 'standard' || value === 'create'
+  return value === 'minimal' || value === 'standard'
+}
+
+export function normalizeAgentMode(value: unknown, fallback: AgentToolMode = 'standard'): AgentToolMode {
+  if (value === 'minimal') return 'minimal'
+  if (value === 'standard' || value === 'create') return 'standard'
+  return fallback
 }
 
 export const MINIMAL_TOOL_NAMES = ['bash', 'str_replace_editor'] as const
@@ -45,7 +51,7 @@ const toolPolicyStorage = new AsyncLocalStorage<{
 
 const toolOriginStorage = new AsyncLocalStorage<ToolOrigin>()
 
-/** 商店插件 apply 期间注册的工具标成 store，仅创造模式可见。 */
+/** 商店插件 apply 期间注册的工具标成 store，标准模式可见。 */
 export function runWithToolOrigin<T>(origin: ToolOrigin, fn: () => T): T {
   return toolOriginStorage.run(origin, fn)
 }
@@ -126,9 +132,8 @@ export class ToolsService extends Service {
   private visible(name: string) {
     const policy = toolPolicyStorage.getStore()
     const mode = policy?.mode ?? this.mode
-    if (mode === 'create') return true
-    if (this.originOf(name) === 'store') return false
     if (mode === 'standard') return true
+    if (this.originOf(name) === 'store') return false
     if ((MINIMAL_TOOL_NAMES as readonly string[]).includes(name)) return true
     if ((policy?.extras ?? new Set()).has(name)) return true
     if (!policy && this.pinnedExtras.includes(name)) return true

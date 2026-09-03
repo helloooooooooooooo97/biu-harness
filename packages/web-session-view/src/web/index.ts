@@ -87,7 +87,6 @@ export interface SessionListItem {
   title: string
   eventCount: number
   updatedAt: number
-  type?: 'chat' | 'live'
   /** host 列表快照：该 session 的 agent 是否在跑 */
   busy?: boolean
   project?: { name: string; path?: string; boundAt: number }
@@ -204,7 +203,6 @@ const empty: SessionViewState = {
 type SessionPayload = {
   id: string
   events: SessionEvent[]
-  type?: 'chat' | 'live'
   hasMore?: boolean
   totalTurns?: number
   totalEvents?: number
@@ -252,8 +250,7 @@ function sessionsEqual(a: SessionListItem[], b: SessionListItem[]): boolean {
       left.mascot?.eye !== right.mascot?.eye ||
       Boolean(left.busy) !== Boolean(right.busy) ||
       Boolean(left.pinned) !== Boolean(right.pinned) ||
-      (left.tags ?? []).join('\0') !== (right.tags ?? []).join('\0') ||
-      (left.type ?? 'chat') !== (right.type ?? 'chat')
+      (left.tags ?? []).join('\0') !== (right.tags ?? []).join('\0')
     ) {
       return false
     }
@@ -296,8 +293,6 @@ export class SessionViewService extends Service {
     this.stopDispatchedPoll()
     const id = this.value.sessionId
     if (!id) return
-    const type = this.value.sessions.find((item) => item.id === id)?.type ?? 'chat'
-    if (type !== 'live') return
     this.dispatchedPoll = setInterval(() => {
       void this.refreshDispatchedUsage()
     }, 2000)
@@ -643,12 +638,11 @@ export class SessionViewService extends Service {
     this.replace({ approvalMode: body.mode === 'hold' ? 'hold' : 'auto' })
   }
 
-  async newSession(opts: { type?: 'chat' | 'live'; projectPath?: string } = {}) {
-    const type = opts.type === 'live' ? 'live' : 'chat'
+  async newSession(opts: { projectPath?: string } = {}) {
     const res = await fetch('/api/sessions', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ type }),
+      body: JSON.stringify({}),
     })
     const body = (await res.json()) as { id?: string }
     if (!body.id) throw new Error('无法创建 session')
@@ -1125,7 +1119,6 @@ export class SessionViewService extends Service {
     const body = (await res.json()) as {
       id?: string
       error?: string
-      type?: SessionListItem['type']
       mascot?: SessionListItem['mascot']
     }
     if (!res.ok || !body.id) throw new Error(body.error || 'fork failed')
@@ -1139,7 +1132,6 @@ export class SessionViewService extends Service {
             id: body.id,
             pinned: false,
             tags: [],
-            type: body.type ?? parent.type,
             ...(body.mascot ? { mascot: body.mascot } : {}),
             updatedAt: Date.now(),
           },

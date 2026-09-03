@@ -218,34 +218,34 @@ test('delete removes session from store and cache', async () => {
   assert.equal(await ctx.sessions.delete(record.id), false)
 })
 
-test('create/listSummaries/fork preserve session type', async () => {
+test('create/listSummaries/fork round-trip without a session type field', async () => {
   const ctx = new Context()
   await ctx.plugin(sessionStore, { driver: 'memory' })
   await ctx.plugin(sessions)
   const chat = await ctx.sessions.create()
-  const live = await ctx.sessions.create(undefined, { type: 'live' })
-  assert.equal(chat.type, 'chat')
-  assert.equal(live.type, 'live')
+  const other = await ctx.sessions.create()
+  assert.equal('type' in chat, false)
+  assert.equal('type' in other, false)
   const summaries = await ctx.sessions.listSummaries()
-  assert.equal(summaries.find((item) => item.id === live.id)?.type, 'live')
-  assert.equal(summaries.find((item) => item.id === chat.id)?.type, 'chat')
-  const forked = await ctx.sessions.fork(live.id)
-  assert.equal(forked.type, 'live')
+  assert.equal(summaries.every((item) => !('type' in item)), true)
+  const forked = await ctx.sessions.fork(other.id)
+  assert.equal('type' in forked, false)
 })
 
-test('sqlite persists session type across reopen', async () => {
+test('sqlite persists session records across reopen', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cordis-type-'))
   const path = join(dir, 'sessions.sqlite')
   const ctx = new Context()
   await ctx.plugin(sessionStore, { driver: 'sqlite', path })
   await ctx.plugin(sessions)
-  await ctx.sessions.create('live-sql', { type: 'live' })
+  await ctx.sessions.create('live-sql', { title: 'saved' })
   const ctx2 = new Context()
   await ctx2.plugin(sessionStore, { driver: 'sqlite', path })
   await ctx2.plugin(sessions)
   const loaded = await ctx2.sessions.get('live-sql')
-  assert.equal(loaded?.type, 'live')
-  assert.equal((await ctx2.sessions.listSummaries())[0]?.type, 'live')
+  assert.equal(loaded?.id, 'live-sql')
+  assert.equal('type' in (loaded ?? {}), false)
+  assert.equal((await ctx2.sessions.listSummaries())[0]?.id, 'live-sql')
 })
 
 

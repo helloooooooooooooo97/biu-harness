@@ -27,7 +27,6 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   PlusIcon,
-  SignalIcon,
   StarIcon,
   FolderIcon,
   TagIcon,
@@ -106,11 +105,6 @@ const SessionRow = memo(function SessionRow({
         title={dancing ? '跳舞中 🎉' : `${identity.shape} · ${identity.color}`}
       />
       <span className="sidebar-label min-w-0 flex-1 truncate font-medium">
-        {(item.type ?? 'chat') === 'live' ? (
-          <span className="mr-1 text-[9px] font-semibold tracking-wide uppercase">
-            live
-          </span>
-        ) : null}
         {item.title}
       </span>
       <SessionTagBadges tags={item.tags} />
@@ -270,7 +264,7 @@ export const ChatSidebar = memo(function ChatSidebar({
   const highlightId = variant === 'popover' ? sessionId : routeSessionId
 
   const createChat = useCallback(
-    (opts: { type?: 'chat' | 'live'; projectPath?: string } = {}) => {
+    (opts: { projectPath?: string } = {}) => {
       void sessionView.newSession(opts).then((id) => {
         onActivate?.()
         if (isChatPagePath(window.location.pathname)) {
@@ -332,24 +326,12 @@ export const ChatSidebar = memo(function ChatSidebar({
             className="app-side-actions-item"
             title="添加聊天"
             aria-label="添加聊天"
-            onClick={() => createChat({ type: 'chat' })}
+            onClick={() => createChat()}
           >
             <span className="app-side-actions-icon" aria-hidden>
               <PlusIcon {...chromeIcon} />
             </span>
             <span className="app-side-actions-label">添加聊天</span>
-          </button>
-          <button
-            type="button"
-            className="app-side-actions-item"
-            title="新建 Live"
-            aria-label="新建 Live"
-            onClick={() => createChat({ type: 'live' })}
-          >
-            <span className="app-side-actions-icon" aria-hidden>
-              <SignalIcon {...chromeIcon} />
-            </span>
-            <span className="app-side-actions-label">新建 Live</span>
           </button>
         </div>
 
@@ -476,7 +458,6 @@ export const ChatSidebar = memo(function ChatSidebar({
                                       onClick={(e) => {
                                         e.stopPropagation()
                                         createChat({
-                                          type: 'chat',
                                           ...(group.path ? { projectPath: group.path } : {}),
                                         })
                                       }}

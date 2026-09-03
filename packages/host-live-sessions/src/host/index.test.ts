@@ -34,7 +34,7 @@ test('live plugin no longer registers session_* tools', async () => {
   ])
 })
 
-test('live session turn unlocks db_* tools on top of minimal mode', async () => {
+test('session turn follows tool mode and does not special-case a live type', async () => {
   const ctx = new Context()
   await ctx.plugin(sessionStore, { driver: 'memory' })
   await ctx.plugin(sessions)
@@ -60,7 +60,7 @@ test('live session turn unlocks db_* tools on top of minimal mode', async () => 
   ctx.tools.setMode('minimal')
   assert.deepEqual(ctx.tools.names().sort(), ['bash'])
 
-  const live = await ctx.sessions.create(undefined, { type: 'live' })
+  const session = await ctx.sessions.create()
   let seen: string[] = []
   const { AgentLoop } = await import('@biu/host-agent-loop')
   const loop = new AgentLoop(
@@ -71,7 +71,7 @@ test('live session turn unlocks db_* tools on top of minimal mode', async () => 
         return { content: 'ok', toolCalls: [], usage: { inputTokens: 1, outputTokens: 1 } }
       },
     },
-    live.id,
+    session.id,
     new AbortController().signal,
   )
   await loop.run([{ kind: 'wake', text: 'list sessions' }])

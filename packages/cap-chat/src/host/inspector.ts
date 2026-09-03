@@ -6,7 +6,7 @@ import {
   type DispatchedTask,
   type TaskDispatchSource,
 } from '@biu/host-live-sessions/usage'
-import { normalizeSessionType, type SessionEvent, type SessionType } from '@biu/type-session'
+import type { SessionEvent } from '@biu/type-session'
 
 export type ToolSourceId = 'minimal' | 'live' | 'plugin' | 'store'
 
@@ -33,17 +33,17 @@ const SOURCE_INFO: InspectorSourceInfo[] = [
   {
     id: 'live',
     label: 'Live 调度',
-    description: '仅 live session 回合自动解锁的指挥工具。',
+    description: '数据库读写与动作工具。',
   },
   {
     id: 'plugin',
     label: '插件注册',
-    description: '内置 seams 工具；标准与创造模式全开，极简需勾选常驻或 slash 临时放开。',
+    description: '内置 seams 工具；标准模式全开，极简需勾选常驻或 slash 临时放开。',
   },
   {
     id: 'store',
     label: '商店插件',
-    description: '已安装商店插件注册的工具，仅创造模式可调用。',
+    description: '已安装商店插件注册的工具，标准模式可调用。',
   },
 ]
 
@@ -57,23 +57,18 @@ export function toolSourceOf(name: string, origin?: 'core' | 'store'): ToolSourc
 export function isToolActiveForSession(opts: {
   name: string
   mode: AgentToolMode
-  sessionType: SessionType
   pinnedExtras: readonly string[]
   origin?: 'core' | 'store'
 }): boolean {
-  if (opts.mode === 'create') return true
-  if (opts.origin === 'store' || toolSourceOf(opts.name, opts.origin) === 'store') return false
   if (opts.mode === 'standard') return true
+  if (opts.origin === 'store' || toolSourceOf(opts.name, opts.origin) === 'store') return false
   if ((MINIMAL_TOOL_NAMES as readonly string[]).includes(opts.name)) return true
-  if (opts.sessionType === 'live' && (LIVE_TOOL_NAMES as readonly string[]).includes(opts.name)) {
-    return true
-  }
   return opts.pinnedExtras.includes(opts.name)
 }
 
 export function buildInspectorTools(
   catalog: Array<{ name: string; description: string; origin?: 'core' | 'store' }>,
-  opts: { mode: AgentToolMode; sessionType: SessionType; pinnedExtras: readonly string[] },
+  opts: { mode: AgentToolMode; pinnedExtras: readonly string[] },
 ): InspectorToolRow[] {
   return catalog
     .map((item) => {
@@ -85,7 +80,6 @@ export function buildInspectorTools(
         active: isToolActiveForSession({
           name: item.name,
           mode: opts.mode,
-          sessionType: opts.sessionType,
           pinnedExtras: opts.pinnedExtras,
           origin: item.origin,
         }),
@@ -104,20 +98,17 @@ export function registerChatInspectorRoutes(ctx: Context) {
     const id = route.params.id
     const record = await ctx.sessions.get(id)
     if (!record) return route.send(404, { error: 'unknown session' })
-    const sessionType = normalizeSessionType(record.type)
     const resolved = ctx.chat.resolveEffective(id)
     const rawMode = resolved.effective.agentMode
-    const mode: AgentToolMode =
-      rawMode === 'minimal' || rawMode === 'create' ? rawMode : 'standard'
+    const mode: AgentToolMode = rawMode === 'minimal' ? 'minimal' : 'standard'
     const pinnedExtras = Array.isArray(resolved.effective.extraTools) ? resolved.effective.extraTools : []
-    const tools = buildInspectorTools(ctx.tools.catalog(), { mode, sessionType, pinnedExtras })
+    const tools = buildInspectorTools(ctx.tools.catalog(), { mode, pinnedExtras })
     const title =
       'title' in resolved.effective && typeof resolved.effective.title === 'string'
         ? resolved.effective.title
         : record.config?.title ?? null
     const body: Record<string, unknown> = {
       sessionId: id,
-      type: sessionType,
       title,
       agentMode: mode,
       extraTools: pinnedExtras,
@@ -127,20 +118,18 @@ export function registerChatInspectorRoutes(ctx: Context) {
       sources: SOURCE_INFO,
       tools,
     }
-    if (sessionType === 'live') {
-      const dispatched = await loadDispatchedUsage(ctx, id, record.events)
-      const { titles, mascots, projects } = await sessionDecorations(ctx)
-      body.dispatchedUsage = dispatched.total
-      body.dispatchedUsageByTurn = Object.fromEntries(
-        Object.entries(dispatched.byLiveTurn).map(([key, value]) => [key, value.usage]),
-      )
-      body.dispatchedTasksByTurn = Object.fromEntries(
-        Object.entries(dispatched.byLiveTurn).map(([key, value]) => [
-          key,
-          value.tasks.map((task) => decorateTask(task, titles, mascots, projects)),
-        ]),
-      )
-    }
+    const dispatched = await loadDispatchedUsage(ctx, id, record.events)
+    const { titles, mascots, projects } = await sessionDecorations(ctx)
+    body.dispatchedUsage = dispatched.total
+    body.dispatchedUsageByTurn = Object.fromEntries(
+      Object.entries(dispatched.byLiveTurn).map(([key, value]) => [key, value.usage]),
+    )
+    body.dispatchedTasksByTurn = Object.fromEntries(
+      Object.entries(dispatched.byLiveTurn).map(([key, value]) => [
+        key,
+        value.tasks.map((task) => decorateTask(task, titles, mascots, projects)),
+      ]),
+    )
     route.send(200, body)
   })
 
@@ -148,14 +137,6 @@ export function registerChatInspectorRoutes(ctx: Context) {
     const id = route.params.id
     const record = await ctx.sessions.get(id)
     if (!record) return route.send(404, { error: 'unknown session' })
-    if (normalizeSessionType(record.type) !== 'live') {
-      return route.send(200, {
-        sessionId: id,
-        dispatchedUsage: null,
-        dispatchedUsageByTurn: {},
-        dispatchedTasksByTurn: {},
-      })
-    }
     const dispatched = await loadDispatchedUsage(ctx, id, record.events)
     const { titles, mascots, projects } = await sessionDecorations(ctx)
     const tasksByTurn: Record<string, Array<Record<string, unknown>>> = {}
@@ -231,7 +212,6 @@ async function loadDispatchedUsage(
   const workers: Array<{ id: string; events: SessionEvent[] }> = []
   for (const item of summaries) {
     if (item.id === liveId) continue
-    if (normalizeSessionType(item.type) === 'live') continue
     const worker = await ctx.sessions.require(item.id)
     workers.push({ id: item.id, events: worker.events })
   }

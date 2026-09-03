@@ -6,7 +6,6 @@ export type CornerAgent = {
   id: string
   title: string
   updatedAt?: number
-  type?: string
   mascot?: { shape: string; color: string; eye?: number }
 }
 
@@ -85,10 +84,7 @@ export function BrandAgentMenu({
               onClick={() => onSelect(item.id)}
             >
               <SidebarMascot size={24} sessionId={item.id} identity={face} animate={false} title={item.title} />
-              <span className="min-w-0 flex-1 truncate">
-                {(item.type ?? 'chat') === 'live' ? <span className="mr-1 text-[9px] font-semibold tracking-wide uppercase">live</span> : null}
-                {item.title}
-              </span>
+              <span className="min-w-0 flex-1 truncate">{item.title}</span>
             </button>
           )
         })

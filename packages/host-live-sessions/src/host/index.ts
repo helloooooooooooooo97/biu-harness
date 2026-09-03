@@ -1,6 +1,5 @@
 import type { Context } from 'cordis'
-import { currentSessionId } from '@biu/host-sessions/scope'
-import { normalizeSessionType, type SessionEvent, type SessionType } from '@biu/type-session'
+import type { SessionEvent } from '@biu/type-session'
 
 export const LIVE_TOOL_NAMES = [
   'db_list',
@@ -13,15 +12,8 @@ export const LIVE_TOOL_NAMES = [
   'db_content',
 ] as const
 
-const LIVE_PROMPT = `你是 Live 指挥席（文字版）：调度其他 chat session，而不是亲自改代码或跑长任务。
-工作流：用 db_list /sessions 和 db_action action=inspect / progress 了解现场；新建用 db_create /sessions（records 数组），改标题/置顶/标签/模型/项目路径用 db_update。上下文压缩用 db_action action=compact / clear / retrieve / status。派工必须走任务体系：db_create /tasks（records 数组）、db_update 指派 assigneeSessionId、db_action action=deliver 派发、action=report 上报；不要直接 dispatch。废弃会话用 db_delete path=/sessions ids=[id]。
-异步派工后不要等待对方完成：完成态在目标 session 自己的 turn 里，需要时再 inspect / progress。
-向用户汇报要克制：只在关键节点、明显卡住、或用户追问时说明，不要刷屏。
-回答简洁：说明调度了谁、当前状态、下一步。`
-
 export interface SessionProgressSnapshot {
   sessionId: string
-  type: SessionType
   status: 'idle' | 'running'
   turn: number | null
   step: number | null
@@ -41,7 +33,7 @@ export interface SessionProgressSnapshot {
 export function buildSessionProgress(
   events: SessionEvent[],
   opts: { afterSeq?: number; textLimit?: number; busy?: boolean; inboxPending?: number } = {},
-): Omit<SessionProgressSnapshot, 'sessionId' | 'type'> {
+): Omit<SessionProgressSnapshot, 'sessionId'> {
   const textLimit = Math.min(2000, Math.max(80, opts.textLimit ?? 600))
   const afterSeq =
     opts.afterSeq == null || !Number.isFinite(opts.afterSeq) ? undefined : opts.afterSeq
@@ -128,12 +120,4 @@ export function buildSessionProgress(
 export const name = 'live-sessions'
 export const inject = ['tools', 'sessions', 'agents', 'systemPrompt']
 
-export function apply(ctx: Context) {
-  ctx.systemPrompt.register('live.persona', () => {
-    const sessionId = currentSessionId()
-    if (!sessionId) return ''
-    const type = normalizeSessionType(ctx.sessions.peek(sessionId)?.type)
-    return type === 'live' ? LIVE_PROMPT : ''
-  })
-
-}
+export function apply(_ctx: Context) {}

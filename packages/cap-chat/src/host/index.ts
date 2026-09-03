@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Service, type Context } from 'cordis'
 import type { ChatMessage } from './chat-types.ts'
-import { isAgentToolMode, type AgentToolMode } from '@biu/host-tools'
+import { isAgentToolMode, normalizeAgentMode, type AgentToolMode } from '@biu/host-tools'
 import type { LlmConfig } from '@biu/host-llm'
 import { probeLlmConnection } from '@biu/host-llm'
 import { LLM_MODEL_CATALOG, LLM_ENDPOINT_PRESETS, describeProvider, defaultModelFor, CHAT_PROVIDERS, findEndpointPreset, normalizeBaseUrl } from './model-catalog.ts'
@@ -22,7 +22,6 @@ import {
 import { estimateTokens } from '@biu/host-sessions'
 import { readArtifactFile } from '@biu/host-sessions/artifacts'
 import { collectLiveDispatchedTasks } from '@biu/host-live-sessions/usage'
-import { normalizeSessionType } from '@biu/type-session'
 import { loadLiveDispatchTasks, registerChatInspectorRoutes } from './inspector.ts'
 
 export type { ChatMessage }
@@ -136,7 +135,7 @@ function writePersisted(config: ChatConfig) {
 }
 
 function parseAgentMode(value: unknown, fallback: AgentToolMode): AgentToolMode {
-  return isAgentToolMode(value) ? value : fallback
+  return normalizeAgentMode(value, fallback)
 }
 
 function parseProvider(value: unknown): ChatProvider | null {
@@ -908,18 +907,14 @@ export function apply(ctx: Context) {
   })
   ctx.http.route('POST', '/api/sessions', async (route) => {
     const payload = ((await route.json().catch(() => null)) ?? {}) as {
-      type?: string
       title?: string
     }
-    const type = payload?.type === 'live' ? 'live' : 'chat'
     const record = await ctx.sessions.create(undefined, {
-      type,
       ...(typeof payload.title === 'string' ? { title: payload.title } : {}),
     })
     route.send(201, {
       id: record.id,
       version: record.version,
-      type: record.type ?? type,
       title: record.config?.title,
       ...(record.mascot ? { mascot: record.mascot } : {}),
       ...(record.config ? { config: record.config } : {}),
@@ -974,7 +969,6 @@ export function apply(ctx: Context) {
         eventCount: item.eventCount,
         title: item.title,
         updatedAt: item.updatedAt,
-        type: item.type ?? 'chat',
         busy: ctx.agents.isBusy(item.id),
         ...(item.project ? { project: item.project } : {}),
         ...(item.mascot ? { mascot: item.mascot } : {}),
@@ -997,7 +991,6 @@ export function apply(ctx: Context) {
     const payload: Record<string, unknown> = {
       id: record.id,
       version: record.version,
-      type: record.type ?? 'chat',
       events: window.events,
       hasMore: window.hasMore,
       totalTurns: window.totalTurns,
@@ -1007,44 +1000,41 @@ export function apply(ctx: Context) {
       ...(record.project ? { project: record.project } : {}),
       ...(record.mascot ? { mascot: record.mascot } : {}),
     }
-    if ((record.type ?? 'chat') === 'live') {
-      const summaries = await ctx.sessions.listSummaries()
-      const workers = []
-      const titles = new Map<string, string>()
-      const mascots = new Map<string, NonNullable<(typeof summaries)[number]['mascot']>>()
-      const projects = new Map<string, { name: string; path?: string }>()
-      for (const item of summaries) {
-        titles.set(item.id, item.title)
-        if (item.mascot) mascots.set(item.id, item.mascot)
-        if (item.project?.name) {
-          projects.set(item.id, {
-            name: item.project.name,
-            ...(item.project.path ? { path: item.project.path } : {}),
-          })
-        }
-        if (item.id === record.id) continue
-        if (normalizeSessionType(item.type) === 'live') continue
-        const worker = await ctx.sessions.require(item.id)
-        workers.push({ id: item.id, events: worker.events })
+    const summaries = await ctx.sessions.listSummaries()
+    const workers = []
+    const titles = new Map<string, string>()
+    const mascots = new Map<string, NonNullable<(typeof summaries)[number]['mascot']>>()
+    const projects = new Map<string, { name: string; path?: string }>()
+    for (const item of summaries) {
+      titles.set(item.id, item.title)
+      if (item.mascot) mascots.set(item.id, item.mascot)
+      if (item.project?.name) {
+        projects.set(item.id, {
+          name: item.project.name,
+          ...(item.project.path ? { path: item.project.path } : {}),
+        })
       }
-      const liveTasks = await loadLiveDispatchTasks(ctx, record.id)
-      const dispatched = collectLiveDispatchedTasks(record.id, record.events, workers, liveTasks)
-      payload.dispatchedUsage = dispatched.total
-      payload.dispatchedUsageByTurn = Object.fromEntries(
-        Object.entries(dispatched.byLiveTurn).map(([key, value]) => [key, value.usage]),
-      )
-      payload.dispatchedTasksByTurn = Object.fromEntries(
-        Object.entries(dispatched.byLiveTurn).map(([key, value]) => [
-          key,
-          value.tasks.map((task) => ({
-            ...task,
-            title: titles.get(task.sessionId) ?? task.sessionId.slice(0, 8),
-            ...(mascots.get(task.sessionId) ? { mascot: mascots.get(task.sessionId) } : {}),
-            ...(projects.get(task.sessionId) ? { project: projects.get(task.sessionId) } : {}),
-          })),
-        ]),
-      )
+      if (item.id === record.id) continue
+      const worker = await ctx.sessions.require(item.id)
+      workers.push({ id: item.id, events: worker.events })
     }
+    const liveTasks = await loadLiveDispatchTasks(ctx, record.id)
+    const dispatched = collectLiveDispatchedTasks(record.id, record.events, workers, liveTasks)
+    payload.dispatchedUsage = dispatched.total
+    payload.dispatchedUsageByTurn = Object.fromEntries(
+      Object.entries(dispatched.byLiveTurn).map(([key, value]) => [key, value.usage]),
+    )
+    payload.dispatchedTasksByTurn = Object.fromEntries(
+      Object.entries(dispatched.byLiveTurn).map(([key, value]) => [
+        key,
+        value.tasks.map((task) => ({
+          ...task,
+          title: titles.get(task.sessionId) ?? task.sessionId.slice(0, 8),
+          ...(mascots.get(task.sessionId) ? { mascot: mascots.get(task.sessionId) } : {}),
+          ...(projects.get(task.sessionId) ? { project: projects.get(task.sessionId) } : {}),
+        })),
+      ]),
+    )
     route.send(200, payload)
   })
   ctx.http.route('GET', '/api/sessions/:id/events', async (route) => {
@@ -1211,7 +1201,6 @@ export function apply(ctx: Context) {
         id: child.id,
         version: child.version,
         parentId: route.params.id,
-        type: child.type ?? 'chat',
         ...(child.mascot ? { mascot: child.mascot } : {}),
       })
     } catch (error) {

@@ -7,7 +7,7 @@ import {
 import { ChatOutlineFilterFields } from './chat-outline-fields.tsx'
 
 type ToolSourceId = 'minimal' | 'live' | 'plugin' | 'store'
-type AgentMode = 'standard' | 'minimal' | 'create'
+type AgentMode = 'standard' | 'minimal'
 type ChatProvider = 'deepseek' | 'openai'
 
 interface InspectorTool {
@@ -37,7 +37,6 @@ interface SessionConfigFields {
 
 interface InspectorPayload {
   sessionId: string
-  type: 'chat' | 'live'
   title?: string | null
   agentMode: AgentMode
   extraTools: string[]

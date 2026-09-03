@@ -11,13 +11,11 @@ import {
   type SessionMascot,
   type SessionProject,
   type SessionRecord,
-  type SessionType,
   type SessionConfig,
   type MessageSender,
   nameFromSessionMascot,
   mergeSessionConfig,
   normalizeSessionConfig,
-  normalizeSessionType,
   isSessionCompactPoint,
   sessionCompactSummaryText,
 } from '@biu/type-session'
@@ -31,8 +29,8 @@ import {
 import { rebuildHealedEvents } from './session-heal.ts'
 import { sessionsCollection } from './sessions-collection.ts'
 
-export type { SessionEvent, SessionEventBody, SessionProject, SessionRecord, SessionMascot, SessionType, SessionConfig }
-export { SESSION_FORMAT_VERSION, normalizeSessionType, normalizeSessionConfig, mergeSessionConfig }
+export type { SessionEvent, SessionEventBody, SessionProject, SessionRecord, SessionMascot, SessionConfig }
+export { SESSION_FORMAT_VERSION, normalizeSessionConfig, mergeSessionConfig }
 export {
   findOpenTurnStep,
   healInterruptedTurnBodies,
@@ -301,11 +299,10 @@ export class SessionsService extends Service {
 
   async create(
     id: string = crypto.randomUUID(),
-    opts: { type?: SessionType; title?: string; config?: SessionConfig } = {},
+    opts: { title?: string; config?: SessionConfig } = {},
   ) {
     const used = await this.collectUsedMascots()
     const mascot = pickSessionMascot(id, used)
-    const type = normalizeSessionType(opts.type)
     const title = opts.title?.trim() || nameFromSessionMascot(mascot)
     const seeded = normalizeSessionConfig({
       ...(opts.config ?? {}),
@@ -316,7 +313,6 @@ export class SessionsService extends Service {
       version: SESSION_FORMAT_VERSION,
       events: [{ type: 'session/open', version: SESSION_FORMAT_VERSION, seq: 0, ts: Date.now() }],
       mascot,
-      type,
       ...(seeded ? { config: seeded } : {}),
     }
     await this.persist(record)
@@ -447,7 +443,6 @@ export class SessionsService extends Service {
       events: source.events.map((event) => ({ ...event })),
       ...(source.project ? { project: { ...source.project } } : {}),
       mascot,
-      type: normalizeSessionType(source.type),
       config: normalizeSessionConfig({
         ...(source.config ?? {}),
         title: nameFromSessionMascot(mascot),
@@ -500,17 +495,6 @@ export class SessionsService extends Service {
           await this.persist(record)
           next = { ...next, mascot: ensured }
         }
-      }
-      const type = normalizeSessionType(next.type)
-      if (next.type !== type) {
-        const record = await this.require(item.id)
-        if (normalizeSessionType(record.type) !== type) {
-          record.type = type
-          await this.persist(record)
-        }
-        next = { ...next, type }
-      } else {
-        next = { ...next, type }
       }
       if (next.mascot && next.title === item.id.slice(0, 8)) {
         next = { ...next, title: nameFromSessionMascot(next.mascot) }

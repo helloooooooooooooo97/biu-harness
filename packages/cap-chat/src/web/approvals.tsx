@@ -6,7 +6,6 @@ import {
   ExclamationCircleIcon,
   PaintBrushIcon,
   PauseIcon,
-  SparklesIcon,
   Squares2X2Icon,
 } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/web-slots'
@@ -14,10 +13,10 @@ import { bindSessionView, type ChatNode, type DispatchedTaskRow, type SessionVie
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { SessionProjectPanel } from './project-panel.tsx'
 
-type AgentMode = 'minimal' | 'standard' | 'create'
+type AgentMode = 'minimal' | 'standard'
 
 function parseAgentMode(value: unknown): AgentMode {
-  return value === 'minimal' || value === 'create' ? value : 'standard'
+  return value === 'minimal' ? 'minimal' : 'standard'
 }
 
 /** 最新一条回复里，上下文（更早 turn）占发给模型的输入文字的比例（0..1）。 */
@@ -373,13 +372,7 @@ export function ApprovalsRail(props: SlotProps) {
                 id: 'standard',
                 label: '标准',
                 icon: <Squares2X2Icon className="size-4" aria-hidden />,
-                hint: '内置 Agent 工具全开（读文件、任务、MCP 等），不含商店插件。',
-              },
-              {
-                id: 'create',
-                label: '创造',
-                icon: <SparklesIcon className="size-4" aria-hidden />,
-                hint: '在标准之上，允许调用已安装的商店插件工具。',
+                hint: '内置 Agent 工具和已安装商店插件全开。',
               },
             ]}
           />

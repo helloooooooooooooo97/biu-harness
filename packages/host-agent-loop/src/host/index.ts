@@ -1,10 +1,8 @@
 import { Service, type Context } from 'cordis'
 import type { AssistantReply, ChatOptions, LlmClient, LlmConfig, LlmMessage, LlmUsage } from '@biu/host-llm'
-import { normalizeSessionType } from '@biu/type-session'
 import { runWithSession } from '@biu/host-sessions/scope'
 import { applyContextBudget } from '@biu/host-sessions'
 import { runWithToolPolicy, type AgentToolMode } from '@biu/host-tools'
-import { LIVE_TOOL_NAMES } from '@biu/host-live-sessions'
 
 /** 工具结果写入事件日志( tool/result )时统一上限字符数；超长裁剪，避免上下文被单次工具输出撑爆。 */
 export const MAX_TOOL_RESULT_CHARS = 16_000
@@ -26,7 +24,6 @@ export class AgentLoop implements AgentRunner {
     let extras = [
       ...new Set(claimed.flatMap((item) => item.extraTools ?? []).map((name) => name.trim()).filter(Boolean)),
     ]
-    const peek = this.ctx.sessions.peek(this.sessionId)
     const chat = this.ctx.get('chat') as
       | {
           resolveEffective?: (id?: string | null) => {
@@ -44,13 +41,8 @@ export class AgentLoop implements AgentRunner {
         if (!extras.includes(name)) extras.push(name)
       }
     }
-    // 极简是底座；Slash / Live 增量放开。商店插件仅创造模式可见。
-    if (normalizeSessionType(peek?.type) === 'live') {
-      for (const name of LIVE_TOOL_NAMES) {
-        if (!extras.includes(name)) extras.push(name)
-      }
-    }
-    if (mode !== 'create') {
+    // 极简是底座；Slash 增量放开。商店插件跟标准模式一起可见。
+    if (mode === 'minimal') {
       extras = extras.filter((name) => this.ctx.tools.originOf(name) !== 'store')
     }
     return runWithSession(this.sessionId, () =>

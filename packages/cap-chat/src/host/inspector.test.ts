@@ -11,12 +11,11 @@ test('toolSourceOf tags minimal / live / plugin / store', () => {
   assert.equal(toolSourceOf('gomoku_move', 'store'), 'store')
 })
 
-test('minimal live session unlocks live tools; pinned extras unlock built-in plugins', () => {
+test('minimal unlocks extras; standard includes store tools', () => {
   assert.equal(
     isToolActiveForSession({
       name: 'bash',
       mode: 'minimal',
-      sessionType: 'chat',
       pinnedExtras: [],
     }),
     true,
@@ -25,7 +24,6 @@ test('minimal live session unlocks live tools; pinned extras unlock built-in plu
     isToolActiveForSession({
       name: 'db_action',
       mode: 'minimal',
-      sessionType: 'chat',
       pinnedExtras: [],
     }),
     false,
@@ -34,8 +32,7 @@ test('minimal live session unlocks live tools; pinned extras unlock built-in plu
     isToolActiveForSession({
       name: 'db_action',
       mode: 'minimal',
-      sessionType: 'live',
-      pinnedExtras: [],
+      pinnedExtras: ['db_action'],
     }),
     true,
   )
@@ -43,7 +40,6 @@ test('minimal live session unlocks live tools; pinned extras unlock built-in plu
     isToolActiveForSession({
       name: 'fs_read',
       mode: 'minimal',
-      sessionType: 'chat',
       pinnedExtras: ['fs_read'],
     }),
     true,
@@ -52,21 +48,19 @@ test('minimal live session unlocks live tools; pinned extras unlock built-in plu
     isToolActiveForSession({
       name: 'gomoku_move',
       mode: 'standard',
-      sessionType: 'chat',
-      pinnedExtras: ['gomoku_move'],
-      origin: 'store',
-    }),
-    false,
-  )
-  assert.equal(
-    isToolActiveForSession({
-      name: 'gomoku_move',
-      mode: 'create',
-      sessionType: 'chat',
       pinnedExtras: [],
       origin: 'store',
     }),
     true,
+  )
+  assert.equal(
+    isToolActiveForSession({
+      name: 'gomoku_move',
+      mode: 'minimal',
+      pinnedExtras: [],
+      origin: 'store',
+    }),
+    false,
   )
 })
 
@@ -78,12 +72,11 @@ test('buildInspectorTools marks configurable plugin tools in minimal mode', () =
       { name: 'fs_read', description: 'read file' },
       { name: 'gomoku_move', description: 'play', origin: 'store' },
     ],
-    { mode: 'minimal', sessionType: 'live', pinnedExtras: [] },
+    { mode: 'minimal', pinnedExtras: [] },
   )
   assert.equal(rows.find((row) => row.name === 'bash')?.active, true)
   assert.equal(rows.find((row) => row.name === 'bash')?.configurable, false)
-  assert.equal(rows.find((row) => row.name === 'db_action')?.active, true)
-  assert.equal(rows.find((row) => row.name === 'db_action')?.configurable, false)
+  assert.equal(rows.find((row) => row.name === 'db_action')?.active, false)
   assert.equal(rows.find((row) => row.name === 'fs_read')?.active, false)
   assert.equal(rows.find((row) => row.name === 'fs_read')?.configurable, true)
   assert.equal(rows.find((row) => row.name === 'gomoku_move')?.active, false)

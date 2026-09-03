@@ -9,11 +9,9 @@ import {
   type SessionRecord,
   type SessionStore,
   type SessionSummary,
-  type SessionType,
   type SessionConfig,
   nameFromSessionMascot,
   normalizeSessionConfig,
-  normalizeSessionType,
   sessionDisplayTitle,
 } from '@biu/type-session'
 import { isSessionMascot, parseSessionMascot } from '@biu/host-sessions/mascot'
@@ -124,12 +122,10 @@ export class SqliteSessionStore implements SessionStore {
     const project = parseProject(row.project_json)
     const mascot = parseMascot(row.mascot_json)
     const config = parseConfig(row.config_json)
-    const type = normalizeSessionType(row.type) as SessionType
     return {
       id: row.id,
       version: row.version,
       events,
-      type,
       ...(project ? { project } : {}),
       ...(mascot ? { mascot } : {}),
       ...(config ? { config } : {}),
@@ -145,7 +141,6 @@ export class SqliteSessionStore implements SessionStore {
     const projectJson = record.project ? JSON.stringify(record.project) : null
     const mascotJson = record.mascot ? JSON.stringify(record.mascot) : null
     const configJson = record.config ? JSON.stringify(record.config) : null
-    const type = normalizeSessionType(record.type)
     const eventCount = record.events.length
 
     const insertEvent = this.db.prepare(
@@ -192,7 +187,7 @@ export class SqliteSessionStore implements SessionStore {
         projectJson,
         mascotJson,
         configJson,
-        type,
+        'chat',
         eventCount,
         title,
         updatedAt,
@@ -256,7 +251,6 @@ export class SqliteSessionStore implements SessionStore {
               ? nameFromSessionMascot(mascot)
               : row.title || row.id.slice(0, 8),
         updatedAt: row.updated_at,
-        type: normalizeSessionType(row.type),
         ...(project ? { project } : {}),
         ...(mascot ? { mascot } : {}),
         ...(config ? { config } : {}),

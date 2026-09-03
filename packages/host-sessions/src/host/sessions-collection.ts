@@ -3,7 +3,6 @@ import { recordBuiltinValues, REQUIRED_RECORD_FIELDS, normalizeSchemaValue } fro
 import {
   isSessionCompactPoint,
   nameFromSessionMascot,
-  normalizeSessionType,
   type SessionConfig,
   type SessionEvent,
   type SessionSummary,
@@ -13,7 +12,6 @@ import { GROK_COLORS, GROK_SHAPES, ensureSessionMascot, isSessionMascot, mascotF
 
 type SessionRecordLike = {
   id: string
-  type?: string
   events: SessionEvent[]
   config?: SessionConfig | null
   project?: { path?: string; name?: string } | null
@@ -24,7 +22,7 @@ type SessionsLike = {
   rename: (id: string, title: string) => Promise<unknown>
   patchConfig: (id: string, patch: SessionConfig) => Promise<unknown>
   delete: (id: string) => Promise<boolean>
-  create?: (opts?: { type?: string; title?: string; config?: SessionConfig }) => Promise<{ id: string }>
+  create?: (opts?: { title?: string; config?: SessionConfig }) => Promise<{ id: string }>
   require?: (id: string) => Promise<SessionRecordLike>
   setProject?: (id: string, project: { path: string } | null) => Promise<unknown>
   isBusy?: (id: string) => boolean
@@ -37,7 +35,6 @@ function asRecord(row: SessionSummary): DbRecord {
   return {
     id: row.id,
     title: row.title,
-    type: row.type ?? 'chat',
     pinned: Boolean(row.config?.pinned),
     tags: Array.isArray(row.config?.tags) ? row.config.tags.map(String) : [],
     eventCount: row.eventCount,
@@ -143,11 +140,10 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
     records: { update: true, create: Boolean(sessions.create), delete: true },
     schema: {
       labelField: 'title',
-      columns: ['title', 'type', 'pinned', 'tags', 'eventCount', 'project', 'updatedAt'],
+      columns: ['title', 'pinned', 'tags', 'eventCount', 'project', 'updatedAt'],
       fields: {
         ...REQUIRED_RECORD_FIELDS,
         title: { type: 'string', label: '标题', writable: true },
-        type: { type: 'select', label: '类型', enum: ['chat', 'live'] },
         pinned: { type: 'boolean', label: '置顶', writable: true },
         tags: { type: 'multi-select', label: '标签', writable: true },
         eventCount: { type: 'number', label: '事件数', computed: true, sortable: true },
@@ -156,7 +152,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         model: { type: 'string', label: '模型', writable: true },
         provider: { type: 'select', label: '服务商', enum: ['deepseek', 'openai', 'anthropic'], writable: true },
         systemPrompt: { type: 'string', label: '系统提示', writable: true },
-        agentMode: { type: 'select', label: '模式', enum: ['standard', 'minimal', 'create'], writable: true },
+        agentMode: { type: 'select', label: '模式', enum: ['standard', 'minimal'], writable: true },
         extraTools: { type: 'multi-select', label: '额外工具', writable: true },
         updatedAt: { type: 'datetime', label: '更新时间', sortable: true },
         mascotName: { type: 'string', label: '形象', computed: true },
@@ -180,9 +176,8 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         config.provider = patch.provider
       }
       if (typeof patch.systemPrompt === 'string') config.systemPrompt = patch.systemPrompt
-      if (patch.agentMode === 'standard' || patch.agentMode === 'minimal' || patch.agentMode === 'create') {
-        config.agentMode = patch.agentMode
-      }
+      if (patch.agentMode === 'minimal') config.agentMode = 'minimal'
+      if (patch.agentMode === 'standard' || patch.agentMode === 'create') config.agentMode = 'standard'
       if (Array.isArray(patch.extraTools)) config.extraTools = patch.extraTools.map((item) => String(item))
       if (Object.keys(config).length) await sessions.patchConfig(id, config)
       if ('projectPath' in patch && sessions.setProject) {
@@ -199,7 +194,6 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
           for (const fields of rows) {
             const rec = await sessions.create!({
               ...(typeof fields.title === 'string' ? { title: fields.title } : {}),
-              ...(fields.type === 'live' || fields.type === 'chat' ? { type: String(fields.type) } : {}),
             })
             const next = (await list()).find((row) => row.id === rec.id)
             if (!next) throw new Error(`unknown session: ${rec.id}`)
@@ -230,7 +224,6 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
           const limit = Math.min(40, Math.max(1, Number(args?.limit) || 12))
           return {
             id: record.id,
-            type: normalizeSessionType(record.type),
             status: sessions.isBusy?.(id) ? 'running' : 'idle',
             title: record.config?.title,
             config: record.config ?? null,
@@ -258,7 +251,6 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
           const record = await sessions.require(id)
           return {
             sessionId: record.id,
-            type: normalizeSessionType(record.type),
             ...sessionProgress(record, {
               afterSeq: args?.afterSeq == null ? undefined : Number(args.afterSeq),
               textLimit: args?.textLimit == null ? undefined : Number(args.textLimit),

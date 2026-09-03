@@ -24,10 +24,8 @@ export function compareSessionRows(a: SessionListItem, b: SessionListItem) {
 
 /** 悬浮聊天用：按更新时间取最近一条对话（忽略置顶；优先普通 chat）。 */
 export function mostRecentSessionId(sessions: SessionListItem[]): string | undefined {
-  const chats = sessions.filter((item) => (item.type ?? 'chat') !== 'live')
-  const pool = chats.length ? chats : sessions
   let best: SessionListItem | undefined
-  for (const item of pool) {
+  for (const item of sessions) {
     if (
       !best ||
       item.updatedAt > best.updatedAt ||

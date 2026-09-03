@@ -4,7 +4,6 @@ import {
   type SessionRecord,
   type SessionStore,
   type SessionSummary,
-  normalizeSessionType,
   sessionDisplayTitle,
 } from '@biu/type-session'
 
@@ -15,7 +14,6 @@ function toSummary(record: SessionRecord, updatedAt?: number): SessionSummary {
     eventCount: record.events.length,
     title: sessionDisplayTitle(record),
     updatedAt: updatedAt ?? record.events.at(-1)?.ts ?? 0,
-    type: normalizeSessionType(record.type),
     ...(record.project ? { project: record.project } : {}),
     ...(record.mascot ? { mascot: record.mascot } : {}),
     ...(record.config ? { config: record.config } : {}),

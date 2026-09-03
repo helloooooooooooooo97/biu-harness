@@ -12,7 +12,6 @@ test('sessionsCollection maps summaries and writes title/pinned/tags', async () 
         eventCount: 3,
         title: 'hello',
         updatedAt: 100,
-        type: 'chat',
         mascot: { shape: 'pebble', color: 'orange', eye: 1 },
         config: { pinned: false, tags: ['a'] },
       },

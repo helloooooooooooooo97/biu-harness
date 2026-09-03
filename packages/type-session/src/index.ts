@@ -63,13 +63,6 @@ export interface SessionMascot {
   eye?: number
 }
 
-/** Session 用途：普通对话 vs Live 指挥席。缺省按 chat 处理。 */
-export type SessionType = 'chat' | 'live'
-
-export function normalizeSessionType(value: unknown): SessionType {
-  return value === 'live' ? 'live' : 'chat'
-}
-
 /** 会话级覆盖配置；未设字段回落到全局 chat-config。 */
 export interface SessionConfig {
   /** 侧栏显示名；未设则仍用最近 user/message 推导 */
@@ -77,7 +70,7 @@ export interface SessionConfig {
   provider?: 'deepseek' | 'openai' | 'anthropic'
   model?: string
   systemPrompt?: string
-  agentMode?: 'standard' | 'minimal' | 'create'
+  agentMode?: 'standard' | 'minimal'
   /** 极简模式下常驻额外工具 */
   extraTools?: string[]
   /** 侧栏标签；一条会话可属于多个标签组 */
@@ -99,7 +92,8 @@ export function normalizeSessionConfig(value: unknown): SessionConfig | undefine
   if (raw.provider === 'deepseek' || raw.provider === 'openai' || raw.provider === 'anthropic') next.provider = raw.provider
   if (typeof raw.model === 'string' && raw.model.trim()) next.model = raw.model.trim()
   if (typeof raw.systemPrompt === 'string') next.systemPrompt = raw.systemPrompt
-  if (raw.agentMode === 'standard' || raw.agentMode === 'minimal' || raw.agentMode === 'create') next.agentMode = raw.agentMode
+  if (raw.agentMode === 'minimal') next.agentMode = 'minimal'
+  if (raw.agentMode === 'standard' || raw.agentMode === 'create') next.agentMode = 'standard'
   if (Array.isArray(raw.extraTools)) {
     next.extraTools = [...new Set(raw.extraTools.map((name) => String(name).trim()).filter(Boolean))]
   }
@@ -141,7 +135,8 @@ export function mergeSessionConfig(
     if (patch.systemPrompt == null) delete next.systemPrompt
     else next.systemPrompt = String(patch.systemPrompt)
   }
-  if (patch.agentMode === 'standard' || patch.agentMode === 'minimal' || patch.agentMode === 'create') next.agentMode = patch.agentMode
+  if (patch.agentMode === 'minimal') next.agentMode = 'minimal'
+  if (patch.agentMode === 'standard' || patch.agentMode === 'create') next.agentMode = 'standard'
   if (Array.isArray(patch.extraTools)) {
     next.extraTools = [...new Set(patch.extraTools.map((name) => String(name).trim()).filter(Boolean))]
   }
@@ -174,7 +169,6 @@ export interface SessionRecord {
   events: SessionEvent[]
   project?: SessionProject
   mascot?: SessionMascot
-  type?: SessionType
   config?: SessionConfig
 }
 
@@ -187,7 +181,6 @@ export interface SessionSummary {
   updatedAt: number
   project?: SessionProject
   mascot?: SessionMascot
-  type?: SessionType
   config?: SessionConfig
 }
 

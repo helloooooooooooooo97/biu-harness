@@ -180,7 +180,7 @@ test('mostRecentSessionId prefers newest chat and ignores pin', () => {
     mostRecentSessionId([
       item({ id: 'old', updatedAt: 1, pinned: true }),
       item({ id: 'new', updatedAt: 9 }),
-      item({ id: 'live', updatedAt: 99, type: 'live' }),
+      item({ id: 'older', updatedAt: 2 }),
     ]),
     'new',
   )
