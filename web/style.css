@@ -1183,23 +1183,26 @@ body {
   position: fixed;
   left: 0;
   top: 0;
-  bottom: 0;
+  width: 0;
+  height: 0;
+  min-width: 0;
+  overflow: visible;
   z-index: 80;
-  width: 12px;
   pointer-events: none;
 }
 
 .sidebar-edge-hot {
   pointer-events: auto;
-  position: absolute;
+  position: fixed;
   left: 0;
   top: 0;
   bottom: 0;
   width: 12px;
+  z-index: 80;
 }
 
 .sidebar-flyout-host.is-collapsed .app-side-bar.is-closed {
-  position: absolute;
+  position: fixed;
   left: 0;
   top: 60px;
   bottom: 60px;
@@ -1221,7 +1224,6 @@ body {
 
 .sidebar-flyout-host.is-collapsed:hover,
 .sidebar-flyout-host.is-collapsed:focus-within {
-  width: var(--sidebar-flyout-width, 240px);
   pointer-events: auto;
 }
 
