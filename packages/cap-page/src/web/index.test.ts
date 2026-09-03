@@ -1,38 +1,13 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { Context, Service } from 'cordis'
-import type { CollectionChrome, CollectionViewType, DatabaseUi } from '@biu/type-file-system/ui'
-import * as pageUi from './index.ts'
-import { pagesChrome } from './chrome.tsx'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { apply, name } from './index.ts'
 
-class FakeDatabaseUi extends Service implements DatabaseUi {
-  last: { path: string; chrome: CollectionChrome } | null = null
-  constructor(ctx: Context) {
-    super(ctx, 'databaseUi')
-  }
-  decorate(path: string, chrome: CollectionChrome) {
-    this.last = { path, chrome }
-    return { dispose() {} }
-  }
-  registerView(_path: string, _view: CollectionViewType) {
-    return { dispose() {} }
-  }
-  chrome() {
-    return this.last?.chrome ?? {}
-  }
-  views() {
-    return []
-  }
-  subscribe() {
-    return () => undefined
-  }
-}
-
-test('page web paints /pages content chrome', async () => {
-  const ctx = new Context()
-  const ui = new FakeDatabaseUi(ctx)
-  await ctx.plugin(pageUi)
-  assert.equal(ui.last?.path, '/pages')
-  assert.equal(ui.last?.chrome.Content, pagesChrome.Content)
-  assert.ok(ctx.pageEditor)
+test('page web no longer owns the document editor', () => {
+  assert.equal(name, 'page-ui')
+  assert.equal(typeof apply, 'function')
+  const src = readFileSync(resolve(import.meta.dirname, './index.ts'), 'utf8')
+  assert.match(src, /@biu\/core-editor\/web/)
+  assert.doesNotMatch(src, /ui\.decorate\('\/pages'/)
 })

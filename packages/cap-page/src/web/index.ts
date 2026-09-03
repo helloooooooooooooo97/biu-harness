@@ -1,25 +1,14 @@
-import type { Context } from 'cordis'
-import type { DatabaseUi } from '@biu/type-file-system/ui'
-import { pagesChrome } from './chrome.tsx'
-import { PageEditorService } from './service.ts'
-import { PAGE_EDITOR_STYLE } from './style.ts'
-
-export { PageEditorService, getPageEditor, usePageEditorVersion } from './service.ts'
-export type { HeadingReplacement, PageBlockSpec, PageBlockViewProps, SlashCommandSpec, SlashInsert } from './service.ts'
+export {
+  PageEditorService,
+  getPageEditor,
+  usePageEditorVersion,
+  PageEditor,
+  RecordEditor,
+} from '@biu/core-editor/web'
+export type { HeadingReplacement, PageBlockSpec, PageBlockViewProps, SlashCommandSpec, SlashInsert } from '@biu/core-editor/web'
 
 export const name = 'page-ui'
 export const inject = ['databaseUi']
 
-export function apply(ctx: Context) {
-  new PageEditorService(ctx)
-  const ui = ctx.get('databaseUi') as DatabaseUi
-  ctx.effect(() => ui.decorate('/pages', pagesChrome).dispose)
-}
-
-if (typeof document !== 'undefined') {
-  const id = 'biu-page-editor-style'
-  const style = document.getElementById(id) ?? document.createElement('style')
-  style.id = id
-  style.textContent = PAGE_EDITOR_STYLE
-  document.head.appendChild(style)
-}
+/** 正文编辑器由 core-editor 挂到 /pages；Page 只登记表和页面存储。 */
+export function apply() {}

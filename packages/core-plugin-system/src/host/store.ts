@@ -45,6 +45,7 @@ type StoreHub = {
 }
 
 const ALLOWED_FILES = new Set(['manifest.json', 'host.js', 'web.js'])
+const README_FILE = 'README.md'
 
 export function storeWebUrl(id: string) {
   return `/api/plugin-store/files/${encodeURIComponent(id)}/web.js`
@@ -223,6 +224,7 @@ export class PluginStoreService extends Service {
     if (webSrc) await writeFile(join(dest, 'web.js'), await compileStoreModule(webSrc, 'web'))
     else if (existsSync(join(dest, 'web.js'))) await rm(join(dest, 'web.js'))
     if (this.isEnabled(id)) await this.mountFromDisk(manifest, dest)
+    await this.ensureReadme(dest, manifest.name, manifest.blurb)
     return { id, pluginPath: dest }
   }
 
@@ -243,6 +245,7 @@ export class PluginStoreService extends Service {
     await writeFile(join(dest, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
     if (hostJs) await writeFile(join(dest, 'host.ts'), hostJs.endsWith('\n') ? hostJs : `${hostJs}\n`)
     if (webSrc) await writeFile(join(dest, 'web.tsx'), webSrc.endsWith('\n') ? webSrc : `${webSrc}\n`)
+    await this.ensureReadme(dest, manifest.name, manifest.blurb)
     return { id, sandboxPath: dest }
   }
 
@@ -270,6 +273,9 @@ export class PluginStoreService extends Service {
     else if (existsSync(join(dest, 'host.js'))) await rm(join(dest, 'host.js'))
     if (webEntry) await writeFile(join(dest, 'web.js'), await bundleStoreEntry(webEntry, 'web'))
     else if (existsSync(join(dest, 'web.js'))) await rm(join(dest, 'web.js'))
+    const sandboxReadme = join(sandbox, README_FILE)
+    if (existsSync(sandboxReadme)) await writeFile(join(dest, README_FILE), await readFile(sandboxReadme))
+    else await this.ensureReadme(dest, manifest.name, manifest.blurb)
     if (this.isEnabled(manifest.id)) await this.mountFromDisk(manifest, dest)
     return { id: manifest.id, sandboxPath: sandbox, pluginPath: dest }
   }
@@ -378,6 +384,36 @@ export class PluginStoreService extends Service {
     delete lastRunAt[id]
     this.state = { ...this.state, lastRunAt }
     this.writeState()
+  }
+
+  private readmeDir(id: string) {
+    const sandbox = this.sandboxPath(id)
+    if (existsSync(join(sandbox, 'manifest.json'))) return sandbox
+    const installed = this.pluginPath(id)
+    if (existsSync(join(installed, 'manifest.json'))) return installed
+    return null
+  }
+
+  private async ensureReadme(dir: string, name: string, blurb: string) {
+    const path = join(dir, README_FILE)
+    if (existsSync(path)) return
+    const body = `# ${name}\n\n${blurb.trim()}\n`
+    await writeFile(path, body)
+  }
+
+  async readReadme(id: string) {
+    const dir = this.readmeDir(id)
+    if (!dir) return ''
+    const path = join(dir, README_FILE)
+    if (!existsSync(path)) return ''
+    return readFile(path, 'utf8')
+  }
+
+  async writeReadme(id: string, markdown: string) {
+    const dir = this.readmeDir(id)
+    if (!dir) throw new Error(`unknown plugin: ${id}`)
+    await writeFile(join(dir, README_FILE), String(markdown ?? ''))
+    this.invalidateList()
   }
 
   async restore() {

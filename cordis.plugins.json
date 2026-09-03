@@ -87,6 +87,16 @@
       "enabled": true
     },
     {
+      "id": "core-editor",
+      "name": "Core-Editor",
+      "layer": "capability",
+      "blurb": "@biu/core-editor。记录正文 Markdown 编辑器；不落盘，由各表经 File System 持久化。会话不用。",
+      "package": "@biu/core-editor/host",
+      "web": "@biu/core-editor/web",
+      "togglable": true,
+      "enabled": true
+    },
+    {
       "id": "core-plugin-system",
       "name": "Core-Plugin System",
       "layer": "capability",

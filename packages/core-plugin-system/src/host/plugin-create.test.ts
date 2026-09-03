@@ -54,6 +54,10 @@ test('create compiles host source straight into .plugin/<id>/', async () => {
     const hostJs = await readFile(join(pluginDir, 'store-echo', 'host.js'), 'utf8')
     assert.match(hostJs, /\bapply\b/)
     assert.doesNotMatch(hostJs, /ctx: \{/)
+    const readme = await readFile(join(pluginDir, 'store-echo', 'README.md'), 'utf8')
+    assert.match(readme, /^# Echo\n/)
+    await store.writeReadme('store-echo', '# Echo\n\n自定义介绍\n')
+    assert.equal(await store.readReadme('store-echo'), '# Echo\n\n自定义介绍\n')
     await assert.rejects(
       () => store.create({ id: 'store-empty', name: 'Empty' }),
       /hostJs and\/or webJs/,
@@ -195,6 +199,8 @@ test('initSandbox writes source; pack bundles into .plugin/<id>/', async () => {
       hostJs: `export const name = 'store-echo'\nexport function apply(ctx: { ok: boolean }) { return ctx.ok }`,
     })
     assert.equal(result.sandboxPath, join(sandboxDir, 'store-echo'))
+    const sandboxReadme = await readFile(join(sandboxDir, 'store-echo', 'README.md'), 'utf8')
+    assert.match(sandboxReadme, /回声/)
     const packed = await store.pack('store-echo')
     assert.equal(packed.pluginPath, join(pluginDir, 'store-echo'))
     const manifest = JSON.parse(await readFile(join(pluginDir, 'store-echo', 'manifest.json'), 'utf8')) as {
@@ -205,6 +211,8 @@ test('initSandbox writes source; pack bundles into .plugin/<id>/', async () => {
     const hostJs = await readFile(join(pluginDir, 'store-echo', 'host.js'), 'utf8')
     assert.match(hostJs, /\bapply\b/)
     assert.doesNotMatch(hostJs, /ctx: \{/)
+    const packedReadme = await readFile(join(pluginDir, 'store-echo', 'README.md'), 'utf8')
+    assert.equal(packedReadme, sandboxReadme)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
@@ -241,6 +249,8 @@ test('create/sandbox/pack live on the plugins collection, not as tools', () => {
   const spec = pluginsCollection({
     list: () => Promise.resolve([]),
     listSandboxes: () => Promise.resolve([]),
+    readReadme: async () => '',
+    writeReadme: async () => {},
     openPlugin() {},
     close() {},
     pack() {},

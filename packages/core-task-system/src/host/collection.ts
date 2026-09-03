@@ -186,7 +186,7 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
         project: { type: 'string', label: '项目', writable: true },
         tags: { type: 'multi-select', label: '标签', writable: true },
         dueAt: { type: 'datetime', label: '截止', writable: true },
-        description: { type: 'string', label: '描述', writable: true },
+        description: { type: 'file', label: '描述', writable: true },
         notes: { type: 'string', label: '备忘', writable: true },
         creator: { type: 'string', label: '创建人' },
         assignee: { type: 'string', label: '承担者' },

@@ -576,6 +576,42 @@ test('SuperTag schema can be written on tables that cannot update other fields',
   assert.equal(collected.items[0]?.path, '/plugins/p1')
 })
 
+test('writeContent can persist intro on tables that cannot update other fields', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  const rows = new Map<string, Record<string, unknown>>([['p1', { id: 'p1', title: 'Demo', readme: '' }]])
+  db.register({
+    id: 'plugins',
+    path: '/plugins',
+    label: '插件',
+    schema: {
+      contentField: 'readme',
+      fields: {
+        ...REQUIRED_RECORD_FIELDS,
+        title: { type: 'string' },
+        readme: { type: 'file', label: '介绍', writable: true },
+      },
+    },
+    records: { update: false, delete: true },
+    list: () => [...rows.values()] as { id: string }[],
+    get: (id) => (rows.get(id) as { id: string } | undefined) ?? null,
+    update: async (id, patch) => {
+      const extra = Object.keys(patch).filter((key) => key !== 'readme')
+      if (extra.length) throw new Error(`plugin fields not writable: ${extra.join(', ')}`)
+      const next = { ...rows.get(id), ...patch, id }
+      rows.set(id, next)
+      return next as { id: string }
+    },
+    remove: (query) => query.ids ?? [],
+  })
+  await assert.rejects(() => db.update('/plugins/p1', { title: '改名' }), /cannot update/)
+  const written = await db.writeContent('/plugins/p1', '# Demo\n')
+  assert.equal(written.field, 'readme')
+  assert.equal(written.value, '# Demo\n')
+  const body = await db.content('/plugins/p1')
+  assert.equal(body.value, '# Demo\n')
+})
+
 test('db_update /supertags writes SuperTag field packs', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)

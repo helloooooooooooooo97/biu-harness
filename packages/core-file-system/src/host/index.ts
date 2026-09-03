@@ -106,7 +106,6 @@ function assertRecordCaps(spec: CollectionSpec) {
   if (spec.records?.update && !spec.update) throw new Error(`collection ${spec.id}: records.update 为 true 时必须提供 update`)
   if (spec.records?.create && !spec.create) throw new Error(`collection ${spec.id}: records.create 为 true 时必须提供 create`)
   if (spec.records?.delete && !spec.remove) throw new Error(`collection ${spec.id}: records.delete 为 true 时必须提供 remove`)
-  if (spec.update && !spec.records?.update) throw new Error(`collection ${spec.id}: 提供了 update 但未声明 records.update`)
   if (spec.create && !spec.records?.create) throw new Error(`collection ${spec.id}: 提供了 create 但未声明 records.create`)
   if (spec.remove && !spec.records?.delete) throw new Error(`collection ${spec.id}: 提供了 remove 但未声明 records.delete`)
 }
@@ -699,11 +698,13 @@ export class DatabaseService extends Service implements Database {
     if (parts.length !== 2) throw new Error(`cannot write content: ${normalizeCollectionPath(path)}`)
     const spec = this.collection(`/${parts[0]}`)
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
-    if (!spec.records?.update || !spec.update) throw new Error(`collection cannot update: ${spec.path}`)
+    if (!spec.update) throw new Error(`collection cannot update: ${spec.path}`)
     const schema = schemaFor(spec)
     const field = schema.contentField ?? 'content'
     if (!schema.fields[field]) throw new Error(`no content field: ${field}`)
-    const patch = pickWritablePatch(schema, { [field]: value })
+    const patch = this.collectionCanUpdate(spec)
+      ? pickWritablePatch(schema, { [field]: value })
+      : { [field]: value }
     const record = await spec.update(parts[1]!, patch)
     this.bump()
     return {

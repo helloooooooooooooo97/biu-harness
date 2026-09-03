@@ -5,10 +5,24 @@ import { pluginsCollection } from './collection.ts'
 import type { PluginStoreService } from './store.ts'
 import { defaultStoreShell } from '../shell.ts'
 
+function stubStore(partial: Partial<PluginStoreService>): PluginStoreService {
+  return {
+    list: () => Promise.resolve([]),
+    listSandboxes: () => Promise.resolve([]),
+    readReadme: async () => '',
+    writeReadme: async () => {},
+    openPlugin() {},
+    close() {},
+    pack() {},
+    uninstall() {},
+    ...partial,
+  } as PluginStoreService
+}
+
 test('pluginsCollection lists installed plugins and sandboxes in one table', async () => {
   const items: DbRecord[] = [{ id: 'demo', name: 'Demo', enabled: false }]
   const calls: string[] = []
-  const spec = pluginsCollection({
+  const spec = pluginsCollection(stubStore({
     list: () =>
       Promise.resolve([
         {
@@ -58,7 +72,7 @@ test('pluginsCollection lists installed plugins and sandboxes in one table', asy
     uninstall(id: string) {
       calls.push(`uninstall:${id}`)
     },
-  } as PluginStoreService)
+  }))
   assert.equal(spec.path, '/plugins')
   assert.equal(spec.view?.moduleId, 'plugins')
   const listed = await spec.list()
@@ -81,7 +95,8 @@ test('pluginsCollection lists installed plugins and sandboxes in one table', asy
   await spec.actions!.find((item) => item.id === 'start')!.run('demo', demo!)
   await spec.actions!.find((item) => item.id === 'pack')!.run('draft-hello', draft!)
   assert.deepEqual(calls, ['open:demo', 'pack:draft-hello'])
-  assert.equal(spec.update, undefined)
+  assert.equal(typeof spec.update, 'function')
+  assert.equal(spec.schema.contentField, 'readme')
   assert.deepEqual(spec.records, { update: false, create: false, delete: true })
   assert.equal(typeof spec.remove, 'function')
   assert.ok(spec.schema.columns?.includes('sandbox'))
@@ -92,7 +107,7 @@ test('pluginsCollection lists installed plugins and sandboxes in one table', asy
 })
 
 test('headless plugins omit shell columns', async () => {
-  const spec = pluginsCollection({
+  const spec = pluginsCollection(stubStore({
     list: () =>
       Promise.resolve([
         {
@@ -118,7 +133,7 @@ test('headless plugins omit shell columns', async () => {
     close() {},
     pack() {},
     uninstall() {},
-  } as PluginStoreService)
+  }))
   const listed = await spec.list()
   assert.equal(listed[0]?.headless, true)
   assert.equal(listed[0]?.shellWidth, undefined)
@@ -126,7 +141,7 @@ test('headless plugins omit shell columns', async () => {
 })
 
 test('same id with sandbox and install merges into one row', async () => {
-  const spec = pluginsCollection({
+  const spec = pluginsCollection(stubStore({
     list: () =>
       Promise.resolve([
         {
@@ -166,7 +181,7 @@ test('same id with sandbox and install merges into one row', async () => {
     close() {},
     pack() {},
     uninstall() {},
-  } as PluginStoreService)
+  }))
   const listed = await spec.list()
   assert.equal(listed.length, 1)
   assert.equal(listed[0]?.id, 'echo')
@@ -174,4 +189,41 @@ test('same id with sandbox and install merges into one row', async () => {
   assert.equal(listed[0]?.sandbox, true)
   assert.equal(listed[0]?.running, true)
   assert.equal(listed[0]?.updatedAt, 9)
+})
+
+test('plugin intro is README.md via contentField readme', async () => {
+  const files = new Map<string, string>()
+  const spec = pluginsCollection(
+    stubStore({
+      list: () =>
+        Promise.resolve([
+          {
+            id: 'demo',
+            name: 'Demo',
+            blurb: 'hi',
+            tags: [],
+            author: '',
+            authorUrl: '',
+            enabled: false,
+            running: false,
+            bytes: 12,
+            createdAt: 1,
+            updatedAt: 2,
+            lastRunAt: null,
+            hasHost: true,
+            hasWeb: false,
+          },
+        ]),
+      readReadme: async (id) => files.get(id) ?? '',
+      writeReadme: async (id, markdown) => {
+        files.set(id, markdown)
+      },
+    }),
+  )
+  const row = await spec.get!('demo')
+  assert.equal(row?.readme, '')
+  const written = await spec.update!('demo', { readme: '# Demo\n\n介绍\n' })
+  assert.equal(written.readme, '# Demo\n\n介绍\n')
+  assert.equal(files.get('demo'), '# Demo\n\n介绍\n')
+  await assert.rejects(() => spec.update!('demo', { name: '改名' }), /not writable/)
 })

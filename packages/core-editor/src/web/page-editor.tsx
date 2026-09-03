@@ -59,7 +59,7 @@ export function PageEditor({ record, value, writable, onChange }: FsContentProps
         attributes: {
           class: 'tiptap',
           role: 'textbox',
-          'aria-label': '页面正文',
+          'aria-label': '正文',
           'data-testid': 'page-editor',
         },
         handleKeyDown: (view, event) => {

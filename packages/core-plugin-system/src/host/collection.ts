@@ -96,7 +96,11 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       .sort()
       .map((id) => mergeLifecycle(byInstalled.get(id), bySandbox.get(id)))
   }
-  const find = async (id: string) => (await list()).find((row) => row.id === id) ?? null
+  const find = async (id: string) => {
+    const row = (await list()).find((item) => item.id === id) ?? null
+    if (!row) return null
+    return { ...row, readme: await store.readReadme(id) }
+  }
   return {
     id: 'plugins',
     path: '/plugins',
@@ -106,13 +110,14 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       route: '/plugins',
       title: '插件',
       inspector: true,
-      blurb: '.plugin 已安装与 .plugin-dev 沙箱同一张表。新建用 db_action create/sandbox，打包用 pack。窗口尺寸来自扁平列 shellWidth/shellHeight，不是 listing.shell。',
+      blurb: '.plugin 已安装与 .plugin-dev 沙箱同一张表。介绍正文是 README.md。新建用 db_action create/sandbox，打包用 pack。窗口尺寸来自扁平列 shellWidth/shellHeight，不是 listing.shell。',
       order: 30,
       icon: 'puzzle-piece',
     },
     records: { update: false, create: false, delete: true },
     schema: {
       labelField: 'name',
+      contentField: 'readme',
       columns: [
         'name',
         'blurb',
@@ -152,10 +157,19 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         shellMinWidth: { type: 'number', label: '最小宽' },
         shellMinHeight: { type: 'number', label: '最小高' },
         shellResizable: { type: 'boolean', label: '可缩放' },
+        readme: { type: 'file', label: '介绍', writable: true },
       },
     },
     list,
     get: find,
+    update: async (id, patch) => {
+      const extra = Object.keys(patch).filter((key) => key !== 'readme')
+      if (extra.length) throw new Error(`plugin fields not writable: ${extra.join(', ')}`)
+      if ('readme' in patch) await store.writeReadme(id, String(patch.readme ?? ''))
+      return (await find(id)) ?? (() => {
+        throw new Error(`unknown plugin: ${id}`)
+      })()
+    },
     remove: async (query) => {
       const ids = query.ids ?? []
       for (const id of ids) await store.uninstall(id)
