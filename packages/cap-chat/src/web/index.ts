@@ -89,6 +89,12 @@ export function apply(ctx: Context) {
   ctx.inject(['databaseUi', 'snapshot'], (inner) => {
     const ui = inner.get('databaseUi') as DatabaseUi
     const snap = inner.get('snapshot') as SnapshotService
-    return ui.decorate('/sessions', sessionsChrome(snap)).dispose
+    let pick: PickService | undefined
+    try {
+      pick = inner.get('pick') as PickService
+    } catch {
+      pick = undefined
+    }
+    return ui.decorate('/sessions', sessionsChrome({ snapshot: snap, slotProps: props(), pick })).dispose
   })
 }
