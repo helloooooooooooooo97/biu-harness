@@ -1343,7 +1343,6 @@ export function CollectionBrowser({
       )
     const host = (
       <span className="fsdb-title-host">
-        {openDetail ? <RowCheck id={row.id} /> : null}
         <RecordMark
           record={row}
           tableIcon={currentTable?.view?.icon}
@@ -1356,6 +1355,7 @@ export function CollectionBrowser({
     if (!openDetail && !tree) return host
     return (
       <div className="tasks-title-cell" style={tree ? { paddingLeft: depth * 16 } : undefined}>
+        {openDetail ? <RowCheck id={row.id} /> : null}
         {tree ? (
           hasKids ? (
             <button
@@ -1589,8 +1589,8 @@ export function CollectionBrowser({
     return (
       <li className={`tasks-queue-item${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
         <div className="tasks-queue-item-body">
+          <RowCheck id={row.id} />
           <span className="fsdb-title-host tasks-queue-item-lead">
-            <RowCheck id={row.id} />
             <div className="tasks-queue-item-main">
               <span className="tasks-queue-item-title">
                 <RecordTitle row={row} openDetail={false} />
@@ -1612,8 +1612,8 @@ export function CollectionBrowser({
         <div className="tasks-minicard-bar">
           <RecordRowTools row={row} />
         </div>
+        <RowCheck id={row.id} />
         <div className="tasks-minicard-title fsdb-title-host">
-          <RowCheck id={row.id} />
           <div className="tasks-minicard-open">
             <span className="tasks-minicard-titletext">
               <RecordTitle row={row} openDetail={false} />
@@ -2335,12 +2335,10 @@ export function CollectionBrowser({
                   const tone = flat ? schemaTagTone(flat.packId) : undefined
                   return (
                   <th key={col.key}>
-                    <span className="fsdb-title-host">
-                      {index === 0 ? <RowCheck ids={pickableIds} /> : null}
-                      <span className="tasks-th" style={tone ? { color: tone } : undefined}>
-                        <FieldGlyph kind={col.kind} />
-                        {col.field.label ?? col.key}
-                      </span>
+                    {index === 0 ? <RowCheck ids={pickableIds} /> : null}
+                    <span className="tasks-th" style={tone ? { color: tone } : undefined}>
+                      <FieldGlyph kind={col.kind} />
+                      {col.field.label ?? col.key}
                     </span>
                   </th>
                   )

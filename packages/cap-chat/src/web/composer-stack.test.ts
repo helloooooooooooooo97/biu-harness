@@ -21,6 +21,7 @@ describe('composer dock stacking above sticky user', () => {
     expect(thread).not.toMatch(/Running/)
     expect(thread).not.toMatch(/StatusRow/)
     expect(shell).toContain('chat-composer-dock')
+    expect(shell).toContain('pb-[calc(1rem+25px)]')
     expect(shell).not.toMatch(/bottom-0 z-\[2\]/)
   })
 

@@ -165,7 +165,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
         <div className="absolute inset-0 z-1 flex min-h-0 overflow-hidden">
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             {centerStage}
-            <div className="chat-composer-dock pointer-events-none absolute inset-x-0 bottom-0 bg-transparent px-6 pb-4 md:px-8 lg:px-10">
+            <div className="chat-composer-dock pointer-events-none absolute inset-x-0 bottom-0 bg-transparent px-6 pb-[calc(1rem+25px)] md:px-8 lg:px-10">
               {centerDock}
             </div>
             {renderSlot('stage-aside')}
