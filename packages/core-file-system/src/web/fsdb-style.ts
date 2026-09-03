@@ -289,7 +289,7 @@ const CSS = `
 .fsdb-tag-collect>.fsdb-page{flex:1;min-width:0;min-height:0;background:transparent}
 .fsdb-page.is-sheet .tasks-main{padding:0;gap:8px;max-width:none}
 .fsdb-page.is-sheet .fsdb-right-body{overflow:hidden}
-.fsdb-detail-aside{display:flex;flex-direction:column;gap:2px;padding:8px 0 12px}
+.fsdb-detail-aside{display:flex;flex-direction:column;gap:2px;padding:0 0 12px}
 .fsdb-proprow,.fsdb-prop{display:grid;grid-template-columns:108px minmax(0,1fr);align-items:center;gap:8px;min-height:32px;font-size:14px;color:#7B7B79}
 .fsdb-proprow-k,.fsdb-prop>span:first-child{font-size:14px;font-weight:500;color:#7B7B79;display:inline-flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-proprow-k svg,.fsdb-prop>span:first-child svg,.fsdb-schema-prop-k svg{color:#F0EFED;opacity:1}
@@ -349,7 +349,7 @@ const CSS = `
 .fsdb-prop-val .fsdb-plain-input:focus{text-overflow:clip}
 .fsdb-prop-val .fsdb-link{display:block;overflow-wrap:normal}
 .fsdb-prop-val .fsdb-tags{display:flex;flex-wrap:nowrap}
-.fsdb-detail-title-row{display:flex;align-items:flex-start;gap:12px;min-width:0}
+.fsdb-detail-title-row{display:flex;align-items:flex-start;gap:12px;min-width:0;padding-bottom:16px}
 .fsdb-detail-title-icon-wrap{position:relative;flex:none;margin-top:2px}
 .fsdb-detail-title-icon{display:grid;place-items:center;width:36px;height:36px;margin:0;border:0;border-radius:10px;padding:0;background:transparent;color:var(--dsw-label-2);font-size:28px;line-height:1;overflow:visible}
 button.fsdb-detail-title-icon{cursor:pointer}

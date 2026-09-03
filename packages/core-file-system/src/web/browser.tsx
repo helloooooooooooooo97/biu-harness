@@ -1963,7 +1963,7 @@ export function CollectionBrowser({
           <span className="fsdb-detail-title-icon" aria-hidden>
             <TableGlyph icon={currentTable?.view?.icon} className="size-8" />
           </span>
-          <h1 className="fsdb-detail-title">{title}</h1>
+          <h1 className="fsdb-detail-title">{activeView?.name ?? title}</h1>
         </div>
         )}
         <div className="tasks-toolbar" ref={toolbarRef} data-biu-ignore>
