@@ -162,7 +162,9 @@ function matchModelOption(catalog: ModelOption[], provider: string, model: strin
   )
 }
 
-export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
+export const ChatComposer = memo(function ChatComposer(
+  props: SlotProps & { boundSessionId?: string; boundPending?: boolean },
+) {
   const formRef = useRef<HTMLFormElement>(null)
   const pickKeysRef = useRef(new Set<string>())
   const pendingRef = useRef(false)
@@ -193,9 +195,13 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   /** 入口展示名 */
   const [endpointLabels, setEndpointLabels] = useState<Record<string, string>>({})
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
-  const pending = useSessionView((state) => state.pending)
-  const inbox = useSessionView((state) => state.inbox)
-  const sessionId = useSessionView((state) => state.sessionId)
+  const boundSessionId = props.boundSessionId
+  const livePending = useSessionView((state) => state.pending)
+  const liveInbox = useSessionView((state) => state.inbox)
+  const liveSessionId = useSessionView((state) => state.sessionId)
+  const pending = boundSessionId ? Boolean(props.boundPending) : livePending
+  const inbox = boundSessionId ? [] : liveInbox
+  const sessionId = boundSessionId || liveSessionId
   const sessionView = props.sessionView as SessionViewService
   const pick = props.pick as PickService | undefined
   const { refs: pickRefs } = usePickState(pick)
@@ -702,8 +708,30 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     const packed = await Promise.all(pendingImages.map((item) => readFileDataUrl(item.file)))
     clearInput()
     pick?.clear()
-    revealOverlayThread()
+    if (!boundSessionId) revealOverlayThread()
     try {
+      if (boundSessionId) {
+        const extraTools = [...new Set(tools.map((name) => name.trim()).filter(Boolean))]
+        const pics = packed.filter((item) => item.url.startsWith('data:image/')).slice(0, 6)
+        const body: Record<string, unknown> = {
+          text: text || '（图片）',
+          wait: false,
+          ...(extraTools.length ? { extraTools } : {}),
+          ...(pics.length ? { images: pics } : {}),
+        }
+        const res = await fetch(`/api/sessions/${boundSessionId}/messages`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as { error?: string }
+          throw new Error(data.error || `发送失败：${res.status}`)
+        }
+        clearDraft(boundSessionId)
+        flushDraftTimer()
+        return
+      }
       await sessionView.send(
         text,
         'wake',
@@ -924,7 +952,13 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
               className="composer-stop"
               title="停止"
               aria-label="停止生成"
-              onClick={() => void sessionView.cancel()}
+              onClick={() => {
+                if (boundSessionId) {
+                  void fetch(`/api/sessions/${boundSessionId}/cancel`, { method: 'POST' })
+                  return
+                }
+                void sessionView.cancel()
+              }}
             >
               <span className="composer-stop-square" aria-hidden />
             </button>

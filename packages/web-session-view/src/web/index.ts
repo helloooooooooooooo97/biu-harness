@@ -4,6 +4,7 @@ import {
   compactSessionEvents,
   mergeDispatchedUsageIntoNodes,
   projectNodes,
+  upsertSessionEvent,
   type ChatNode,
   type DerivedMessage,
   type SessionEvent,
@@ -30,6 +31,7 @@ export {
   compactSessionEvents,
   mergeDispatchedUsageIntoNodes,
   projectNodes,
+  upsertSessionEvent,
   formatTokens,
   formatTrajectoryUsage,
   sumTrajectoryRowUsage,
@@ -421,7 +423,7 @@ export class SessionViewService extends Service {
       return
     }
     this.flushChunkFrame()
-    const events = upsertEvent(this.value.sessionId === sessionId ? this.value.events : [], event)
+    const events = upsertSessionEvent(this.value.sessionId === sessionId ? this.value.events : [], event)
     const basePatch: Partial<SessionViewState> = {
       sessionId,
       events,
@@ -449,7 +451,7 @@ export class SessionViewService extends Service {
   }
 
   private ingestChunk(sessionId: string, event: Extract<SessionEvent, { type: 'assistant/chunk' }>) {
-    const events = upsertEvent(this.value.sessionId === sessionId ? this.value.events : [], event)
+    const events = upsertSessionEvent(this.value.sessionId === sessionId ? this.value.events : [], event)
     const chunk = events.at(-1)
     const nodes =
       chunk?.type === 'assistant/chunk'
@@ -1411,26 +1413,6 @@ export class SessionViewService extends Service {
     this.value = { ...this.value, ...patch }
     for (const fn of this.listeners) fn()
   }
-}
-
-function upsertEvent(events: SessionEvent[], event: SessionEvent) {
-  if (events.some((item) => item.seq === event.seq)) return events
-  if (event.type === 'assistant/chunk') {
-    const last = events.at(-1)
-    if (last?.type === 'assistant/chunk') {
-      return [
-        ...events.slice(0, -1),
-        { ...last, text: last.text + event.text, ts: event.ts },
-      ]
-    }
-  }
-  if (event.type === 'assistant/message') {
-    const last = events.at(-1)
-    if (last?.type === 'assistant/chunk') {
-      return [...events.slice(0, -1), event]
-    }
-  }
-  return [...events, event].sort((a, b) => a.seq - b.seq)
 }
 
 function patchStreamingNodes(

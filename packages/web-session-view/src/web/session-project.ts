@@ -704,3 +704,23 @@ export function projectTrajectory(events: SessionEvent[]): TrajectoryRow[] {
   }
   return rows
 }
+
+export function upsertSessionEvent(events: SessionEvent[], event: SessionEvent) {
+  if (events.some((item) => item.seq === event.seq)) return events
+  if (event.type === 'assistant/chunk') {
+    const last = events.at(-1)
+    if (last?.type === 'assistant/chunk') {
+      return [
+        ...events.slice(0, -1),
+        { ...last, text: last.text + event.text, ts: event.ts },
+      ]
+    }
+  }
+  if (event.type === 'assistant/message') {
+    const last = events.at(-1)
+    if (last?.type === 'assistant/chunk') {
+      return [...events.slice(0, -1), event]
+    }
+  }
+  return [...events, event].sort((a, b) => a.seq - b.seq)
+}
