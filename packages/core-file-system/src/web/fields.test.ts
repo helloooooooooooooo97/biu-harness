@@ -2,7 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import type { CollectionSchema } from '@biu/type-file-system'
 import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
-import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, isViewModeId, matchActionWhen, matchesFilters, parentFieldKey, readFacetFlatValue, resolveFieldType, sortRows, uniqueValues } from './fields'
+import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, matchesFilters, parentFieldKey, readFacetFlatValue, resolveFieldType, sortRows, uniqueValues } from './fields'
 
 test('isViewModeId accepts builtin and custom slugs', () => {
   assert.equal(isViewModeId('table'), true)
@@ -185,6 +185,30 @@ test('parentFieldKey reads schema then parentId then data links', () => {
       ],
     ),
     'folder',
+  )
+})
+
+test('hasTreeLinks is false until a row points at another row', () => {
+  assert.equal(hasTreeLinks([], 'parentId'), false)
+  assert.equal(
+    hasTreeLinks(
+      [
+        { id: 'a', title: 'root', parentId: '' },
+        { id: 'b', title: 'also', parentId: '' },
+      ],
+      'parentId',
+    ),
+    false,
+  )
+  assert.equal(
+    hasTreeLinks(
+      [
+        { id: 'a', title: 'root', parentId: '' },
+        { id: 'b', title: 'child', parentId: 'a' },
+      ],
+      'parentId',
+    ),
+    true,
   )
 })
 

@@ -54,6 +54,16 @@ export function parentFieldKey(schema: CollectionSchema | undefined, rows: DbRec
   return null
 }
 
+/** 当前数据里是否真有父子链接；没有则不当树形表。 */
+export function hasTreeLinks(rows: DbRecord[], parentKey: string | null): boolean {
+  if (!parentKey || !rows.length) return false
+  const ids = new Set(rows.map((row) => row.id))
+  return rows.some((row) => {
+    const raw = String(row[parentKey] ?? '')
+    return Boolean(raw) && raw !== row.id && ids.has(raw)
+  })
+}
+
 export type TreeRow = { row: DbRecord; depth: number; hasKids: boolean; kidCount: number }
 
 export function flattenTree(rows: DbRecord[], parentKey: string, collapsed: Record<string, boolean> = {}): TreeRow[] {

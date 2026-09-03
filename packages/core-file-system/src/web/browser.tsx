@@ -46,6 +46,7 @@ import {
   groupField,
   groupRecords,
   groupableFields,
+  hasTreeLinks,
   parentFieldKey,
   parseFacetFlatColumnKey,
   patchFacetFlatValue,
@@ -734,12 +735,14 @@ export function CollectionBrowser({
     return buckets.filter((item) => item.rows.length)
   }, [groupBy, grouping, mode, schema, visible])
   const parentKey = useMemo(() => parentFieldKey(schema, items), [items, schema])
+  const treeable = useMemo(() => hasTreeLinks(items, parentKey), [items, parentKey])
+  const treeOn = treeable && showTree
   const flattenRows = useCallback(
     (rows: DbRecord[]) => {
-      if (!parentKey || !showTree) return rows.map((row) => ({ row, depth: 0, hasKids: false, kidCount: 0 }))
+      if (!parentKey || !treeOn) return rows.map((row) => ({ row, depth: 0, hasKids: false, kidCount: 0 }))
       return flattenTree(rows, parentKey, collapsed)
     },
-    [collapsed, parentKey, showTree],
+    [collapsed, parentKey, treeOn],
   )
   const pickableIds = useMemo(() => {
     const rows = grouping ? grouped.flatMap((group) => group.rows) : visible
@@ -1341,7 +1344,7 @@ export function CollectionBrowser({
       ) : (
         <>{labelOf(row)}</>
       )
-    const tree = openDetail && parentKey && showTree
+    const tree = openDetail && treeOn
     const host = (
       <span className="fsdb-title-host" style={tree ? { paddingLeft: depth * 16 } : undefined}>
         {tree ? (
@@ -2236,13 +2239,13 @@ export function CollectionBrowser({
             <div className="tasks-filter-btn-wrap" ref={configRef}>
               <button
                 type="button"
-                className={`tasks-refresh tasks-rbar-btn${configOpen || wrapCells || !truncateCells || (Boolean(parentKey) && !showTree) ? ' is-active' : ''}`}
+                className={`tasks-refresh tasks-rbar-btn${configOpen || wrapCells || !truncateCells || (treeable && !showTree) ? ' is-active' : ''}`}
                 aria-label="表格配置"
                 title="表格配置"
                 onClick={() => toggleMenu('config')}
               >
                 <AdjustmentsHorizontalIcon aria-hidden className="size-[14px]" />
-                {wrapCells || !truncateCells || (Boolean(parentKey) && !showTree) ? (
+                {wrapCells || !truncateCells || (treeable && !showTree) ? (
                   <span className="tasks-filter-dot" aria-hidden />
                 ) : null}
               </button>
@@ -2261,7 +2264,7 @@ export function CollectionBrowser({
                     on={truncateCells}
                     onToggle={() => setTruncate(!truncateCells)}
                   />
-                  {parentKey ? (
+                  {treeable ? (
                     <CheckRow
                       icon={<ChevronRightIcon aria-hidden className="size-[14px]" />}
                       label="树形展示"
