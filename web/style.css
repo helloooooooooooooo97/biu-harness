@@ -3924,20 +3924,16 @@ body {
   opacity: 0.3;
 }
 
-.chat-outline-tick.is-h2 {
-  padding-left: 6px;
+.chat-outline-tick.is-h1::after {
+  width: 10px;
 }
 
 .chat-outline-tick.is-h2::after {
-  width: 4px;
-}
-
-.chat-outline-tick.is-h3 {
-  padding-left: 10px;
+  width: 7px;
 }
 
 .chat-outline-tick.is-h3::after {
-  width: 3px;
+  width: 4px;
 }
 
 .chat-outline-tick.is-robot::after {
@@ -3946,7 +3942,6 @@ body {
 
 .chat-outline-tick:hover::after,
 .chat-outline-tick.is-active::after {
-  width: 10px;
   opacity: 0.62;
 }
 

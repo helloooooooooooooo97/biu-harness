@@ -4,7 +4,7 @@ export type OutlineNavItem = {
   id: string
   text: string
   robot?: boolean
-  /** 1 / 2 / 3 级标题，越大越缩进 */
+  /** 1 / 2 / 3 级标题：刻度左齐，右侧长度 h1 > h2 > h3 */
   level?: 1 | 2 | 3
 }
 
