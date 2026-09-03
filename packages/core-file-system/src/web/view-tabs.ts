@@ -1,13 +1,12 @@
 export function countFittingViewTabs(
   tabWidths: number[],
-  moreWidth: number,
   available: number,
   gap: number,
 ): number {
   const n = tabWidths.length
   if (n === 0) return 0
   const widthOf = (count: number) => {
-    let w = moreWidth
+    let w = 0
     for (let i = 0; i < count; i++) w += tabWidths[i] + gap
     return w
   }

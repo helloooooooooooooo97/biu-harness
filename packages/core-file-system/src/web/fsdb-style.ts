@@ -83,7 +83,6 @@ const CSS = `
 .fsdb-page .tasks-viewtabs-measure{position:absolute;left:0;top:0;visibility:hidden;pointer-events:none;display:flex;align-items:center;gap:2px;white-space:nowrap}
 .fsdb-page .tasks-viewdd-btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:8px;padding:5px 9px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;font-weight:650;cursor:pointer;flex:none}
 .fsdb-page .tasks-viewtab.is-active{background:var(--dsw-hover)}
-.fsdb-page .tasks-viewdd-more{padding:5px 6px}
 .fsdb-page .tasks-viewdd-btn:hover,.fsdb-page .tasks-viewdd-btn.is-active{background:var(--dsw-hover)}
 .fsdb-page .tasks-viewdd-name{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-page .tasks-viewdd-menu,.fsdb-page .tasks-sort-menu,.fsdb-page .tasks-filter-menu{position:absolute;top:calc(100% + 6px);z-index:40;min-width:180px;padding:8px;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:4px}

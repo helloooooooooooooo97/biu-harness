@@ -422,11 +422,9 @@ export function CollectionBrowser({
       const right = toolbarRightRef.current
       const row = viewMeasureRef.current
       if (!toolbar || !right || !row) return
-      const more = row.querySelector('[data-view-measure-more]')
       const tabs = [...row.querySelectorAll('[data-view-measure]')] as HTMLElement[]
       const available = Math.max(0, toolbar.clientWidth - right.offsetWidth - 12)
-      const moreWidth = more instanceof HTMLElement ? more.offsetWidth : 32
-      setViewTabFit(countFittingViewTabs(tabs.map((el) => el.offsetWidth), moreWidth, available, 2))
+      setViewTabFit(countFittingViewTabs(tabs.map((el) => el.offsetWidth), available, 2))
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -1876,42 +1874,40 @@ export function CollectionBrowser({
                     <span className="tasks-viewdd-name">{view.name}</span>
                   </button>
                 ))}
-                <button type="button" className="tasks-viewdd-btn tasks-viewdd-more" tabIndex={-1} data-view-measure-more>
-                  <EllipsisHorizontalIcon aria-hidden className="size-[14px]" />
-                </button>
               </div>
               <div className="tasks-viewtabs">
                 {(views.length ? splitVisibleViews(views, viewTabFit, activeViewId).shown : []).map((view) => (
                   <button
                     key={view.id}
                     type="button"
-                    className={`tasks-viewdd-btn tasks-viewtab${view.id === activeViewId ? ' is-active' : ''}`}
+                    className={`tasks-viewdd-btn tasks-viewtab${view.id === activeViewId ? ' is-active' : ''}${view.id === activeViewId && viewMenuOpen ? ' is-menu' : ''}`}
                     data-testid="fsdb-view-tab"
                     aria-pressed={view.id === activeViewId}
-                    onClick={() => selectView(view)}
+                    aria-haspopup={view.id === activeViewId ? 'menu' : undefined}
+                    aria-expanded={view.id === activeViewId ? viewMenuOpen : undefined}
+                    onClick={() => {
+                      if (view.id === activeViewId) toggleMenu('view')
+                      else selectView(view)
+                    }}
                   >
                     <ViewModeGlyph mode={view.mode} className="size-[14px]" />
                     <span className="tasks-viewdd-name">{view.name}</span>
                   </button>
                 ))}
                 {!views.length ? (
-                  <button type="button" className="tasks-viewdd-btn tasks-viewtab is-active" disabled>
+                  <button
+                    type="button"
+                    className={`tasks-viewdd-btn tasks-viewtab is-active${viewMenuOpen ? ' is-menu' : ''}`}
+                    aria-haspopup="menu"
+                    aria-expanded={viewMenuOpen}
+                    data-testid="fsdb-view-tab"
+                    onClick={() => toggleMenu('view')}
+                  >
                     <Squares2X2Icon aria-hidden className="size-[14px]" />
                     <span className="tasks-viewdd-name">未保存</span>
                   </button>
                 ) : null}
               </div>
-              <button
-                type="button"
-                className={`tasks-viewdd-btn tasks-viewdd-more${viewMenuOpen ? ' is-active' : ''}`}
-                aria-label="视图菜单"
-                aria-haspopup="menu"
-                aria-expanded={viewMenuOpen}
-                data-testid="fsdb-view-more"
-                onClick={() => toggleMenu('view')}
-              >
-                <EllipsisHorizontalIcon aria-hidden className="size-[14px]" />
-              </button>
               {viewMenuOpen ? (
                 <div className="tasks-viewdd-menu" role="menu">
                   <div className="tasks-viewdd-head">视图</div>
