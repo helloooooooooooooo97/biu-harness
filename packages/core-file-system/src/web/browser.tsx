@@ -2600,7 +2600,6 @@ export function CollectionBrowser({
           writePatch={writePatch}
           tableIcon={currentTable?.view?.icon}
           onOpenRecord={(recordId, collection) => onOpenRecord?.(recordId, activeViewId, collection)}
-          onDelete={canDelete && selected ? () => setDlg({ kind: 'delete-record', row: selected }) : undefined}
           onPrev={total > 1 ? () => void stepViewRecord(-1) : undefined}
           onNext={total > 1 ? () => void stepViewRecord(1) : undefined}
           canPrev={viewIndex == null ? total > 1 : viewIndex > 0}

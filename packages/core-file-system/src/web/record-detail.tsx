@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode, type Dispatch, type SetStateAction
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import type { CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
 import { ChevronDownIcon, ChevronUpIcon, HashtagIcon } from '@heroicons/react/16/solid'
-import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { contentFieldKey, formatField, resolveFieldType } from './fields.ts'
 import { LocalText } from './controls.tsx'
 import { FilePreview } from './fsdb-cells.tsx'
@@ -99,7 +98,6 @@ export function RecordDetail({
   writePatch,
   tableIcon,
   onOpenRecord,
-  onDelete,
   onPrev,
   onNext,
   canPrev,
@@ -118,7 +116,6 @@ export function RecordDetail({
   writePatch: (row: DbRecord, patch: Record<string, unknown>) => Promise<unknown> | void
   tableIcon?: string
   onOpenRecord?: (recordId: string, collection?: string) => void
-  onDelete?: () => void
   onPrev?: () => void
   onNext?: () => void
   canPrev?: boolean
@@ -182,11 +179,6 @@ export function RecordDetail({
                 ) : (
                   <h1 className="fsdb-detail-title">{labelOf(selected)}</h1>
                 )}
-                {onDelete ? (
-                  <button type="button" className="tasks-icon-btn is-danger" title="删除" aria-label="删除记录" onClick={onDelete}>
-                    <TrashGlyph aria-hidden className="size-[14px]" />
-                  </button>
-                ) : null}
                 </div>
                 {chrome?.Board ? <chrome.Board record={selected} openRecord={onOpenRecord} /> : null}
                 {chrome?.Board ? null : (
