@@ -1,4 +1,5 @@
-import { builtinAllViewId, stubBuiltinAllView, stubBuiltinCatalogView, stubBuiltinTagView } from '../catalog-views.ts'
+import { builtinAllViewId, stubBuiltinAllView, stubBuiltinCatalogView, stubBuiltinTagView, isReadOnlyViewId } from '../catalog-views.ts'
+import { listCollection } from './db-client.ts'
 import { normalizeSavedView, type SavedView } from './saved-view.ts'
 
 export function viewsKey(collectionPath: string) {
@@ -118,11 +119,73 @@ export function persistStarredViews(items: StarredView[]) {
 }
 
 export function pushSavedViews(collectionPath: string, views: SavedView[]) {
-  void fetch('/api/db/saved-views', {
+  return fetch('/api/db/saved-views', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ path: collectionPath, views }),
   }).catch(() => undefined)
+}
+
+function parseViewFilters(value: unknown): Record<string, string> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const out: Record<string, string> = {}
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) out[key] = String(item)
+    return out
+  }
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      return parseViewFilters(JSON.parse(value))
+    } catch {
+      return {}
+    }
+  }
+  return {}
+}
+
+export function savedViewFromRecord(row: { viewId?: unknown; title?: unknown; mode?: unknown; sortField?: unknown; sortDir?: unknown; query?: unknown; groupBy?: unknown; columns?: unknown; filters?: unknown; tree?: unknown; wrap?: unknown; truncate?: unknown; pageSize?: unknown }): SavedView | null {
+  const id = String(row.viewId ?? '').trim()
+  if (!id || isReadOnlyViewId(id)) return null
+  return normalizeSavedView({
+    id,
+    name: String(row.title ?? id),
+    mode: String(row.mode ?? 'table') as SavedView['mode'],
+    sortField: String(row.sortField ?? 'id'),
+    sortDir: row.sortDir === 'desc' ? 'desc' : 'asc',
+    query: String(row.query ?? ''),
+    groupBy: String(row.groupBy ?? ''),
+    columns: Array.isArray(row.columns) ? row.columns.map((item) => String(item)) : [],
+    filters: parseViewFilters(row.filters),
+    tree: row.tree !== false,
+    wrap: Boolean(row.wrap),
+    truncate: row.truncate !== false,
+    pageSize: Number(row.pageSize) || 50,
+    builtin: false,
+  })
+}
+
+export async function pullSavedViews() {
+  try {
+    const page = await listCollection({ path: '/views', limit: 200, offset: 0 })
+    const byPath = new Map<string, SavedView[]>()
+    for (const row of page.items) {
+      const tablePath = String(row.tablePath ?? '').trim()
+      const view = savedViewFromRecord(row)
+      if (!tablePath || !view) continue
+      const list = byPath.get(tablePath) ?? []
+      list.push(view)
+      byPath.set(tablePath, list)
+    }
+    for (const [path, views] of byPath) {
+      rememberViews(path, views)
+      try {
+        localStorage.setItem(viewsKey(path), JSON.stringify(views))
+      } catch {
+        /* ignore */
+      }
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 export function upsertSavedView(collectionPath: string, view: SavedView) {

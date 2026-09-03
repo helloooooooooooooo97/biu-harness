@@ -1,5 +1,8 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { builtinAllViewId } from '../catalog-views.ts'
 import { SavedViewsStore, viewsCollection } from './saved-views.ts'
 
@@ -67,4 +70,39 @@ test('every registered table gets a builtin all-view even before the client sync
   assert.equal(rows.length, 2)
   assert.equal(rows.find((row) => row.tablePath === '/sessions')?.title, '全部会话')
   assert.equal(rows.find((row) => row.tablePath === '/events')?.title, '全部事件')
+})
+
+test('saved views persist created fields and updates across reopen', async () => {
+  const file = join(mkdtempSync(join(tmpdir(), 'fsdb-views-')), 'file-system.sqlite')
+  const tables = [
+    { path: '/tasks', id: 'tasks', kind: 'collection' as const, label: 'Task', view: { moduleId: 'tasks', route: '/tasks', title: 'Task' } },
+  ]
+  const first = new SavedViewsStore()
+  first.open(file)
+  const spec = viewsCollection(first, () => tables)
+  const [row] = await spec.create!([{ tablePath: '/tasks', title: '看板', mode: 'board', sortField: 'dueAt' }])
+  await spec.update!(String(row?.id), { query: 'foo', groupBy: 'status' })
+  first.replace('/tasks', [
+    {
+      id: String(row?.viewId),
+      name: '看板',
+      mode: 'board',
+      sortField: 'dueAt',
+      sortDir: 'asc',
+      query: 'foo',
+      groupBy: 'status',
+      filters: { status: 'doing' },
+      columns: ['title', 'status'],
+    },
+  ])
+  const second = new SavedViewsStore()
+  second.open(file)
+  const listed = await viewsCollection(second, () => tables).list()
+  const hit = listed.find((item) => item.id === row?.id)
+  assert.equal(hit?.title, '看板')
+  assert.equal(hit?.mode, 'board')
+  assert.equal(hit?.query, 'foo')
+  assert.equal(hit?.groupBy, 'status')
+  assert.equal(hit?.sortField, 'dueAt')
+  assert.equal(hit?.filters, '{"status":"doing"}')
 })

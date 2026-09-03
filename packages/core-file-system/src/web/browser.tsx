@@ -853,9 +853,9 @@ export function CollectionBrowser({
     const listed = listedViews(path, next).map((view) => withViewDisplay(path, view))
     const stored = listed.filter((view) => !view.builtin)
     rememberViews(path, listed)
+    pushSavedViews(path, stored)
     if (!nested) {
       localStorage.setItem(viewsKey(path), JSON.stringify(stored))
-      pushSavedViews(path, stored)
     }
     if (path === collectionPath) {
       viewsRef.current = listed

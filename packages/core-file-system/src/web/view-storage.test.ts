@@ -5,6 +5,7 @@ import { VIEWS_COLLECTION_PATH } from './database-path.ts'
 import {
   defaultViewId,
   persistViewDisplay,
+  savedViewFromRecord,
   viewDisplayKey,
   viewForPath,
   withViewDisplay,
@@ -67,4 +68,19 @@ test('builtin view columns overlay survives withViewDisplay', () => {
     'title',
     'project',
   ])
+})
+
+test('savedViewFromRecord skips builtin rows and keeps filters', () => {
+  assert.equal(savedViewFromRecord({ viewId: builtinAllViewId('/tasks'), title: '全部' }), null)
+  const view = savedViewFromRecord({
+    viewId: 'v1',
+    title: '看板',
+    mode: 'board',
+    sortField: 'dueAt',
+    filters: '{"status":"doing"}',
+    columns: ['title'],
+  })
+  assert.equal(view?.id, 'v1')
+  assert.equal(view?.mode, 'board')
+  assert.equal(view?.filters.status, 'doing')
 })

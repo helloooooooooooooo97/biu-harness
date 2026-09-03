@@ -15,7 +15,7 @@ import {
   bootLoadCollections,
   collectionNavKey,
 } from './nav-boot.ts'
-import { defaultViewId, pushAllSavedViews } from './view-storage.ts'
+import { defaultViewId, pullSavedViews, pushAllSavedViews } from './view-storage.ts'
 import { DATA_MODULE, DATA_MODULE_ID, DATA_MODULE_PATH, SUPERTAGS_COLLECTION_PATH, VIEWS_COLLECTION_PATH, sortDataCollections } from './database-path.ts'
 import { superTagsChrome } from './super-tags-chrome.tsx'
 import { viewsChrome } from './views-chrome.ts'
@@ -102,7 +102,7 @@ function CollectionPage(props: SlotProps) {
   }
 
   useEffect(() => {
-    pushAllSavedViews()
+    void pullSavedViews().then(() => pushAllSavedViews())
   }, [])
 
   useEffect(() => {

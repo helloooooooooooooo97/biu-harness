@@ -1,3 +1,6 @@
+import { mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
+import { createRequire } from 'node:module'
 import type { CollectionInfo, CollectionSpec, DbRecord } from '@biu/type-file-system'
 import { normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 import { builtinAllView, isReadOnlyViewId } from '../catalog-views.ts'
@@ -5,10 +8,82 @@ import type { SavedView } from '../web/saved-view.ts'
 import { isViewModeId } from '../web/fields.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
+type DatabaseSync = import('node:sqlite').DatabaseSync
+
+const require = createRequire(import.meta.url)
+
 export type StoredView = Partial<SavedView> & Pick<SavedView, 'id' | 'name'>
+
+type ViewRow = { collection: string; payload_json: string }
 
 export class SavedViewsStore {
   private byPath = new Map<string, StoredView[]>()
+  private db: DatabaseSync | null = null
+
+  open(path = ':memory:') {
+    if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true })
+    const { DatabaseSync } = require('node:sqlite') as typeof import('node:sqlite')
+    this.db = new DatabaseSync(path)
+    this.db.exec('PRAGMA journal_mode = WAL')
+    this.db.exec('PRAGMA synchronous = NORMAL')
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS saved_views (
+        collection TEXT NOT NULL,
+        view_id TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        updated_at INTEGER NOT NULL,
+        PRIMARY KEY (collection, view_id)
+      );
+    `)
+    this.hydrate()
+    return this
+  }
+
+  private hydrate() {
+    if (!this.db) return
+    this.byPath.clear()
+    const rows = this.db.prepare('SELECT collection, payload_json FROM saved_views').all() as ViewRow[]
+    for (const row of rows) {
+      const collection = normalizeCollectionPath(row.collection)
+      if (!collection || collection === '/' || collection === '/views') continue
+      let parsed: StoredView | null = null
+      try {
+        parsed = JSON.parse(row.payload_json) as StoredView
+      } catch {
+        continue
+      }
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue
+      const id = String(parsed.id ?? '').trim()
+      const name = String(parsed.name ?? id).trim()
+      if (!id || isReadOnlyViewId(id) || parsed.builtin) continue
+      const list = this.byPath.get(collection) ?? []
+      list.push({ ...parsed, id, name })
+      this.byPath.set(collection, list)
+    }
+  }
+
+  private persistPath(collectionPath: string) {
+    if (!this.db) return
+    const path = normalizeCollectionPath(collectionPath)
+    const views = this.byPath.get(path) ?? []
+    const upsert = this.db.prepare(
+      `INSERT INTO saved_views (collection, view_id, payload_json, updated_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(collection, view_id) DO UPDATE SET payload_json = excluded.payload_json, updated_at = excluded.updated_at`,
+    )
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      this.db.prepare('DELETE FROM saved_views WHERE collection = ?').run(path)
+      for (const view of views) {
+        if (view.builtin || isReadOnlyViewId(String(view.id))) continue
+        upsert.run(path, String(view.id), JSON.stringify(view), Date.now())
+      }
+      this.db.exec('COMMIT')
+    } catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    }
+  }
 
   replace(collectionPath: string, views: StoredView[]) {
     const path = normalizeCollectionPath(collectionPath)
@@ -18,6 +93,7 @@ export class SavedViewsStore {
         .filter((view) => !view.builtin && !isReadOnlyViewId(String(view.id)))
         .map((view) => ({ ...view, id: String(view.id), name: String(view.name || view.id) })),
     )
+    this.persistPath(path)
   }
 
   rows(tables: CollectionInfo[]): DbRecord[] {
@@ -82,6 +158,7 @@ export class SavedViewsStore {
       updatedAt: Date.now(),
     }
     this.byPath.set(tablePath, [...views, view])
+    this.persistPath(tablePath)
     return asRecord(tablePath, label, view)
   }
 
@@ -91,6 +168,7 @@ export class SavedViewsStore {
       const next = views.filter((view) => rowId(path, view.id) !== id)
       if (next.length === views.length) continue
       this.byPath.set(path, next)
+      this.persistPath(path)
       return true
     }
     throw new Error(`unknown view: ${id}`)
@@ -124,6 +202,7 @@ export class SavedViewsStore {
         createdAt: Number((cur as { createdAt?: number }).createdAt) || Date.now(),
       }
       views[idx] = next
+      this.persistPath(path)
       return asRecord(path, path, next)
     }
     throw new Error(`unknown view: ${id}`)

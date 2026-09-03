@@ -841,6 +841,7 @@ export function apply(ctx: Context) {
   const db = new DatabaseService(ctx)
   db.schemaTags.open(join(process.cwd(), SUPER_TAGS_SQLITE))
   const savedViews = new SavedViewsStore()
+  savedViews.open(process.env.VITEST ? ':memory:' : join(process.cwd(), SUPER_TAGS_SQLITE))
   const schemaTags = db.schemaTags
   db.register(viewsCollection(savedViews, () => db.collectionsList().map((item) => ({
     id: item.id,
