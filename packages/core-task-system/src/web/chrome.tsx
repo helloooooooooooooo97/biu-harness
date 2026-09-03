@@ -12,7 +12,7 @@ import {
   UserIcon,
   XMarkIcon,
 } from '@heroicons/react/16/solid'
-import { TagChip, TagChips } from '@biu/public-ui'
+import { TagChip, TagChips, listenOutsideDismiss } from '@biu/public-ui'
 import { CellSelect } from '@biu/database-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import type { DbRecord } from '@biu/type-file-system'
@@ -136,13 +136,7 @@ function FloatMenu({
   }, [anchor, minWidth])
 
   useEffect(() => {
-    const onDown = (event: MouseEvent) => {
-      const target = event.target as Node
-      if (menuRef.current?.contains(target) || anchor?.contains(target)) return
-      onClose()
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
+    return listenOutsideDismiss(onClose, (target) => Boolean(menuRef.current?.contains(target) || anchor?.contains(target)))
   }, [anchor, onClose])
 
   if (!anchor) return null

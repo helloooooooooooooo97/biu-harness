@@ -11,7 +11,7 @@ import {
   type SchemaPackField,
 } from '@biu/type-file-system'
 import { ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
-import { TagChip, TagChips, tagTone } from '@biu/public-ui'
+import { TagChip, TagChips, tagTone, listenOutsideDismiss } from '@biu/public-ui'
 import { asStringList } from './fields.ts'
 import { FieldEditor, FieldGlyph, parseFieldValue } from './fsdb-cells.tsx'
 import { loadFacets, persistFacets, fieldKeyFromLabel, slugFacetId, subscribeFacets } from './facet-catalog.ts'
@@ -75,11 +75,10 @@ function TypeMenu({ value, onChange }: { value: AtomicFieldType; onChange: (next
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
-    const onDown = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
+    return listenOutsideDismiss(
+      () => setOpen(false),
+      (target) => Boolean(ref.current?.contains(target)),
+    )
   }, [open])
   return (
     <div className="fsdb-schema-type" ref={ref}>
@@ -132,11 +131,10 @@ function TagPicker({
 
   useEffect(() => {
     if (!open) return
-    const onDown = (event: MouseEvent) => {
-      if (boxRef.current && !boxRef.current.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
+    return listenOutsideDismiss(
+      () => setOpen(false),
+      (target) => Boolean(boxRef.current?.contains(target)),
+    )
   }, [open])
 
   return (

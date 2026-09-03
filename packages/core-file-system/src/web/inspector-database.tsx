@@ -4,6 +4,7 @@ import type { SlotProps } from '@biu/type-slots'
 import type { CollectionInfo } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import { parseAppPath } from '@biu/web-session-view'
+import { listenOutsideDismiss } from '@biu/public-ui'
 import { buildCrumbs, pathForCrumbTarget, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
 import { CollectionBrowser } from './browser.tsx'
 import { CrumbTrail } from './crumb-trail.tsx'
@@ -196,15 +197,14 @@ export function DatabaseInspectorTab({
   const tabRef = useRef<HTMLDivElement>(null)
   useViewTick()
   useEffect(() => {
-    function onPointer(event: globalThis.MouseEvent) {
-      const target = event.target as Node
-      if (tabRef.current?.contains(target)) return
-      if (target instanceof Element && target.closest('[data-fsdb-crumb-menu]')) return
-      setCrumbOpen(null)
-      setTrailOpen(false)
-    }
-    document.addEventListener('mousedown', onPointer)
-    return () => document.removeEventListener('mousedown', onPointer)
+    return listenOutsideDismiss(
+      () => {
+        setCrumbOpen(null)
+        setTrailOpen(false)
+      },
+      (target) =>
+        Boolean(tabRef.current?.contains(target) || (target instanceof Element && target.closest('[data-fsdb-crumb-menu]'))),
+    )
   }, [])
   const { crumbs } = crumbsForRoute(inspectorPath, tables)
   const leaf = crumbs.at(-1)

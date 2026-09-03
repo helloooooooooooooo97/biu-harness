@@ -349,8 +349,8 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       if (target?.closest('.composer-model')) return
       setModelOpen(false)
     }
-    window.addEventListener('mousedown', onPointer)
-    return () => window.removeEventListener('mousedown', onPointer)
+    window.addEventListener('mousedown', onPointer, true)
+    return () => window.removeEventListener('mousedown', onPointer, true)
     // endpointLabels 仅作合并基础，不纳入依赖避免循环刷新
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modelOpen])

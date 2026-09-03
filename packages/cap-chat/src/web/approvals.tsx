@@ -189,10 +189,10 @@ export function ApprovalsRail(props: SlotProps) {
       setAgentMenuOpen(false)
       setApprovalMenuOpen(false)
     }
-    window.addEventListener('mousedown', onDown)
+    window.addEventListener('mousedown', onDown, true)
     window.addEventListener('keydown', onKey)
     return () => {
-      window.removeEventListener('mousedown', onDown)
+      window.removeEventListener('mousedown', onDown, true)
       window.removeEventListener('keydown', onKey)
     }
   }, [agentMenuOpen, approvalMenuOpen])

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type HTMLAttributes, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { listenOutsideDismiss } from './outside-dismiss.ts'
 
 export function AnchorMenu({
   anchor,
@@ -39,13 +40,7 @@ export function AnchorMenu({
   }, [anchor])
 
   useEffect(() => {
-    const onDown = (event: MouseEvent) => {
-      const target = event.target as Node
-      if (menuRef.current?.contains(target) || anchor?.contains(target)) return
-      onClose()
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
+    return listenOutsideDismiss(onClose, (target) => Boolean(menuRef.current?.contains(target) || anchor?.contains(target)))
   }, [anchor, onClose])
 
   if (!anchor) return null

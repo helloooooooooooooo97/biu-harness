@@ -135,8 +135,8 @@ export function BrandCornerMascot({
       if (target instanceof Element && target.closest('[data-testid="chat-session-delete-dialog"]')) return
       setAgentsOpen(false)
     }
-    window.addEventListener('mousedown', onPointer)
-    return () => window.removeEventListener('mousedown', onPointer)
+    window.addEventListener('mousedown', onPointer, true)
+    return () => window.removeEventListener('mousedown', onPointer, true)
   }, [agentsOpen, onToggle])
 
   const panel = onToggle || !agentsOpen

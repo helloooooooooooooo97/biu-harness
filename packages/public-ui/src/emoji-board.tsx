@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { listenOutsideDismiss } from './outside-dismiss.ts'
 
 const RECORD_EMOJI_PRESETS = ['⭐', '🔥', '✅', '📌', '💡', '🎯', '📦', '🧩', '📄', '⚡']
 
@@ -37,15 +38,10 @@ export function RecordEmojiBoard({
     }
   }, [anchor])
   useEffect(() => {
-    const onPointer = (event: MouseEvent) => {
-      const target = event.target
-      if (!(target instanceof Node)) return
-      if (anchor.contains(target)) return
-      if (target instanceof Element && target.closest('.fsdb-emoji-picker')) return
-      onClose()
-    }
-    document.addEventListener('mousedown', onPointer)
-    return () => document.removeEventListener('mousedown', onPointer)
+    return listenOutsideDismiss(onClose, (target) => {
+      if (anchor.contains(target)) return true
+      return target instanceof Element && Boolean(target.closest('.fsdb-emoji-picker'))
+    })
   }, [anchor, onClose])
   if (typeof document === 'undefined') return null
   return createPortal(

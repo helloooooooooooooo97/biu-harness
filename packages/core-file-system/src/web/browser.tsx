@@ -34,7 +34,7 @@ import {
 import type { CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
 import type { CollectionChrome, CollectionViewType, DatabaseUi } from '@biu/type-file-system/ui'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
-import { BoolBox, ChatCount } from '@biu/public-ui'
+import { BoolBox, ChatCount, listenOutsideDismiss } from '@biu/public-ui'
 import {
   contentFieldKey,
   defaultColumnKeys,
@@ -382,38 +382,37 @@ export function CollectionBrowser({
   }, [nested])
 
   useEffect(() => {
-    function onPointer(event: MouseEvent) {
-      const target = event.target as Node
-      if (!searchRef.current?.contains(target) && !query) setSearchOpen(false)
-      if (
-        crumbRef.current?.contains(target) ||
-        (target instanceof Element && target.closest('[data-fsdb-crumb-menu]')) ||
-        viewRef.current?.contains(target) ||
-        modeRef.current?.contains(target) ||
-        sortRef.current?.contains(target) ||
-        columnRef.current?.contains(target) ||
-        filterRef.current?.contains(target) ||
-        configRef.current?.contains(target) ||
-        groupRef.current?.contains(target) ||
-        pageSizeRef.current?.contains(target) ||
-        pageSizeMenuRef.current?.contains(target) ||
-        layoutRef.current?.contains(target)
-      ) {
-        return
-      }
-      setCrumbOpen(null)
-      setViewMenuOpen(false)
-      setModeMenuOpen(false)
-      setSortMenuOpen(false)
-      setColumnMenuOpen(false)
-      setFilterOpen(false)
-      setConfigOpen(false)
-      setGroupOpen(false)
-      setPageSizeOpen(false)
-      setLayoutOpen(false)
-    }
-    document.addEventListener('mousedown', onPointer)
-    return () => document.removeEventListener('mousedown', onPointer)
+    return listenOutsideDismiss(
+      () => {
+        setCrumbOpen(null)
+        setViewMenuOpen(false)
+        setModeMenuOpen(false)
+        setSortMenuOpen(false)
+        setColumnMenuOpen(false)
+        setFilterOpen(false)
+        setConfigOpen(false)
+        setGroupOpen(false)
+        setPageSizeOpen(false)
+        setLayoutOpen(false)
+      },
+      (target) => {
+        if (!searchRef.current?.contains(target) && !query) setSearchOpen(false)
+        return Boolean(
+          crumbRef.current?.contains(target) ||
+            (target instanceof Element && target.closest('[data-fsdb-crumb-menu]')) ||
+            viewRef.current?.contains(target) ||
+            modeRef.current?.contains(target) ||
+            sortRef.current?.contains(target) ||
+            columnRef.current?.contains(target) ||
+            filterRef.current?.contains(target) ||
+            configRef.current?.contains(target) ||
+            groupRef.current?.contains(target) ||
+            pageSizeRef.current?.contains(target) ||
+            pageSizeMenuRef.current?.contains(target) ||
+            layoutRef.current?.contains(target),
+        )
+      },
+    )
   }, [query])
 
   useLayoutEffect(() => {

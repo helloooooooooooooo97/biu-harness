@@ -248,8 +248,8 @@ export const SessionInspector = memo(function SessionInspector({
       if (plusRef.current?.contains(target) || plusMenuRef.current?.contains(target)) return
       setPlusOpen(false)
     }
-    window.addEventListener('mousedown', onPointer)
-    return () => window.removeEventListener('mousedown', onPointer)
+    window.addEventListener('mousedown', onPointer, true)
+    return () => window.removeEventListener('mousedown', onPointer, true)
   }, [])
 
   useEffect(() => {
