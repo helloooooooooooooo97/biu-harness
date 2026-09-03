@@ -3924,6 +3924,14 @@ body {
   width: 4px;
 }
 
+.chat-outline-tick.is-h3 {
+  padding-left: 10px;
+}
+
+.chat-outline-tick.is-h3::after {
+  width: 3px;
+}
+
 .chat-outline-tick.is-robot::after {
   opacity: 0.2;
 }
@@ -3998,6 +4006,13 @@ body {
   font-size: 12px;
   font-weight: 450;
   opacity: 0.88;
+}
+
+.chat-outline-item.is-h3 {
+  padding-left: 36px;
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.76;
 }
 
 .chat-outline-item.is-robot {
