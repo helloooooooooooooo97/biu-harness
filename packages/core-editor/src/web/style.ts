@@ -21,7 +21,7 @@ export const PAGE_EDITOR_STYLE = `
 .page-editor .tiptap pre code{padding:0;background:transparent;font-size:13px;line-height:1.6}
 .page-editor .tiptap a{color:var(--dsw-business);text-underline-offset:2px}
 .page-editor .tiptap p.is-editor-empty:first-child::before,
-.page-editor .tiptap .is-empty::before{content:attr(data-placeholder);float:left;height:0;pointer-events:none;color:var(--dsw-label-3)}
+.page-editor .tiptap .is-empty::before{content:attr(data-placeholder);float:left;height:0;pointer-events:none;color:var(--dsw-placeholder)}
 .page-bubble{z-index:80;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);box-shadow:0 8px 28px rgba(15,15,15,.12),0 0 0 1px color-mix(in srgb,var(--dsw-border) 70%,transparent);border-radius:10px;overflow:hidden}
 .page-slash{position:fixed;z-index:10000;width:324px;max-height:min(70vh,420px);padding:6px;display:flex;flex-direction:column;gap:2px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);box-shadow:0 8px 28px rgba(15,15,15,.12),0 0 0 1px color-mix(in srgb,var(--dsw-border) 70%,transparent);border-radius:10px}
 .page-slash-head,.page-slash-empty{padding:6px 8px;color:var(--dsw-label-3);font-size:12px;font-weight:600}

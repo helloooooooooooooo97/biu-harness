@@ -113,6 +113,8 @@ describe('composer dock stacking above sticky user', () => {
   it('uses the specified chrome palette and pick highlight', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     expect(css).toMatch(/--dsw-bg:\s*#191919/)
+    expect(css).toMatch(/--dsw-placeholder:\s*#5F5F5A/)
+    expect(css).toMatch(/::placeholder\s*\{[^}]*color:\s*var\(--dsw-placeholder\)/)
     expect(css).toMatch(/--dsw-sidebar:\s*#202020/)
     expect(css).toMatch(/--dsw-hover:\s*#2c2c2c/)
     expect(css).toMatch(/--dsw-sidebar-fg:\s*#bcbab6/)

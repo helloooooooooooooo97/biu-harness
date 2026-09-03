@@ -379,6 +379,7 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-field{display:flex;flex-direction:column;gap:4px;color:var(--dsw-label-3);font-size:14px}
 .fsdb-field em{font-style:normal;color:var(--dsw-label);font-size:14px}
 .fsdb-plain-input{width:100%;border:0;border-radius:6px;padding:4px 6px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;outline:none}
+.fsdb-plain-input::placeholder{color:var(--dsw-placeholder)}
 .fsdb-plain-input:hover,.fsdb-plain-input:focus{background:var(--dsw-hover)}
 .fsdb-cellselect{display:inline-flex;position:relative;min-width:0;max-width:100%;box-sizing:border-box;vertical-align:middle}
 .fsdb-cellselect-trigger{display:inline-flex;align-items:center;max-width:110px;height:22px;border:0;border-radius:4px;padding:0 6px;background:rgba(255,255,255,.08);color:var(--dsw-label);font:inherit;font-size:14px;font-weight:500;line-height:22px;cursor:pointer;text-align:left}

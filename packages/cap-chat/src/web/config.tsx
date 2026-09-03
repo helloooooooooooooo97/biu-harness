@@ -71,7 +71,7 @@ function isOfficial(id: string): id is OfficialId {
 const inputCls = [
   'w-full rounded-lg px-2.5 py-[7px] text-[13px] text-(--dsw-label)',
   'border border-(--dsw-border) bg-(--dsw-input) outline-none',
-  'placeholder:text-(--dsw-label-3) focus:border-(--dsw-business)',
+  'placeholder:text-(--dsw-placeholder) focus:border-(--dsw-business)',
 ].join(' ')
 
 export function ChatConfig(props?: { onClose?: () => void }) {
@@ -718,7 +718,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                         <MagnifyingGlassIcon className="size-3.5 shrink-0 text-(--dsw-label-3)" />
                         <input
                           ref={pickerInputRef}
-                          className="min-w-0 flex-1 bg-transparent text-[13px] text-(--dsw-label) outline-none placeholder:text-(--dsw-label-3)"
+                          className="min-w-0 flex-1 bg-transparent text-[13px] text-(--dsw-label) outline-none placeholder:text-(--dsw-placeholder)"
                           placeholder="搜索或创建连接…"
                           value={pickerQuery}
                           onChange={(e) => {
@@ -849,7 +849,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                   <div className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-(--dsw-hover)">
                     <div className="w-18 shrink-0 text-[12px] text-(--dsw-label-3)">名称</div>
                     <input
-                      className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-[6px] text-[13px] text-(--dsw-label) outline-none placeholder:text-(--dsw-label-3) hover:border-(--dsw-border) focus:border-(--dsw-label-3) focus:bg-(--dsw-input)"
+                      className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-[6px] text-[13px] text-(--dsw-label) outline-none placeholder:text-(--dsw-placeholder) hover:border-(--dsw-border) focus:border-(--dsw-label-3) focus:bg-(--dsw-input)"
                       placeholder="My OneAPI"
                       value={newLabel}
                       onChange={(e) => setNewLabel(e.target.value)}
@@ -887,7 +887,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                 <div className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-(--dsw-hover)">
                   <div className="w-18 shrink-0 text-[12px] text-(--dsw-label-3)">Base URL</div>
                   <input
-                    className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-[6px] font-mono text-[12px] text-(--dsw-label) outline-none placeholder:font-sans placeholder:text-(--dsw-label-3) hover:border-(--dsw-border) focus:border-(--dsw-label-3) focus:bg-(--dsw-input)"
+                    className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-[6px] font-mono text-[12px] text-(--dsw-label) outline-none placeholder:font-sans placeholder:text-(--dsw-placeholder) hover:border-(--dsw-border) focus:border-(--dsw-label-3) focus:bg-(--dsw-input)"
                     placeholder="https://api.example.com/v1"
                     value={newUrl}
                     onChange={(e) => setNewUrl(e.target.value)}
@@ -897,7 +897,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                 <div className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-(--dsw-hover)">
                   <div className="w-18 shrink-0 text-[12px] text-(--dsw-label-3)">API Key</div>
                   <input
-                    className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-[6px] text-[13px] text-(--dsw-label) outline-none placeholder:text-(--dsw-label-3) hover:border-(--dsw-border) focus:border-(--dsw-label-3) focus:bg-(--dsw-input)"
+                    className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-[6px] text-[13px] text-(--dsw-label) outline-none placeholder:text-(--dsw-placeholder) hover:border-(--dsw-border) focus:border-(--dsw-label-3) focus:bg-(--dsw-input)"
                     type="password"
                     autoComplete="off"
                     placeholder="sk-…（可选，稍后可补）"

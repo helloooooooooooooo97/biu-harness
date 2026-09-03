@@ -8,6 +8,7 @@
   --dsw-label: #f0efed;
   --dsw-label-2: rgba(242, 241, 237, 0.72);
   --dsw-label-3: rgba(242, 241, 237, 0.45);
+  --dsw-placeholder: #5F5F5A;
   --dsw-border: rgba(242, 241, 237, 0.1);
   --dsw-bubble: #262626;
   --dsw-business: #f2f1ed;
@@ -242,8 +243,12 @@ body {
   pointer-events: auto;
 }
 
+::placeholder {
+  color: var(--dsw-placeholder);
+}
+
 .chat-view-session-title::placeholder {
-  color: var(--dsw-label-3);
+  color: var(--dsw-placeholder);
   font-weight: 500;
 }
 
@@ -4673,7 +4678,7 @@ body {
   content: attr(data-placeholder);
   float: left;
   height: 0;
-  color: var(--dsw-label-3);
+  color: var(--dsw-placeholder);
   pointer-events: none;
 }
 
