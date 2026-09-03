@@ -148,18 +148,20 @@ const CSS = `
 .fsdb-page .tasks-tree-toggle.is-empty{cursor:default;pointer-events:none}
 .fsdb-page .tasks-tree-toggle.is-empty:hover{background:transparent}
 .fsdb-page .fsdb-title-text{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-.fsdb-page .fsdb-title-host{position:relative;display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;flex:1}
+.fsdb-page .fsdb-title-host{position:relative;display:inline-flex;align-items:center;gap:6px;min-width:0;width:100%;max-width:100%;flex:1}
 .fsdb-page .tasks-table.is-wrap .fsdb-title-text{white-space:normal}
 .fsdb-page .tasks-title-aside{position:relative;flex:none;display:inline-flex;align-items:center}
 .fsdb-page .tasks-title-zoom{position:relative;display:grid;place-items:center;width:24px;height:24px}
 .fsdb-page .tasks-title-zoom .tasks-tree-count,.fsdb-page .tasks-title-zoom .tasks-title-open{grid-area:1/1}
 .fsdb-page .tasks-title-open{flex:none;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--dsw-label-3);border-radius:6px;cursor:pointer;padding:0;opacity:0;z-index:1}
+.fsdb-page .tasks-row-tools-slot{position:absolute;top:0;right:0;bottom:0;z-index:2;width:0;overflow:visible;pointer-events:none}
 .fsdb-page .tasks-table td:has(.fsdb-title-host) .tasks-row-tools,.fsdb-page .tasks-table td:has(.fsdb-title-host) .tasks-row-actions{opacity:0;pointer-events:none}
-.fsdb-page .tasks-table tr:hover td:has(.fsdb-title-host) .tasks-title-open,.fsdb-page .tasks-title-open:focus-visible,.fsdb-page .tasks-table tr:hover td:has(.fsdb-title-host) .tasks-row-actions,.fsdb-page .tasks-table tr:hover td:has(.fsdb-title-host) .tasks-row-tools,.fsdb-page .tasks-table td:has(.fsdb-title-host):focus-within .tasks-row-tools{opacity:1;pointer-events:auto}
+.fsdb-page .tasks-table tr:hover td:has(.fsdb-title-host) .tasks-title-open,.fsdb-page .tasks-title-open:focus-visible,.fsdb-page .tasks-table tr:hover td:has(.fsdb-title-host) .tasks-row-actions,.fsdb-page .tasks-table tr:hover td:has(.fsdb-title-host) .tasks-row-tools{opacity:1;pointer-events:auto}
 .fsdb-page .tasks-row-tools{display:inline-flex;align-items:center;gap:2px;flex:none}
-.fsdb-page .tasks-table td:has(.fsdb-title-host) > .tasks-row-tools{position:absolute;right:0;top:50%;z-index:2;transform:translateY(-50%);padding-left:10px;background:linear-gradient(to right,transparent,var(--dsw-surface) 12px)}
-.fsdb-page .tasks-table tr:hover td:has(.fsdb-title-host) > .tasks-row-tools{background:linear-gradient(to right,transparent,color-mix(in srgb,var(--dsw-hover) 55%,var(--dsw-surface)) 12px)}
-.fsdb-page .tasks-table tr.is-active td:has(.fsdb-title-host) > .tasks-row-tools{background:linear-gradient(to right,transparent,color-mix(in srgb,var(--dsw-business) 8%,var(--dsw-surface)) 12px)}
+.fsdb-page .tasks-row-tools-slot .tasks-row-tools{position:absolute;right:0;top:50%;transform:translateY(-50%);padding-left:10px;background:linear-gradient(to right,transparent,var(--dsw-surface) 12px)}
+.fsdb-page .tasks-table tr:hover .tasks-row-tools-slot .tasks-row-tools{background:linear-gradient(to right,transparent,color-mix(in srgb,var(--dsw-hover) 55%,var(--dsw-surface)) 12px)}
+.fsdb-page .tasks-table tr.is-active .tasks-row-tools-slot .tasks-row-tools{background:linear-gradient(to right,transparent,color-mix(in srgb,var(--dsw-business) 8%,var(--dsw-surface)) 12px)}
+.fsdb-page .tasks-table td:has(.fsdb-title-host:focus-within) .tasks-row-tools-slot,.fsdb-page .tasks-table td:has(.fsdb-plain-input:focus) .tasks-row-tools-slot,.fsdb-page .tasks-queue-item:has(.fsdb-title-host:focus-within) .tasks-row-tools,.fsdb-page .tasks-minicard:has(.fsdb-title-host:focus-within) .tasks-row-tools{opacity:0;pointer-events:none}
 .fsdb-page .tasks-table tr:hover .tasks-tree-count,.fsdb-page .tasks-title-zoom:has(.tasks-title-open:focus-visible) .tasks-tree-count{opacity:0}
 .fsdb-page .tasks-title-open:hover{opacity:1;color:var(--dsw-label);background:var(--dsw-hover)}
 .fsdb-page .tasks-tree-count{pointer-events:none}

@@ -1380,7 +1380,9 @@ export function CollectionBrowser({
     return (
       <>
         {host}
-        <RecordRowTools row={row} kidCount={tree ? kidCount : 0} />
+        <span className="tasks-row-tools-slot">
+          <RecordRowTools row={row} kidCount={tree ? kidCount : 0} />
+        </span>
       </>
     )
   }
