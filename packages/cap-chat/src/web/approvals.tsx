@@ -286,7 +286,7 @@ export function ApprovalsRail(props: SlotProps) {
       ) : null}
 
       <div
-        className="chat-dock-toolbar bg-transparent px-1 text-(length:--dsw-chat-ui-font-size) text-(--dsw-label-3)"
+        className="chat-dock-toolbar bg-transparent px-1 text-(length:--dsw-chat-ui-font-size)"
         role="toolbar"
         aria-label="Session controls"
       >

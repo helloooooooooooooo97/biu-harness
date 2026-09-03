@@ -1375,6 +1375,7 @@ body {
   align-items: center;
   width: 100%;
   gap: 8px;
+  color: #F0EFED;
 }
 
 .chat-dock-toolbar-end {
@@ -2266,7 +2267,7 @@ body {
   border-radius: 999px;
   background: #262626;
   padding: 0;
-  color: var(--dsw-sidebar-fg);
+  color: #F0EFED;
   cursor: pointer;
   box-shadow: none;
 }
@@ -2375,7 +2376,7 @@ body {
 }
 
 .project-chip-muted {
-  color: var(--dsw-sidebar-fg);
+  color: #F0EFED;
   cursor: default;
 }
 
@@ -2449,7 +2450,7 @@ body {
   border: 1px solid var(--dsw-border);
   border-radius: 999px;
   background: color-mix(in srgb, var(--dsw-bg) 82%, transparent);
-  color: var(--dsw-sidebar-fg);
+  color: #F0EFED;
   cursor: pointer;
   box-shadow: none;
   transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
@@ -4551,7 +4552,7 @@ body {
   border: 1px solid var(--dsw-border);
   border-radius: 999px;
   background: transparent;
-  color: var(--dsw-sidebar-fg);
+  color: #F0EFED;
   cursor: pointer;
 }
 
@@ -4652,7 +4653,7 @@ body {
   border-radius: 8px;
   background: transparent;
   padding: 4px 6px;
-  color: var(--dsw-sidebar-fg);
+  color: #F0EFED;
   font-size: var(--dsw-chat-ui-font-size);
   cursor: pointer;
 }
