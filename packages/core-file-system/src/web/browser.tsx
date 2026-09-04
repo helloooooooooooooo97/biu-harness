@@ -116,6 +116,7 @@ import { mergeTableViews } from '../catalog-views.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
 import { SchemaChips, SchemaFieldEditor, schemaTagTone } from './schema-field.tsx'
 import { CellPop, cellUsesPop } from './cell-pop.tsx'
+import { CellPopDraft } from './cell-pop-draft.tsx'
 import { loadFacets, pullFacets, subscribeFacets } from './facet-catalog.ts'
 
 const EMPTY_VIEWS: CollectionViewType[] = []
@@ -237,8 +238,8 @@ export function CollectionBrowser({
   const [columnKeys, setColumnKeys] = useState<string[]>(initialView?.columns ?? [])
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => normalizeColumnWidths(initialView?.columnWidths))
   const [resizingCol, setResizingCol] = useState<string | null>(null)
+  const [cellPop, setCellPop] = useState<{ id: string; key: string } | null>(null)
   const cellPickRef = useRef<{ id: string; key: string } | null>(null)
-  const [cellPopOpen, setCellPopOpen] = useState(false)
   const cellAnchorRef = useRef<HTMLElement | null>(null)
   const [facetCatalog, setFacetCatalog] = useState(() => loadFacets())
   const tablePathsKey = tables
@@ -1321,8 +1322,19 @@ export function CollectionBrowser({
 
   function renderCell(row: DbRecord, key: string, field: FieldSpec, surface: 'table' | 'detail' = 'detail') {
     const kind = resolveFieldType(field)
-    const pop = surface === 'table' && cellUsesPop(kind, field.writable)
     const flat = parseFacetFlatColumnKey(key)
+    if (surface === 'table') {
+      if (kind === 'action') {
+        const actionId = fieldActionId(key, field)
+        const action = (schema?.actions ?? []).find((item) => item.id === actionId)
+        return <ActionCell field={field} fieldKey={key} onRun={action ? () => void runAction(row, action) : undefined} />
+      }
+      if (kind === 'facet') return <SchemaChips value={row[key]} tags={loadFacets()} />
+      if (flat) return <DefaultCell field={field} value={readFacetFlatValue(row, key, facetSourceKey(schema))} />
+      const Custom = chrome?.cells?.[key]
+      if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={formatField(field, row[key])} />
+      return <DefaultCell field={field} value={row[key]} />
+    }
     if (flat) {
       const source = facetSourceKey(schema)
       const value = readFacetFlatValue(row, key, source)
@@ -1334,8 +1346,7 @@ export function CollectionBrowser({
             value={fieldDraftValue(field, value)}
             source={value}
             collectionPath={collectionPath}
-            compact={surface === 'table'}
-            autoOpen={surface === 'detail'}
+            autoOpen
             options={uniqueValues(
               items.map((item) => ({ ...item, [key]: readFacetFlatValue(item, key, source) })),
               key,
@@ -1349,7 +1360,6 @@ export function CollectionBrowser({
       return <DefaultCell field={field} value={value} />
     }
     if (kind === 'facet') {
-      if (pop) return <SchemaChips value={row[key]} tags={loadFacets()} />
       if (field.writable) {
         return (
           <SchemaFieldEditor
@@ -1357,7 +1367,7 @@ export function CollectionBrowser({
             record={row}
             value={row[key]}
             writable
-            autoOpen={surface === 'detail'}
+            autoOpen
             onChange={(next) => void writePatch(row, { [key]: next })}
           />
         )
@@ -1386,8 +1396,7 @@ export function CollectionBrowser({
           value={fieldDraftValue(field, row[key])}
           source={row[key]}
           collectionPath={collectionPath}
-          compact={surface === 'table'}
-          autoOpen={surface === 'detail'}
+          autoOpen={false}
           options={uniqueValues(items, key, field)}
           onChange={(next) => void writeOne(row, key, field, next)}
           onCommit={(next) => writeCellValue(row, key, field, next)}
@@ -1398,14 +1407,36 @@ export function CollectionBrowser({
   }
 
   function renderCellPop() {
-    const cellPick = cellPickRef.current
-    if (!cellPopOpen || !cellPick || !schema) return null
-    const row = items.find((item) => item.id === cellPick.id)
-    const col = columns.find((item) => item.key === cellPick.key)
+    if (!cellPop || !schema) return null
+    const row = items.find((item) => item.id === cellPop.id)
+    const col = columns.find((item) => item.key === cellPop.key)
     if (!row || !col) return null
+    const key = col.key
+    const field = col.field
+    const flat = parseFacetFlatColumnKey(key)
+    const initial = flat ? readFacetFlatValue(row, key, facetSourceKey(schema)) : row[key]
+    const options = flat
+      ? uniqueValues(
+          items.map((item) => ({ ...item, [key]: readFacetFlatValue(item, key, facetSourceKey(schema)) })),
+          key,
+          field,
+        )
+      : uniqueValues(items, key, field)
     return (
-      <CellPop key={`${cellPick.id}:${cellPick.key}`} open anchor={cellAnchorRef.current} onClose={() => setCellPopOpen(false)}>
-        {renderCell(row, col.key, col.field, 'detail')}
+      <CellPop key={`${cellPop.id}:${cellPop.key}`} open anchor={cellAnchorRef.current} onClose={() => setCellPop(null)}>
+        <CellPopDraft
+          record={row}
+          fieldKey={key}
+          field={field}
+          initial={initial}
+          options={options}
+          collectionPath={collectionPath}
+          onClose={() => setCellPop(null)}
+          onSubmit={(raw) => {
+            writeCellValue(row, key, field, raw)
+            setCellPop(null)
+          }}
+        />
       </CellPop>
     )
   }
@@ -1766,7 +1797,7 @@ export function CollectionBrowser({
                   cellPickRef.current = { id: row.id, key: col.key }
                   markCellOn(td, cellFieldWritable(col.field))
                   const kind = resolveFieldType(col.field)
-                  setCellPopOpen(cellUsesPop(kind, col.field.writable))
+                  setCellPop(cellUsesPop(kind, col.field.writable) ? { id: row.id, key: col.key } : null)
                 }}
               >
                 {index === 0 ? <RowCheck id={row.id} /> : null}
