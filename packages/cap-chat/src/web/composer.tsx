@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent } from 'react'
-import { ArrowUpIcon, ChevronDownIcon, PlusIcon, Cog6ToothIcon } from '@heroicons/react/16/solid'
+import { ArrowUpIcon, ArrowPathIcon, ChevronDownIcon, PlusIcon, Cog6ToothIcon } from '@heroicons/react/16/solid'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { EditorContent, useEditor } from '@tiptap/react'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -129,6 +129,7 @@ type ModelOption = {
   endpointId: string
   model: string
   note?: string
+  category?: string
 }
 
 type ToolCatalogItem = { name: string; description: string }
@@ -185,6 +186,9 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   })
   const [modelBusy, setModelBusy] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
+  const [refreshDone, setRefreshDone] = useState<string | null>(null)
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
   /** 全部目录模型（含未配置的），用于下拉只展示已配置入口，但当前选中可能来自任一。 */
   const [allModels, setAllModels] = useState<ModelOption[]>([])
@@ -192,6 +196,8 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
   const [modelProviders, setModelProviders] = useState<Record<string, boolean> | null>(null)
   /** 入口展示名 */
   const [endpointLabels, setEndpointLabels] = useState<Record<string, string>>({})
+  /** 入口分组（official/relay/local/custom）；local 默认本地服务，未启动不误报。 */
+  const [endpointGroups, setEndpointGroups] = useState<Record<string, string>>({})
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
   const pending = useSessionView((state) => state.pending)
   const inbox = useSessionView((state) => state.inbox)
@@ -211,6 +217,58 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     return () => window.removeEventListener('biu:open-model-config', open)
   }, [])
 
+  /** 从各已配置入口 GET /models 拉取真实模型列表，成功后触发配置重载。 */
+  async function refreshRemoteModels() {
+    if (refreshing) return
+    setRefreshing(true)
+    setRefreshError(null)
+    setRefreshDone(null)
+    try {
+      // 本地服务（ollama/lmstudio/vllm）默认未启动，不纳入刷新目标，避免日常误报失败
+      const ids = [
+        ...new Set(
+          Object.entries(modelProviders ?? {})
+            .filter(([, ok]) => ok)
+            .map(([id]) => id)
+            .filter((id) => endpointGroups[id] !== 'local'),
+        ),
+      ]
+      if (!ids.length) {
+        setRefreshError('暂无可刷新的已配置入口（本地服务已跳过）')
+        return
+      }
+      const results = await Promise.all(
+        ids.map(async (endpointId) => {
+          const res = await fetch('/api/chat/config/models/refresh', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ endpointId }),
+          })
+          const body = (await res.json().catch(() => null)) as {
+            ok?: boolean
+            detail?: string
+            count?: number
+          } | null
+          return { endpointId, ok: res.ok && body?.ok !== false, detail: body?.detail }
+        }),
+      )
+      const failed = results.filter((r) => !r.ok)
+      if (failed.length) {
+        // 网络类失败（fetch failed）多为入口未配通/外网受限，温和提示而非红色报错
+        setRefreshError(failed.map((f) => `${f.endpointId}: ${f.detail ?? '失败'}`).join('；'))
+      } else {
+        const okList = results.map((r) => r.endpointId)
+        setRefreshDone(`已刷新 ${results.length} 个入口`)
+      }
+      window.dispatchEvent(new Event('biu:chat-config-changed'))
+    } catch (error) {
+      setRefreshError(error instanceof Error ? error.message : String(error))
+      setRefreshDone(null)
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   function openModelConfig() {
     setModelOpen(false)
     setConfigOpen(true)
@@ -227,7 +285,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       endpointId?: string
       model?: string
       providers?: Record<string, { configured?: boolean }>
-      endpoints?: Array<{ id: string; label?: string; configured?: boolean }>
+      endpoints?: Array<{ id: string; label?: string; configured?: boolean; group?: string }>
       modelCatalog?: Array<{
         id: string
         label: string
@@ -235,6 +293,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
         endpointId?: string
         model: string
         note?: string
+        category?: string
         endpointConfigured?: boolean
       }>
     }) {
@@ -248,6 +307,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           provider: m.provider as ChatProvider,
           endpointId: m.endpointId || m.provider,
           model: m.model,
+          category: m.category,
           ...(m.note ? { note: m.note } : {}),
         }))
         setAllModels(catalog)
@@ -262,10 +322,12 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
         anthropic: 'Claude',
         openai: 'GPT',
       }
+      const groups: Record<string, string> = {}
       if (Array.isArray(data.endpoints)) {
         for (const ep of data.endpoints) {
           cfg[ep.id] = Boolean(ep?.configured)
           if (ep.label) labels[ep.id] = ep.label
+          if (ep.group) groups[ep.id] = ep.group
         }
       }
       if (data.providers) {
@@ -273,6 +335,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       }
       if (Object.keys(cfg).length) setModelProviders(cfg)
       setEndpointLabels(labels)
+      if (Object.keys(groups).length) setEndpointGroups(groups)
     }
 
     function reload() {
@@ -303,7 +366,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           provider?: string
           model?: string
           providers?: Record<string, { configured?: boolean }>
-          endpoints?: Array<{ id: string; label?: string; configured?: boolean }>
+          endpoints?: Array<{ id: string; label?: string; configured?: boolean; group?: string }>
           modelCatalog?: Array<{
             id: string
             label: string
@@ -311,6 +374,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
             endpointId?: string
             model: string
             note?: string
+            category?: string
           }>
         }) => {
           if (Array.isArray(data.modelCatalog) && data.modelCatalog.length) {
@@ -320,6 +384,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
               provider: m.provider as ChatProvider,
               endpointId: m.endpointId || m.provider,
               model: m.model,
+              category: m.category,
               ...(m.note ? { note: m.note } : {}),
             }))
             setAllModels(catalog)
@@ -328,10 +393,12 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           }
           const cfg: Record<string, boolean> = {}
           const labels: Record<string, string> = { ...endpointLabels }
+          const groups: Record<string, string> = { ...endpointGroups }
           if (Array.isArray(data.endpoints)) {
             for (const ep of data.endpoints) {
               cfg[ep.id] = Boolean(ep?.configured)
               if (ep.label) labels[ep.id] = ep.label
+              if (ep.group) groups[ep.id] = ep.group
             }
           }
           if (data.providers) {
@@ -339,6 +406,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           }
           if (Object.keys(cfg).length) setModelProviders(cfg)
           setEndpointLabels(labels)
+          if (Object.keys(groups).length) setEndpointGroups(groups)
         },
       )
       .catch(() => {
@@ -850,6 +918,16 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
                   <span className="composer-model-config-title">Models</span>
                   <button
                     type="button"
+                    className={`composer-model-config-entry${refreshing ? ' is-spinning' : ''}`}
+                    title="从 API 刷新模型列表"
+                    aria-label="从 API 刷新模型列表"
+                    disabled={refreshing}
+                    onClick={() => void refreshRemoteModels()}
+                  >
+                    <ArrowPathIcon className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
                     className="composer-model-config-entry"
                     data-testid="open-model-config"
                     title="配置模型"
@@ -859,14 +937,22 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
                     <Cog6ToothIcon className="size-3.5" />
                   </button>
                 </div>
+                {refreshError ? (
+                  <div className="composer-model-refresh-error">{refreshError}</div>
+                ) : refreshDone ? (
+                  <div className="composer-model-refresh-success">{refreshDone}</div>
+                ) : null}
                 {(() => {
+                  // 只展示 API 真实拉取成功的模型（category === 'remote'）；
+                  // 若当前选中项来自静态目录（如默认模型），也一并保留，避免选中了却找不到。
+                  const currentId = modelOption.id
                   const visible = allModels.filter(
-                    (m) => modelProviders?.[m.endpointId] || modelProviders?.[m.provider],
+                    (m) => m.category === 'remote' || m.id === currentId,
                   )
                   if (!visible.length) {
                     return (
                       <div className="composer-model-empty">
-                        尚未配置可用模型。点击上方「配置模型」添加官方 Key 或第三方。
+                        暂无可用的 API 模型。点击上方刷新按钮「从 API 刷新模型列表」，或点配置添加 Key。
                       </div>
                     )
                   }
@@ -906,6 +992,9 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
                             onClick={() => void selectModel(option)}
                           >
                             <span className="composer-model-item-label">{option.label}</span>
+                            {option.category === 'remote' ? (
+                              <span className="composer-model-item-badge">API</span>
+                            ) : null}
                             {option.note ? (
                               <span className="composer-model-item-note">{option.note}</span>
                             ) : null}

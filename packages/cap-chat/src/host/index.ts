@@ -4,7 +4,7 @@ import { Service, type Context } from 'cordis'
 import type { ChatMessage } from './chat-types.ts'
 import { isAgentToolMode, normalizeAgentMode, type AgentToolMode } from '@biu/host-tools'
 import type { LlmConfig } from '@biu/host-llm'
-import { probeLlmConnection } from '@biu/host-llm'
+import { probeLlmConnection, listLlmModels, type LlmModelInfo } from '@biu/host-llm'
 import { LLM_MODEL_CATALOG, LLM_ENDPOINT_PRESETS, describeProvider, defaultModelFor, CHAT_PROVIDERS, findEndpointPreset, normalizeBaseUrl } from './model-catalog.ts'
 import type { ChatProvider, LlmModelDef, LlmEndpointDef } from './model-catalog.ts'
 export type { ChatProvider, LlmModelDef, LlmEndpointDef } from './model-catalog.ts'
@@ -295,6 +295,7 @@ function allModels(config: ChatConfig): LlmModelDef[] {
   ]
 }
 
+
 function resolveEndpoint(config: ChatConfig, endpointId: string): LlmEndpointDef | undefined {
   return allEndpoints(config).find((e) => e.id === endpointId)
 }
@@ -323,6 +324,92 @@ function blockEndpoint(config: ChatConfig, id: string) {
 export class ChatService extends Service {
   private config = mergePersisted(defaults(), readPersisted())
 
+  /** 各入口已从上游 /models 拉取的模型（内存缓存，key/baseUrl 变更即失效）。 */
+  private remoteModels: Record<string, { models: LlmModelInfo[]; fetchedAt: number }> = {}
+
+  /** 静态目录 + 自定义 + 远端拉取（按 endpointId+model 去重，远端优先）。 */
+  private modelDefs(): LlmModelDef[] {
+    const remote: LlmModelDef[] = []
+    for (const [endpointId, cache] of Object.entries(this.remoteModels)) {
+      const ep = resolveEndpoint(this.config, endpointId)
+      const provider = ep?.provider ?? 'openai'
+      for (const m of cache.models) {
+        remote.push({
+          id: `remote-${endpointId}-${m.id}`.replace(/[^a-zA-Z0-9._:-]+/g, '-'),
+          label: m.id,
+          endpointId,
+          provider,
+          model: m.id,
+          category: 'remote',
+          note: m.ownedBy ? `来自 API · ${m.ownedBy}` : '来自 API',
+          builtin: false,
+        })
+      }
+    }
+    const staticModels = allModels(this.config)
+    const seen = new Set<string>()
+    const out: LlmModelDef[] = []
+    for (const m of [...remote, ...staticModels]) {
+      const key = `${m.endpointId}\x00${m.model}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push(m)
+    }
+    return out
+  }
+
+  /** 启动时静默预拉已配置入口的模型（失败静默，不阻塞、不落盘）。 */
+  preloadRemoteModels() {
+    for (const ep of allEndpoints(this.config)) {
+      if (endpointConfigured(this.config, ep) && ep.protocol !== 'anthropic') {
+        void this.refreshModels({ endpointId: ep.id }).catch(() => undefined)
+      }
+    }
+  }
+
+  /** 清除某入口（或全部）的远端模型缓存。 */
+  private invalidateRemoteModels(endpointId?: string) {
+    if (endpointId) delete this.remoteModels[endpointId]
+    else this.remoteModels = {}
+  }
+
+  /** 从上游 GET /models 拉取某入口的真实模型列表（写入内存缓存，不落盘）。 */
+  async refreshModels(opts?: { endpointId?: string; apiKey?: string; baseUrl?: string }) {
+    const endpointId = (opts?.endpointId || this.config.endpointId || this.config.provider).trim()
+    const endpoint = resolveEndpoint(this.config, endpointId)
+    if (!endpoint) return { ok: false as const, detail: `未知入口：${endpointId}`, endpointId }
+    if (endpoint.protocol === 'anthropic') {
+      return { ok: false as const, detail: 'Anthropic Messages 无模型列表接口，请手动添加模型', endpointId }
+    }
+    const draftKey = typeof opts?.apiKey === 'string' ? opts.apiKey.trim() : ''
+    const storedKey = (this.config.apiKeys[endpointId] ?? '').trim()
+    const apiKey = draftKey || storedKey || (isLocalEndpoint(endpoint) ? 'local' : '')
+    if (!apiKey) return { ok: false as const, detail: '未配置 API Key', endpointId }
+    const baseUrl =
+      (typeof opts?.baseUrl === 'string' && opts.baseUrl.trim() ? normalizeBaseUrl(opts.baseUrl) : '') ||
+      effectiveBaseUrl(this.config, endpoint)
+    try {
+      const models = await listLlmModels({ provider: endpoint.provider, apiKey, model: '', baseUrl })
+      if (!models) {
+        return { ok: false as const, detail: '该入口协议不支持模型列表', endpointId }
+      }
+      this.remoteModels[endpointId] = { models, fetchedAt: Date.now() }
+      return {
+        ok: true as const,
+        endpointId,
+        count: models.length,
+        fetchedAt: this.remoteModels[endpointId]!.fetchedAt,
+      }
+    } catch (error) {
+      return {
+        ok: false as const,
+        endpointId,
+        detail: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+
   constructor(ctx: Context) {
     super(ctx, 'chat')
     ctx.systemPrompt.register('chat.persona', () => {
@@ -339,7 +426,7 @@ export class ChatService extends Service {
 
   publicView() {
     const endpoints = allEndpoints(this.config)
-    const models = allModels(this.config)
+    const models = this.modelDefs()
     const current = resolveEndpoint(this.config, this.config.endpointId)
     const providers: Record<string, { label: string; configured: boolean; hint: string; baseUrl: string; group: string; protocol: string }> = {}
     for (const ep of endpoints) {
@@ -391,6 +478,13 @@ export class ChatService extends Service {
         note: ep.note,
         builtin: ep.builtin !== false && ep.group !== 'custom',
       })),
+      /** 各入口已从上游 /models 拉取的模型摘要（count/fetchedAt）。 */
+      remoteModels: Object.fromEntries(
+        Object.entries(this.remoteModels).map(([id, cache]) => [
+          id,
+          { count: cache.models.length, fetchedAt: cache.fetchedAt },
+        ]),
+      ),
       modelCatalog: models.map((m) => ({
         ...m,
         // 方便前端按入口过滤
@@ -421,7 +515,17 @@ export class ChatService extends Service {
     const provider = (config?.provider as ChatProvider | undefined) ?? defaultsView.provider
     const model = config?.model ?? defaultsView.model
     let endpointId = defaultsView.endpointId
-    const matched = allModels(this.config).find((m) => m.model === model && m.provider === provider)
+    // 同一个 model id 可能同时存在于官方目录与当前自定义中转入口（例如
+    // `gpt-4o-mini`）。先在默认入口下匹配，避免会话覆盖模型名时被错误路由回
+    // 官方 OpenAI 地址。使用合并后的远端模型目录，确保 API 拉取的模型也可路由。
+    const models = this.modelDefs()
+    const matched =
+      models.find(
+        (m) =>
+          m.model === model &&
+          m.provider === provider &&
+          m.endpointId === defaultsView.endpointId,
+      ) ?? models.find((m) => m.model === model && m.provider === provider)
     if (matched) endpointId = matched.endpointId
     else if (config?.provider && CHAT_PROVIDERS.includes(config.provider as ChatProvider)) {
       endpointId = config.provider as string
@@ -484,7 +588,7 @@ export class ChatService extends Service {
         : effectiveBaseUrl(this.config, endpoint)
     const model =
       (typeof opts?.model === 'string' && opts.model.trim()) ||
-      allModels(this.config).find((m) => m.endpointId === endpointId)?.model ||
+      this.modelDefs().find((m) => m.endpointId === endpointId)?.model ||
       this.config.model ||
       defaultModelFor(endpoint.provider)
 
@@ -504,6 +608,7 @@ export class ChatService extends Service {
   invalidateEndpoint(endpointId: string, opts?: { persist?: boolean }) {
     const id = endpointId.trim()
     if (!id) return this.publicView()
+    this.invalidateRemoteModels(id)
     blockEndpoint(this.config, id)
     if (this.config.endpointId === id) {
       const fallback =
@@ -513,7 +618,7 @@ export class ChatService extends Service {
         this.config.endpointId = fallback.id
         this.config.provider = fallback.provider
         this.config.model =
-          allModels(this.config).find((m) => m.endpointId === fallback.id)?.model ??
+          this.modelDefs().find((m) => m.endpointId === fallback.id)?.model ??
           defaultModelFor(fallback.provider)
       }
     }
@@ -532,6 +637,7 @@ export class ChatService extends Service {
   markEndpointReachable(endpointId: string, opts?: { persist?: boolean; apiKey?: string; baseUrl?: string }) {
     const id = endpointId.trim()
     if (!id) return this.publicView()
+    this.invalidateRemoteModels(id)
     unblockEndpoint(this.config, id)
     if (typeof opts?.apiKey === 'string' && opts.apiKey.trim()) {
       this.config.apiKeys[id] = opts.apiKey.trim()
@@ -585,7 +691,7 @@ export class ChatService extends Service {
       if (ep) this.config.provider = ep.provider
       // 未指定 model 时，切到该入口第一个模型
       if (typeof next.model !== 'string' || !next.model.trim()) {
-        const first = allModels(this.config).find((m) => m.endpointId === id)
+        const first = this.modelDefs().find((m) => m.endpointId === id)
         if (first) this.config.model = first.model
         else if (ep) this.config.model = defaultModelFor(ep.provider)
       }
@@ -611,6 +717,7 @@ export class ChatService extends Service {
           this.config.apiKeys[id] = key.trim()
           unblockEndpoint(this.config, id)
         }
+        this.invalidateRemoteModels(id)
       }
     }
     if (next.setBaseUrl && typeof next.setBaseUrl === 'object') {
@@ -620,12 +727,14 @@ export class ChatService extends Service {
         } else if (typeof url === 'string' && url.trim()) {
           this.config.baseUrls[id] = normalizeBaseUrl(url)
         }
+        this.invalidateRemoteModels(id)
       }
     }
     // 兼容旧调用：单一 apiKey 写入当前入口
     if (typeof next.apiKey === 'string' && next.apiKey.trim()) {
       this.config.apiKeys[this.config.endpointId] = next.apiKey.trim()
       unblockEndpoint(this.config, this.config.endpointId)
+      this.invalidateRemoteModels(this.config.endpointId)
     }
     if (next.addEndpoint && typeof next.addEndpoint === 'object') {
       const label = String(next.addEndpoint.label ?? '').trim()
@@ -657,10 +766,11 @@ export class ChatService extends Service {
         }
         if (existing >= 0) this.config.customEndpoints[existing] = def
         else this.config.customEndpoints.push(def)
+        this.invalidateRemoteModels(id)
         this.config.endpointId = id
         this.config.provider = provider
         // 自定义入口默认挂一批常用模型名，避免下拉空空如也
-        const hasModels = allModels(this.config).some((m) => m.endpointId === id)
+        const hasModels = this.modelDefs().some((m) => m.endpointId === id)
         if (!hasModels) {
           const seeds = [
             'gpt-4o',
@@ -719,6 +829,7 @@ export class ChatService extends Service {
       this.config.customModels = this.config.customModels.filter((m) => m.endpointId !== id)
       delete this.config.apiKeys[id]
       delete this.config.baseUrls[id]
+      this.invalidateRemoteModels(id)
       unblockEndpoint(this.config, id)
       if (this.config.endpointId === id) {
         this.config.endpointId = DEFAULT_PROVIDER
@@ -848,6 +959,8 @@ declare module 'cordis' {
 
 export function apply(ctx: Context) {
   const chat = new ChatService(ctx)
+  // 启动即静默拉取已配置入口的真实模型列表（失败静默降级静态目录）
+  chat.preloadRemoteModels()
   ctx.hub.register({
     id: 'chat',
     title: '对话',
@@ -905,7 +1018,20 @@ export function apply(ctx: Context) {
       route.send(500, { ok: false, detail: String(error) })
     }
   })
-  ctx.http.route('POST', '/api/sessions', async (route) => {
+  ctx.http.route('POST', '/api/chat/config/models/refresh', async (route) => {
+    const payload = ((await route.json().catch(() => null)) ?? {}) as {
+      endpointId?: string
+      apiKey?: string
+      baseUrl?: string
+    }
+    try {
+      const result = await chat.refreshModels(payload)
+      route.send(result.ok ? 200 : 400, { ...result, config: chat.publicView() })
+    } catch (error) {
+      route.send(500, { ok: false, detail: String(error) })
+    }
+  })
+    ctx.http.route('POST', '/api/sessions', async (route) => {
     const payload = ((await route.json().catch(() => null)) ?? {}) as {
       title?: string
     }

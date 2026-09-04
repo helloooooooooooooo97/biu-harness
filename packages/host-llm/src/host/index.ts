@@ -158,6 +158,72 @@ export async function probeLlmConnection(
   }
 }
 
+export interface LlmModelInfo {
+  id: string
+  ownedBy?: string
+}
+
+/**
+ * 列出上游可用模型。
+ * - OpenAI 兼容：GET {base}/models → { data: [{ id, owned_by }] }
+ * - Ollama / LM Studio：GET {base}/models → { models: [{ name }] }（无鉴权）
+ * - Anthropic：无模型列表接口，返回 null（调用方应跳过并提示）。
+ * 网络 / HTTP 失败抛 Error；成功但无 data 字段返回 []。
+ */
+export async function listLlmModels(
+  config: LlmConfig,
+  opts?: { signal?: AbortSignal },
+): Promise<LlmModelInfo[] | null> {
+  if (config.provider === 'anthropic') return null
+  const apiKey = config.apiKey?.trim() || ''
+  const url = resolveModelsListUrl(config.baseUrl, config.provider)
+  // 未显式传 signal 时给默认超时，避免启动预拉挂死
+  const signal =
+    opts?.signal ??
+    (typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(10_000) : undefined)
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+      accept: 'application/json',
+    },
+    signal,
+  })
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`
+    try {
+      const err = (await res.json()) as { error?: { message?: string } }
+      if (err.error?.message) detail = err.error.message
+    } catch {
+      /* ignore */
+    }
+    throw new Error(detail)
+  }
+  const body = (await res.json()) as {
+    data?: Array<{ id?: unknown; owned_by?: unknown }>
+    models?: Array<{ name?: unknown; model?: unknown }>
+  }
+  // OpenAI 兼容
+  if (Array.isArray(body.data)) {
+    return body.data
+      .map((m) => ({
+        id: String(m.id ?? '').trim(),
+        ...(typeof m.owned_by === 'string' && m.owned_by ? { ownedBy: m.owned_by } : {}),
+      }))
+      .filter((m): m is LlmModelInfo => Boolean(m.id))
+  }
+  // Ollama / LM Studio：{ models: [{ name }] }
+  if (Array.isArray(body.models)) {
+    return body.models
+      .map((m) => {
+        const id = String(m.name ?? m.model ?? '').trim()
+        return id ? { id } : null
+      })
+      .filter((m): m is LlmModelInfo => m !== null)
+  }
+  return []
+}
+
 /** DeepSeek 视觉模型：检测到图片输入时自动路由到它。 */
 export const DEEPSEEK_VISION_MODEL = 'deepseek-v4-flash-vision-exp'
 
