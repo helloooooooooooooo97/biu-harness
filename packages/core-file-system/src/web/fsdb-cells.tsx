@@ -21,7 +21,6 @@ import {
   TableCellsIcon,
   ShareIcon,
   Squares2X2Icon,
-  TagIcon,
   ViewColumnsIcon,
 } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
@@ -117,7 +116,7 @@ export function FieldGlyph({ kind }: { kind: FieldType }) {
   if (kind === 'image') return <PhotoIcon aria-hidden className={cls} />
   if (kind === 'attachment') return <PaperClipIcon aria-hidden className={cls} />
   if (kind === 'file') return <DocumentTextIcon aria-hidden className={cls} />
-  if (kind === 'facet') return <TagIcon aria-hidden className={cls} />
+  if (kind === 'facet') return <RectangleStackIcon aria-hidden className={cls} />
   if (kind === 'action') return <PlayIcon aria-hidden className={cls} />
   return <Bars3BottomLeftIcon aria-hidden className={cls} />
 }

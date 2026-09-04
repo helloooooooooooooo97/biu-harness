@@ -1,15 +1,23 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  ArchiveBoxArrowDownIcon,
+  ArrowPathIcon,
   ChatBubbleLeftRightIcon,
   CheckCircleIcon,
+  ClipboardDocumentListIcon,
   DocumentIcon,
   MagnifyingGlassIcon,
+  PencilSquareIcon,
+  PlayIcon,
   PuzzlePieceIcon,
+  RectangleStackIcon,
   Squares2X2Icon,
-  TagIcon,
+  StopIcon,
 } from '@heroicons/react/16/solid'
 import { TagChip, TagChips } from '@biu/public-ui'
+import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
+import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { setChatOverlay } from './chat-overlay.ts'
 
 export type SearchKind = 'session' | 'task' | 'page' | 'plugin' | 'facet'
@@ -23,11 +31,23 @@ export const SEARCH_SCOPES: Array<{
   { id: 'task', label: '任务', path: '/tasks' },
   { id: 'page', label: '页面', path: '/pages' },
   { id: 'plugin', label: '插件', path: '/plugins' },
-  { id: 'facet', label: '类型', path: '/facets' },
+  { id: 'facet', label: '合集', path: '/facets' },
 ]
 
 const PER_KIND = 8
 const DEBOUNCE_MS = 160
+const NAV_ACTION_IDS = new Set(['open-split', 'open-page'])
+
+export type SearchAction = {
+  id: string
+  label: string
+  tone?: 'danger'
+  placement?: Array<'row' | 'detail'>
+  confirm?: string
+  when?: Record<string, unknown>
+}
+
+export type SearchMascot = { shape: string; color: string; eye?: number }
 
 export type SearchHit = {
   kind: SearchKind
@@ -35,9 +55,20 @@ export type SearchHit = {
   title: string
   tags?: string[]
   updatedAt?: number
+  emoji?: string
+  mascot?: SearchMascot
+  record?: Record<string, unknown>
+  actions?: SearchAction[]
 }
 
-export type SessionHint = { id: string; title: string; tags?: string[]; updatedAt?: number }
+export type SessionHint = {
+  id: string
+  title: string
+  tags?: string[]
+  updatedAt?: number
+  emoji?: string
+  mascot?: SearchMascot
+}
 
 function recordTitle(row: Record<string, unknown>) {
   const title = row.title ?? row.name ?? row.label
@@ -68,6 +99,25 @@ export function tagsFromRecord(row: Record<string, unknown>) {
   return [...new Set(tags)]
 }
 
+/** 与列表 RecordMark 相同：emoji 最多两枚。 */
+export function recordEmoji(row: Record<string, unknown>) {
+  const text = String(row.emoji ?? '').trim()
+  if (!text) return ''
+  return [...text].slice(0, 2).join('')
+}
+
+export function recordMascot(row: Record<string, unknown>): SearchMascot | undefined {
+  const raw = row.mascot
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+  const mascot = raw as { shape?: unknown; color?: unknown; eye?: unknown }
+  if (typeof mascot.shape !== 'string' || typeof mascot.color !== 'string') return undefined
+  return {
+    shape: mascot.shape,
+    color: mascot.color,
+    ...(typeof mascot.eye === 'number' ? { eye: mascot.eye } : {}),
+  }
+}
+
 export function recordUpdatedAt(row: Record<string, unknown>) {
   const updated = Number(row.updatedAt)
   if (Number.isFinite(updated) && updated) return updated
@@ -79,6 +129,29 @@ export function pickRecentHits<T extends { id: string; updatedAt?: number }>(ite
   return [...items]
     .sort((left, right) => (right.updatedAt ?? 0) - (left.updatedAt ?? 0) || left.id.localeCompare(right.id))
     .slice(0, limit)
+}
+
+export function matchActionWhen(record: Record<string, unknown>, when?: Record<string, unknown>) {
+  if (!when) return true
+  for (const [key, expected] of Object.entries(when)) {
+    const actual = record[key]
+    if (expected === true || expected === false) {
+      const flag = actual === true || actual === 'true'
+      if (flag !== expected) return false
+      continue
+    }
+    if (String(actual ?? '') !== String(expected)) return false
+  }
+  return true
+}
+
+export function visibleRowActions(actions: SearchAction[] | undefined, record: Record<string, unknown> | undefined) {
+  const row = record ?? {}
+  return (actions ?? []).filter((action) => {
+    if (NAV_ACTION_IDS.has(action.id)) return false
+    const places = action.placement ?? ['row', 'detail']
+    return places.includes('row') && matchActionWhen(row, action.when)
+  })
 }
 
 export function searchCollection(kind: SearchKind) {
@@ -107,6 +180,30 @@ function matchLocal(title: string, id: string, needle: string) {
   return title.toLowerCase().includes(needle) || id.toLowerCase().includes(needle)
 }
 
+function asSearchActions(value: unknown): SearchAction[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is SearchAction => {
+    if (!item || typeof item !== 'object') return false
+    const action = item as SearchAction
+    return typeof action.id === 'string' && typeof action.label === 'string'
+  })
+}
+
+function hitFromRow(kind: SearchKind, row: Record<string, unknown>, actions: SearchAction[]): SearchHit {
+  const id = String(row.id ?? '')
+  return {
+    kind,
+    id,
+    title: recordTitle(row),
+    tags: tagsFromRecord(row),
+    updatedAt: recordUpdatedAt(row),
+    emoji: recordEmoji(row),
+    mascot: recordMascot(row),
+    record: row,
+    actions,
+  }
+}
+
 async function listKind(path: string, query: string, signal: AbortSignal) {
   const params = new URLSearchParams({
     path,
@@ -118,8 +215,28 @@ async function listKind(path: string, query: string, signal: AbortSignal) {
     filter: '{}',
   })
   const res = await fetch(`/api/db/list?${params}`, { signal })
-  const body = (await res.json()) as { items?: Array<Record<string, unknown>> }
-  return Array.isArray(body.items) ? body.items : []
+  const body = (await res.json()) as {
+    items?: Array<Record<string, unknown>>
+    schema?: { actions?: unknown }
+  }
+  return {
+    items: Array.isArray(body.items) ? body.items : [],
+    actions: asSearchActions(body.schema?.actions),
+  }
+}
+
+function actionGlyph(id: string) {
+  const cls = 'size-[14px]'
+  if (id === 'start' || id === 'play' || id === 'run' || id === 'open') return <PlayIcon aria-hidden className={cls} />
+  if (id === 'stop' || id === 'close' || id === 'pause') return <StopIcon aria-hidden className={cls} />
+  if (id === 'pack') return <ArchiveBoxArrowDownIcon aria-hidden className={cls} />
+  if (id === 'uninstall' || id === 'delete' || id === 'remove') return <TrashGlyph aria-hidden className={cls} />
+  if (id === 'edit' || id === 'rename') return <PencilSquareIcon aria-hidden className={cls} />
+  if (id === 'refresh') return <ArrowPathIcon aria-hidden className={cls} />
+  if (id === 'progress' || id === 'report' || id === 'deliver' || id === 'inspect') {
+    return <ClipboardDocumentListIcon aria-hidden className={cls} />
+  }
+  return null
 }
 
 function HitRecordTags({ tags }: { tags?: string[] }) {
@@ -137,6 +254,56 @@ function HitRecordTags({ tags }: { tags?: string[] }) {
   )
 }
 
+function HitActions({
+  hit,
+  onRan,
+}: {
+  hit: SearchHit
+  onRan: () => void
+}) {
+  const actions = visibleRowActions(hit.actions, hit.record ?? { id: hit.id })
+  const [busyId, setBusyId] = useState<string | null>(null)
+  if (!actions.length) return null
+  const run = async (action: SearchAction) => {
+    if (action.confirm && !window.confirm(action.confirm)) return
+    setBusyId(action.id)
+    try {
+      await fetch('/api/db/action', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          path: `${searchCollection(hit.kind)}/${hit.id}`,
+          action: action.id,
+        }),
+      })
+      onRan()
+    } finally {
+      setBusyId(null)
+    }
+  }
+  return (
+    <span className="shell-search-hit-actions" data-biu-ignore>
+      {actions.map((action) => (
+        <button
+          key={action.id}
+          type="button"
+          className={`shell-search-hit-action${action.tone === 'danger' ? ' is-danger' : ''}`}
+          title={action.label}
+          aria-label={action.label}
+          disabled={busyId != null}
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            void run(action)
+          }}
+        >
+          {actionGlyph(action.id) ?? action.label}
+        </button>
+      ))}
+    </span>
+  )
+}
+
 function KindGlyph({ kind, compact }: { kind: SearchKind | 'all'; compact?: boolean }) {
   const className = compact ? 'size-3 shrink-0' : 'size-4 shrink-0'
   if (kind === 'all') return <Squares2X2Icon className={className} />
@@ -144,7 +311,17 @@ function KindGlyph({ kind, compact }: { kind: SearchKind | 'all'; compact?: bool
   if (kind === 'task') return <CheckCircleIcon className={className} />
   if (kind === 'page') return <DocumentIcon className={className} />
   if (kind === 'plugin') return <PuzzlePieceIcon className={className} />
-  return <TagIcon className={className} />
+  return <RectangleStackIcon className={className} />
+}
+
+function HitMark({ hit }: { hit: SearchHit }) {
+  const emoji = (hit.emoji || recordEmoji(hit.record ?? {})).trim()
+  if (emoji) return <span className="fsdb-record-emoji">{emoji}</span>
+  if (hit.kind === 'session') {
+    const identity = resolveSessionMascot(hit.id, hit.mascot ?? recordMascot(hit.record ?? {}))
+    return <SidebarMascot size={20} sessionId={hit.id} identity={identity} animate={false} title="" />
+  }
+  return <KindGlyph kind={hit.kind} />
 }
 
 export function ShellSearchPanel({
@@ -158,12 +335,15 @@ export function ShellSearchPanel({
 }) {
   const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<'all' | SearchKind>('all')
   const [hits, setHits] = useState<SearchHit[]>([])
   const [busy, setBusy] = useState(false)
   const [active, setActive] = useState(0)
+  const [reloadSeq, setReloadSeq] = useState(0)
   const cacheRef = useRef(new Map<string, SearchHit[]>())
+  const schemaActionsRef = useRef(new Map<SearchKind, SearchAction[]>())
 
   useLayoutEffect(() => {
     const node = inputRef.current
@@ -174,6 +354,7 @@ export function ShellSearchPanel({
   const needle = query.trim().toLowerCase()
 
   const localSessions = useMemo(() => {
+    const sessionActions = schemaActionsRef.current.get('session')
     const matched = sessions
       .filter((item) => matchLocal(item.title, item.id, needle))
       .map((item) => ({
@@ -182,9 +363,20 @@ export function ShellSearchPanel({
         title: item.title || item.id,
         tags: (item.tags ?? []).map((tag) => tag.trim()).filter(Boolean),
         updatedAt: item.updatedAt ?? 0,
+        emoji: item.emoji,
+        mascot: item.mascot,
+        record: {
+          id: item.id,
+          title: item.title,
+          tags: item.tags,
+          emoji: item.emoji,
+          mascot: item.mascot,
+          updatedAt: item.updatedAt,
+        },
+        actions: sessionActions,
       }))
     return pickRecentHits(matched)
-  }, [needle, sessions])
+  }, [needle, sessions, hits, reloadSeq])
 
   useEffect(() => {
     const keyOf = (kind: SearchKind) => `${kind}\0${needle}`
@@ -194,6 +386,7 @@ export function ShellSearchPanel({
     })).filter((item): item is { id: SearchKind; path: string } => Boolean(item.path))
     const remote = listed.filter((item) => scope === 'all' || item.id === scope)
     const allRemote = listed
+    if (reloadSeq) cacheRef.current.clear()
     const fromCache = allRemote.flatMap((item) => cacheRef.current.get(keyOf(item.id)) ?? [])
     if (fromCache.length) setHits(fromCache)
     if (!remote.length) {
@@ -212,17 +405,9 @@ export function ShellSearchPanel({
       void Promise.all(
         missing.map(async (item) => {
           try {
-            const rows = await listKind(item.path!, needle, ac.signal)
-            return rows.map((row) => {
-              const id = String(row.id ?? '')
-              return {
-                kind: item.id,
-                id,
-                title: recordTitle(row),
-                tags: tagsFromRecord(row),
-                updatedAt: recordUpdatedAt(row),
-              } satisfies SearchHit
-            })
+            const listedKind = await listKind(item.path, needle, ac.signal)
+            schemaActionsRef.current.set(item.id, listedKind.actions)
+            return listedKind.items.map((row) => hitFromRow(item.id, row, listedKind.actions))
           } catch {
             return [] as SearchHit[]
           }
@@ -241,7 +426,7 @@ export function ShellSearchPanel({
       ac.abort()
       window.clearTimeout(timer)
     }
-  }, [needle, scope])
+  }, [needle, scope, reloadSeq])
 
   const grouped = useMemo(() => {
     const remote = hits.filter((item) => scope === 'all' || item.kind === scope)
@@ -263,6 +448,13 @@ export function ShellSearchPanel({
 
   const flat = grouped.flatMap((group) => group.items)
   const current = flat[Math.min(active, Math.max(0, flat.length - 1))]
+
+  useLayoutEffect(() => {
+    const root = bodyRef.current
+    if (!root) return
+    const node = root.querySelector<HTMLElement>(`[data-search-hit="${active}"]`)
+    node?.scrollIntoView({ block: 'nearest' })
+  }, [active, flat.length])
 
   const openHit = (hit: SearchHit, side: 'right' | 'left') => {
     if (side === 'left') {
@@ -305,7 +497,7 @@ export function ShellSearchPanel({
             ref={inputRef}
             className="shell-search-input"
             autoFocus
-            placeholder="搜索会话、任务、页面、插件、类型"
+            placeholder="搜索会话、任务、页面、插件、合集"
             value={query}
             data-testid="shell-search-input"
             onChange={(event) => {
@@ -356,10 +548,10 @@ export function ShellSearchPanel({
             ))}
           </TagChips>
         </div>
-        <div className="shell-search-body" aria-busy={busy}>
+        <div ref={bodyRef} className="shell-search-body" aria-busy={busy}>
           {!needle && scope === 'all' && !flat.length && !busy ? (
             <p className="shell-search-hint">
-              空着时会话、任务、页面、插件、类型各按更新时间列最近 {PER_KIND} 条。
+              空着时会话、任务、页面、插件、合集各按更新时间列最近 {PER_KIND} 条。
             </p>
           ) : null}
           {grouped.map((group) => (
@@ -368,24 +560,37 @@ export function ShellSearchPanel({
               {group.items.map((item) => {
                 cursor += 1
                 const index = cursor
+                const tags = (item.kind === 'session' || item.kind === 'task' || item.kind === 'page' || item.kind === 'plugin')
+                  ? item.tags
+                  : undefined
+                const actions = visibleRowActions(item.actions, item.record ?? { id: item.id })
                 return (
-                  <button
-                    type="button"
+                  <div
+                    role="option"
+                    aria-selected={index === active}
+                    data-search-hit={index}
                     key={`${item.kind}:${item.id}`}
                     className={`shell-search-hit${index === active ? ' is-active' : ''}`}
                     onMouseEnter={() => setActive(index)}
                     onClick={(event) => openHit(item, event.shiftKey ? 'left' : 'right')}
                   >
                     <span className="shell-search-hit-icon" aria-hidden>
-                      <KindGlyph kind={item.kind} />
+                      <HitMark hit={item} />
                     </span>
                     <span className="shell-search-hit-title">{item.title}</span>
-                    {(item.kind === 'session' || item.kind === 'task' || item.kind === 'page' || item.kind === 'plugin') && item.tags?.length ? (
-                      <span className="shell-search-hit-tags">
-                        <HitRecordTags tags={item.tags} />
+                    {tags?.length || actions.length ? (
+                      <span className="shell-search-hit-aside">
+                        {tags?.length ? (
+                          <span className="shell-search-hit-tags">
+                            <HitRecordTags tags={tags} />
+                          </span>
+                        ) : null}
+                        {actions.length ? (
+                          <HitActions hit={item} onRan={() => setReloadSeq((n) => n + 1)} />
+                        ) : null}
                       </span>
                     ) : null}
-                  </button>
+                  </div>
                 )
               })}
             </section>

@@ -812,6 +812,7 @@ function Shell(props: SlotProps) {
               title: item.title,
               tags: item.tags,
               updatedAt: item.updatedAt,
+              mascot: item.mascot,
             }))}
             onClose={() => setSearchOpen(false)}
             focusSeq={searchFocusSeq}
