@@ -42,7 +42,7 @@ test('tasksCollection maps /tasks rows with rolled-up usage', async () => {
   assert.equal(spec.view?.inspector, true)
   assert.equal(spec.view?.icon, 'check-circle')
   assert.deepEqual(spec.schema.columns, ['title', 'status', 'priority', 'difficulty', 'usage', 'creator', 'assignee', 'project', 'tags', 'dueAt'])
-  assert.equal(spec.schema.fields.usage?.computed, true)
+  assert.deepEqual(spec.schema.fields.status?.enum, ['todo', 'doing', 'done', 'failed'])
   assert.equal(spec.schema.fields.assignee?.label, '执行人')
   assert.equal(spec.schema.fields.assignee?.writable, true)
   assert.equal(spec.schema.fields.assigneeSessionId, undefined)
