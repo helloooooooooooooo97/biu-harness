@@ -120,12 +120,19 @@ test('facet search scope is named 合集 with stack icon', () => {
   assert.doesNotMatch(src, /label: '类型'/)
 })
 
+test('search does not draw agent progress as a hit action', () => {
+  const src = readFileSync(resolve(import.meta.dirname, './shell-search.tsx'), 'utf8')
+  assert.match(src, /actionVisibleToUser\(action\)/)
+  assert.doesNotMatch(src, /id === 'progress' \|\| id === 'report'/)
+})
+
 test('search hits hide agent-only actions', () => {
   assert.deepEqual(
     visibleRowActions(
       [
         { id: 'start', label: '运行' },
         { id: 'progress', label: '进度', for: 'agent' },
+        { id: 'progress-row', label: '进度', for: 'agent', placement: ['row'] },
       ],
       { id: 's1' },
     ).map((item) => item.id),

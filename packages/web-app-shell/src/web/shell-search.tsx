@@ -188,7 +188,7 @@ function asSearchActions(value: unknown): SearchAction[] {
   return value.filter((item): item is SearchAction => {
     if (!item || typeof item !== 'object') return false
     const action = item as SearchAction
-    return typeof action.id === 'string' && typeof action.label === 'string'
+    return typeof action.id === 'string' && typeof action.label === 'string' && actionVisibleToUser(action)
   })
 }
 
@@ -236,7 +236,7 @@ function actionGlyph(id: string) {
   if (id === 'uninstall' || id === 'delete' || id === 'remove') return <TrashGlyph aria-hidden className={cls} />
   if (id === 'edit' || id === 'rename') return <PencilSquareIcon aria-hidden className={cls} />
   if (id === 'refresh') return <ArrowPathIcon aria-hidden className={cls} />
-  if (id === 'progress' || id === 'report' || id === 'deliver' || id === 'inspect') {
+  if (id === 'report' || id === 'deliver') {
     return <ClipboardDocumentListIcon aria-hidden className={cls} />
   }
   return null
