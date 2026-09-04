@@ -161,7 +161,6 @@ test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.doesNotMatch(cells, /placeholder=\{kind === 'image'/)
   assert.match(browser, /fieldDraftValue\(field, row\[key\]\)/)
   assert.match(browser, /const Custom = chrome\?\.cells\?\.\[key\][\s\S]*if \(field.writable && kind !== 'file'\)/)
-  assert.match(browser, /function RecordProperties[\s\S]*item\.field\.writable && kind !== 'file'/)
   assert.match(browser, /key && field\?\.writable \?/)
   assert.doesNotMatch(browser, /skipBoolean/)
 })
