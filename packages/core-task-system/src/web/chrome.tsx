@@ -2,10 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { createPortal } from 'react-dom'
 import {
   ArrowPathIcon,
-  CalendarDaysIcon,
   ChartBarIcon,
   CheckCircleIcon,
-  ClockIcon,
   FlagIcon,
   LockClosedIcon,
   MinusCircleIcon,
@@ -13,7 +11,7 @@ import {
   XMarkIcon,
 } from '@heroicons/react/16/solid'
 import { listenOutsideDismiss } from '@biu/public-ui'
-import { CellMulti, CellSelect } from '@biu/database-ui'
+import { CellMulti, CellSelect, CellDateTime } from '@biu/database-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import type { DbRecord } from '@biu/type-file-system'
 import type { CollectionChrome, FsCellProps } from '@biu/type-file-system/ui'
@@ -413,33 +411,18 @@ function ProjectCell({ record, value }: FsCellProps) {
   )
 }
 
-function toDatetimeLocal(value: unknown) {
-  const n = Number(value)
-  if (!Number.isFinite(n) || n <= 0) return ''
-  const d = new Date(n)
-  const pad = (x: number) => String(x).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
 function DueCell({ record, value }: FsCellProps) {
   const due = Number(value)
   const overdue = Number.isFinite(due) && due > 0 && record.status !== 'done' && due <= Date.now()
   return (
-    <label className={`tasks-due-edit${overdue ? ' is-overdue' : ''}`} onClick={(event) => event.stopPropagation()}>
-      {overdue ? <ClockIcon aria-hidden className="size-[14px]" /> : <CalendarDaysIcon aria-hidden className="size-[14px]" />}
-      <input
-        type="datetime-local"
-        className="tasks-cell-input"
-        defaultValue={toDatetimeLocal(value)}
-        key={`${record.id}-${record.updatedAt ?? ''}-due`}
-        aria-label="截止"
-        onChange={(event) => {
-          const raw = event.target.value
-          const next = raw ? new Date(raw).getTime() : null
-          void patchRecord(record.id, { dueAt: Number.isFinite(next) ? next : null })
-        }}
-      />
-    </label>
+    <CellDateTime
+      value={value}
+      overdue={overdue}
+      empty="截止"
+      onChange={(next) => {
+        void patchRecord(record.id, { dueAt: next })
+      }}
+    />
   )
 }
 

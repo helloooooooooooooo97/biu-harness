@@ -27,3 +27,14 @@ test('database-ui ships one search menu for select and multi-select', () => {
   assert.doesNotMatch(select, /未选择/)
   assert.match(select, /Boolean\(item\.value\)/)
 })
+
+test('datetime cell uses a calendar popover instead of datetime-local', () => {
+  const picker = readFileSync(resolve(import.meta.dirname, './cell-datetime.tsx'), 'utf8')
+  const menu = readFileSync(resolve(import.meta.dirname, './search-menu.tsx'), 'utf8')
+  const index = readFileSync(resolve(import.meta.dirname, './index.ts'), 'utf8')
+  assert.match(picker, /function CellDateTime/)
+  assert.match(picker, /<DbMenu/)
+  assert.doesNotMatch(picker, /datetime-local/)
+  assert.match(menu, /\.db-datetime-grid/)
+  assert.match(index, /CellDateTime/)
+})

@@ -29,13 +29,13 @@ import { actionVisibleToUser, asAttachment, asHttpHref, asImageSrc } from '@biu/
 import type { CollectionViewType } from '@biu/type-file-system/ui'
 import {
   asStringList,
-  asTime,
   formatField,
   matchActionWhen,
   resolveFieldType,
   type ViewMode,
 } from './fields.ts'
 import { LocalText, TokenMultiSelect } from './controls.tsx'
+import { CellDateTime } from '@biu/database-ui'
 
 export function actionIcon(id: string) {
   const cls = 'size-[14px]'
@@ -90,20 +90,6 @@ export function draftFromRecord(schema: CollectionSchema, row: DbRecord, bodyKey
     next[key] = fieldDraftValue(field, value)
   }
   return next
-}
-
-export function toDatetimeLocal(value: unknown) {
-  const n = asTime(value)
-  if (!n) return ''
-  const d = new Date(n)
-  const pad = (x: number) => String(x).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-export function fromDatetimeLocal(value: string) {
-  if (!value) return ''
-  const n = new Date(value).getTime()
-  return Number.isFinite(n) ? String(n) : ''
 }
 
 export function FieldGlyph({ kind }: { kind: FieldType }) {
@@ -369,11 +355,9 @@ export function FieldEditor({
   }
   if (kind === 'datetime') {
     return (
-      <LocalText
-        className="fsdb-plain-input"
-        value={toDatetimeLocal(value)}
-        placeholder=""
-        onCommit={(next) => onChange(fromDatetimeLocal(next))}
+      <CellDateTime
+        value={value}
+        onChange={(next) => onChange(next == null ? '' : String(next))}
       />
     )
   }
