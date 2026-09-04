@@ -47,11 +47,11 @@ test('search hits collect tags from tags, facet.tags, and config.tags', () => {
   assert.deepEqual(tagsFromRecord({ tags: ['a'], facet: { tags: ['a', 'b'] } }), ['a', 'b'])
 })
 
-test('session task page plugin hits render a kind tag on the right', () => {
+test('session task page plugin hits render record tags on the right, not kind chips', () => {
   const src = readFileSync(resolve(import.meta.dirname, './shell-search.tsx'), 'utf8')
-  assert.match(src, /HitKindTag/)
+  assert.doesNotMatch(src, /HitKindTag/)
   assert.match(src, /HitRecordTags/)
-  assert.match(src, /item\.kind === 'session' \|\| item\.kind === 'task' \|\| item\.kind === 'page' \|\| item\.kind === 'plugin'/)
+  assert.match(src, /item\.tags\?\.length/)
   assert.match(src, /shell-search-hit-tags/)
   const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
   assert.match(css, /\.shell-search-hit-tags\s*\{[^}]*margin-left:\s*auto/s)
