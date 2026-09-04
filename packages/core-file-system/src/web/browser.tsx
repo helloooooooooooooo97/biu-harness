@@ -2490,16 +2490,14 @@ export function CollectionBrowser({
                                 <GroupHead groupKey={group.key || 'unset'} label={group.label} count={group.rows.length} />
                               </td>
                             </tr>
-                            {collapsedGroups[group.key || 'unset'] ? null : (
-                            {tableBodyRows(group.rows, `${group.key}:`)}
-                            )}
+                            {collapsedGroups[group.key || 'unset'] ? null : tableBodyRows(group.rows, `${group.key}:`)}
                           </Fragment>
                         ))
                       ) : (
-                        {tableBodyRows([])}
+                        tableBodyRows([])
                       )
                     ) : (
-                      {tableBodyRows(visible)}
+                      tableBodyRows(visible)
                     )}
             </tbody>
           </table>
