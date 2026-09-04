@@ -449,10 +449,16 @@ function Shell(props: SlotProps) {
   )
   useEffect(() => {
     let timer = 0
+    let raf = 0
+    const applyWidth = () => {
+      raf = 0
+      const next = window.innerWidth
+      setViewportWidth((prev) => (prev === next ? prev : next))
+    }
     const sync = () => {
       shellRef.current?.classList.add('is-window-resizing')
-      setViewportWidth(window.innerWidth)
-      setWindowResizing(true)
+      setWindowResizing((prev) => prev || true)
+      if (!raf) raf = window.requestAnimationFrame(applyWidth)
       window.clearTimeout(timer)
       timer = window.setTimeout(() => {
         shellRef.current?.classList.remove('is-window-resizing')
@@ -463,6 +469,7 @@ function Shell(props: SlotProps) {
     window.addEventListener('resize', sync)
     return () => {
       window.clearTimeout(timer)
+      if (raf) window.cancelAnimationFrame(raf)
       window.removeEventListener('resize', sync)
     }
   }, [])
