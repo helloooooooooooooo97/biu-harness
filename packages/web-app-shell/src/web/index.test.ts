@@ -67,6 +67,8 @@ test('center stage keeps modules mounted and crossfades', () => {
   assert.match(shell, /onWidthLive=\{onSidebarWidthLive\}/)
   assert.match(shell, /onWidthLive=\{onInspectorWidthLive\}/)
   assert.match(shell, /applyShellColumnCssVars/)
+  assert.match(shell, /const PluginModuleStage = memo\(function PluginModuleStage/)
+  assert.match(shell, /paintLiveLayout/)
   assert.match(shell, /paintColumnDrag/)
   assert.doesNotMatch(shell, /if \(moduleId !== activeId\) return null/)
   assert.match(css, /\.app-stage-pane\.is-active[\s\S]*?opacity:\s*1/)

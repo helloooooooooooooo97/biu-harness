@@ -388,11 +388,12 @@ export const DataSidebar = memo(function DataSidebar({
   useEffect(() => {
     let cancelled = false
     void Promise.all(
-      countJobs.map((job) =>
-        fetchViewTotal(job.path, job.view).catch(() => {
+      countJobs.map((job) => {
+        if (getPreviewTotal(viewTotalKey(job.path, job.view)) != null) return Promise.resolve()
+        return fetchViewTotal(job.path, job.view).catch(() => {
           if (cancelled) return
-        }),
-      ),
+        })
+      }),
     )
     return () => {
       cancelled = true

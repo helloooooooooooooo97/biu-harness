@@ -69,6 +69,14 @@ test('window reveal event opens the inspector record path', async () => {
   window.removeEventListener('biu:inspector-tab', onTab)
 })
 
+test('showRecordInInspector updates an already-open repeatable pane, not just the canonical tab id', async () => {
+  const pane = 'database:/pages::abc123'
+  setInspectorDbPath(pane, '/database/pages/view/builtin-all:/pages')
+  showRecordInInspector('/pages', 'p1')
+  assert.equal(getInspectorDbPath(pane), '/database/pages/record/p1')
+  assert.equal(getInspectorDbPath('database:/pages'), '/database/pages/record/p1')
+})
+
 test('showRecordInInspector opens the inspector on this record', async () => {
   const tabs: string[] = []
   const onTab = (event: Event) => {

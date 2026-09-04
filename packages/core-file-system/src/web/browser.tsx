@@ -132,6 +132,22 @@ function recordsFingerprint(rows: Array<DbRecord & { path?: string }>) {
   return JSON.stringify(rows)
 }
 
+const LIST_CACHE_MAX = 8
+const listCache = new Map<string, { items: Array<DbRecord & { path?: string }>; total: number; stat: StatResult | null }>()
+
+function rememberListCache(
+  path: string,
+  snap: { items: Array<DbRecord & { path?: string }>; total: number; stat: StatResult | null },
+) {
+  if (listCache.has(path)) listCache.delete(path)
+  listCache.set(path, snap)
+  while (listCache.size > LIST_CACHE_MAX) {
+    const first = listCache.keys().next().value
+    if (first === undefined) break
+    listCache.delete(first)
+  }
+}
+
 const EMPTY_FILTERS: Record<string, string> = {}
 
 export function CollectionBrowser({
@@ -482,6 +498,7 @@ export function CollectionBrowser({
       )
       setItems((prev) => (recordsFingerprint(prev) === recordsFingerprint(listed.items) ? prev : listed.items))
       setTotal(listed.total)
+      rememberListCache(dataPath, { items: listed.items, total: listed.total, stat: { ...nextStat, schema: nextSchema } })
       if (activeViewId) {
         rememberPreviewTotal(
           viewTotalKey(collectionPath, {
@@ -539,8 +556,10 @@ export function CollectionBrowser({
     hydratePath.current = ''
     setCollapsed({})
     hydratedDetail.current = ''
-    setItems([])
-    setStat(null)
+    const cached = listCache.get(dataPath)
+    setItems(cached?.items ?? [])
+    setStat(cached?.stat ?? null)
+    setTotal(cached?.total ?? 0)
     setError('')
     setPage(0)
     const stored = viewForPath(collectionPath, routeViewId)

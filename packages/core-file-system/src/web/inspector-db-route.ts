@@ -16,6 +16,29 @@ function storageKey(paneId: string) {
   return `${STORAGE_PREFIX}${paneId}`
 }
 
+function slotTabId(openedId: string) {
+  const split = openedId.indexOf('::')
+  return split === -1 ? openedId : openedId.slice(0, split)
+}
+
+function paneIdsForTab(tabId: string) {
+  const ids = new Set<string>([tabId])
+  for (const id of paths.keys()) {
+    if (id === tabId || slotTabId(id) === tabId) ids.add(id)
+  }
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i) ?? ''
+      if (!key.startsWith(STORAGE_PREFIX)) continue
+      const id = key.slice(STORAGE_PREFIX.length)
+      if (id === tabId || slotTabId(id) === tabId) ids.add(id)
+    }
+  } catch {
+    /* ignore */
+  }
+  return [...ids]
+}
+
 function readStoredPath(paneId: string) {
   try {
     const raw = localStorage.getItem(storageKey(paneId)) ?? ''
@@ -115,10 +138,10 @@ export function inspectorCollectionTabId(collection: string) {
   return `database:${collection}`
 }
 
-/** 右侧检查器打开这条路径，中间主界面不动。 */
+/** 右侧检查器打开这条路径，中间主界面不动。已打开的同表实例（含 :: 副本）一起改路径。 */
 export function showInInspector(collection: string, href: string) {
   const tabId = inspectorCollectionTabId(collection)
-  setInspectorDbPath(tabId, href)
+  for (const paneId of paneIdsForTab(tabId)) setInspectorDbPath(paneId, href)
   window.dispatchEvent(new Event('biu:inspector-open'))
   window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: tabId }))
 }
