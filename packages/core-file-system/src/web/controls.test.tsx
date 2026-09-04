@@ -50,7 +50,7 @@ test('AppDialog can hide cancel so an alert only has a confirm button', () => {
   )
   assert.equal(screen.queryByRole('button', { name: '取消' }), null)
   assert.ok(screen.getByRole('button', { name: '知道了' }))
-  assert.ok(screen.getByRole('dialog', { name: '打包失败' }))
+  assert.ok(screen.getByRole('dialog', { name: '安装失败' }))
 })
 
 test('LocalText keeps keystrokes inside the field and only commits on blur', () => {
