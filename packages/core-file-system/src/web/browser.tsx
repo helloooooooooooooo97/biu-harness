@@ -1378,7 +1378,6 @@ export function CollectionBrowser({
           />
         )}
         <span className="fsdb-title-text">{body}</span>
-        <RecordOpenControls row={row} kidCount={tree ? kidCount : 0} />
       </span>
     )
     return (
@@ -1386,6 +1385,7 @@ export function CollectionBrowser({
         {host}
         <span className="tasks-row-tools-slot">
           <RecordRowTools row={row} />
+          <RecordOpenControls row={row} kidCount={tree ? kidCount : 0} />
         </span>
       </>
     )
