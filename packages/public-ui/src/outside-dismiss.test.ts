@@ -9,4 +9,5 @@ test('outside dismiss listens in the capture phase', () => {
   assert.match(src, /addEventListener\('mousedown', onDown, true\)/)
   assert.match(src, /removeEventListener\('mousedown', onDown, true\)/)
   assert.match(menu, /listenOutsideDismiss/)
+  assert.match(menu, /zIndex = 200/)
 })

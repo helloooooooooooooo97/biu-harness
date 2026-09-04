@@ -164,6 +164,8 @@ const CSS = `
 .fsdb-page .tasks-table.is-wrap.is-truncate .fsdb-cell{overflow:hidden;max-width:100%;max-height:2.8em}
 .fsdb-page .tasks-table.is-wrap.is-truncate .fsdb-title-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:normal}
 .fsdb-page .tasks-table th,.fsdb-page .tasks-table td{overflow:visible}
+.fsdb-page .tasks-table tbody tr:hover{position:relative;z-index:6}
+.fsdb-page .tasks-table [data-dock-tip]::after{z-index:80}
 .fsdb-page .tasks-table th{padding:6px 6px;color:var(--dsw-label-2);font-size:14px;font-weight:600;position:sticky;top:0;background:var(--dsw-surface);z-index:5;white-space:nowrap}
 .fsdb-row-check{position:absolute;top:50%;left:0;z-index:3;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin:0;transform:translate(-100%,-50%);opacity:0;pointer-events:none}
 .fsdb-page .tasks-table td:first-child{position:relative}
