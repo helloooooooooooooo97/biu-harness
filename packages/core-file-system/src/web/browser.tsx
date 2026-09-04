@@ -1302,6 +1302,9 @@ export function CollectionBrowser({
         />
       )
     }
+    const Custom = chrome?.cells?.[key]
+    const fallback = formatField(field, row[key])
+    if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={fallback} />
     if (field.writable && kind !== 'file') {
       return (
         <FieldEditor
@@ -1313,9 +1316,6 @@ export function CollectionBrowser({
         />
       )
     }
-    const Custom = chrome?.cells?.[key]
-    const fallback = formatField(field, row[key])
-    if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={fallback} />
     return <DefaultCell field={field} value={row[key]} />
   }
 

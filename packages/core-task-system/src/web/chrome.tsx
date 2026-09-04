@@ -270,7 +270,7 @@ function PersonPicker({
         type="button"
         className="tasks-assignee-trigger"
         data-open={open || undefined}
-        title={which === 'creator' ? '选择创建人' : '选择承担者'}
+        title={which === 'creator' ? '选择创建人' : '选择执行人'}
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
