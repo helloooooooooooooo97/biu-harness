@@ -237,7 +237,7 @@ export function CollectionBrowser({
   const [columnKeys, setColumnKeys] = useState<string[]>(initialView?.columns ?? [])
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => normalizeColumnWidths(initialView?.columnWidths))
   const [resizingCol, setResizingCol] = useState<string | null>(null)
-  const [cellPick, setCellPick] = useState<{ id: string; key: string } | null>(null)
+  const cellPickRef = useRef<{ id: string; key: string } | null>(null)
   const [cellPopOpen, setCellPopOpen] = useState(false)
   const cellAnchorRef = useRef<HTMLElement | null>(null)
   const [facetCatalog, setFacetCatalog] = useState(() => loadFacets())
@@ -1266,6 +1266,16 @@ export function CollectionBrowser({
     return Boolean(field.writable) && kind !== 'file' && kind !== 'action'
   }
 
+  function markCellOn(td: HTMLElement, writable: boolean) {
+    const table = td.closest('table')
+    table?.querySelectorAll('td.is-cell-on').forEach((node) => {
+      if (node === td) return
+      node.classList.remove('is-cell-on', 'is-cell-ro')
+    })
+    td.classList.add('is-cell-on')
+    td.classList.toggle('is-cell-ro', !writable)
+  }
+
   async function writeOne(row: DbRecord, key: string, field: FieldSpec, raw: string) {
     await writePatch(row, { [key]: parseFieldValue(field, raw) })
   }
@@ -1386,6 +1396,7 @@ export function CollectionBrowser({
   }
 
   function renderCellPop() {
+    const cellPick = cellPickRef.current
     if (!cellPopOpen || !cellPick || !schema) return null
     const row = items.find((item) => item.id === cellPick.id)
     const col = columns.find((item) => item.key === cellPick.key)
@@ -1717,9 +1728,10 @@ export function CollectionBrowser({
     )
   }
 
-  function TableBodyRows({ rows, keyPrefix = '' }: { rows: DbRecord[]; keyPrefix?: string }) {
+  function tableBodyRows(rows: DbRecord[], keyPrefix = '') {
     const listed = flattenRows(rows)
     const span = tableColSpan
+    const cellPick = cellPickRef.current
     if (!listed.length) {
       return (
         <tr>
@@ -1747,10 +1759,14 @@ export function CollectionBrowser({
                   if (event.button !== 0) return
                   const hit = event.target as HTMLElement | null
                   if (hit?.closest('.fsdb-row-check, .fsdb-col-resizer, .tasks-row-tools, .tasks-title-open, .fsdb-action-btn')) return
-                  cellAnchorRef.current = event.currentTarget
-                  setCellPick({ id: row.id, key: col.key })
+                  const td = event.currentTarget
+                  cellAnchorRef.current = td
+                  cellPickRef.current = { id: row.id, key: col.key }
+                  markCellOn(td, cellFieldWritable(col.field))
                   const kind = resolveFieldType(col.field)
-                  setCellPopOpen(Boolean(cellUsesPop(kind, col.field.writable)))
+                  const wantPop = cellUsesPop(kind, col.field.writable)
+                  if (wantPop) setCellPopOpen(true)
+                  else setCellPopOpen(false)
                 }}
               >
                 {index === 0 ? <RowCheck id={row.id} /> : null}
@@ -2477,15 +2493,15 @@ export function CollectionBrowser({
                               </td>
                             </tr>
                             {collapsedGroups[group.key || 'unset'] ? null : (
-                            <TableBodyRows rows={group.rows} keyPrefix={`${group.key}:`} />
+                            {tableBodyRows(group.rows, `${group.key}:`)}
                             )}
                           </Fragment>
                         ))
                       ) : (
-                        <TableBodyRows rows={[]} />
+                        {tableBodyRows([])}
                       )
                     ) : (
-                      <TableBodyRows rows={visible} />
+                      {tableBodyRows(visible)}
                     )}
             </tbody>
           </table>
