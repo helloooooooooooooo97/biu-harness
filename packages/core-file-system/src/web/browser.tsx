@@ -1515,6 +1515,7 @@ export function CollectionBrowser({
           type="button"
           className={`tasks-icon-btn${action.tone === 'danger' ? ' is-danger' : ''}`}
           title={action.label}
+          data-dock-tip={action.label}
           aria-label={`${action.label} ${labelOf(row)}`}
           disabled={busy}
           onClick={run}
@@ -1533,6 +1534,7 @@ export function CollectionBrowser({
               type="button"
               className="tasks-icon-btn"
               title="更多"
+              data-dock-tip="更多"
               aria-label="更多操作"
               aria-expanded={moreOpen}
               disabled={busy}

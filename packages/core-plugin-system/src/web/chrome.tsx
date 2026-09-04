@@ -55,6 +55,7 @@ function PluginAction({ action, busy, run }: FsActionProps) {
       type="button"
       className={`tasks-icon-btn${action.tone === 'danger' ? ' is-danger' : ''}`}
       title={action.label}
+      data-dock-tip={action.label}
       aria-label={action.label}
       disabled={busy}
       onClick={run}
