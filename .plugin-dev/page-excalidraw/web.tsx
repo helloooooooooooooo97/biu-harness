@@ -32,12 +32,18 @@ function emptyScene(): Scene {
   return { elements: [], appState: { theme: 'dark' }, files: {} }
 }
 
+function withoutCollab(appState: unknown): Record<string, unknown> {
+  if (!appState || typeof appState !== 'object' || Array.isArray(appState)) return {}
+  const { collaborators: _c, ...rest } = appState as Record<string, unknown>
+  return rest
+}
+
 function parseScene(raw: unknown): Scene {
   if (!raw || typeof raw !== 'object') return emptyScene()
   const o = raw as Scene
   return {
     elements: Array.isArray(o.elements) ? o.elements : [],
-    appState: { theme: 'dark' },
+    appState: withoutCollab(o.appState),
     files: o.files && typeof o.files === 'object' ? o.files : {},
   }
 }
@@ -221,7 +227,6 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
 
   const bindApi = useCallback((api: DrawApi | null) => {
     apiRef.current = api
-    requestAnimationFrame(() => fitView(api))
   }, [])
 
   useEffect(() => {
@@ -242,10 +247,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
   }, [file])
 
   useEffect(() => {
-    if (!expanded) {
-      const id = requestAnimationFrame(() => fitView(apiRef.current))
-      return () => cancelAnimationFrame(id)
-    }
+    if (!expanded) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setExpanded(false)
     }
@@ -261,7 +263,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
     if (!file) return
     const next: Scene = {
       elements,
-      appState: { theme: 'dark' },
+      appState: withoutCollab(appState),
       files,
     }
     live.current = next
@@ -292,7 +294,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
         theme="dark"
         initialData={{
           elements: start.elements as never,
-          appState: { theme: 'dark', collaborators: new Map() },
+          appState: { ...start.appState, collaborators: new Map() },
           files: start.files as never,
         }}
         viewModeEnabled={!expanded}

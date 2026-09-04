@@ -126,6 +126,16 @@ export const pageBlock = Node.create({
   addNodeView() {
     return ReactNodeViewRenderer(PageBlockView, {
       className: 'page-block',
+      update({ oldNode, newNode, updateProps }) {
+        if (
+          oldNode.attrs.kind === newNode.attrs.kind &&
+          JSON.stringify(oldNode.attrs.data) === JSON.stringify(newNode.attrs.data)
+        ) {
+          return true
+        }
+        updateProps()
+        return true
+      },
       stopEvent: ({ event }) => {
         const target = event.target as HTMLElement | null
         return Boolean(

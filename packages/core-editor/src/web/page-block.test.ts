@@ -141,6 +141,15 @@ test('duplicate pageBlock file pointers get a cloneFrom copy', () => {
   editor.destroy()
 })
 
+test('pageBlock node view skips react update when attrs are unchanged', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const { resolve } = await import('node:path')
+  const src = await readFile(resolve(import.meta.dirname, './page-block.ts'), 'utf8')
+  assert.match(src, /oldNode\.attrs\.kind === newNode\.attrs\.kind/)
+  assert.match(src, /JSON\.stringify\(oldNode\.attrs\.data\) === JSON\.stringify\(newNode\.attrs\.data\)/)
+  assert.match(src, /return true/)
+})
+
 test('pageBlock capture includes drawing surfaces', async () => {
   const { readFile } = await import('node:fs/promises')
   const { resolve } = await import('node:path')
