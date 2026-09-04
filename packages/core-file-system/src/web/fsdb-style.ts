@@ -167,8 +167,10 @@ const CSS = `
 .fsdb-page .tasks-table tbody tr:hover{position:relative;z-index:6}
 .fsdb-page .tasks-table [data-dock-tip]::after{z-index:80}
 .fsdb-page .tasks-table th{padding:6px 6px;color:var(--dsw-label-2);font-size:14px;font-weight:600;position:sticky;top:0;background:var(--dsw-surface);z-index:5;white-space:nowrap}
-.fsdb-page .tasks-table.is-cols-fixed{table-layout:fixed;width:max-content}
-.fsdb-page .tasks-table.is-cols-fixed.is-wrap{width:max-content;max-width:none}
+.fsdb-page .tasks-table.is-cols-fixed{table-layout:fixed;width:max-content;min-width:0;max-width:none}
+.fsdb-page .tasks-table.is-cols-fixed.is-wrap{width:max-content;max-width:none;min-width:0}
+.fsdb-page .tasks-table.is-cols-fixed col,.fsdb-page .tasks-table.is-cols-fixed th,.fsdb-page .tasks-table.is-cols-fixed td{box-sizing:border-box}
+.fsdb-page .tasks-table.is-cols-fixed th,.fsdb-page .tasks-table.is-cols-fixed td{max-width:none}
 .fsdb-page .tasks-table.is-cols-fixed td .fsdb-cell{max-width:100%}
 .fsdb-page .tasks-table .fsdb-col-resizer{position:absolute;top:0;bottom:0;right:-5px;z-index:9;width:9px;height:auto;cursor:col-resize;user-select:none;touch-action:none;pointer-events:auto}
 .fsdb-page .tasks-table .fsdb-col-resizer::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:4px;transform:translateX(-50%);background:transparent;pointer-events:none}
