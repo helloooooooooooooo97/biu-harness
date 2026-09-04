@@ -258,6 +258,8 @@ const CSS = `
 .fsdb-bool{display:inline-flex;align-items:center;flex:none;line-height:0;vertical-align:middle}
 .fsdb-boolbtn{border:0;background:transparent;padding:0;cursor:pointer;display:inline-flex;align-items:center;flex:none;line-height:0;vertical-align:middle}
 .fsdb-boolbox{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--dsw-border);display:inline-flex;align-items:center;justify-content:center;background:transparent;color:var(--dsw-bg);box-sizing:border-box}
+.fsdb-field-bool-glyph{display:inline-flex;flex:none;align-items:center;line-height:0}
+.fsdb-field-bool-glyph .fsdb-boolbox{width:14px;height:14px}
 .fsdb-boolbox.is-on{background:var(--dsw-pick,#2383e2);border-color:transparent;color:var(--dsw-bg)}
 .fsdb-boolbox.is-locked{cursor:default;opacity:.9}
 .fsdb-boolbox.is-locked.is-on{background:var(--dsw-pick,#2383e2);border-color:transparent;color:var(--dsw-bg)}
@@ -280,6 +282,10 @@ const CSS = `
 .fsdb-page.is-sheet .tasks-main{padding:0 0 0 var(--fsdb-check-gutter);gap:8px;max-width:none}
 .fsdb-page.is-sheet .fsdb-right-body{overflow:hidden}
 .fsdb-detail-aside{display:flex;flex-direction:column;gap:2px;padding:0 0 12px}
+.fsdb-detail-aside .fsdb-proprow-k,.fsdb-detail-aside .fsdb-prop>span:first-child,.fsdb-detail-aside .fsdb-proprow-label{color:#ACA9A4}
+.fsdb-detail-aside .fsdb-proprow-k svg,.fsdb-detail-aside .fsdb-prop>span:first-child svg{color:#ACA9A4;opacity:1}
+.fsdb-detail-aside .fsdb-field-bool-glyph .fsdb-boolbox{border-color:#ACA9A4}
+.fsdb-detail-aside .fsdb-proprow-v,.fsdb-detail-aside .fsdb-prop-val,.fsdb-detail-aside .fsdb-detail-id,.fsdb-detail-aside .fsdb-plain-input{color:#F0EFED}
 .fsdb-proprow,.fsdb-prop{display:grid;grid-template-columns:108px minmax(0,1fr);align-items:center;gap:8px;min-height:32px;font-size:14px;color:#7B7B79}
 .fsdb-proprow-k,.fsdb-prop>span:first-child{font-size:14px;font-weight:500;color:#7B7B79;display:inline-flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-proprow-k svg,.fsdb-prop>span:first-child svg,.fsdb-schema-prop-k svg{color:#F0EFED;opacity:1}

@@ -84,11 +84,14 @@ test('title cell hover icons use F0EFED', () => {
   assert.match(css, /\.fsdb-page \.tasks-row-tools \.tasks-icon-btn,\.fsdb-page \.tasks-row-actions \.tasks-icon-btn\{[^}]*color:#F0EFED/)
 })
 
-test('list and detail properties share key and value colors', () => {
+test('list properties keep muted colors; detail property column uses ACA9A4 keys and F0EFED values', () => {
   assert.match(css, /\.fsdb-proprow-k,\.fsdb-prop>span:first-child\{[^}]*color:#7B7B79/)
   assert.match(css, /\.fsdb-proprow-v,\.fsdb-prop-val,\.fsdb-detail-id\{[^}]*color:#7C7A76/)
   assert.match(css, /\.fsdb-schema-prop-k\{[^}]*color:#7B7B79/)
   assert.match(css, /\.fsdb-proprow-k svg,\.fsdb-prop>span:first-child svg,\.fsdb-schema-prop-k svg\{[^}]*color:#F0EFED/)
+  assert.match(css, /\.fsdb-detail-aside \.fsdb-proprow-k,\.fsdb-detail-aside \.fsdb-prop>span:first-child,\.fsdb-detail-aside \.fsdb-proprow-label\{[^}]*color:#ACA9A4/)
+  assert.match(css, /\.fsdb-detail-aside \.fsdb-proprow-k svg,\.fsdb-detail-aside \.fsdb-prop>span:first-child svg\{[^}]*color:#ACA9A4/)
+  assert.match(css, /\.fsdb-detail-aside \.fsdb-proprow-v,\.fsdb-detail-aside \.fsdb-prop-val,\.fsdb-detail-aside \.fsdb-detail-id,\.fsdb-detail-aside \.fsdb-plain-input\{[^}]*color:#F0EFED/)
 })
 
 test('usage figures in collection cells match the table font size', () => {

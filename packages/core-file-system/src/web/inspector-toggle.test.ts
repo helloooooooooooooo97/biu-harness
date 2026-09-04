@@ -353,6 +353,12 @@ test('page collection uses a document glyph, not the table/database icon', () =>
   assert.match(glyphs, /<DocumentIcon/)
 })
 
+test('boolean field glyph is a checkbox, not the document list icon', () => {
+  const cells = readFileSync(resolve(import.meta.dirname, './fsdb-cells.tsx'), 'utf8')
+  assert.match(cells, /kind === 'boolean'\) return <span aria-hidden className="fsdb-field-bool-glyph"><BoolBox on=\{false\}/)
+  assert.doesNotMatch(cells, /kind === 'boolean'\) return <ClipboardDocumentListIcon/)
+})
+
 test('facet field glyph matches the collection stack icon', () => {
   const glyphs = readFileSync(resolve(import.meta.dirname, './table-glyph.tsx'), 'utf8')
   const cells = readFileSync(resolve(import.meta.dirname, './fsdb-cells.tsx'), 'utf8')
