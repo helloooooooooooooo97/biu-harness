@@ -124,6 +124,7 @@ test('search does not draw agent progress as a hit action', () => {
   const src = readFileSync(resolve(import.meta.dirname, './shell-search.tsx'), 'utf8')
   assert.match(src, /actionVisibleToUser\(action\)/)
   assert.doesNotMatch(src, /id === 'progress' \|\| id === 'report'/)
+  assert.match(src, /id === 'deliver'\) return <PaperAirplaneIcon/)
 })
 
 test('search hits hide agent-only actions', () => {

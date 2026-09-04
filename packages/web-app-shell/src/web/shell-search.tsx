@@ -5,9 +5,9 @@ import {
   ArrowPathIcon,
   ChatBubbleLeftRightIcon,
   CheckCircleIcon,
-  ClipboardDocumentListIcon,
   DocumentIcon,
   MagnifyingGlassIcon,
+  PaperAirplaneIcon,
   PencilSquareIcon,
   PlayIcon,
   PuzzlePieceIcon,
@@ -236,9 +236,7 @@ function actionGlyph(id: string) {
   if (id === 'uninstall' || id === 'delete' || id === 'remove') return <TrashGlyph aria-hidden className={cls} />
   if (id === 'edit' || id === 'rename') return <PencilSquareIcon aria-hidden className={cls} />
   if (id === 'refresh') return <ArrowPathIcon aria-hidden className={cls} />
-  if (id === 'report' || id === 'deliver') {
-    return <ClipboardDocumentListIcon aria-hidden className={cls} />
-  }
+  if (id === 'deliver') return <PaperAirplaneIcon aria-hidden className={cls} />
   return null
 }
 
