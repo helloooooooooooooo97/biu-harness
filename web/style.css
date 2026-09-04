@@ -2974,6 +2974,23 @@ body {
   margin-bottom: 4px;
 }
 
+.dock-approval-card-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.dock-approval-card-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .dock-approval-mark {
   display: inline-flex;
   flex: none;

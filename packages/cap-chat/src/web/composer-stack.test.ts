@@ -110,6 +110,8 @@ describe('composer dock stacking above sticky user', () => {
     expect(approvals).not.toContain('待确认工具 · 先处理后再发')
     expect(approvals).toContain('dock-approval-mark')
     expect(approvals).toMatch(/data-dock-tip="待确认"/)
+    expect(approvals).toContain('dock-approval-card-actions')
+    expect(approvals).toContain('dock-approval-card-head')
     expect(css).toMatch(/\.composer-tool-chip\.is-pick,\s*\n\.user-pick-chip\s*\{[^}]*--biu-tag/s)
     expect(chip).toMatch(/pickKindTone/)
     expect(chip).toMatch(/tagTone\(canonicalPickKind\(kind\)\)/)
