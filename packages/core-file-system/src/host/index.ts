@@ -963,7 +963,7 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_delete',
-    description: '按条件删除记录。路径为 /<表>，必须带 ids、q 或 filter 之一，禁止无条件清空全表。能否删除看 db_stat 的 caps 与 schema.records。',
+    description: '按条件删除记录。路径为 /<表>，必须带 ids、q 或 filter 之一，禁止无条件清空全表。能否删除看 db_stat 的 caps 与 schema.records。调用后会进入审批，用户同意才真正删。',
     parameters: {
       type: 'object',
       properties: {
