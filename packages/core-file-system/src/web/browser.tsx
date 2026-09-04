@@ -1473,7 +1473,6 @@ export function CollectionBrowser({
             type="button"
             className="tasks-title-open"
             data-testid="record-title-open"
-            data-biu-action="open"
             aria-label="查看详情"
             title="查看详情"
             onClick={(event) => {
