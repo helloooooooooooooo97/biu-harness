@@ -3,7 +3,7 @@ import type { Context } from 'cordis'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { CircleStackIcon } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/type-slots'
-import { DATABASE_CHANNEL, type CollectionInfo, type CollectionView } from '@biu/type-file-system'
+import { DATABASE_CHANNEL, type CollectionInfo } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import { isLegacyDatabasePath, parseAppPath } from '@biu/web-session-view'
 import { pathForCenter, pathForCrumbTarget, type CrumbTarget } from './sidebar-nav.ts'
@@ -50,15 +50,6 @@ type SnapshotService = {
   onMessage: (type: string, handler: (payload: unknown) => void) => () => void
   get?: () => { collections?: CollectionInfo[] }
   subscribe?: (fn: () => void) => () => void
-}
-
-export function navConflict(view: CollectionView, title: string, modules: AppModule[], selfId: string): string | null {
-  const route = normalizeCollectionPath(view.route)
-  const pathHit = modules.find((item) => item.id !== selfId && normalizeCollectionPath(item.path) === route)
-  if (pathHit) return `路由重复：${route} 已被「${pathHit.label}」占用，请换一个路由再登记`
-  const nameHit = modules.find((item) => item.id !== selfId && item.label === title)
-  if (nameHit) return `名称重复：导航已有「${title}」，请换一个名字`
-  return null
 }
 
 const EMPTY_CHROME: CollectionChrome = {}

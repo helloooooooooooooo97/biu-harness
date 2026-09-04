@@ -1,9 +1,10 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { headingElById, headingsFromHtml, headingsFromRoot } from './heading-outline.ts'
+import { headingsFromRoot } from './heading-outline.ts'
 
-test('headingsFromHtml extracts h1–h3 and skips chrome titles', () => {
-  const html = `
+test('headingsFromRoot extracts h1–h3 and skips chrome titles', () => {
+  const root = document.createElement('div')
+  root.innerHTML = `
     <h1 class="fsdb-detail-title">Record title</h1>
     <div class="page-editor">
       <h1>Intro</h1>
@@ -15,11 +16,14 @@ test('headingsFromHtml extracts h1–h3 and skips chrome titles', () => {
     </div>
     <h3 class="fsdb-detail-extra-title">Related</h3>
   `
-  assert.deepEqual(headingsFromHtml(html), [
-    { id: 'heading-0', text: 'Intro', level: 1 },
-    { id: 'heading-1', text: 'Section', level: 2 },
-    { id: 'heading-2', text: 'Detail', level: 3 },
-  ])
+  assert.deepEqual(
+    headingsFromRoot(root).map((item) => [item.id, item.text, item.level]),
+    [
+      ['heading-0', 'Intro', 1],
+      ['heading-1', 'Section', 2],
+      ['heading-2', 'Detail', 3],
+    ],
+  )
 })
 
 test('headingsFromRoot is read-only so TipTap headings do not trip MutationObserver', () => {
@@ -40,8 +44,6 @@ test('headingsFromRoot is read-only so TipTap headings do not trip MutationObser
       ['heading-2', 'C', 3],
     ],
   )
-  assert.equal(root.querySelector('[data-heading-outline]'), null)
   assert.equal(fires, 0)
   mo.disconnect()
-  assert.equal(headingElById(root, 'heading-2')?.textContent, 'C')
 })

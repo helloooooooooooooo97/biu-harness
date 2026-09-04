@@ -123,10 +123,6 @@ export function FieldGlyph({ kind }: { kind: FieldType }) {
   return <Bars3BottomLeftIcon aria-hidden className={cls} />
 }
 
-export function boolOn(value: unknown) {
-  return value === true || value === 'true'
-}
-
 export function BoolCell({
   on,
   writable,

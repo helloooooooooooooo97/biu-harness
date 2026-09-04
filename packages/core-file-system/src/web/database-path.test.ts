@@ -1,7 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { parseAppPath } from '@biu/web-session-view'
-import { DATA_MODULE, databaseAllViewPath, databaseRecordPath, databaseViewPath, isSystemCollection, sortDataCollections, viewsCatalogHref, viewsCatalogSource } from './database-path.ts'
+import { DATA_MODULE, databaseAllViewPath, databaseRecordPath, databaseViewPath, isSystemCollection, sortDataCollections, viewsCatalogSource } from './database-path.ts'
 
 const plugins = [DATA_MODULE]
 
@@ -52,13 +52,9 @@ test('table path without view still parses as a collection-view URL', () => {
   }
 })
 
-test('views catalog href is filtered by table source', () => {
-  assert.equal(
-    viewsCatalogHref('/events'),
-    `/database/views/view/${encodeURIComponent('builtin:/events')}?source=%2Fevents`,
-  )
+test('views catalog source is a query filter', () => {
   assert.equal(viewsCatalogSource('?source=%2Fevents'), '/events')
-  assert.equal(viewsCatalogHref('/views'), `/database/views/view/${encodeURIComponent('builtin:/views')}`)
+  assert.equal(viewsCatalogSource(''), '')
 })
 
 test('views and events are system collections; tags sort with user tables', () => {

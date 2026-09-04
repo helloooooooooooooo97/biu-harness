@@ -1,5 +1,5 @@
 import { buildAppPath, type AppRoute } from '@biu/web-session-view'
-import { builtinAllViewId, builtinCatalogViewId } from '../catalog-views.ts'
+import { builtinAllViewId } from '../catalog-views.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
 export const DATA_MODULE_ID = 'database'
@@ -68,14 +68,6 @@ export function sortDataCollections<T extends { path: string }>(tables: T[]): { 
     return aRank - bRank || left.localeCompare(right)
   })
   return { user, system }
-}
-
-export function viewsCatalogHref(sourcePath: string): string {
-  const source = normalizeCollectionPath(sourcePath)
-  const viewId = builtinCatalogViewId(source || VIEWS_COLLECTION_PATH)
-  const base = databaseViewPath(VIEWS_COLLECTION_PATH, viewId)
-  if (!source || source === VIEWS_COLLECTION_PATH) return base
-  return `${base}?source=${encodeURIComponent(source)}`
 }
 
 export function viewsCatalogSource(search: string): string {

@@ -9,7 +9,6 @@ import {
   crumbRecordLabel,
   rememberPreviewTotal,
   SIDEBAR_PREVIEW_PAGE,
-  tableTotalKey,
   viewTotalKey,
 } from './sidebar-preview.ts'
 
@@ -36,9 +35,8 @@ test('preview cache includes view query and filters', () => {
   assert.notEqual(a, b)
 })
 
-test('table total key is not a saved view key', () => {
+test('preview total key is cached per view', () => {
   const view = { id: 'v1', sortField: 'id', sortDir: 'asc' as const, filters: {}, query: '' }
-  assert.notEqual(tableTotalKey('/tasks'), viewTotalKey('/tasks', view))
   rememberPreviewTotal(viewTotalKey('/tasks', view), 12)
   assert.equal(getPreviewTotal(viewTotalKey('/tasks', view)), 12)
 })

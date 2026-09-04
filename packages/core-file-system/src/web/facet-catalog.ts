@@ -1,10 +1,8 @@
 import {
   BUILTIN_FIELDS,
-  isAtomicFieldType,
   isReservedSchemaFieldKey,
   isReservedSchemaFieldLabel,
   normalizeSchemaPack,
-  type AtomicFieldType,
   type CollectionSchemaPack,
 } from '@biu/type-file-system'
 
@@ -133,24 +131,4 @@ export function registerFacetFieldKey(
   const key = fieldKeyFromLabel(name, usedKeys)
   if (isReservedSchemaFieldKey(key) || usedKeys.has(key)) return null
   return key
-}
-
-export function addFacetField(facetId: string, name: string, type: AtomicFieldType) {
-  if (!isAtomicFieldType(type)) return false
-  const label = name.trim()
-  if (!label) return false
-  const catalog = loadFacets()
-  const facet = catalog.find((item) => item.id === facetId)
-  if (!facet) return false
-  const key = registerFacetFieldKey(label, {
-    keys: facet.fields.map((item) => item.key),
-    labels: facet.fields.map((item) => item.label ?? item.key),
-  })
-  if (!key) return false
-  persistFacets(
-    catalog.map((item) =>
-      item.id === facet.id ? { ...item, fields: [...item.fields, { key, type, label, writable: true }] } : item,
-    ),
-  )
-  return true
 }

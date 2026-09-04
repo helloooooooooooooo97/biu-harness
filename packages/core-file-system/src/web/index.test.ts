@@ -2,7 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { apply, name, navConflict } from './index.tsx'
+import { apply, name } from './index.tsx'
 import { DATA_MODULE_ID } from './database-path.ts'
 
 test('file-system web is the implementation plugin, not a domain module', () => {
@@ -14,13 +14,6 @@ test('shell matches the data module by extra.moduleId database', () => {
   const extra = { moduleId: DATA_MODULE_ID, tables: [] as never[] }
   const slotKey = 'fsdb-database'
   assert.equal(String(extra.moduleId ?? slotKey), 'database')
-})
-
-test('navConflict flags duplicate route and display name against existing modules', () => {
-  const modules = [{ id: 'tasks', label: 'Tasks', path: '/tasks' }]
-  assert.match(navConflict({ moduleId: 'x', route: '/tasks' }, 'X', modules, 'x') ?? '', /路由重复/)
-  assert.match(navConflict({ moduleId: 'x', route: '/other' }, 'Tasks', modules, 'x') ?? '', /名称重复/)
-  assert.equal(navConflict({ moduleId: 'tasks', route: '/tasks' }, 'Tasks', modules, 'tasks'), null)
 })
 
 test('database page no longer registers collection shortcuts on the dock', () => {
