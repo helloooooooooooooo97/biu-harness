@@ -20,11 +20,11 @@ test('deriveChatOutline can hide robot-initiated user nodes', () => {
     ['u-1', 'u-3'],
   )
   assert.deepEqual(
-    deriveChatOutline(nodes, 'all').map((item) => [item.id, item.robot]),
+    deriveChatOutline(nodes, 'all').map((item) => [item.id, item.robot, item.level]),
     [
-      ['u-1', false],
-      ['u-2', true],
-      ['u-3', false],
+      ['u-1', false, 1],
+      ['u-2', true, 1],
+      ['u-3', false, 1],
     ],
   )
 })
@@ -43,7 +43,7 @@ test('message outline is a left rail of ticks with a hover menu', () => {
   assert.match(css, /\.chat-outline-panel\s*\{[^}]*border-radius:\s*8px/s)
   assert.match(css, /\.chat-outline-panel\s*\{[^}]*backdrop-filter:\s*blur\(16px\)\s*saturate\(1\.2\)/s)
   assert.match(css, /\.chat-outline-panel\s*\{[^}]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.1\)/s)
-  assert.match(css, /\.chat-outline-tick::after\s*\{[^}]*width:\s*6px/s)
+  assert.match(css, /\.chat-outline-tick::after\s*\{[^}]*width:\s*10px/s)
   assert.match(css, /\.chat-outline-tick::after\s*\{[^}]*height:\s*2px/s)
   assert.match(css, /\.chat-outline-tick::after\s*\{[^}]*opacity:\s*0\.3/s)
   assert.match(css, /\.chat-outline-tick\.is-h1::after\s*\{[^}]*width:\s*10px/s)

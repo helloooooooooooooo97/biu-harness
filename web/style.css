@@ -4331,7 +4331,7 @@ body {
 .chat-outline-tick::after {
   content: '';
   display: block;
-  width: 6px;
+  width: 10px;
   height: 2px;
   margin: 0;
   border-radius: 1px;
