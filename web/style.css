@@ -363,13 +363,11 @@ body {
 
 .shell-search-hit-action {
   display: inline-flex;
-  width: 16px;
-  height: 16px;
   align-items: center;
   justify-content: center;
   border: 0;
   border-radius: 5px;
-  padding: 0;
+  padding: 3px;
   background: transparent;
   color: var(--dsw-label-2);
   cursor: pointer;
@@ -378,7 +376,7 @@ body {
 }
 
 .shell-search-hit-action:hover {
-  background: var(--dsw-input);
+  background: var(--dsw-hover);
   color: var(--dsw-label-2);
 }
 
