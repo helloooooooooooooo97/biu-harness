@@ -11,6 +11,7 @@ import {
   ChatBubbleLeftRightIcon,
   DocumentIcon,
   PuzzlePieceIcon,
+  RectangleStackIcon,
   TagIcon,
   BoltIcon,
   EyeIcon,
@@ -31,6 +32,7 @@ function captionTableIcon(icon?: string) {
   const name = (icon ?? '').trim().toLowerCase()
   if (name === 'puzzle-piece' || name === 'puzzle') return PuzzlePieceIcon
   if (name === 'tag') return TagIcon
+  if (name === 'rectangle-stack' || name === 'collection') return RectangleStackIcon
   if (name === 'check-circle' || name === 'check' || name === 'clipboard-document-list' || name === 'clipboard') return CheckCircleIcon
   if (name === 'chat-bubble' || name === 'chat-bubble-left-right') return ChatBubbleLeftRightIcon
   if (name === 'document' || name === 'document-text' || name === 'page') return DocumentIcon

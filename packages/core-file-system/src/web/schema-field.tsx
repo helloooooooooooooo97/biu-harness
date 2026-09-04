@@ -29,7 +29,7 @@ const TYPE_LABEL: Partial<Record<FieldType, string>> = {
   attachment: '附件',
   file: '正文',
   action: '动作',
-  facet: '类型',
+  facet: '合集',
 }
 
 export const schemaTagTone = tagTone
@@ -190,7 +190,7 @@ export function FacetPackEditor({ facetId }: { facetId: string }) {
     setCatalog(next)
   }
 
-  if (!tag) return <p className="fsdb-muted">这条类型已不在目录里。</p>
+  if (!tag) return <p className="fsdb-muted">这条合集已不在目录里。</p>
   const pack = tag
 
   function addField(name: string, type: AtomicFieldType) {

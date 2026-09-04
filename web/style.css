@@ -331,6 +331,16 @@ body {
   white-space: nowrap;
 }
 
+.shell-search-hit-aside {
+  display: inline-flex;
+  min-width: 0;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-left: auto;
+}
+
 .shell-search-hit-tags {
   display: inline-flex;
   min-width: 0;
@@ -338,11 +348,55 @@ body {
   align-items: center;
   justify-content: flex-end;
   gap: 4px;
-  margin-left: auto;
 }
 
 .shell-search-hit-tags .biu-tags {
   flex-wrap: nowrap;
+}
+
+.shell-search-hit-actions {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.shell-search-hit-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 5px;
+  padding: 3px;
+  background: transparent;
+  color: var(--dsw-label-3);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.shell-search-hit-action:hover {
+  background: var(--dsw-input);
+  color: var(--dsw-label);
+}
+
+.shell-search-hit-action.is-danger:hover {
+  background: var(--dsw-danger-soft);
+  color: var(--dsw-danger);
+}
+
+.shell-search-hit-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.shell-search-hit-icon .fsdb-record-emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.shell-search-hit-icon .sidebar-mascot {
+  display: block;
 }
 
 .shell-search-hint {

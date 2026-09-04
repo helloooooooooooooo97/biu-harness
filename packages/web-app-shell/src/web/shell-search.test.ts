@@ -20,7 +20,7 @@ test('search opens inspector collections, not chat or database routes', () => {
   assert.equal(searchCollection('facet'), '/facets')
   assert.deepEqual(
     SEARCH_SCOPES.map((item) => item.label),
-    ['会话', '任务', '页面', '插件', '类型'],
+    ['会话', '任务', '页面', '插件', '合集'],
   )
 })
 
@@ -80,15 +80,33 @@ test('empty search lists every kind by updatedAt instead of skipping remotes', (
   assert.doesNotMatch(src, /if \(!needle && scope === 'all'\) \{\s*setHits\(\[\]\)/)
   assert.match(src, /sort: 'updatedAt'/)
   assert.match(src, /item.id === 'session' \? '\/sessions'/)
-  assert.match(src, /空着时会话、任务、页面、插件、类型各按更新时间列最近/)
+  assert.match(src, /空着时会话、任务、页面、插件、合集各按更新时间列最近/)
 })
 
-test('session task page plugin hits render record tags on the right, not kind chips', () => {
+test('session task page plugin hits render tags left of actions', () => {
   const src = readFileSync(resolve(import.meta.dirname, './shell-search.tsx'), 'utf8')
   assert.doesNotMatch(src, /HitKindTag/)
   assert.match(src, /HitRecordTags/)
-  assert.match(src, /item\.tags\?\.length/)
+  assert.match(src, /HitActions/)
+  assert.match(src, /shell-search-hit-aside/)
   assert.match(src, /shell-search-hit-tags/)
+  assert.match(src, /shell-search-hit-actions/)
   const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
-  assert.match(css, /\.shell-search-hit-tags\s*\{[^}]*margin-left:\s*auto/s)
+  assert.match(css, /\.shell-search-hit-aside\s*\{[^}]*margin-left:\s*auto/s)
+})
+
+test('search hit icons follow record mark: emoji, else session mascot', () => {
+  const src = readFileSync(resolve(import.meta.dirname, './shell-search.tsx'), 'utf8')
+  assert.match(src, /function HitMark/)
+  assert.match(src, /fsdb-record-emoji/)
+  assert.match(src, /SidebarMascot/)
+  assert.match(src, /resolveSessionMascot/)
+  assert.match(src, /scrollIntoView\(\{ block: 'nearest' \}\)/)
+})
+
+test('facet search scope is named 合集 with stack icon', () => {
+  const src = readFileSync(resolve(import.meta.dirname, './shell-search.tsx'), 'utf8')
+  assert.match(src, /label: '合集'/)
+  assert.match(src, /kind === 'plugin'[\s\S]*return <RectangleStackIcon/)
+  assert.doesNotMatch(src, /label: '类型'/)
 })

@@ -71,15 +71,15 @@ export function facetsCollection(
   return {
     id: 'facets',
     path: '/facets',
-    label: '类型',
+    label: '合集',
     view: {
       moduleId: 'facets-db',
       route: '/db-facets',
-      title: '类型',
+      title: '合集',
       inspector: true,
-      blurb: '工作区全局类型，谁都可以改属性和贴到任意表的记录上（含插件）。新建用 db_create，改名/属性用 db_update（fields 为属性 JSON 数组）。',
+      blurb: '工作区全局合集，谁都可以改属性和贴到任意表的记录上（含插件）。新建用 db_create，改名/属性用 db_update（fields 为属性 JSON 数组）。',
       order: 31,
-      icon: 'tag',
+      icon: 'rectangle-stack',
     },
     records: { update: true, create: true, delete: true },
     schema: {
@@ -88,14 +88,14 @@ export function facetsCollection(
       columns: ['title', 'fieldCount', 'stampCount'],
       fields: {
         ...REQUIRED_RECORD_FIELDS,
-        title: { type: 'string', label: '类型', writable: true },
+        title: { type: 'string', label: '合集', writable: true },
         fieldCount: { type: 'number', label: '字段', computed: true },
         stampCount: { type: 'number', label: '收集', computed: true, sortable: true },
         fields: { type: 'string', label: '属性', writable: true },
         table: { type: 'string', label: '来源表', computed: true },
         tablePath: { type: 'string', label: '表路径', computed: true },
         sourceId: { type: 'string', label: '记录', computed: true },
-        facetId: { type: 'string', label: '类型', computed: true },
+        facetId: { type: 'string', label: '合集', computed: true },
       },
     },
     list: (query?: CollectionListQuery) => {
@@ -124,7 +124,7 @@ export function facetsCollection(
     },
     create: (rows) =>
       rows.map((fields = {}) => {
-        const title = String(fields.title ?? '').trim() || '未命名类型'
+        const title = String(fields.title ?? '').trim() || '未命名合集'
         const id = slugFacetId(title, new Set(store.list().map((facet) => facet.id)))
         const pack = store.upsert({ id, label: title, fields: parseFields(fields.fields) })
         return asFacet(pack.id, pack.label, pack.fields, 0)
@@ -132,7 +132,7 @@ export function facetsCollection(
     update: (id, patch) => {
       if (parseStampRecordId(id)) throw new Error(`cannot update collected row: ${id}`)
       const current = store.get(id)
-      if (!current) throw new Error(`unknown 类型: ${id}`)
+      if (!current) throw new Error(`unknown 合集: ${id}`)
       const label = patch.title != null ? String(patch.title).trim() || current.label : current.label
       const fields = patch.fields != null ? parseFields(patch.fields) : current.fields
       const pack = store.upsert({ id: current.id, label, fields })
@@ -142,7 +142,7 @@ export function facetsCollection(
       const ids = query.ids ?? []
       for (const id of ids) {
         if (parseStampRecordId(id)) throw new Error(`cannot delete collected row: ${id}`)
-        if (!store.removeFacet(id)) throw new Error(`unknown 类型: ${id}`)
+        if (!store.removeFacet(id)) throw new Error(`unknown 合集: ${id}`)
       }
       return ids
     },

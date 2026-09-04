@@ -14,11 +14,11 @@ test('addFacetField appends an atomic field onto an existing facet pack', () => 
 
 test('type pack fields cannot reuse file-system keys or labels', () => {
   persistFacets([{ id: 'dp', label: '动态规划', fields: [] }])
-  assert.equal(registerFacetFieldKey('类型'), null)
+  assert.equal(registerFacetFieldKey('合集'), null)
   assert.equal(registerFacetFieldKey('facet'), null)
   assert.equal(registerFacetFieldKey('标题'), null)
   assert.equal(registerFacetFieldKey('title'), null)
-  assert.equal(addFacetField('dp', '类型', 'string'), false)
+  assert.equal(addFacetField('dp', '合集', 'string'), false)
   assert.equal(addFacetField('dp', 'facet', 'string'), false)
   assert.equal(addFacetField('dp', '复杂度', 'string'), true)
   assert.equal(addFacetField('dp', '复杂度', 'number'), false)

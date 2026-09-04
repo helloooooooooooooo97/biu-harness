@@ -62,7 +62,7 @@ const KIND_ICONS: Record<string, Glyph> = {
   turn: HashtagIcon,
   usage: CircleStackIcon,
   tag: TagIcon,
-  facet: TagIcon,
+  facet: RectangleStackIcon,
   record: ClipboardDocumentCheckIcon,
 }
 

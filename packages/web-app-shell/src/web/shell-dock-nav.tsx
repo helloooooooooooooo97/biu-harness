@@ -4,7 +4,7 @@ import {
   CheckCircleIcon,
   DocumentIcon,
   PuzzlePieceIcon,
-  TagIcon,
+  RectangleStackIcon,
   MapIcon,
   SignalIcon,
 } from '@heroicons/react/16/solid'
@@ -21,7 +21,7 @@ const INSPECTOR_DOCK_TOOLS = [
   { id: 'inspector:sessions', title: '会话', tabId: 'database:/sessions', order: 41, Icon: ChatBubbleLeftRightIcon },
   { id: 'inspector:tasks', title: '任务', tabId: 'database:/tasks', order: 42, Icon: CheckCircleIcon },
   { id: 'inspector:plugins', title: '插件', tabId: 'database:/plugins', order: 43, Icon: PuzzlePieceIcon },
-  { id: 'inspector:facets', title: '类型', tabId: 'database:/facets', order: 44, Icon: TagIcon },
+  { id: 'inspector:facets', title: '合集', tabId: 'database:/facets', order: 44, Icon: RectangleStackIcon },
   { id: 'inspector:traj', title: '轨迹', tabId: 'traj', order: 45, Icon: MapIcon },
   { id: 'inspector:usage', title: '用量', tabId: 'usage', order: 46, Icon: SignalIcon },
 ] as const

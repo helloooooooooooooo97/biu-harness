@@ -35,6 +35,8 @@ test('kind maps to distinct heroicons', () => {
   assert.notEqual(pickKindIcon('collection'), pickKindIcon('usage'))
   assert.equal(pickKindIcon('plugin'), lu.PuzzlePieceIcon)
   assert.equal(pickKindIcon('plugins'), lu.PuzzlePieceIcon)
+  assert.equal(pickKindIcon('facet'), lu.RectangleStackIcon)
+  assert.equal(pickKindIcon('facets'), lu.RectangleStackIcon)
   assert.equal(pickKindIcon('unknown'), lu.TagIcon)
 })
 

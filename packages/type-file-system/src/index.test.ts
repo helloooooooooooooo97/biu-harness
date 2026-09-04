@@ -26,10 +26,11 @@ test('schemaSearchHaystack includes facet labels and field values', () => {
   assert.match(text, /O\(n\)/)
 })
 
-test('reserved schema fields include 类型 / facet by key or label', () => {
+test('reserved schema fields include 合集 / facet by key or label', () => {
   assert.equal(isReservedSchemaFieldKey('facet'), true)
   assert.equal(isReservedSchemaFieldKey('title'), true)
-  assert.equal(isReservedSchemaFieldLabel('类型'), true)
+  assert.equal(isReservedSchemaFieldLabel('合集'), true)
+  assert.equal(isReservedSchemaFieldLabel('类型'), false)
   assert.equal(isReservedSchemaFieldLabel('标题'), true)
   assert.equal(isReservedSchemaFieldLabel('facet'), true)
   assert.equal(isReservedSchemaFieldLabel('复杂度'), false)
@@ -55,7 +56,7 @@ test('normalizeSchemaPack drops fields that reuse file-system keys or labels', (
     label: '动态规划',
     fields: [
       { key: 'facet', type: 'string', label: '别的名字' },
-      { key: 'extra', type: 'string', label: '类型' },
+      { key: 'extra', type: 'string', label: '合集' },
       { key: 'title', type: 'string', label: '题目' },
       { key: 'complexity', type: 'string', label: '复杂度' },
       { key: 'dup', type: 'string', label: '复杂度' },
@@ -68,7 +69,7 @@ test('withBuiltinFields always includes writable facet', () => {
   const fields = withBuiltinFields({ title: { type: 'string', writable: true } })
   assert.equal(fields.facet?.type, 'facet')
   assert.equal(fields.facet?.writable, true)
-  assert.equal(fields.facet?.label, '类型')
+  assert.equal(fields.facet?.label, '合集')
 })
 
 test('recordBuiltinValues fills required record columns', () => {

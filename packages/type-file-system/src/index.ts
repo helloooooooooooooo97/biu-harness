@@ -84,7 +84,7 @@ export const BUILTIN_FIELDS = {
   updatedAt: { type: 'datetime', label: '更新时间' },
   content: { type: 'file', label: '内容' },
   emoji: { type: 'string', label: '图标', writable: true },
-  facet: { type: 'facet', label: '类型', writable: true },
+  facet: { type: 'facet', label: '合集', writable: true },
 } as const satisfies Record<string, FieldSpec>
 
 /** 登记 CollectionSpec.schema.fields 必须声明：图标、创建/更新时间、分面。由登记方自己存。 */

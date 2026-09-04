@@ -136,7 +136,7 @@ test('every collection schema includes id, title, createdAt and updatedAt', asyn
   assert.equal(stat.schema.fields.content?.type, 'file')
   assert.equal(stat.schema.fields.emoji?.writable, true)
   assert.equal(stat.schema.fields.facet?.type, 'facet')
-  assert.equal(stat.schema.fields.facet?.label, '类型')
+  assert.equal(stat.schema.fields.facet?.label, '合集')
   assert.equal(stat.schema.fields.facet?.writable, true)
   assert.equal(stat.schema.contentField, 'content')
   const tagged = await db.update('/notes/n1', { facet: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } } })
