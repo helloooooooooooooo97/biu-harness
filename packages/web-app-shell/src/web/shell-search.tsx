@@ -226,7 +226,7 @@ async function listKind(path: string, query: string, signal: AbortSignal) {
 }
 
 function actionGlyph(id: string) {
-  const cls = 'size-[14px]'
+  const cls = 'size-4'
   if (id === 'start' || id === 'play' || id === 'run' || id === 'open') return <PlayIcon aria-hidden className={cls} />
   if (id === 'stop' || id === 'close' || id === 'pause') return <StopIcon aria-hidden className={cls} />
   if (id === 'pack') return <ArchiveBoxArrowDownIcon aria-hidden className={cls} />

@@ -135,6 +135,8 @@ test('every collection schema includes id, title, createdAt and updatedAt', asyn
   assert.equal(stat.schema.fields.updatedAt?.label, '更新时间')
   assert.equal(stat.schema.fields.content?.type, 'file')
   assert.equal(stat.schema.fields.emoji?.writable, true)
+  assert.equal(stat.schema.fields.tags?.type, 'multi-select')
+  assert.equal(stat.schema.fields.tags?.writable, true)
   assert.equal(stat.schema.fields.facet?.type, 'facet')
   assert.equal(stat.schema.fields.facet?.label, '合集')
   assert.equal(stat.schema.fields.facet?.writable, true)
@@ -575,6 +577,16 @@ test('facet schema can be written on tables that cannot update other fields', as
   const collected = await db.collectFacet('dp')
   assert.equal(collected.items.length, 1)
   assert.equal(collected.items[0]?.path, '/plugins/p1')
+  await db.update('/plugins/p1', { emoji: '🔌' })
+  const withEmoji = await db.read('/plugins/p1')
+  if (withEmoji.kind !== 'record') return
+  assert.equal(withEmoji.value.emoji, '🔌')
+  assert.deepEqual((withEmoji.value.facet as { tags?: string[] })?.tags, ['dp'])
+  await db.update('/plugins/p1', { tags: ['host-ui', 'lab'] })
+  const withTags = await db.read('/plugins/p1')
+  if (withTags.kind !== 'record') return
+  assert.deepEqual(withTags.value.tags, ['host-ui', 'lab'])
+  assert.equal(withTags.value.emoji, '🔌')
 })
 
 test('writeContent can persist intro on tables that cannot update other fields', async () => {

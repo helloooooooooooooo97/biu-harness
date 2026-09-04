@@ -58,3 +58,15 @@ test('sqlite stores facet overlay for records that cannot update', async () => {
   assert.equal(store.recordFacet('/plugins', 'demo'), null)
   assert.equal(store.stampedIds('/plugins', 'dp').has('demo'), false)
 })
+
+test('sqlite stores emoji and tags overlay without wiping the other', () => {
+  const store = new FacetStore()
+  store.writeRecordMeta('/plugins', 'demo', { emoji: '🔌' })
+  assert.equal(store.recordMeta('/plugins', 'demo')?.emoji, '🔌')
+  assert.equal(store.recordMeta('/plugins', 'demo')?.tags, null)
+  store.writeRecordMeta('/plugins', 'demo', { tags: ['host-ui'] })
+  assert.equal(store.recordMeta('/plugins', 'demo')?.emoji, '🔌')
+  assert.deepEqual(store.recordMeta('/plugins', 'demo')?.tags, ['host-ui'])
+  store.removeRecord('/plugins', 'demo')
+  assert.equal(store.recordMeta('/plugins', 'demo'), null)
+})

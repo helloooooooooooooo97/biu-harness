@@ -29,7 +29,7 @@ test('schemaSearchHaystack includes facet labels and field values', () => {
 test('reserved schema fields include 合集 / facet by key or label', () => {
   assert.equal(isReservedSchemaFieldKey('facet'), true)
   assert.equal(isReservedSchemaFieldKey('title'), true)
-  assert.equal(isReservedSchemaFieldLabel('合集'), true)
+  assert.equal(isReservedSchemaFieldLabel('标签'), true)
   assert.equal(isReservedSchemaFieldLabel('类型'), false)
   assert.equal(isReservedSchemaFieldLabel('标题'), true)
   assert.equal(isReservedSchemaFieldLabel('facet'), true)
@@ -65,11 +65,14 @@ test('normalizeSchemaPack drops fields that reuse file-system keys or labels', (
   assert.deepEqual(pack?.fields.map((field) => field.key), ['complexity'])
 })
 
-test('withBuiltinFields always includes writable facet', () => {
+test('withBuiltinFields always includes writable facet and tags', () => {
   const fields = withBuiltinFields({ title: { type: 'string', writable: true } })
   assert.equal(fields.facet?.type, 'facet')
   assert.equal(fields.facet?.writable, true)
   assert.equal(fields.facet?.label, '合集')
+  assert.equal(fields.tags?.type, 'multi-select')
+  assert.equal(fields.tags?.writable, true)
+  assert.equal(fields.emoji?.writable, true)
 })
 
 test('recordBuiltinValues fills required record columns', () => {
@@ -77,14 +80,17 @@ test('recordBuiltinValues fills required record columns', () => {
     createdAt: 0,
     updatedAt: 0,
     emoji: '',
+    tags: [],
     facet: { tags: [], values: {} },
   })
   assert.equal(recordBuiltinValues({ createdAt: 10, emoji: '📄' }).emoji, '📄')
+  assert.deepEqual(recordBuiltinValues({ tags: ['a', 'a', ''] }).tags, ['a'])
 })
 
-test('required record fields are icon, timestamps, and facet', () => {
-  assert.deepEqual([...REQUIRED_RECORD_FIELD_KEYS].sort(), ['createdAt', 'emoji', 'facet', 'updatedAt'])
+test('required record fields are icon, tags, timestamps, and facet', () => {
+  assert.deepEqual([...REQUIRED_RECORD_FIELD_KEYS].sort(), ['createdAt', 'emoji', 'facet', 'tags', 'updatedAt'])
   assert.equal(REQUIRED_RECORD_FIELDS.emoji.type, 'string')
+  assert.equal(REQUIRED_RECORD_FIELDS.tags.type, 'multi-select')
   assert.equal(REQUIRED_RECORD_FIELDS.facet.type, 'facet')
   assert.equal(REQUIRED_RECORD_FIELDS.createdAt.type, 'datetime')
   assert.equal(REQUIRED_RECORD_FIELDS.updatedAt.type, 'datetime')

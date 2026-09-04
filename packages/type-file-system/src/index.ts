@@ -84,11 +84,12 @@ export const BUILTIN_FIELDS = {
   updatedAt: { type: 'datetime', label: '更新时间' },
   content: { type: 'file', label: '内容' },
   emoji: { type: 'string', label: '图标', writable: true },
+  tags: { type: 'multi-select', label: '标签', writable: true },
   facet: { type: 'facet', label: '合集', writable: true },
 } as const satisfies Record<string, FieldSpec>
 
-/** 登记 CollectionSpec.schema.fields 必须声明：图标、创建/更新时间、分面。由登记方自己存。 */
-export const REQUIRED_RECORD_FIELD_KEYS = ['createdAt', 'updatedAt', 'emoji', 'facet'] as const
+/** 登记 CollectionSpec.schema.fields 必须声明：图标、标签、创建/更新时间、分面。由登记方自己存。 */
+export const REQUIRED_RECORD_FIELD_KEYS = ['createdAt', 'updatedAt', 'emoji', 'tags', 'facet'] as const
 
 export type RequiredRecordFieldKey = (typeof REQUIRED_RECORD_FIELD_KEYS)[number]
 
@@ -100,6 +101,7 @@ export const REQUIRED_RECORD_FIELDS: RequiredRecordFields = {
   createdAt: BUILTIN_FIELDS.createdAt,
   updatedAt: BUILTIN_FIELDS.updatedAt,
   emoji: BUILTIN_FIELDS.emoji,
+  tags: BUILTIN_FIELDS.tags,
   facet: BUILTIN_FIELDS.facet,
 }
 
@@ -228,10 +230,14 @@ export function recordBuiltinValues(row: Record<string, unknown> = {}) {
   const updatedAt = Number(row.updatedAt)
   const created = Number.isFinite(createdAt) && createdAt > 0 ? createdAt : 0
   const updated = Number.isFinite(updatedAt) && updatedAt > 0 ? updatedAt : created
+  const tags = Array.isArray(row.tags)
+    ? [...new Set(row.tags.map((item) => String(item).trim()).filter(Boolean))]
+    : []
   return {
     createdAt: created,
     updatedAt: updated,
     emoji: String(row.emoji ?? ''),
+    tags,
     facet: normalizeSchemaValue(row.facet),
   }
 }
@@ -268,6 +274,9 @@ export function withBuiltinFields(
   if (!next.createdAt) next.createdAt = BUILTIN_FIELDS.createdAt
   if (!next.updatedAt) next.updatedAt = BUILTIN_FIELDS.updatedAt
   if (!next.emoji) next.emoji = BUILTIN_FIELDS.emoji
+  else if (!next.emoji.computed) next.emoji = { ...BUILTIN_FIELDS.emoji, ...next.emoji, writable: true }
+  if (!next.tags) next.tags = BUILTIN_FIELDS.tags
+  else if (!next.tags.computed) next.tags = { ...BUILTIN_FIELDS.tags, ...next.tags, type: 'multi-select', writable: true }
   if (!next.facet) next.facet = BUILTIN_FIELDS.facet
   if (contentField === 'content' && !next.content) next.content = BUILTIN_FIELDS.content
   const ordered: Record<string, FieldSpec> = {
