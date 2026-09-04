@@ -415,6 +415,24 @@ test('registered actions run when when-clause matches', async () => {
   await assert.rejects(() => db.action('/notes/n1', 'pin'), /not available/)
 })
 
+test('agent-only actions stay in schema but have empty placement', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  db.register({
+    ...notesCollection(),
+    actions: [
+      { id: 'pin', label: '钉住', when: { pinned: false }, run: async () => ({}) },
+      { id: 'progress', label: '进度', for: 'agent', run: async () => ({}) },
+    ],
+  })
+  const stat = await db.stat('/notes')
+  if (stat.kind !== 'collection') return
+  const progress = stat.schema.actions?.find((item) => item.id === 'progress')
+  assert.equal(progress?.for, 'agent')
+  assert.deepEqual(progress?.placement, [])
+  assert.equal(JSON.parse(JSON.stringify(progress)).for, 'agent')
+})
+
 test('create and delete follow records caps declared at register', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)

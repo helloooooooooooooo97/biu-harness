@@ -13,6 +13,7 @@ import {
   LinkIcon,
   ListBulletIcon,
   PaperClipIcon,
+  PaperAirplaneIcon,
   PencilSquareIcon,
   PhotoIcon,
   PlayIcon,
@@ -45,6 +46,7 @@ export function actionIcon(id: string) {
   if (id === 'uninstall' || id === 'delete' || id === 'remove') return <TrashGlyph aria-hidden className={cls} />
   if (id === 'edit' || id === 'rename') return <PencilSquareIcon aria-hidden className={cls} />
   if (id === 'refresh') return <ArrowPathIcon aria-hidden className={cls} />
+  if (id === 'deliver') return <PaperAirplaneIcon aria-hidden className={cls} />
   return null
 }
 

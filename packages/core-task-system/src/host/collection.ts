@@ -262,7 +262,8 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
           {
             id: 'report',
             label: '汇报进度',
-            placement: ['row', 'detail'],
+            for: 'agent',
+            placement: [],
             parameters: {
               type: 'object',
               properties: {
@@ -275,6 +276,7 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
           {
             id: 'deliver',
             label: '派工',
+            for: 'both',
             placement: ['row', 'detail'],
             parameters: {
               type: 'object',

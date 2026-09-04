@@ -10,6 +10,7 @@ import {
   schemaSearchHaystack,
   withBuiltinFields,
   hasCollectionDeleteQuery,
+  actionVisibleToUser,
   type CollectionAction,
   type CollectionActionInfo,
   type CollectionInfo,
@@ -31,6 +32,7 @@ import { databaseRevealForTool, normalizeCollectionPath } from '../paths.ts'
 
 function publicAction(action: CollectionAction): CollectionActionInfo {
   const { run: _run, ...info } = action
+  if (!actionVisibleToUser(info)) return { ...info, placement: [] }
   return info
 }
 

@@ -214,7 +214,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         id: 'inspect',
         label: '检查',
         for: 'agent',
-        placement: ['detail'],
+        placement: [],
         parameters: {
           type: 'object',
           properties: { limit: { type: 'number' } },
@@ -240,6 +240,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         id: 'progress',
         label: '进度',
         for: 'agent',
+        placement: [],
         parameters: {
           type: 'object',
           properties: {
@@ -265,6 +266,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         id: 'compact',
         label: '压缩上下文',
         for: 'agent',
+        placement: [],
         parameters: {
           type: 'object',
           properties: {
@@ -298,6 +300,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         id: 'clear',
         label: '清空上下文',
         for: 'agent',
+        placement: [],
         run: async (id) => {
           if (!sessions.require) throw new Error('session clear unavailable')
           await sessions.require(id)
@@ -312,6 +315,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         id: 'retrieve',
         label: '检索历史',
         for: 'agent',
+        placement: [],
         parameters: {
           type: 'object',
           properties: {
@@ -340,6 +344,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         id: 'status',
         label: '上下文占用',
         for: 'agent',
+        placement: [],
         run: async (id) => {
           if (!sessions.require) throw new Error('session status unavailable')
           const events = (await sessions.require(id)).events
