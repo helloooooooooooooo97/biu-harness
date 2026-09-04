@@ -34,6 +34,25 @@ export function normalizeColumnWidths(value: unknown): Record<string, number> {
   return out
 }
 
+/** Explicit px box so table-layout:fixed cannot stretch neighbors. */
+export function colWidthStyle(px: unknown): { width: string; minWidth: string; maxWidth: string } | undefined {
+  const n = typeof px === 'number' ? px : Number(px)
+  if (!Number.isFinite(n)) return undefined
+  const v = `${Math.round(Math.min(COL_WIDTH_MAX, Math.max(COL_WIDTH_MIN, n)))}px`
+  return { width: v, minWidth: v, maxWidth: v }
+}
+
+export function tableWidthStyle(widths: Record<string, number>, keys: string[]): { width: string; minWidth: string; maxWidth: string } | undefined {
+  let sum = 0
+  for (const key of keys) {
+    const n = widths[key]
+    if (!n) return undefined
+    sum += n
+  }
+  const v = `${sum}px`
+  return { width: v, minWidth: v, maxWidth: v }
+}
+
 export function normalizeSavedView(view: SavedView): SavedView {
   return {
     ...view,

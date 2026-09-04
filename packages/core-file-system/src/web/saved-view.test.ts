@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { normalizeSavedView, viewStateKey, type SavedView } from './saved-view.ts'
+import { colWidthStyle, normalizeSavedView, tableWidthStyle, viewStateKey, type SavedView } from './saved-view.ts'
 
 const base: SavedView = {
   id: '1',
@@ -34,6 +34,17 @@ test('normalizeColumnWidths clamps and viewStateKey includes widths', () => {
   assert.equal(wide.columnWidths?.status, 720)
   assert.equal(wide.columnWidths?.skip, undefined)
   assert.notEqual(viewStateKey(wide), viewStateKey({ ...wide, columnWidths: {} }))
+})
+
+test('colWidthStyle and tableWidthStyle declare explicit px boxes', () => {
+  assert.deepEqual(colWidthStyle(240), { width: '240px', minWidth: '240px', maxWidth: '240px' })
+  assert.equal(colWidthStyle(undefined), undefined)
+  assert.deepEqual(tableWidthStyle({ title: 120, status: 80 }, ['title', 'status']), {
+    width: '200px',
+    minWidth: '200px',
+    maxWidth: '200px',
+  })
+  assert.equal(tableWidthStyle({ title: 120 }, ['title', 'status']), undefined)
 })
 
 test('viewStateKey ignores name and treats missing query as empty', () => {

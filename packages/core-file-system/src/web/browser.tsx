@@ -63,7 +63,7 @@ import { CrumbTrail } from './crumb-trail.tsx'
 import { pickDomAttrs, recordPickKind } from './pick-dom.ts'
 import { normalizeRecordEmoji, recordPreviewEmoji, crumbRecordLabel } from './sidebar-preview.ts'
 import { recordPreviewMascot, RecordMark } from './record-mark.tsx'
-import { COL_WIDTH_MAX, COL_WIDTH_MIN, normalizeColumnWidths, normalizeSavedView, normalizePageSize, viewStateKey, type SavedView } from './saved-view.ts'
+import { COL_WIDTH_MAX, COL_WIDTH_MIN, colWidthStyle, normalizeColumnWidths, normalizeSavedView, normalizePageSize, tableWidthStyle, viewStateKey, type SavedView } from './saved-view.ts'
 import { PagerSizeControl } from './pager-size.tsx'
 import {
   actionIcon,
@@ -1750,6 +1750,7 @@ export function CollectionBrowser({
             {columns.map((col, index) => (
               <td
                 key={col.key}
+                style={colWidthStyle(columnWidths[col.key])}
                 className={
                   cellPick?.id === row.id && cellPick.key === col.key
                     ? cellFieldWritable(col.field)
@@ -2454,10 +2455,13 @@ export function CollectionBrowser({
             ) : null}
             {!customView ? (
               <div className="tasks-table-wrap">
-                <table className={`tasks-table${wrapCells ? ' is-wrap' : ''}${truncateCells ? ' is-truncate' : ''}${hasColWidths ? ' is-cols-fixed' : ''}${resizingCol ? ' is-col-resize' : ''}`}>
+                <table
+                  className={`tasks-table${wrapCells ? ' is-wrap' : ''}${truncateCells ? ' is-truncate' : ''}${hasColWidths ? ' is-cols-fixed' : ''}${resizingCol ? ' is-col-resize' : ''}`}
+                  style={tableWidthStyle(columnWidths, columns.map((col) => col.key))}
+                >
             <colgroup>
               {columns.map((col) => (
-                <col key={col.key} style={columnWidths[col.key] ? { width: columnWidths[col.key] } : undefined} />
+                <col key={col.key} style={colWidthStyle(columnWidths[col.key])} />
               ))}
             </colgroup>
             <thead>
@@ -2466,7 +2470,7 @@ export function CollectionBrowser({
                   const flat = parseFacetFlatColumnKey(col.key)
                   const tone = flat ? schemaTagTone(flat.packId) : undefined
                   return (
-                  <th key={col.key} style={columnWidths[col.key] ? { width: columnWidths[col.key], minWidth: columnWidths[col.key] } : undefined}>
+                  <th key={col.key} style={colWidthStyle(columnWidths[col.key])}>
                     {index === 0 ? <RowCheck ids={pickableIds} /> : null}
                     <span className="tasks-th" style={tone ? { color: tone } : undefined}>
                       <FieldGlyph kind={col.kind} />
