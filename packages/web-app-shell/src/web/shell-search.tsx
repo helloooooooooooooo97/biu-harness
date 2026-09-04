@@ -189,6 +189,14 @@ export function searchHref(hit: { kind: SearchKind; id: string }) {
   return `/database${collection}/record/${encodeURIComponent(hit.id)}`
 }
 
+/** 左侧打开会抢走焦点（会话切主栏、composer 抢焦）；搜索层保持打开并把光标拉回输入框。 */
+export function refocusSearchField(node: HTMLInputElement | null) {
+  const go = () => node?.focus()
+  go()
+  requestAnimationFrame(go)
+  window.setTimeout(go, 60)
+}
+
 function matchLocal(title: string, id: string, needle: string) {
   if (!needle) return true
   return title.toLowerCase().includes(needle) || id.toLowerCase().includes(needle)
@@ -474,9 +482,10 @@ export function ShellSearchPanel({
       const href = searchHref(hit)
       if (hit.kind === 'session') setChatOverlay(false)
       navigate(href)
-    } else {
-      openSearchHit(hit)
+      refocusSearchField(inputRef.current)
+      return
     }
+    openSearchHit(hit)
     onClose()
   }
 
