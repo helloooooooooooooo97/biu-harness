@@ -156,6 +156,8 @@ test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.doesNotMatch(schemaUi, /function TagPicker/)
   assert.doesNotMatch(cells, /placeholder=\{fieldKey\}/)
   assert.doesNotMatch(cells, /YYYY-MM-DDTHH:mm/)
+  assert.match(cells, /<CellDateTime/)
+  assert.doesNotMatch(cells, /datetime-local/)
   assert.doesNotMatch(cells, /placeholder=\{kind === 'image'/)
   assert.match(browser, /fieldDraftValue\(field, row\[key\]\)/)
   assert.match(browser, /const Custom = chrome\?\.cells\?\.\[key\][\s\S]*if \(field.writable && kind !== 'file'\)/)

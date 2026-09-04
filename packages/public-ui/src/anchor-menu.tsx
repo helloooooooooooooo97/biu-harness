@@ -9,6 +9,7 @@ export function AnchorMenu({
   className = 'fsdb-cellselect-menu',
   role = 'listbox',
   zIndex = 200,
+  minWidth = 220,
   ...rest
 }: {
   anchor: HTMLElement | null
@@ -17,6 +18,7 @@ export function AnchorMenu({
   className?: string
   role?: string
   zIndex?: number
+  minWidth?: number
 } & Omit<HTMLAttributes<HTMLDivElement>, 'role' | 'className' | 'children'>) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState({ top: 0, left: 0, width: 200 })
@@ -25,7 +27,7 @@ export function AnchorMenu({
     if (!anchor) return
     const place = () => {
       const rect = anchor.getBoundingClientRect()
-      const width = Math.max(220, rect.width)
+      const width = Math.max(minWidth, rect.width)
       const left = Math.min(rect.left, Math.max(8, window.innerWidth - width - 8))
       const top = rect.bottom + 4
       setBox({ top, left, width })
@@ -37,7 +39,7 @@ export function AnchorMenu({
       window.removeEventListener('resize', place)
       window.removeEventListener('scroll', place, true)
     }
-  }, [anchor])
+  }, [anchor, minWidth])
 
   useEffect(() => {
     return listenOutsideDismiss(onClose, (target) => Boolean(menuRef.current?.contains(target) || anchor?.contains(target)))

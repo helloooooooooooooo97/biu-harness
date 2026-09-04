@@ -69,3 +69,11 @@ test('task tags use public-ui TagChip', async () => {
   assert.doesNotMatch(css, /\.tasks-tag\{/)
   assert.doesNotMatch(css, /\.tasks-tag-input\{/)
 })
+
+test('writable datetime cells use the shared picker, not datetime-local', async () => {
+  const { readFileSync } = await import('node:fs')
+  const { resolve } = await import('node:path')
+  const chrome = readFileSync(resolve(import.meta.dirname, './chrome.tsx'), 'utf8')
+  assert.match(chrome, /<CellDateTime/)
+  assert.doesNotMatch(chrome, /datetime-local/)
+})
