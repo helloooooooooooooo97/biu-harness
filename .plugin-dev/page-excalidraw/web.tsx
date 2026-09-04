@@ -1,7 +1,8 @@
 import { Excalidraw } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import { createPortal } from 'react-dom'
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react''
 
 export const name = 'page-excalidraw'
 export const inject = ['pageEditor']
@@ -99,6 +100,166 @@ function fitView(api: DrawApi | null) {
 }
 
 const UI_OPTIONS = { canvasActions: { loadScene: false, saveToActiveFile: false } } as const
+
+type Host = {
+  file: string
+  el: HTMLDivElement
+  root: Root | null
+  refs: number
+  ready: Promise<Host>
+  initialData: { elements: never; appState: Record<string, unknown>; files: never } | null
+  lastScene: Scene | null
+  expanded: boolean
+  sync?: () => void
+  onCollapse?: () => void
+}
+
+const hosts = new Map<string, Host>()
+let syncQueued = false
+
+function queueHostSync() {
+  if (syncQueued) return
+  syncQueued = true
+  requestAnimationFrame(() => {
+    syncQueued = false
+    for (const host of hosts.values()) host.sync?.()
+  })
+}
+
+function syncHostBox(host: Host, slot: HTMLElement | null) {
+  const el = host.el
+  if (host.expanded) {
+    el.style.cssText =
+      'position:fixed;top:36px;left:0;right:0;bottom:0;width:auto;height:auto;z-index:9990;pointer-events:auto;visibility:visible;overflow:hidden;isolation:isolate;background:var(--dsw-bg,#191919)'
+    return
+  }
+  if (!slot) {
+    el.style.visibility = 'hidden'
+    el.style.pointerEvents = 'none'
+    return
+  }
+  const box = slot.getBoundingClientRect()
+  el.style.cssText = `position:fixed;top:${box.top}px;left:${box.left}px;width:${box.width}px;height:${box.height}px;z-index:2;pointer-events:none;visibility:visible;overflow:hidden;isolation:isolate;background:var(--dsw-bg)`
+}
+
+function paintHost(host: Host) {
+  if (!host.root || !host.initialData) return
+  host.root.render(
+    <PersistentDraw file={host.file} initialData={host.initialData} expanded={host.expanded} />,
+  )
+}
+
+function retainHost(file: string) {
+  const current = hosts.get(file)
+  if (current) {
+    current.refs += 1
+    return current
+  }
+  const el = document.createElement('div')
+  el.dataset.excalidrawHost = file
+  document.body.appendChild(el)
+  const host: Host = {
+    file,
+    el,
+    root: null,
+    refs: 1,
+    ready: Promise.resolve(null as unknown as Host),
+    initialData: null,
+    lastScene: null,
+    expanded: false,
+  }
+  host.ready = loadScene(file).then((scene) => {
+    if (hosts.get(file) !== host) return host
+    host.initialData = {
+      elements: (scene.elements ?? []) as never,
+      appState: { ...withoutCollab(scene.appState), collaborators: new Map() },
+      files: (scene.files ?? {}) as never,
+    }
+    host.lastScene = scene
+    host.root = createRoot(el)
+    paintHost(host)
+    return host
+  })
+  hosts.set(file, host)
+  if (hosts.size === 1) {
+    window.addEventListener('scroll', queueHostSync, true)
+    window.addEventListener('resize', queueHostSync)
+  }
+  return host
+}
+
+function releaseHost(file: string) {
+  const host = hosts.get(file)
+  if (!host) return
+  host.refs -= 1
+  if (host.refs > 0) return
+  queueMicrotask(() => {
+    if (host.refs > 0) return
+    host.root?.unmount()
+    host.el.remove()
+    hosts.delete(file)
+    if (!hosts.size) {
+      window.removeEventListener('scroll', queueHostSync, true)
+      window.removeEventListener('resize', queueHostSync)
+    }
+  })
+}
+
+function PersistentDraw(props: {
+  file: string
+  initialData: NonNullable<Host['initialData']>
+  expanded: boolean
+}) {
+  const file = props.file
+  const pending = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastSaved = useRef('')
+  const apiRef = useRef<DrawApi | null>(null)
+  const bindApi = useCallback((api: DrawApi | null) => {
+    apiRef.current = api
+  }, [])
+  const onChange = useCallback((elements: unknown[], appState: Record<string, unknown>, files: Record<string, unknown>) => {
+    if (!file) return
+    const next: Scene = {
+      elements,
+      appState: withoutCollab(appState),
+      files,
+    }
+    const raw = JSON.stringify(next)
+    if (raw === lastSaved.current) return
+    lastSaved.current = raw
+    const hosted = hosts.get(file)
+    if (hosted) hosted.lastScene = next
+    if (pending.current) clearTimeout(pending.current)
+    pending.current = setTimeout(() => saveScene(file, next), 400)
+  }, [file])
+
+  useEffect(() => {
+    if (!props.expanded) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') hosts.get(props.file)?.onCollapse?.()
+    }
+    window.addEventListener('keydown', onKey)
+    const id = requestAnimationFrame(() => fitView(apiRef.current))
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      cancelAnimationFrame(id)
+    }
+  }, [props.expanded, props.file])
+
+  return (
+    <div style={{ height: '100%', width: '100%', isolation: 'isolate', overflow: 'hidden' }}>
+      <Excalidraw
+        theme="dark"
+        initialData={props.initialData as never}
+        viewModeEnabled={!props.expanded}
+        zenModeEnabled={!props.expanded}
+        UIOptions={UI_OPTIONS as never}
+        onChange={onChange as never}
+        excalidrawAPI={bindApi as never}
+      />
+    </div>
+  )
+}
 
 const BAR: CSSProperties = {
   display: 'flex',
@@ -216,95 +377,51 @@ function BoardBar(props: {
 
 function Board(props: { data: Record<string, unknown>; update: (p: Record<string, unknown>) => void; writable: boolean }) {
   const file = String(props.data.file || '')
-  const [scene, setScene] = useState<Scene | null>(null)
   const [expanded, setExpanded] = useState(false)
-  const apiRef = useRef<DrawApi | null>(null)
-  const pending = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastSaved = useRef('')
-  const live = useRef<Scene | null>(null)
-  const expandedRef = useRef(expanded)
-  expandedRef.current = expanded
-
-  const bindApi = useCallback((api: DrawApi | null) => {
-    apiRef.current = api
-  }, [])
+  const slotRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!file) {
       props.update({ file: `assets/画板-${crypto.randomUUID().slice(0, 8)}.json` })
-      return
-    }
-    let gone = false
-    void loadScene(file).then((next) => {
-      if (gone) return
-      lastSaved.current = JSON.stringify(next)
-      live.current = next
-      setScene(next)
-    })
-    return () => {
-      gone = true
     }
   }, [file])
 
-  useEffect(() => {
-    if (!expanded) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setExpanded(false)
-    }
-    window.addEventListener('keydown', onKey)
-    const id = requestAnimationFrame(() => fitView(apiRef.current))
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      cancelAnimationFrame(id)
-    }
-  }, [expanded])
-
-  const onChange = useCallback((elements: unknown[], appState: Record<string, unknown>, files: Record<string, unknown>) => {
+  useLayoutEffect(() => {
     if (!file) return
-    const next: Scene = {
-      elements,
-      appState: withoutCollab(appState),
-      files,
-    }
-    live.current = next
-    const raw = JSON.stringify(next)
-    if (raw === lastSaved.current) return
-    lastSaved.current = raw
-    if (pending.current) clearTimeout(pending.current)
-    pending.current = setTimeout(() => saveScene(file, next), 400)
+    retainHost(file)
+    return () => releaseHost(file)
   }, [file])
+
+  useLayoutEffect(() => {
+    if (!file) return
+    const host = hosts.get(file)
+    if (!host) return
+    host.expanded = expanded
+    host.onCollapse = () => setExpanded(false)
+    host.sync = () => {
+      host.expanded = expanded
+      syncHostBox(host, slotRef.current)
+    }
+    void host.ready.then(() => {
+      if (hosts.get(file) !== host) return
+      paintHost(host)
+      host.sync?.()
+    })
+    host.sync()
+    return () => {
+      if (host.onCollapse) host.onCollapse = undefined
+      if (host.sync) host.sync = undefined
+    }
+  }, [file, expanded])
 
   const onRename = (name: string) => {
     const nextFile = `assets/${name}`
-    const current = live.current
-    if (current) saveScene(nextFile, current)
+    const scene = hosts.get(file)?.lastScene
+    if (scene) saveScene(nextFile, scene)
     props.update({ file: nextFile })
   }
 
   if (!file) return <div className="text-sm text-[var(--muted-foreground)]">正在创建画板文件…</div>
-  if (!scene) return <div className="text-sm text-[var(--muted-foreground)]">正在加载画板…</div>
-
-  const start = live.current || scene
-  const canvas = (
-    <div
-      className={expanded ? 'h-full w-full' : 'pointer-events-none h-full w-full'}
-      style={{ height: '100%', width: '100%', isolation: 'isolate', overflow: 'hidden' }}
-    >
-      <Excalidraw
-        theme="dark"
-        initialData={{
-          elements: start.elements as never,
-          appState: { ...start.appState, collaborators: new Map() },
-          files: start.files as never,
-        }}
-        viewModeEnabled={!expanded}
-        zenModeEnabled={!expanded}
-        UIOptions={UI_OPTIONS as never}
-        onChange={onChange as never}
-        excalidrawAPI={bindApi as never}
-      />
-    </div>
-  )
 
   return (
     <div style={{ overflow: 'hidden', background: 'var(--dsw-bg)', borderRadius: 8 }}>
@@ -315,18 +432,19 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
         onToggle={() => setExpanded((v) => !v)}
         onRename={onRename}
       />
-      <div className="h-[280px]">{expanded ? null : canvas}</div>
+      <div className="h-[280px]" ref={slotRef} />
       {expanded
         ? createPortal(
-            <div className="fixed inset-0 flex flex-col bg-[var(--dsw-bg,#191919)]" style={{ zIndex: 9990 }}>
-              <BoardBar
-                file={file}
-                expanded={expanded}
-                writable={props.writable}
-                onToggle={() => setExpanded(false)}
-                onRename={onRename}
-              />
-              <div className="min-h-0 flex-1">{canvas}</div>
+            <div className="fixed inset-0 flex flex-col bg-[var(--dsw-bg,#191919)]" style={{ zIndex: 9991, pointerEvents: 'none' }}>
+              <div style={{ pointerEvents: 'auto' }}>
+                <BoardBar
+                  file={file}
+                  expanded={expanded}
+                  writable={props.writable}
+                  onToggle={() => setExpanded(false)}
+                  onRename={onRename}
+                />
+              </div>
             </div>,
             document.body,
           )
