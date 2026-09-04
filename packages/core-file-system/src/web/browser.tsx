@@ -68,6 +68,7 @@ import { PagerSizeControl } from './pager-size.tsx'
 import {
   actionIcon,
   ActionCell,
+  BoolCell,
   DefaultCell,
   draftFromRecord,
   FieldEditor,
@@ -1324,6 +1325,14 @@ export function CollectionBrowser({
     const kind = resolveFieldType(field)
     const flat = parseFacetFlatColumnKey(key)
     if (surface === 'table') {
+      if (kind === 'boolean') {
+        const raw = flat ? readFacetFlatValue(row, key, facetSourceKey(schema)) : row[key]
+        const on = raw === true || raw === 'true'
+        if (field.writable) {
+          return <BoolCell on={on} writable onToggle={() => writeCellValue(row, key, field, !on)} />
+        }
+        return <BoolCell on={on} />
+      }
       if (kind === 'action') {
         const actionId = fieldActionId(key, field)
         const action = (schema?.actions ?? []).find((item) => item.id === actionId)
@@ -1792,7 +1801,7 @@ export function CollectionBrowser({
                 onPointerDown={(event) => {
                   if (event.button !== 0) return
                   const hit = event.target as HTMLElement | null
-                  if (hit?.closest('.fsdb-row-check, .fsdb-col-resizer, .tasks-row-tools, .tasks-title-open, .fsdb-action-btn')) return
+                  if (hit?.closest('.fsdb-row-check, .fsdb-col-resizer, .tasks-row-tools, .tasks-title-open, .fsdb-action-btn, .fsdb-boolbtn')) return
                   const td = event.currentTarget
                   cellAnchorRef.current = td
                   cellPickRef.current = { id: row.id, key: col.key }

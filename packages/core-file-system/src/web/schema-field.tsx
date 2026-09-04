@@ -55,7 +55,7 @@ export function SchemaChip({
 
 export function SchemaChips({ value, tags }: { value: unknown; tags: CollectionSchemaPack[] }) {
   const parsed = normalizeSchemaValue(value)
-  if (!parsed.tags.length) return <span className="fsdb-muted">空</span>
+  if (!parsed.tags.length) return null
   const byId = new Map(tags.map((tag) => [tag.id, tag]))
   return (
     <TagChips>

@@ -20,3 +20,12 @@ test('image cells still render a thumbnail', () => {
   assert.equal(img?.getAttribute('width'), '28')
   assert.equal(img?.getAttribute('height'), '18')
 })
+
+test('empty cells render no placeholder copy', () => {
+  const text = render(<DefaultCell field={{ type: 'string' }} value="" />)
+  assert.equal(text.container.textContent, '')
+  const select = render(<DefaultCell field={{ type: 'select' }} value="" />)
+  assert.equal(select.container.textContent, '')
+  const file = render(<DefaultCell field={{ type: 'attachment' }} value="" />)
+  assert.equal(file.container.textContent, '')
+})

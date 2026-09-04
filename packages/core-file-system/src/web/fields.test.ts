@@ -60,9 +60,9 @@ test('fieldHasValue hides missing list/card/board chips', () => {
 test('formatField renders datetime tags and media', () => {
   assert.equal(formatField(schema.fields.size, 2048), '2048')
   assert.equal(formatField(schema.fields.tags, ['a', 'b']), 'a, b')
-  assert.equal(formatField(schema.fields.dueAt, 0), '—')
+  assert.equal(formatField(schema.fields.dueAt, 0), '')
   assert.equal(formatField({ type: 'url' }, 'https://example.com/x'), 'https://example.com/x')
-  assert.equal(formatField({ type: 'url' }, 'javascript:alert(1)'), '—')
+  assert.equal(formatField({ type: 'url' }, 'javascript:alert(1)'), '')
   assert.equal(formatField({ type: 'attachment' }, { name: 'a.pdf', href: 'https://cdn.example/a.pdf' }), 'a.pdf')
 })
 

@@ -133,6 +133,7 @@ export function BoolCell({
         event.stopPropagation()
         onToggle()
       }}
+      onPointerDown={(event) => event.stopPropagation()}
     >
       {mark}
     </button>
@@ -231,7 +232,7 @@ export function FilePreview({
   compact?: boolean
   kind?: FieldType
 }) {
-  if (value == null || value === '') return <span className="fsdb-muted">—</span>
+  if (value == null || value === '') return null
   const src = previewImageSrc(kind, value)
   if (src) {
     if (compact) return <ImageThumb src={src} />
@@ -256,7 +257,7 @@ export function FilePreview({
   }
   const text = typeof value === 'string' ? value : JSON.stringify(value, null, compact ? 0 : 2)
   if (compact) return <span className="fsdb-meta">{text.length > 80 ? `${text.slice(0, 80)}…` : text}</span>
-  return <pre className="fsdb-fileview-pre">{text || '—'}</pre>
+  return text ? <pre className="fsdb-fileview-pre">{text}</pre> : null
 }
 
 export function DefaultCell({ field, value, fieldKey, onRun }: { field: FieldSpec; value: unknown; fieldKey?: string; onRun?: () => void }) {
@@ -266,7 +267,7 @@ export function DefaultCell({ field, value, fieldKey, onRun }: { field: FieldSpe
   }
   if (kind === 'select' || kind === 'multi-select') {
     const tags = kind === 'multi-select' ? asStringList(value) : String(value ?? '') ? [String(value)] : []
-    if (!tags.length) return <span className="fsdb-muted">—</span>
+    if (!tags.length) return null
     return (
       <TagChips>
         {tags.map((tag) => (
@@ -275,10 +276,14 @@ export function DefaultCell({ field, value, fieldKey, onRun }: { field: FieldSpe
       </TagChips>
     )
   }
+  if (kind === 'boolean') {
+    return <BoolCell on={value === true || value === 'true'} />
+  }
   if (kind === 'url' || kind === 'image' || kind === 'attachment' || kind === 'file') {
     return <FilePreview value={value} compact kind={kind} />
   }
   const text = formatField(field, value)
+  if (!text) return null
   return <span className={kind === 'datetime' ? 'fsdb-meta' : undefined}>{text}</span>
 }
 

@@ -59,7 +59,7 @@ const NOTION_DARK = {
 export function CellDateTime({
   value,
   onChange,
-  empty = '选择时间',
+  empty = '',
   overdue = false,
 }: {
   value: unknown

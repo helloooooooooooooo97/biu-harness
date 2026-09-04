@@ -206,12 +206,12 @@ export function asTime(value: unknown): number {
 }
 
 export function formatField(field: FieldSpec | undefined, value: unknown): string {
-  if (!field) return value == null || value === '' ? '—' : String(value)
+  if (!field) return value == null || value === '' ? '' : String(value)
   const kind = resolveFieldType(field)
-  if (value == null || value === '') return '—'
+  if (value == null || value === '') return ''
   if (kind === 'datetime') {
     const n = asTime(value)
-    if (!n) return '—'
+    if (!n) return ''
     return new Date(n).toLocaleString('zh-CN', {
       year: 'numeric',
       month: '2-digit',
@@ -222,14 +222,14 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
     })
   }
   if (kind === 'boolean') return value === true || value === 'true' ? '是' : '否'
-  if (kind === 'url') return asHttpHref(value) || '—'
-  if (kind === 'image') return asImageSrc(value) || '—'
+  if (kind === 'url') return asHttpHref(value) || ''
+  if (kind === 'image') return asImageSrc(value) || ''
   if (kind === 'attachment') {
     const file = asAttachment(value)
-    return file ? file.name : '—'
+    return file ? file.name : ''
   }
   if (kind === 'file') {
-    if (value == null || value === '') return '—'
+    if (value == null || value === '') return ''
     const img = asImageSrc(value)
     if (img) return img
     const file = asAttachment(value)
@@ -238,17 +238,17 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
     try {
       return JSON.stringify(value)
     } catch {
-      return '—'
+      return ''
     }
   }
   if (kind === 'multi-select') {
     const tags = asStringList(value)
-    return tags.length ? tags.join(', ') : '—'
+    return tags.length ? tags.join(', ') : ''
   }
   if (kind === 'action') return field.label || '动作'
   if (kind === 'facet') {
     const parsed = normalizeSchemaValue(value)
-    return parsed.tags.length ? parsed.tags.join(', ') : '—'
+    return parsed.tags.length ? parsed.tags.join(', ') : ''
   }
   return String(value)
 }
@@ -263,7 +263,7 @@ export function fieldHasValue(field: FieldSpec | undefined, value: unknown): boo
   const kind = resolveFieldType(field)
   if (kind === 'boolean') return value === true || value === 'true'
   if (kind === 'facet') return normalizeSchemaValue(value).tags.length > 0
-  return formatField(field, value) !== '—'
+  return Boolean(formatField(field, value))
 }
 
 export function contentFieldKey(schema: CollectionSchema | undefined) {

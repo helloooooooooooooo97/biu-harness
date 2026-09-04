@@ -41,6 +41,7 @@ test('collection browser renders extra views registered for that path', () => {
   assert.match(schemaUi, /placeholder=""/)
   assert.doesNotMatch(schemaUi, /placeholder="属性名"/)
   assert.doesNotMatch(schemaUi, /placeholder=\{selected\.length/)
+  assert.doesNotMatch(schemaUi, />空</)
   assert.doesNotMatch(schemaUi, /超级标签/)
   assert.doesNotMatch(schemaUi, /创建 SuperTag/)
   assert.doesNotMatch(schemaUi, /没有匹配的 SuperTag/)
