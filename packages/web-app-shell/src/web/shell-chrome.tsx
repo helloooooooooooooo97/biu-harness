@@ -9,6 +9,7 @@ import {
   MagnifyingGlassIcon,
 } from '@heroicons/react/16/solid'
 import { setChatOverlay } from './chat-overlay.ts'
+import { chromeIcon } from './chrome-icon.ts'
 
 export function ShellSettingsUpdate() {
   const [behind, setBehind] = useState(0)
@@ -125,7 +126,7 @@ export function ShellSidePlaces({
         title="会话"
         active={activeId === 'agent'}
         testId="chrome-chat-panel"
-        icon={<ChatBubbleLeftRightIcon className="size-5 shrink-0" />}
+        icon={<ChatBubbleLeftRightIcon {...chromeIcon} />}
         onClick={() => {
           setChatOverlay(false)
           navigate(agentHref)
@@ -135,14 +136,14 @@ export function ShellSidePlaces({
         title="数据"
         active={activeId === 'database'}
         testId="chrome-data-panel"
-        icon={<CircleStackIcon className="size-5 shrink-0" />}
+        icon={<CircleStackIcon {...chromeIcon} />}
         onClick={() => navigate('/database')}
       />
       <SideAction
         title="搜索"
         active={searchOpen}
         testId="chrome-search"
-        icon={<MagnifyingGlassIcon className="size-5 shrink-0" />}
+        icon={<MagnifyingGlassIcon {...chromeIcon} />}
         onClick={() => {
           setNotifyOpen(false)
           onSearch?.()
@@ -153,7 +154,7 @@ export function ShellSidePlaces({
           title="通知"
           active={notifyOpen}
           testId="chrome-notify"
-          icon={<BellIcon className="size-5 shrink-0" />}
+          icon={<BellIcon {...chromeIcon} />}
           onClick={() => {
             setNotifyOpen((open) => !open)
           }}
@@ -167,7 +168,7 @@ export function ShellSidePlaces({
       <SideAction
         title="设置"
         testId="chrome-settings"
-        icon={<Cog6ToothIcon className="size-5 shrink-0" />}
+        icon={<Cog6ToothIcon {...chromeIcon} />}
         onClick={onSettings}
       />
     </div>
