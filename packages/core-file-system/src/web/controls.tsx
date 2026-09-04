@@ -67,6 +67,7 @@ export function AppDialog({
   confirm,
   danger,
   disabled,
+  hideCancel,
   onCancel,
   onConfirm,
   input,
@@ -78,6 +79,7 @@ export function AppDialog({
   confirm: string
   danger?: boolean
   disabled?: boolean
+  hideCancel?: boolean
   onCancel: () => void
   onConfirm: (name?: string) => void
   input?: {
@@ -130,9 +132,11 @@ export function AppDialog({
           {error ? <div className="fsdb-dlg-error">{error}</div> : null}
         </div>
         <div className="fsdb-dlg-actions">
-          <button type="button" className="fsdb-dlg-cancel" disabled={disabled} onClick={onCancel}>
-            取消
-          </button>
+          {hideCancel ? null : (
+            <button type="button" className="fsdb-dlg-cancel" disabled={disabled} onClick={onCancel}>
+              取消
+            </button>
+          )}
           <button type="button" className={`fsdb-dlg-ok${danger ? ' is-danger' : ''}`} disabled={disabled} onClick={submit}>
             {confirm}
           </button>

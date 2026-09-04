@@ -309,6 +309,7 @@ export function CollectionBrowser({
     | { kind: 'rename'; view: SavedView }
     | { kind: 'delete'; view: SavedView }
     | { kind: 'action'; row: DbRecord; action: CollectionActionInfo }
+    | { kind: 'alert'; title: string; body: string }
     | { kind: 'delete-record'; row: DbRecord }
     | { kind: 'delete-records'; ids: string[] }
     | null
@@ -1113,7 +1114,7 @@ export function CollectionBrowser({
       quietUntil.current = 0
       await reload()
     } catch (err) {
-      setError(String(err))
+      setDlg({ kind: 'alert', title: `${action.label}失败`, body: String(err) })
     } finally {
       setBusyKey(null)
     }
@@ -2617,6 +2618,16 @@ export function CollectionBrowser({
             void executeAction(row, action)
           }}
           body={<p>{dlg.action.confirm}</p>}
+        />
+      ) : null}
+      {dlg?.kind === 'alert' ? (
+        <AppDialog
+          title={dlg.title}
+          confirm="知道了"
+          hideCancel
+          onCancel={() => setDlg(null)}
+          onConfirm={() => setDlg(null)}
+          body={<p>{dlg.body}</p>}
         />
       ) : null}
     </div>
