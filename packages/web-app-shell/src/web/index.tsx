@@ -180,7 +180,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
   )
 })
 
-function PluginModuleStage({
+const PluginModuleStage = memo(function PluginModuleStage({
   slots,
   activeId,
   renderSlot,
@@ -212,7 +212,7 @@ function PluginModuleStage({
       })}
     </>
   )
-}
+})
 
 function Shell(props: SlotProps) {
   const useSnapshot = props.useSnapshot as ReturnType<typeof bindSnapshot>
@@ -273,6 +273,7 @@ function Shell(props: SlotProps) {
   const lastWideSidebar = useRef(sidebarWidth >= SIDEBAR_LABEL_AT ? sidebarWidth : SIDEBAR_MAX)
   const persistSidebar = useCallback((width: number, collapsed: boolean) => {
     if (collapsed) {
+      paintLiveLayoutRef.current({ sidebarCollapsed: true })
       setSidebarCollapsed(true)
       try {
         localStorage.setItem('cordis.sidebar.collapsed', '1')
@@ -283,6 +284,7 @@ function Shell(props: SlotProps) {
     }
     const next = clampSidebarWidth(width)
     if (next === 0) {
+      paintLiveLayoutRef.current({ sidebarCollapsed: true })
       setSidebarCollapsed(true)
       try {
         localStorage.setItem('cordis.sidebar.collapsed', '1')
@@ -293,6 +295,7 @@ function Shell(props: SlotProps) {
     }
     setSidebarWidth(next)
     setSidebarCollapsed(false)
+    paintLiveLayoutRef.current({ sidebarCollapsed: false, sidebarWidth: next })
     if (next >= SIDEBAR_LABEL_AT) lastWideSidebar.current = next
     try {
       localStorage.setItem('cordis.sidebar.width', String(next))
@@ -302,6 +305,7 @@ function Shell(props: SlotProps) {
     }
   }, [])
   const collapseSidebar = useCallback(() => {
+    paintLiveLayoutRef.current({ sidebarCollapsed: true })
     setSidebarCollapsed(true)
     try {
       localStorage.setItem('cordis.sidebar.collapsed', '1')
@@ -377,6 +381,7 @@ function Shell(props: SlotProps) {
   const toggleInspector = useCallback(() => {
     setInspectorOpen((prev) => {
       const next = !prev
+      paintLiveLayoutRef.current({ inspectorOpen: next })
       try {
         localStorage.setItem('cordis.inspector.open', next ? '1' : '0')
       } catch {
@@ -406,6 +411,7 @@ function Shell(props: SlotProps) {
   }, [onInspectorWidthChange])
   useEffect(() => {
     const persist = (next: boolean) => {
+      paintLiveLayoutRef.current({ inspectorOpen: next })
       setInspectorOpen(next)
       try {
         localStorage.setItem('cordis.inspector.open', next ? '1' : '0')
@@ -418,6 +424,7 @@ function Shell(props: SlotProps) {
     const onToggle = () => {
       setInspectorOpen((prev) => {
         const next = !prev
+        paintLiveLayoutRef.current({ inspectorOpen: next })
         try {
           localStorage.setItem('cordis.inspector.open', next ? '1' : '0')
         } catch {
@@ -498,6 +505,23 @@ function Shell(props: SlotProps) {
   if (!columnResizing) paintedCols.current = { left: shellColumns.left, inspector: shellColumns.inspector }
   const dragPaintRaf = useRef(0)
   const dragPaintPending = useRef<{ sidebar?: number; inspector?: number }>({})
+  const paintLiveLayout = useCallback((patch: { inspectorOpen?: boolean; sidebarCollapsed?: boolean; sidebarWidth?: number }) => {
+    const snap = layoutSnap.current
+    const inspectorOpen = patch.inspectorOpen ?? snap.inspectorVisible
+    const sidebarCollapsed = patch.sidebarCollapsed ?? snap.sidebarCollapsed
+    const width = patch.sidebarWidth ?? snap.sidebarWidth
+    const cols = allocateShellColumns({
+      viewportWidth: window.innerWidth,
+      leftPane: snap.leftPane,
+      leftWidth: snap.leftPane ? (sidebarCollapsed ? 0 : width) : undefined,
+      inspectorOpen,
+      inspectorWidth: snap.inspectorWidth,
+    })
+    paintedCols.current = { left: cols.left, inspector: cols.inspector }
+    applyShellColumnCssVars(shellRef.current, cols)
+  }, [])
+  const paintLiveLayoutRef = useRef(paintLiveLayout)
+  paintLiveLayoutRef.current = paintLiveLayout
   const paintColumnDrag = useCallback((patch: { sidebar?: number; inspector?: number }) => {
     Object.assign(dragPaintPending.current, patch)
     if (dragPaintRaf.current) return
