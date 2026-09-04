@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import type { CollectionInfo, CollectionSpec, DbRecord } from '@biu/type-file-system'
 import { normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 import { builtinAllView, isReadOnlyViewId } from '../catalog-views.ts'
-import type { SavedView } from '../web/saved-view.ts'
+import { normalizeColumnWidths, type SavedView } from '../web/saved-view.ts'
 import { isViewModeId } from '../web/fields.ts'
 import { normalizeCollectionPath } from '../paths.ts'
 
@@ -154,6 +154,7 @@ export class SavedViewsStore {
       wrap: Boolean(fields.wrap),
       truncate: fields.truncate !== false,
       pageSize: Number(fields.pageSize) || 50,
+      columnWidths: normalizeColumnWidths(fields.columnWidths),
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
@@ -196,6 +197,7 @@ export class SavedViewsStore {
         ...(typeof patch.tree === 'boolean' ? { tree: patch.tree } : {}),
         ...(typeof patch.wrap === 'boolean' ? { wrap: patch.wrap } : {}),
         ...(typeof patch.truncate === 'boolean' ? { truncate: patch.truncate } : {}),
+        ...('columnWidths' in patch ? { columnWidths: normalizeColumnWidths(patch.columnWidths) } : {}),
         ...('emoji' in patch ? { emoji: String(patch.emoji ?? '') } : {}),
         ...('facet' in patch ? { facet: normalizeSchemaValue(patch.facet) } : {}),
         updatedAt: Date.now(),
@@ -265,6 +267,7 @@ function asRecord(path: string, tableName: string, view: StoredView): DbRecord {
     truncate: view.truncate !== false,
     pageSize: Number(view.pageSize) || 50,
     columns: Array.isArray(view.columns) ? view.columns.map(String) : [],
+    columnWidths: view.columnWidths ?? {},
     filters: JSON.stringify(filters),
     ...recordBuiltinValues(view as Record<string, unknown>),
   }

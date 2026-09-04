@@ -207,7 +207,7 @@ function savedViewFromPayload(raw: unknown, revealViewId: unknown): SavedView | 
     wrap: Boolean(rec.wrap),
     truncate: rec.truncate !== false,
     query: String(rec.query ?? ''),
-    pageSize: Number(rec.pageSize) || 50,
+    columnWidths: rec.columnWidths,
     builtin: false,
   })
 }

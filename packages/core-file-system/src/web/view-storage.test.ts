@@ -83,4 +83,11 @@ test('savedViewFromRecord skips builtin rows and keeps filters', () => {
   assert.equal(view?.id, 'v1')
   assert.equal(view?.mode, 'table')
   assert.equal(view?.filters.status, 'doing')
+  const withWidths = savedViewFromRecord({
+    viewId: 'v2',
+    title: '宽列',
+    mode: 'table',
+    columnWidths: { title: 240 },
+  })
+  assert.equal(withWidths?.columnWidths?.title, 240)
 })

@@ -83,3 +83,13 @@ test('visible column menu scrolls inside a max height', () => {
   assert.match(css, /\.fsdb-page \.fsdb-col-menu\{[^}]*max-height:min\(60vh,360px\)/)
   assert.match(css, /\.fsdb-page \.fsdb-col-menu-list\{[^}]*overflow:auto/)
 })
+
+test('table column widths can be dragged and saved on the view', () => {
+  const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf8')
+  assert.match(browser, /data-testid="fsdb-col-resizer"/)
+  assert.match(browser, /startColResize/)
+  assert.match(browser, /columnWidths/)
+  assert.match(browser, /persistViews/)
+  assert.match(css, /\.fsdb-page \.tasks-table\.is-cols-fixed\{[^}]*table-layout:fixed/)
+  assert.match(css, /\.fsdb-page \.tasks-table \.fsdb-col-resizer\{[^}]*cursor:col-resize/)
+})

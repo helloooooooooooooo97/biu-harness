@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { Fragment, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { flushSync } from 'react-dom'
 import {
   ArrowDownIcon,
@@ -63,7 +63,7 @@ import { CrumbTrail } from './crumb-trail.tsx'
 import { pickDomAttrs, recordPickKind } from './pick-dom.ts'
 import { normalizeRecordEmoji, recordPreviewEmoji, crumbRecordLabel } from './sidebar-preview.ts'
 import { recordPreviewMascot, RecordMark } from './record-mark.tsx'
-import { normalizeSavedView, normalizePageSize, viewStateKey, type SavedView } from './saved-view.ts'
+import { COL_WIDTH_MAX, COL_WIDTH_MIN, normalizeColumnWidths, normalizeSavedView, normalizePageSize, viewStateKey, type SavedView } from './saved-view.ts'
 import { PagerSizeControl } from './pager-size.tsx'
 import {
   actionIcon,
@@ -234,6 +234,8 @@ export function CollectionBrowser({
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialView?.sortDir ?? 'asc')
   const [filters, setFilters] = useState<Record<string, string>>(initialView?.filters ?? {})
   const [columnKeys, setColumnKeys] = useState<string[]>(initialView?.columns ?? [])
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => normalizeColumnWidths(initialView?.columnWidths))
+  const [resizingCol, setResizingCol] = useState<string | null>(null)
   const [facetCatalog, setFacetCatalog] = useState(() => loadFacets())
   const tablePathsKey = tables
     .map((table) => table.path)
@@ -677,6 +679,41 @@ export function CollectionBrowser({
     )
     return order.map((key) => base.find((item) => item.key === key) ?? allColumns.find((item) => item.key === key)).filter(Boolean) as typeof allColumns
   }, [allColumns, columnKeys, schema, schemaDefaultKeys])
+  const hasColWidths = Object.keys(columnWidths).length > 0
+
+  function startColResize(event: ReactPointerEvent<HTMLSpanElement>, colKey: string) {
+    if (event.button !== 0) return
+    event.preventDefault()
+    event.stopPropagation()
+    const handle = event.currentTarget
+    const table = handle.closest('table')
+    if (!table) return
+    const heads = [...table.querySelectorAll('thead th')]
+    const startX = event.clientX
+    const snapshot: Record<string, number> = {}
+    for (let i = 0; i < columns.length; i += 1) {
+      const key = columns[i]!.key
+      const measured = heads[i]?.getBoundingClientRect().width ?? 120
+      snapshot[key] = columnWidths[key] ?? Math.round(measured)
+    }
+    const origin = snapshot[colKey] ?? COL_WIDTH_MIN
+    handle.setPointerCapture(event.pointerId)
+    setResizingCol(colKey)
+    setColumnWidths(snapshot)
+    const onMove = (ev: PointerEvent) => {
+      const next = { ...snapshot, [colKey]: Math.round(Math.min(COL_WIDTH_MAX, Math.max(COL_WIDTH_MIN, origin + ev.clientX - startX))) }
+      setColumnWidths(next)
+    }
+    const onUp = () => {
+      handle.removeEventListener('pointermove', onMove)
+      handle.removeEventListener('pointerup', onUp)
+      handle.removeEventListener('pointercancel', onUp)
+      setResizingCol(null)
+    }
+    handle.addEventListener('pointermove', onMove)
+    handle.addEventListener('pointerup', onUp)
+    handle.addEventListener('pointercancel', onUp)
+  }
   const groupFields = useMemo(() => groupableFields(schema), [schema])
   const activeGroup = groupField(schema, groupBy)
   const grouping = Boolean(activeGroup)
@@ -910,7 +947,8 @@ export function CollectionBrowser({
       query === nextQuery &&
       pageSize === nextPageSize &&
       JSON.stringify(filters) === JSON.stringify(next.filters) &&
-      JSON.stringify(columnKeys) === JSON.stringify(nextColumns)
+      JSON.stringify(columnKeys) === JSON.stringify(nextColumns) &&
+      JSON.stringify(columnWidths) === JSON.stringify(normalizeColumnWidths(next.columnWidths))
     ) {
       return
     }
@@ -920,6 +958,7 @@ export function CollectionBrowser({
     setSortDir(next.sortDir)
     setFilters(next.filters)
     setColumnKeys(nextColumns)
+    setColumnWidths(normalizeColumnWidths(next.columnWidths))
     setGroupBy(nextGroup)
     setShowTree(next.tree !== false)
     setWrapCells(!!next.wrap)
@@ -1003,6 +1042,7 @@ export function CollectionBrowser({
             wrap: wrapCells,
             truncate: truncateCells,
             query,
+            columnWidths,
           },
     )
   }
@@ -1721,6 +1761,7 @@ export function CollectionBrowser({
         truncate: truncateCells,
         query,
         pageSize,
+        columnWidths,
       })
       if (viewStateKey(current) === viewStateKey(next)) return
       if (current.builtin) {
@@ -1735,6 +1776,7 @@ export function CollectionBrowser({
     activeViewId,
     collectionPath,
     columnKeys,
+    columnWidths,
     filters,
     groupBy,
     hydrated,
@@ -2339,19 +2381,29 @@ export function CollectionBrowser({
             ) : null}
             {!customView ? (
               <div className="tasks-table-wrap">
-                <table className={`tasks-table${wrapCells ? ' is-wrap' : ''}${truncateCells ? ' is-truncate' : ''}`}>
+                <table className={`tasks-table${wrapCells ? ' is-wrap' : ''}${truncateCells ? ' is-truncate' : ''}${hasColWidths ? ' is-cols-fixed' : ''}${resizingCol ? ' is-col-resize' : ''}`}>
+            <colgroup>
+              {columns.map((col) => (
+                <col key={col.key} style={columnWidths[col.key] ? { width: columnWidths[col.key] } : undefined} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
                 {columns.map((col, index) => {
                   const flat = parseFacetFlatColumnKey(col.key)
                   const tone = flat ? schemaTagTone(flat.packId) : undefined
                   return (
-                  <th key={col.key}>
+                  <th key={col.key} style={columnWidths[col.key] ? { width: columnWidths[col.key], minWidth: columnWidths[col.key] } : undefined}>
                     {index === 0 ? <RowCheck ids={pickableIds} /> : null}
                     <span className="tasks-th" style={tone ? { color: tone } : undefined}>
                       <FieldGlyph kind={col.kind} />
                       {col.field.label ?? col.key}
                     </span>
+                    <span
+                      className={`fsdb-col-resizer${resizingCol === col.key ? ' is-active' : ''}`}
+                      data-testid="fsdb-col-resizer"
+                      onPointerDown={(event) => startColResize(event, col.key)}
+                    />
                   </th>
                   )
                 })}

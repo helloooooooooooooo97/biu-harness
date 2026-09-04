@@ -25,6 +25,15 @@ test('normalizeSavedView keeps custom mode slugs and rejects junk', () => {
   assert.equal(junk.wrap, false)
   assert.equal(junk.query, '')
   assert.equal(junk.pageSize, 50)
+  assert.deepEqual(junk.columnWidths, {})
+})
+
+test('normalizeColumnWidths clamps and viewStateKey includes widths', () => {
+  const wide = normalizeSavedView({ ...base, columnWidths: { title: 12, status: 900, skip: Number.NaN } })
+  assert.equal(wide.columnWidths?.title, 56)
+  assert.equal(wide.columnWidths?.status, 720)
+  assert.equal(wide.columnWidths?.skip, undefined)
+  assert.notEqual(viewStateKey(wide), viewStateKey({ ...wide, columnWidths: {} }))
 })
 
 test('viewStateKey ignores name and treats missing query as empty', () => {

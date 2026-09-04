@@ -142,7 +142,7 @@ function parseViewFilters(value: unknown): Record<string, string> {
   return {}
 }
 
-export function savedViewFromRecord(row: { viewId?: unknown; title?: unknown; mode?: unknown; sortField?: unknown; sortDir?: unknown; query?: unknown; groupBy?: unknown; columns?: unknown; filters?: unknown; tree?: unknown; wrap?: unknown; truncate?: unknown; pageSize?: unknown }): SavedView | null {
+export function savedViewFromRecord(row: { viewId?: unknown; title?: unknown; mode?: unknown; sortField?: unknown; sortDir?: unknown; query?: unknown; groupBy?: unknown; columns?: unknown; filters?: unknown; tree?: unknown; wrap?: unknown; truncate?: unknown; pageSize?: unknown; columnWidths?: unknown }): SavedView | null {
   const id = String(row.viewId ?? '').trim()
   if (!id || isReadOnlyViewId(id)) return null
   return normalizeSavedView({
@@ -159,6 +159,7 @@ export function savedViewFromRecord(row: { viewId?: unknown; title?: unknown; mo
     wrap: Boolean(row.wrap),
     truncate: row.truncate !== false,
     pageSize: Number(row.pageSize) || 50,
+    columnWidths: row.columnWidths,
     builtin: false,
   })
 }
@@ -235,6 +236,7 @@ const DISPLAY_KEYS = [
   'truncate',
   'query',
   'pageSize',
+  'columnWidths',
 ] as const
 
 export type ViewDisplayPatch = Partial<Pick<SavedView, (typeof DISPLAY_KEYS)[number]>>
