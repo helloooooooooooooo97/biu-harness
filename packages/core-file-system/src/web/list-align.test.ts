@@ -59,6 +59,10 @@ test('title cell hover icons use F0EFED', () => {
   assert.match(css, /\.fsdb-page \.tasks-title-open\{[^}]*color:#F0EFED/)
   assert.match(css, /\.fsdb-page \.tasks-title-open:hover\{[^}]*color:#F0EFED/)
   assert.match(css, /\.fsdb-page \.tasks-row-tools \.tasks-icon-btn,\.fsdb-page \.tasks-row-actions \.tasks-icon-btn\{[^}]*color:#F0EFED/)
+  assert.match(
+    css,
+    /\.fsdb-page \.tasks-table tr:hover td:has\(\.fsdb-title-host\) \.tasks-title-open,\.fsdb-page \.tasks-title-open:focus-visible,\.fsdb-page \.tasks-table tr:hover td:has\(\.fsdb-title-host\) \.tasks-row-tools \.tasks-icon-btn,\.fsdb-page \.tasks-table tr:hover td:has\(\.fsdb-title-host\) \.tasks-row-actions \.tasks-icon-btn\{[^}]*background:var\(--dsw-hover\)/,
+  )
 })
 
 test('list properties keep muted colors; detail property column uses ACA9A4 keys and F0EFED values', () => {
