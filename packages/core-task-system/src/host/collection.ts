@@ -208,7 +208,7 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
         dueAt: { type: 'datetime', label: '截止', writable: true },
         description: { type: 'file', label: '描述', writable: true },
         notes: { type: 'string', label: '备忘', writable: true },
-        creator: { type: 'string', label: '创建人' },
+        creator: { type: 'string', label: '创建人', writable: true },
         assignee: { type: 'string', label: '执行人', writable: true },
         parentId: { type: 'string', label: '父任务', writable: true },
         dependsOn: { type: 'multi-select', label: '依赖' },
@@ -229,6 +229,14 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
       if (assignee !== undefined) {
         nextPatch.assignee = assignee
         delete nextPatch.assigneeSessionId
+      }
+      if (people?.resolveAssignee && ('creator' in patch || 'creatorSessionId' in patch)) {
+        const creator = await people.resolveAssignee({
+          ...('creatorSessionId' in patch ? { assigneeSessionId: patch.creatorSessionId == null ? '' : String(patch.creatorSessionId) } : {}),
+          ...('creator' in patch ? { assignee: patch.creator } : {}),
+        })
+        nextPatch.creator = creator ?? { kind: 'user', name: '用户' }
+        delete nextPatch.creatorSessionId
       }
       const next = tasks.update(id, nextPatch) as TaskRow
       const rows = tasks.list().map((row) => (row.id === id ? { ...row, ...next, id } : row))
