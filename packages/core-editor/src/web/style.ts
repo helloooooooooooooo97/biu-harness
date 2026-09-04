@@ -21,9 +21,9 @@ export const PAGE_EDITOR_STYLE = `
 .page-editor .tiptap li p{min-height:0;margin:0}
 .page-editor .tiptap blockquote{margin-left:0;padding-left:14px;border-left:3px solid var(--dsw-border);color:var(--dsw-label-2)}
 .page-editor .tiptap hr{border:0;border-top:1px solid var(--dsw-border);margin:18px 0}
-.page-editor .tiptap code{padding:.12em .35em;border-radius:4px;background:var(--dsw-hover);font-family:var(--font-mono);font-size:.9em}
-.page-editor .tiptap pre{padding:12px 14px;border-radius:6px;background:var(--dsw-input);overflow:auto}
-.page-editor .tiptap pre code{padding:0;background:transparent;font-size:13px;line-height:1.6}
+.page-editor .tiptap code{display:inline;padding:.12em .35em;border-radius:4px;background:var(--dsw-hover);font-family:var(--font-mono);font-size:.9em}
+.page-editor .tiptap pre{display:block;margin:8px 0;padding:10px 12px;border:1px solid var(--dsw-border);border-radius:10px;background:var(--dsw-chat-code-bg,var(--dsw-sidebar));overflow-x:auto;white-space:pre;font-family:var(--font-mono)}
+.page-editor .tiptap pre code{display:block;padding:0;background:transparent;font-size:13px;line-height:1.6;white-space:inherit}
 .page-editor .tiptap a{color:var(--dsw-business);text-underline-offset:2px}
 .page-editor .tiptap p.is-editor-empty:first-child::before,
 .page-editor .tiptap .is-empty::before{content:attr(data-placeholder);float:left;height:0;pointer-events:none;color:var(--dsw-placeholder)}

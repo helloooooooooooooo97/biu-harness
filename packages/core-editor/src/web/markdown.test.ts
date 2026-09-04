@@ -73,6 +73,9 @@ test('slash suggestion uses a fixed high stacking context', async () => {
   assert.match(css, /\.page-editor \.page-block\{[^}]*isolation:isolate/)
   assert.match(css, /\.page-editor \.tiptap ul\{list-style-type:disc\}/)
   assert.match(css, /\.page-editor \.tiptap ol\{list-style-type:decimal\}/)
+  assert.match(css, /\.page-editor \.tiptap pre\{[^}]*background:var\(--dsw-chat-code-bg/)
+  assert.match(css, /\.page-editor \.tiptap pre\{[^}]*white-space:pre/)
+  assert.match(css, /\.page-editor \.tiptap code\{[^}]*background:var\(--dsw-hover\)/)
 })
 
 test('slash command turns the current block into a heading', () => {
