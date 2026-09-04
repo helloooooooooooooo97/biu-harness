@@ -2965,7 +2965,7 @@ body {
 }
 
 .dock-approval-card {
-  border: 1px solid rgba(250, 204, 100, 0.35);
+  border: 1px solid #2f2f2f;
   border-radius: 12px;
   background: #202020;
   padding: 8px 12px;

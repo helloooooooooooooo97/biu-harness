@@ -262,7 +262,7 @@ export function ApprovalsRail(props: SlotProps) {
               <pre className="mb-2 max-h-20 overflow-auto whitespace-pre-wrap text-(--dsw-label-2)">
                 {JSON.stringify(item.args, null, 2)}
               </pre>
-              <div className="flex gap-2">
+              <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   className="rounded-full px-3 py-1 text-(length:--dsw-chat-ui-font-size) text-(--dsw-bg)"
