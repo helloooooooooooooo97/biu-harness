@@ -47,14 +47,6 @@ export function nextPreviewLimit(loaded: number, total: number) {
   return Math.min(SIDEBAR_PREVIEW_PAGE, SIDEBAR_PREVIEW_MAX - loaded, total - loaded)
 }
 
-export const TABLE_TOTAL_VIEW = {
-  id: '__table__',
-  sortField: 'id',
-  sortDir: 'asc' as const,
-  filters: {} as Record<string, string>,
-  query: '',
-}
-
 const totalCache = new Map<string, number>()
 const totalListeners = new Set<() => void>()
 let totalsVersion = 0
@@ -83,10 +75,6 @@ export function subscribePreviewTotals(fn: () => void) {
 
 export function viewTotalKey(path: string, view: Pick<SavedView, 'id' | 'sortField' | 'sortDir' | 'filters' | 'query'>) {
   return previewCacheKey(path, view)
-}
-
-export function tableTotalKey(path: string) {
-  return previewCacheKey(path, TABLE_TOTAL_VIEW)
 }
 
 export async function fetchViewTotal(

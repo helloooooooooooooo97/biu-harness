@@ -154,15 +154,6 @@ function savedViewFromPayload(raw: unknown, revealViewId: unknown): SavedView | 
   })
 }
 
-export function seedInspectorDbPath(paneId: string, pathname?: string) {
-  const id = pathname === undefined ? DEFAULT_PANE : paneId
-  const path = pathname === undefined ? paneId : pathname
-  if (panePath(id)) return
-  if (!isInspectorDatabasePath(path)) return
-  paths.set(id, path)
-  bump()
-}
-
 export const INSPECTOR_REVEAL_EVENT = 'biu:inspector-reveal'
 
 function onInspectorReveal(event: Event) {

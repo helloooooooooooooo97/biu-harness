@@ -4,7 +4,6 @@ import { databaseAllViewPath } from './database-path.ts'
 import {
   getInspectorDbPath,
   isInspectorDatabasePath,
-  seedInspectorDbPath,
   setInspectorDbPath,
   showRecordInInspector,
   showInInspector,
@@ -14,23 +13,21 @@ import {
   setInspectorAgentWorking,
 } from './inspector-db-route.ts'
 
-test('inspector database path does not overwrite after first seed', () => {
+test('inspector database path is set explicitly', () => {
   setInspectorDbPath('')
-  seedInspectorDbPath('/database/pages')
-  assert.equal(getInspectorDbPath(), '/database/pages')
-  seedInspectorDbPath('/database/tasks')
+  setInspectorDbPath('/database/pages')
   assert.equal(getInspectorDbPath(), '/database/pages')
   setInspectorDbPath('/database/tasks')
   assert.equal(getInspectorDbPath(), '/database/tasks')
 })
 
-test('chat routes are not seeded as inspector database paths', () => {
+test('chat routes are not inspector database paths', () => {
   setInspectorDbPath('')
   assert.equal(isInspectorDatabasePath('/s/abc'), false)
   assert.equal(isInspectorDatabasePath('/database/pages'), true)
-  seedInspectorDbPath('/s/abc')
+  setInspectorDbPath('/s/abc')
   assert.equal(getInspectorDbPath(), '')
-  seedInspectorDbPath('/database/pages')
+  setInspectorDbPath('/database/pages')
   assert.equal(getInspectorDbPath(), '/database/pages')
 })
 
@@ -39,8 +36,6 @@ test('each inspector database pane keeps its own path', () => {
   setInspectorDbPath('database::b', '/database/tasks')
   assert.equal(getInspectorDbPath('database::a'), '/database/pages')
   assert.equal(getInspectorDbPath('database::b'), '/database/tasks')
-  seedInspectorDbPath('database::a', '/database/events')
-  assert.equal(getInspectorDbPath('database::a'), '/database/pages')
 })
 
 test('window reveal event opens the inspector record path', async () => {

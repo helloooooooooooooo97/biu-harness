@@ -1,15 +1,10 @@
 import type { CollectionSchema, CollectionSchemaPack, DbRecord, FieldSpec, FieldType, SchemaFieldValue } from '@biu/type-file-system'
-import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS, isFacetFieldType, normalizeSchemaValue, schemaSearchHaystack } from '@biu/type-file-system'
-import { loadFacets } from './facet-catalog.ts'
+import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS, isFacetFieldType, normalizeSchemaValue } from '@biu/type-file-system'
 
 export const BUILTIN_VIEW_MODES = ['queue', 'table', 'cards', 'board'] as const
 export type BuiltinViewMode = (typeof BUILTIN_VIEW_MODES)[number]
 /** 内置四种 + 集合自己 registerView 的 id（如 graph）。 */
 export type ViewMode = BuiltinViewMode | (string & {})
-
-export function isBuiltinViewMode(mode: string): mode is BuiltinViewMode {
-  return (BUILTIN_VIEW_MODES as readonly string[]).includes(mode)
-}
 
 export function isViewModeId(mode: unknown): mode is ViewMode {
   return typeof mode === 'string' && /^[a-z][a-z0-9-]{0,31}$/.test(mode)
@@ -278,85 +273,6 @@ export function contentFieldKey(schema: CollectionSchema | undefined) {
     if (field && (resolveFieldType(field) === 'string' || resolveFieldType(field) === 'file')) return key
   }
   return null
-}
-
-/** @deprecated 用 contentFieldKey */
-export function bodyFieldKey(schema: CollectionSchema | undefined) {
-  return contentFieldKey(schema)
-}
-
-export function detailsFieldKey(schema: CollectionSchema | undefined) {
-  return contentFieldKey(schema)
-}
-
-export function matchesQuery(row: DbRecord, query: string, schema: CollectionSchema) {
-  const q = query.trim().toLowerCase()
-  if (!q) return true
-  if (String(row.id).toLowerCase().includes(q)) return true
-  for (const [key, field] of Object.entries(schema.fields)) {
-    if (resolveFieldType(field) === 'facet') {
-      if (schemaSearchHaystack(row[key], loadFacets()).toLowerCase().includes(q)) return true
-      continue
-    }
-    const text = formatField(field, row[key]).toLowerCase()
-    if (text.includes(q)) return true
-  }
-  return false
-}
-
-export function matchesFilters(row: DbRecord, filters: Record<string, string>, schema: CollectionSchema) {
-  for (const [key, expected] of Object.entries(filters)) {
-    if (!expected) continue
-    const field = schema.fields[key]
-    if (!field) continue
-    const kind = resolveFieldType(field)
-    if (kind === 'datetime' && ['1h', '24h', '7d', '30d'].includes(expected)) {
-      const n = asTime(row[key])
-      if (!n) return false
-      const span =
-        expected === '1h' ? 3600e3 : expected === '24h' ? 86400e3 : expected === '7d' ? 7 * 86400e3 : 30 * 86400e3
-      if (Date.now() - n > span) return false
-      continue
-    }
-    if (kind === 'multi-select') {
-      if (!asStringList(row[key]).includes(expected)) return false
-      continue
-    }
-    if (kind === 'facet') {
-      const parsed = normalizeSchemaValue(row[key])
-      if (!parsed.tags.includes(expected) && !loadFacets().some((tag) => parsed.tags.includes(tag.id) && tag.label === expected)) {
-        return false
-      }
-      continue
-    }
-    if (kind === 'boolean') {
-      const actual = row[key] === true || row[key] === 'true' ? 'true' : 'false'
-      if (actual !== expected) return false
-      continue
-    }
-    if (String(row[key] ?? '') !== expected) return false
-  }
-  return true
-}
-
-function compareValues(field: FieldSpec, a: unknown, b: unknown): number {
-  const kind = resolveFieldType(field)
-  if (kind === 'number' || kind === 'datetime') return asTime(a) - asTime(b) || Number(a ?? 0) - Number(b ?? 0)
-  if (kind === 'boolean') return Number(a === true || a === 'true') - Number(b === true || b === 'true')
-  if (kind === 'select' && field.enum?.length) {
-    return field.enum.indexOf(String(a ?? '')) - field.enum.indexOf(String(b ?? ''))
-  }
-  return String(a ?? '').localeCompare(String(b ?? ''), 'zh')
-}
-
-export function sortRows(rows: DbRecord[], schema: CollectionSchema, field: string, dir: 'asc' | 'desc') {
-  const spec = schema.fields[field]
-  const sign = dir === 'desc' ? -1 : 1
-  return [...rows].sort((a, b) => {
-    const c = spec ? compareValues(spec, a[field], b[field]) : String(a[field] ?? '').localeCompare(String(b[field] ?? ''))
-    if (c !== 0) return c * sign
-    return String(a.id).localeCompare(String(b.id))
-  })
 }
 
 export function uniqueValues(rows: DbRecord[], key: string, field: FieldSpec): string[] {

@@ -2,7 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import type { CollectionSchema } from '@biu/type-file-system'
 import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
-import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, matchesFilters, parentFieldKey, readFacetFlatValue, resolveFieldType, sortRows, uniqueValues } from './fields'
+import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, parentFieldKey, readFacetFlatValue, resolveFieldType, uniqueValues } from './fields'
 import { visibleActions } from './fsdb-cells.tsx'
 
 test('isViewModeId accepts builtin and custom slugs', () => {
@@ -61,22 +61,6 @@ test('formatField renders datetime tags and media', () => {
   assert.equal(formatField({ type: 'url' }, 'https://example.com/x'), 'https://example.com/x')
   assert.equal(formatField({ type: 'url' }, 'javascript:alert(1)'), '—')
   assert.equal(formatField({ type: 'attachment' }, { name: 'a.pdf', href: 'https://cdn.example/a.pdf' }), 'a.pdf')
-})
-
-test('filters and sort follow declared column types', () => {
-  const rows = [
-    { id: '2', title: 'b', status: 'todo', tags: ['x'], dueAt: 20, facet: { tags: ['dp'], values: {} } },
-    { id: '1', title: 'a', status: 'doing', tags: ['x', 'y'], dueAt: 10, facet: { tags: [], values: {} } },
-  ]
-  const withSchema = { ...schema, fields: { ...schema.fields, facet: { type: 'facet' as const } } }
-  assert.equal(matchesFilters(rows[1]!, { status: 'doing' }, schema), true)
-  assert.equal(matchesFilters(rows[0]!, { tags: 'y' }, schema), false)
-  assert.equal(matchesFilters(rows[0]!, { facet: 'dp' }, withSchema), true)
-  assert.equal(matchesFilters(rows[1]!, { facet: 'dp' }, withSchema), false)
-  assert.deepEqual(
-    sortRows(rows, schema, 'status', 'asc').map((row) => row.id),
-    ['2', '1'],
-  )
 })
 
 test('matchActionWhen uses field equality including booleans', () => {

@@ -1111,7 +1111,7 @@ export function apply(ctx: Context) {
   })
   ctx.http.route('POST', '/api/db/facets', async (route) => {
     try {
-      const body = (await route.json()) as { path?: string; facets?: unknown[] }
+      const body = (await route.json()) as { facets?: unknown[] }
       facets.replace(Array.isArray(body.facets) ? body.facets : [])
       ctx.emit('database/change')
       route.send(200, { ok: true, facets: facets.list() })

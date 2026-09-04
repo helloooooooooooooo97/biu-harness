@@ -359,8 +359,3 @@ export function SchemaFieldEditor({
     </div>
   )
 }
-
-export function formatSchemaCell(value: unknown) {
-  const parsed = normalizeSchemaValue(value)
-  return parsed.tags.length ? parsed.tags.join(', ') : '—'
-}
