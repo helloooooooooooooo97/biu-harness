@@ -19,7 +19,7 @@ import { TagChip, TagChips } from '@biu/public-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { actionVisibleToUser } from '@biu/type-file-system'
-import { setChatOverlay } from './chat-overlay.ts'
+import { setChatOverlay, requestComposerFocus } from './chat-overlay.ts'
 
 export type SearchKind = 'session' | 'task' | 'page' | 'plugin' | 'facet'
 
@@ -478,6 +478,7 @@ export function ShellSearchPanel({
       openSearchHit(hit)
     }
     onClose()
+    if (side === 'left' && hit.kind === 'session') requestComposerFocus()
   }
 
   let cursor = -1

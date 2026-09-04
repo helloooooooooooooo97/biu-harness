@@ -159,11 +159,22 @@ export function setOverlayThread(next: boolean) {
   emitThread()
 }
 
+let composerFocusPending = false
+
 export function requestComposerFocus() {
+  composerFocusPending = true
   const fire = () => window.dispatchEvent(new Event('biu:composer-focus'))
   fire()
   requestAnimationFrame(fire)
   window.setTimeout(fire, 40)
+  window.setTimeout(() => {
+    fire()
+    composerFocusPending = false
+  }, 160)
+}
+
+export function isComposerFocusPending() {
+  return composerFocusPending
 }
 
 /** 聊天页中间已有输入框，选取不要再弹悬浮窗。 */
