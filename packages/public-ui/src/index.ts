@@ -26,5 +26,5 @@ export {
   CHAT_DOCK_STACK,
 } from './chat-pane.tsx'
 export { OutlineNav, type OutlineNavItem } from './outline-nav.tsx'
-export { findOutlineSidebarHost, OUTLINE_SIDEBAR_HOST } from './outline-sidebar.ts'
+export { findOutlineSidebarHost, OUTLINE_SIDEBAR_HOST_ID } from './outline-sidebar.ts'
 export { SidebarOutlinePortal } from './outline-portal.tsx'

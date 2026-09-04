@@ -31,6 +31,7 @@ test('sessionsCollection maps summaries and writes title/pinned/tags', async () 
     },
   })
   assert.equal(spec.path, '/sessions')
+  assert.equal(spec.schema.contentField, 'content')
   assert.equal(spec.view?.moduleId, 'sessions-db')
   assert.deepEqual(spec.records, { update: true, create: false, delete: true })
   const rows = await spec.list()

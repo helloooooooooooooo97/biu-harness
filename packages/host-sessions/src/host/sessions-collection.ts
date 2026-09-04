@@ -140,6 +140,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
     records: { update: true, create: Boolean(sessions.create), delete: true },
     schema: {
       labelField: 'title',
+      contentField: 'content',
       columns: ['title', 'pinned', 'tags', 'eventCount', 'project', 'updatedAt'],
       fields: {
         ...REQUIRED_RECORD_FIELDS,

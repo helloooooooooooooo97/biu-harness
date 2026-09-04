@@ -27,15 +27,18 @@ export function SidebarOutlinePortal({
       setAllowed(agentCenterAllowsOutline(mark.current))
     }
     sync()
+    const mo = new MutationObserver(sync)
     const center = mark.current?.closest('[data-testid="agent-center"]')
-    const mo =
-      center instanceof HTMLElement
-        ? new MutationObserver(sync)
-        : null
-    mo?.observe(center as HTMLElement, { attributes: true, attributeFilter: ['class', 'aria-hidden'] })
+    if (center instanceof HTMLElement) {
+      mo.observe(center, { attributes: true, attributeFilter: ['class', 'aria-hidden'] })
+    }
+    const shell = document.querySelector('[data-testid="app-shell"]')
+    if (shell instanceof HTMLElement) {
+      mo.observe(shell, { attributes: true, attributeFilter: ['style', 'class'] })
+    }
     const frame = requestAnimationFrame(sync)
     return () => {
-      mo?.disconnect()
+      mo.disconnect()
       cancelAnimationFrame(frame)
     }
   })
