@@ -255,10 +255,19 @@ export function ApprovalsRail(props: SlotProps) {
     <div className="w-full space-y-2">
       {approvals.length ? (
         <div className="dock-approval-hint" role="status">
-          <div className="dock-approval-hint-label">待确认工具 · 先处理后再发</div>
           {approvals.map((item) => (
             <div key={item.id} className="dock-approval-card">
-              <div className="mb-1 font-medium">Approval · {item.name}</div>
+              <div className="dock-approval-card-head">
+                <span
+                  className="dock-approval-mark"
+                  data-dock-tip="待确认"
+                  data-dock-tip-at="ne"
+                  aria-label="待确认"
+                >
+                  <ExclamationCircleIcon aria-hidden className="size-4" />
+                </span>
+                <div className="font-medium">Approval · {item.name}</div>
+              </div>
               <pre className="mb-2 max-h-20 overflow-auto whitespace-pre-wrap text-(--dsw-label-2)">
                 {JSON.stringify(item.args, null, 2)}
               </pre>

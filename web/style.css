@@ -2958,12 +2958,6 @@ body {
   gap: 8px;
 }
 
-.dock-approval-hint-label {
-  padding: 0 2px;
-  font-size: var(--dsw-chat-ui-font-size);
-  color: var(--dsw-label-3);
-}
-
 .dock-approval-card {
   border: 1px solid #2f2f2f;
   border-radius: 12px;
@@ -2971,6 +2965,21 @@ body {
   padding: 8px 12px;
   font-size: var(--dsw-chat-ui-font-size);
   color: var(--dsw-label);
+}
+
+.dock-approval-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.dock-approval-mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  color: var(--dsw-label-3);
+  cursor: help;
 }
 
 .sr-only {
