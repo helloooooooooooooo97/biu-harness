@@ -807,7 +807,12 @@ function Shell(props: SlotProps) {
       {searchOpen
         ? createPortal(
           <ShellSearchPanel
-            sessions={danceSessions.map((item) => ({ id: item.id, title: item.title, tags: item.tags }))}
+            sessions={danceSessions.map((item) => ({
+              id: item.id,
+              title: item.title,
+              tags: item.tags,
+              updatedAt: item.updatedAt,
+            }))}
             onClose={() => setSearchOpen(false)}
             focusSeq={searchFocusSeq}
           />,
