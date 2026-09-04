@@ -3,11 +3,12 @@ import { AnchorMenu } from '@biu/public-ui'
 
 const STYLE_ID = 'biu-database-ui-search'
 const CSS = `
-.db-search-menu{box-sizing:border-box;padding:6px;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:4px}
-.db-search-field{display:flex;align-items:center;gap:6px;border:1px solid var(--dsw-border);border-radius:8px;padding:4px 8px;color:var(--dsw-label-3);background:var(--dsw-input)}
-.db-search-field input{flex:1;min-width:0;border:0;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;outline:none}
+.db-search-menu{box-sizing:border-box;padding:6px;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:4px;font-size:14px}
+.db-search-field{display:flex;align-items:center;gap:6px;border:1px solid var(--dsw-border);border-radius:8px;padding:4px 8px;color:var(--dsw-label-3);background:var(--dsw-input);font-size:14px}
+.db-search-field input{flex:1;min-width:0;border:0;background:transparent;color:var(--dsw-label);font-family:inherit;font-size:14px;font-weight:400;line-height:1.4;outline:none}
+.db-search-field input::placeholder{font-size:14px;color:var(--dsw-label-3)}
 .db-search-list{display:flex;flex-direction:column;gap:1px;max-height:220px;overflow:auto}
-.db-search-option{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:0;border-radius:6px;padding:5px 6px;background:transparent;color:var(--dsw-label);font:inherit;cursor:pointer;text-align:left}
+.db-search-option{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:0;border-radius:6px;padding:5px 6px;background:transparent;color:var(--dsw-label);font-family:inherit;font-size:14px;cursor:pointer;text-align:left}
 .db-search-option:hover,.db-search-option.is-selected,.db-search-option.is-active{background:color-mix(in srgb,var(--dsw-business) 12%,transparent)}
 .db-search-option-main{display:inline-flex;align-items:center;gap:6px;min-width:0}
 .db-search-empty{padding:8px;color:var(--dsw-label-3);font-size:14px}
