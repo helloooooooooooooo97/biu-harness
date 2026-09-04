@@ -12,8 +12,13 @@ export const PAGE_EDITOR_STYLE = `
 .page-editor .page-block.ProseMirror-selectednode{outline:none;box-shadow:none}
 .page-editor .page-block[data-page-block=excalidraw]{outline:none;box-shadow:none;border:0;border-radius:8px}
 .page-editor .page-block-missing{padding:12px 14px;border:1px dashed var(--dsw-border);border-radius:8px;color:var(--dsw-label-3);font-size:13px}
-.page-editor .tiptap ul,.page-editor .tiptap ol{padding-left:1.6em}
-.page-editor .tiptap li{margin:1px 0}
+.page-editor .tiptap ul,.page-editor .tiptap ol{padding-left:1.6em;list-style-position:outside}
+.page-editor .tiptap ul{list-style-type:disc}
+.page-editor .tiptap ol{list-style-type:decimal}
+.page-editor .tiptap ul ul{list-style-type:circle}
+.page-editor .tiptap ul ul ul{list-style-type:square}
+.page-editor .tiptap li{display:list-item;margin:1px 0}
+.page-editor .tiptap li p{min-height:0;margin:0}
 .page-editor .tiptap blockquote{margin-left:0;padding-left:14px;border-left:3px solid var(--dsw-border);color:var(--dsw-label-2)}
 .page-editor .tiptap hr{border:0;border-top:1px solid var(--dsw-border);margin:18px 0}
 .page-editor .tiptap code{padding:.12em .35em;border-radius:4px;background:var(--dsw-hover);font-family:var(--font-mono);font-size:.9em}
