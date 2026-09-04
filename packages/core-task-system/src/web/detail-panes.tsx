@@ -507,7 +507,7 @@ export function ScriptPane({ record }: FsDetailPaneProps) {
               <span className="tasks-auto-then-arrow">
                 <PlayIcon aria-hidden className="size-[14px]" />
               </span>
-              <span className="tasks-auto-then-text">自动派工给承担者并开始执行任务</span>
+              <span className="tasks-auto-then-text">自动派工给执行人并开始执行任务</span>
             </div>
             <div className="tasks-trigger-status">
               <span className={`tasks-trigger-state-pill is-${trigger.state ?? 'idle'}`}>
