@@ -1764,9 +1764,7 @@ export function CollectionBrowser({
                   cellPickRef.current = { id: row.id, key: col.key }
                   markCellOn(td, cellFieldWritable(col.field))
                   const kind = resolveFieldType(col.field)
-                  const wantPop = cellUsesPop(kind, col.field.writable)
-                  if (wantPop) setCellPopOpen(true)
-                  else setCellPopOpen(false)
+                  setCellPopOpen(cellUsesPop(kind, col.field.writable))
                 }}
               >
                 {index === 0 ? <RowCheck id={row.id} /> : null}
