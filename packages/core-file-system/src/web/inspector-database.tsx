@@ -192,7 +192,6 @@ export function DatabaseInspectorTab({
   const inspectorPath = useBindInspectorDbPath(id, tables, seedCollection)
   const { collection: tabCollection } = crumbsForRoute(inspectorPath, tables)
   const agentWorking = useInspectorAgentWorking(tabCollection || seedCollection || '')
-  const [crumbOpen, setCrumbOpen] = useState<string | null>(null)
   const [trailOpen, setTrailOpen] = useState(false)
   const crumbRef = useRef<HTMLElement>(null)
   const tabRef = useRef<HTMLDivElement>(null)
@@ -200,7 +199,6 @@ export function DatabaseInspectorTab({
   useEffect(() => {
     return listenOutsideDismiss(
       () => {
-        setCrumbOpen(null)
         setTrailOpen(false)
       },
       (target) =>
@@ -239,8 +237,6 @@ export function DatabaseInspectorTab({
       {crumbs.length ? (
         <CrumbTrail
           crumbs={crumbs}
-          openId={crumbOpen}
-          onOpenId={setCrumbOpen}
           onActivate={onActivate}
           allowMenu={trailOpen}
           lockRootCrumb
@@ -271,10 +267,7 @@ export function DatabaseInspectorTab({
               event.preventDefault()
               event.stopPropagation()
               onActivate?.()
-              setTrailOpen((open) => {
-                if (open) setCrumbOpen(null)
-                return !open
-              })
+              setTrailOpen((open) => !open)
             }}
           >
             {trailOpen ? (

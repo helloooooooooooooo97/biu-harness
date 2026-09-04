@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type Ref } from 'react'
 import { createPortal } from 'react-dom'
 import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/16/solid'
+import { listenOutsideDismiss } from '@biu/public-ui'
 import { CrumbItemGlyph, TableGlyph } from './nav-glyphs.tsx'
 import { crumbButtonAction, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
 
@@ -140,8 +141,6 @@ function CrumbMenu({
 
 export function CrumbTrail({
   crumbs,
-  openId,
-  onOpenId,
   onPick,
   onActivate,
   onCreate,
@@ -154,8 +153,6 @@ export function CrumbTrail({
   lockRootCrumb = false,
 }: {
   crumbs: Crumb[]
-  openId: string | null
-  onOpenId: (id: string | null) => void
   onPick: (target: CrumbTarget) => void
   onActivate?: () => void
   onCreate?: (kind: 'view' | 'record') => void
@@ -170,10 +167,27 @@ export function CrumbTrail({
   lockRootCrumb?: boolean
 }) {
   const btnRefs = useRef(new Map<string, HTMLButtonElement>())
+  const trailRef = useRef<HTMLElement | null>(null)
+  const [openId, setOpenId] = useState<string | null>(null)
   const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null)
   const openCrumb = crumbs.find((item) => item.id === openId)
   const tableCrumb = crumbs.find((item) => item.kind === 'collection')
   const tableIcon = tableCrumb?.icon
+
+  useEffect(() => {
+    if (!allowMenu) setOpenId(null)
+  }, [allowMenu])
+
+  useEffect(() => {
+    return listenOutsideDismiss(
+      () => setOpenId(null),
+      (target) =>
+        Boolean(
+          trailRef.current?.contains(target) ||
+            (target instanceof Element && target.closest('[data-fsdb-crumb-menu]')),
+        ),
+    )
+  }, [])
 
   useLayoutEffect(() => {
     if (!openId) {
@@ -183,10 +197,18 @@ export function CrumbTrail({
     const box = btnRefs.current.get(openId)?.getBoundingClientRect()
     if (!box) return
     setMenuPos({ left: Math.max(8, box.left), top: box.bottom + 4 })
-  }, [openId, crumbs])
+  }, [openId])
 
   return (
-    <nav className={className ?? 'fsdb-crumbs'} aria-label={label ?? '位置'} ref={navRef}>
+    <nav
+      className={className ?? 'fsdb-crumbs'}
+      aria-label={label ?? '位置'}
+      ref={(node) => {
+        trailRef.current = node
+        if (typeof navRef === 'function') navRef(node)
+        else if (navRef) navRef.current = node
+      }}
+    >
       {crumbs.map((crumb, index) => {
         const rootLocked = lockRootCrumb && index === 0 && crumbs.length > 1
         const canPick = allowMenu && !rootLocked && canOpenCrumbMenu(crumb)
@@ -229,18 +251,19 @@ export function CrumbTrail({
                 onClick={(event: MouseEvent) => {
                   event.preventDefault()
                   event.stopPropagation()
-                  onActivate?.()
                   if (!allowMenu) {
-                    onOpenId(null)
+                    onActivate?.()
+                    setOpenId(null)
                     return
                   }
                   const action = crumbButtonAction(crumb, index ? crumbs[index - 1] : undefined)
                   if (action === 'menu') {
-                    onOpenId(open ? null : crumb.id)
+                    setOpenId(open ? null : crumb.id)
                     return
                   }
+                  onActivate?.()
                   onPick(action)
-                  onOpenId(null)
+                  setOpenId(null)
                 }}
               >
                 {glyph}
@@ -258,7 +281,7 @@ export function CrumbTrail({
               crumbs={crumbs}
               pos={menuPos}
               onPick={onPick}
-              onOpenId={onOpenId}
+              onOpenId={setOpenId}
               onCreate={onCreate}
               canCreateView={canCreateView}
               canCreateRecord={canCreateRecord}

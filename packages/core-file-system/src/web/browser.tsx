@@ -331,7 +331,6 @@ export function CollectionBrowser({
     | null
   >(null)
   const [dlgError, setDlgError] = useState('')
-  const [crumbOpen, setCrumbOpen] = useState<string | null>(null)
   const crumbRef = useRef<HTMLElement>(null)
   const viewRef = useRef<HTMLDivElement>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
@@ -410,7 +409,6 @@ export function CollectionBrowser({
   useEffect(() => {
     return listenOutsideDismiss(
       () => {
-        setCrumbOpen(null)
         setViewMenuOpen(false)
         setModeMenuOpen(false)
         setSortMenuOpen(false)
@@ -1862,8 +1860,6 @@ export function CollectionBrowser({
             ) : null}
             <CrumbTrail
               crumbs={crumbs}
-              openId={crumbOpen}
-              onOpenId={setCrumbOpen}
               canCreateView
               canCreateRecord={canCreate}
               onCreate={(kind) => {
@@ -1874,11 +1870,9 @@ export function CollectionBrowser({
                 if (target.kind === 'view' && target.collection === collectionPath) {
                   const view = views.find((item) => item.id === target.viewId)
                   if (view) selectView(view)
-                  setCrumbOpen(null)
                   return
                 }
                 onCrumbTarget?.(target)
-                setCrumbOpen(null)
               }}
               navRef={crumbRef}
             />
