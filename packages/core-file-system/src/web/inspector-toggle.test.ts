@@ -221,6 +221,8 @@ test('filesystem list is table-only; extra modes come from registerView', () => 
   assert.match(browser, /function RecordRowTools/)
   assert.match(browser, /className="fsdb-title-host"/)
   assert.doesNotMatch(browser, /<th>操作<\/th>/)
+  assert.match(browser, /aria-label="查看模式"/)
+  assert.doesNotMatch(browser, /extraViews\.length \?/)
 })
 
 test('filesystem header expands the shared left sidebar and toggles the right inspector', () => {

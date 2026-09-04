@@ -2068,7 +2068,6 @@ export function CollectionBrowser({
                 />
               ) : null}
             </div>
-            {extraViews.length ? (
             <div className="tasks-sort-wrap" ref={modeRef}>
               <button
                 type="button"
@@ -2098,7 +2097,6 @@ export function CollectionBrowser({
                 </div>
               ) : null}
             </div>
-            ) : null}
             <div className="tasks-sort-wrap" ref={sortRef}>
               <button
                 type="button"
