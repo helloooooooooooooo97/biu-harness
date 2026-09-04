@@ -4291,7 +4291,7 @@ body {
 
 .chat-outline {
   position: absolute;
-  left: 8px;
+  left: 20px;
   top: 50%;
   z-index: 8;
   display: flex;

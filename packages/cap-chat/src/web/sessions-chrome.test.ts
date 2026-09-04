@@ -25,7 +25,7 @@ test('session table uses mascot as the standalone icon property, title is just t
   assert.match(src, /createPortal/)
   assert.match(src, /fsdb-right/)
   assert.match(src, /inset:0/)
-  assert.match(src, /left:8px/)
+  assert.match(src, /left:20px/)
   assert.match(src, /top:50%/)
   assert.doesNotMatch(src, /50cqh/)
   assert.doesNotMatch(src, /container-type/)
