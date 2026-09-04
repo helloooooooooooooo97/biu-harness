@@ -54,7 +54,7 @@ test('refresh does not send unfinished plugin routes home', () => {
   assert.match(shell, /waitingOnNav/)
 })
 
-test('center stage keeps modules mounted and crossfades', () => {
+test('center stage keeps modules mounted without a page fade', () => {
   const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
   const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
   assert.match(shell, /className="app-stage"/)
@@ -71,7 +71,9 @@ test('center stage keeps modules mounted and crossfades', () => {
   assert.doesNotMatch(shell, /if \(moduleId !== activeId\) return null/)
   assert.match(css, /\.app-stage-pane\.is-active[\s\S]*?opacity:\s*1/)
   assert.match(css, /\.app-stage-pane[\s\S]*?content-visibility:\s*hidden/)
-  assert.match(css, /\.app-pane-in\s*\{[^}]*animation:\s*app-pane-in/s)
+  assert.doesNotMatch(css, /\.app-stage-pane\s*\{[^}]*transition:\s*[\s\S]*opacity 220ms/s)
+  assert.doesNotMatch(css, /@keyframes app-pane-in/)
+  assert.doesNotMatch(css, /\.app-pane-in\s*\{[^}]*animation:\s*app-pane-in/s)
 })
 
 test('left sidebar keeps chat and database lists mounted and folds smoothly', () => {
