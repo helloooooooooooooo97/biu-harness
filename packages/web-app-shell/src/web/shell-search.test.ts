@@ -1,6 +1,8 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { SEARCH_SCOPES, openSearchHit, searchCollection, searchHref } from './shell-search.tsx'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { SEARCH_SCOPES, openSearchHit, searchCollection, searchHref, tagsFromRecord } from './shell-search.tsx'
 
 test('search opens inspector collections, not chat or database routes', () => {
   assert.equal(searchCollection('session'), '/sessions')
@@ -36,4 +38,21 @@ test('searchHref opens the left main pane by changing the route', () => {
   assert.equal(searchHref({ kind: 'task', id: 't1' }), '/database/tasks/record/t1')
   assert.equal(searchHref({ kind: 'plugin', id: 'g1' }), '/database/plugins/record/g1')
   assert.equal(searchHref({ kind: 'facet', id: 'f1' }), '/database/facets/record/f1')
+})
+
+test('search hits collect tags from tags, facet.tags, and config.tags', () => {
+  assert.deepEqual(tagsFromRecord({ tags: ['a', 'b'] }), ['a', 'b'])
+  assert.deepEqual(tagsFromRecord({ facet: { tags: ['dp'] } }), ['dp'])
+  assert.deepEqual(tagsFromRecord({ config: { tags: ['host-ui'] } }), ['host-ui'])
+  assert.deepEqual(tagsFromRecord({ tags: ['a'], facet: { tags: ['a', 'b'] } }), ['a', 'b'])
+})
+
+test('session task page plugin hits render a kind tag on the right', () => {
+  const src = readFileSync(resolve(import.meta.dirname, './shell-search.tsx'), 'utf8')
+  assert.match(src, /HitKindTag/)
+  assert.match(src, /HitRecordTags/)
+  assert.match(src, /item\.kind === 'session' \|\| item\.kind === 'task' \|\| item\.kind === 'page' \|\| item\.kind === 'plugin'/)
+  assert.match(src, /shell-search-hit-tags/)
+  const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
+  assert.match(css, /\.shell-search-hit-tags\s*\{[^}]*margin-left:\s*auto/s)
 })
