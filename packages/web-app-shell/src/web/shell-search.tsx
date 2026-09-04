@@ -38,6 +38,16 @@ export const SEARCH_SCOPES: Array<{
 const PER_KIND = 8
 const DEBOUNCE_MS = 160
 const NAV_ACTION_IDS = new Set(['open-split', 'open-page'])
+/** Agent-only / internal actions that must never appear on search hits. */
+const SEARCH_SKIP_ACTION_IDS = new Set([
+  'report',
+  'progress',
+  'inspect',
+  'compact',
+  'clear',
+  'retrieve',
+  'status',
+])
 
 export type SearchAction = {
   id: string
@@ -152,6 +162,7 @@ export function visibleRowActions(actions: SearchAction[] | undefined, record: R
   return (actions ?? []).filter((action) => {
     if (!actionVisibleToUser(action)) return false
     if (NAV_ACTION_IDS.has(action.id)) return false
+    if (SEARCH_SKIP_ACTION_IDS.has(action.id)) return false
     const places = action.placement ?? ['row', 'detail']
     return places.includes('row') && matchActionWhen(row, action.when)
   })
@@ -262,7 +273,7 @@ function HitActions({
   hit: SearchHit
   onRan: () => void
 }) {
-  const actions = visibleRowActions(hit.actions, hit.record ?? { id: hit.id })
+  const actions = visibleRowActions(hit.actions, hit.record ?? { id: hit.id }).filter((action) => actionGlyph(action.id))
   const [busyId, setBusyId] = useState<string | null>(null)
   if (!actions.length) return null
   const run = async (action: SearchAction) => {
@@ -299,7 +310,7 @@ function HitActions({
             void run(action)
           }}
         >
-          {actionGlyph(action.id) ?? action.label}
+          {actionGlyph(action.id)}
         </button>
       ))}
     </span>

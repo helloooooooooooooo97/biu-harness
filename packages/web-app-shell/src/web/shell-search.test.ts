@@ -123,7 +123,7 @@ test('facet search scope is named 合集 with stack icon', () => {
 test('search does not draw agent progress as a hit action', () => {
   const src = readFileSync(resolve(import.meta.dirname, './shell-search.tsx'), 'utf8')
   assert.match(src, /actionVisibleToUser\(action\)/)
-  assert.doesNotMatch(src, /id === 'progress' \|\| id === 'report'/)
+  assert.match(src, /SEARCH_SKIP_ACTION_IDS/)
   assert.match(src, /id === 'deliver'\) return <PaperAirplaneIcon/)
 })
 
@@ -138,5 +138,18 @@ test('search hits hide agent-only actions', () => {
       { id: 's1' },
     ).map((item) => item.id),
     ['start'],
+  )
+})
+
+test('search hits never show report even if placement is row', () => {
+  assert.deepEqual(
+    visibleRowActions(
+      [
+        { id: 'report', label: '汇报进度', placement: ['row', 'detail'], for: 'both' },
+        { id: 'deliver', label: '派工', placement: ['row', 'detail'], for: 'both' },
+      ],
+      { id: 't1' },
+    ).map((item) => item.id),
+    ['deliver'],
   )
 })
