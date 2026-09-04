@@ -25,7 +25,7 @@ import {
 } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import type { CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
-import { asAttachment, asHttpHref, asImageSrc } from '@biu/type-file-system'
+import { actionVisibleToUser, asAttachment, asHttpHref, asImageSrc } from '@biu/type-file-system'
 import type { CollectionViewType } from '@biu/type-file-system/ui'
 import {
   asStringList,
@@ -395,6 +395,7 @@ export function FieldEditor({
 
 export function visibleActions(schema: CollectionSchema | undefined, row: DbRecord, place: 'row' | 'detail') {
   return (schema?.actions ?? []).filter((action) => {
+    if (!actionVisibleToUser(action)) return false
     const places = action.placement ?? ['row', 'detail']
     return places.includes(place) && matchActionWhen(row, action.when)
   })

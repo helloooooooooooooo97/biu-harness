@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import type { CollectionSchema } from '@biu/type-file-system'
 import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
 import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, matchesFilters, parentFieldKey, readFacetFlatValue, resolveFieldType, sortRows, uniqueValues } from './fields'
+import { visibleActions } from './fsdb-cells.tsx'
 
 test('isViewModeId accepts builtin and custom slugs', () => {
   assert.equal(isViewModeId('table'), true)
@@ -81,6 +82,21 @@ test('filters and sort follow declared column types', () => {
 test('matchActionWhen uses field equality including booleans', () => {
   assert.equal(matchActionWhen({ id: '1', enabled: false }, { enabled: false }), true)
   assert.equal(matchActionWhen({ id: '1', enabled: true }, { enabled: false }), false)
+})
+
+test('visibleActions hides agent-only actions from the page', () => {
+  const schema: CollectionSchema = {
+    fields: { ...REQUIRED_RECORD_FIELDS },
+    actions: [
+      { id: 'run', label: '运行' },
+      { id: 'progress', label: '进度', for: 'agent' },
+      { id: 'edit', label: '编辑', for: 'user' },
+    ],
+  }
+  assert.deepEqual(
+    visibleActions(schema, { id: '1' }, 'row').map((item) => item.id),
+    ['run', 'edit'],
+  )
 })
 
 test('default columns skip id and timestamps unless schema.columns lists them; title stays first', () => {

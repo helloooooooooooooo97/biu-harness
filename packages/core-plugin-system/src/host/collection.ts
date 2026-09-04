@@ -179,6 +179,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       {
         id: 'create',
         label: '直写安装',
+        for: 'agent',
         placement: [],
         allowMissing: true,
         parameters: {
@@ -192,6 +193,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       {
         id: 'sandbox',
         label: '开沙箱',
+        for: 'agent',
         placement: [],
         allowMissing: true,
         parameters: {
