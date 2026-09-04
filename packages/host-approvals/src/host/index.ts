@@ -15,8 +15,7 @@ export class ApprovalsService extends Service {
   constructor(ctx: Context) {
     super(ctx, 'approvals')
     ctx.tools.guard(async (req) => {
-      if (this.mode === 'auto') return req
-      if (this.mode === 'hold' && !sensitive(req.name)) return req
+      if (!needsApproval(req.name, this.mode)) return req
       const id = crypto.randomUUID()
       const allow = await new Promise<boolean>((resolve) => {
         const timer = setTimeout(() => {
@@ -47,6 +46,12 @@ export class ApprovalsService extends Service {
     item.resolve(allow)
     return { ok: true }
   }
+}
+
+function needsApproval(name: string, mode: 'auto' | 'hold') {
+  if (name === 'db_delete') return true
+  if (mode === 'auto') return false
+  return sensitive(name)
 }
 
 function sensitive(name: string) {
