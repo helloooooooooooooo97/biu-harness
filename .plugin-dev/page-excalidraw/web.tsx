@@ -131,7 +131,7 @@ function placeHost(host: Host, slot: HTMLElement | null) {
   if (host.expanded) {
     if (el.parentElement !== document.body) document.body.appendChild(el)
     el.style.cssText =
-      'position:fixed;top:36px;left:0;right:0;bottom:0;width:auto;height:auto;z-index:9990;pointer-events:auto;visibility:visible;overflow:hidden;isolation:isolate;background:var(--dsw-bg,#191919)'
+      'position:fixed;top:36px;left:0;right:0;bottom:0;width:auto;height:auto;z-index:9992;pointer-events:auto;visibility:visible;overflow:hidden;isolation:isolate;background:var(--dsw-bg,#191919)'
     return
   }
   if (!slot?.isConnected) {
@@ -442,16 +442,23 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
       <div className="h-[280px]" ref={slotRef} style={{ position: 'relative' }} />
       {expanded
         ? createPortal(
-            <div className="fixed inset-0 flex flex-col bg-[var(--dsw-bg,#191919)]" style={{ zIndex: 9991, pointerEvents: 'none' }}>
-              <div style={{ pointerEvents: 'auto' }}>
-                <BoardBar
-                  file={file}
-                  expanded={expanded}
-                  writable={props.writable}
-                  onToggle={() => setExpanded(false)}
-                  onRename={onRename}
-                />
-              </div>
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                zIndex: 9993,
+                pointerEvents: 'auto',
+              }}
+            >
+              <BoardBar
+                file={file}
+                expanded={expanded}
+                writable={props.writable}
+                onToggle={() => setExpanded(false)}
+                onRename={onRename}
+              />
             </div>,
             document.body,
           )
