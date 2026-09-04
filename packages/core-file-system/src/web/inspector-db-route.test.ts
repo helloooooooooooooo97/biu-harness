@@ -5,6 +5,7 @@ import {
   getInspectorDbPath,
   isInspectorDatabasePath,
   setInspectorDbPath,
+  resetInspectorDbPathMemory,
   showRecordInInspector,
   showInInspector,
   applyDatabaseReveal,
@@ -36,6 +37,17 @@ test('each inspector database pane keeps its own path', () => {
   setInspectorDbPath('database::b', '/database/tasks')
   assert.equal(getInspectorDbPath('database::a'), '/database/pages')
   assert.equal(getInspectorDbPath('database::b'), '/database/tasks')
+})
+
+test('inspector pane remembers view and record after a memory reset', () => {
+  const pane = 'database:/sessions'
+  setInspectorDbPath(pane, '/database/sessions/view/mine')
+  setInspectorDbPath(pane, '/database/sessions/record/s1?view=mine')
+  resetInspectorDbPathMemory()
+  assert.equal(getInspectorDbPath(pane), '/database/sessions/record/s1?view=mine')
+  setInspectorDbPath(pane, '/database/sessions/view/board-1')
+  resetInspectorDbPathMemory()
+  assert.equal(getInspectorDbPath(pane), '/database/sessions/view/board-1')
 })
 
 test('window reveal event opens the inspector record path', async () => {
