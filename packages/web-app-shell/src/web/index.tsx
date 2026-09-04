@@ -39,12 +39,10 @@ import { ChatSidebar } from './chat-sidebar.tsx'
 import { ShellSidebarFrame } from './shell-sidebar-frame.tsx'
 import { ChatSessionTitle } from './chat-session-title.tsx'
 import { BrandCornerMascot, DanceStage } from '@biu/public-mascot'
-import type { DockService } from '@biu/core-dock'
 import { SessionInspector } from './session-inspector.tsx'
 import { SessionConfigDialog } from '@biu/web-session-view/dialog'
 import { FolderGlyph } from '@biu/web-session-view/folder-glyph'
 import { OverlayChatWindow } from './overlay-window.tsx'
-import { ShellDockNav } from './shell-dock-nav.tsx'
 import { ShellSettingsUpdate } from './shell-chrome.tsx'
 import { ShellSearchPanel } from './shell-search.tsx'
 import { useSlotEntries } from '@biu/web-slots'
@@ -59,7 +57,7 @@ import {
 } from '@heroicons/react/16/solid'
 
 export const name = 'shell'
-export const inject = ['slots', 'dock', 'snapshot', 'sessionView', 'projectView', 'appModules']
+export const inject = ['slots', 'snapshot', 'sessionView', 'projectView', 'appModules']
 
 function DockSessionMascot({
   useSessionView,
@@ -223,7 +221,6 @@ function Shell(props: SlotProps) {
   const sessionView = props.sessionView as SessionViewService
   const projectView = props.projectView as ProjectViewService
   const slots = props.slots as SlotsService
-  const dock = props.dock as DockService
   const navigate = useNavigate()
   const location = useLocation()
   const modules = useAppModules()
@@ -762,13 +759,6 @@ function Shell(props: SlotProps) {
 
       <DanceStage sessions={danceSessions} on={dancing} shape={danceShape} />
       <ShellDockPins useSessionView={useSessionView} />
-      <ShellDockNav
-        dock={dock}
-        activeId={activeModule}
-        inspectorOpen={inspectorVisible}
-        sessionId={sessionId}
-        collections={collections}
-      />
 
       <main className="app-stage">
         <div
@@ -902,7 +892,6 @@ export function apply(ctx: Context) {
     projectView: ctx.projectView as ProjectViewService,
     useProjectView: bindProjectView(ctx.projectView as ProjectViewService),
     slots: ctx.slots as SlotsService,
-    dock: ctx.dock as DockService,
     appModules: ctx.appModules as AppModulesService,
   }
   ctx.slots.fill('root', Shell, {

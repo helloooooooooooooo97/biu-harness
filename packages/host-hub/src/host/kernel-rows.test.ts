@@ -24,7 +24,6 @@ test('kernel rows cover host and web tables without overlapping catalog forks', 
   assert.ok(webRows.every((row) => row.layer === 'web' && row.togglable === false && row.enabled === true))
   assert.ok(hostRows.some((row) => row.id === 'shell'))
   assert.ok(webRows.some((row) => row.id === 'shell'))
-  assert.ok(webRows.some((row) => row.id === 'dock'))
   assert.equal(catalog.length, raw.plugins.length)
   assert.ok(catalog.every((row) => row.layer === 'capability'))
 })

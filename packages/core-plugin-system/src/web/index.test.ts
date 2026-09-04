@@ -2,7 +2,6 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { Context, Service } from 'cordis'
 import * as slots from '@biu/web-slots'
-import * as dock from '@biu/core-dock'
 import type { CollectionChrome, CollectionViewType, DatabaseUi } from '@biu/type-file-system/ui'
 import * as plugins2Ui from './index.tsx'
 
@@ -32,7 +31,6 @@ class FakeDatabaseUi extends Service implements DatabaseUi {
 test('plugin system web declares extras so store plugins can mount windows', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
-  await ctx.plugin(dock)
   new FakeDatabaseUi(ctx)
   ctx.slots.fill('root', () => null, {
     children: {
@@ -47,7 +45,6 @@ test('plugin system web declares extras so store plugins can mount windows', asy
 test('plugin system web passes name/tags/action chrome into databaseUi', async () => {
   const ctx = new Context()
   await ctx.plugin(slots)
-  await ctx.plugin(dock)
   const ui = new FakeDatabaseUi(ctx)
   ctx.slots.fill('root', () => null, {
     children: {
@@ -118,9 +115,9 @@ test('plugin window hover controls sit on the right without a title bar', async 
   assert.doesNotMatch(src, /bg-\[#202020\]/)
   assert.doesNotMatch(src, /bg-\[#ff5f57\]/)
   assert.doesNotMatch(src, /bottom-4 left-1\/2/)
-  assert.match(src, /dock\.register/)
-  assert.match(src, /PuzzlePieceIcon/)
-  assert.match(src, /ExtraIcon/)
+  assert.doesNotMatch(src, /dock\.register/)
+  assert.doesNotMatch(src, /PuzzlePieceIcon/)
+  assert.doesNotMatch(src, /ExtraIcon/)
 })
 
 test('bundled store plugins register their own dock icons', async () => {

@@ -262,7 +262,7 @@ export function overlayStillHoldsPointer(
   if (related instanceof Node && root.contains(related)) return true
   if (typeof clientX === 'number' && typeof clientY === 'number') {
     const hit = document.elementFromPoint(clientX, clientY)
-    if (hit && (root.contains(hit) || hit.closest('[data-testid="chat-overlay-panel"]') || hit.closest('[data-os-dock]'))) return true
+    if (hit && (root.contains(hit) || hit.closest('[data-testid="chat-overlay-panel"]'))) return true
   }
   return false
 }

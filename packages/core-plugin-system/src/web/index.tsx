@@ -3,9 +3,8 @@ import type { Context } from 'cordis'
 import { useSlotEntries, type SlotsService } from '@biu/web-slots'
 import type { SlotProps } from '@biu/type-slots'
 
-import { XMarkIcon, MinusIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon, PuzzlePieceIcon, Bars2Icon } from '@heroicons/react/16/solid'
+import { XMarkIcon, MinusIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon, Bars2Icon } from '@heroicons/react/16/solid'
 import type { DatabaseUi } from '@biu/type-file-system/ui'
-import type { DockService } from '@biu/core-dock'
 import { pluginsChrome } from './chrome.tsx'
 import {
   WIN_CHROME_H,
@@ -18,7 +17,7 @@ import {
 } from '../shell.ts'
 
 export const name = 'core-plugin-system-ui'
-export const inject = ['slots', 'databaseUi', 'dock']
+export const inject = ['slots', 'databaseUi']
 
 type StoreListing = { id: string; name: string; shell?: StoreShell; headless?: boolean }
 
@@ -290,7 +289,6 @@ function PluginAppWindow({
 
 function PluginExtrasLayer(props: SlotProps) {
   const slots = props.slots as SlotsService
-  const dock = props.dock as DockService
   const extras = useSlotEntries(slots, 'plugin-store-extras')
   const [listings, setListings] = useState<StoreListing[]>([])
   const [minimized, setMinimized] = useState<Record<string, boolean>>({})
@@ -356,51 +354,6 @@ function PluginExtrasLayer(props: SlotProps) {
     })
   }, [sorted.map((entry) => entry.id).join('|')])
 
-  useEffect(() => {
-    const live = new Set<string>()
-    for (const entry of sorted) {
-      if (dismissed[entry.id]) continue
-      const extraProps = entry.props?.() ?? {}
-      const listing = resolveListing(entry.id, listings)
-      if (listingIsHeadless(listing) || extraProps.headless === true) continue
-      const title = listing?.name ?? entry.id
-      const dockId = `plugin:${entry.id}`
-      live.add(dockId)
-      const ExtraIcon = extraProps.Icon as ((props: { className?: string }) => ReactNode) | undefined
-      const Icon = ExtraIcon
-        ? () => <ExtraIcon className="size-5" />
-        : () => <PuzzlePieceIcon className="size-5" aria-hidden />
-      dock.register({
-        id: dockId,
-        title,
-        group: 'tray',
-        kind: 'plugin',
-        pinned: false,
-        order: 300 + entry.order,
-        Icon,
-        onOpen: () => {
-          setMinimized((cur) => {
-            const next = { ...cur }
-            delete next[entry.id]
-            return next
-          })
-        },
-        onClose: () => {
-          const listingNow = resolveListing(entry.id, listings)
-          dismissAndStop(entry.id, listingNow?.id ?? entry.id)
-        },
-      })
-      dock.patch(dockId, {
-        running: true,
-        minimized: Boolean(minimized[entry.id]),
-        title,
-      })
-    }
-    for (const app of dock.list()) {
-      if (app.kind === 'plugin' && !live.has(app.id)) dock.unregister(app.id)
-    }
-  }, [dock, listings, minimized, dismissed, sorted.map((entry) => entry.id).join('|')])
-
   if (extras.length === 0) return null
   return (
     <div className="pointer-events-none fixed inset-0 z-20" data-testid="plugin-store-extras">
@@ -425,7 +378,6 @@ function PluginExtrasLayer(props: SlotProps) {
             onMinimize={() => {
               if (fullscreenId === entry.id) setFullscreenId(null)
               setMinimized((cur) => ({ ...cur, [entry.id]: true }))
-              dock.minimize(`plugin:${entry.id}`)
             }}
             onToggleFullscreen={() => {
               if (!shell.resizable) return
@@ -448,7 +400,7 @@ export function apply(ctx: Context) {
   slots.place('root-overlays', PluginExtrasLayer, {
     key: 'plugin-store-extras-layer',
     order: 20,
-    props: () => ({ slots, dock: ctx.dock }),
+    props: () => ({ slots }),
     children: {
       'plugin-store-extras': { kind: 'list' },
     },
