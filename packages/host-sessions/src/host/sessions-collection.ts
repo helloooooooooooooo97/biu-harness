@@ -133,7 +133,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       route: '/db-sessions',
       title: '会话',
       inspector: true,
-      blurb: '会话元数据，不是聊天记录。列出会话 db_list /sessions；改标题/置顶/标签/emoji/合集/模型/服务商/系统提示/模式/额外工具/项目路径用 db_update /sessions/<id>。不要往这张表写对话正文。发消息、取消、清空走会话工具而不是 db_*。下一步（均 db_action /sessions/<id>）：inspect 看近况与最近消息；progress 轮询当前回合（可带 afterSeq）；status 看 token 是否超预算；超预算则 compact（先不带 text 拿指南，再带 args.text 提交摘要）；找回被压缩细节用 retrieve（必填 query）。新建会话看 caps.create，有则 db_create。',
+      blurb: '这张表的每一行是一个会话，也就是一个代理（agent）。一个代理 = 一个 session，id 就是会话 id。用户说「再开一个 agent / 叫另一个代理去做」= 在本表 db_create 新建一行（caps.create 为真时），不要去建插件、不要去建任务。你自己也是其中一个会话。列表 db_list /sessions。改标题/置顶/标签/emoji/合集/模型/服务商/系统提示/模式/额外工具/项目路径：db_update /sessions/<id>。聊天记录不在这张表，不能用 db_update 写对话。本表动作（db_action path=/sessions/<会话id> action=…）：inspect=看这个代理的配置和最近几句对话（可选 args.limit）；progress=看它当前回合忙不忙、在用什么工具、刚说了什么（轮询时把上次返回的 newestSeq 当作 afterSeq）；status=看它上下文 token 用了多少；compact=压缩它的旧上下文（第一次不传 text 会返回该怎么写摘要，第二次把摘要放进 args.text）；clear=丢掉摘要、硬切压缩点；retrieve=按关键词找回被压缩的旧内容（必填 args.query）。',
       order: 18,
       icon: 'chat-bubble',
     },
@@ -216,7 +216,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         for: 'agent',
         placement: [],
         description:
-          '快照这条会话：标题、配置、项目、是否 busy、最近若干条 user/assistant 消息。args.limit 默认 12、最大 40。要跟当前回合用 progress，不要反复 inspect 刷屏。',
+          '看这一个代理（这一行 session）的配置和最近几句对话。args.limit 默认 12、最大 40。要跟它当前回合用 progress。',
         parameters: {
           type: 'object',
           properties: { limit: { type: 'number', description: '最近消息条数，默认 12，最大 40' } },
@@ -244,7 +244,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         for: 'agent',
         placement: [],
         description:
-          '看当前回合：running/idle、turn/step、lastTool、截断后的 assistantText、newestSeq。轮询时把上次 newestSeq 当作 afterSeq，避免重复读旧输出。textLimit 默认 600、最大 2000。',
+          '看这一个代理当前回合：忙不忙、第几 turn、在用什么工具、刚说了什么。轮询时把上次 newestSeq 当作 afterSeq。',
         parameters: {
           type: 'object',
           properties: {
@@ -272,7 +272,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         for: 'agent',
         placement: [],
         description:
-          '压缩会话前缀。第一次不要传 text，返回指南；按指南写摘要后再调用并传 args.text。提交后本次 db_action 即新前缀。旧细节用 retrieve，不要再 compact 一遍当搜索。',
+          '压缩这一个代理的旧上下文。第一次不要传 text，返回该怎么写摘要；再调用并把摘要放进 args.text。旧细节用 retrieve。',
         parameters: {
           type: 'object',
           properties: {
@@ -308,7 +308,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         for: 'agent',
         placement: [],
         description:
-          '丢掉摘要、直接把当前 db_action 当成压缩点。比 compact 更狠。旧细节仍可用 retrieve。不要用这个代替发消息。',
+          '丢掉这一个代理的摘要，硬切压缩点。比 compact 更狠。旧细节仍可用 retrieve。',
         run: async (id) => {
           if (!sessions.require) throw new Error('session clear unavailable')
           await sessions.require(id)
@@ -325,7 +325,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         for: 'agent',
         placement: [],
         description:
-          '按关键词从已压缩/历史事件里找回片段。必填 args.query；limit 默认 5、最大 10。不是搜索所有会话，只搜这一条。',
+          '按关键词从这一个代理被压缩的历史里找回片段。必填 args.query。只搜这一行 session，不是所有代理。',
         parameters: {
           type: 'object',
           properties: {
@@ -356,7 +356,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         for: 'agent',
         placement: [],
         description:
-          '看最近一次 LLM usage 相对 CTX_BUDGET。overBudget 或接近上限时再 compact。没有 usage 数据时不要误判该压。',
+          '看这一个代理最近一次模型调用用了多少 token。超预算再 compact。',
         run: async (id) => {
           if (!sessions.require) throw new Error('session status unavailable')
           const events = (await sessions.require(id)).events

@@ -281,7 +281,7 @@ export function viewsCollection(store: SavedViewsStore, tables: () => Collection
       route: '/db-views',
       title: '视图',
       inspector: true,
-      blurb: '各表已保存的视图（筛选/排序/呈现），不是旧的 /api/task-views。列视图 db_list /views。新建 db_create /views records=[{title, tablePath, mode}]，tablePath 如 /tasks，mode 为 table / board / cards / queue（自定义呈现 id 也可以）。改筛选 filters（JSON 字符串）、列 columns、排序 sortField/sortDir、搜索 query、分组 groupBy、每页 pageSize 用 db_update。内置「全部 xx」只读。打开某表某视图：检查器按 tablePath + viewId 跳，不要自己拼过时 URL。',
+      blurb: '各表已保存的视图（筛选/排序/呈现）。列表 db_list /views。新建 db_create /views records=[{title, tablePath, mode}]，tablePath 如 /tasks，mode 为 table / board / cards / queue。改筛选 filters（JSON 字符串）、列 columns、排序 sortField/sortDir、搜索 query、分组 groupBy、每页 pageSize 用 db_update。内置「全部 xx」只读。本表没有 db_action。',
       order: 17,
       icon: 'eye',
     },

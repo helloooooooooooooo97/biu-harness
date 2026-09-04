@@ -110,7 +110,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       route: '/plugins',
       title: '插件',
       inspector: true,
-      blurb: '已安装（.plugin）和沙箱（.plugin-dev）同一张表。列表看 db_list /plugins。介绍正文是 README.md：读/写用 db_content /plugins/<id>，不要用 db_update 改 name/blurb 等只读列（合集 facet/tags 仍可 db_update）。records.create=false，新建不要 db_create。下一步：小插件 db_action create（args 带 name + hostJs/webJs，立刻进 .plugin）；多文件先 sandbox 再在 .plugin-dev/<id> 写代码，最后 pack 才进已安装。运行/停止 start/stop（when 看 installed+running）。卸载 uninstall。窗口尺寸看扁平列 shellWidth/shellHeight，没有 listing.shell。',
+      blurb: '这是插件（可安装的小程序），不是代理。用户说「再开一个 agent」请去 /sessions db_create，不要在这张表 create。已安装（.plugin）和沙箱（.plugin-dev）同一张表。列表 db_list /plugins。README 用 db_content /plugins/<id>。name 等只读（facet/tags 仍可写）。不能 db_create。窗口尺寸看 shellWidth/shellHeight。本表动作（db_action path=/plugins/<插件id> action=…）：create=把小插件源码写进 .plugin（args：name，以及 hostJs/webJs；记录可以还不存在）；sandbox=只建 .plugin-dev/<id>/，多文件写完必须再 pack；pack=把沙箱打进 .plugin（when：sandbox）；start=打开已安装插件窗口（when：installed 且未 running）；stop=关掉运行中的插件（when：installed 且 running）；uninstall=删除 .plugin/<id>/（沙箱还在则这行还在）。',
       order: 30,
       icon: 'puzzle-piece',
     },
