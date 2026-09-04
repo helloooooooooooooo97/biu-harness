@@ -43,7 +43,7 @@ if (typeof document !== 'undefined') {
 .tasks-graph-status.is-done{color:#2f7d4c}
 .tasks-graph-status.is-failed{color:var(--dsw-danger)}
 .tasks-proj-tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:14px;font-weight:600;color:var(--dsw-label-2);background:color-mix(in srgb,var(--dsw-border) 55%,transparent);white-space:nowrap}
-.tasks-tags{display:inline-flex;flex-wrap:wrap;gap:4px;vertical-align:middle;align-items:center}
+.tasks-queue-assignee{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;color:var(--dsw-label-2)}
 .tasks-status-cell{display:inline-flex;align-items:center;gap:5px;min-width:0}
 .tasks-actor{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%}
 .tasks-actor.is-empty{color:var(--dsw-label-3)}
@@ -77,8 +77,6 @@ if (typeof document !== 'undefined') {
 .tasks-chip-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tasks-cell-input{min-width:0;width:100%;border:0;border-radius:6px;padding:3px 6px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;font-weight:600}
 .tasks-cell-input:hover,.tasks-cell-input:focus{background:var(--dsw-hover);outline:none}
-.tasks-tag-input{min-width:64px;max-width:110px;border:0;border-radius:999px;padding:1px 8px;background:transparent;color:var(--dsw-label);font:inherit;font-size:13px}
-.tasks-tag-input:focus{background:var(--dsw-hover);outline:none}
 .tasks-due-edit{display:inline-flex;align-items:center;gap:4px;min-width:0;width:100%;color:var(--dsw-label-2)}
 .tasks-due-edit.is-overdue{color:var(--dsw-danger)}
 .tasks-field-input, .tasks-field-textarea { width:100%; border:1px solid color-mix(in srgb, var(--dsw-border) 85%, transparent); border-radius:7px; padding:7px 10px; background:var(--dsw-input); color:var(--dsw-label); font:inherit; font-size:14px; outline:none; resize:vertical; transition:border-color .12s, box-shadow .12s; }
