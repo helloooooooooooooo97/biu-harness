@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from 'cordis'
-import { buildDeliverText, coerceAssigneeArg, computeBlocked, computeBlockedBy, computeNextTriggerAt, computeTurnUsage, defaultTrigger, depsSatisfied, deriveExecution, deriveExecutionFromReports, MAX_REPORT_PROMPTS, normalizeTrigger, normalizeViewConfig, parseCron, reportBackToCreator, shouldPromptProgress, sumReportUsage, TasksService } from './index.ts'
+import { buildDeliverText, coerceAssigneeArg, computeBlocked, computeBlockedBy, computeNextTriggerAt, computeTurnUsage, defaultTrigger, depsSatisfied, deriveExecution, deriveExecutionFromReports, MAX_REPORT_PROMPTS, normalizeTrigger, parseCron, reportBackToCreator, shouldPromptProgress, sumReportUsage, TasksService } from './index.ts'
 
 test('tasks sqlite crud and status move', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
@@ -735,78 +735,6 @@ test('trigger default state is idle and enabled=false (no auto-trigger for plain
     // source=null（未给 trigger）→ 自动触发不开启
     assert.equal(plain.trigger?.enabled, false)
     assert.equal(plain.trigger?.state, 'idle')
-  } finally {
-    await rm(dir, { recursive: true, force: true })
-  }
-})
-
-// ==================== 视图系统（Notion 风格）测试 ====================
-
-test('task_views: no builtin layout views; create / update / delete', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'tasks-views-'))
-  const path = join(dir, 'tasks.sqlite')
-  try {
-    const ctx = new Context()
-    const tasks = new TasksService(ctx, path).open()
-    assert.equal(tasks.listTaskViews().length, 0)
-
-    const v = tasks.createTaskView({
-      name: '  我的视图  ',
-      config: {
-        mode: 'gantt' as never,
-        filter: { project: 'biu', tags: ['a', 'a', ' '], time: '99d' },
-        sort: { field: 'bogus' as never, dir: 'side' as never },
-      },
-    })
-    assert.equal(v.name, '我的视图')
-    assert.equal(v.isBuiltin, false)
-    assert.deepEqual(v.config, {
-      mode: 'table',
-      filter: { project: 'biu', tags: ['a'], time: '' },
-      sort: { field: 'status', dir: 'asc' },
-    })
-
-    const tasks2 = new TasksService(new Context(), path).open()
-    assert.equal(tasks2.listTaskViews().length, 1)
-
-    const updated = tasks.updateTaskView(v.id, {
-      name: '高优看板',
-      config: { mode: 'board', filter: { project: 'biu-harness', tags: ['前端'], time: '7d' }, sort: { field: 'due', dir: 'asc' } },
-    })
-    assert.equal(updated.name, '高优看板')
-    assert.deepEqual(updated.config.filter, { project: 'biu-harness', tags: ['前端'], time: '7d' })
-    assert.deepEqual(updated.config.sort, { field: 'due', dir: 'asc' })
-
-    assert.throws(() => tasks.updateTaskView('nope', { name: 'x' }), /unknown view/)
-    assert.equal(tasks.deleteTaskView('nope'), false)
-    assert.equal(tasks.deleteTaskView(v.id), true)
-    assert.equal(tasks.getTaskView(v.id), undefined)
-    assert.equal(tasks.listTaskViews().length, 0)
-  } finally {
-    await rm(dir, { recursive: true, force: true })
-  }
-})
-
-test('task_views: open drops leftover builtin layout rows', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'tasks-views-drop-'))
-  const path = join(dir, 'tasks.sqlite')
-  try {
-    new TasksService(new Context(), path).open()
-    const { DatabaseSync } = require('node:sqlite') as typeof import('node:sqlite')
-    const db = new DatabaseSync(path)
-    const ts = Date.now()
-    db.prepare(
-      'INSERT INTO task_views (id, name, config_json, is_builtin, created_at, updated_at) VALUES (?, ?, ?, 1, ?, ?)',
-    ).run(
-      'builtin-table',
-      '表格',
-      JSON.stringify({ mode: 'table', filter: { project: '', tags: [], time: '' }, sort: { field: 'status', dir: 'asc' } }),
-      ts,
-      ts,
-    )
-    db.close()
-    const again = new TasksService(new Context(), path).open()
-    assert.equal(again.listTaskViews().length, 0)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
