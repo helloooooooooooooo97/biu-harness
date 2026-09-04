@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { createPortal, flushSync } from 'react-dom'
+import { flushSync } from 'react-dom'
 import {
   ArrowDownIcon,
   ArrowPathIcon,
@@ -66,7 +66,8 @@ import { CrumbTrail } from './crumb-trail.tsx'
 import { pickDomAttrs, recordPickKind } from './pick-dom.ts'
 import { normalizeRecordEmoji, recordPreviewEmoji, crumbRecordLabel } from './sidebar-preview.ts'
 import { recordPreviewMascot, RecordMark } from './record-mark.tsx'
-import { normalizeSavedView, normalizePageSize, PAGE_SIZES, viewStateKey, type SavedView } from './saved-view.ts'
+import { normalizeSavedView, normalizePageSize, viewStateKey, type SavedView } from './saved-view.ts'
+import { PagerSizeControl } from './pager-size.tsx'
 import {
   actionIcon,
   ActionCell,
@@ -287,7 +288,6 @@ export function CollectionBrowser({
   const [filterOpen, setFilterOpen] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
-  const [pageSizeOpen, setPageSizeOpen] = useState(false)
   const [layoutOpen, setLayoutOpen] = useState(false)
   const [wrapCells, setWrapCells] = useState(!!initialView?.wrap)
   const [truncateCells, setTruncateCells] = useState(initialView?.truncate !== false)
@@ -327,10 +327,7 @@ export function CollectionBrowser({
   const filterRef = useRef<HTMLDivElement>(null)
   const configRef = useRef<HTMLDivElement>(null)
   const groupRef = useRef<HTMLDivElement>(null)
-  const pageSizeRef = useRef<HTMLDivElement>(null)
   const layoutRef = useRef<HTMLDivElement>(null)
-  const pageSizeMenuRef = useRef<HTMLDivElement>(null)
-  const [pageSizeMenuPos, setPageSizeMenuPos] = useState<{ right: number; bottom: number } | null>(null)
   const searchRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchExpanded = searchOpen || query.length > 0
@@ -404,7 +401,6 @@ export function CollectionBrowser({
         setFilterOpen(false)
         setConfigOpen(false)
         setGroupOpen(false)
-        setPageSizeOpen(false)
         setLayoutOpen(false)
       },
       (target) => {
@@ -419,8 +415,6 @@ export function CollectionBrowser({
             filterRef.current?.contains(target) ||
             configRef.current?.contains(target) ||
             groupRef.current?.contains(target) ||
-            pageSizeRef.current?.contains(target) ||
-            pageSizeMenuRef.current?.contains(target) ||
             layoutRef.current?.contains(target),
         )
       },
@@ -449,24 +443,11 @@ export function CollectionBrowser({
     }
   }, [sheet, views, searchExpanded])
 
-  useLayoutEffect(() => {
-    if (!pageSizeOpen) {
-      setPageSizeMenuPos(null)
-      return
-    }
-    const box = pageSizeRef.current?.getBoundingClientRect()
-    if (!box) return
-    setPageSizeMenuPos({
-      right: Math.max(8, window.innerWidth - box.right),
-      bottom: Math.max(8, window.innerHeight - box.top + 6),
-    })
-  }, [pageSizeOpen])
-
   useEffect(() => {
     if (searchOpen) searchInputRef.current?.focus()
   }, [searchOpen])
 
-  function toggleMenu(which: 'view' | 'mode' | 'sort' | 'columns' | 'filter' | 'config' | 'group' | 'pageSize' | 'layout') {
+  function toggleMenu(which: 'view' | 'mode' | 'sort' | 'columns' | 'filter' | 'config' | 'group' | 'layout') {
     setViewMenuOpen(which === 'view' && !viewMenuOpen)
     setModeMenuOpen(which === 'mode' && !modeMenuOpen)
     setSortMenuOpen(which === 'sort' && !sortMenuOpen)
@@ -474,7 +455,6 @@ export function CollectionBrowser({
     setFilterOpen(which === 'filter' && !filterOpen)
     setConfigOpen(which === 'config' && !configOpen)
     setGroupOpen(which === 'group' && !groupOpen)
-    setPageSizeOpen(which === 'pageSize' && !pageSizeOpen)
     setLayoutOpen(which === 'layout' && !layoutOpen)
   }
 
@@ -2529,47 +2509,7 @@ export function CollectionBrowser({
               <span>{total}</span>
             </span>
             <div className="fsdb-pager-nav">
-              <div className="fsdb-pager-size" ref={pageSizeRef}>
-                <button
-                  type="button"
-                  className={`tasks-icon-btn fsdb-pager-size-btn${pageSizeOpen ? ' is-active' : ''}`}
-                  aria-label={`每页 ${pageSize} 条`}
-                  aria-haspopup="menu"
-                  aria-expanded={pageSizeOpen}
-                  title={`每页 ${pageSize} 条`}
-                  onClick={() => toggleMenu('pageSize')}
-                >
-                  <Bars3BottomLeftIcon aria-hidden className="size-[14px]" />
-                  <span>{pageSize}</span>
-                </button>
-                {pageSizeOpen && pageSizeMenuPos
-                  ? createPortal(
-                      <div
-                        ref={pageSizeMenuRef}
-                        className="fsdb-pager-size-menu"
-                        role="menu"
-                        style={{ right: pageSizeMenuPos.right, bottom: pageSizeMenuPos.bottom }}
-                      >
-                        {PAGE_SIZES.map((size) => (
-                          <button
-                            key={size}
-                            type="button"
-                            className={`fsdb-pager-size-option${size === pageSize ? ' is-active' : ''}`}
-                            role="menuitem"
-                            onClick={() => {
-                              setPageSize(normalizePageSize(size))
-                              setPageSizeOpen(false)
-                            }}
-                          >
-                            {size}
-                            {size === pageSize ? <CheckIcon aria-hidden className="size-[14px]" /> : null}
-                          </button>
-                        ))}
-                      </div>,
-                      document.body,
-                    )
-                  : null}
-              </div>
+              <PagerSizeControl pageSize={pageSize} onChange={setPageSize} />
               <button
                 type="button"
                 className="tasks-icon-btn"
