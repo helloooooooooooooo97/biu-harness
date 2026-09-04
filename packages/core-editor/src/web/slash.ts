@@ -4,6 +4,7 @@ import { ReactRenderer } from '@tiptap/react'
 import Suggestion, { type SuggestionOptions } from '@tiptap/suggestion'
 import { SlashList } from './slash-list.tsx'
 import { placeSlashInWindow } from './slash-place.ts'
+import { slashMayOpen } from './editor-live.ts'
 import { getPageEditor, type SlashInsert } from './service.ts'
 
 export type SlashItem = {
@@ -173,7 +174,7 @@ function renderSlash() {
     onStart(props: { editor: Editor; mount: (el: HTMLElement) => () => void } & Record<string, unknown>) {
       cancelled = false
       pending = props
-      if (props.editor.isActive('codeBlock')) return
+      if (!slashMayOpen(props.editor)) return
       // TipTap 文档：事务是同步的，ReactRenderer 的 flushSync 不能落在 React effect 里。
       queueMicrotask(() => {
         if (cancelled || !pending) return
@@ -217,7 +218,7 @@ export const slashCommand = Extension.create({
     return {
       suggestion: {
         char: '/',
-        allow: ({ editor }) => !editor.isActive('codeBlock'),
+        allow: ({ editor }) => slashMayOpen(editor),
         items: ({ query }) => filterSlashItems(query),
         command: ({ editor, range, props }) => {
           props.command({ editor, range })

@@ -65,6 +65,7 @@ test('slash suggestion uses a fixed high stacking context', async () => {
   const { resolve } = await import('node:path')
   const src = await readFile(resolve(import.meta.dirname, './slash.ts'), 'utf8')
   const css = await readFile(resolve(import.meta.dirname, './style.ts'), 'utf8')
+  assert.match(src, /slashMayOpen\(editor\)/)
   assert.match(src, /strategy: 'fixed'/)
   assert.match(src, /keepInWindow/)
   assert.match(src, /placeSlashInWindow/)

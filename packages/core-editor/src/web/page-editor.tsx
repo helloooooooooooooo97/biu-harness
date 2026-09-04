@@ -5,6 +5,7 @@ import type { Editor } from '@tiptap/core'
 import { Selection } from '@tiptap/pm/state'
 import type { FsContentProps } from '@biu/type-file-system/ui'
 import { pageEditorExtensions } from './kit.ts'
+import { editorHostIsLive } from './editor-live.ts'
 import { FOCUS_RECORD_CONTENT, FOCUS_RECORD_TITLE, isDocStartSelection } from './title-content-nav.ts'
 
 function asMarkdown(value: unknown) {
@@ -130,7 +131,7 @@ export function PageEditor({ record, value, writable, onChange }: FsContentProps
   useEffect(() => {
     if (!editor || editor.isDestroyed) return
     const onFocus = () => {
-      if (editor.isDestroyed) return
+      if (editor.isDestroyed || !editorHostIsLive(editor)) return
       editor.commands.focus('start')
     }
     window.addEventListener(FOCUS_RECORD_CONTENT, onFocus)
