@@ -238,7 +238,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       {
         id: 'progress',
         label: '进度',
-        placement: ['row', 'detail'],
+        placement: [],
         parameters: {
           type: 'object',
           properties: {

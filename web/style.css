@@ -392,8 +392,6 @@ body {
 
 .shell-search-hit-action[data-dock-tip]::after {
   z-index: 80;
-  bottom: auto;
-  top: calc(100% + 6px);
 }
 
 .shell-search-hit-icon .fsdb-record-emoji {
