@@ -2967,7 +2967,7 @@ body {
 .dock-approval-card {
   border: 1px solid rgba(250, 204, 100, 0.35);
   border-radius: 12px;
-  background: rgba(250, 204, 100, 0.1);
+  background: #202020;
   padding: 8px 12px;
   font-size: var(--dsw-chat-ui-font-size);
   color: var(--dsw-label);
