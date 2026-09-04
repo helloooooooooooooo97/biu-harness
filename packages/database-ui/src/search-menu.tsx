@@ -24,8 +24,8 @@ const CSS = `
 .db-cell-select.is-field .db-cell-select-trigger{display:flex;justify-content:space-between;gap:6px;width:100%;max-width:none;min-height:28px;border:1px solid var(--dsw-border);border-radius:7px;padding:5px 8px;background:var(--dsw-input);color:var(--dsw-label)}
 .db-cell-select.is-field .db-cell-select-trigger:hover,.db-cell-select.is-field .db-cell-select-trigger[data-open]{background:var(--dsw-hover);filter:none}
 .db-cell-select.is-field .db-cell-select-trigger.is-empty{color:var(--dsw-label-3)}
-.db-cell-multi{position:relative;min-width:0}
-.db-cell-multi-box{display:flex;flex-wrap:wrap;align-items:center;gap:4px;width:100%;min-height:28px;border:0;border-radius:6px;padding:2px 4px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.db-cell-multi{position:relative;display:inline-flex;min-width:0;max-width:100%;vertical-align:middle}
+.db-cell-multi-box{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px;width:auto;max-width:100%;min-height:20px;border:0;border-radius:6px;padding:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .db-cell-multi-box:hover,.db-cell-multi-box[aria-expanded="true"]{background:var(--dsw-hover)}
 `
 
