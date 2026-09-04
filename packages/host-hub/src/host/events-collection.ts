@@ -41,7 +41,7 @@ export function eventsCollection(hub: HubLike): CollectionSpec {
       route: '/db-events',
       title: '事件',
       inspector: true,
-      blurb: 'Hub 已缓冲的 internal/dispatch 事件（最多约 80 条），只读。',
+      blurb: 'Hub 已缓冲的 internal/dispatch 事件，大约最多 80 条，只读。浏览用 db_list /events（可 q 搜 name）。禁止 create/update/delete/action。这不是任务队列也不是会话时间线；要旁观实时事件用事件日志插件，不要往这里写。',
       order: 19,
       icon: 'bolt',
     },

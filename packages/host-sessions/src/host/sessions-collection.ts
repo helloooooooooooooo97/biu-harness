@@ -133,7 +133,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       route: '/db-sessions',
       title: '会话',
       inspector: true,
-      blurb: '标题、置顶、标签、模型等元数据用 db_update；聊天记录不能从这张表改。进度/检查/压缩走 db_action。',
+      blurb: '会话元数据，不是聊天记录。列出会话 db_list /sessions；改标题/置顶/标签/emoji/合集/模型/服务商/系统提示/模式/额外工具/项目路径用 db_update /sessions/<id>。不要往这张表写对话正文。发消息、取消、清空走会话工具而不是 db_*。下一步（均 db_action /sessions/<id>）：inspect 看近况与最近消息；progress 轮询当前回合（可带 afterSeq）；status 看 token 是否超预算；超预算则 compact（先不带 text 拿指南，再带 args.text 提交摘要）；找回被压缩细节用 retrieve（必填 query）。新建会话看 caps.create，有则 db_create。',
       order: 18,
       icon: 'chat-bubble',
     },
@@ -215,9 +215,11 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         label: '检查',
         for: 'agent',
         placement: [],
+        description:
+          '快照这条会话：标题、配置、项目、是否 busy、最近若干条 user/assistant 消息。args.limit 默认 12、最大 40。要跟当前回合用 progress，不要反复 inspect 刷屏。',
         parameters: {
           type: 'object',
-          properties: { limit: { type: 'number' } },
+          properties: { limit: { type: 'number', description: '最近消息条数，默认 12，最大 40' } },
         },
         run: async (id, _record, args) => {
           if (!sessions.require) throw new Error('session inspect unavailable')
@@ -241,11 +243,13 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         label: '进度',
         for: 'agent',
         placement: [],
+        description:
+          '看当前回合：running/idle、turn/step、lastTool、截断后的 assistantText、newestSeq。轮询时把上次 newestSeq 当作 afterSeq，避免重复读旧输出。textLimit 默认 600、最大 2000。',
         parameters: {
           type: 'object',
           properties: {
-            afterSeq: { type: 'number' },
-            textLimit: { type: 'number' },
+            afterSeq: { type: 'number', description: '只看该 seq 之后的工具/助手输出；轮询时用上次 newestSeq' },
+            textLimit: { type: 'number', description: 'assistantText 字数上限，默认 600' },
           },
         },
         run: async (id, _record, args) => {
@@ -267,6 +271,8 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         label: '压缩上下文',
         for: 'agent',
         placement: [],
+        description:
+          '压缩会话前缀。第一次不要传 text，返回指南；按指南写摘要后再调用并传 args.text。提交后本次 db_action 即新前缀。旧细节用 retrieve，不要再 compact 一遍当搜索。',
         parameters: {
           type: 'object',
           properties: {
@@ -301,6 +307,8 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         label: '清空上下文',
         for: 'agent',
         placement: [],
+        description:
+          '丢掉摘要、直接把当前 db_action 当成压缩点。比 compact 更狠。旧细节仍可用 retrieve。不要用这个代替发消息。',
         run: async (id) => {
           if (!sessions.require) throw new Error('session clear unavailable')
           await sessions.require(id)
@@ -316,6 +324,8 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         label: '检索历史',
         for: 'agent',
         placement: [],
+        description:
+          '按关键词从已压缩/历史事件里找回片段。必填 args.query；limit 默认 5、最大 10。不是搜索所有会话，只搜这一条。',
         parameters: {
           type: 'object',
           properties: {
@@ -345,6 +355,8 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         label: '上下文占用',
         for: 'agent',
         placement: [],
+        description:
+          '看最近一次 LLM usage 相对 CTX_BUDGET。overBudget 或接近上限时再 compact。没有 usage 数据时不要误判该压。',
         run: async (id) => {
           if (!sessions.require) throw new Error('session status unavailable')
           const events = (await sessions.require(id)).events

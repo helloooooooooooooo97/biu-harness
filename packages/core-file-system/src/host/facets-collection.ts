@@ -77,7 +77,7 @@ export function facetsCollection(
       route: '/db-facets',
       title: '合集',
       inspector: true,
-      blurb: '工作区全局合集，谁都可以改属性和贴到任意表的记录上（含插件）。新建用 db_create，改名/属性用 db_update（fields 为属性 JSON 数组）。',
+      blurb: '工作区全局合集定义，可贴到任意表的记录（含插件）。列定义 db_list /facets；某合集已贴过哪些记录用 filter.facetId。新建 db_create /facets records=[{title}]（id 由标题 slug）。改名或属性 db_update /facets/<id>，fields 为 JSON 数组 [{key,type,label}]，不是嵌套对象。把合集贴到某条记录：db_update 那条记录的 facet 字段（所有表的 facet 都可写）。不要用单独 REST，也不要用 GET /api/db/facets?collect= 当收集列表。',
       order: 31,
       icon: 'rectangle-stack',
     },

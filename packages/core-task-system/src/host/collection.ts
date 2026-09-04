@@ -187,7 +187,7 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
       route: '/tasks',
       title: '任务',
       inspector: true,
-      blurb: 'Task table in File System; detail panes host scripts and progress reports.',
+      blurb: '可读写任务。列任务 db_list /tasks，读一行 db_read /tasks/<id>。改标题/状态/优先级/难度/项目/标签/截止用 db_update；执行人与创建人写会话 id 或人名（会收成 actor），派工前必须让 assignee 带上 sessionId。新建 db_create，删除 db_delete。描述正文走 db_content（字段 description），不要塞进 notes。下一步：派人执行用 db_action deliver（可选 args.text，wait 默认 true）；执行会话汇报用 db_action report（args.status=doing|done，可选 note）。不要另开 /api/tasks。',
       order: 21,
       icon: 'check-circle',
     },
@@ -271,12 +271,16 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
             label: '汇报进度',
             for: 'agent',
             placement: [],
+            description:
+              '当前执行会话向这条任务汇报。args.status 必须是 doing 或 done；可选 note。会追加 reports，并把任务 status 写成对应值。done 会尝试回传创建会话。给人看的界面不画 report 正文，但 Agent 必须用这个动作而不是只改 status。',
             parameters: {
               type: 'object',
+              description: 'status=doing|done；note 为给人/创建者看的一句进度。',
               properties: {
-                status: { type: 'string', enum: ['doing', 'done'] },
-                note: { type: 'string' },
+                status: { type: 'string', enum: ['doing', 'done'], description: 'doing=做到一半，done=本任务完成' },
+                note: { type: 'string', description: '可选。简短说明做了什么、卡在哪' },
               },
+              required: ['status'],
             },
             run: (id, record, args) => recordActions.report(id, record, args),
           },
@@ -285,11 +289,14 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
             label: '派工',
             for: 'both',
             placement: ['row', 'detail'],
+            description:
+              '把任务正文发给执行会话。先 db_update /tasks/<id> 写入 assignee（会话 id）。未分配会报错。args.text 可覆盖默认派工词；wait 默认 true 等这一回合，false 只入队。不要用会话 messages API 代替本动作（否则没有任务上下文）。',
             parameters: {
               type: 'object',
+              description: '可选 text 覆盖派工说明；wait=false 时立即返回 queued。',
               properties: {
-                text: { type: 'string' },
-                wait: { type: 'boolean' },
+                text: { type: 'string', description: '派给执行会话的文本；不传则用任务标题+描述拼默认稿' },
+                wait: { type: 'boolean', description: '默认 true。false=只入队不等回复' },
               },
             },
             run: (id, record, args) => recordActions.deliver(id, record, args),

@@ -340,7 +340,11 @@ const ID_NAME_BLURB = {
     description: '插件 id：小写字母开头，仅 [a-z0-9-]，最长 41。',
   },
   name: { type: 'string', description: '商店卡片标题' },
-  blurb: { type: 'string', description: '一行简介' },
+  blurb: {
+    type: 'string',
+    description:
+      '给后续 Agent 和用户看的说明书：插件做什么、怎么打开或调用（窗口 / 无头 / HTTP）、关键文件或 API、不要踩的坑。写两三句，不要只写四个字。',
+  },
   tags: {
     type: 'array',
     items: { type: 'string' },
