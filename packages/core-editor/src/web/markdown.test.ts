@@ -37,6 +37,8 @@ const a = 1
   const out = editor.getMarkdown()
   assert.match(html, /<h1>大标题<\/h1>/)
   assert.match(html, /<strong>粗<\/strong>/)
+  assert.match(html, /<ul>/)
+  assert.match(html, /<ol>/)
   assert.match(out, /^# 大标题/m)
   assert.match(out, /\*\*粗\*\*/)
   assert.match(out, /苹果/)
@@ -69,6 +71,8 @@ test('slash suggestion uses a fixed high stacking context', async () => {
   assert.match(src, /zIndex = '10000'/)
   assert.match(css, /\.page-slash\{[^}]*z-index:10000/)
   assert.match(css, /\.page-editor \.page-block\{[^}]*isolation:isolate/)
+  assert.match(css, /\.page-editor \.tiptap ul\{list-style-type:disc\}/)
+  assert.match(css, /\.page-editor \.tiptap ol\{list-style-type:decimal\}/)
 })
 
 test('slash command turns the current block into a heading', () => {
