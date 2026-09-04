@@ -417,12 +417,13 @@ export function CollectionBrowser({
         setConfigOpen(false)
         setGroupOpen(false)
         setLayoutOpen(false)
+        setSearchOpen((open) => (query ? open : false))
       },
-      (target) => {
-        if (!searchRef.current?.contains(target) && !query) setSearchOpen(false)
-        return Boolean(
+      (target) =>
+        Boolean(
           crumbRef.current?.contains(target) ||
             (target instanceof Element && target.closest('[data-fsdb-crumb-menu]')) ||
+            searchRef.current?.contains(target) ||
             viewRef.current?.contains(target) ||
             modeRef.current?.contains(target) ||
             sortRef.current?.contains(target) ||
@@ -431,8 +432,7 @@ export function CollectionBrowser({
             configRef.current?.contains(target) ||
             groupRef.current?.contains(target) ||
             layoutRef.current?.contains(target),
-        )
-      },
+        ),
     )
   }, [query])
 
@@ -445,7 +445,8 @@ export function CollectionBrowser({
       if (!toolbar || !right || !row) return
       const tabs = [...row.querySelectorAll('[data-view-measure]')] as HTMLElement[]
       const available = Math.max(0, toolbar.clientWidth - right.offsetWidth - 12)
-      setViewTabFit(countFittingViewTabs(tabs.map((el) => el.offsetWidth), available, 2))
+      const next = countFittingViewTabs(tabs.map((el) => el.offsetWidth), available, 2)
+      setViewTabFit((prev) => (prev === next ? prev : next))
     }
     measure()
     const ro = new ResizeObserver(measure)

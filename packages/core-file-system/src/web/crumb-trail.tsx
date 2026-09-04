@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type Ref } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type Ref } from 'react'
 import { createPortal } from 'react-dom'
 import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/16/solid'
 import { listenOutsideDismiss } from '@biu/public-ui'
@@ -166,21 +166,21 @@ export function CrumbTrail({
   /** 右侧检查器：一级只显示图标且不可点选，从第二级开始切换 */
   lockRootCrumb?: boolean
 }) {
-  const btnRefs = useRef(new Map<string, HTMLButtonElement>())
   const trailRef = useRef<HTMLElement | null>(null)
-  const [openId, setOpenId] = useState<string | null>(null)
-  const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null)
+  const [openMenu, setOpenMenu] = useState<{ id: string; left: number; top: number } | null>(null)
+  const openId = openMenu?.id ?? null
+  const menuPos = openMenu ? { left: openMenu.left, top: openMenu.top } : null
   const openCrumb = crumbs.find((item) => item.id === openId)
   const tableCrumb = crumbs.find((item) => item.kind === 'collection')
   const tableIcon = tableCrumb?.icon
 
   useEffect(() => {
-    if (!allowMenu) setOpenId(null)
+    if (!allowMenu) setOpenMenu(null)
   }, [allowMenu])
 
   useEffect(() => {
     return listenOutsideDismiss(
-      () => setOpenId(null),
+      () => setOpenMenu(null),
       (target) =>
         Boolean(
           trailRef.current?.contains(target) ||
@@ -188,16 +188,6 @@ export function CrumbTrail({
         ),
     )
   }, [])
-
-  useLayoutEffect(() => {
-    if (!openId) {
-      setMenuPos(null)
-      return
-    }
-    const box = btnRefs.current.get(openId)?.getBoundingClientRect()
-    if (!box) return
-    setMenuPos({ left: Math.max(8, box.left), top: box.bottom + 4 })
-  }, [openId])
 
   return (
     <nav
@@ -240,10 +230,6 @@ export function CrumbTrail({
               ) : (
               <button
                 type="button"
-                ref={(el) => {
-                  if (el) btnRefs.current.set(crumb.id, el)
-                  else btnRefs.current.delete(crumb.id)
-                }}
                 className={`fsdb-crumb-btn${open ? ' is-open' : ''}`}
                 title={crumb.label}
                 aria-haspopup={canPick ? 'menu' : undefined}
@@ -253,17 +239,22 @@ export function CrumbTrail({
                   event.stopPropagation()
                   if (!allowMenu) {
                     onActivate?.()
-                    setOpenId(null)
+                    setOpenMenu(null)
                     return
                   }
                   const action = crumbButtonAction(crumb, index ? crumbs[index - 1] : undefined)
                   if (action === 'menu') {
-                    setOpenId(open ? null : crumb.id)
+                    if (open) {
+                      setOpenMenu(null)
+                      return
+                    }
+                    const box = event.currentTarget.getBoundingClientRect()
+                    setOpenMenu({ id: crumb.id, left: Math.max(8, box.left), top: box.bottom + 4 })
                     return
                   }
                   onActivate?.()
                   onPick(action)
-                  setOpenId(null)
+                  setOpenMenu(null)
                 }}
               >
                 {glyph}
@@ -281,7 +272,9 @@ export function CrumbTrail({
               crumbs={crumbs}
               pos={menuPos}
               onPick={onPick}
-              onOpenId={setOpenId}
+              onOpenId={(id) => {
+                if (!id) setOpenMenu(null)
+              }}
               onCreate={onCreate}
               canCreateView={canCreateView}
               canCreateRecord={canCreateRecord}
