@@ -275,7 +275,7 @@ test('database extras sit after the record detail, not in the inspector', () => 
   assert.doesNotMatch(detail, /aria-label="删除记录"/)
   assert.doesNotMatch(browser, /onDelete=\{canDelete/)
   assert.match(detail, /<HeadingOutline enabled=\{headingOutline\} \/>/)
-  assert.match(browser, /headingOutline=\{collectionPath !== '\/sessions'\}/)
+  assert.doesNotMatch(browser, /headingOutline=\{collectionPath !== '\/sessions'\}/)
   assert.match(style, /\.heading-outline-host\{[^}]*z-index:20/)
   assert.match(detail, /FOCUS_RECORD_CONTENT/)
   assert.match(detail, /FOCUS_RECORD_TITLE/)

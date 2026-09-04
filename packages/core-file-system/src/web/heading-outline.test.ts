@@ -47,3 +47,21 @@ test('headingsFromRoot is read-only so TipTap headings do not trip MutationObser
   assert.equal(fires, 0)
   mo.disconnect()
 })
+
+test('headingsFromRoot includes session chat user messages in document order', () => {
+  const root = document.createElement('div')
+  root.innerHTML = `
+    <h1 class="fsdb-detail-title">Session title</h1>
+    <div data-chat-kind="user" data-node-id="u-1">hello from me</div>
+    <div data-chat-kind="reply"><h2>Section in reply</h2></div>
+    <div data-chat-kind="user" data-node-id="u-2">second question</div>
+  `
+  assert.deepEqual(
+    headingsFromRoot(root).map((item) => [item.id, item.text, item.level]),
+    [
+      ['u-1', 'hello from me', 1],
+      ['heading-0', 'Section in reply', 2],
+      ['u-2', 'second question', 1],
+    ],
+  )
+})
