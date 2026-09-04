@@ -325,9 +325,24 @@ body {
 
 .shell-search-hit-title {
   min-width: 0;
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.shell-search-hit-tags {
+  display: inline-flex;
+  min-width: 0;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.shell-search-hit-tags .biu-tags {
+  flex-wrap: nowrap;
 }
 
 .shell-search-hint {

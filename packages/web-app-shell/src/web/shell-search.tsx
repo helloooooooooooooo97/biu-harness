@@ -33,14 +33,38 @@ export type SearchHit = {
   kind: SearchKind
   id: string
   title: string
+  tags?: string[]
 }
 
-export type SessionHint = { id: string; title: string }
+export type SessionHint = { id: string; title: string; tags?: string[] }
 
 function recordTitle(row: Record<string, unknown>) {
   const title = row.title ?? row.name ?? row.label
   const text = String(title ?? '').trim()
   return text || String(row.id ?? '')
+}
+
+function pushTags(into: string[], value: unknown) {
+  if (!Array.isArray(value)) return
+  for (const item of value) {
+    const text = String(item ?? '').trim()
+    if (text) into.push(text)
+  }
+}
+
+/** 列表行上的标签：tags、facet.tags、config.tags。 */
+export function tagsFromRecord(row: Record<string, unknown>) {
+  const tags: string[] = []
+  pushTags(tags, row.tags)
+  const facet = row.facet
+  if (facet && typeof facet === 'object' && !Array.isArray(facet)) {
+    pushTags(tags, (facet as { tags?: unknown }).tags)
+  }
+  const config = row.config
+  if (config && typeof config === 'object' && !Array.isArray(config)) {
+    pushTags(tags, (config as { tags?: unknown }).tags)
+  }
+  return [...new Set(tags)]
 }
 
 export function searchCollection(kind: SearchKind) {
@@ -82,6 +106,27 @@ async function listKind(path: string, query: string, signal: AbortSignal) {
   const res = await fetch(`/api/db/list?${params}`, { signal })
   const body = (await res.json()) as { items?: Array<Record<string, unknown>> }
   return Array.isArray(body.items) ? body.items : []
+}
+
+function HitKindTag({ kind }: { kind: SearchKind }) {
+  const scope = SEARCH_SCOPES.find((item) => item.id === kind)
+  if (!scope) return null
+  return <TagChip id={kind} label={scope.label} icon={<KindGlyph kind={kind} compact />} />
+}
+
+function HitRecordTags({ tags }: { tags?: string[] }) {
+  const list = (tags ?? []).map((tag) => tag.trim()).filter(Boolean)
+  if (!list.length) return null
+  const shown = list.slice(0, 2)
+  const extra = list.length - shown.length
+  return (
+    <TagChips>
+      {shown.map((tag) => (
+        <TagChip key={tag} id={tag} label={tag} />
+      ))}
+      {extra > 0 ? <TagChip id={`+${extra}`} label={`+${extra}`} /> : null}
+    </TagChips>
+  )
 }
 
 function KindGlyph({ kind, compact }: { kind: SearchKind | 'all'; compact?: boolean }) {
@@ -128,6 +173,7 @@ export function ShellSearchPanel({
         kind: 'session' as const,
         id: item.id,
         title: item.title || item.id,
+        tags: (item.tags ?? []).map((tag) => tag.trim()).filter(Boolean),
       }))
   }, [needle, sessions])
 
@@ -165,6 +211,7 @@ export function ShellSearchPanel({
                 kind: item.id,
                 id,
                 title: recordTitle(row),
+                tags: tagsFromRecord(row),
               } satisfies SearchHit
             })
           } catch {
@@ -319,6 +366,12 @@ export function ShellSearchPanel({
                       <KindGlyph kind={item.kind} />
                     </span>
                     <span className="shell-search-hit-title">{item.title}</span>
+                    {item.kind === 'session' || item.kind === 'task' || item.kind === 'page' || item.kind === 'plugin' ? (
+                      <span className="shell-search-hit-tags">
+                        <HitRecordTags tags={item.tags} />
+                        <HitKindTag kind={item.kind} />
+                      </span>
+                    ) : null}
                   </button>
                 )
               })}
