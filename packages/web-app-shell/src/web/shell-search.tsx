@@ -289,6 +289,7 @@ function HitActions({
           type="button"
           className={`shell-search-hit-action${action.tone === 'danger' ? ' is-danger' : ''}`}
           title={action.label}
+          data-dock-tip={action.label}
           aria-label={action.label}
           disabled={busyId != null}
           onClick={(event) => {

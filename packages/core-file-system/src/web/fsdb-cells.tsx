@@ -325,6 +325,7 @@ export function ActionCell({
       type="button"
       className="fsdb-action-btn"
       title={label}
+      data-dock-tip={label}
       onClick={(event) => {
         event.stopPropagation()
         onRun?.()

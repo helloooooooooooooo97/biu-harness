@@ -88,6 +88,7 @@ test('session task page plugin hits render tags left of actions', () => {
   assert.doesNotMatch(src, /HitKindTag/)
   assert.match(src, /HitRecordTags/)
   assert.match(src, /HitActions/)
+  assert.match(src, /data-dock-tip=\{action\.label\}/)
   assert.match(src, /shell-search-hit-aside/)
   assert.match(src, /shell-search-hit-tags/)
   assert.match(src, /shell-search-hit-actions/)

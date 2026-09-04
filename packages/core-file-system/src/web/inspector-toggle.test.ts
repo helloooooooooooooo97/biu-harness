@@ -362,6 +362,14 @@ test('row actions reload even when updatedAt is unchanged', () => {
   assert.match(browser, /quietUntil\.current = 0\s*\n\s*await reload\(\)/)
 })
 
+test('row actions hover the registered action label', () => {
+  assert.match(browser, /data-dock-tip=\{action\.label\}/)
+  const cells = readFileSync(resolve(import.meta.dirname, './fsdb-cells.tsx'), 'utf8')
+  assert.match(cells, /data-dock-tip=\{label\}/)
+  const plugin = readFileSync(resolve(import.meta.dirname, '../../../core-plugin-system/src/web/chrome.tsx'), 'utf8')
+  assert.match(plugin, /data-dock-tip=\{action\.label\}/)
+})
+
 test('inspector no longer listens for add/copy view actions', () => {
   assert.doesNotMatch(browser, /biu:inspector-action/)
   assert.doesNotMatch(browser, /detail === 'add-view'/)
