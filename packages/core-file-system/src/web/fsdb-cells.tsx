@@ -323,6 +323,7 @@ export function FieldEditor({
   collectionPath,
   source,
   onCommit,
+  compact = false,
 }: {
   fieldKey: string
   field: FieldSpec
@@ -334,6 +335,7 @@ export function FieldEditor({
   collectionPath?: string
   source?: unknown
   onCommit?: (next: unknown) => void
+  compact?: boolean
 }) {
   const kind = resolveFieldType(field)
   if (kind === 'action') {
@@ -369,6 +371,7 @@ export function FieldEditor({
         kind={kind}
         value={source ?? value}
         collectionPath={collectionPath}
+        compact={compact}
         onCommit={(next) => {
           if (onCommit) onCommit(next)
           else onChange(typeof next === 'string' ? next : JSON.stringify(next))

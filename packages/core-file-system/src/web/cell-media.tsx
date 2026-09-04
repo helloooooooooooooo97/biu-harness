@@ -33,11 +33,13 @@ export function MediaField({
   kind,
   value,
   collectionPath,
+  compact = false,
   onCommit,
 }: {
   kind: 'image' | 'attachment' | 'url'
   value: unknown
   collectionPath?: string
+  compact?: boolean
   onCommit: (next: unknown) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -45,12 +47,13 @@ export function MediaField({
   const pageAssets = collectionPath === '/pages'
   const imageSrc = kind === 'image' ? asImageSrc(value) : ''
   const file = kind === 'attachment' ? asAttachment(value) : null
-  const href = kind === 'url' ? asHttpHref(value) || String(value ?? '') : file?.href || imageSrc
+  const href = kind === 'url' ? asHttpHref(value) || String(value ?? '') : ''
 
   async function takeFile(picked: File) {
     setError('')
     try {
       if (kind === 'url') return
+      if (kind === 'image' && !picked.type.startsWith('image/')) throw new Error('请选择图片')
       if (pageAssets) {
         const written = await uploadPageAsset(picked)
         if (kind === 'image') onCommit(written.href)
@@ -58,66 +61,57 @@ export function MediaField({
         return
       }
       if (kind === 'image') {
-        if (!picked.type.startsWith('image/')) throw new Error('请选择图片')
         onCommit(await fileToDataUrl(picked))
         return
       }
-      throw new Error('这张表还没有附件存储，请填 http(s) 链接')
+      throw new Error('这张表还没有附件存储')
     } catch (err) {
       setError(String(err instanceof Error ? err.message : err))
     }
   }
 
+  if (kind === 'url') {
+    return (
+      <LocalText className="fsdb-plain-input" value={href} placeholder="https://" onCommit={(next) => onCommit(next.trim())} />
+    )
+  }
+
+  const label = kind === 'image' ? (imageSrc ? '更换图片' : '粘贴或选择图片') : file ? file.name : '选择文件'
+
   return (
     <div
-      className="fsdb-media-field"
+      className={`fsdb-media-field${compact ? ' is-compact' : ''}`}
       tabIndex={0}
-      onPaste={(event) => {
-        const next = Array.from(event.clipboardData?.files ?? []).find((item) =>
-          kind === 'image' ? item.type.startsWith('image/') : Boolean(item.size),
-        )
-        if (!next) return
-        event.preventDefault()
-        void takeFile(next)
-      }}
+      title={error || undefined}
+      onPaste={
+        kind === 'image'
+          ? (event) => {
+              const next = Array.from(event.clipboardData?.files ?? []).find((item) => item.type.startsWith('image/'))
+              if (!next) {
+                event.preventDefault()
+                return
+              }
+              event.preventDefault()
+              void takeFile(next)
+            }
+          : (event) => event.preventDefault()
+      }
     >
       {kind === 'image' && imageSrc ? <img className="fsdb-media-preview" src={imageSrc} alt="" /> : null}
-      {kind === 'attachment' && file ? (
-        <a className="fsdb-link" href={file.href} target="_blank" rel="noreferrer">
-          {file.name}
-        </a>
-      ) : null}
-      {kind !== 'url' ? (
-        <div className="fsdb-media-row">
-          <button type="button" className="fsdb-media-pick" onClick={() => inputRef.current?.click()}>
-            {kind === 'image' ? <PhotoIcon aria-hidden className="size-[14px]" /> : <PaperClipIcon aria-hidden className="size-[14px]" />}
-            {kind === 'image' ? '选择或粘贴图片' : '选择文件'}
-          </button>
-          <input
-            ref={inputRef}
-            type="file"
-            hidden
-            accept={kind === 'image' ? 'image/*' : undefined}
-            onChange={(event) => {
-              const next = event.target.files?.[0]
-              event.target.value = ''
-              if (next) void takeFile(next)
-            }}
-          />
-        </div>
-      ) : null}
-      <LocalText
-        className="fsdb-plain-input"
-        value={href}
-        placeholder={kind === 'url' ? 'https://' : '或填写链接'}
-        onCommit={(next) => {
-          setError('')
-          if (kind === 'attachment') {
-            const name = file?.name || next.split('/').filter(Boolean).pop() || 'file'
-            onCommit(next.trim() ? { name, href: next.trim(), bytes: file?.bytes } : '')
-            return
-          }
-          onCommit(next.trim())
+      {kind === 'attachment' ? <PaperClipIcon aria-hidden className="size-[14px] shrink-0 opacity-80" /> : null}
+      <button type="button" className="fsdb-media-pick" title={label} onClick={() => inputRef.current?.click()}>
+        {kind === 'image' ? <PhotoIcon aria-hidden className="size-[14px]" /> : null}
+        <span className="fsdb-media-pick-label">{label}</span>
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        hidden
+        accept={kind === 'image' ? 'image/*' : undefined}
+        onChange={(event) => {
+          const next = event.target.files?.[0]
+          event.target.value = ''
+          if (next) void takeFile(next)
         }}
       />
       {error ? <p className="fsdb-media-error">{error}</p> : null}

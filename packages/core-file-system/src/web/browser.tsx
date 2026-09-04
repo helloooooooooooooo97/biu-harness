@@ -1334,6 +1334,7 @@ export function CollectionBrowser({
             value={fieldDraftValue(field, value)}
             source={value}
             collectionPath={collectionPath}
+            compact={surface === 'table'}
             autoOpen={surface === 'detail'}
             options={uniqueValues(
               items.map((item) => ({ ...item, [key]: readFacetFlatValue(item, key, source) })),
@@ -1385,6 +1386,7 @@ export function CollectionBrowser({
           value={fieldDraftValue(field, row[key])}
           source={row[key]}
           collectionPath={collectionPath}
+          compact={surface === 'table'}
           autoOpen={surface === 'detail'}
           options={uniqueValues(items, key, field)}
           onChange={(next) => void writeOne(row, key, field, next)}
