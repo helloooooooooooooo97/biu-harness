@@ -108,12 +108,6 @@ async function listKind(path: string, query: string, signal: AbortSignal) {
   return Array.isArray(body.items) ? body.items : []
 }
 
-function HitKindTag({ kind }: { kind: SearchKind }) {
-  const scope = SEARCH_SCOPES.find((item) => item.id === kind)
-  if (!scope) return null
-  return <TagChip id={kind} label={scope.label} icon={<KindGlyph kind={kind} compact />} />
-}
-
 function HitRecordTags({ tags }: { tags?: string[] }) {
   const list = (tags ?? []).map((tag) => tag.trim()).filter(Boolean)
   if (!list.length) return null
@@ -366,10 +360,9 @@ export function ShellSearchPanel({
                       <KindGlyph kind={item.kind} />
                     </span>
                     <span className="shell-search-hit-title">{item.title}</span>
-                    {item.kind === 'session' || item.kind === 'task' || item.kind === 'page' || item.kind === 'plugin' ? (
+                    {(item.kind === 'session' || item.kind === 'task' || item.kind === 'page' || item.kind === 'plugin') && item.tags?.length ? (
                       <span className="shell-search-hit-tags">
                         <HitRecordTags tags={item.tags} />
-                        <HitKindTag kind={item.kind} />
                       </span>
                     ) : null}
                   </button>
