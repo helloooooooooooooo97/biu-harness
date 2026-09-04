@@ -13,6 +13,7 @@ test('database-ui ships one search menu for select and multi-select', () => {
   assert.match(select, /<DbSearchMenu/)
   assert.match(multi, /<DbSearchMenu/)
   assert.match(multi, /TagChip/)
+  assert.doesNotMatch(multi, /db-cell-multi-input/)
   assert.doesNotMatch(multi, /搜索或添加/)
   assert.match(select, /chips/)
   assert.match(select, /<TagChip/)

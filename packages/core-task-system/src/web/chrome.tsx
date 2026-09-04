@@ -12,8 +12,8 @@ import {
   UserIcon,
   XMarkIcon,
 } from '@heroicons/react/16/solid'
-import { TagChip, TagChips, listenOutsideDismiss } from '@biu/public-ui'
-import { CellSelect } from '@biu/database-ui'
+import { listenOutsideDismiss } from '@biu/public-ui'
+import { CellMulti, CellSelect } from '@biu/database-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import type { DbRecord } from '@biu/type-file-system'
 import type { CollectionChrome, FsCellProps } from '@biu/type-file-system/ui'
@@ -382,40 +382,16 @@ function DifficultyCell({ record, value }: FsCellProps) {
 
 function TagsCell({ record, value }: FsCellProps) {
   const tags = asTags(value)
-  const [draft, setDraft] = useState('')
   return (
-    <span className="tasks-tags" onClick={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()}>
-      <TagChips>
-      {tags.map((tag) => (
-        <TagChip
-          key={tag}
-          id={tag}
-          label={tag}
-          onRemove={() => void patchRecord(record.id, { tags: tags.filter((item) => item !== tag) })}
-        />
-      ))}
-      </TagChips>
-      <input
-        className="tasks-tag-input"
-        value={draft}
-        placeholder=""
-        aria-label="添加标签"
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key !== 'Enter') return
-          const next = draft.trim()
-          if (!next || tags.includes(next)) return
-          setDraft('')
-          void patchRecord(record.id, { tags: [...tags, next] })
-        }}
-        onBlur={() => {
-          const next = draft.trim()
-          if (!next || tags.includes(next)) return
-          setDraft('')
-          void patchRecord(record.id, { tags: [...tags, next] })
-        }}
-      />
-    </span>
+    <CellMulti
+      values={tags}
+      options={tags.map((tag) => ({ value: tag, label: tag }))}
+      allowCreate
+      placeholder="添加标签"
+      onChange={(next) => {
+        void patchRecord(record.id, { tags: next })
+      }}
+    />
   )
 }
 

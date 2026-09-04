@@ -28,7 +28,10 @@ export function CellMulti({
   )
   const canCreate =
     allowCreate && Boolean(query.trim()) && !values.includes(query.trim()) && !options.some((item) => item.value === query.trim() || item.label === query.trim())
-  const close = () => setOpen(false)
+  const close = () => {
+    setOpen(false)
+    setQuery('')
+  }
   const add = (value: string) => {
     if (multiple) {
       if (!values.includes(value)) onChange([...values, value])
@@ -47,6 +50,9 @@ export function CellMulti({
     >
       <div
         className="db-cell-multi-box fsdb-tokens-box"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={placeholder ?? '添加标签'}
         onClick={() => setOpen(true)}
       >
         <TagChips>
@@ -59,31 +65,13 @@ export function CellMulti({
             />
           ))}
         </TagChips>
-        <input
-          className="db-cell-multi-input fsdb-tokens-input"
-          value={query}
-          placeholder={placeholder ?? ''}
-          onFocus={() => setOpen(true)}
-          onChange={(event) => {
-            setQuery(event.target.value)
-            setOpen(true)
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              if (available[0]) add(available[0].value)
-              else if (canCreate) add(query.trim())
-            } else if (event.key === 'Backspace' && !query && values.length) {
-              onChange(values.slice(0, -1))
-            } else if (event.key === 'Escape') close()
-          }}
-        />
       </div>
       {open ? (
         <DbSearchMenu
           anchor={boxRef.current}
           onClose={close}
           query={query}
+          placeholder={placeholder ?? '添加标签'}
           onQuery={(next) => {
             setQuery(next)
             setOpen(true)

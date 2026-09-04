@@ -364,8 +364,8 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-cellselect-option:hover,.fsdb-cellselect-option.is-selected{background:color-mix(in srgb,var(--dsw-business) 12%,transparent)}
 .fsdb-cellselect-empty{padding:8px;color:var(--dsw-label-3);font-size:14px}
 .fsdb-tokens{position:relative;min-width:0}
-.fsdb-tokens-box{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-height:28px;border-radius:6px;padding:2px 4px;cursor:text}
-.fsdb-tokens-box:hover,.fsdb-tokens-box:focus-within{background:var(--dsw-hover)}
+.fsdb-tokens-box{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-height:28px;border-radius:6px;padding:2px 4px;cursor:pointer}
+.fsdb-tokens-box:hover{background:var(--dsw-hover)}
 .fsdb-token{display:inline-flex;align-items:center;gap:2px;height:22px;border-radius:4px;padding:0 6px;font-size:14px;font-weight:500;line-height:22px;color:var(--dsw-label);background:rgba(255,255,255,.08);white-space:nowrap}
 .fsdb-token-x{border:0;background:transparent;padding:0;margin:0;color:inherit;opacity:.55;cursor:pointer;display:inline-flex;line-height:0}
 .fsdb-tokens-input{flex:1;min-width:64px;border:0;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;outline:none;padding:2px 0}

@@ -25,9 +25,8 @@ const CSS = `
 .db-cell-select.is-field .db-cell-select-trigger:hover,.db-cell-select.is-field .db-cell-select-trigger[data-open]{background:var(--dsw-hover);filter:none}
 .db-cell-select.is-field .db-cell-select-trigger.is-empty{color:var(--dsw-label-3)}
 .db-cell-multi{position:relative;min-width:0}
-.db-cell-multi-box{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-height:28px;border-radius:6px;padding:2px 4px;cursor:text}
-.db-cell-multi-box:hover,.db-cell-multi-box:focus-within{background:var(--dsw-hover)}
-.db-cell-multi-input{flex:1;min-width:64px;border:0;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;outline:none;padding:2px 0}
+.db-cell-multi-box{display:flex;flex-wrap:wrap;align-items:center;gap:4px;width:100%;min-height:28px;border:0;border-radius:6px;padding:2px 4px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.db-cell-multi-box:hover,.db-cell-multi-box[aria-expanded="true"]{background:var(--dsw-hover)}
 `
 
 export function ensureDbSearchStyle() {
