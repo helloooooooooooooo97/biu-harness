@@ -59,6 +59,12 @@ export function allocateShellColumns(opts: {
   return { left, inspector, center }
 }
 
+export function applyShellColumnCssVars(el: HTMLElement | null, cols: { left: number; inspector: number }) {
+  if (!el) return
+  el.style.setProperty('--sidebar-col', `${cols.left}px`)
+  el.style.setProperty('--inspector-width', `${cols.inspector}px`)
+}
+
 export function chatColumnWidth(opts: {
   viewportWidth: number
   inspectorOpen: boolean

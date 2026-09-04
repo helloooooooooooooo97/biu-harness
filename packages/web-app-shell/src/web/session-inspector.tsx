@@ -75,6 +75,7 @@ export type SessionInspectorProps = {
   open: boolean
   width: number
   onWidthChange: (width: number) => void
+  onWidthLive?: (width: number) => void
   useSessionView: ReturnType<typeof bindSessionView>
   sessionView: SessionViewService
   slots: SlotsService
@@ -105,6 +106,7 @@ export const SessionInspector = memo(function SessionInspector({
   open,
   width,
   onWidthChange,
+  onWidthLive,
   useSessionView,
   sessionView,
   slots,
@@ -179,7 +181,7 @@ export const SessionInspector = memo(function SessionInspector({
     if (next.length === opened.length) return
     persistOpened(next)
   }, [collections, opened, persistOpened])
-  const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
+  const dragRef = useRef<{ startX: number; startWidth: number; last: number } | null>(null)
 
   useEffect(() => {
     setOpened(readOpened(sessionId))
@@ -271,12 +273,16 @@ export const SessionInspector = memo(function SessionInspector({
       const drag = dragRef.current
       if (!drag) return
       const next = drag.startWidth + (drag.startX - event.clientX)
-      onWidthChange(next)
+      drag.last = next
+      if (onWidthLive) onWidthLive(next)
+      else onWidthChange(next)
     }
     const onUp = () => {
+      const drag = dragRef.current
       dragRef.current = null
       document.body.style.removeProperty('cursor')
       document.body.style.removeProperty('user-select')
+      if (drag && onWidthLive) onWidthChange(drag.last)
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
@@ -284,7 +290,7 @@ export const SessionInspector = memo(function SessionInspector({
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
     }
-  }, [onWidthChange])
+  }, [onWidthChange, onWidthLive])
 
   useEffect(() => {
     const activeTab = tabsRef.current?.querySelector<HTMLElement>('.inspector-tab.is-active, .inspector-crumb-tab.is-active')
@@ -336,7 +342,7 @@ export const SessionInspector = memo(function SessionInspector({
         onPointerDown={(event) => {
           event.preventDefault()
           const visual = event.currentTarget.parentElement?.getBoundingClientRect().width ?? width
-          dragRef.current = { startX: event.clientX, startWidth: visual }
+          dragRef.current = { startX: event.clientX, startWidth: visual, last: visual }
           document.body.style.cursor = 'col-resize'
           document.body.style.userSelect = 'none'
         }}

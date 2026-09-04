@@ -11,6 +11,7 @@ export type ShellSidebarFrameProps = {
   onCollapse?: () => void
   onExpand?: () => void
   onWidthChange?: (width: number) => void
+  onWidthLive?: (width: number) => void
   testId?: string
   activeId?: string
   agentHref?: string
@@ -28,6 +29,7 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
   onCollapse,
   onExpand,
   onWidthChange,
+  onWidthLive,
   testId = 'shell-sidebar',
   activeId,
   agentHref,
@@ -36,17 +38,22 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
   searchOpen = false,
   children,
 }: ShellSidebarFrameProps) {
-  const dragRef = useRef<{ startX: number; startWidth: number } | null>(null)
+  const dragRef = useRef<{ startX: number; startWidth: number; last: number } | null>(null)
   useEffect(() => {
     const onMove = (event: PointerEvent) => {
       const drag = dragRef.current
       if (!drag) return
-      onWidthChange?.(drag.startWidth + (event.clientX - drag.startX))
+      const next = drag.startWidth + (event.clientX - drag.startX)
+      drag.last = next
+      if (onWidthLive) onWidthLive(next)
+      else onWidthChange?.(next)
     }
     const onUp = () => {
+      const drag = dragRef.current
       dragRef.current = null
       document.body.style.removeProperty('cursor')
       document.body.style.removeProperty('user-select')
+      if (drag && onWidthLive) onWidthChange?.(drag.last)
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
@@ -54,7 +61,7 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
     }
-  }, [onWidthChange])
+  }, [onWidthChange, onWidthLive])
 
   return (
     <div className={`sidebar-flyout-host${visible ? '' : ' is-collapsed'}`} data-testid="sidebar-flyout-host">
@@ -73,7 +80,7 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
           onPointerDown={(event) => {
             event.preventDefault()
             const visual = event.currentTarget.parentElement?.getBoundingClientRect().width ?? 0
-            dragRef.current = { startX: event.clientX, startWidth: visual }
+            dragRef.current = { startX: event.clientX, startWidth: visual, last: visual }
             document.body.style.cursor = 'col-resize'
             document.body.style.userSelect = 'none'
           }}

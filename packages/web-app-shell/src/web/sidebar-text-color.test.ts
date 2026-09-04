@@ -36,6 +36,8 @@ describe('sidebar text colors', () => {
     expect(sidebar).toMatch(/text-\[14px\]/)
     expect(frame).toMatch(/data-testid="sidebar-expand"/)
     expect(frame).toMatch(/data-testid="sidebar-resize"/)
+    expect(frame).toMatch(/onWidthLive/)
+    expect(frame).toMatch(/if \(onWidthLive\) onWidthLive\(next\)/)
     const shell = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
     expect(shell).toMatch(/leftWidth: leftPane \? sidebarCol/)
     expect(shell).toMatch(/id="shell-module-sidebar"/)

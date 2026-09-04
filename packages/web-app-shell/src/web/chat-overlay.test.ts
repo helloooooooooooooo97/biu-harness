@@ -4,6 +4,7 @@ import {
   chatColumnWidth,
   inspectorWidthForExpandedChat,
   allocateShellColumns,
+  applyShellColumnCssVars,
   CHAT_OVERLAY_ENTER,
   CENTER_MIN,
   INSPECTOR_MIN,
@@ -75,6 +76,13 @@ test('sidebar stays a normal pane at min width, never an icon rail', () => {
     inspectorWidth: 320,
   })
   assert.equal(atMin.left, SIDEBAR_MIN)
+})
+
+test('applyShellColumnCssVars writes grid tracks without React state', () => {
+  const el = document.createElement('div')
+  applyShellColumnCssVars(el, { left: 240, inspector: 320 })
+  assert.equal(el.style.getPropertyValue('--sidebar-col'), '240px')
+  assert.equal(el.style.getPropertyValue('--inspector-width'), '320px')
 })
 
 test('narrow viewport shrinks center and inspector first; left hides last', () => {

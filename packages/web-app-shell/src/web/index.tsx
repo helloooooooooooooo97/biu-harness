@@ -8,6 +8,7 @@ import {
   requestOverlayFocus,
   requestInspectorClose,
   allocateShellColumns,
+  applyShellColumnCssVars,
   clampSidebarWidth,
   isChatPagePath,
   SIDEBAR_DEFAULT,
@@ -485,6 +486,39 @@ function Shell(props: SlotProps) {
     inspectorOpen: inspectorVisible,
     inspectorWidth,
   })
+  const layoutSnap = useRef({
+    leftPane: true,
+    inspectorVisible: false,
+    inspectorWidth: 320,
+    sidebarWidth: SIDEBAR_DEFAULT,
+    sidebarCollapsed: false,
+  })
+  layoutSnap.current = { leftPane, inspectorVisible, inspectorWidth, sidebarWidth, sidebarCollapsed }
+  const paintedCols = useRef({ left: shellColumns.left, inspector: shellColumns.inspector })
+  if (!columnResizing) paintedCols.current = { left: shellColumns.left, inspector: shellColumns.inspector }
+  const dragPaintRaf = useRef(0)
+  const dragPaintPending = useRef<{ sidebar?: number; inspector?: number }>({})
+  const paintColumnDrag = useCallback((patch: { sidebar?: number; inspector?: number }) => {
+    Object.assign(dragPaintPending.current, patch)
+    if (dragPaintRaf.current) return
+    dragPaintRaf.current = window.requestAnimationFrame(() => {
+      dragPaintRaf.current = 0
+      const pending = dragPaintPending.current
+      dragPaintPending.current = {}
+      const snap = layoutSnap.current
+      const cols = allocateShellColumns({
+        viewportWidth: window.innerWidth,
+        leftPane: snap.leftPane,
+        leftWidth: snap.leftPane ? (pending.sidebar ?? (snap.sidebarCollapsed ? 0 : snap.sidebarWidth)) : undefined,
+        inspectorOpen: snap.inspectorVisible,
+        inspectorWidth: pending.inspector ?? snap.inspectorWidth,
+      })
+      paintedCols.current = { left: cols.left, inspector: cols.inspector }
+      applyShellColumnCssVars(shellRef.current, cols)
+    })
+  }, [])
+  const onSidebarWidthLive = useCallback((width: number) => paintColumnDrag({ sidebar: width }), [paintColumnDrag])
+  const onInspectorWidthLive = useCallback((width: number) => paintColumnDrag({ inspector: width }), [paintColumnDrag])
   const leftHidden = shellColumns.left <= 0
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('biu:shell-sidebar-width', { detail: sidebarCol }))
@@ -653,9 +687,9 @@ function Shell(props: SlotProps) {
       data-testid="app-shell"
       style={
         {
-          ['--sidebar-col' as string]: `${shellColumns.left}px`,
+          ['--sidebar-col' as string]: `${paintedCols.current.left}px`,
           ['--sidebar-flyout-width' as string]: `${Math.max(SIDEBAR_MIN, sidebarWidth)}px`,
-          ['--inspector-width' as string]: `${shellColumns.inspector}px`,
+          ['--inspector-width' as string]: `${paintedCols.current.inspector}px`,
         } as CSSProperties
       }
     >
@@ -667,6 +701,7 @@ function Shell(props: SlotProps) {
           onCollapse={collapseSidebar}
           onExpand={expandSidebar}
           onWidthChange={onSidebarWidthChange}
+          onWidthLive={onSidebarWidthLive}
           testId={showChatSidebar ? 'chat-sidebar' : 'module-sidebar'}
           activeId={activeModule}
           agentHref={agentHref}
@@ -735,6 +770,7 @@ function Shell(props: SlotProps) {
         open={inspectorVisible}
         width={inspectorWidth}
         onWidthChange={onInspectorWidthChange}
+        onWidthLive={onInspectorWidthLive}
         useSessionView={useSessionView}
         sessionView={sessionView}
         slots={slots}
