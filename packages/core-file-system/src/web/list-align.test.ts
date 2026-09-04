@@ -8,12 +8,12 @@ const css = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8'
 test('list and detail share the chat column max width with side padding', () => {
   assert.match(css, /\.fsdb-main\{[^}]*max-width:var\(--dsw-chat-max-width\)/)
   assert.match(css, /\.fsdb-main\{[^}]*margin-inline:auto/)
-  assert.match(css, /\.fsdb-main\{[^}]*padding:80px 100px 16px/)
+  assert.match(css, /\.fsdb-main\{[^}]*padding:80px 60px 16px/)
   assert.match(css, /\.fsdb-main > \.fsdb-detail-title-row\{[^}]*flex:none/)
   assert.match(css, /\.fsdb-detail-title-row\{[^}]*padding-bottom:16px/)
   assert.match(css, /\.fsdb-detail-main\{[^}]*max-width:var\(--dsw-chat-max-width\)/)
   assert.match(css, /\.fsdb-detail-main\{[^}]*margin-inline:auto/)
-  assert.match(css, /\.fsdb-detail-main\{[^}]*padding:80px 100px 24px/)
+  assert.match(css, /\.fsdb-detail-main\{[^}]*padding:80px 60px 24px/)
   assert.doesNotMatch(css, /\.fsdb-main\{[^}]*max-width:none/)
   assert.match(css, /\.fsdb-page\.is-full-width \.fsdb-main,\.fsdb-page\.is-full-width \.fsdb-detail-main\{[^}]*max-width:none/)
   assert.doesNotMatch(css, /\.fsdb-page\.is-full-width[^{]*\{[^}]*padding:[^}]*24px/)
@@ -62,6 +62,7 @@ test('list and detail share the chat column max width with side padding', () => 
   assert.match(css, /\.tasks-viewtabs\{[^}]*overflow:hidden/)
   assert.match(css, /\.tasks-viewdd-item-actions\{[^}]*visibility:hidden/)
   assert.match(css, /\.tasks-viewdd-act\{[^}]*width:26px/)
+  assert.match(css, /\.fsdb-right-body:has\(\.fsdb-detail-stage\) \.app-pane-in\{[^}]*width:100%/)
   assert.match(css, /\.fsdb-right-body:has\(\.fsdb-detail-stage\) \.app-pane-in\{[^}]*overflow:visible/)
   assert.match(css, /\.fsdb-right-body:has\(\.fsdb-pager\)\{[^}]*overflow:hidden/)
   assert.match(css, /\.fsdb-pager\{[^}]*margin-top:auto/)
@@ -84,7 +85,8 @@ test('list and detail properties share key and value colors', () => {
 })
 
 test('usage figures in collection cells match the table font size', () => {
-  assert.match(css, /\.fsdb-page \.traj-usage,\.fsdb-page \.traj-usage-empty\{[^}]*font-size:14px/)
+  assert.match(css, /\.fsdb-page \.fsdb-cell \.traj-usage,\.fsdb-page \.fsdb-cell \.traj-usage-empty,\.fsdb-page \.tasks-table \.traj-usage,\.fsdb-page \.tasks-table \.traj-usage-empty,\.fsdb-page \.tasks-queue-item-main \.traj-usage,\.fsdb-page \.tasks-queue-item-main \.traj-usage-empty\{[^}]*font-size:14px/)
+  assert.match(css, /\.fsdb-page \.chat-pane \.traj-usage,\.fsdb-page \.chat-pane \.traj-usage-empty\{[^}]*font-size:var\(--dsw-chat-ui-font-size\)/)
 })
 
 test('visible column menu scrolls inside a max height', () => {
