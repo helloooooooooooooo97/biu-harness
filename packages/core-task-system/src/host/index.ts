@@ -12,7 +12,7 @@ type SQLInputValue = import('node:sqlite').SQLInputValue
 
 const require = createRequire(import.meta.url)
 
-export type TaskStatus = 'todo' | 'doing' | 'done'
+export type TaskStatus = 'todo' | 'doing' | 'done' | 'failed'
 export type TaskPriority = 'low' | 'med' | 'high'
 export type TaskDifficulty = 'low' | 'med' | 'high'
 export type TaskActorKind = 'user' | 'agent'
@@ -141,10 +141,12 @@ export type TaskRow = {
   trigger?: TaskTrigger
   /** 下次触发时间戳（派生）：当前状态 idle/pending 且有命中条件时计算。 */
   nextTriggerAt?: number | null
-  /** 进度汇报提醒间隔（秒）。任务派发后若 assignee 超过该时长未 task_report，creator 会收到进度追问。默认 60。 */
+  /** 进度汇报提醒间隔（秒）。派发后若超过该时长未 report，向执行会话追问进展。默认 60。 */
   reportIntervalSec: number
   /** 上次进度追问时间戳（ms），用于追问冷却（冷却窗口=reportIntervalSec）。 */
   lastReportPromptAt: number | null
+  /** 自上次汇报以来已追问次数。达到 MAX_REPORT_PROMPTS 后停止，避免把执行会话问死。 */
+  reportPromptCount: number
 }
 
 
@@ -266,6 +268,8 @@ export type TaskUpdateInput = Partial<{
   reportIntervalSec: number
   /** 上次进度追问时间戳（ms），仅供内部监测更新。 */
   lastReportPromptAt: number | null
+  /** 自上次汇报以来已追问次数。 */
+  reportPromptCount: number
   emoji: string
   facet: SchemaFieldValue
 }>
@@ -336,7 +340,7 @@ type HostCtx = Context & {
   }
 }
 
-const STATUSES = new Set<TaskStatus>(['todo', 'doing', 'done'])
+const STATUSES = new Set<TaskStatus>(['todo', 'doing', 'done', 'failed'])
 const PRIORITIES = new Set<TaskPriority>(['low', 'med', 'high'])
 const DIFFICULTIES = new Set<TaskDifficulty>(['low', 'med', 'high'])
 
@@ -932,14 +936,12 @@ function mapRow(row: Record<string, unknown>): TaskRow {
       }
       return undefined
     })(),
-    reportIntervalSec:
-      row.report_interval_sec == null || Number.isNaN(Number(row.report_interval_sec)) || Number(row.report_interval_sec) <= 0
-        ? 60
-        : Math.round(Number(row.report_interval_sec)),
+    reportIntervalSec: normalizeReportIntervalSec(row.report_interval_sec),
     lastReportPromptAt:
       row.last_report_prompt_at == null || row.last_report_prompt_at === ''
         ? null
         : Number(row.last_report_prompt_at),
+    reportPromptCount: Math.max(0, Math.round(Number(row.report_prompt_count) || 0)),
   }
 }
 
@@ -1073,32 +1075,48 @@ export function computeTurnUsage(
 }
 
 /**
- * 进度超时判定（纯函数，导出便于单测与复用）。
- * 对已派发（assignee 有 sessionId 且 assignedAt 非空）、非 done 的任务：
- * 距最近一次 task_report（无 report 时以 assignedAt 为基线）超过 reportIntervalSec 且不在追问冷却
- * （距上次追问 lastReportPromptAt 不足 reportIntervalSec）时，应触发一次进度追问。
- * 返回 { shouldPrompt, overdueSec, intervalMs }。
+ * 进度超时判定。
+ * 距最近一次 report（无 report 时以 assignedAt 为基线）超过 reportIntervalSec、不在冷却窗口内、
+ * 且本轮追问次数未达 MAX_REPORT_PROMPTS 时，应再追一次。次数用尽后停，避免把执行会话问死。
  */
+export const DEFAULT_REPORT_INTERVAL_SEC = 60
+/** 同一段未汇报窗口内最多追问几次。 */
+export const MAX_REPORT_PROMPTS = 3
+
+export function normalizeReportIntervalSec(value: unknown, fallback = DEFAULT_REPORT_INTERVAL_SEC): number {
+  if (value == null || value === '') return fallback
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) return fallback
+  return Math.round(n)
+}
+
 export type PromptProgressVerdict = {
   shouldPrompt: boolean
+  shouldFail: boolean
   overdueSec: number
   intervalMs: number
 }
 
 export function shouldPromptProgress(row: TaskRow, nowTs: number): PromptProgressVerdict {
-  const none: PromptProgressVerdict = { shouldPrompt: false, overdueSec: 0, intervalMs: 0 }
-  if (row.status === 'done') return none
+  const none: PromptProgressVerdict = { shouldPrompt: false, shouldFail: false, overdueSec: 0, intervalMs: 0 }
+  if (row.status === 'done' || row.status === 'failed') return none
   if (!row.assignedAt) return none
   if (!row.assignee?.sessionId) return none
   if (row.creator?.kind !== 'agent' || !row.creator.sessionId) return none
+  const intervalSec = normalizeReportIntervalSec(row.reportIntervalSec)
+  const intervalMs = intervalSec * 1000
   const lastReportTs = row.reports?.length ? row.reports[row.reports.length - 1].ts : row.assignedAt
-  const intervalMs = Math.max(1, row.reportIntervalSec) * 1000
-  if (nowTs - lastReportTs <= intervalMs) return { shouldPrompt: false, overdueSec: 0, intervalMs }
-  if (row.lastReportPromptAt != null && nowTs - row.lastReportPromptAt < intervalMs) {
-    return { shouldPrompt: false, overdueSec: 0, intervalMs }
-  }
+  const count = Math.max(0, Math.round(Number(row.reportPromptCount) || 0))
   const overdueSec = Math.max(1, Math.floor((nowTs - lastReportTs) / 1000))
-  return { shouldPrompt: true, overdueSec, intervalMs }
+  if (count >= MAX_REPORT_PROMPTS) {
+    if (row.lastReportPromptAt != null && nowTs - row.lastReportPromptAt < intervalMs) return none
+    return { shouldPrompt: false, shouldFail: true, overdueSec, intervalMs }
+  }
+  if (nowTs - lastReportTs <= intervalMs) return { shouldPrompt: false, shouldFail: false, overdueSec: 0, intervalMs }
+  if (row.lastReportPromptAt != null && nowTs - row.lastReportPromptAt < intervalMs) {
+    return { shouldPrompt: false, shouldFail: false, overdueSec: 0, intervalMs }
+  }
+  return { shouldPrompt: true, shouldFail: false, overdueSec, intervalMs }
 }
 
 export class TasksService extends Service {
@@ -1149,6 +1167,7 @@ export class TasksService extends Service {
       "ALTER TABLE tasks ADD COLUMN trigger_json TEXT NOT NULL DEFAULT '{}'",
       'ALTER TABLE tasks ADD COLUMN report_interval_sec INTEGER NOT NULL DEFAULT 60',
       'ALTER TABLE tasks ADD COLUMN last_report_prompt_at INTEGER',
+      'ALTER TABLE tasks ADD COLUMN report_prompt_count INTEGER NOT NULL DEFAULT 0',
       "ALTER TABLE tasks ADD COLUMN facet_json TEXT NOT NULL DEFAULT '{}'",
       "ALTER TABLE tasks ADD COLUMN emoji TEXT NOT NULL DEFAULT ''",
     ]) {
@@ -1401,6 +1420,10 @@ export class TasksService extends Service {
         : patch.lastReportPromptAt == null
           ? null
           : Number(patch.lastReportPromptAt)
+    const reportPromptCount =
+      patch.reportPromptCount === undefined
+        ? current.reportPromptCount
+        : Math.max(0, Math.round(Number(patch.reportPromptCount) || 0))
     const emoji = patch.emoji !== undefined ? String(patch.emoji ?? '') : current.emoji
     const facet = patch.facet !== undefined ? normalizeSchemaValue(patch.facet) : current.facet
 
@@ -1411,7 +1434,7 @@ export class TasksService extends Service {
           title = ?, status = ?, priority = ?, difficulty = ?, assignee = ?, due_at = ?, description = ?, notes = ?, sort = ?,
           updated_at = ?, creator_json = ?, assignee_json = ?, assigned_at = ?, project = ?, tags_json = ?,
           parent_id = ?, depends_on = ?, depth = ?, trigger_json = ?,
-          report_interval_sec = ?, last_report_prompt_at = ?, facet_json = ?, emoji = ?
+          report_interval_sec = ?, last_report_prompt_at = ?, report_prompt_count = ?, facet_json = ?, emoji = ?
          WHERE id = ?`,
       )
       .run(
@@ -1436,6 +1459,7 @@ export class TasksService extends Service {
         JSON.stringify(trigger),
         reportIntervalSec,
         lastReportPromptAt,
+        reportPromptCount,
         JSON.stringify(facet),
         emoji,
         id,
@@ -1534,9 +1558,9 @@ export class TasksService extends Service {
     if (!current) throw new Error('unknown task')
     const reports = [...(current.reports ?? []), report]
     const ts = now()
-    // 新 report 到来即「已回应」：重置 lastReportPromptAt（清空后倒计时重新从本次报道算起，避免立即再追问）
+    // 新 report 到来即「已回应」：重置追问时间与次数
     this.db
-      .prepare('UPDATE tasks SET reports_json = ?, updated_at = ?, last_report_prompt_at = NULL WHERE id = ?')
+      .prepare('UPDATE tasks SET reports_json = ?, updated_at = ?, last_report_prompt_at = NULL, report_prompt_count = 0 WHERE id = ?')
       .run(JSON.stringify(reports), ts, id)
     this.emitChange()
     return this.get(id)!
@@ -1817,7 +1841,7 @@ export function apply(ctx: Context) {
     const tr = row.trigger
     if (!tr?.enabled) return false
     if (tr.state !== 'idle') return false
-    if (row.status === 'done') return false
+    if (row.status === 'done' || row.status === 'failed') return false
     const targetSessionId = row.assignee?.sessionId
     if (!targetSessionId) {
       // 未分配负责 session：不派工也不改状态（保持 idle，等分配后再触发）
@@ -1882,29 +1906,33 @@ export function apply(ctx: Context) {
    */
   function promptForProgress(row: TaskRow): void {
     try {
-      if (row.status === 'done') return
-      if (!row.assignedAt) return
-      const assigneeSessionId = row.assignee?.sessionId
-      if (!assigneeSessionId) return
-      const creatorSessionId = row.creator?.kind === 'agent' ? row.creator.sessionId : undefined
-      if (!creatorSessionId) return
-      if (!host.sessions?.sendMessage) return
-      // 基线：最新 report.ts；无 report 用 assignedAt
-      const lastReportTs = row.reports?.length ? row.reports[row.reports.length - 1].ts : row.assignedAt
-      const intervalMs = Math.max(1, row.reportIntervalSec) * 1000
       const nowTs = now()
-      // 距上次汇报未超过间隔 → 仍处于窗口内，不追问
-      if (nowTs - lastReportTs <= intervalMs) return
-      // 冷却：距上次追问未超过间隔 → 不重复追问
-      if (row.lastReportPromptAt != null && nowTs - row.lastReportPromptAt < intervalMs) return
-      const overdueSec = Math.max(1, Math.floor((nowTs - lastReportTs) / 1000))
-      const text = `【任务进度询问】${row.title}\n任务 id：${row.id}\n任务已派发 ${overdueSec} 秒仍未收到汇报，请问当前进展？`
+      const verdict = shouldPromptProgress(row, nowTs)
+      if (verdict.shouldFail) {
+        if (row.status === 'failed') return
+        tasks.update(row.id, { status: 'failed' })
+        const assigneeSessionId = row.assignee?.sessionId
+        const creatorSessionId = row.creator?.kind === 'agent' ? row.creator.sessionId : undefined
+        if (assigneeSessionId && host.sessions?.sendMessage) {
+          const text = `【任务失败】${row.title}\n任务 id：${row.id}\n已询问进度 ${MAX_REPORT_PROMPTS} 次仍未收到汇报，任务已标记为失败。`
+          const sender = creatorSessionId ? { type: 'session' as const, sessionId: creatorSessionId } : undefined
+          host.sessions.sendMessage(assigneeSessionId, text, { wait: false, ...(sender ? { sender } : {}) }).catch(() => {})
+        }
+        return
+      }
+      if (!verdict.shouldPrompt) return
+      const assigneeSessionId = row.assignee?.sessionId
+      const creatorSessionId = row.creator?.kind === 'agent' ? row.creator.sessionId : undefined
+      if (!assigneeSessionId || !creatorSessionId) return
+      if (!host.sessions?.sendMessage) return
+      const used = Math.max(0, Math.round(Number(row.reportPromptCount) || 0))
+      const nextCount = used + 1
+      const text = `【任务进度询问】${row.title}\n任务 id：${row.id}\n任务已派发 ${verdict.overdueSec} 秒仍未收到汇报（第 ${nextCount}/${MAX_REPORT_PROMPTS} 次询问）。请问当前进展？`
       const sender = { type: 'session' as const, sessionId: creatorSessionId }
       host.sessions.sendMessage(assigneeSessionId, text, { wait: false, sender }).catch(() => {
         /* 发送失败：保留 lastReportPromptAt 未更新，下轮可重试 */
       })
-      // 记录追问时间，进入冷却窗口
-      tasks.update(row.id, { lastReportPromptAt: nowTs })
+      tasks.update(row.id, { lastReportPromptAt: nowTs, reportPromptCount: nextCount })
     } catch {
       /* 单测/无完整 host 时容忍 */
     }

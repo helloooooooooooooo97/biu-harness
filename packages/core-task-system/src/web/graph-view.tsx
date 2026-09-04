@@ -15,6 +15,7 @@ import { layoutTaskGraph } from './graph-layout.ts'
 function statusClass(status: string) {
   if (status === 'doing') return 'is-doing'
   if (status === 'done') return 'is-done'
+  if (status === 'failed') return 'is-failed'
   return 'is-todo'
 }
 

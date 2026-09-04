@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from 'cordis'
-import { buildDeliverText, coerceAssigneeArg, computeBlocked, computeBlockedBy, computeNextTriggerAt, computeTurnUsage, defaultTrigger, depsSatisfied, deriveExecution, deriveExecutionFromReports, normalizeTrigger, normalizeViewConfig, parseCron, reportBackToCreator, shouldPromptProgress, sumReportUsage, TasksService } from './index.ts'
+import { buildDeliverText, coerceAssigneeArg, computeBlocked, computeBlockedBy, computeNextTriggerAt, computeTurnUsage, defaultTrigger, depsSatisfied, deriveExecution, deriveExecutionFromReports, MAX_REPORT_PROMPTS, normalizeTrigger, normalizeViewConfig, parseCron, reportBackToCreator, shouldPromptProgress, sumReportUsage, TasksService } from './index.ts'
 
 test('tasks sqlite crud and status move', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
@@ -459,6 +459,7 @@ test('reportIntervalSec persists with default 60 and is updatable to 5', async (
     // 默认 60
     assert.equal(a.reportIntervalSec, 60)
     assert.equal(a.lastReportPromptAt, null)
+    assert.equal(a.reportPromptCount, 0)
     // 可回读（DB 持久）
     assert.equal(tasks.get(a.id)!.reportIntervalSec, 60)
     // 改 5 秒
@@ -544,7 +545,7 @@ test('shouldPromptProgress: cooldown after prompt and reset on new report', asyn
   }
 })
 
-test('shouldPromptProgress: done task stops prompting', async () => {
+test('shouldPromptProgress: done or failed task stops prompting', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
   const path = join(dir, 'tasks.sqlite')
   try {
@@ -559,6 +560,41 @@ test('shouldPromptProgress: done task stops prompting', async () => {
     const base = a.assignedAt!
     tasks.update(a.id, { status: 'done' })
     assert.equal(shouldPromptProgress(tasks.get(a.id)!, base + 200_000).shouldPrompt, false)
+    assert.equal(shouldPromptProgress(tasks.get(a.id)!, base + 200_000).shouldFail, false)
+    const b = tasks.create({
+      title: 'B',
+      creator: { kind: 'agent', sessionId: 'boss', name: 'Boss' },
+      assignee: { kind: 'agent', sessionId: 'worker', name: 'Worker' },
+      reportIntervalSec: 5,
+    })
+    tasks.update(b.id, { status: 'failed' })
+    assert.equal(tasks.get(b.id)!.status, 'failed')
+    assert.equal(shouldPromptProgress(tasks.get(b.id)!, b.assignedAt! + 200_000).shouldPrompt, false)
+    assert.equal(shouldPromptProgress(tasks.get(b.id)!, b.assignedAt! + 200_000).shouldFail, false)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('shouldPromptProgress: after max nags without a report, mark fail instead of asking again', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'tasks-'))
+  const path = join(dir, 'tasks.sqlite')
+  try {
+    const ctx = new Context()
+    const tasks = new TasksService(ctx, path).open()
+    const a = tasks.create({
+      title: 'A',
+      creator: { kind: 'agent', sessionId: 'boss', name: 'Boss' },
+      assignee: { kind: 'agent', sessionId: 'worker', name: 'Worker' },
+      reportIntervalSec: 5,
+    })
+    const t1 = a.assignedAt! + 6_000
+    tasks.update(a.id, { lastReportPromptAt: t1, reportPromptCount: MAX_REPORT_PROMPTS })
+    assert.equal(shouldPromptProgress(tasks.get(a.id)!, t1 + 4_000).shouldPrompt, false)
+    assert.equal(shouldPromptProgress(tasks.get(a.id)!, t1 + 4_000).shouldFail, false)
+    const late = shouldPromptProgress(tasks.get(a.id)!, t1 + 6_000)
+    assert.equal(late.shouldPrompt, false)
+    assert.equal(late.shouldFail, true)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

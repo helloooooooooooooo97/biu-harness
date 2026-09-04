@@ -23,6 +23,7 @@ const STATUS_LABEL: Record<string, string> = {
   todo: '待办',
   doing: '进行中',
   done: '已完成',
+  failed: '失败',
 }
 
 const PRIORITY_LABEL: Record<string, string> = {
@@ -324,7 +325,7 @@ function PersonPicker({
 function TaskTitle({ record, label }: { record: DbRecord; label: string }) {
   const chain = String(record.parentChain ?? '')
   return (
-    <span className={`tasks2-title${record.status === 'done' ? ' is-done' : ''}`}>
+    <span className={`tasks2-title${record.status === 'done' || record.status === 'failed' ? ' is-done' : ''}`}>
       {chain ? <span className="tasks-queue-chain">{chain} / </span> : null}
       {label}
       {record.blocked ? (
@@ -339,6 +340,7 @@ function TaskTitle({ record, label }: { record: DbRecord; label: string }) {
 function StatusGlyph({ status }: { status: string }) {
   if (status === 'doing') return <ArrowPathIcon aria-hidden className="size-[14px]" />
   if (status === 'done') return <CheckCircleIcon aria-hidden className="size-[14px]" />
+  if (status === 'failed') return <XMarkIcon aria-hidden className="size-[14px]" />
   return <MinusCircleIcon aria-hidden className="size-[14px]" />
 }
 

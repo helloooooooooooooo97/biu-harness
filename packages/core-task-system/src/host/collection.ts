@@ -199,7 +199,7 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
       fields: {
         ...REQUIRED_RECORD_FIELDS,
         title: { type: 'string', label: '标题', writable: true },
-        status: { type: 'select', label: '状态', writable: true, enum: ['todo', 'doing', 'done'] },
+        status: { type: 'select', label: '状态', writable: true, enum: ['todo', 'doing', 'done', 'failed'] },
         priority: { type: 'select', label: '优先级', writable: true, enum: ['low', 'med', 'high'] },
         difficulty: { type: 'select', label: '难度', writable: true, enum: ['low', 'med', 'high'] },
         usage: { type: 'number', label: '消耗', computed: true, sortable: true },
