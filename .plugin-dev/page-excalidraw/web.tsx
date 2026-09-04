@@ -126,20 +126,23 @@ function queueHostSync() {
   })
 }
 
-function syncHostBox(host: Host, slot: HTMLElement | null) {
+function placeHost(host: Host, slot: HTMLElement | null) {
   const el = host.el
   if (host.expanded) {
+    if (el.parentElement !== document.body) document.body.appendChild(el)
     el.style.cssText =
       'position:fixed;top:36px;left:0;right:0;bottom:0;width:auto;height:auto;z-index:9990;pointer-events:auto;visibility:visible;overflow:hidden;isolation:isolate;background:var(--dsw-bg,#191919)'
     return
   }
-  if (!slot) {
+  if (!slot?.isConnected) {
+    if (el.parentElement !== document.body) document.body.appendChild(el)
     el.style.visibility = 'hidden'
     el.style.pointerEvents = 'none'
     return
   }
-  const box = slot.getBoundingClientRect()
-  el.style.cssText = `position:fixed;top:${box.top}px;left:${box.left}px;width:${box.width}px;height:${box.height}px;z-index:2;pointer-events:none;visibility:visible;overflow:hidden;isolation:isolate;background:var(--dsw-bg)`
+  if (el.parentElement !== slot) slot.appendChild(el)
+  el.style.cssText =
+    'position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;visibility:visible;overflow:hidden;isolation:isolate;background:var(--dsw-bg)'
 }
 
 function paintHost(host: Host) {
@@ -389,7 +392,11 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
   useLayoutEffect(() => {
     if (!file) return
     retainHost(file)
-    return () => releaseHost(file)
+    return () => {
+      const host = hosts.get(file)
+      if (host && host.el.parentElement !== document.body) document.body.appendChild(host.el)
+      releaseHost(file)
+    }
   }, [file])
 
   useLayoutEffect(() => {
@@ -400,7 +407,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
     host.onCollapse = () => setExpanded(false)
     host.sync = () => {
       host.expanded = expanded
-      syncHostBox(host, slotRef.current)
+      placeHost(host, slotRef.current)
     }
     void host.ready.then(() => {
       if (hosts.get(file) !== host) return
@@ -432,7 +439,7 @@ function Board(props: { data: Record<string, unknown>; update: (p: Record<string
         onToggle={() => setExpanded((v) => !v)}
         onRename={onRename}
       />
-      <div className="h-[280px]" ref={slotRef} />
+      <div className="h-[280px]" ref={slotRef} style={{ position: 'relative' }} />
       {expanded
         ? createPortal(
             <div className="fixed inset-0 flex flex-col bg-[var(--dsw-bg,#191919)]" style={{ zIndex: 9991, pointerEvents: 'none' }}>
