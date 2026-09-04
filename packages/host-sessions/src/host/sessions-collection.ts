@@ -36,7 +36,6 @@ function asRecord(row: SessionSummary): DbRecord {
     id: row.id,
     title: row.title,
     pinned: Boolean(row.config?.pinned),
-    tags: Array.isArray(row.config?.tags) ? row.config.tags.map(String) : [],
     eventCount: row.eventCount,
     project: row.project?.name ?? '',
     projectPath: row.project?.path ?? '',
@@ -54,6 +53,7 @@ function asRecord(row: SessionSummary): DbRecord {
       createdAt: row.config?.createdAt,
       updatedAt: row.updatedAt,
       emoji: row.config?.emoji,
+      tags: row.config?.tags,
       facet: row.config?.facet,
     }),
   }
@@ -238,7 +238,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       {
         id: 'progress',
         label: '进度',
-        placement: ['row', 'detail'],
+        placement: [],
         parameters: {
           type: 'object',
           properties: {

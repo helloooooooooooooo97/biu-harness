@@ -130,6 +130,11 @@ test('table title opens record from the title-side button', () => {
   assert.doesNotMatch(browser, /recordPick\(row\)\} onClick=\{\(\) => setDetailId\(row\.id\)\}/)
 })
 
+test('title cell row tools skip the overflow action menu', () => {
+  assert.match(browser, /if \(place === 'row'\)/)
+  assert.match(browser, /rowShown\.map\(renderOne\)/)
+})
+
 test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.match(browser, /data-testid="fsdb-bulk-delete"/)
   assert.match(browser, /kind: 'delete-records'/)
