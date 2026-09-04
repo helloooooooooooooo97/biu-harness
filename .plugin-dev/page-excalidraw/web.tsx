@@ -2,7 +2,7 @@ import { Excalidraw } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import { createPortal } from 'react-dom'
 import { createRoot, type Root } from 'react-dom/client'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react''
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 
 export const name = 'page-excalidraw'
 export const inject = ['pageEditor']
