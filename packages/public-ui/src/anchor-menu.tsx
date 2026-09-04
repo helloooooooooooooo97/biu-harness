@@ -8,7 +8,7 @@ export function AnchorMenu({
   children,
   className = 'fsdb-cellselect-menu',
   role = 'listbox',
-  zIndex = 80,
+  zIndex = 200,
   ...rest
 }: {
   anchor: HTMLElement | null
