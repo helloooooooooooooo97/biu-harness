@@ -34,6 +34,7 @@ import {
 } from './fields.ts'
 import { LocalText, TokenMultiSelect } from './controls.tsx'
 import { CellDateTime } from '@biu/database-ui'
+import { MediaField } from './cell-media.tsx'
 
 export function actionIcon(id: string) {
   const cls = 'size-[14px]'
@@ -196,9 +197,9 @@ export function parseFieldValue(field: FieldSpec, raw: string): unknown {
       return { tags: [], values: {} }
     }
   }
-  if (kind === 'file') {
+  if (kind === 'file' || kind === 'attachment' || kind === 'image') {
     const trimmed = raw.trim()
-    if (!trimmed) return null
+    if (!trimmed) return kind === 'file' ? null : ''
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
       try {
         return JSON.parse(trimmed) as unknown
@@ -318,6 +319,10 @@ export function FieldEditor({
   onChange,
   options,
   onAction,
+  autoOpen = false,
+  collectionPath,
+  source,
+  onCommit,
 }: {
   fieldKey: string
   field: FieldSpec
@@ -325,6 +330,10 @@ export function FieldEditor({
   onChange: (next: string) => void
   options?: string[]
   onAction?: () => void
+  autoOpen?: boolean
+  collectionPath?: string
+  source?: unknown
+  onCommit?: (next: unknown) => void
 }) {
   const kind = resolveFieldType(field)
   if (kind === 'action') {
@@ -338,6 +347,7 @@ export function FieldEditor({
         values={selected}
         options={list}
         multiple={kind === 'multi-select'}
+        autoOpen={autoOpen}
         onChange={(next) => onChange(kind === 'multi-select' ? next.join(', ') : (next[0] ?? ''))}
       />
     )
@@ -355,11 +365,14 @@ export function FieldEditor({
   }
   if (kind === 'url' || kind === 'image' || kind === 'attachment') {
     return (
-      <LocalText
-        className="fsdb-plain-input"
-        value={value}
-        placeholder=""
-        onCommit={onChange}
+      <MediaField
+        kind={kind}
+        value={source ?? value}
+        collectionPath={collectionPath}
+        onCommit={(next) => {
+          if (onCommit) onCommit(next)
+          else onChange(typeof next === 'string' ? next : JSON.stringify(next))
+        }}
       />
     )
   }

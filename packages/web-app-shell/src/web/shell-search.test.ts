@@ -14,6 +14,7 @@ import {
 } from './shell-search.tsx'
 
 test('search opens inspector collections, not chat or database routes', () => {
+  assert.equal(searchCollection('view'), '/views')
   assert.equal(searchCollection('session'), '/sessions')
   assert.equal(searchCollection('task'), '/tasks')
   assert.equal(searchCollection('page'), '/pages')
@@ -21,7 +22,7 @@ test('search opens inspector collections, not chat or database routes', () => {
   assert.equal(searchCollection('facet'), '/facets')
   assert.deepEqual(
     SEARCH_SCOPES.map((item) => item.label),
-    ['会话', '任务', '页面', '插件', '合集'],
+    ['视图', '会话', '任务', '页面', '插件', '合集'],
   )
 })
 
@@ -34,14 +35,17 @@ test('openSearchHit reveals the record in the inspector', () => {
   window.addEventListener('biu:inspector-reveal', onReveal)
   openSearchHit({ kind: 'page', id: 'p1' })
   openSearchHit({ kind: 'session', id: 'abc' })
+  openSearchHit({ kind: 'view', id: 'pages::mine', record: { tablePath: '/pages', viewId: 'mine' } })
   window.removeEventListener('biu:inspector-reveal', onReveal)
   assert.deepEqual(seen, [
     { collection: '/pages', recordId: 'p1' },
     { collection: '/sessions', recordId: 'abc' },
+    { collection: '/pages', viewId: 'mine' },
   ])
 })
 
 test('searchHref opens the left main pane by changing the route', () => {
+  assert.equal(searchHref({ kind: 'view', id: 'pages::mine', record: { tablePath: '/pages', viewId: 'mine' } }), '/database/pages/view/mine')
   assert.equal(searchHref({ kind: 'session', id: 'abc' }), '/s/abc')
   assert.equal(searchHref({ kind: 'page', id: 'p1' }), '/database/pages/record/p1')
   assert.equal(searchHref({ kind: 'task', id: 't1' }), '/database/tasks/record/t1')
@@ -81,7 +85,7 @@ test('empty search lists every kind by updatedAt instead of skipping remotes', (
   assert.doesNotMatch(src, /if \(!needle && scope === 'all'\) \{\s*setHits\(\[\]\)/)
   assert.match(src, /sort: 'updatedAt'/)
   assert.match(src, /item.id === 'session' \? '\/sessions'/)
-  assert.match(src, /空着时会话、任务、页面、插件、合集各按更新时间列最近/)
+  assert.match(src, /空着时视图、会话、任务、页面、插件、合集各按更新时间列最近/)
 })
 
 test('session task page plugin hits render tags left of actions', () => {
@@ -115,6 +119,8 @@ test('search hit icons follow record mark: emoji, else session mascot', () => {
 
 test('facet search scope is named 合集 with stack icon', () => {
   const src = readFileSync(resolve(import.meta.dirname, './shell-search.tsx'), 'utf8')
+  assert.match(src, /label: '视图'/)
+  assert.match(src, /kind === 'view'[\s\S]*return <TableCellsIcon/)
   assert.match(src, /label: '合集'/)
   assert.match(src, /kind === 'plugin'[\s\S]*return <RectangleStackIcon/)
   assert.doesNotMatch(src, /label: '类型'/)

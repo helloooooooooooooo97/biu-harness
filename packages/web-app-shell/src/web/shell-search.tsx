@@ -14,6 +14,7 @@ import {
   RectangleStackIcon,
   Squares2X2Icon,
   StopIcon,
+  TableCellsIcon,
 } from '@heroicons/react/16/solid'
 import { TagChip, TagChips } from '@biu/public-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
@@ -21,13 +22,14 @@ import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { actionVisibleToUser } from '@biu/type-file-system'
 import { setChatOverlay, requestComposerFocus } from './chat-overlay.ts'
 
-export type SearchKind = 'session' | 'task' | 'page' | 'plugin' | 'facet'
+export type SearchKind = 'view' | 'session' | 'task' | 'page' | 'plugin' | 'facet'
 
 export const SEARCH_SCOPES: Array<{
   id: SearchKind
   label: string
   path: string | null
 }> = [
+  { id: 'view', label: '视图', path: '/views' },
   { id: 'session', label: '会话', path: null },
   { id: 'task', label: '任务', path: '/tasks' },
   { id: 'page', label: '页面', path: '/pages' },
@@ -173,17 +175,27 @@ export function searchCollection(kind: SearchKind) {
   return SEARCH_SCOPES.find((item) => item.id === kind)?.path ?? `/${kind}`
 }
 
+function viewOpenTarget(hit: { kind: SearchKind; id: string; record?: Record<string, unknown> }) {
+  const tablePath = String(hit.record?.tablePath ?? '').trim()
+  const viewId = String(hit.record?.viewId ?? '').trim()
+  if (hit.kind !== 'view' || !tablePath || !viewId) return null
+  return { collection: tablePath, viewId }
+}
+
 /** Enter：右侧检查器打开，不改路由、不换主 Session。 */
-export function openSearchHit(hit: { kind: SearchKind; id: string }) {
+export function openSearchHit(hit: { kind: SearchKind; id: string; record?: Record<string, unknown> }) {
+  const view = viewOpenTarget(hit)
   window.dispatchEvent(
     new CustomEvent('biu:inspector-reveal', {
-      detail: { collection: searchCollection(hit.kind), recordId: hit.id },
+      detail: view ?? { collection: searchCollection(hit.kind), recordId: hit.id },
     }),
   )
 }
 
 /** Shift+Enter：左侧主区打开并改路由；会话会换成主 Session。 */
-export function searchHref(hit: { kind: SearchKind; id: string }) {
+export function searchHref(hit: { kind: SearchKind; id: string; record?: Record<string, unknown> }) {
+  const view = viewOpenTarget(hit)
+  if (view) return `/database${view.collection}/view/${encodeURIComponent(view.viewId)}`
   if (hit.kind === 'session') return `/s/${encodeURIComponent(hit.id)}`
   const collection = searchCollection(hit.kind)
   return `/database${collection}/record/${encodeURIComponent(hit.id)}`
@@ -320,6 +332,7 @@ function HitActions({
 function KindGlyph({ kind, compact }: { kind: SearchKind | 'all'; compact?: boolean }) {
   const className = compact ? 'size-3 shrink-0' : 'size-4 shrink-0'
   if (kind === 'all') return <Squares2X2Icon className={className} />
+  if (kind === 'view') return <TableCellsIcon className={className} />
   if (kind === 'session') return <ChatBubbleLeftRightIcon className={className} />
   if (kind === 'task') return <CheckCircleIcon className={className} />
   if (kind === 'page') return <DocumentIcon className={className} />
@@ -443,7 +456,7 @@ export function ShellSearchPanel({
 
   const grouped = useMemo(() => {
     const remote = hits.filter((item) => scope === 'all' || item.kind === scope)
-    const order: SearchKind[] = ['session', 'task', 'page', 'plugin', 'facet']
+    const order: SearchKind[] = ['view', 'session', 'task', 'page', 'plugin', 'facet']
     return order
       .map((kind) => {
         const fromRemote = remote.filter((item) => item.kind === kind)
@@ -511,7 +524,7 @@ export function ShellSearchPanel({
             ref={inputRef}
             className="shell-search-input"
             autoFocus
-            placeholder="搜索会话、任务、页面、插件、合集"
+            placeholder="搜索视图、会话、任务、页面、插件、合集"
             value={query}
             data-testid="shell-search-input"
             onChange={(event) => {
@@ -565,7 +578,7 @@ export function ShellSearchPanel({
         <div ref={bodyRef} className="shell-search-body" aria-busy={busy}>
           {!needle && scope === 'all' && !flat.length && !busy ? (
             <p className="shell-search-hint">
-              空着时会话、任务、页面、插件、合集各按更新时间列最近 {PER_KIND} 条。
+              空着时视图、会话、任务、页面、插件、合集各按更新时间列最近 {PER_KIND} 条。
             </p>
           ) : null}
           {grouped.map((group) => (

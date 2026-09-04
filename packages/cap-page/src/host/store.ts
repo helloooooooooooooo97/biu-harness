@@ -1,4 +1,4 @@
-import { mkdir, readFile, stat, unlink } from 'node:fs/promises'
+import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname } from 'node:path'
 import { createRequire } from 'node:module'
 import type { DbRecord, SchemaFieldValue } from '@biu/type-file-system'
@@ -433,11 +433,12 @@ export class PagesStore {
     await this.gcAssets()
   }
 
-  async writeAsset(name: string, content: string) {
+  async writeAsset(name: string, content: string | Buffer | Uint8Array) {
     const file = basename(name)
     if (!file || file !== name.replace(/\\/g, '/') || !isPageAssetFileName(file)) throw new Error('invalid asset')
     await this.ensureDirs()
-    await this.fs.write(`${PAGE_ASSETS}/${file}`, content)
+    const bytes = typeof content === 'string' ? Buffer.from(content) : Buffer.from(content)
+    await writeFile(this.fs.resolve(`${PAGE_ASSETS}/${file}`), bytes)
     return { name: file, href: fileUrl(file) }
   }
 

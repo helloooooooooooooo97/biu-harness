@@ -115,6 +115,7 @@ import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 import { mergeTableViews } from '../catalog-views.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
 import { SchemaChips, SchemaFieldEditor, schemaTagTone } from './schema-field.tsx'
+import { CellPop, cellUsesPop } from './cell-pop.tsx'
 import { loadFacets, pullFacets, subscribeFacets } from './facet-catalog.ts'
 
 const EMPTY_VIEWS: CollectionViewType[] = []
@@ -236,6 +237,9 @@ export function CollectionBrowser({
   const [columnKeys, setColumnKeys] = useState<string[]>(initialView?.columns ?? [])
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => normalizeColumnWidths(initialView?.columnWidths))
   const [resizingCol, setResizingCol] = useState<string | null>(null)
+  const [cellPick, setCellPick] = useState<{ id: string; key: string } | null>(null)
+  const [cellPopOpen, setCellPopOpen] = useState(false)
+  const cellAnchorRef = useRef<HTMLElement | null>(null)
   const [facetCatalog, setFacetCatalog] = useState(() => loadFacets())
   const tablePathsKey = tables
     .map((table) => table.path)
@@ -1257,8 +1261,23 @@ export function CollectionBrowser({
     }
   }
 
+  function cellFieldWritable(field: FieldSpec) {
+    const kind = resolveFieldType(field)
+    return Boolean(field.writable) && kind !== 'file' && kind !== 'action'
+  }
+
   async function writeOne(row: DbRecord, key: string, field: FieldSpec, raw: string) {
     await writePatch(row, { [key]: parseFieldValue(field, raw) })
+  }
+
+  function writeCellValue(row: DbRecord, key: string, field: FieldSpec, next: unknown) {
+    const flat = parseFacetFlatColumnKey(key)
+    if (flat && schema) {
+      const source = facetSourceKey(schema)
+      void writePatch(row, { [source]: patchFacetFlatValue(row, key, next, source) })
+      return
+    }
+    void writePatch(row, { [key]: next })
   }
 
   const labelOf = (row: DbRecord) => crumbRecordLabel(row, schema?.labelField)
@@ -1290,30 +1309,37 @@ export function CollectionBrowser({
   const recordKind = recordPickKind(currentTable?.view?.moduleId || currentTable?.id)
   const recordPick = (row: DbRecord) => pickDomAttrs(recordKind, row.id, labelOf(row))
 
-  function renderCell(row: DbRecord, key: string, field: FieldSpec) {
+  function renderCell(row: DbRecord, key: string, field: FieldSpec, surface: 'table' | 'detail' = 'detail') {
     const kind = resolveFieldType(field)
+    const pop = surface === 'table' && cellUsesPop(kind, field.writable)
     const flat = parseFacetFlatColumnKey(key)
     if (flat) {
       const source = facetSourceKey(schema)
       const value = readFacetFlatValue(row, key, source)
+      if (pop) return <DefaultCell field={field} value={value} />
       if (field.writable && kind !== 'file') {
         return (
           <FieldEditor
             fieldKey={field.label ?? flat.fieldKey}
             field={field}
             value={fieldDraftValue(field, value)}
+            source={value}
+            collectionPath={collectionPath}
+            autoOpen={surface === 'detail'}
             options={uniqueValues(
               items.map((item) => ({ ...item, [key]: readFacetFlatValue(item, key, source) })),
               key,
               field,
             )}
             onChange={(next) => void writePatch(row, { [source]: patchFacetFlatValue(row, key, parseFieldValue(field, next), source) })}
+            onCommit={(next) => writeCellValue(row, key, field, next)}
           />
         )
       }
       return <DefaultCell field={field} value={value} />
     }
     if (kind === 'facet') {
+      if (pop) return <SchemaChips value={row[key]} tags={loadFacets()} />
       if (field.writable) {
         return (
           <SchemaFieldEditor
@@ -1321,7 +1347,7 @@ export function CollectionBrowser({
             record={row}
             value={row[key]}
             writable
-            compact
+            autoOpen={surface === 'detail'}
             onChange={(next) => void writePatch(row, { [key]: next })}
           />
         )
@@ -1342,18 +1368,35 @@ export function CollectionBrowser({
     const Custom = chrome?.cells?.[key]
     const fallback = formatField(field, row[key])
     if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={fallback} />
+    if (pop) return <DefaultCell field={field} value={row[key]} fieldKey={key} />
     if (field.writable && kind !== 'file') {
       return (
         <FieldEditor
           fieldKey={key}
           field={field}
           value={fieldDraftValue(field, row[key])}
+          source={row[key]}
+          collectionPath={collectionPath}
+          autoOpen={surface === 'detail'}
           options={uniqueValues(items, key, field)}
           onChange={(next) => void writeOne(row, key, field, next)}
+          onCommit={(next) => writeCellValue(row, key, field, next)}
         />
       )
     }
     return <DefaultCell field={field} value={row[key]} />
+  }
+
+  function renderCellPop() {
+    if (!cellPopOpen || !cellPick || !schema) return null
+    const row = items.find((item) => item.id === cellPick.id)
+    const col = columns.find((item) => item.key === cellPick.key)
+    if (!row || !col) return null
+    return (
+      <CellPop open anchor={cellAnchorRef.current} onClose={() => setCellPopOpen(false)}>
+        {renderCell(row, col.key, col.field, 'detail')}
+      </CellPop>
+    )
   }
 
   function RecordTitle({
@@ -1373,11 +1416,11 @@ export function CollectionBrowser({
     const field = key && schema ? schema.fields[key] : undefined
     const body =
       key && field?.writable ? (
-        renderCell(row, key, field)
+        renderCell(row, key, field, 'table')
       ) : chrome?.Title ? (
         <chrome.Title record={row} label={labelOf(row)} />
       ) : key && field ? (
-        renderCell(row, key, field)
+        renderCell(row, key, field, 'table')
       ) : (
         <>{labelOf(row)}</>
       )
@@ -1693,12 +1736,31 @@ export function CollectionBrowser({
         {listed.map(({ row, depth, hasKids, kidCount }) => (
           <tr key={`${keyPrefix}${row.id}`} className={row.id === detailId ? 'is-active' : undefined} {...recordPick(row)}>
             {columns.map((col, index) => (
-              <td key={col.key}>
+              <td
+                key={col.key}
+                className={
+                  cellPick?.id === row.id && cellPick.key === col.key
+                    ? cellFieldWritable(col.field)
+                      ? 'is-cell-on'
+                      : 'is-cell-on is-cell-ro'
+                    : undefined
+                }
+                onPointerDown={(event) => {
+                  if (event.button !== 0) return
+                  const hit = event.target as HTMLElement | null
+                  if (hit?.closest('.fsdb-row-check, .fsdb-col-resizer, .tasks-row-tools, .tasks-title-open, .fsdb-action-btn')) return
+                  cellAnchorRef.current = event.currentTarget
+                  setCellPick({ id: row.id, key: col.key })
+                  const kind = resolveFieldType(col.field)
+                  const custom = Boolean(chrome?.cells?.[col.key])
+                  setCellPopOpen(Boolean(cellUsesPop(kind, col.field.writable) && !custom))
+                }}
+              >
                 {index === 0 ? <RowCheck id={row.id} /> : null}
                 {col.key === schema?.labelField ? (
                   <RecordTitle row={row} depth={depth} hasKids={hasKids} kidCount={kidCount} />
                 ) : (
-                  <span className="fsdb-cell">{renderCell(row, col.key, col.field)}</span>
+                  <span className="fsdb-cell">{renderCell(row, col.key, col.field, 'table')}</span>
                 )}
               </td>
             ))}
@@ -2559,6 +2621,7 @@ export function CollectionBrowser({
           body={<p>{dlg.body}</p>}
         />
       ) : null}
+      {renderCellPop()}
     </div>
   )
 }

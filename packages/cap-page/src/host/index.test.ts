@@ -105,6 +105,11 @@ test('page plugin stores pages in SQLite under .page', async () => {
   assert.match(diskAsset, /elements/)
   const read = await store.readAsset('board.json')
   assert.equal(read.type, 'application/json; charset=utf-8')
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+  await store.writeAsset('shot.png', png)
+  const shot = await store.readAsset('shot.png')
+  assert.equal(shot.type, 'image/png')
+  assert.deepEqual([...shot.bytes], [...png])
   await assert.rejects(() => store.writeAsset('../secret.json', '{}'), /invalid asset/)
 })
 

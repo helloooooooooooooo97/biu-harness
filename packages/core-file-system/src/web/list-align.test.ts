@@ -88,7 +88,12 @@ test('visible column menu scrolls inside a max height', () => {
   assert.match(css, /\.fsdb-page \.fsdb-col-menu-list\{[^}]*overflow:auto/)
 })
 
-test('table column widths can be dragged and saved on the view', () => {
+test('empty select cells fill the table cell so a click opens the tag menu', () => {
+  assert.match(css, /td:has\(\.db-cell-multi\.is-empty\) \.db-cell-multi\.is-empty[\s\S]*?position:absolute/)
+  assert.match(css, /td:has\(\.db-cell-multi\.is-empty\) \.db-cell-multi\.is-empty[\s\S]*?inset:0/)
+})
+
+test('table columns resize with a Super Tag blue highlight on the divider', () => {
   const browser = readFileSync(resolve(import.meta.dirname, './browser.tsx'), 'utf8')
   assert.match(browser, /data-testid="fsdb-col-resizer"/)
   assert.match(browser, /startColResize/)
@@ -104,5 +109,12 @@ test('table column widths can be dragged and saved on the view', () => {
   assert.match(css, /\.fsdb-page \.tasks-table \.fsdb-col-resizer::after\{[^}]*top:0/)
   assert.match(css, /\.fsdb-page \.tasks-table \.fsdb-col-resizer::after\{[^}]*bottom:0/)
   assert.match(css, /\.fsdb-page \.tasks-table \.fsdb-col-resizer:hover::after,\.fsdb-page \.tasks-table \.fsdb-col-resizer\.is-active::after\{[^}]*background:var\(--dsw-pick/)
-  assert.doesNotMatch(css, /\.fsdb-col-resizer:hover::after[^{]*\{[^}]*--dsw-business/)
+})
+
+test('selected table cells use Super Tag blue when writable and gray when locked', () => {
+  assert.match(css, /\.fsdb-page \.tasks-table td\.is-cell-on\{[^}]*box-shadow:inset 0 0 0 2px var\(--dsw-pick/)
+  assert.match(css, /\.fsdb-page \.tasks-table td\.is-cell-on\.is-cell-ro\{[^}]*box-shadow:inset 0 0 0 2px #787774/)
+  assert.match(css, /\.fsdb-page \.tasks-table td \.db-cell-select-trigger,.fsdb-page \.tasks-table td \.fsdb-cellselect-trigger\{[^}]*width:100%/)
+  assert.match(css, /\.fsdb-page \.tasks-table td \.db-cell-select-trigger,.fsdb-page \.tasks-table td \.fsdb-cellselect-trigger\{[^}]*max-width:none/)
+  assert.match(css, /\.fsdb-cell-pop\{[^}]*background:#202020/)
 })

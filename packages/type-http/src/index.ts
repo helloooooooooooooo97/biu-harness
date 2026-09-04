@@ -8,6 +8,7 @@ export interface RouteContext {
   params: Record<string, string>
   query: URLSearchParams
   json<T = unknown>(): Promise<T>
+  bytes(): Promise<Buffer>
   send(status: number, body: unknown): void
 }
 

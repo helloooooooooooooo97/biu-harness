@@ -34,21 +34,22 @@ function compile(pattern: string) {
   return { keys, regexp }
 }
 
-function parseBody(req: IncomingMessage): Promise<unknown> {
+function readBody(req: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
-    req.on('data', (chunk) => chunks.push(chunk))
-    req.on('end', () => {
-      const raw = Buffer.concat(chunks).toString('utf8')
-      if (!raw) return resolve(null)
-      try {
-        resolve(JSON.parse(raw))
-      } catch {
-        reject(new Error('invalid json'))
-      }
-    })
+    req.on('data', (chunk) => chunks.push(Buffer.from(chunk)))
+    req.on('end', () => resolve(Buffer.concat(chunks)))
     req.on('error', reject)
   })
+}
+
+function parseJson(raw: Buffer): unknown {
+  if (!raw.length) return null
+  try {
+    return JSON.parse(raw.toString('utf8'))
+  } catch {
+    throw new Error('invalid json')
+  }
 }
 
 export type HttpListenConfig = {
@@ -158,12 +159,18 @@ export class HttpService extends Service {
       match.keys.forEach((key, i) => {
         params[key] = decodeURIComponent(result?.[i + 1] ?? '')
       })
+      let rawBody: Promise<Buffer> | null = null
+      const body = () => {
+        if (!rawBody) rawBody = readBody(req)
+        return rawBody
+      }
       const context: RouteContext = {
         req,
         res,
         params,
         query: url.searchParams,
-        json: <T = unknown>() => parseBody(req) as Promise<T>,
+        json: async <T = unknown>() => parseJson(await body()) as T,
+        bytes: () => body(),
         send: (status, body) => {
           res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', ...corsHeaders })
           res.end(JSON.stringify(body))

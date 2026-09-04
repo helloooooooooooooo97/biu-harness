@@ -14,7 +14,7 @@ const CSS = `
 .db-search-empty{padding:8px;color:var(--dsw-label-3);font-size:14px}
 .db-search-foot{border-top:1px solid var(--dsw-border);margin-top:4px;padding-top:4px}
 .db-cell-select{display:inline-flex;position:relative;min-width:0;max-width:100%;box-sizing:border-box;vertical-align:middle}
-.db-cell-select-trigger{display:inline-flex;align-items:center;gap:5px;max-width:110px;height:22px;border:0;border-radius:4px;padding:0 6px;background:rgba(255,255,255,.08);color:var(--dsw-label);font:inherit;font-size:14px;font-weight:500;line-height:22px;cursor:pointer;text-align:left}
+.db-cell-select-trigger{display:inline-flex;align-items:center;gap:5px;max-width:none;height:22px;border:0;border-radius:4px;padding:0 6px;background:rgba(255,255,255,.08);color:var(--dsw-label);font:inherit;font-size:14px;font-weight:500;line-height:22px;cursor:pointer;text-align:left}
 .db-cell-select-trigger:hover,.db-cell-select-trigger[data-open]{background:rgba(255,255,255,.12)}
 .db-cell-select-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .db-cell-select-caret{flex:none;opacity:.55;color:var(--dsw-label-2)}
@@ -25,8 +25,10 @@ const CSS = `
 .db-cell-select.is-field .db-cell-select-trigger{display:flex;justify-content:space-between;gap:6px;width:100%;max-width:none;min-height:28px;border:1px solid var(--dsw-border);border-radius:7px;padding:5px 8px;background:var(--dsw-input);color:var(--dsw-label)}
 .db-cell-select.is-field .db-cell-select-trigger:hover,.db-cell-select.is-field .db-cell-select-trigger[data-open]{background:var(--dsw-hover);filter:none}
 .db-cell-select.is-field .db-cell-select-trigger.is-empty{color:var(--dsw-label-3)}
-.db-cell-multi{position:relative;display:inline-flex;min-width:0;max-width:100%;vertical-align:middle}
-.db-cell-multi-box{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px;width:auto;max-width:100%;min-height:20px;border:0;border-radius:6px;padding:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.db-cell-multi{position:relative;display:flex;min-width:0;width:100%;max-width:100%;vertical-align:middle}
+.db-cell-multi.is-empty{display:flex;width:100%;min-width:0;align-self:stretch}
+.db-cell-multi-box{display:flex;flex-wrap:wrap;align-items:center;gap:4px;width:100%;max-width:none;min-height:20px;border:0;border-radius:6px;padding:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.db-cell-multi-box.is-empty{display:flex;width:100%;min-height:22px;min-width:0;align-self:stretch}
 .db-cell-multi-box:hover,.db-cell-multi-box[aria-expanded="true"]{background:var(--dsw-hover)}
 .db-datetime{display:inline-flex;position:relative;min-width:0;max-width:100%;vertical-align:middle}
 .db-datetime .ant-picker{width:auto;max-width:100%;padding:0 4px;background:transparent;border:0;box-shadow:none}

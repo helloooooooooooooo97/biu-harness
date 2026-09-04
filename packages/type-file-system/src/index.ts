@@ -57,11 +57,18 @@ export function asImageSrc(value: unknown): string {
   return ''
 }
 
+function asLocalHref(text: string) {
+  const value = text.trim()
+  if (/^https?:\/\//i.test(value)) return value
+  if (/^\/(?!\/)[^\s]+$/.test(value)) return value
+  return ''
+}
+
 export function asAttachment(value: unknown): AttachmentValue | null {
   if (value == null || value === '') return null
   if (typeof value === 'object' && !Array.isArray(value)) {
     const rec = value as Record<string, unknown>
-    const href = asHttpHref(rec.href ?? rec.url)
+    const href = asLocalHref(String(rec.href ?? rec.url ?? ''))
     if (!href) return null
     const name = String(rec.name ?? rec.filename ?? '').trim()
     const bytes = Number(rec.bytes)
@@ -71,7 +78,7 @@ export function asAttachment(value: unknown): AttachmentValue | null {
       bytes: Number.isFinite(bytes) && bytes > 0 ? bytes : undefined,
     }
   }
-  const href = asHttpHref(value)
+  const href = asLocalHref(String(value ?? ''))
   if (!href) return null
   return { name: href.split('/').filter(Boolean).pop() || href, href }
 }

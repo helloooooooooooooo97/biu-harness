@@ -9,6 +9,7 @@ export function CellMulti({
   allowCreate = true,
   placeholder,
   multiple = true,
+  autoOpen = false,
 }: {
   values: string[]
   options: Array<{ value: string; label: string }>
@@ -16,9 +17,10 @@ export function CellMulti({
   allowCreate?: boolean
   placeholder?: string
   multiple?: boolean
+  autoOpen?: boolean
 }) {
   ensureDbSearchStyle()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(autoOpen)
   const [query, setQuery] = useState('')
   const boxRef = useRef<HTMLDivElement>(null)
   const q = query.trim().toLowerCase()
@@ -41,19 +43,28 @@ export function CellMulti({
     }
     setQuery('')
   }
+  const empty = values.length === 0
   return (
     <div
-      className="db-cell-multi fsdb-tokens"
+      className={`db-cell-multi fsdb-tokens${empty ? ' is-empty' : ''}`}
       ref={boxRef}
       onClick={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}
     >
       <div
-        className="db-cell-multi-box fsdb-tokens-box"
+        className={`db-cell-multi-box fsdb-tokens-box${empty ? ' is-empty' : ''}`}
+        role="button"
+        tabIndex={0}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={placeholder ?? '添加标签'}
         onClick={() => setOpen(true)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            setOpen(true)
+          }
+        }}
       >
         <TagChips>
           {values.map((value) => (

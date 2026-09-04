@@ -13,8 +13,7 @@ import {
 import { ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
 import { TagChip, TagChips, tagTone, listenOutsideDismiss } from '@biu/public-ui'
 import { CellMulti } from '@biu/database-ui'
-import { asStringList } from './fields.ts'
-import { FieldEditor, FieldGlyph, parseFieldValue } from './fsdb-cells.tsx'
+import { FieldEditor, FieldGlyph, fieldDraftValue, parseFieldValue } from './fsdb-cells.tsx'
 import { loadFacets, persistFacets, registerFacetFieldKey, slugFacetId, subscribeFacets } from './facet-catalog.ts'
 
 const TYPE_LABEL: Partial<Record<FieldType, string>> = {
@@ -35,11 +34,7 @@ const TYPE_LABEL: Partial<Record<FieldType, string>> = {
 export const schemaTagTone = tagTone
 
 function asDraft(value: unknown, field: FieldSpec): string {
-  const kind = field.type
-  if (kind === 'multi-select') return asStringList(value).join(', ')
-  if (kind === 'boolean') return value === true || value === 'true' ? 'true' : 'false'
-  if (value == null) return ''
-  return String(value)
+  return fieldDraftValue(field, value)
 }
 
 export function SchemaChip({
@@ -236,6 +231,7 @@ export function SchemaFieldEditor({
   writable,
   onChange,
   compact,
+  autoOpen = false,
 }: {
   collectionPath: string
   record: DbRecord
@@ -244,6 +240,7 @@ export function SchemaFieldEditor({
   onChange: (next: SchemaFieldValue) => void
   /** Table cells: chips only — pack fields flatten as their own columns. */
   compact?: boolean
+  autoOpen?: boolean
 }) {
   const parsed = normalizeSchemaValue(value)
   const [catalog, setCatalog] = useState(() => loadFacets())
@@ -318,6 +315,8 @@ export function SchemaFieldEditor({
         options={catalog.map((tag) => ({ value: tag.id, label: tag.label }))}
         onChange={applyTags}
         multiple
+        autoOpen={autoOpen}
+        placeholder="添加合集"
       />
       {compact
         ? null
@@ -339,7 +338,14 @@ export function SchemaFieldEditor({
                     fieldKey={field.label ?? field.key}
                     field={field}
                     value={asDraft(bag[field.key], field)}
+                    source={bag[field.key]}
+                    collectionPath={_collectionPath}
                     onChange={(next) => writeField(tag.id, field, next)}
+                    onCommit={(next) => {
+                      const bagNext = { ...(parsed.values[tag.id] ?? {}) }
+                      bagNext[field.key] = next
+                      patchValue({ tags: parsed.tags, values: { ...parsed.values, [tag.id]: bagNext } })
+                    }}
                   />
                   <button
                     type="button"
