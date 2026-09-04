@@ -97,8 +97,8 @@ test('session task page plugin hits render tags left of actions', () => {
   assert.match(css, /\.shell-search-hit-aside\s*\{[^}]*margin-left:\s*auto/s)
   assert.match(css, /\.shell-search-hit-icon\s*\{[^}]*color:\s*var\(--dsw-label-2\)/s)
   assert.match(css, /\.shell-search-hit-action\s*\{[^}]*color:\s*var\(--dsw-label-2\)/s)
-  assert.match(css, /\.shell-search-hit-action\s*\{[^}]*width:\s*16px/s)
-  assert.match(css, /\.shell-search-hit-action\s*\{[^}]*height:\s*16px/s)
+  assert.match(css, /\.shell-search-hit-action\s*\{[^}]*padding:\s*3px/s)
+  assert.match(css, /\.shell-search-hit-action:hover\s*\{[^}]*background:\s*var\(--dsw-hover\)/s)
 })
 
 test('search hit icons follow record mark: emoji, else session mascot', () => {
