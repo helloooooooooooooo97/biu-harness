@@ -221,7 +221,11 @@ export function CollectionBrowser({
   const [filters, setFilters] = useState<Record<string, string>>(initialView?.filters ?? {})
   const [columnKeys, setColumnKeys] = useState<string[]>(initialView?.columns ?? [])
   const [facetCatalog, setFacetCatalog] = useState(() => loadFacets())
-  const tablePathsKey = tables.map((table) => `${table.path}\t${table.view?.title ?? table.label ?? ''}`).join('\n')
+  const tablePathsKey = tables
+    .map((table) => table.path)
+    .slice()
+    .sort()
+    .join('\n')
   const [views, setViews] = useState<SavedView[]>(() => loadViews(collectionPath))
   const [activeViewId, setActiveViewId] = useState<string | null>(initialView?.id ?? null)
   const catalogLocks = useMemo(() => {
@@ -231,6 +235,7 @@ export function CollectionBrowser({
     return { ...current.filters, ...lockedFilters }
   }, [activeViewId, lockedFilters, sheet, views])
   const queryFilters = useMemo(() => ({ ...filters, ...catalogLocks }), [catalogLocks, filters])
+  const queryFiltersKey = JSON.stringify(queryFilters)
   const lockedFilterKeys = Object.keys(catalogLocks)
   const lockedSource = catalogLocks.tablePath ?? ''
   useEffect(() => {
@@ -532,7 +537,7 @@ export function CollectionBrowser({
 
   useEffect(() => {
     setPage((prev) => (prev === 0 ? prev : 0))
-  }, [fetchQuery, queryFilters, sortField, sortDir, pageSize, collectionPath, dataPath])
+  }, [fetchQuery, queryFiltersKey, sortField, sortDir, pageSize, collectionPath, dataPath])
 
   async function refreshNow() {
     if (refreshing) return

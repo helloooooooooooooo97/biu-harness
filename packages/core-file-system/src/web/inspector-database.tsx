@@ -36,6 +36,7 @@ export function collectionTabIcon(icon?: string) {
 }
 
 const EMPTY_CHROME: CollectionChrome = {}
+const EMPTY_FILTERS: Record<string, string> = {}
 
 type InspectorSnapshot = {
   subscribe: (fn: () => void) => () => void
@@ -324,7 +325,7 @@ export function DatabaseInspectorBrowse(props: SlotProps) {
     () => (currentPath ? ui?.chrome(currentPath) ?? EMPTY_CHROME : EMPTY_CHROME),
     () => (currentPath ? ui?.chrome(currentPath) ?? EMPTY_CHROME : EMPTY_CHROME),
   )
-  const lockedFilters = chrome.lockedFiltersFromSearch?.(search) ?? {}
+  const lockedFilters = chrome.lockedFiltersFromSearch?.(search) ?? EMPTY_FILTERS
   const table = tables.find((item) => item.path === currentPath)
   const title = table ? tableLabel(table) : '数据'
   const liveWorking = useInspectorAgentWorking(currentPath)

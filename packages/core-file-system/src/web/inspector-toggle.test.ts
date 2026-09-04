@@ -349,6 +349,20 @@ test('collection reload does not follow callback identity', () => {
   assert.doesNotMatch(browser, /pullFacets\(\),\s*\n\s*\]\)/)
 })
 
+test('pager keeps the current page when filter objects are only recreated', () => {
+  const page = readFileSync(resolve(import.meta.dirname, './index.tsx'), 'utf8')
+  const inspector = readFileSync(resolve(import.meta.dirname, './inspector-database.tsx'), 'utf8')
+  assert.match(browser, /const queryFiltersKey = JSON.stringify\(queryFilters\)/)
+  assert.match(browser, /\[fetchQuery, queryFiltersKey, sortField, sortDir, pageSize, collectionPath, dataPath\]/)
+  assert.doesNotMatch(browser, /\[fetchQuery, queryFilters, sortField/)
+  assert.match(browser, /tables\s*\n\s*\.map\(\(table\) => table\.path\)/)
+  assert.doesNotMatch(browser, /tablePathsKey = tables\.map/)
+  assert.match(page, /lockedFiltersFromSearch\?\.\(location\.search\) \?\? EMPTY_FILTERS/)
+  assert.doesNotMatch(page, /lockedFiltersFromSearch\?\.\(location\.search\) \?\? \{\}/)
+  assert.match(inspector, /lockedFiltersFromSearch\?\.\(search\) \?\? EMPTY_FILTERS/)
+  assert.doesNotMatch(inspector, /lockedFiltersFromSearch\?\.\(search\) \?\? \{\}/)
+})
+
 test('page collection uses a document glyph, not the table/database icon', () => {
   const glyphs = readFileSync(resolve(import.meta.dirname, './table-glyph.tsx'), 'utf8')
   assert.match(glyphs, /name === 'document' \|\| name === 'document-text' \|\| name === 'page'/)

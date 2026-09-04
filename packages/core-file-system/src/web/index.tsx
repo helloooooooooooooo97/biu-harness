@@ -53,6 +53,7 @@ type SnapshotService = {
 }
 
 const EMPTY_CHROME: CollectionChrome = {}
+const EMPTY_FILTERS: Record<string, string> = {}
 
 function CollectionPage(props: SlotProps) {
   const tables = (props.tables as CollectionInfo[] | undefined) ?? []
@@ -130,7 +131,7 @@ function CollectionPage(props: SlotProps) {
     go({ collection: first.path, viewId: defaultViewId(first.path) }, { replace: true })
   }, [collectionFromRoute, orderedTables])
 
-  const lockedFilters = chrome.lockedFiltersFromSearch?.(location.search) ?? {}
+  const lockedFilters = chrome.lockedFiltersFromSearch?.(location.search) ?? EMPTY_FILTERS
   if (!currentPath) return null
   const title = row?.view?.title ?? row?.label ?? currentPath.replace(/^\//, '')
   return (
