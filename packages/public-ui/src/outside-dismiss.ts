@@ -3,6 +3,8 @@ export function listenOutsideDismiss(onClose: () => void, isInside: (target: Nod
   const onDown = (event: MouseEvent) => {
     const target = event.target
     if (!(target instanceof Node) || isInside(target)) return
+    const active = document.activeElement
+    if (active instanceof Node && isInside(active)) return
     onClose()
   }
   document.addEventListener('mousedown', onDown, true)

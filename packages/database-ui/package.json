@@ -8,6 +8,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "antd": "^6.6.1",
+    "dayjs": "^1.11.13",
     "@biu/public-ui": "0.1.0"
   },
   "peerDependencies": {

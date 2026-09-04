@@ -28,27 +28,10 @@ const CSS = `
 .db-cell-multi-box{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px;width:auto;max-width:100%;min-height:20px;border:0;border-radius:6px;padding:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .db-cell-multi-box:hover,.db-cell-multi-box[aria-expanded="true"]{background:var(--dsw-hover)}
 .db-datetime{display:inline-flex;position:relative;min-width:0;max-width:100%;vertical-align:middle}
-.db-datetime-trigger{display:inline-flex;align-items:center;gap:5px;max-width:100%;height:22px;border:0;border-radius:4px;padding:0 6px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;font-weight:500;line-height:22px;cursor:pointer;text-align:left}
-.db-datetime-trigger:hover,.db-datetime-trigger[data-open]{background:var(--dsw-hover)}
-.db-datetime-trigger.is-empty{color:var(--dsw-label-3);font-weight:500}
-.db-datetime-trigger.is-overdue{color:var(--dsw-danger)}
-.db-datetime-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.db-datetime-pop{box-sizing:border-box;padding:8px}
-.db-datetime-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px}
-.db-datetime-month{font-size:14px;font-weight:650;color:var(--dsw-label)}
-.db-datetime-nav{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label);cursor:pointer}
-.db-datetime-nav:hover{background:var(--dsw-hover)}
-.db-datetime-week,.db-datetime-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.db-datetime-week span{text-align:center;font-size:11px;color:var(--dsw-label-3);padding:4px 0}
-.db-datetime-day{border:0;border-radius:6px;height:28px;background:transparent;color:var(--dsw-label);font:inherit;font-size:13px;cursor:pointer}
-.db-datetime-day:hover{background:var(--dsw-hover)}
-.db-datetime-day.is-on{background:color-mix(in srgb,var(--dsw-business) 18%,transparent);color:var(--dsw-business);font-weight:650}
-.db-datetime-day.is-empty{visibility:hidden;pointer-events:none}
-.db-datetime-time{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--dsw-border)}
-.db-datetime-time select{flex:1;min-width:0;height:28px;border:1px solid var(--dsw-border);border-radius:6px;padding:0 6px;background:var(--dsw-input);color:var(--dsw-label);font:inherit;font-size:14px}
-.db-datetime-foot{display:flex;justify-content:space-between;gap:8px;margin-top:6px}
-.db-datetime-foot button{border:0;border-radius:6px;padding:4px 6px;background:transparent;color:var(--dsw-label-2);font:inherit;font-size:13px;cursor:pointer}
-.db-datetime-foot button:hover{background:var(--dsw-hover);color:var(--dsw-label)}
+.db-datetime .ant-picker{width:auto;max-width:100%;padding:0 4px;background:transparent;border:0;box-shadow:none}
+.db-datetime .ant-picker-input > input{font-size:14px;font-weight:500;color:var(--dsw-label)}
+.db-datetime.is-overdue .ant-picker-input > input{color:var(--dsw-danger)}
+.db-datetime .ant-picker-suffix,.db-datetime .ant-picker-clear{color:var(--dsw-label-3)}
 `
 
 export function ensureDbSearchStyle() {
