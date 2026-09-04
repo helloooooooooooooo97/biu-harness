@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent, type Ref } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent, type Ref } from 'react'
 import { createPortal } from 'react-dom'
 import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/16/solid'
 import { listenOutsideDismiss } from '@biu/public-ui'
@@ -34,7 +34,6 @@ function CrumbMenu({
   canCreateView?: boolean
   canCreateRecord?: boolean
 }) {
-  const searchRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
   const filtered = useMemo(
@@ -44,11 +43,6 @@ function CrumbMenu({
   const createKind = createKindOf(crumb)
   const showCreate =
     (createKind === 'view' && canCreateView && onCreate) || (createKind === 'record' && canCreateRecord && onCreate)
-
-  useEffect(() => {
-    const id = window.setTimeout(() => searchRef.current?.focus(), 0)
-    return () => window.clearTimeout(id)
-  }, [])
 
   return (
     <div
@@ -61,10 +55,10 @@ function CrumbMenu({
       <label className="fsdb-crumb-search">
         <MagnifyingGlassIcon aria-hidden className="size-[14px]" />
         <input
-          ref={searchRef}
           value={query}
           placeholder="搜索"
           aria-label="搜索"
+          autoFocus
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
@@ -234,7 +228,8 @@ export function CrumbTrail({
                 title={crumb.label}
                 aria-haspopup={canPick ? 'menu' : undefined}
                 aria-expanded={canPick ? open : undefined}
-                onClick={(event: MouseEvent) => {
+                onPointerDown={(event: PointerEvent<HTMLButtonElement>) => {
+                  if (event.button !== 0) return
                   event.preventDefault()
                   event.stopPropagation()
                   if (!allowMenu) {
@@ -255,6 +250,10 @@ export function CrumbTrail({
                   onActivate?.()
                   onPick(action)
                   setOpenMenu(null)
+                }}
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
                 }}
               >
                 {glyph}
