@@ -710,7 +710,7 @@ export async function coerceAssigneeArg(host: HostCtx, value: unknown): Promise<
 
 const ASSIGNEE_PARAM = {
   description:
-    '分配人。支持：人名字符串；sessionId 字符串；或 actor 对象 { kind, sessionId?, name?, mascot? }；null 清空。也可用 assigneeSessionId。',
+    '分配人。写执行人字段：sessionId 字符串、或 actor 对象 { kind, sessionId?, name?, mascot? }；空则清空。',
 } as const
 
 const ASSIGNEE_SESSION_PARAM = {
@@ -1657,7 +1657,7 @@ export function apply(ctx: Context) {
     if (!row) throw new Error('unknown task')
     const targetSessionId = row.assignee?.sessionId
     if (!targetSessionId) {
-      throw new Error(`task ${id} 未分配负责 session（assignee 无 sessionId），请先用 db_update 写入 assigneeSessionId`)
+      throw new Error(`task ${id} 未分配执行会话。请先 db_update /tasks/${id} 写入 assignee（会话 id）`)
     }
     if (!host.sessions?.sendMessage) {
       throw new Error('sessions.sendMessage 不可用：sessions 服务未就绪')
@@ -1679,110 +1679,6 @@ export function apply(ctx: Context) {
       steps: turn.steps.length,
     }
   }
-
-  host.http.route('GET', '/api/tasks', async (route) => {
-    const statusRaw = route.query.get('status')
-    const q = route.query.get('q') ?? undefined
-    const status = statusRaw && STATUSES.has(statusRaw as TaskStatus) ? (statusRaw as TaskStatus) : undefined
-    const rows = await presentMany(tasks.list({ ...(status ? { status } : {}), ...(q ? { q } : {}) }))
-    route.send(200, { tasks: rows })
-  })
-
-  host.http.route('POST', '/api/tasks', async (route) => {
-    try {
-      const body = (await route.json()) as TaskCreateInput
-      const creator = await resolveCreator(host, body.creator)
-      const resolved = await resolveAssignee(host, {
-        ...(body.assigneeSessionId !== undefined ? { assigneeSessionId: body.assigneeSessionId } : {}),
-        ...(body.assignee !== undefined ? { assignee: body.assignee } : {}),
-      })
-      const row = tasks.create({
-        ...body,
-        creator,
-        assignee: resolved.touchAssignedAt ? resolved.assignee : body.assignee ?? null,
-      })
-      route.send(201, { task: await present(row) })
-    } catch (error) {
-      route.send(400, { error: String(error) })
-    }
-  })
-
-  host.http.route('GET', '/api/tasks/:id', async (route) => {
-    const row = tasks.get(route.params.id)
-    if (!row) return route.send(404, { error: 'unknown task' })
-    route.send(200, { task: await present(row) })
-  })
-
-  host.http.route('PATCH', '/api/tasks/:id', async (route) => {
-    try {
-      const body = (await route.json()) as TaskUpdateInput
-      const patch: TaskUpdateInput & { assignee?: TaskActor | null; creator?: TaskActor } = { ...body }
-      if (body.assigneeSessionId !== undefined || body.assignee !== undefined) {
-        const resolved = await resolveAssignee(host, {
-          ...(body.assigneeSessionId !== undefined ? { assigneeSessionId: body.assigneeSessionId } : {}),
-          ...(body.assignee !== undefined ? { assignee: body.assignee } : {}),
-        })
-        if (resolved.touchAssignedAt) patch.assignee = resolved.assignee
-      }
-      if (body.creatorSessionId !== undefined) {
-        const sid = body.creatorSessionId?.trim()
-        if (!sid) patch.creator = { kind: 'user', name: '用户' }
-        else {
-          const resolved = await resolveAssignee(host, { assigneeSessionId: sid })
-          patch.creator = resolved.assignee ?? { kind: 'agent', sessionId: sid, name: sid.slice(0, 8) }
-        }
-      }
-      const row = tasks.update(route.params.id, patch)
-      route.send(200, { task: await present(row) })
-    } catch (error) {
-      const message = String(error)
-      route.send(message.includes('unknown') ? 404 : 400, { error: message })
-    }
-  })
-
-  host.http.route('DELETE', '/api/tasks/:id', (route) => {
-    const ok = tasks.delete(route.params.id)
-    if (!ok) return route.send(404, { error: 'unknown task' })
-    route.send(200, { ok: true })
-  })
-
-  // 批量创建
-  host.http.route('POST', '/api/tasks/batch', async (route) => {
-    try {
-      const body = (await route.json()) as { tasks: TaskCreateInput[] }
-      const items = Array.isArray(body.tasks) ? body.tasks : []
-      const creator = await resolveCreator(host)
-      const created: TaskRow[] = []
-      for (const input of items) {
-        const resolved = await resolveAssignee(host, {
-          ...(input.assigneeSessionId !== undefined ? { assigneeSessionId: input.assigneeSessionId } : {}),
-          ...(input.assignee !== undefined ? { assignee: input.assignee } : {}),
-        })
-        const row = tasks.create({ ...input, creator, assignee: resolved.touchAssignedAt ? resolved.assignee : input.assignee ?? null })
-        created.push(row)
-      }
-      route.send(201, { tasks: await presentMany(created) })
-    } catch (error) {
-      route.send(400, { error: String(error) })
-    }
-  })
-
-  // 批量删除
-  host.http.route('DELETE', '/api/tasks', async (route) => {
-    try {
-      const body = (await route.json()) as { ids: string[] }
-      const ids = Array.isArray(body.ids) ? body.ids.map(String) : []
-      let deleted = 0
-      const missing: string[] = []
-      for (const id of ids) {
-        if (tasks.delete(id)) deleted++
-        else missing.push(id)
-      }
-      route.send(200, { ok: true, deleted, missing })
-    } catch (error) {
-      route.send(400, { error: String(error) })
-    }
-  })
 
   // ==================== 视图（task_views）REST：Notion 风格视图持久化 ====================
   // GET    /api/task-views      —— 视图列表

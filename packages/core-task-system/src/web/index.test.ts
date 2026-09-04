@@ -47,6 +47,8 @@ test('task-system web paints /tasks chrome without importing file-system', async
   assert.match(chrome, /which="creator"/)
   assert.match(chrome, /which="assignee"/)
   assert.match(chrome, /选择执行人/)
+  assert.match(chrome, /\/api\/db\/update/)
+  assert.doesNotMatch(chrome, /\/api\/tasks/)
   assert.doesNotMatch(chrome, /选择承担者/)
   assert.equal(ui.last?.chrome.panes?.map((pane) => pane.id).join(','), 'script,reports')
   assert.equal(ui.registered[0]?.path, '/tasks')

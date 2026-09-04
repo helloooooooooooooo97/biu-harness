@@ -82,17 +82,6 @@ async function loadChatPeople(): Promise<ChatPerson[]> {
     }))
 }
 
-async function patchTask(id: string, patch: Record<string, unknown>) {
-  const res = await fetch(`/api/tasks/${id}`, {
-    method: 'PATCH',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(patch),
-  })
-  const body = (await res.json()) as { error?: string }
-  if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`)
-  window.dispatchEvent(new Event('fsdb:change'))
-}
-
 async function patchRecord(id: string, content: Record<string, unknown>) {
   const res = await fetch('/api/db/update', {
     method: 'POST',
@@ -258,9 +247,8 @@ function PersonPicker({
     }
   }, [open])
 
-  const key = which === 'creator' ? 'creatorSessionId' : 'assigneeSessionId'
   const pick = (sessionId: string | null) => {
-    void patchTask(record.id, { [key]: sessionId })
+    void patchRecord(record.id, { [which]: sessionId ?? '' })
     setOpen(false)
   }
 
