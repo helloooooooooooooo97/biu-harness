@@ -266,28 +266,28 @@ export function ApprovalsRail(props: SlotProps) {
                 >
                   <ExclamationCircleIcon aria-hidden className="size-4" />
                 </span>
-                <div className="font-medium">Approval · {item.name}</div>
+                <div className="dock-approval-card-title">Approval · {item.name}</div>
+                <div className="dock-approval-card-actions">
+                  <button
+                    type="button"
+                    className="rounded-full px-3 py-1 text-(length:--dsw-chat-ui-font-size) text-(--dsw-bg)"
+                    style={{ background: 'var(--dsw-business)' }}
+                    onClick={() => void sessionView.decideApproval(item.id, true)}
+                  >
+                    Allow
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-full border border-(--dsw-border) px-3 py-1 text-(length:--dsw-chat-ui-font-size)"
+                    onClick={() => void sessionView.decideApproval(item.id, false)}
+                  >
+                    Deny
+                  </button>
+                </div>
               </div>
-              <pre className="mb-2 max-h-20 overflow-auto whitespace-pre-wrap text-(--dsw-label-2)">
+              <pre className="max-h-20 overflow-auto whitespace-pre-wrap text-(--dsw-label-2)">
                 {JSON.stringify(item.args, null, 2)}
               </pre>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  className="rounded-full px-3 py-1 text-(length:--dsw-chat-ui-font-size) text-(--dsw-bg)"
-                  style={{ background: 'var(--dsw-business)' }}
-                  onClick={() => void sessionView.decideApproval(item.id, true)}
-                >
-                  Allow
-                </button>
-                <button
-                  type="button"
-                  className="rounded-full border border-(--dsw-border) px-3 py-1 text-(length:--dsw-chat-ui-font-size)"
-                  onClick={() => void sessionView.decideApproval(item.id, false)}
-                >
-                  Deny
-                </button>
-              </div>
             </div>
           ))}
         </div>
