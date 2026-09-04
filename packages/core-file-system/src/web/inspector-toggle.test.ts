@@ -164,6 +164,8 @@ test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.match(browser, /const Custom = chrome\?\.cells\?\.\[key\][\s\S]*if \(field.writable && kind !== 'file'\)/)
   assert.match(browser, /key && field\?\.writable \?/)
   assert.match(browser, /cellUsesPop/)
+  assert.doesNotMatch(browser, /if \(pop\) return <DefaultCell field=\{field\} value=\{row\[key\]\}/)
+  assert.match(browser, /renderCell\(row, key, field, 'table'\)/)
   assert.match(browser, /is-cell-on/)
   assert.match(browser, /is-cell-ro/)
   assert.match(browser, /cellFieldWritable/)

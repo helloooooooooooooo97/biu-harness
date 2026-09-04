@@ -1316,7 +1316,6 @@ export function CollectionBrowser({
     if (flat) {
       const source = facetSourceKey(schema)
       const value = readFacetFlatValue(row, key, source)
-      if (pop) return <DefaultCell field={field} value={value} />
       if (field.writable && kind !== 'file') {
         return (
           <FieldEditor
@@ -1368,7 +1367,6 @@ export function CollectionBrowser({
     const Custom = chrome?.cells?.[key]
     const fallback = formatField(field, row[key])
     if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={fallback} />
-    if (pop) return <DefaultCell field={field} value={row[key]} fieldKey={key} />
     if (field.writable && kind !== 'file') {
       return (
         <FieldEditor
@@ -1393,7 +1391,7 @@ export function CollectionBrowser({
     const col = columns.find((item) => item.key === cellPick.key)
     if (!row || !col) return null
     return (
-      <CellPop open anchor={cellAnchorRef.current} onClose={() => setCellPopOpen(false)}>
+      <CellPop key={`${cellPick.id}:${cellPick.key}`} open anchor={cellAnchorRef.current} onClose={() => setCellPopOpen(false)}>
         {renderCell(row, col.key, col.field, 'detail')}
       </CellPop>
     )
@@ -1752,8 +1750,7 @@ export function CollectionBrowser({
                   cellAnchorRef.current = event.currentTarget
                   setCellPick({ id: row.id, key: col.key })
                   const kind = resolveFieldType(col.field)
-                  const custom = Boolean(chrome?.cells?.[col.key])
-                  setCellPopOpen(Boolean(cellUsesPop(kind, col.field.writable) && !custom))
+                  setCellPopOpen(Boolean(cellUsesPop(kind, col.field.writable)))
                 }}
               >
                 {index === 0 ? <RowCheck id={row.id} /> : null}

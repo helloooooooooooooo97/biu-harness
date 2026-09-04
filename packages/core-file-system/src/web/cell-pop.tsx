@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { AnchorMenu } from '@biu/public-ui'
 import type { FieldType } from '@biu/type-file-system'
 
 export function cellUsesPop(kind: FieldType, writable?: boolean) {
   if (!writable) return false
-  return kind !== 'boolean' && kind !== 'action' && kind !== 'file'
+  return kind === 'facet'
 }
 
 export function CellPop({
@@ -18,11 +18,15 @@ export function CellPop({
   onClose: () => void
   children: ReactNode
 }) {
+  const openedAt = useRef(performance.now())
   if (!open || !anchor) return null
   return (
     <AnchorMenu
       anchor={anchor}
-      onClose={onClose}
+      onClose={() => {
+        if (performance.now() - openedAt.current < 400) return
+        onClose()
+      }}
       className="fsdb-cell-pop"
       role="dialog"
       minWidth={280}
