@@ -52,13 +52,15 @@ test('session outline is one tick per user bubble, never reply headings', () => 
   const root = document.createElement('div')
   root.innerHTML = `
     <h1 class="fsdb-detail-title">Session title</h1>
-    <div data-chat-kind="user" data-node-id="u-1">
-      <div data-testid="user-bubble">hello from me</div>
-      <div>回复栏</div>
-    </div>
-    <div data-chat-kind="reply"><h2>Section in reply</h2></div>
-    <div data-chat-kind="user" data-node-id="u-2">
-      <div data-testid="user-bubble">second question</div>
+    <div data-testid="session-record-chat">
+      <div data-chat-kind="user" data-node-id="u-1">
+        <div data-testid="user-bubble">hello from me</div>
+        <div>回复栏</div>
+      </div>
+      <div data-chat-kind="reply"><h2>Section in reply</h2></div>
+      <div data-chat-kind="user" data-node-id="u-2">
+        <div data-testid="user-bubble">second question</div>
+      </div>
     </div>
   `
   assert.deepEqual(
@@ -66,6 +68,21 @@ test('session outline is one tick per user bubble, never reply headings', () => 
     [
       ['u-1', 'hello from me', 1],
       ['u-2', 'second question', 1],
+    ],
+  )
+})
+
+test('page and task outlines still use headings when no session chat', () => {
+  const root = document.createElement('div')
+  root.innerHTML = `
+    <h1 class="fsdb-detail-title">Task</h1>
+    <div class="page-editor"><h1>Goal</h1><h2>Step</h2></div>
+  `
+  assert.deepEqual(
+    headingsFromRoot(root).map((item) => [item.id, item.text, item.level]),
+    [
+      ['heading-0', 'Goal', 1],
+      ['heading-1', 'Step', 2],
     ],
   )
 })

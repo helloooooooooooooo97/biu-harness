@@ -40,12 +40,11 @@ function escapeId(id: string) {
   return typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(id) : id
 }
 
-/** 只读扫描。禁止给标题写 data-*：PageEditor / TipTap 拥有这些节点，写属性会触发 MutationObserver 死循环。 */
+/** 只读扫描。会话详情只收用户气泡；页面/任务只收 h1–h3。禁止给标题写 data-*。 */
 export function headingsFromRoot(root: ParentNode): HeadingOutlineItem[] {
-  const bubbles = chatUserBubbles(root)
-  if (bubbles.length) {
+  if (root.querySelector('[data-testid="session-record-chat"]')) {
     const items: HeadingOutlineItem[] = []
-    for (const el of bubbles) {
+    for (const el of chatUserBubbles(root)) {
       const wrap = el.closest('[data-chat-kind="user"][data-node-id]')
       const id = wrap instanceof HTMLElement ? wrap.getAttribute('data-node-id')?.trim() : ''
       const text = preview(el.textContent ?? '')
