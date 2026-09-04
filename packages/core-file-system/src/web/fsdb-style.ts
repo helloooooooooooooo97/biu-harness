@@ -265,7 +265,7 @@ const CSS = `
 .fsdb-detail-stage{position:relative;display:flex;min-width:0;width:100%;min-height:min-content;flex:1 0 auto;flex-direction:row;overflow:visible;background:var(--dsw-bg)}
 .heading-outline-host{position:absolute;inset:0;z-index:20;pointer-events:none}
 .fsdb-right:has(.heading-outline-host),.fsdb-right-body:has(.heading-outline-host),.fsdb-detail-stage:has(.heading-outline-host){position:relative}
-.heading-outline-host .chat-outline{left:8px;top:50%}
+.heading-outline-host .chat-outline{left:20px;top:50%}
 .fsdb-detail-screen{display:flex;min-width:0;width:100%;min-height:min-content;flex:1;flex-direction:column;overflow:visible}
 .fsdb-detail-screen .fsdb-detail-split,.fsdb-detail-screen > :not(header){flex:none;width:100%;min-height:min-content;overflow:visible}
 .fsdb-detail-float-nav{position:sticky;top:50%;align-self:flex-start;flex:none;z-index:24;display:flex;flex-direction:column;gap:4px;width:0;min-width:0;margin:0;padding:4px 0;border:0;border-radius:8px;background:#202020;box-shadow:0 1px 2px rgba(15,15,15,.04);overflow:visible;transform:translate(-40px,-50%)}

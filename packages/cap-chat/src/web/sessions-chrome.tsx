@@ -140,7 +140,7 @@ if (typeof document !== 'undefined') {
 .fsdb-detail-main:has(.chat-pane-embed) .chat-stage>*{max-width:100%;width:100%;min-width:0;box-sizing:border-box}
 .session-outline-host{position:absolute;inset:0;z-index:20;pointer-events:none}
 .fsdb-right:has(.session-outline-host),.fsdb-right-body:has(.session-outline-host),.fsdb-detail-stage:has(.session-outline-host){position:relative}
-.session-outline-host .chat-outline{left:8px;top:50%}
+.session-outline-host .chat-outline{left:20px;top:50%}
 `
   document.head.appendChild(style)
 }
