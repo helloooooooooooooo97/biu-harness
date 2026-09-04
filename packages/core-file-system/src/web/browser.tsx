@@ -1504,6 +1504,9 @@ export function CollectionBrowser({
     const Action = chrome?.Action
     const shown = actions.filter((action) => action.id === 'open-split' || action.id === 'open-page')
     const overflow = actions.filter((action) => action.id !== 'open-split' && action.id !== 'open-page')
+    const rowShown = actions.filter(
+      (action) => Action || actionIcon(action.id) || action.id === 'open-split' || action.id === 'open-page',
+    )
     const busy = Boolean(busyKey?.endsWith(`:${row.id}`))
     const renderOne = (action: CollectionActionInfo) => {
       const run = () => void runAction(row, action)
@@ -1522,6 +1525,14 @@ export function CollectionBrowser({
         >
           {glyph ?? action.label}
         </button>
+      )
+    }
+    if (place === 'row') {
+      if (!rowShown.length) return null
+      return (
+        <div className="tasks-row-actions" data-biu-ignore onClick={(event) => event.stopPropagation()}>
+          {rowShown.map(renderOne)}
+        </div>
       )
     }
     return (
