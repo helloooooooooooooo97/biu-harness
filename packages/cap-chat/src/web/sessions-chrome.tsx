@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { createPortal } from 'react-dom'
-import { ChatPane, ChatStage, OutlineNav } from '@biu/public-ui'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { ChatPane, ChatStage, OutlineNav, SidebarOutlinePortal } from '@biu/public-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { MASCOT_COLOR_NAME, MASCOT_EYE_NAME, MASCOT_SHAPE_NAME } from '@biu/type-session'
 import type { CollectionChrome, FsCellProps, FsContentProps } from '@biu/type-file-system/ui'
@@ -64,8 +63,6 @@ function escapeId(id: string) {
 function SessionRecordChat({ record }: FsContentProps) {
   const sessionId = String(record.id)
   const [nodes, setNodes] = useState<ChatNode[]>([])
-  const [host, setHost] = useState<HTMLElement | null>(null)
-  const anchorRef = useRef<HTMLDivElement>(null)
   const filter = useSyncExternalStore(subscribeChatOutline, getChatOutlineFilter, (): ChatOutlineFilter => 'user')
   const items = useMemo(() => deriveChatOutline(nodes, filter), [nodes, filter])
   const go = useCallback((id: string) => {
@@ -73,11 +70,6 @@ function SessionRecordChat({ record }: FsContentProps) {
       `[data-testid="session-record-chat"] [data-node-id="${escapeId(id)}"]`,
     )
     el?.scrollIntoView({ block: 'start', behavior: 'smooth' })
-  }, [])
-  useLayoutEffect(() => {
-    const el = anchorRef.current
-    const root = el?.closest('.fsdb-right') ?? el?.closest('.fsdb-right-body') ?? el?.closest('.fsdb-detail-stage')
-    setHost(root instanceof HTMLElement ? root : null)
   }, [])
   useEffect(() => {
     const ac = new AbortController()
@@ -95,20 +87,22 @@ function SessionRecordChat({ record }: FsContentProps) {
       .catch(() => undefined)
     return () => ac.abort()
   }, [sessionId])
-  const outline = <OutlineNav items={items} testId="session-outline" onSelect={go} />
+  const outline = items.length ? (
+    <SidebarOutlinePortal>
+      <OutlineNav items={items} testId="session-outline" onSelect={go} />
+    </SidebarOutlinePortal>
+  ) : null
   return (
     <>
-      {host ? createPortal(<div className="session-outline-host">{outline}</div>, host) : null}
-      <div ref={anchorRef}>
-        <ChatPane
-          embed
-          thread={
-            <ChatStage variant="pane">
-              <ChatNodeList nodes={nodes} onInspect={() => undefined} onFork={() => undefined} />
-            </ChatStage>
-          }
-        />
-      </div>
+      {outline}
+      <ChatPane
+        embed
+        thread={
+          <ChatStage variant="pane">
+            <ChatNodeList nodes={nodes} onInspect={() => undefined} onFork={() => undefined} />
+          </ChatStage>
+        }
+      />
     </>
   )
 }
@@ -138,9 +132,6 @@ if (typeof document !== 'undefined') {
 .fsdb-detail-main:has(.chat-pane-embed) .chat-pane-embed{padding-inline:0;min-width:0;min-height:0;width:100%;max-width:100%;box-sizing:border-box}
 .fsdb-detail-main:has(.chat-pane-embed) .chat-pane-embed,.fsdb-detail-main:has(.chat-pane-embed) .chat-overlay-thread,.fsdb-detail-main:has(.chat-pane-embed) .chat-stage{overflow:visible;flex:none;min-width:0;min-height:0;height:auto;max-width:100%;overscroll-behavior:auto;align-items:stretch;scrollbar-gutter:auto}
 .fsdb-detail-main:has(.chat-pane-embed) .chat-stage>*{max-width:100%;width:100%;min-width:0;box-sizing:border-box}
-.session-outline-host{position:absolute;inset:0;z-index:20;pointer-events:none}
-.fsdb-right:has(.session-outline-host),.fsdb-right-body:has(.session-outline-host),.fsdb-detail-stage:has(.session-outline-host){position:relative}
-.session-outline-host .chat-outline{left:20px;top:50%}
 `
   document.head.appendChild(style)
 }

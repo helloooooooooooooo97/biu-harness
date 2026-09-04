@@ -169,11 +169,19 @@ body {
 
 /* App shell — sidebar + main */
 .app-shell {
+  position: relative;
   display: grid;
   height: 100vh;
   overflow: hidden;
   background: var(--dsw-bg);
   color: var(--dsw-label);
+}
+
+.sidebar-outline-host {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
 }
 
 .chat-view-header {
@@ -4290,10 +4298,10 @@ body {
 }
 
 .chat-outline {
-  position: absolute;
-  left: 20px;
+  position: fixed;
+  left: calc(var(--sidebar-col, 0px) + 20px);
   top: 50%;
-  z-index: 8;
+  z-index: 40;
   display: flex;
   align-items: stretch;
   max-height: min(72vh, 640px);
