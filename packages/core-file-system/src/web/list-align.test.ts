@@ -38,6 +38,8 @@ test('list and detail share the chat column max width with side padding', () => 
   assert.match(css, /\.tasks-viewtabs\{[^}]*overflow:hidden/)
   assert.match(css, /\.tasks-viewdd-item-actions\{[^}]*visibility:hidden/)
   assert.match(css, /\.tasks-viewdd-act\{[^}]*width:26px/)
+  assert.match(css, /\.fsdb-right-body:has\(\.fsdb-detail-stage\) \.app-pane-in\{[^}]*overflow:visible/)
+  assert.match(css, /\.fsdb-right-body:has\(\.fsdb-detail-stage\) \.app-pane-in\{[^}]*width:100%/)
   assert.match(css, /\.fsdb-right-body:has\(\.fsdb-pager\)\{[^}]*overflow:hidden/)
   assert.match(css, /\.fsdb-pager\{[^}]*margin-top:auto/)
   assert.match(css, /\.fsdb-page\{[^}]*--fsdb-pager-lift:calc\(1rem \+ 44px \+ 25px \+ 25px - 30px\)/)
