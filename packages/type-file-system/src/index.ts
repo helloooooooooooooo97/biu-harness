@@ -296,6 +296,8 @@ export type CollectionActionAudience = 'both' | 'agent' | 'user'
 export type CollectionActionInfo = {
   id: string
   label: string
+  /** 给 Agent 看：这个动作何时用、args 怎么填、不要用错成别的动作。db_stat schema.actions 会带上。 */
+  description?: string
   tone?: 'danger'
   /** 谁能用。缺省 both。前端只画 user 与 both。 */
   for?: CollectionActionAudience
@@ -349,6 +351,7 @@ export type CollectionView = {
   /** 调用方选定的前端路由，例如 /tasks；不得与已有导航冲突。 */
   route: string
   title?: string
+  /** 给 Agent 看的表说明书：这张表是什么、用哪条 db_*、下一步常见动作、不要做什么。会出现在 db_list / 的 items[].view.blurb。 */
   blurb?: string
   order?: number
   /** 导航图标名（实现侧映射），例如 clipboard-document-list、puzzle-piece、document。 */

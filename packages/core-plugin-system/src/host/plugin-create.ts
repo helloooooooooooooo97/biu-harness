@@ -302,6 +302,7 @@ const CONTRACT = [
 ].join(' ')
 
 export const PLUGIN_CREATE_DESCRIPTION = [
+  '这是安装插件，不是新建代理。用户说「再开一个 agent」请 db_create /sessions。',
   '直写已安装插件：单文件小插件。把 host/web 源码放进 args，立刻编译进 .plugin/<id>/，插件列表就能看到。',
   '适合一两百行、无相对 import、无多文件。更大或要拆文件请改用 sandbox + pack。',
   CONTRACT,
@@ -340,7 +341,11 @@ const ID_NAME_BLURB = {
     description: '插件 id：小写字母开头，仅 [a-z0-9-]，最长 41。',
   },
   name: { type: 'string', description: '商店卡片标题' },
-  blurb: { type: 'string', description: '一行简介' },
+  blurb: {
+    type: 'string',
+    description:
+      '给后续 Agent 和用户看的说明书：插件做什么、怎么打开或调用（窗口 / 无头 / HTTP）、关键文件或 API、不要踩的坑。写两三句，不要只写四个字。',
+  },
   tags: {
     type: 'array',
     items: { type: 'string' },

@@ -110,7 +110,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
       route: '/plugins',
       title: '插件',
       inspector: true,
-      blurb: '.plugin 已安装与 .plugin-dev 沙箱同一张表。介绍正文是 README.md。新建用 db_action create/sandbox，打包用 pack。窗口尺寸来自扁平列 shellWidth/shellHeight，不是 listing.shell。',
+      blurb: '这是插件（可安装的小程序），不是代理。用户说「再开一个 agent」请去 /sessions db_create，不要在这张表 create。已安装（.plugin）和沙箱（.plugin-dev）同一张表。列表 db_list /plugins。README 用 db_content /plugins/<id>。name 等只读（facet/tags 仍可写）。不能 db_create。窗口尺寸看 shellWidth/shellHeight。本表动作（db_action path=/plugins/<插件id> action=…）：create=把小插件源码写进 .plugin（args：name，以及 hostJs/webJs；记录可以还不存在）；sandbox=只建 .plugin-dev/<id>/，多文件写完必须再 pack；pack=把沙箱打进 .plugin（when：sandbox）；start=打开已安装插件窗口（when：installed 且未 running）；stop=关掉运行中的插件（when：installed 且 running）；uninstall=删除 .plugin/<id>/（沙箱还在则这行还在）。',
       order: 30,
       icon: 'puzzle-piece',
     },
@@ -182,6 +182,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         for: 'agent',
         placement: [],
         allowMissing: true,
+        description: PLUGIN_CREATE_DESCRIPTION,
         parameters: {
           type: 'object',
           description: PLUGIN_CREATE_DESCRIPTION,
@@ -196,6 +197,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         for: 'agent',
         placement: [],
         allowMissing: true,
+        description: PLUGIN_SANDBOX_DESCRIPTION,
         parameters: {
           type: 'object',
           description: PLUGIN_SANDBOX_DESCRIPTION,
@@ -208,6 +210,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         id: 'start',
         label: '运行',
         when: { installed: true, running: false },
+        description: '打开已安装插件窗口（无头则只挂 host）。when：installed 且未 running。不要对纯沙箱、未 pack 的行调用。',
         run: async (id) => {
           await store.openPlugin(id)
         },
@@ -216,6 +219,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         id: 'stop',
         label: '停止',
         when: { installed: true, running: true },
+        description: '关掉运行中的插件窗口/host。when：installed 且 running。',
         run: async (id) => {
           await store.close(id)
         },
@@ -224,6 +228,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         id: 'pack',
         label: '打包安装',
         when: { sandbox: true },
+        description: PLUGIN_PACK_DESCRIPTION,
         parameters: { type: 'object', description: PLUGIN_PACK_DESCRIPTION, properties: {} },
         run: async (id) => store.pack(id),
       },
@@ -233,6 +238,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         tone: 'danger',
         confirm: '确定卸载这个插件？已安装的代码会被删掉。',
         when: { installed: true },
+        description: '删除 .plugin/<id>/。沙箱 .plugin-dev/<id>/ 还在的话行不会消失，只是 installed 变 false。',
         run: async (id) => {
           await store.uninstall(id)
         },

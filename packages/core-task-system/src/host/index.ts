@@ -147,7 +147,9 @@ export type TaskRow = {
   lastReportPromptAt: number | null
   /** 自上次汇报以来已追问次数。达到 MAX_REPORT_PROMPTS 后停止，避免把执行会话问死。 */
   reportPromptCount: number
-}export type TaskCreateInput = {
+}
+
+export type TaskCreateInput = {
   title: string
   status?: TaskStatus
   priority?: TaskPriority

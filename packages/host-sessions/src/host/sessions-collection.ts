@@ -133,7 +133,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
       route: '/db-sessions',
       title: '会话',
       inspector: true,
-      blurb: '标题、置顶、标签、模型等元数据用 db_update；聊天记录不能从这张表改。进度/检查/压缩走 db_action。',
+      blurb: '这张表的每一行是一个会话，也就是一个代理（agent）。一个代理 = 一个 session，id 就是会话 id。用户说「再开一个 agent / 叫另一个代理去做」= 在本表 db_create 新建一行（caps.create 为真时），不要去建插件、不要去建任务。你自己也是其中一个会话。列表 db_list /sessions。改标题/置顶/标签/emoji/合集/模型/服务商/系统提示/模式/额外工具/项目路径：db_update /sessions/<id>。聊天记录不在这张表，不能用 db_update 写对话。本表动作（db_action path=/sessions/<会话id> action=…）：inspect=看这个代理的配置和最近几句对话（可选 args.limit）；progress=看它当前回合忙不忙、在用什么工具、刚说了什么（轮询时把上次返回的 newestSeq 当作 afterSeq）；status=看它上下文 token 用了多少；compact=压缩它的旧上下文（第一次不传 text 会返回该怎么写摘要，第二次把摘要放进 args.text）；clear=丢掉摘要、硬切压缩点；retrieve=按关键词找回被压缩的旧内容（必填 args.query）。',
       order: 18,
       icon: 'chat-bubble',
     },
@@ -215,9 +215,11 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         label: '检查',
         for: 'agent',
         placement: [],
+        description:
+          '看这一个代理（这一行 session）的配置和最近几句对话。args.limit 默认 12、最大 40。要跟它当前回合用 progress。',
         parameters: {
           type: 'object',
-          properties: { limit: { type: 'number' } },
+          properties: { limit: { type: 'number', description: '最近消息条数，默认 12，最大 40' } },
         },
         run: async (id, _record, args) => {
           if (!sessions.require) throw new Error('session inspect unavailable')
@@ -241,11 +243,13 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         label: '进度',
         for: 'agent',
         placement: [],
+        description:
+          '看这一个代理当前回合：忙不忙、第几 turn、在用什么工具、刚说了什么。轮询时把上次 newestSeq 当作 afterSeq。',
         parameters: {
           type: 'object',
           properties: {
-            afterSeq: { type: 'number' },
-            textLimit: { type: 'number' },
+            afterSeq: { type: 'number', description: '只看该 seq 之后的工具/助手输出；轮询时用上次 newestSeq' },
+            textLimit: { type: 'number', description: 'assistantText 字数上限，默认 600' },
           },
         },
         run: async (id, _record, args) => {
@@ -267,6 +271,8 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         label: '压缩上下文',
         for: 'agent',
         placement: [],
+        description:
+          '压缩这一个代理的旧上下文。第一次不要传 text，返回该怎么写摘要；再调用并把摘要放进 args.text。旧细节用 retrieve。',
         parameters: {
           type: 'object',
           properties: {
@@ -301,6 +307,8 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         label: '清空上下文',
         for: 'agent',
         placement: [],
+        description:
+          '丢掉这一个代理的摘要，硬切压缩点。比 compact 更狠。旧细节仍可用 retrieve。',
         run: async (id) => {
           if (!sessions.require) throw new Error('session clear unavailable')
           await sessions.require(id)
@@ -316,6 +324,8 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         label: '检索历史',
         for: 'agent',
         placement: [],
+        description:
+          '按关键词从这一个代理被压缩的历史里找回片段。必填 args.query。只搜这一行 session，不是所有代理。',
         parameters: {
           type: 'object',
           properties: {
@@ -345,6 +355,8 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         label: '上下文占用',
         for: 'agent',
         placement: [],
+        description:
+          '看这一个代理最近一次模型调用用了多少 token。超预算再 compact。',
         run: async (id) => {
           if (!sessions.require) throw new Error('session status unavailable')
           const events = (await sessions.require(id)).events
