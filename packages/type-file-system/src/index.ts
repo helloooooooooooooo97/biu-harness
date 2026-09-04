@@ -291,10 +291,14 @@ export function withBuiltinFields(
 }
 
 /** 登记方可序列化的动作声明。图标与按钮长什么样由前端 decorate，不进这份契约。 */
+export type CollectionActionAudience = 'both' | 'agent' | 'user'
+
 export type CollectionActionInfo = {
   id: string
   label: string
   tone?: 'danger'
+  /** 谁能用。缺省 both。前端只画 user 与 both。 */
+  for?: CollectionActionAudience
   placement?: Array<'row' | 'detail'>
   confirm?: string
   /** 记录字段等值时才显示，例如 { enabled: false } */
@@ -303,6 +307,11 @@ export type CollectionActionInfo = {
   parameters?: Record<string, unknown>
   /** 记录还不存在时也能跑（例如新建插件）。 */
   allowMissing?: boolean
+}
+
+export function actionVisibleToUser(action: { for?: CollectionActionAudience }) {
+  const audience = action.for ?? 'both'
+  return audience === 'both' || audience === 'user'
 }
 
 export type CollectionSchema = {

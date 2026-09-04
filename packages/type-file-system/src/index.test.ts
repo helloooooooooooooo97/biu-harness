@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { asImageSrc, emptySchemaValue, hasCollectionDeleteQuery, isReservedSchemaFieldKey, isReservedSchemaFieldLabel, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, schemaSearchHaystack, withBuiltinFields } from './index.ts'
+import { asImageSrc, actionVisibleToUser, emptySchemaValue, hasCollectionDeleteQuery, isReservedSchemaFieldKey, isReservedSchemaFieldLabel, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, schemaSearchHaystack, withBuiltinFields } from './index.ts'
 
 test('asImageSrc keeps http, data:image, and same-origin image paths', () => {
   assert.equal(asImageSrc('https://example.com/a.png'), 'https://example.com/a.png')
@@ -103,4 +103,11 @@ test('hasCollectionDeleteQuery requires ids, q, or a non-empty filter', () => {
   assert.equal(hasCollectionDeleteQuery({ q: '  x ' }), true)
   assert.equal(hasCollectionDeleteQuery({ filter: { status: 'open' } }), true)
   assert.equal(hasCollectionDeleteQuery({ filter: { status: '' } }), false)
+})
+
+test('actionVisibleToUser shows user and both, hides agent', () => {
+  assert.equal(actionVisibleToUser({}), true)
+  assert.equal(actionVisibleToUser({ for: 'both' }), true)
+  assert.equal(actionVisibleToUser({ for: 'user' }), true)
+  assert.equal(actionVisibleToUser({ for: 'agent' }), false)
 })

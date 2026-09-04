@@ -10,6 +10,7 @@ import {
   searchCollection,
   searchHref,
   tagsFromRecord,
+  visibleRowActions,
 } from './shell-search.tsx'
 
 test('search opens inspector collections, not chat or database routes', () => {
@@ -117,4 +118,17 @@ test('facet search scope is named 合集 with stack icon', () => {
   assert.match(src, /label: '合集'/)
   assert.match(src, /kind === 'plugin'[\s\S]*return <RectangleStackIcon/)
   assert.doesNotMatch(src, /label: '类型'/)
+})
+
+test('search hits hide agent-only actions', () => {
+  assert.deepEqual(
+    visibleRowActions(
+      [
+        { id: 'start', label: '运行' },
+        { id: 'progress', label: '进度', for: 'agent' },
+      ],
+      { id: 's1' },
+    ).map((item) => item.id),
+    ['start'],
+  )
 })

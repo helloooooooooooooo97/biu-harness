@@ -78,6 +78,12 @@ test('list and detail share the chat column max width with side padding', () => 
   assert.match(css, /\.fsdb-page \.tasks-queue-item:hover \.tasks-title-open/)
 })
 
+test('title cell hover icons use F0EFED', () => {
+  assert.match(css, /\.fsdb-page \.tasks-title-open\{[^}]*color:#F0EFED/)
+  assert.match(css, /\.fsdb-page \.tasks-title-open:hover\{[^}]*color:#F0EFED/)
+  assert.match(css, /\.fsdb-page \.tasks-row-tools \.tasks-icon-btn,\.fsdb-page \.tasks-row-actions \.tasks-icon-btn\{[^}]*color:#F0EFED/)
+})
+
 test('list and detail properties share key and value colors', () => {
   assert.match(css, /\.fsdb-proprow-k,\.fsdb-prop>span:first-child\{[^}]*color:#7B7B79/)
   assert.match(css, /\.fsdb-proprow-v,\.fsdb-prop-val,\.fsdb-detail-id\{[^}]*color:#7C7A76/)

@@ -18,6 +18,7 @@ import {
 import { TagChip, TagChips } from '@biu/public-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
+import { actionVisibleToUser } from '@biu/type-file-system'
 import { setChatOverlay } from './chat-overlay.ts'
 
 export type SearchKind = 'session' | 'task' | 'page' | 'plugin' | 'facet'
@@ -42,6 +43,7 @@ export type SearchAction = {
   id: string
   label: string
   tone?: 'danger'
+  for?: 'both' | 'agent' | 'user'
   placement?: Array<'row' | 'detail'>
   confirm?: string
   when?: Record<string, unknown>
@@ -148,6 +150,7 @@ export function matchActionWhen(record: Record<string, unknown>, when?: Record<s
 export function visibleRowActions(actions: SearchAction[] | undefined, record: Record<string, unknown> | undefined) {
   const row = record ?? {}
   return (actions ?? []).filter((action) => {
+    if (!actionVisibleToUser(action)) return false
     if (NAV_ACTION_IDS.has(action.id)) return false
     const places = action.placement ?? ['row', 'detail']
     return places.includes('row') && matchActionWhen(row, action.when)
