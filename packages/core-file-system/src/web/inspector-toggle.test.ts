@@ -222,6 +222,7 @@ test('card and queue rows expose split and expand like the table', () => {
   assert.match(browser, /className="fsdb-title-host"/)
   assert.doesNotMatch(browser, /fsdb-row-check-cell/)
   assert.doesNotMatch(browser, /<th>操作<\/th>/)
+  assert.doesNotMatch(browser, /data-biu-action="open"/)
   assert.doesNotMatch(browser, /tasks-queue-item-main" data-biu-action="open"/)
   assert.doesNotMatch(browser, /tasks-minicard-open" data-biu-action="open"/)
   const style = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8')
