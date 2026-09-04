@@ -96,6 +96,7 @@ test('table column widths can be dragged and saved on the view', () => {
   assert.match(css, /\.fsdb-page \.tasks-table \.fsdb-col-resizer\{[^}]*bottom:0/)
   assert.match(css, /\.fsdb-page \.tasks-table \.fsdb-col-resizer\{[^}]*right:-5px/)
   assert.match(css, /\.fsdb-page \.tasks-table \.fsdb-col-resizer::after\{[^}]*left:50%/)
+  assert.match(css, /\.fsdb-page \.tasks-table \.fsdb-col-resizer::after\{[^}]*width:4px/)
   assert.match(css, /\.fsdb-page \.tasks-table \.fsdb-col-resizer::after\{[^}]*top:0/)
   assert.match(css, /\.fsdb-page \.tasks-table \.fsdb-col-resizer::after\{[^}]*bottom:0/)
   assert.match(css, /\.fsdb-page \.tasks-table \.fsdb-col-resizer:hover::after,\.fsdb-page \.tasks-table \.fsdb-col-resizer\.is-active::after\{[^}]*background:var\(--dsw-pick/)

@@ -170,7 +170,7 @@ const CSS = `
 .fsdb-page .tasks-table.is-cols-fixed.is-wrap{width:max-content;max-width:none}
 .fsdb-page .tasks-table.is-cols-fixed td .fsdb-cell{max-width:100%}
 .fsdb-page .tasks-table .fsdb-col-resizer{position:absolute;top:0;bottom:0;right:-5px;z-index:9;width:9px;height:auto;cursor:col-resize;user-select:none;touch-action:none;pointer-events:auto}
-.fsdb-page .tasks-table .fsdb-col-resizer::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;transform:translateX(-50%);background:transparent;pointer-events:none}
+.fsdb-page .tasks-table .fsdb-col-resizer::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:4px;transform:translateX(-50%);background:transparent;pointer-events:none}
 .fsdb-page .tasks-table .fsdb-col-resizer:hover::after,.fsdb-page .tasks-table .fsdb-col-resizer.is-active::after{background:var(--dsw-pick,#5b9fd6)}
 .fsdb-page .tasks-table.is-col-resize{cursor:col-resize;user-select:none}
 .fsdb-row-check{position:absolute;top:50%;left:0;z-index:3;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin:0;transform:translate(-100%,-50%);opacity:0;pointer-events:none}
