@@ -6,10 +6,33 @@ import { upsertSavedView } from './view-storage.ts'
 import { normalizeSavedView, type SavedView } from './saved-view.ts'
 
 const DEFAULT_PANE = 'database'
+const STORAGE_PREFIX = 'inspector.dbPath:'
 const listeners = new Set<() => void>()
 const paths = new Map<string, string>()
 const working = new Set<string>()
 const workingListeners = new Set<() => void>()
+
+function storageKey(paneId: string) {
+  return `${STORAGE_PREFIX}${paneId}`
+}
+
+function readStoredPath(paneId: string) {
+  try {
+    const raw = localStorage.getItem(storageKey(paneId)) ?? ''
+    return isInspectorDatabasePath(raw) ? raw : ''
+  } catch {
+    return ''
+  }
+}
+
+function writeStoredPath(paneId: string, path: string) {
+  try {
+    if (!path) localStorage.removeItem(storageKey(paneId))
+    else localStorage.setItem(storageKey(paneId), path)
+  } catch {
+    /* ignore */
+  }
+}
 
 export function subscribeInspectorAgentWorking(fn: () => void) {
   workingListeners.add(fn)
@@ -58,21 +81,33 @@ export function isInspectorDatabasePath(pathname: string) {
 }
 
 function panePath(paneId = DEFAULT_PANE) {
-  const path = paths.get(paneId) ?? ''
-  return isInspectorDatabasePath(path) ? path : ''
+  const mem = paths.get(paneId)
+  if (mem !== undefined) return isInspectorDatabasePath(mem) ? mem : ''
+  const stored = readStoredPath(paneId)
+  if (stored) paths.set(paneId, stored)
+  return stored
 }
 
 export function getInspectorDbPath(paneId = DEFAULT_PANE) {
   return panePath(paneId)
 }
 
+/** 测试用：清空内存路径，模拟整页刷新后只剩 localStorage。 */
+export function resetInspectorDbPathMemory() {
+  paths.clear()
+}
+
 export function setInspectorDbPath(paneId: string, next?: string) {
   const id = next === undefined ? DEFAULT_PANE : paneId
   const path = next === undefined ? paneId : next
   const stored = isInspectorDatabasePath(path) ? path : ''
-  if ((paths.get(id) ?? '') === stored) return
+  if ((paths.get(id) ?? '') === stored) {
+    writeStoredPath(id, stored)
+    return
+  }
   if (!stored) paths.delete(id)
   else paths.set(id, stored)
+  writeStoredPath(id, stored)
   bump()
 }
 
