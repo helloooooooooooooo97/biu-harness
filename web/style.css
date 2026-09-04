@@ -37,7 +37,7 @@
   /* 右侧对话正文字号 */
   --dsw-chat-font-size: 14px;
   --dsw-chat-line-height: 1.6;
-  --dsw-chat-composer-font-size: 14px;
+  --dsw-chat-composer-font-size: 16px;
   /* 聊天窗内控件：工具条、回合栏、排队、slash、模型、工具卡 */
   --dsw-chat-ui-font-size: 12px;
   --dsw-chat-chip-font-size: 12px;
@@ -1509,11 +1509,17 @@ body {
 }
 
 .chat-pane-embed {
-  min-height: min(72vh, 720px);
-  padding: 0 10px 10px;
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  padding: 0;
   border: 0;
   border-radius: 14px;
   background: #191919;
+}
+
+.chat-pane-embed .chat-overlay-thread {
+  padding-bottom: 5.5rem;
 }
 
 .chat-overlay-head {
@@ -3285,8 +3291,10 @@ body {
   justify-content: flex-end;
   gap: 4px;
   max-width: 100%;
-  font-size: 10px;
+  font-size: var(--dsw-chat-ui-font-size);
   line-height: 1;
+  font-weight: 400;
+  color: var(--dsw-sidebar-fg);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -3302,8 +3310,8 @@ body {
 }
 
 .traj-usage-in {
-  color: var(--dsw-label);
-  font-weight: 600;
+  color: var(--dsw-sidebar-fg);
+  font-weight: 400;
 }
 
 .traj-usage-arrow {
@@ -3312,8 +3320,8 @@ body {
 }
 
 .traj-usage-out {
-  color: var(--dsw-label);
-  font-weight: 600;
+  color: var(--dsw-sidebar-fg);
+  font-weight: 400;
 }
 
 /* 绿色 cache / 橙色历史：SVG 描边圆环，不用 mask，取色能落到实色 */
@@ -4169,6 +4177,25 @@ body {
   flex-direction: column;
   align-items: center;
   font-size: var(--dsw-chat-ui-font-size);
+  transition: opacity 160ms ease;
+}
+
+.chat-composer-dock.is-composer-faded {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chat-composer-dock.is-composer-faded > * {
+  pointer-events: auto;
+}
+
+.composer-dock-zone {
+  pointer-events: auto;
+}
+
+.composer-dock-zone:hover > .chat-composer-dock.is-composer-faded,
+.composer-dock-zone:focus-within > .chat-composer-dock.is-composer-faded {
+  opacity: 1;
 }
 
 .chat-composer-dock>* {

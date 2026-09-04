@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
-import { ChatPane, ChatStage, OutlineNav } from '@biu/public-ui'
+import { ChatDockStack, ChatPane, ChatStage, OutlineNav } from '@biu/public-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { MASCOT_COLOR_NAME, MASCOT_EYE_NAME, MASCOT_SHAPE_NAME } from '@biu/type-session'
 import type { CollectionChrome, FsCellProps, FsContentProps } from '@biu/type-file-system/ui'
 import type { DbRecord } from '@biu/type-file-system'
+import type { SlotProps } from '@biu/web-slots'
+import type { PickService } from '@biu/cap-pick/web'
 import {
   deriveChatOutline,
   getChatOutlineFilter,
@@ -16,8 +18,14 @@ import {
   type ChatOutlineFilter,
   type SessionEvent,
   type TrajectoryUsage,
+  upsertSessionEvent,
 } from '@biu/web-session-view'
+import { ApprovalsRail } from './approvals.tsx'
+import { ChatConfigBanner } from './config-banner.tsx'
+import { ChatLiveHud } from './live-hud.tsx'
 import { ChatNodeList } from './thread.tsx'
+import { ChatComposer } from './composer.tsx'
+import type { SnapshotService } from '@biu/web-snapshot'
 
 function sessionMascot(record: DbRecord) {
   const raw = record.mascot
@@ -61,13 +69,56 @@ function escapeId(id: string) {
   return typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(id) : id
 }
 
-function SessionRecordChat({ record }: FsContentProps) {
+function useIdleSessionView<S>(sel: (state: { pending: boolean; inbox: never[]; sessionId: string }) => S): S {
+  return sel({ pending: false, inbox: [], sessionId: '' })
+}
+
+const idleSessionView = {
+  send: async () => undefined,
+  cancel: async () => undefined,
+  flushInbox: async () => undefined,
+  get: () => ({ sessionId: '' }),
+} as never
+
+type SessionChromeDeps = {
+  snapshot?: SnapshotService
+  slotProps: Record<string, unknown>
+  pick?: PickService
+}
+
+function SessionRecordChat({
+  record,
+  snapshot,
+  slotProps,
+  pick,
+}: FsContentProps & SessionChromeDeps) {
   const sessionId = String(record.id)
+  const [events, setEvents] = useState<SessionEvent[]>([])
   const [nodes, setNodes] = useState<ChatNode[]>([])
-  const [host, setHost] = useState<HTMLElement | null>(null)
+  const [boundPending, setBoundPending] = useState(false)
+  const [outlineHost, setOutlineHost] = useState<HTMLElement | null>(null)
+  const [composerHost, setComposerHost] = useState<HTMLElement | null>(null)
   const anchorRef = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
   const filter = useSyncExternalStore(subscribeChatOutline, getChatOutlineFilter, (): ChatOutlineFilter => 'user')
   const items = useMemo(() => deriveChatOutline(nodes, filter), [nodes, filter])
+  const dockSlotProps = slotProps as SlotProps
+  const reloadSession = useCallback(() => {
+    void fetch(`/api/sessions/${sessionId}?turns=${SESSION_LOAD_TURNS}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (!body || !Array.isArray(body.events)) return
+        const next = body.events as SessionEvent[]
+        setEvents(next)
+        setNodes(
+          mergeDispatchedUsageIntoNodes(
+            projectNodes(next),
+            (body.dispatchedUsageByTurn as Record<string, TrajectoryUsage>) ?? {},
+          ),
+        )
+      })
+      .catch(() => undefined)
+  }, [sessionId])
   const go = useCallback((id: string) => {
     const el = document.querySelector<HTMLElement>(
       `[data-testid="session-record-chat"] [data-node-id="${escapeId(id)}"]`,
@@ -76,34 +127,75 @@ function SessionRecordChat({ record }: FsContentProps) {
   }, [])
   useLayoutEffect(() => {
     const el = anchorRef.current
-    const root = el?.closest('.fsdb-right') ?? el?.closest('.fsdb-right-body') ?? el?.closest('.fsdb-detail-stage')
-    setHost(root instanceof HTMLElement ? root : null)
+    const main = el?.closest('main')
+    const right = el?.closest('.fsdb-right')
+    const root = (main instanceof HTMLElement ? main : right instanceof HTMLElement ? right : null)
+    setOutlineHost(right instanceof HTMLElement ? right : root)
+    setComposerHost(root)
   }, [])
   useEffect(() => {
-    const ac = new AbortController()
-    void fetch(`/api/sessions/${sessionId}?turns=${SESSION_LOAD_TURNS}`, { signal: ac.signal })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body) => {
-        if (!body || !Array.isArray(body.events)) return
-        setNodes(
-          mergeDispatchedUsageIntoNodes(
-            projectNodes(body.events as SessionEvent[]),
-            (body.dispatchedUsageByTurn as Record<string, TrajectoryUsage>) ?? {},
-          ),
-        )
+    reloadSession()
+  }, [reloadSession])
+  useEffect(() => {
+    if (!snapshot) return
+    const offSession = snapshot.onMessage('session', (payload) => {
+      const detail = payload as { sessionId?: string; event?: SessionEvent }
+      if (detail.sessionId !== sessionId || !detail.event) return
+      setEvents((prev) => {
+        const next = upsertSessionEvent(prev, detail.event as SessionEvent)
+        setNodes(projectNodes(next))
+        return next
       })
-      .catch(() => undefined)
-    return () => ac.abort()
-  }, [sessionId])
+    })
+    const offAgent = snapshot.onMessage('agent', (payload) => {
+      const status = payload as { sessionId?: string; status?: string }
+      if (status.sessionId !== sessionId) return
+      setBoundPending(status.status === 'running')
+    })
+    return () => {
+      offSession()
+      offAgent()
+    }
+  }, [snapshot, sessionId])
+  useLayoutEffect(() => {
+    const el = stageRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [sessionId, nodes])
   const outline = <OutlineNav items={items} testId="session-outline" onSelect={go} />
+  const dock = (
+    <ChatDockStack>
+      <ChatLiveHud {...dockSlotProps} boundNodes={nodes} />
+      <ChatConfigBanner {...dockSlotProps} />
+      <ApprovalsRail
+        {...dockSlotProps}
+        boundSessionId={sessionId}
+        boundNodes={nodes}
+        onSessionRefresh={reloadSession}
+      />
+      <ChatComposer
+        {...dockSlotProps}
+        pick={pick}
+        boundSessionId={sessionId}
+        boundPending={boundPending}
+        useSessionView={useIdleSessionView}
+        sessionView={idleSessionView}
+      />
+    </ChatDockStack>
+  )
   return (
     <>
-      {host ? createPortal(<div className="session-outline-host">{outline}</div>, host) : null}
-      <div ref={anchorRef}>
+      {outlineHost ? createPortal(<div className="session-outline-host">{outline}</div>, outlineHost) : null}
+      {composerHost ? createPortal(
+        <div className="session-composer-host composer-dock-zone">
+          <div className="chat-composer-dock pointer-events-none bg-transparent">{dock}</div>
+        </div>,
+        composerHost,
+      ) : null}
+      <div ref={anchorRef} className="session-record-chat-host">
         <ChatPane
           embed
           thread={
-            <ChatStage variant="pane">
+            <ChatStage variant="pane" stageRef={stageRef}>
               <ChatNodeList nodes={nodes} onInspect={() => undefined} onFork={() => undefined} />
             </ChatStage>
           }
@@ -113,11 +205,11 @@ function SessionRecordChat({ record }: FsContentProps) {
   )
 }
 
-export function sessionsChrome(): CollectionChrome {
+export function sessionsChrome(deps: SessionChromeDeps): CollectionChrome {
   return {
     Title: SessionTitle,
     Icon: SessionIcon,
-    Content: SessionRecordChat,
+    Content: (props) => <SessionRecordChat {...props} {...deps} />,
     cells: {
       mascotShape: MascotShapeCell,
       mascotColor: MascotColorCell,
@@ -132,11 +224,25 @@ if (typeof document !== 'undefined') {
   style.id = id
   style.textContent = `
 .sessions-title-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-.fsdb-fileview:has(.chat-pane-embed){display:flex;flex-direction:column;flex:1;min-height:min(72vh,720px);background:#191919}
+.session-record-chat-host{display:flex;flex-direction:column;flex:1;min-height:0}
+.fsdb-fileview:has(.chat-pane-embed){display:flex;flex-direction:column;flex:1;min-height:min(72vh,720px);overflow:hidden;background:#191919}
 .inspector-database-page .fsdb-fileview:has(.chat-pane-embed){min-height:0;flex:1}
 .fsdb-detail-main:has(.chat-pane-embed),.fsdb-detail-screen:has(.chat-pane-embed){background:#191919}
+.inspector-database-page .fsdb-detail-screen:has(.chat-pane-embed),
+.inspector-database-page .fsdb-detail-screen:has(.chat-pane-embed) .fsdb-detail-split,
+.inspector-database-page .fsdb-detail-main:has(.chat-pane-embed){
+  min-height:0;flex:1;overflow:hidden;display:flex;flex-direction:column
+}
+.inspector-database-page .fsdb-detail-stage:has(.chat-pane-embed) .fsdb-detail-float-nav{
+  position:sticky;top:50%;align-self:flex-start;flex:none;z-index:24;transform:translateY(-50%)
+}
+.inspector-database-page .fsdb-detail-main:has(.chat-pane-embed){padding-bottom:12px}
 .session-outline-host{position:absolute;inset:0;z-index:20;pointer-events:none}
-.fsdb-right:has(.session-outline-host),.fsdb-right-body:has(.session-outline-host),.fsdb-detail-stage:has(.session-outline-host){position:relative}
+main:has(.session-composer-host){position:relative}
+.session-composer-host{position:absolute;inset-inline:0;bottom:0;z-index:25;padding:0 60px calc(1rem + 25px);pointer-events:auto}
+.session-composer-host .chat-composer-dock{position:static;padding:0;background:transparent}
+.session-composer-host .chat-composer-dock>*{pointer-events:auto;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto}
+.fsdb-right:has(.session-outline-host){position:relative}
 .session-outline-host .chat-outline{left:8px;top:50%}
 `
   document.head.appendChild(style)

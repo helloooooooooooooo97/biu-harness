@@ -29,6 +29,8 @@ const CSS = `
 .fsdb-right-body .app-pane-in{display:flex;flex-direction:column;min-height:0;flex:1}
 .fsdb-right-body:has(.fsdb-pager){overflow:hidden}
 .fsdb-right-body:has(.fsdb-pager)>*,.fsdb-right-body:has(.fsdb-pager) .fsdb-main{display:flex;flex-direction:column;min-height:0;flex:1;height:100%;overflow:hidden}
+.fsdb-detail-main:has(.chat-pane-embed),.fsdb-detail-screen:has(.chat-pane-embed){background:#191919}
+.fsdb-detail-main:has(.chat-pane-embed){padding-bottom:calc(5.5rem + 2rem + 1rem + 25px)}
 .fsdb-views{display:flex;width:100%;max-width:none;min-width:0;flex:1;flex-direction:column;min-height:0;overflow:hidden;box-sizing:border-box}
 .fsdb-page>.fsdb-views{width:var(--sidebar-col,var(--dsw-sidebar-min,160px));max-width:var(--dsw-sidebar-max,360px);flex:none}
 .fsdb-nav-chevron{flex:none;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
@@ -39,7 +41,7 @@ const CSS = `
 .fsdb-views .chat-session-row-delete,.fsdb-views .chat-session-row-star{cursor:pointer}
 .fsdb-collection-name{font-size:14px;font-weight:650;color:var(--dsw-label);line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-collection-head .fsdb-footnote{margin:4px 0 0;font-size:14px;font-weight:400;line-height:1.45;color:var(--dsw-label-3);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
-.fsdb-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;gap:10px;padding:80px 100px 16px;overflow:hidden}
+.fsdb-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;gap:10px;padding:80px 60px 16px;overflow:hidden}
 .fsdb-page.is-full-width .fsdb-main,.fsdb-page.is-full-width .fsdb-detail-main{max-width:none}
 .fsdb-page{--fsdb-pager-lift:calc(1rem + 44px + 25px + 25px - 30px)}
 .fsdb-page:not(.inspector-database-page) .fsdb-main{padding-bottom:var(--fsdb-pager-lift)}
@@ -129,7 +131,8 @@ const CSS = `
 .fsdb-page .tasks-table.is-wrap td{white-space:normal;vertical-align:top;max-width:28rem}
 .fsdb-page .tasks-table th,.fsdb-page .tasks-table.is-wrap th{white-space:nowrap}
 .fsdb-cell{display:flex;align-items:center;min-width:0;max-width:100%;min-height:18px}
-.fsdb-page .traj-usage,.fsdb-page .traj-usage-empty{font-size:14px;line-height:inherit}
+.fsdb-page .fsdb-cell .traj-usage,.fsdb-page .fsdb-cell .traj-usage-empty,.fsdb-page .tasks-table .traj-usage,.fsdb-page .tasks-table .traj-usage-empty,.fsdb-page .tasks-queue-item-main .traj-usage,.fsdb-page .tasks-queue-item-main .traj-usage-empty{font-size:14px;line-height:inherit}
+.fsdb-page .chat-pane .traj-usage,.fsdb-page .chat-pane .traj-usage-empty{font-size:var(--dsw-chat-ui-font-size);line-height:1;font-weight:400;color:var(--dsw-sidebar-fg)}
 .fsdb-link{color:inherit;text-underline-offset:2px;overflow-wrap:anywhere}
 .fsdb-link:hover{text-decoration:underline}
 .fsdb-thumb-link,.fsdb-thumb-btn{display:inline-flex;align-items:center;justify-content:center;line-height:0;border:0;padding:0;background:transparent;cursor:zoom-in;vertical-align:middle}
@@ -286,7 +289,7 @@ const CSS = `
 .fsdb-detail-tab-count{margin-left:6px;font-size:11px;font-weight:700;color:var(--dsw-label-3)}
 .fsdb-detail-head-actions{display:inline-flex;align-items:center;gap:2px;justify-self:end}
 .fsdb-detail-split{display:flex;flex-direction:column;flex:none;min-height:min-content;overflow:visible}
-.fsdb-detail-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;flex-direction:column;gap:8px;padding:80px 100px 24px;min-width:0}
+.fsdb-detail-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;flex-direction:column;gap:8px;padding:80px 60px 24px;min-width:0}
 .fsdb-tag-collect{display:flex;flex:1;min-width:0;min-height:320px}
 .fsdb-tag-collect>.fsdb-page{flex:1;min-width:0;min-height:0;background:transparent}
 .fsdb-page.is-sheet .tasks-main{padding:0;gap:8px;max-width:none}

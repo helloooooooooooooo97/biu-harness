@@ -9,6 +9,7 @@ import {
   projectRequestMessages,
   projectTrajectory,
   sumTrajectoryUsage,
+  upsertSessionEvent,
   type SessionEvent,
 } from './session-project.ts'
 
@@ -432,4 +433,14 @@ test('reply & step histPct is token-weighted average over all llm.chat usage', (
   // 各 step 单独保留自身 histPct
   assert.equal(reply.steps?.[0]?.histPct, 0.2)
   assert.equal(reply.steps?.[1]?.histPct, 0.8)
+})
+
+test('upsertSessionEvent merges streaming chunks without duplicating seq', () => {
+  const first: SessionEvent[] = [{ type: 'assistant/chunk', text: 'hel', seq: 2, ts: 3 }]
+  const merged = upsertSessionEvent(first, { type: 'assistant/chunk', text: 'lo', seq: 3, ts: 4 })
+  assert.equal(merged.length, 1)
+  assert.equal(merged[0]?.type, 'assistant/chunk')
+  if (merged[0]?.type === 'assistant/chunk') assert.equal(merged[0].text, 'hello')
+  const same = upsertSessionEvent(merged, { type: 'assistant/chunk', text: 'x', seq: 2, ts: 5 })
+  assert.equal(same, merged)
 })

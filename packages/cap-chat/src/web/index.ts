@@ -14,6 +14,7 @@ import { UsagePanel } from './usage-panel.tsx'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
 import type { PickService } from '@biu/cap-pick/web'
 import type { DatabaseUi } from '@biu/type-file-system/ui'
+import type { SnapshotService } from '@biu/web-snapshot'
 import { sessionsChrome } from './sessions-chrome.tsx'
 
 export const name = 'chat-ui'
@@ -85,8 +86,15 @@ export function apply(ctx: Context) {
       centerKinds: ['session'],
     }),
   })
-  ctx.inject(['databaseUi'], (inner) => {
+  ctx.inject(['databaseUi', 'snapshot'], (inner) => {
     const ui = inner.get('databaseUi') as DatabaseUi
-    return ui.decorate('/sessions', sessionsChrome()).dispose
+    const snap = inner.get('snapshot') as SnapshotService
+    let pick: PickService | undefined
+    try {
+      pick = inner.get('pick') as PickService
+    } catch {
+      pick = undefined
+    }
+    return ui.decorate('/sessions', sessionsChrome({ snapshot: snap, slotProps: props(), pick })).dispose
   })
 }
