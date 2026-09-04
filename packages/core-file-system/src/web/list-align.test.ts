@@ -86,7 +86,8 @@ test('list and detail properties share key and value colors', () => {
 })
 
 test('usage figures in collection cells match the table font size', () => {
-  assert.match(css, /\.fsdb-page \.traj-usage,\.fsdb-page \.traj-usage-empty\{[^}]*font-size:14px/)
+  assert.match(css, /\.fsdb-page \.fsdb-cell \.traj-usage,\.fsdb-page \.fsdb-cell \.traj-usage-empty,\.fsdb-page \.tasks-table \.traj-usage,\.fsdb-page \.tasks-table \.traj-usage-empty,\.fsdb-page \.tasks-queue-item-main \.traj-usage,\.fsdb-page \.tasks-queue-item-main \.traj-usage-empty\{[^}]*font-size:14px/)
+  assert.match(css, /\.fsdb-page \.chat-pane \.traj-usage,\.fsdb-page \.chat-pane \.traj-usage-empty\{[^}]*font-size:var\(--dsw-chat-ui-font-size\)/)
 })
 
 test('visible column menu scrolls inside a max height', () => {
