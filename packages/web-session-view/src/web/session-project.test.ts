@@ -96,6 +96,39 @@ test('keeps reply streaming across tools until turn/end (Details stay open)', ()
   }
 })
 
+test('accumulates usage and stepCount while the turn is still streaming', () => {
+  const nodes = projectNodes([
+    { type: 'turn/start', turn: 1, seq: 0, ts: 1 },
+    { type: 'user/message', text: 'hi', kind: 'wake', seq: 1, ts: 2 },
+    { type: 'step/start', turn: 1, step: 0, seq: 2, ts: 3 },
+    {
+      type: 'assistant/message',
+      text: 'thinking',
+      tool_calls: [{ id: 'c1', name: 'bash', arguments: '{}' }],
+      usage: { inputTokens: 12, outputTokens: 4 },
+      seq: 3,
+      ts: 4,
+    },
+    { type: 'tool/call', id: 'c1', name: 'bash', arguments: '{}', seq: 4, ts: 5 },
+    { type: 'tool/result', id: 'c1', name: 'bash', ok: true, detail: 'ok', seq: 5, ts: 6 },
+    { type: 'step/end', turn: 1, step: 0, seq: 6, ts: 7 },
+    { type: 'step/start', turn: 1, step: 1, seq: 7, ts: 8 },
+    { type: 'assistant/message', text: 'more', usage: { inputTokens: 8, outputTokens: 3 }, seq: 8, ts: 9 },
+  ])
+  const reply = nodes.find((node) => node.kind === 'reply')
+  assert.equal(reply?.kind, 'reply')
+  if (reply?.kind !== 'reply') return
+  assert.equal(reply.streaming, true)
+  assert.equal(reply.finished, false)
+  assert.equal(reply.durationMs, undefined)
+  assert.equal(reply.stepCount, 2)
+  assert.deepEqual(reply.usage, {
+    inputTokens: 20,
+    outputTokens: 7,
+    totalTokens: 27,
+  })
+})
+
 test('tool/call after tool/result keeps a single completed tool part', () => {
   const nodes = projectNodes([
     { type: 'tool/result', id: 'c1', name: 'bash', ok: true, detail: 'ok', seq: 1, ts: 1 },

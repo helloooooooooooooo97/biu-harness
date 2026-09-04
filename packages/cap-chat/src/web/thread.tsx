@@ -396,13 +396,12 @@ function UserTurnBar({
 }) {
   const streaming = Boolean(reply?.streaming)
   const { hasDetails } = reply && !streaming ? splitReplyForDisplay(reply) : { hasDetails: false }
-  const toolCount = reply && !streaming ? replyToolCount(reply) : 0
+  const toolCount = reply ? replyToolCount(reply) : 0
   const hasMeta =
-    !streaming &&
     reply != null &&
     (reply.turn != null ||
       reply.stepCount != null ||
-      reply.durationMs != null ||
+      (!streaming && reply.durationMs != null) ||
       Boolean(reply.usage) ||
       toolCount > 0)
   const sentLabel = user.ts != null ? formatSentAt(user.ts) : ''

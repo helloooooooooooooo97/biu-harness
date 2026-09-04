@@ -99,6 +99,40 @@ describe('sticky user message markers', () => {
     expect(document.querySelector('[data-testid="user-bubble"] [data-testid="user-sender-human"]')).toBeNull()
   })
 
+  it('shows live usage while the reply is still streaming', () => {
+    const onInspect = vi.fn()
+    const onFork = vi.fn(async () => {})
+    render(
+      <ChatNodeList
+        nodes={[
+          { id: 'u-live', kind: 'user', text: 'go', ts: Date.parse('2026-08-22T10:30:00') },
+          {
+            id: 'r-live',
+            kind: 'reply',
+            parts: [
+              { id: 'a-live', kind: 'assistant', text: 'thinking' },
+              { id: 't-live', kind: 'tool', callId: 'c1', name: 'bash', arguments: '{}' },
+            ],
+            copyText: 'thinking',
+            streaming: true,
+            finished: false,
+            turn: 1,
+            stepCount: 1,
+            usage: { inputTokens: 12, outputTokens: 4, totalTokens: 16 },
+          },
+        ]}
+        onInspect={onInspect}
+        onFork={onFork}
+      />,
+    )
+    const user = document.querySelector('[data-node-id="u-live"]')
+    expect(user?.querySelector('[data-testid="user-turn-bar"]')).toBeTruthy()
+    expect(user?.querySelector('[data-testid="user-tool-count"]')?.textContent).toBe('1')
+    expect(user?.querySelector('.chat-reply-meta')?.textContent).toMatch(/12/)
+    expect(user?.querySelector('[data-testid="user-turn-end-status"]')).toBeNull()
+    expect(user?.querySelector('[data-testid="details-toggle"]')).toBeNull()
+  })
+
   it('puts stats under user message; copy/fork stay on reply', () => {
     const onInspect = vi.fn()
     const onFork = vi.fn(async () => {})
