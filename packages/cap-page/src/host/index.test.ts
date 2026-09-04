@@ -35,7 +35,7 @@ test('markdown frontmatter roundtrips YAML properties and body', () => {
   assert.equal(body, '正文第一段\n')
 })
 
-test('page plugin stores markdown under .page and assets for images', async () => {
+test('page plugin stores pages in SQLite under .page', async () => {
   const ctx = new Context()
   const registered: CollectionSpec[] = []
   class FakeDb extends Service {
@@ -79,12 +79,11 @@ test('page plugin stores markdown under .page and assets for images', async () =
   assert.equal(created[0]?.notes, '# 标题\n内容')
   assert.equal(created[0]?.cover, '/api/page/file/hero.png')
   assert.equal(asImageSrc(created[0]?.cover), '/api/page/file/hero.png')
-
-  const disk = await readFile(join(root, PAGE_ROOT, `${created[0]!.id}.md`), 'utf8')
-  assert.match(disk, /^---\n/)
-  assert.match(disk, /title: 新页面/)
-  assert.match(disk, /cover: assets\/hero.png/)
-  assert.match(disk, /# 标题\n内容/)
+  const loaded = await spec.get!(created[0]!.id)
+  assert.equal(loaded?.notes, '# 标题\n内容')
+  assert.equal(loaded?.title, '新页面')
+  const sqlite = await readFile(join(root, '.page/pages.sqlite'))
+  assert.ok(sqlite.byteLength > 0)
 
   const written = await spec.update!(created[0]!.id, {
     enabled: false,
@@ -92,9 +91,9 @@ test('page plugin stores markdown under .page and assets for images', async () =
   })
   assert.equal(written.enabled, false)
   assert.deepEqual(written.facet, { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } })
-  const again = await readFile(join(root, PAGE_ROOT, `${created[0]!.id}.md`), 'utf8')
-  assert.match(again, /enabled: false/)
-  assert.match(again, /complexity: O\(n\)/)
+  const again = await spec.get!(created[0]!.id)
+  assert.equal(again?.enabled, false)
+  assert.equal(JSON.stringify(again?.facet), JSON.stringify({ tags: ['dp'], values: { dp: { complexity: 'O(n)' } } }))
 
   await spec.remove!({ ids: [created[0]!.id] })
   assert.equal((await spec.list()).length, 0)
@@ -120,16 +119,36 @@ test('PagesStore reads existing markdown files from .page', async () => {
     dumpMarkdown({ title: 'Home', status: 'live', parentId: null }, 'hello\n'),
     'utf8',
   )
-  const store = new PagesStore(ctx.fs)
+  let reads = 0
+  const inner = ctx.fs
+  const store = new PagesStore({
+    resolve: (rel) => inner.resolve(rel),
+    read: async (rel) => {
+      reads += 1
+      return inner.read(rel)
+    },
+    write: (rel, content) => inner.write(rel, content),
+    list: (rel) => inner.list(rel),
+  })
   const listed = await store.list()
   assert.equal(listed.length, 1)
   assert.equal(listed[0]?.id, 'home')
   assert.equal(listed[0]?.title, 'Home')
-  assert.equal(listed[0]?.notes, 'hello\n')
+  assert.equal(listed[0]?.notes, '')
+  assert.equal(reads, 1)
+  const afterListReads = reads
+  await store.list()
+  assert.equal(reads, afterListReads)
+  const home = await store.get('home')
+  assert.equal(home?.notes, 'hello\n')
+  assert.equal(reads, afterListReads)
   await writeFile(join(root, PAGE_ROOT, 'other.md'), dumpMarkdown({ title: 'Other' }, ''), 'utf8')
   const onlyHome = await store.list(['home'])
   assert.equal(onlyHome.length, 1)
   assert.equal(onlyHome[0]?.id, 'home')
+  const all = await store.list()
+  assert.equal(all.map((row) => row.id).sort().join(','), 'home,other')
+  assert.equal(reads, afterListReads + 1)
 })
 
 test('collectPageAssetNames picks page asset pointers', () => {

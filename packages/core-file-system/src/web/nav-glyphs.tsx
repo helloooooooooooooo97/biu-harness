@@ -1,10 +1,7 @@
 import {
   CircleStackIcon,
-  ListBulletIcon,
   ShareIcon,
-  Squares2X2Icon,
   TableCellsIcon,
-  ViewColumnsIcon,
 } from '@heroicons/react/16/solid'
 import type { ViewMode } from './fields.ts'
 import type { CrumbKind } from './sidebar-nav.ts'
@@ -14,10 +11,7 @@ import { TableGlyph } from './table-glyph.tsx'
 export { TableGlyph } from './table-glyph.tsx'
 
 export function ViewModeGlyph({ mode, className = 'size-4' }: { mode?: ViewMode; className?: string }) {
-  if (mode === 'queue') return <ListBulletIcon aria-hidden className={className} />
-  if (mode === 'table') return <TableCellsIcon aria-hidden className={className} />
-  if (mode === 'cards') return <Squares2X2Icon aria-hidden className={className} />
-  if (mode === 'board') return <ViewColumnsIcon aria-hidden className={className} />
+  if (mode === 'table' || !mode) return <TableCellsIcon aria-hidden className={className} />
   return <ShareIcon aria-hidden className={className} />
 }
 

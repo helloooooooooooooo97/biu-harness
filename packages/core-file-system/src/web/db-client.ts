@@ -13,6 +13,8 @@ export type ListPage = {
   schema?: CollectionSchema
 }
 
+const listInflight = new Map<string, Promise<ListPage>>()
+
 export async function listCollection(opts: {
   path: string
   limit: number
@@ -31,13 +33,23 @@ export async function listCollection(opts: {
     dir: opts.sortDir === 'desc' ? 'desc' : 'asc',
     filter: JSON.stringify(opts.filters ?? {}),
   })
-  const body = await readJson<ListPage & { items?: DbRecord[]; total?: number; schema?: CollectionSchema }>(
+  const key = params.toString()
+  const pending = listInflight.get(key)
+  if (pending) return pending
+  const request = readJson<ListPage & { items?: DbRecord[]; total?: number; schema?: CollectionSchema }>(
     `/api/db/list?${params}`,
   )
-  const items = Array.isArray(body.items) ? body.items : []
-  return {
-    items,
-    total: typeof body.total === 'number' ? body.total : items.length,
-    schema: body.schema,
-  }
+    .then((body) => {
+      const items = Array.isArray(body.items) ? body.items : []
+      return {
+        items,
+        total: typeof body.total === 'number' ? body.total : items.length,
+        schema: body.schema,
+      } satisfies ListPage
+    })
+    .finally(() => {
+      listInflight.delete(key)
+    })
+  listInflight.set(key, request)
+  return request
 }

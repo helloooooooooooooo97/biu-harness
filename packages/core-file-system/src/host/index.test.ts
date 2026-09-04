@@ -336,7 +336,7 @@ test('db_create /views reveals the source table and view', async () => {
   const created = await runWithSession('s1', () =>
     ctx.tools.invoke('db_create', {
       path: '/views',
-      records: [{ tablePath: '/notes', title: '看板', mode: 'board' }],
+      records: [{ tablePath: '/notes', title: '看板', mode: 'graph' }],
     }),
   )
   const row = (created as { items: Array<{ value: { tablePath?: string; viewId?: string; title?: string } }> }).items[0]?.value
@@ -355,7 +355,7 @@ test('db_create /views reveals the source table and view', async () => {
   assert.equal(payload.sessionId, 's1')
   assert.equal(payload.reveal?.viewId, row?.viewId)
   assert.equal(payload.savedView?.name, '看板')
-  assert.equal(payload.savedView?.mode, 'board')
+  assert.equal(payload.savedView?.mode, 'graph')
 })
 
 test('register rejects duplicate view route and nav title', async () => {

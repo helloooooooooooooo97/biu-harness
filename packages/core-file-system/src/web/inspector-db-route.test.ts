@@ -188,5 +188,5 @@ test('applyDatabaseChannelPayload upserts a created view then opens it', () => {
   const stored = JSON.parse(mem['fsdb.views:/tasks'] ?? '[]') as Array<{ id: string; name: string; mode: string }>
   assert.equal(stored[0]?.id, 'board-1')
   assert.equal(stored[0]?.name, '看板')
-  assert.equal(stored[0]?.mode, 'board')
+  assert.equal(stored[0]?.mode, 'table')
 })

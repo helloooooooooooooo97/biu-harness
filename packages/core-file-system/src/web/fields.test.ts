@@ -8,6 +8,9 @@ import { visibleActions } from './fsdb-cells.tsx'
 test('isViewModeId accepts builtin and custom slugs', () => {
   assert.equal(isViewModeId('table'), true)
   assert.equal(isViewModeId('graph'), true)
+  assert.equal(isViewModeId('board'), false)
+  assert.equal(isViewModeId('queue'), false)
+  assert.equal(isViewModeId('cards'), false)
   assert.equal(isViewModeId('??'), false)
 })
 

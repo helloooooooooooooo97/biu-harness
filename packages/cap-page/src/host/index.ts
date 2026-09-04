@@ -15,7 +15,7 @@ export function pagesCollection(store: PagesStore): CollectionSpec {
       route: '/pages',
       title: '页面',
       inspector: true,
-      blurb: '页面是工作区 .page 下的 Markdown。列表 db_list /pages；属性（title/status/tags/parentId/封面/附件等）db_update /pages/<id>。正文 notes 用 db_content，不要写进摘要列 blurb。图片和附件在 .page/assets，记录里用 file/image/attachment 引用。树用 parentId。新建 db_create，删除 db_delete。本表没有 db_action。',
+      blurb: '页面存在工作区 .page/pages.sqlite。列表 db_list /pages 走 SQLite，不扫全部 Markdown；正文 notes 用 db_content / db_update。图片和附件仍在 .page/assets。树用 parentId。新建 db_create，删除 db_delete。本表没有 db_action。',
       order: 25,
       icon: 'document',
     },

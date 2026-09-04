@@ -20,7 +20,6 @@ import {
   EyeIcon,
   FunnelIcon,
   HashtagIcon,
-  ListBulletIcon,
   MagnifyingGlassIcon,
   PencilSquareIcon,
   PlusIcon,
@@ -54,12 +53,10 @@ import {
   readFacetFlatValue,
   resolveFieldType,
   uniqueValues,
-  fieldHasValue,
   type ViewMode,
 } from './fields.ts'
 import { DbMenu, DbSearchOption } from '@biu/database-ui'
 import { AppDialog, CellSelect, CheckRow, LocalText } from './controls.tsx'
-import { PropertyRow } from './property-row.tsx'
 import { DataSidebar } from './data-sidebar.tsx'
 import { buildCrumbs, type CrumbTarget } from './sidebar-nav.ts'
 import { CrumbTrail } from './crumb-trail.tsx'
@@ -88,8 +85,6 @@ import { RecordDetail } from './record-detail.tsx'
 import { TableGlyph, ViewModeGlyph } from './nav-glyphs.tsx'
 import { countFittingViewTabs, splitVisibleViews } from './view-tabs.ts'
 import { getDatabaseUi } from './database-ui.ts'
-
-const EMPTY_VIEWS: CollectionViewType[] = []
 import {
   activeViewStorageKey,
   getStarredViews,
@@ -121,6 +116,8 @@ import { mergeTableViews } from '../catalog-views.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
 import { SchemaChips, SchemaFieldEditor, schemaTagTone } from './schema-field.tsx'
 import { loadFacets, pullFacets, subscribeFacets } from './facet-catalog.ts'
+
+const EMPTY_VIEWS: CollectionViewType[] = []
 
 type StatResult = { schema?: CollectionSchema }
 
@@ -680,10 +677,6 @@ export function CollectionBrowser({
     )
     return order.map((key) => base.find((item) => item.key === key) ?? allColumns.find((item) => item.key === key)).filter(Boolean) as typeof allColumns
   }, [allColumns, columnKeys, schema, schemaDefaultKeys])
-  const propColumns = useMemo(
-    () => columns.filter((item) => item.key !== schema?.labelField),
-    [columns, schema?.labelField],
-  )
   const groupFields = useMemo(() => groupableFields(schema), [schema])
   const activeGroup = groupField(schema, groupBy)
   const grouping = Boolean(activeGroup)
@@ -735,9 +728,9 @@ export function CollectionBrowser({
 
   const grouped = useMemo(() => {
     const buckets = groupRecords(visible, schema, groupBy)
-    if (!grouping || mode === 'board') return buckets
+    if (!grouping) return buckets
     return buckets.filter((item) => item.rows.length)
-  }, [groupBy, grouping, mode, schema, visible])
+  }, [groupBy, grouping, schema, visible])
   const parentKey = useMemo(() => parentFieldKey(schema, items), [items, schema])
   const treeable = useMemo(() => hasTreeLinks(items, parentKey), [items, parentKey])
   const treeOn = treeable && showTree
@@ -1579,30 +1572,6 @@ export function CollectionBrowser({
     )
   }
 
-  function RecordProperties({ row, omit }: { row: DbRecord; omit?: string }) {
-    const hide = omit ?? activeGroup?.key
-    const bodyKey = contentFieldKey(schema)
-    const cols = (hide ? propColumns.filter((item) => item.key !== hide) : propColumns).filter((item) => {
-      if (item.key === schema?.labelField || item.key === bodyKey) return false
-      const kind = resolveFieldType(item.field)
-      const value = parseFacetFlatColumnKey(item.key)
-        ? readFacetFlatValue(row, item.key, facetSourceKey(schema))
-        : row[item.key]
-      if (item.field.writable && kind !== 'file') return true
-      return fieldHasValue(item.field, value)
-    })
-    if (!cols.length) return null
-    return (
-      <div className="fsdb-proplist">
-        {cols.map((col) => (
-          <PropertyRow key={col.key} field={col.field} fieldKey={col.key}>
-            {renderCell(row, col.key, col.field)}
-          </PropertyRow>
-        ))}
-      </div>
-    )
-  }
-
   function GroupHead({ groupKey, label, count }: { groupKey: string; label: string; count: number }) {
     const folded = Boolean(collapsedGroups[groupKey])
     return (
@@ -1667,38 +1636,6 @@ export function CollectionBrowser({
     )
   }
 
-  function QueueRow({ row }: { row: DbRecord }) {
-    return (
-      <li className={`tasks-queue-item${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
-        <div className="tasks-queue-item-body">
-          <RowCheck id={row.id} />
-          <span className="tasks-queue-item-lead">
-            <div className="tasks-queue-item-main">
-              <span className="tasks-queue-item-title">
-                <RecordTitle row={row} openDetail={false} />
-              </span>
-            </div>
-          </span>
-          <RecordProperties row={row} />
-        </div>
-      </li>
-    )
-  }
-
-  function MiniCard({ row }: { row: DbRecord }) {
-    return (
-      <div className={`tasks-minicard${row.id === detailId ? ' is-active' : ''}`} {...recordPick(row)}>
-        <RowCheck id={row.id} />
-        <div className="tasks-minicard-title">
-          <RecordTitle row={row} openDetail={false} />
-        </div>
-        <div className="tasks-minicard-foot">
-          <RecordProperties row={row} />
-        </div>
-      </div>
-    )
-  }
-
   function TableBodyRows({ rows, keyPrefix = '' }: { rows: DbRecord[]; keyPrefix?: string }) {
     const listed = flattenRows(rows)
     const span = tableColSpan
@@ -1750,7 +1687,12 @@ export function CollectionBrowser({
     const hydrateKey = `${collectionPath}\0${dataPath}`
     if (hydratePath.current === hydrateKey) return
     hydratePath.current = hydrateKey
-    persistViews(loadViews(collectionPath))
+    const listedViewsNow = listedViews(collectionPath, loadViews(collectionPath)).map((view) =>
+      withViewDisplay(collectionPath, view),
+    )
+    rememberViews(collectionPath, listedViewsNow)
+    viewsRef.current = listedViewsNow
+    setViews(listedViewsNow)
     const listed = viewsRef.current
     const view =
       listed.find((item) => item.id === routeViewId) ??
@@ -2084,6 +2026,7 @@ export function CollectionBrowser({
                 />
               ) : null}
             </div>
+            {extraViews.length ? (
             <div className="tasks-sort-wrap" ref={modeRef}>
               <button
                 type="button"
@@ -2113,6 +2056,7 @@ export function CollectionBrowser({
                 </div>
               ) : null}
             </div>
+            ) : null}
             <div className="tasks-sort-wrap" ref={sortRef}>
               <button
                 type="button"
@@ -2393,7 +2337,7 @@ export function CollectionBrowser({
             {customView ? (
               <customView.View path={dataPath} rows={items} schema={schema} onOpen={openRow} />
             ) : null}
-            {mode === 'table' && !customView ? (
+            {!customView ? (
               <div className="tasks-table-wrap">
                 <table className={`tasks-table${wrapCells ? ' is-wrap' : ''}${truncateCells ? ' is-truncate' : ''}`}>
             <thead>
@@ -2437,85 +2381,6 @@ export function CollectionBrowser({
             </tbody>
           </table>
         </div>
-            ) : null}
-
-            {mode === 'cards' && !customView ? (
-              grouping ? (
-                <div className="fsdb-cards-stack">
-                  {grouped.length ? (
-                    grouped.map((group) => (
-                      <section key={group.key || 'unset'} className="tasks-queue-group">
-                        <GroupHead groupKey={group.key || 'unset'} label={group.label} count={group.rows.length} />
-                        {collapsedGroups[group.key || 'unset'] ? null : (
-                        <div className="fsdb-cards">
-                          {group.rows.map((row) => (
-                            <MiniCard key={row.id} row={row} />
-                          ))}
-                        </div>
-                        )}
-                      </section>
-                    ))
-                  ) : (
-                    <p className="fsdb-empty">{error ? '加载失败' : '暂无记录'}</p>
-                  )}
-                </div>
-              ) : (
-                <div className="fsdb-cards">
-                  {visible.length ? (
-                    visible.map((row) => <MiniCard key={row.id} row={row} />)
-                  ) : (
-                    <p className="fsdb-empty">{error ? '加载失败' : '暂无记录'}</p>
-                  )}
-                </div>
-              )
-            ) : null}
-
-            {mode === 'queue' && !customView ? (
-              <div className="tasks-queue">
-                {visible.length ? (
-                  grouping ? (
-                    grouped.map((group) => (
-                      <section key={group.key || 'unset'} className="tasks-queue-group">
-                        <GroupHead groupKey={group.key || 'unset'} label={group.label} count={group.rows.length} />
-                        {collapsedGroups[group.key || 'unset'] ? null : (
-                        <ul className="tasks-queue-list">
-                          {group.rows.map((row) => (
-                            <QueueRow key={row.id} row={row} />
-                          ))}
-                        </ul>
-                        )}
-                      </section>
-                    ))
-                  ) : (
-                    <ul className="tasks-queue-list">
-                      {visible.map((row) => (
-                        <QueueRow key={row.id} row={row} />
-                      ))}
-                    </ul>
-                  )
-                ) : (
-                  <p className="fsdb-empty">{error ? '加载失败' : '暂无记录'}</p>
-                )}
-              </div>
-            ) : null}
-
-            {mode === 'board' && !customView ? (
-              <div className="tasks-board" style={{ gridTemplateColumns: `repeat(${Math.max(grouped.length, 1)}, minmax(240px, 1fr))` }}>
-                {grouped.map((group) => (
-                  <div key={group.key || 'all'} className="tasks-board-col">
-                    <div className="tasks-board-colhead">
-                      {activeGroup ? <FieldGlyph kind={resolveFieldType(activeGroup.field)} /> : null}
-                      <span className="tasks-board-coltitle">{group.label}</span>
-                      <span className="tasks-board-count">{group.rows.length}</span>
-                    </div>
-                    <div className="tasks-board-list">
-                      {group.rows.map((row) => (
-                        <MiniCard key={row.id} row={row} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
             ) : null}
           </div>
           <div className="fsdb-pager" data-biu-ignore>

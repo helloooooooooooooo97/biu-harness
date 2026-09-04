@@ -47,10 +47,10 @@ test('viewsCollection creates and deletes user views on a registered table', asy
   ])
   assert.equal(spec.records?.create, true)
   assert.equal(spec.records?.delete, true)
-  const [row] = await spec.create!([{ tablePath: '/tasks', title: '看板', mode: 'board', filters: '{"status":"doing"}' }])
+  const [row] = await spec.create!([{ tablePath: '/tasks', title: '看板', mode: 'graph', filters: '{"status":"doing"}' }])
   assert.equal(row?.tablePath, '/tasks')
   assert.equal(row?.title, '看板')
-  assert.equal(row?.mode, 'board')
+  assert.equal(row?.mode, 'graph')
   assert.equal(row?.filters, '{"status":"doing"}')
   assert.equal(typeof row?.viewId, 'string')
   assert.throws(() => spec.create!([{ tablePath: '/nope', title: 'x' }]), /unknown collection/)
@@ -81,13 +81,13 @@ test('saved views persist created fields and updates across reopen', async () =>
   const first = new SavedViewsStore()
   first.open(file)
   const spec = viewsCollection(first, () => tables)
-  const [row] = await spec.create!([{ tablePath: '/tasks', title: '看板', mode: 'board', sortField: 'dueAt' }])
+  const [row] = await spec.create!([{ tablePath: '/tasks', title: '看板', mode: 'graph', sortField: 'dueAt' }])
   await spec.update!(String(row?.id), { query: 'foo', groupBy: 'status' })
   first.replace('/tasks', [
     {
       id: String(row?.viewId),
       name: '看板',
-      mode: 'board',
+      mode: 'graph',
       sortField: 'dueAt',
       sortDir: 'asc',
       query: 'foo',
@@ -101,7 +101,7 @@ test('saved views persist created fields and updates across reopen', async () =>
   const listed = await viewsCollection(second, () => tables).list()
   const hit = listed.find((item) => item.id === row?.id)
   assert.equal(hit?.title, '看板')
-  assert.equal(hit?.mode, 'board')
+  assert.equal(hit?.mode, 'graph')
   assert.equal(hit?.query, 'foo')
   assert.equal(hit?.groupBy, 'status')
   assert.equal(hit?.sortField, 'dueAt')

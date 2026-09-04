@@ -20,8 +20,6 @@ import {
   StopIcon,
   TableCellsIcon,
   ShareIcon,
-  Squares2X2Icon,
-  ViewColumnsIcon,
 } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import type { CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
@@ -53,18 +51,12 @@ export function ModeGlyph({ id, extra }: { id: ViewMode; extra?: CollectionViewT
   const cls = 'size-[14px]'
   const Custom = extra?.find((item) => item.id === id)?.Icon
   if (Custom) return <Custom className={cls} />
-  if (id === 'queue') return <ListBulletIcon aria-hidden className={cls} />
   if (id === 'table') return <TableCellsIcon aria-hidden className={cls} />
-  if (id === 'cards') return <Squares2X2Icon aria-hidden className={cls} />
-  if (id === 'board') return <ViewColumnsIcon aria-hidden className={cls} />
   return <ShareIcon aria-hidden className={cls} />
 }
 
 export const VIEW_MODES: Array<{ id: ViewMode; label: string }> = [
-  { id: 'queue', label: '列表' },
   { id: 'table', label: '表格' },
-  { id: 'cards', label: '卡片' },
-  { id: 'board', label: '看板' },
 ]
 
 export function fieldDraftValue(field: FieldSpec, value: unknown): string {

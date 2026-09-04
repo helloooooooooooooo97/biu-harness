@@ -15,6 +15,8 @@ const base: SavedView = {
 test('normalizeSavedView keeps custom mode slugs and rejects junk', () => {
   const graph = normalizeSavedView({ id: '1', name: 'a', mode: 'graph', sortField: '', sortDir: 'asc', filters: {}, columns: [] })
   assert.equal(graph.mode, 'graph')
+  const board = normalizeSavedView({ id: '1', name: 'a', mode: 'board', sortField: '', sortDir: 'asc', filters: {}, columns: [] })
+  assert.equal(board.mode, 'table')
   const junk = normalizeSavedView({ id: '1', name: 'a', mode: '???' as SavedView['mode'], sortField: '', sortDir: 'asc', filters: {}, columns: [] })
   assert.equal(junk.mode, 'table')
   assert.equal(junk.sortField, 'id')

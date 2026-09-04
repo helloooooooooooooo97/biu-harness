@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Page：工作区 .page 下的 Markdown 页面（YAML 属性，assets 里放图片和附件）",
+  "description": "Page：工作区 .page/pages.sqlite 存页面，assets 里放图片和附件",
   "exports": {
     "./host": "./src/host/index.ts",
     "./web": "./src/web/index.ts"

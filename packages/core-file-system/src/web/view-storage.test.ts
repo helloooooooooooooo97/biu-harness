@@ -81,6 +81,6 @@ test('savedViewFromRecord skips builtin rows and keeps filters', () => {
     columns: ['title'],
   })
   assert.equal(view?.id, 'v1')
-  assert.equal(view?.mode, 'board')
+  assert.equal(view?.mode, 'table')
   assert.equal(view?.filters.status, 'doing')
 })

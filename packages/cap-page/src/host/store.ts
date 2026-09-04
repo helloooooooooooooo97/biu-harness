@@ -1,10 +1,12 @@
 import { mkdir, readFile, stat, unlink } from 'node:fs/promises'
 import { basename, dirname } from 'node:path'
+import { createRequire } from 'node:module'
 import type { DbRecord, SchemaFieldValue } from '@biu/type-file-system'
 import { emptySchemaValue, normalizeSchemaValue } from '@biu/type-file-system'
 import { dumpMarkdown, splitMarkdown } from './markdown.ts'
 
 export const PAGE_ROOT = '.page'
+export const PAGE_DB = '.page/pages.sqlite'
 export const PAGE_ASSETS = '.page/assets'
 /** 正文不再引用后，附件再留一天，避免撤销/未落盘指针误删。 */
 export const ASSET_GC_GRACE_MS = 24 * 60 * 60 * 1000
@@ -274,13 +276,94 @@ function applyPatch(current: PageRow, patch: Record<string, unknown>): PageRow {
 export class PagesStore {
   constructor(private fs: WorkspaceFs) {}
 
+  private db: import('node:sqlite').DatabaseSync | null = null
+
   private async ensureDirs() {
     await mkdir(dirname(this.fs.resolve(`${PAGE_ROOT}/x.md`)), { recursive: true })
     await mkdir(this.fs.resolve(PAGE_ASSETS), { recursive: true })
   }
 
-  async list(ids?: string[]): Promise<PageRow[]> {
+  private async openDb() {
     await this.ensureDirs()
+    if (this.db) return this.db
+    const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite') as typeof import('node:sqlite')
+    const db = new DatabaseSync(this.fs.resolve(PAGE_DB))
+    db.exec('PRAGMA journal_mode = WAL')
+    db.exec('PRAGMA synchronous = NORMAL')
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS pages (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        blurb TEXT NOT NULL DEFAULT '',
+        count REAL NOT NULL DEFAULT 0,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        status TEXT NOT NULL DEFAULT 'draft',
+        tags_json TEXT NOT NULL DEFAULT '[]',
+        aliases_json TEXT NOT NULL DEFAULT '[]',
+        published_at INTEGER NOT NULL,
+        size REAL NOT NULL DEFAULT 0,
+        homepage TEXT NOT NULL DEFAULT '',
+        cover TEXT NOT NULL DEFAULT '',
+        pack_json TEXT NOT NULL DEFAULT '{}',
+        notes TEXT NOT NULL DEFAULT '',
+        score REAL NOT NULL DEFAULT 0,
+        parent_id TEXT,
+        facet_json TEXT NOT NULL DEFAULT '{}',
+        emoji TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    `)
+    this.db = db
+    return db
+  }
+
+  private async migrateMarkdown() {
+    if (!this.db) return
+    let names: string[] = []
+    try {
+      names = await this.fs.list(PAGE_ROOT)
+    } catch {
+      return
+    }
+    const existing = new Set(
+      (this.db.prepare('SELECT id FROM pages').all() as Array<{ id: string }>).map((row) => row.id),
+    )
+    for (const name of names) {
+      if (!name.endsWith('.md')) continue
+      const id = name.slice(0, -3)
+      if (!ID_RE.test(id) || existing.has(id)) continue
+      try {
+        const row = rowFromFile(id, await this.fs.read(pageRel(id)))
+        this.upsert(row)
+        existing.add(id)
+      } catch {
+        /* skip unreadable */
+      }
+    }
+  }
+
+  private upsert(row: PageRow) {
+    if (!this.db) return
+    this.db.prepare(`
+      INSERT INTO pages (
+        id, title, blurb, count, enabled, status, tags_json, aliases_json,
+        published_at, size, homepage, cover, pack_json, notes, score, parent_id,
+        facet_json, emoji, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        title=excluded.title, blurb=excluded.blurb, count=excluded.count, enabled=excluded.enabled,
+        status=excluded.status, tags_json=excluded.tags_json, aliases_json=excluded.aliases_json,
+        published_at=excluded.published_at, size=excluded.size, homepage=excluded.homepage,
+        cover=excluded.cover, pack_json=excluded.pack_json, notes=excluded.notes, score=excluded.score,
+        parent_id=excluded.parent_id, facet_json=excluded.facet_json, emoji=excluded.emoji,
+        updated_at=excluded.updated_at
+    `).run(...sqlValues(row))
+  }
+
+  async list(ids?: string[]): Promise<PageRow[]> {
+    const db = await this.openDb()
+    await this.migrateMarkdown()
     if (ids) {
       const rows: PageRow[] = []
       for (const id of ids) {
@@ -290,31 +373,21 @@ export class PagesStore {
       }
       return rows
     }
-    let names: string[] = []
-    try {
-      names = await this.fs.list(PAGE_ROOT)
-    } catch {
-      return []
-    }
-    const rows: PageRow[] = []
-    for (const name of names) {
-      if (!name.endsWith('.md')) continue
-      const id = name.slice(0, -3)
-      if (!ID_RE.test(id)) continue
-      const row = await this.get(id)
-      if (row) rows.push(row)
-    }
-    return rows.sort((a, b) => a.id.localeCompare(b.id))
+    const listed = db.prepare(`
+      SELECT id, title, blurb, count, enabled, status, tags_json, aliases_json,
+        published_at, size, homepage, cover, pack_json, '' AS notes, score, parent_id,
+        facet_json, emoji, created_at, updated_at
+      FROM pages ORDER BY id
+    `).all() as SqlPage[]
+    return listed.map(rowFromSql)
   }
 
   async get(id: string): Promise<PageRow | null> {
     if (!ID_RE.test(id)) return null
-    try {
-      const raw = await this.fs.read(pageRel(id))
-      return rowFromFile(id, raw)
-    } catch {
-      return null
-    }
+    const db = await this.openDb()
+    await this.migrateMarkdown()
+    const hit = db.prepare('SELECT * FROM pages WHERE id = ?').get(id) as SqlPage | undefined
+    return hit ? rowFromSql(hit) : null
   }
 
   async update(id: string, patch: Record<string, unknown>): Promise<PageRow> {
@@ -327,8 +400,8 @@ export class PagesStore {
   }
 
   async create(fields: Record<string, unknown> = {}): Promise<PageRow> {
-    await this.ensureDirs()
-    const existing = new Set((await this.list()).map((row) => row.id))
+    const db = await this.openDb()
+    const existing = new Set((db.prepare('SELECT id FROM pages').all() as Array<{ id: string }>).map((row) => row.id))
     let n = existing.size
     let id = `p${String(n).padStart(3, '0')}`
     while (existing.has(id) || !ID_RE.test(id)) {
@@ -349,11 +422,13 @@ export class PagesStore {
 
   async remove(id: string) {
     if (!ID_RE.test(id)) throw new Error(`unknown page: ${id}`)
-    const full = this.fs.resolve(pageRel(id))
+    const db = await this.openDb()
+    const info = db.prepare('DELETE FROM pages WHERE id = ?').run(id)
+    if (!info.changes) throw new Error(`unknown page: ${id}`)
     try {
-      await unlink(full)
+      await unlink(this.fs.resolve(pageRel(id)))
     } catch {
-      throw new Error(`unknown page: ${id}`)
+      /* markdown sidecar optional */
     }
     await this.gcAssets()
   }
@@ -382,9 +457,15 @@ export class PagesStore {
     } catch {
       return
     }
+    const db = await this.openDb()
     const live = new Set<string>()
-    for (const row of await this.list()) {
-      for (const name of collectPageAssetNames(dumpMarkdown(matterOf(row), row.notes ?? ''))) live.add(name)
+    const bodies = db.prepare('SELECT cover, pack_json, notes FROM pages').all() as Array<{
+      cover: string
+      pack_json: string
+      notes: string
+    }>
+    for (const body of bodies) {
+      for (const name of collectPageAssetNames(body.cover, body.pack_json, body.notes)) live.add(name)
     }
     for (const name of names) {
       if (name === '.gitkeep' || live.has(name) || !isPageAssetFileName(name)) continue
@@ -400,9 +481,123 @@ export class PagesStore {
   }
 
   private async write(row: PageRow) {
-    await this.ensureDirs()
-    const body = row.notes ?? ''
-    await this.fs.write(pageRel(row.id), dumpMarkdown(matterOf(row), body))
+    await this.openDb()
+    this.upsert(row)
+  }
+}
+
+type SqlPage = {
+  id: string
+  title: string
+  blurb: string
+  count: number
+  enabled: number
+  status: string
+  tags_json: string
+  aliases_json: string
+  published_at: number
+  size: number
+  homepage: string
+  cover: string
+  pack_json: string
+  notes: string
+  score: number
+  parent_id: string | null
+  facet_json: string
+  emoji: string
+  created_at: number
+  updated_at: number
+}
+
+function parseJson<T>(raw: string, fallback: T): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
+function sqlPayload(row: PageRow) {
+  return {
+    id: row.id,
+    title: row.title,
+    blurb: row.blurb,
+    count: row.count,
+    enabled: row.enabled ? 1 : 0,
+    status: row.status,
+    tags_json: JSON.stringify(row.tags),
+    aliases_json: JSON.stringify(row.aliases),
+    published_at: row.publishedAt,
+    size: row.size,
+    homepage: row.homepage,
+    cover: storedCover(row.cover, ''),
+    pack_json: JSON.stringify({
+      name: row.pack.name,
+      href: storedPackHref(row.pack.href),
+      bytes: row.pack.bytes,
+    }),
+    notes: row.notes ?? '',
+    score: row.score,
+    parent_id: row.parentId,
+    facet_json: JSON.stringify(row.facet),
+    emoji: row.emoji,
+    created_at: row.createdAt,
+    updated_at: row.updatedAt,
+  }
+}
+
+function sqlValues(row: PageRow) {
+  const payload = sqlPayload(row)
+  return [
+    payload.id,
+    payload.title,
+    payload.blurb,
+    payload.count,
+    payload.enabled,
+    payload.status,
+    payload.tags_json,
+    payload.aliases_json,
+    payload.published_at,
+    payload.size,
+    payload.homepage,
+    payload.cover,
+    payload.pack_json,
+    payload.notes,
+    payload.score,
+    payload.parent_id,
+    payload.facet_json,
+    payload.emoji,
+    payload.created_at,
+    payload.updated_at,
+  ]
+}
+
+function rowFromSql(row: SqlPage): PageRow {
+  const pack = asPack(parseJson(row.pack_json, {})) ?? { name: '', href: '', bytes: 0 }
+  const status = STATUS.includes(row.status as (typeof STATUS)[number])
+    ? (row.status as (typeof STATUS)[number])
+    : 'draft'
+  return {
+    id: row.id,
+    title: row.title,
+    blurb: row.blurb,
+    count: Number(row.count) || 0,
+    enabled: row.enabled !== 0,
+    status,
+    tags: asStringList(parseJson(row.tags_json, [])),
+    aliases: asStringList(parseJson(row.aliases_json, [])),
+    publishedAt: Number(row.published_at) || 0,
+    size: Number(row.size) || 0,
+    homepage: row.homepage,
+    cover: publicCover(row.cover),
+    pack: publicPack(pack),
+    notes: row.notes,
+    score: Number(row.score) || 0,
+    parentId: row.parent_id == null || row.parent_id === '' ? null : String(row.parent_id),
+    facet: normalizeSchemaValue(parseJson(row.facet_json, emptySchemaValue())),
+    emoji: row.emoji ?? '',
+    createdAt: Number(row.created_at) || 0,
+    updatedAt: Number(row.updated_at) || 0,
   }
 }
 

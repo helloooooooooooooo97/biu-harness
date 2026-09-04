@@ -1,13 +1,17 @@
 import type { CollectionSchema, CollectionSchemaPack, DbRecord, FieldSpec, FieldType, SchemaFieldValue } from '@biu/type-file-system'
 import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS, isFacetFieldType, normalizeSchemaValue } from '@biu/type-file-system'
 
-export const BUILTIN_VIEW_MODES = ['queue', 'table', 'cards', 'board'] as const
+export const BUILTIN_VIEW_MODES = ['table'] as const
 export type BuiltinViewMode = (typeof BUILTIN_VIEW_MODES)[number]
-/** 内置四种 + 集合自己 registerView 的 id（如 graph）。 */
+/** 表格为文件系统默认；其它呈现由集合 registerView 注册。 */
 export type ViewMode = BuiltinViewMode | (string & {})
 
+export function isDroppedViewMode(mode: unknown) {
+  return mode === 'queue' || mode === 'cards' || mode === 'board'
+}
+
 export function isViewModeId(mode: unknown): mode is ViewMode {
-  return typeof mode === 'string' && /^[a-z][a-z0-9-]{0,31}$/.test(mode)
+  return typeof mode === 'string' && /^[a-z][a-z0-9-]{0,31}$/.test(mode) && !isDroppedViewMode(mode)
 }
 
 export function resolveFieldType(field: FieldSpec): FieldType {
