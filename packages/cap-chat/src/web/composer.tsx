@@ -18,7 +18,7 @@ import {
 import { ModelConfigDialog } from './model-config-dialog.tsx'
 import { ImageThumbs } from './image-thumbs.tsx'
 import { collectClipboardImages, collectImageFiles } from './clipboard-images.ts'
-import { revealOverlayThread } from '@biu/web-app-shell/chat-overlay'
+import { revealOverlayThread, isComposerFocusPending } from '@biu/web-app-shell/chat-overlay'
 import { shouldNavigateToSession } from './composer-nav.ts'
 
 /** 按键不驱动受控 value；仅防抖更新发送按钮可用态，避免每个字符打穿 React 渲染。 */
@@ -569,6 +569,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
     }
     if (keep.length && !pick?.picking) pick?.addMany(keep)
     pickKeysRef.current = collectPickKeys(editor)
+    if (isComposerFocusPending()) editor.commands.focus('end')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, editor])
 

@@ -7,7 +7,6 @@ import {
   openSearchHit,
   pickRecentHits,
   recordUpdatedAt,
-  refocusSearchField,
   searchCollection,
   searchHref,
   tagsFromRecord,
@@ -155,15 +154,8 @@ test('search hits never show report even if placement is row', () => {
   )
 })
 
-test('opening a session on the left keeps search and refocuses the field', () => {
+test('opening a session on the left closes search and focuses the composer', () => {
   const src = readFileSync(resolve(import.meta.dirname, './shell-search.tsx'), 'utf8')
-  assert.match(src, /refocusSearchField\(inputRef\.current\)/)
-  assert.match(src, /window\.setTimeout\(go, 60\)/)
-  assert.match(src, /navigate\(href\)\s*refocusSearchField/)
-  assert.doesNotMatch(src, /navigate\(href\)\s*\} else \{\s*openSearchHit/)
-  const calls: number[] = []
-  const node = { focus: () => calls.push(1) } as unknown as HTMLInputElement
-  refocusSearchField(node)
-  assert.equal(calls.length, 1)
-  refocusSearchField(null)
+  assert.match(src, /onClose\(\)\s*if \(side === 'left' && hit\.kind === 'session'\) requestComposerFocus\(\)/)
+  assert.doesNotMatch(src, /refocusSearchField/)
 })

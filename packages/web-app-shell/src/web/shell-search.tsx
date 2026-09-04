@@ -19,7 +19,7 @@ import { TagChip, TagChips } from '@biu/public-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { actionVisibleToUser } from '@biu/type-file-system'
-import { setChatOverlay } from './chat-overlay.ts'
+import { setChatOverlay, requestComposerFocus } from './chat-overlay.ts'
 
 export type SearchKind = 'session' | 'task' | 'page' | 'plugin' | 'facet'
 
@@ -187,14 +187,6 @@ export function searchHref(hit: { kind: SearchKind; id: string }) {
   if (hit.kind === 'session') return `/s/${encodeURIComponent(hit.id)}`
   const collection = searchCollection(hit.kind)
   return `/database${collection}/record/${encodeURIComponent(hit.id)}`
-}
-
-/** 左侧打开会抢走焦点（会话切主栏、composer 抢焦）；搜索层保持打开并把光标拉回输入框。 */
-export function refocusSearchField(node: HTMLInputElement | null) {
-  const go = () => node?.focus()
-  go()
-  requestAnimationFrame(go)
-  window.setTimeout(go, 60)
 }
 
 function matchLocal(title: string, id: string, needle: string) {
@@ -482,11 +474,11 @@ export function ShellSearchPanel({
       const href = searchHref(hit)
       if (hit.kind === 'session') setChatOverlay(false)
       navigate(href)
-      refocusSearchField(inputRef.current)
-      return
+    } else {
+      openSearchHit(hit)
     }
-    openSearchHit(hit)
     onClose()
+    if (side === 'left' && hit.kind === 'session') requestComposerFocus()
   }
 
   let cursor = -1
