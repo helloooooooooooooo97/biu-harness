@@ -48,19 +48,23 @@ test('headingsFromRoot is read-only so TipTap headings do not trip MutationObser
   mo.disconnect()
 })
 
-test('headingsFromRoot includes session chat user messages in document order', () => {
+test('session outline is one tick per user bubble, never reply headings', () => {
   const root = document.createElement('div')
   root.innerHTML = `
     <h1 class="fsdb-detail-title">Session title</h1>
-    <div data-chat-kind="user" data-node-id="u-1">hello from me</div>
+    <div data-chat-kind="user" data-node-id="u-1">
+      <div data-testid="user-bubble">hello from me</div>
+      <div>回复栏</div>
+    </div>
     <div data-chat-kind="reply"><h2>Section in reply</h2></div>
-    <div data-chat-kind="user" data-node-id="u-2">second question</div>
+    <div data-chat-kind="user" data-node-id="u-2">
+      <div data-testid="user-bubble">second question</div>
+    </div>
   `
   assert.deepEqual(
     headingsFromRoot(root).map((item) => [item.id, item.text, item.level]),
     [
       ['u-1', 'hello from me', 1],
-      ['heading-0', 'Section in reply', 2],
       ['u-2', 'second question', 1],
     ],
   )
