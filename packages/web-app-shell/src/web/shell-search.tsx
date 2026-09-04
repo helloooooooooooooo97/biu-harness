@@ -34,9 +34,10 @@ export type SearchHit = {
   id: string
   title: string
   tags?: string[]
+  updatedAt?: number
 }
 
-export type SessionHint = { id: string; title: string; tags?: string[] }
+export type SessionHint = { id: string; title: string; tags?: string[]; updatedAt?: number }
 
 function recordTitle(row: Record<string, unknown>) {
   const title = row.title ?? row.name ?? row.label
@@ -65,6 +66,19 @@ export function tagsFromRecord(row: Record<string, unknown>) {
     pushTags(tags, (config as { tags?: unknown }).tags)
   }
   return [...new Set(tags)]
+}
+
+export function recordUpdatedAt(row: Record<string, unknown>) {
+  const updated = Number(row.updatedAt)
+  if (Number.isFinite(updated) && updated) return updated
+  const created = Number(row.createdAt)
+  return Number.isFinite(created) ? created : 0
+}
+
+export function pickRecentHits<T extends { id: string; updatedAt?: number }>(items: T[], limit = PER_KIND) {
+  return [...items]
+    .sort((left, right) => (right.updatedAt ?? 0) - (left.updatedAt ?? 0) || left.id.localeCompare(right.id))
+    .slice(0, limit)
 }
 
 export function searchCollection(kind: SearchKind) {
@@ -160,27 +174,27 @@ export function ShellSearchPanel({
   const needle = query.trim().toLowerCase()
 
   const localSessions = useMemo(() => {
-    return sessions
+    const matched = sessions
       .filter((item) => matchLocal(item.title, item.id, needle))
-      .slice(0, PER_KIND)
       .map((item) => ({
         kind: 'session' as const,
         id: item.id,
         title: item.title || item.id,
         tags: (item.tags ?? []).map((tag) => tag.trim()).filter(Boolean),
+        updatedAt: item.updatedAt ?? 0,
       }))
+    return pickRecentHits(matched)
   }, [needle, sessions])
 
   useEffect(() => {
     const keyOf = (kind: SearchKind) => `${kind}\0${needle}`
-    const remote = SEARCH_SCOPES.filter((item) => item.path && (scope === 'all' || item.id === scope))
-    const allRemote = SEARCH_SCOPES.filter((item) => item.path)
+    const listed = SEARCH_SCOPES.map((item) => ({
+      id: item.id,
+      path: item.id === 'session' ? '/sessions' : item.path,
+    })).filter((item): item is { id: SearchKind; path: string } => Boolean(item.path))
+    const remote = listed.filter((item) => scope === 'all' || item.id === scope)
+    const allRemote = listed
     const fromCache = allRemote.flatMap((item) => cacheRef.current.get(keyOf(item.id)) ?? [])
-    if (!needle && scope === 'all') {
-      setHits([])
-      setBusy(false)
-      return
-    }
     if (fromCache.length) setHits(fromCache)
     if (!remote.length) {
       setBusy(false)
@@ -206,6 +220,7 @@ export function ShellSearchPanel({
                 id,
                 title: recordTitle(row),
                 tags: tagsFromRecord(row),
+                updatedAt: recordUpdatedAt(row),
               } satisfies SearchHit
             })
           } catch {
@@ -229,15 +244,20 @@ export function ShellSearchPanel({
   }, [needle, scope])
 
   const grouped = useMemo(() => {
-    const sessionHits = scope === 'all' || scope === 'session' ? localSessions : []
     const remote = hits.filter((item) => scope === 'all' || item.kind === scope)
     const order: SearchKind[] = ['session', 'task', 'page', 'plugin', 'facet']
     return order
-      .map((kind) => ({
-        kind,
-        label: SEARCH_SCOPES.find((item) => item.id === kind)?.label ?? kind,
-        items: kind === 'session' ? sessionHits : remote.filter((item) => item.kind === kind),
-      }))
+      .map((kind) => {
+        const fromRemote = remote.filter((item) => item.kind === kind)
+        const fromLocal = kind === 'session' && (scope === 'all' || scope === 'session') ? localSessions : []
+        const seen = new Set(fromRemote.map((item) => item.id))
+        const merged = [...fromRemote, ...fromLocal.filter((item) => !seen.has(item.id))]
+        return {
+          kind,
+          label: SEARCH_SCOPES.find((item) => item.id === kind)?.label ?? kind,
+          items: pickRecentHits(merged),
+        }
+      })
       .filter((group) => group.items.length)
   }, [hits, localSessions, scope])
 
@@ -337,9 +357,9 @@ export function ShellSearchPanel({
           </TagChips>
         </div>
         <div className="shell-search-body" aria-busy={busy}>
-          {!needle && scope === 'all' && !flat.length ? (
+          {!needle && scope === 'all' && !flat.length && !busy ? (
             <p className="shell-search-hint">
-              会话用已加载的列表即时筛；其它类型并行各取最多 {PER_KIND} 条，输入后再请求。
+              空着时会话、任务、页面、插件、类型各按更新时间列最近 {PER_KIND} 条。
             </p>
           ) : null}
           {grouped.map((group) => (
