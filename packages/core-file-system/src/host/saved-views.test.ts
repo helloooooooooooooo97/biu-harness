@@ -23,6 +23,7 @@ test('viewsCollection lists saved views with source table', async () => {
   const spec = viewsCollection(store, () => [{ path: '/tasks', id: 'tasks', kind: 'collection', label: 'Task', view: { moduleId: 'tasks', route: '/tasks', title: 'Task' } }])
   assert.equal(spec.path, '/views')
   assert.equal(spec.view?.title, '视图')
+  assert.equal(spec.view?.inspector, false)
   const rows = await spec.list()
   const all = rows.find((row) => row.viewId === builtinAllViewId('/tasks'))
   const user = rows.find((row) => row.id === 'tasks::v1')
