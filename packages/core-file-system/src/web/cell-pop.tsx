@@ -12,11 +12,13 @@ export function CellPop({
   open,
   anchor,
   onClose,
+  className,
   children,
 }: {
   open: boolean
   anchor: HTMLElement | null
   onClose: () => void
+  className?: string
   children: ReactNode
 }) {
   const menuRef = useRef<HTMLDivElement>(null)
@@ -69,7 +71,7 @@ export function CellPop({
   return createPortal(
     <div
       ref={menuRef}
-      className="fsdb-cell-pop"
+      className={`fsdb-cell-pop${className ? ` ${className}` : ''}`}
       role="dialog"
       style={{ position: 'fixed', top: box.top, left: box.left, width: box.width, minHeight: box.minHeight, zIndex: 180 }}
       onMouseDown={(event) => event.stopPropagation()}

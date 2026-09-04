@@ -126,5 +126,5 @@ test('selected table cells use Super Tag blue when writable and gray when locked
   assert.match(css, /\.fsdb-media-field\{[^}]*flex-wrap:nowrap/)
   assert.match(css, /\.fsdb-media-field\{[^}]*height:22px/)
   assert.match(css, /\.fsdb-cell-pop\{[^}]*background:#202020/)
-  assert.match(css, /\.fsdb-cell-pop-actions\{[^}]*justify-content:flex-end/)
+  assert.match(css, /\.fsdb-cell-pop-tags\{[^}]*flex-direction:column/)
 })

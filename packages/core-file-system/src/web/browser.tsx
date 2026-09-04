@@ -1432,7 +1432,13 @@ export function CollectionBrowser({
         )
       : uniqueValues(items, key, field)
     return (
-      <CellPop key={`${cellPop.id}:${cellPop.key}`} open anchor={cellAnchorRef.current} onClose={() => setCellPop(null)}>
+      <CellPop
+        key={`${cellPop.id}:${cellPop.key}`}
+        open
+        className={`is-${resolveFieldType(field)}`}
+        anchor={cellAnchorRef.current}
+        onClose={() => setCellPop(null)}
+      >
         <CellPopDraft
           record={row}
           fieldKey={key}
@@ -1441,10 +1447,7 @@ export function CollectionBrowser({
           options={options}
           collectionPath={collectionPath}
           onClose={() => setCellPop(null)}
-          onSubmit={(raw) => {
-            writeCellValue(row, key, field, raw)
-            setCellPop(null)
-          }}
+          onSubmit={(raw) => writeCellValue(row, key, field, raw)}
         />
       </CellPop>
     )
