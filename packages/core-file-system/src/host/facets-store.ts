@@ -86,6 +86,13 @@ export class FacetStore {
         facet_json TEXT NOT NULL,
         PRIMARY KEY (collection, record_id)
       );
+      CREATE TABLE IF NOT EXISTS record_meta (
+        collection TEXT NOT NULL,
+        record_id TEXT NOT NULL,
+        emoji TEXT,
+        tags_json TEXT,
+        PRIMARY KEY (collection, record_id)
+      );
     `)
     return this
   }
@@ -226,10 +233,57 @@ export class FacetStore {
     return value
   }
 
+  recordMeta(collection: string, recordId: string): { emoji: string | null; tags: string[] | null } | null {
+    const row = this.ensure()
+      .prepare('SELECT emoji, tags_json FROM record_meta WHERE collection = ? AND record_id = ?')
+      .get(collection, recordId) as { emoji: string | null; tags_json: string | null } | undefined
+    if (!row) return null
+    let tags: string[] | null = null
+    if (row.tags_json != null) {
+      try {
+        const parsed = JSON.parse(row.tags_json) as unknown
+        tags = Array.isArray(parsed)
+          ? [...new Set(parsed.map((item) => String(item).trim()).filter(Boolean))]
+          : []
+      } catch {
+        tags = []
+      }
+    }
+    return {
+      emoji: row.emoji != null ? String(row.emoji) : null,
+      tags,
+    }
+  }
+
+  writeRecordMeta(
+    collection: string,
+    recordId: string,
+    patch: { emoji?: string; tags?: string[] },
+  ): { emoji: string | null; tags: string[] | null } {
+    this.ensure()
+      .prepare(
+        `INSERT INTO record_meta (collection, record_id, emoji, tags_json)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(collection, record_id) DO UPDATE SET
+           emoji = COALESCE(excluded.emoji, record_meta.emoji),
+           tags_json = COALESCE(excluded.tags_json, record_meta.tags_json)`,
+      )
+      .run(
+        collection,
+        recordId,
+        patch.emoji !== undefined ? String(patch.emoji ?? '') : null,
+        patch.tags !== undefined
+          ? JSON.stringify([...new Set(patch.tags.map((item) => String(item).trim()).filter(Boolean))])
+          : null,
+      )
+    return this.recordMeta(collection, recordId) ?? { emoji: null, tags: null }
+  }
+
   removeRecord(collection: string, recordId: string) {
     const db = this.ensure()
     db.prepare('DELETE FROM facet_stamps WHERE collection = ? AND record_id = ?').run(collection, recordId)
     db.prepare('DELETE FROM facet_record_values WHERE collection = ? AND record_id = ?').run(collection, recordId)
+    db.prepare('DELETE FROM record_meta WHERE collection = ? AND record_id = ?').run(collection, recordId)
   }
 
   stampedIds(collection: string, tagIdOrLabel: string): Set<string> {

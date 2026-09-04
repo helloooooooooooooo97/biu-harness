@@ -74,6 +74,11 @@ function schemaWithTagPack(schema: CollectionSchema, pack: CollectionSchemaPack 
   return { ...schema, fields, columns: ['title', 'table', ...extra] }
 }
 
+function ensureColumn(columns: string[] | undefined, key: string) {
+  if (!columns) return columns
+  return columns.includes(key) ? columns : [...columns, key]
+}
+
 function schemaFor(spec: CollectionSpec): CollectionSchema {
   const contentField = spec.schema.contentField ?? 'content'
   const labelField = spec.schema.labelField ?? 'title'
@@ -89,12 +94,8 @@ function schemaFor(spec: CollectionSpec): CollectionSchema {
     fields,
     columns:
       spec.path === '/facets'
-        ? spec.schema.columns
-        : spec.schema.columns?.includes('facet')
-          ? spec.schema.columns
-          : spec.schema.columns
-            ? [...spec.schema.columns, 'facet']
-            : spec.schema.columns,
+        ? ensureColumn(spec.schema.columns, 'tags')
+        : ensureColumn(ensureColumn(spec.schema.columns, 'facet'), 'tags'),
     actions: (spec.actions ?? []).map(publicAction),
     records: {
       update: Boolean(spec.records?.update),
@@ -390,7 +391,7 @@ export class DatabaseService extends Service implements Database {
   private async loadCollectionRows(spec: CollectionSpec, query: CollectionListQuery) {
     const rows = await spec.list(query)
     const listed = !query.ids?.length ? rows : rows.filter((row) => query.ids!.includes(row.id))
-    return listed.map((row) => this.applyFacetOverlay(spec, row))
+    return listed.map((row) => this.decorateRecord(spec, row))
   }
 
   private async matchCollectionRows(
@@ -422,7 +423,7 @@ export class DatabaseService extends Service implements Database {
       if (!spec || !id) continue
       const found = await spec.get(id)
       if (!found) continue
-      const record = this.applyFacetOverlay(spec, found)
+      const record = this.decorateRecord(spec, found)
       const bag = normalizeSchemaValue(record.facet).values[pack.id] ?? {}
       for (const field of wanted) {
         if (bag[field.key] !== undefined) row[field.key] = bag[field.key]
@@ -466,7 +467,7 @@ export class DatabaseService extends Service implements Database {
         label: spec.label ?? spec.id,
         schema: schemaFor(spec),
         caps,
-        value: withoutContent(spec, this.applyFacetOverlay(spec, record)),
+        value: withoutContent(spec, this.decorateRecord(spec, record)),
       }
     }
     throw new Error(`path too deep: ${normalizeCollectionPath(path)}`)
@@ -543,11 +544,27 @@ export class DatabaseService extends Service implements Database {
     }
   }
 
+  private decorateRecord(spec: CollectionSpec, row: DbRecord): DbRecord {
+    const withFacet = this.applyFacetOverlay(spec, row)
+    if (this.collectionCanUpdate(spec)) return withFacet
+    return this.applyMetaOverlay(spec, withFacet)
+  }
+
   private applyFacetOverlay(spec: CollectionSpec, row: DbRecord): DbRecord {
     if (spec.path === '/facets' || !schemaFor(spec).fields.facet) return row
     const overlay = this.facets.recordFacet(spec.path, row.id)
     if (!overlay) return row
     return { ...row, facet: overlay }
+  }
+
+  private applyMetaOverlay(spec: CollectionSpec, row: DbRecord): DbRecord {
+    const meta = this.facets.recordMeta(spec.path, row.id)
+    if (!meta) return row
+    return {
+      ...row,
+      ...(meta.emoji !== null ? { emoji: meta.emoji } : {}),
+      ...(meta.tags !== null ? { tags: meta.tags } : {}),
+    }
   }
 
   private collectionCanUpdate(spec: CollectionSpec) {
@@ -574,7 +591,7 @@ export class DatabaseService extends Service implements Database {
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     const record = await spec.get(parts[1]!)
     if (!record) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
-    return { kind: 'record' as const, path: `${spec.path}/${record.id}`, schema: schemaFor(spec), value: withoutContent(spec, this.applyFacetOverlay(spec, record)) }
+    return { kind: 'record' as const, path: `${spec.path}/${record.id}`, schema: schemaFor(spec), value: withoutContent(spec, this.decorateRecord(spec, record)) }
   }
 
   async update(path: string, content: unknown) {
@@ -586,19 +603,42 @@ export class DatabaseService extends Service implements Database {
     const raw = parseContent(content)
     if (!this.collectionCanUpdate(spec)) {
       const keys = Object.keys(raw)
-      if (keys.length !== 1 || keys[0] !== 'facet' || !schema.fields.facet?.writable || schema.fields.facet.computed) {
+      const overlayKeys = new Set(['facet', 'emoji', 'tags'])
+      if (!keys.length || keys.some((key) => !overlayKeys.has(key))) {
         throw new Error(`collection cannot update: ${spec.path}`)
       }
       const current = await spec.get(parts[1]!)
       if (!current) throw new Error(`unknown record: ${spec.path}/${parts[1]}`)
-      const nextSchema = coerce(schema.fields.facet, raw.facet)
-      const labelKey = schema.labelField ?? 'title'
-      this.facets.writeRecordFacet(spec.path, current.id, nextSchema, String(current[labelKey] ?? current.id))
+      let next: DbRecord = { ...this.decorateRecord(spec, current) }
+      if ('facet' in raw) {
+        if (!schema.fields.facet?.writable || schema.fields.facet.computed) throw new Error(`field not writable: facet`)
+        const nextSchema = coerce(schema.fields.facet, raw.facet)
+        const labelKey = schema.labelField ?? 'title'
+        this.facets.writeRecordFacet(spec.path, current.id, nextSchema, String(current[labelKey] ?? current.id))
+        next = { ...next, facet: nextSchema }
+      }
+      if ('emoji' in raw || 'tags' in raw) {
+        if ('emoji' in raw && (!schema.fields.emoji?.writable || schema.fields.emoji.computed)) {
+          throw new Error(`field not writable: emoji`)
+        }
+        if ('tags' in raw && (!schema.fields.tags?.writable || schema.fields.tags.computed)) {
+          throw new Error(`field not writable: tags`)
+        }
+        const meta = this.facets.writeRecordMeta(spec.path, current.id, {
+          ...('emoji' in raw ? { emoji: String(coerce(schema.fields.emoji!, raw.emoji) ?? '') } : {}),
+          ...('tags' in raw ? { tags: coerce(schema.fields.tags!, raw.tags) as string[] } : {}),
+        })
+        next = {
+          ...next,
+          ...(meta.emoji !== null ? { emoji: meta.emoji } : {}),
+          ...(meta.tags !== null ? { tags: meta.tags } : {}),
+        }
+      }
       this.bump()
       return {
         kind: 'record' as const,
         path: `${spec.path}/${current.id}`,
-        value: withoutContent(spec, { ...current, facet: nextSchema }),
+        value: withoutContent(spec, next),
       }
     }
     const patch = pickWritablePatch(schema, raw)

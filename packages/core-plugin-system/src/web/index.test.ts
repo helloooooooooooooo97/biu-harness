@@ -58,16 +58,15 @@ test('plugin system web passes name/tags/action chrome into databaseUi', async (
   assert.equal(ui.last?.path, '/plugins')
   assert.equal(typeof ui.last?.chrome.Title, 'function')
   assert.equal(typeof ui.last?.chrome.cells?.author, 'function')
-  assert.equal(typeof ui.last?.chrome.cells?.tags, 'function')
+  assert.equal(ui.last?.chrome.cells?.tags, undefined)
   assert.equal(typeof ui.last?.chrome.Action, 'function')
 })
 
-test('plugin title is the name only and tags use public-ui TagChip', async () => {
+test('plugin title is the name only; tags stay the file-system writable column', async () => {
   const { readFileSync } = await import('node:fs')
   const { resolve } = await import('node:path')
   const chrome = readFileSync(resolve(import.meta.dirname, './chrome.tsx'), 'utf8')
-  assert.match(chrome, /TagChip/)
-  assert.match(chrome, /TagChips/)
+  assert.doesNotMatch(chrome, /PluginTagsCell/)
   assert.doesNotMatch(chrome, /已装/)
   assert.doesNotMatch(chrome, /rounded-full/)
 })

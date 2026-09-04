@@ -1,5 +1,4 @@
 import { ArchiveBoxArrowDownIcon, PlayIcon, StopIcon } from '@heroicons/react/16/solid'
-import { TagChip, TagChips } from '@biu/public-ui'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import { asHttpHref } from '@biu/type-file-system'
 import type { CollectionChrome, FsActionProps, FsCellProps } from '@biu/type-file-system/ui'
@@ -24,18 +23,6 @@ function PluginAuthorCell({ record, fallback }: FsCellProps) {
     >
       {name || href}
     </a>
-  )
-}
-
-function PluginTagsCell({ value, fallback }: FsCellProps) {
-  const tags = Array.isArray(value) ? value.map(String) : fallback === '—' ? [] : fallback.split(', ')
-  if (!tags.length) return <span className="text-(--dsw-label-3)">—</span>
-  return (
-    <TagChips>
-      {tags.map((tag) => (
-        <TagChip key={tag} id={tag} label={tag} />
-      ))}
-    </TagChips>
   )
 }
 
@@ -68,7 +55,6 @@ function PluginAction({ action, busy, run }: FsActionProps) {
 export const pluginsChrome: CollectionChrome = {
   cells: {
     author: PluginAuthorCell,
-    tags: PluginTagsCell,
   },
   Title: PluginTitle,
   Action: PluginAction,

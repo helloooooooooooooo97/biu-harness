@@ -142,7 +142,7 @@ export function pluginsCollection(store: PluginStoreService): CollectionSpec {
         sandbox: { type: 'boolean', label: '沙箱' },
         enabled: { type: 'boolean', label: '已打开' },
         running: { type: 'boolean', label: '运行中' },
-        tags: { type: 'multi-select', label: '标签' },
+        tags: { type: 'multi-select', label: '标签', writable: true },
         bytes: { type: 'number', label: '大小' },
         createdAt: { type: 'datetime', label: '创建时间' },
         updatedAt: { type: 'datetime', label: '更新时间' },
