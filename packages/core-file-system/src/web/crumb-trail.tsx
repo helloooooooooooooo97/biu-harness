@@ -18,7 +18,6 @@ function createKindOf(crumb: Crumb): 'view' | 'record' | null {
 function CrumbMenu({
   crumb,
   crumbs,
-  pos,
   onPick,
   onOpenId,
   onCreate,
@@ -27,7 +26,6 @@ function CrumbMenu({
 }: {
   crumb: Crumb
   crumbs: Crumb[]
-  pos: { left: number; top: number }
   onPick: (target: CrumbTarget) => void
   onOpenId: (id: string | null) => void
   onCreate?: (kind: 'view' | 'record') => void
@@ -49,7 +47,6 @@ function CrumbMenu({
       className="fsdb-crumb-menu is-fixed"
       role="menu"
       data-fsdb-crumb-menu=""
-      style={{ left: pos.left, top: pos.top }}
       onMouseDown={(event) => event.stopPropagation()}
     >
       <label className="fsdb-crumb-search">
@@ -58,7 +55,6 @@ function CrumbMenu({
           value={query}
           placeholder="搜索"
           aria-label="搜索"
-          autoFocus
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
@@ -161,20 +157,18 @@ export function CrumbTrail({
   lockRootCrumb?: boolean
 }) {
   const trailRef = useRef<HTMLElement | null>(null)
-  const [openMenu, setOpenMenu] = useState<{ id: string; left: number; top: number } | null>(null)
-  const openId = openMenu?.id ?? null
-  const menuPos = openMenu ? { left: openMenu.left, top: openMenu.top } : null
+  const [openId, setOpenId] = useState<string | null>(null)
   const openCrumb = crumbs.find((item) => item.id === openId)
   const tableCrumb = crumbs.find((item) => item.kind === 'collection')
   const tableIcon = tableCrumb?.icon
 
   useEffect(() => {
-    if (!allowMenu) setOpenMenu(null)
+    if (!allowMenu) setOpenId(null)
   }, [allowMenu])
 
   useEffect(() => {
     return listenOutsideDismiss(
-      () => setOpenMenu(null),
+      () => setOpenId(null),
       (target) =>
         Boolean(
           trailRef.current?.contains(target) ||
@@ -234,26 +228,17 @@ export function CrumbTrail({
                   event.stopPropagation()
                   if (!allowMenu) {
                     onActivate?.()
-                    setOpenMenu(null)
+                    setOpenId(null)
                     return
                   }
                   const action = crumbButtonAction(crumb, index ? crumbs[index - 1] : undefined)
                   if (action === 'menu') {
-                    if (open) {
-                      setOpenMenu(null)
-                      return
-                    }
-                    const box = event.currentTarget.getBoundingClientRect()
-                    setOpenMenu({ id: crumb.id, left: Math.max(8, box.left), top: box.bottom + 4 })
+                    setOpenId(open ? null : crumb.id)
                     return
                   }
                   onActivate?.()
                   onPick(action)
-                  setOpenMenu(null)
-                }}
-                onClick={(event) => {
-                  event.preventDefault()
-                  event.stopPropagation()
+                  setOpenId(null)
                 }}
               >
                 {glyph}
@@ -263,16 +248,15 @@ export function CrumbTrail({
           </span>
         )
       })}
-      {allowMenu && openCrumb && canOpenCrumbMenu(openCrumb) && menuPos && typeof document !== 'undefined'
+      {allowMenu && openCrumb && canOpenCrumbMenu(openCrumb) && typeof document !== 'undefined'
         ? createPortal(
             <CrumbMenu
               key={openCrumb.id}
               crumb={openCrumb}
               crumbs={crumbs}
-              pos={menuPos}
               onPick={onPick}
               onOpenId={(id) => {
-                if (!id) setOpenMenu(null)
+                if (!id) setOpenId(null)
               }}
               onCreate={onCreate}
               canCreateView={canCreateView}
