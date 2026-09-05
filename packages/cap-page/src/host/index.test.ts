@@ -79,6 +79,12 @@ test('page plugin stores pages in SQLite under .page', async () => {
   assert.equal(created[0]?.notes, '# 标题\n内容')
   assert.equal(created[0]?.cover, '/api/page/file/hero.png')
   assert.equal(asImageSrc(created[0]?.cover), '/api/page/file/hero.png')
+  await writeFile(join(root, PAGE_ASSETS, 'hero-b.png'), 'fake-png-b', 'utf8')
+  const manyCovers = await spec.update!(created[0]!.id, {
+    cover: ['/api/page/file/hero.png', '/api/page/file/hero-b.png'],
+  })
+  assert.deepEqual(manyCovers.cover, ['/api/page/file/hero.png', '/api/page/file/hero-b.png'])
+  assert.deepEqual((await spec.get!(created[0]!.id))?.cover, ['/api/page/file/hero.png', '/api/page/file/hero-b.png'])
   const loaded = await spec.get!(created[0]!.id)
   assert.equal(loaded?.notes, '# 标题\n内容')
   assert.equal(loaded?.title, '新页面')

@@ -48,7 +48,7 @@ export type PageRow = DbRecord & {
   publishedAt: number
   size: number
   homepage: string
-  cover: string
+  cover: string | string[]
   pack: { name: string; href: string; bytes: number }
   notes: string
   score: number
@@ -118,10 +118,14 @@ export function fileUrl(name: string) {
   return `/api/page/file/${encodeURIComponent(name)}`
 }
 
-function publicCover(stored: string) {
-  const name = assetName(stored)
-  if (name) return fileUrl(name)
-  return stored
+function publicCover(stored: unknown): string | string[] {
+  const pubs = coverList(stored).map((item) => {
+    const name = assetName(item)
+    return name ? fileUrl(name) : item
+  })
+  if (!pubs.length) return ''
+  if (pubs.length === 1) return pubs[0]!
+  return pubs
 }
 
 function publicPack(pack: { name: string; href: string; bytes: number }) {
@@ -130,16 +134,51 @@ function publicPack(pack: { name: string; href: string; bytes: number }) {
   return { ...pack, href: fileUrl(basename(name)) }
 }
 
-function storedCover(value: unknown, fallback: string) {
-  if (value == null) return fallback
-  const text = String(value)
+function storedCoverItem(value: unknown): string {
+  if (value == null) return ''
+  const text = String(value).trim()
+  if (!text) return ''
   const name = assetName(text)
   if (name) return `assets/${name}`
   if (text.startsWith('/api/page/file/')) {
     const file = decodeURIComponent(text.slice('/api/page/file/'.length).split(/[?#]/)[0] ?? '')
-    return file ? `assets/${basename(file)}` : fallback
+    return file ? `assets/${basename(file)}` : ''
   }
   return text
+}
+
+function coverList(value: unknown): string[] {
+  if (value == null || value === '') return []
+  if (Array.isArray(value)) return value.flatMap(coverList).filter(Boolean)
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed) as unknown
+        if (Array.isArray(parsed)) return coverList(parsed)
+      } catch {
+        /* one path */
+      }
+    }
+    const one = storedCoverItem(trimmed)
+    return one ? [one] : []
+  }
+  const one = storedCoverItem(value)
+  return one ? [one] : []
+}
+
+function storedCover(value: unknown, fallback: string) {
+  const list = coverList(value)
+  if (!list.length) return fallback
+  if (list.length === 1) return list[0]!
+  return JSON.stringify(list)
+}
+
+function storedCoverMatter(value: unknown, fallback: string) {
+  const list = coverList(value)
+  if (!list.length) return fallback
+  if (list.length === 1) return list[0]!
+  return list
 }
 
 function storedPackHref(href: string) {
@@ -169,7 +208,7 @@ function matterOf(row: PageRow): Record<string, unknown> {
     publishedAt: new Date(row.publishedAt).toISOString(),
     size: row.size,
     homepage: row.homepage,
-    cover: storedCover(row.cover, ''),
+    cover: storedCoverMatter(row.cover, ''),
     pack: {
       name: row.pack.name,
       href: storedPackHref(row.pack.href),
@@ -193,7 +232,6 @@ function rowFromFile(id: string, raw: string): PageRow {
     : 'draft'
   const createdAt = asTime(matter.createdAt, now)
   const updatedAt = asTime(matter.updatedAt, createdAt)
-  const cover = String(matter.cover ?? '')
   return {
     id,
     title: String(matter.title ?? id),
@@ -206,7 +244,7 @@ function rowFromFile(id: string, raw: string): PageRow {
     publishedAt: asTime(matter.publishedAt, createdAt),
     size: Number(matter.size) || 0,
     homepage: String(matter.homepage ?? ''),
-    cover: publicCover(cover),
+    cover: publicCover(matter.cover),
     pack: publicPack(pack),
     notes: body,
     score: Number(matter.score) || 0,
@@ -260,7 +298,7 @@ function applyPatch(current: PageRow, patch: Record<string, unknown>): PageRow {
       href: storedPackHref(pack.href),
       bytes: pack.bytes,
     },
-    cover: storedCover(patch.cover !== undefined ? patch.cover : current.cover, ''),
+    cover: publicCover(patch.cover !== undefined ? patch.cover : current.cover),
     parentId: 'parentId' in patch
       ? patch.parentId == null || patch.parentId === '' ? null : String(patch.parentId)
       : current.parentId,
