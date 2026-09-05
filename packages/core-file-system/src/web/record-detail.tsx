@@ -155,6 +155,7 @@ export function RecordDetail({
   return (
 <div className="fsdb-detail-stage">
           <div className="fsdb-detail-screen" role="main" aria-label="记录详情">
+            {toolbar}
             <div className="fsdb-detail-split">
               <div className="fsdb-detail-main">
                 <div className="fsdb-detail-title-row">
@@ -198,7 +199,6 @@ export function RecordDetail({
                 ) : (
                   <h1 className="fsdb-detail-title">{labelOf(selected)}</h1>
                 )}
-                {toolbar}
                 </div>
                 </div>
                 <div className="fsdb-detail-aside">
