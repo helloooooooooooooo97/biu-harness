@@ -1706,7 +1706,6 @@ export function CollectionBrowser({
         </div>
       )
     }
-    const primaryId = actions.find((item) => item.tone !== 'danger')?.id
     return (
       <div className="fsdb-detail-actionbar" data-testid="fsdb-detail-actions" data-biu-ignore aria-label="记录操作">
         <div className="fsdb-detail-actions">
