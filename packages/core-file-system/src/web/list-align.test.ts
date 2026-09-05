@@ -32,6 +32,8 @@ test('list and detail share the chat column max width with side padding', () => 
   assert.match(css, /\.fsdb-page \.tasks-table \.biu-tag,\.fsdb-page \.fsdb-cell \.biu-tag,\.fsdb-page \.fsdb-proprow-v \.biu-tag,\.fsdb-page \.fsdb-proprow-v \.fsdb-token,\.fsdb-page \.tasks-table \.fsdb-token\{[^}]*font-weight:400/)
   assert.match(css, /\.fsdb-proprow-k,\.fsdb-prop>span:first-child\{[^}]*font-weight:600/)
   assert.match(css, /\.fsdb-proprow-v,\.fsdb-prop-val,\.fsdb-detail-id\{[^}]*font-weight:600/)
+  assert.match(css, /\.fsdb-detail-id\{[^}]*font-family:inherit/)
+  assert.doesNotMatch(css, /\.fsdb-detail-id\{[^}]*font-family:var\(--font-mono\)/)
   assert.doesNotMatch(css, /\.inspector-database-page \.fsdb-main,\.inspector-database-page \.fsdb-detail-main\{[^}]*padding-left:28px/)
   assert.doesNotMatch(css, /inspector-database-page[^{]*\{[^}]*padding-left:28px/)
   assert.match(css, /\.fsdb-page \.tasks-table\.is-wrap\.is-truncate \.fsdb-title-text\{[^}]*-webkit-line-clamp:2/)
