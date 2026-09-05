@@ -1706,22 +1706,24 @@ export function CollectionBrowser({
         </div>
       )
     }
+    const primaryId = actions.find((item) => item.tone !== 'danger')?.id
     return (
       <div className="fsdb-detail-actions" data-testid="fsdb-detail-actions" data-biu-ignore>
         {actions.map((action) => {
           const run = () => void runAction(row, action)
           if (Action) return <Action key={action.id} action={action} record={row} busy={busy} run={run} />
+          const primary = action.tone !== 'danger' && action.id === primaryId
           return (
             <button
               key={action.id}
               type="button"
-              className={`fsdb-detail-action${action.tone === 'danger' ? ' is-danger' : ''}`}
+              className={`fsdb-detail-action${primary ? ' is-primary' : ''}${action.tone === 'danger' ? ' is-danger' : ''}`}
               title={action.label}
               aria-label={`${action.label} ${labelOf(row)}`}
               disabled={busy}
               onClick={run}
             >
-              {actionIcon(action.id)}
+              {actionIcon(action.id, { fallback: false })}
               {action.label}
             </button>
           )
