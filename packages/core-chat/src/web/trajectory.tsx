@@ -16,6 +16,23 @@ import { pickDomAttrs, pickPreview } from '@biu/core-pick/web'
 
 type TagTone = 'user' | 'assistant' | 'tool' | 'system' | 'turn' | 'step'
 
+async function loadEventDetail(sessionId: string, seq: number): Promise<SessionEvent | null> {
+  const res = await fetch(`/api/sessions/${sessionId}/events/${seq}`)
+  if (!res.ok) throw new Error(`加载事件失败：${res.status}`)
+  const body = (await res.json()) as { event?: SessionEvent }
+  return body.event ?? null
+}
+
+async function loadEventRequest(sessionId: string, seq: number): Promise<{ messages: DerivedMessage[]; toolsTokens: number }> {
+  const res = await fetch(`/api/sessions/${sessionId}/events/${seq}/request`)
+  if (!res.ok) throw new Error(`加载 request 失败：${res.status}`)
+  const body = (await res.json()) as { messages?: DerivedMessage[]; toolsTokens?: number }
+  return {
+    messages: Array.isArray(body.messages) ? body.messages : [],
+    toolsTokens: typeof body.toolsTokens === 'number' ? body.toolsTokens : 0,
+  }
+}
+
 function toneOf(type: TrajectoryRow['type']): TagTone {
   if (type.startsWith('user/')) return 'user'
   if (type.startsWith('assistant/')) return 'assistant'
@@ -65,7 +82,7 @@ const TRAJ_NEAR_BOTTOM_PX = 96
 
 export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
   const useSessionView = props.useSessionView as ReturnType<typeof bindSessionView>
-  const sessionView = props.sessionView as SessionViewService
+  const sessionView = props.sessionView as SessionViewService | undefined
   const rows = useSessionView((state) => state.trajectory)
   const focusCallId = useSessionView((state) => state.focusCallId)
   const sessionId = useSessionView((state) => state.sessionId)
@@ -148,11 +165,19 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
     setDetailRequest(null)
     void (async () => {
       try {
-        const event = await sessionView.fetchEventDetail(selectedSeq)
+        const event = sessionView
+          ? await sessionView.fetchEventDetail(selectedSeq)
+          : sessionId
+            ? await loadEventDetail(sessionId, selectedSeq)
+            : null
         if (cancelled) return
         setDetailEvent(event)
         if (event?.type === 'assistant/message') {
-          const request = await sessionView.fetchEventRequest(selectedSeq)
+          const request = sessionView
+            ? await sessionView.fetchEventRequest(selectedSeq)
+            : sessionId
+              ? await loadEventRequest(sessionId, selectedSeq)
+              : { messages: [], toolsTokens: 0 }
           if (!cancelled) setDetailRequest(request)
         }
       } catch (error) {
@@ -164,7 +189,7 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
     return () => {
       cancelled = true
     }
-  }, [selectedSeq, rows, sessionView])
+  }, [selectedSeq, rows, sessionId, sessionView])
 
   if (!sessionId) {
     return (
@@ -193,8 +218,8 @@ export const TrajectoryView = memo(function TrajectoryView(props: SlotProps) {
               className="traj-meta-earlier"
               title="加载更早的轮次"
               aria-label="加载更早的轮次"
-              disabled={trajectoryLoading}
-              onClick={() => void sessionView.loadOlderTrajectory()}
+              disabled={trajectoryLoading || !sessionView}
+              onClick={() => void sessionView?.loadOlderTrajectory()}
             >
               <ArrowUpIcon aria-hidden className="size-3" />
             </button>

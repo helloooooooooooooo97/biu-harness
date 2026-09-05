@@ -34,7 +34,6 @@ const INSPECTOR_VIEW_OMIT = new Set([
   'databaseUi',
   'useSnapshot',
   'slots',
-  'sessionView',
   'repeatable',
 ])
 

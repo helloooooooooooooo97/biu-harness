@@ -54,9 +54,10 @@ test('inspector view props drop tab chrome and databaseUi', () => {
     databaseUi: { boom: true },
     useSnapshot: 1,
     paneId: 'x',
+    sessionView: { fetchEventDetail: true },
     repeatable: true,
   })
-  assert.deepEqual(next, { paneId: 'x' })
+  assert.deepEqual(next, { paneId: 'x', sessionView: { fetchEventDetail: true } })
 })
 
 test('opened database tabs drop when the collection is gone', () => {

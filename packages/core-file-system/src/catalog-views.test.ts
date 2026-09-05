@@ -6,6 +6,8 @@ import {
   builtinCatalogViewId,
   builtinCatalogViews,
   isBuiltinCatalogViewId,
+  isReadOnlyViewId,
+  EVENTS_TRAJ_VIEW_ID,
   mergeCatalogViews,
   mergeTableViews,
   stubBuiltinAllView,
@@ -91,4 +93,10 @@ test('stamp rows open the source record, not a tag view', () => {
     recordId: 'home',
   })
   assert.equal(stampRowOpenTarget({ tablePath: '', sourceId: 'home' }), null)
+})
+
+test('events traj and usage views are read-only', () => {
+  assert.equal(isReadOnlyViewId(EVENTS_TRAJ_VIEW_ID), true)
+  assert.equal(isReadOnlyViewId('builtin-usage:/events'), true)
+  assert.equal(isReadOnlyViewId('user-traj'), false)
 })

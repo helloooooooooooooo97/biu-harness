@@ -6,7 +6,6 @@ import { resolveCatalog } from './resolve-catalog.ts'
 import type { PageSpec } from '@biu/type-http'
 import { HUB_CHANGE, HUB_CHANNEL_EVENT, HUB_CHANNEL_SNAPSHOT } from '@biu/type-http'
 import { runWithToolOrigin } from '@biu/host-tools'
-import { eventsCollection } from './events-collection.ts'
 
 export { HUB_CHANGE, HUB_CHANNEL_EVENT, HUB_CHANNEL_SNAPSHOT }
 
@@ -38,9 +37,6 @@ export class HubService extends Service {
       })
       this.events.splice(80)
       ctx.http.broadcast(HUB_CHANNEL_EVENT, this.events[0])
-    })
-    ctx.inject(['database'], (inner) => {
-      inner.database.register(eventsCollection(this))
     })
     let snapTimer: ReturnType<typeof setTimeout> | null = null
     const pushSnapshot = () => {
@@ -206,7 +202,6 @@ function isStorePackage(packageName?: string) {
   return typeof packageName === 'string' && packageName.startsWith('store:')
 }
 
-export { eventsCollection } from './events-collection.ts'
 export type { CatalogEntry } from './catalog.ts'
 
 export const name = 'hub'
