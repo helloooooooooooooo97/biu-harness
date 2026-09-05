@@ -191,13 +191,27 @@ export class AgentLoop implements AgentRunner {
         let detail = ''
         let ok = true
         try {
+          if (this.signal.aborted) throw new Error('cancelled')
           detail = truncateToolResult(stringify(await this.ctx.tools.invoke(call.name, args, this.signal)))
         } catch (error) {
           ok = false
           detail = String(error)
+          steps.push({ name: call.name, ok, detail })
+          await session.append(this.sessionId, { type: 'tool/result', id: call.id, name: call.name, ok, detail })
+          if (this.signal.aborted || isCancelError(error)) {
+            await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'cancelled' })
+            this.ctx.emit('agent/status', { sessionId: this.sessionId, status: 'idle' })
+            throw new Error('cancelled')
+          }
+          continue
         }
         steps.push({ name: call.name, ok, detail })
         await session.append(this.sessionId, { type: 'tool/result', id: call.id, name: call.name, ok, detail })
+        if (this.signal.aborted) {
+          await session.append(this.sessionId, { type: 'turn/end', turn, reason: 'cancelled' })
+          this.ctx.emit('agent/status', { sessionId: this.sessionId, status: 'idle' })
+          throw new Error('cancelled')
+        }
       }
       await session.append(this.sessionId, { type: 'step/end', turn, step })
       final = steps.at(-1)?.detail ?? final
@@ -236,6 +250,10 @@ export class AgentLoopService extends Service {
         }
     return new AgentLoop(this.ctx, llm, sessionId, signal)
   }
+}
+
+function isCancelError(error: unknown) {
+  return /cancelled|AbortError|aborted/i.test(String(error))
 }
 
 function stringify(value: unknown) {

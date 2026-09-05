@@ -147,6 +147,30 @@ test('abort closes the turn as cancelled', async () => {
   assert.equal(types.includes('turn/end'), true)
 })
 
+test('cancel during hung tool ends the turn instead of swallowing cancelled', async () => {
+  const { ctx, sessionId } = await spine()
+  const ac = new AbortController()
+  ctx.tools.register({
+    name: 'hang',
+    description: 'hang',
+    parameters: { type: 'object', properties: {} },
+    execute: () => new Promise(() => undefined),
+  })
+  const loop = new AgentLoop(
+    ctx,
+    new ScriptedLlm([{ content: null, toolCalls: [{ id: '1', name: 'hang', arguments: '{}' }] }]),
+    sessionId,
+    ac.signal,
+  )
+  const pending = loop.run([{ kind: 'wake', text: 'x' }])
+  await new Promise((resolve) => setTimeout(resolve, 40))
+  ac.abort()
+  await assert.rejects(() => pending, /cancelled/)
+  const events = (await ctx.sessions.require(sessionId)).events
+  const end = events.find((event) => event.type === 'turn/end')
+  assert.equal(end?.type === 'turn/end' && end.reason, 'cancelled')
+})
+
 test('truncateToolResult keeps head+tail and clips middle when over limit', () => {
   const half = MAX_TOOL_RESULT_CHARS >> 1
   // 短输出不截断

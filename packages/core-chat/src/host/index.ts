@@ -1269,8 +1269,11 @@ export function apply(ctx: Context) {
     await ctx.agents.create(id)
     route.send(200, { sessionId: id, inbox: ctx.agents.listInbox(id) })
   })
-  ctx.http.route('POST', '/api/sessions/:id/cancel', (route) => {
-    ctx.agents.get(route.params.id)?.cancel()
+  ctx.http.route('POST', '/api/sessions/:id/cancel', async (route) => {
+    const id = route.params.id
+    if (!(await ctx.sessions.get(id))) return route.send(404, { error: 'unknown session' })
+    const agent = await ctx.agents.create(id)
+    agent.cancel()
     route.send(200, { ok: true })
   })
   // 清空上下文：不经过大模型，仅向会话事件日志插入一条 context_clear tool/call 记录（作为压缩点）。

@@ -192,12 +192,13 @@ export class ToolsService extends Service {
   }
 
   async invoke(name: string, args: Record<string, unknown> = {}, signal: AbortSignal = new AbortController().signal) {
+    if (signal.aborted) throw new Error('cancelled')
     if (!this.visible(name)) {
       const mode = toolPolicyStorage.getStore()?.mode ?? this.mode
       throw new Error(`tool not available in ${mode} mode: ${name}`)
     }
     let req: ToolRequest = { name, args }
-    for (const guard of this.guards) req = await guard(req)
+    for (const guard of this.guards) req = await raceAbort(signal, Promise.resolve(guard(req)))
     req = this.ctx.waterfall('tools/pre-execute', req, () => req)
     if (req.deny) {
       this.ctx.emit('tools/post-execute', { name, ok: false, detail: req.deny })
@@ -206,7 +207,7 @@ export class ToolsService extends Service {
     const tool = this.tools.get(name)
     if (!tool) throw new Error(`unknown tool: ${name}`)
     try {
-      const result = await tool.execute(req.args, signal)
+      const result = await raceAbort(signal, Promise.resolve(tool.execute(req.args, signal)))
       this.ctx.emit('tools/post-execute', { name, ok: true, detail: stringify(result) })
       return result
     } catch (error) {
@@ -214,6 +215,15 @@ export class ToolsService extends Service {
       throw error
     }
   }
+}
+
+function raceAbort<T>(signal: AbortSignal, work: Promise<T>): Promise<T> {
+  if (signal.aborted) return Promise.reject(new Error('cancelled'))
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new Error('cancelled'))
+    signal.addEventListener('abort', onAbort, { once: true })
+    work.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort))
+  })
 }
 
 function stringify(value: unknown) {

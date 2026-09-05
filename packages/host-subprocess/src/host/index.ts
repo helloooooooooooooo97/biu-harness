@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { spawn, type ChildProcess } from 'node:child_process'
 import { Service, type Context } from 'cordis'
 export { posixShellArgv, posixShellBin, hostShellKind, describeHostRuntime } from './posix-shell.ts'
 
@@ -16,6 +16,8 @@ export interface SpawnResult {
   stderr: string
 }
 
+const KILL_GRACE_MS = 800
+
 export class SubprocessService extends Service {
   constructor(ctx: Context) {
     super(ctx, 'subprocess')
@@ -24,40 +26,88 @@ export class SubprocessService extends Service {
   run(req: SpawnRequest, signal?: AbortSignal): Promise<SpawnResult> {
     const wrapped = this.ctx.sandbox.wrap(req)
     return new Promise((resolve, reject) => {
+      // Unix：独立进程组，超时才能杀管道子进程。否则只 SIGTERM shell，
+      // grep|cat 仍占着 stdout，child.close 永远不来，agent 整回合卡死。
       const child = spawn(wrapped.argv[0]!, wrapped.argv.slice(1), {
         cwd: wrapped.cwd,
         env: wrapped.env,
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
+        detached: process.platform !== 'win32',
       })
       let stdout = ''
       let stderr = ''
+      let settled = false
+      let killTimer: ReturnType<typeof setTimeout> | undefined
+      let forceTimer: ReturnType<typeof setTimeout> | undefined
       child.stdout?.on('data', (chunk) => {
         stdout += String(chunk)
       })
       child.stderr?.on('data', (chunk) => {
         stderr += String(chunk)
       })
-      const timer = wrapped.timeoutMs
-        ? setTimeout(() => {
-            child.kill('SIGTERM')
-          }, wrapped.timeoutMs)
-        : undefined
-      const onAbort = () => child.kill('SIGTERM')
-      signal?.addEventListener('abort', onAbort)
+
+      const cleanup = () => {
+        if (timer) clearTimeout(timer)
+        if (killTimer) clearTimeout(killTimer)
+        if (forceTimer) clearTimeout(forceTimer)
+        signal?.removeEventListener('abort', onAbort)
+      }
+      const settle = (fn: () => void) => {
+        if (settled) return
+        settled = true
+        cleanup()
+        fn()
+      }
+      const stop = () => {
+        killTree(child, 'SIGTERM')
+        killTimer = setTimeout(() => {
+          killTree(child, 'SIGKILL')
+          child.stdout?.destroy()
+          child.stderr?.destroy()
+        }, KILL_GRACE_MS)
+        forceTimer = setTimeout(() => {
+          settle(() => resolve({ code: null, stdout, stderr }))
+        }, KILL_GRACE_MS + 500)
+      }
+
+      const timer = wrapped.timeoutMs ? setTimeout(stop, wrapped.timeoutMs) : undefined
+      const onAbort = () => stop()
+      if (signal?.aborted) stop()
+      else signal?.addEventListener('abort', onAbort)
       if (wrapped.stdin) child.stdin?.end(wrapped.stdin)
       else child.stdin?.end()
       child.on('error', (error) => {
-        if (timer) clearTimeout(timer)
-        signal?.removeEventListener('abort', onAbort)
-        reject(error)
+        settle(() => reject(error))
       })
       child.on('close', (code) => {
-        if (timer) clearTimeout(timer)
-        signal?.removeEventListener('abort', onAbort)
-        resolve({ code, stdout, stderr })
+        settle(() => resolve({ code, stdout, stderr }))
       })
     })
+  }
+}
+
+function killTree(child: ChildProcess, sig: NodeJS.Signals) {
+  const pid = child.pid
+  if (pid == null) return
+  if (process.platform === 'win32') {
+    spawn('taskkill', ['/pid', String(pid), '/t', '/f'], { windowsHide: true, stdio: 'ignore' }).on('error', () => {
+      try {
+        child.kill()
+      } catch {
+        /* already dead */
+      }
+    })
+    return
+  }
+  try {
+    process.kill(-pid, sig)
+  } catch {
+    try {
+      child.kill(sig)
+    } catch {
+      /* already dead */
+    }
   }
 }
 

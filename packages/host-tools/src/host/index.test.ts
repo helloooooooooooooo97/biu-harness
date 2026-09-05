@@ -123,3 +123,19 @@ test('store tools appear in standard mode', async () => {
   ctx.tools.setMode('minimal')
   await assert.rejects(() => ctx.tools.invoke('store_ping'), /not available in minimal mode/)
 })
+
+test('invoke rejects promptly when aborted during a hung execute', async () => {
+  const ctx = new Context()
+  await ctx.plugin(tools)
+  ctx.tools.register({
+    name: 'hang',
+    description: 'hang',
+    parameters: { type: 'object', properties: {} },
+    execute: () => new Promise(() => undefined),
+  })
+  const ac = new AbortController()
+  const pending = ctx.tools.invoke('hang', {}, ac.signal)
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  ac.abort()
+  await assert.rejects(() => pending, /cancelled/)
+})
