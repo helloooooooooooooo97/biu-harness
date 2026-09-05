@@ -48,6 +48,7 @@ import {
   hasTreeLinks,
   isRecordLinkField,
   listProjectionKeys,
+  overlayListed,
   parentFieldKey,
   parseFacetFlatColumnKey,
   patchFacetFlatValue,
@@ -131,18 +132,6 @@ function isListColumn(key: string) {
 
 function recordsFingerprint(rows: Array<DbRecord & { path?: string }>) {
   return JSON.stringify(rows)
-}
-
-function mergeRecord(base: DbRecord, patch: DbRecord): DbRecord {
-  let changed = false
-  const next: DbRecord = { ...base }
-  for (const [key, value] of Object.entries(patch)) {
-    if (!Object.is(next[key], value)) {
-      next[key] = value
-      changed = true
-    }
-  }
-  return changed ? next : base
 }
 
 const LIST_CACHE_MAX = 8
@@ -509,7 +498,7 @@ export function CollectionBrowser({
       const openId = detailIdRef.current
       if (openId) {
         const hit = listed.items.find((item) => item.id === openId)
-        if (hit) setDetailRow((prev) => (prev?.id === openId ? mergeRecord(prev, hit) : prev))
+        if (hit) setDetailRow((prev) => (prev?.id === openId ? overlayListed(prev, hit, listColumns) : prev))
       }
       setTotal(listed.total)
       rememberListCache(dataPath, { items: listed.items, total: listed.total, stat: { ...nextStat, schema: nextSchema } })
@@ -817,9 +806,9 @@ export function CollectionBrowser({
   const listedSelected = detailId ? items.find((item) => item.id === detailId) : undefined
   const selected = useMemo(() => {
     if (!detailId) return null
-    if (detailRow?.id === detailId) return listedSelected ? mergeRecord(detailRow, listedSelected) : detailRow
+    if (detailRow?.id === detailId) return listedSelected ? overlayListed(detailRow, listedSelected, listColumns) : detailRow
     return listedSelected ?? null
-  }, [detailId, detailRow, listedSelected])
+  }, [detailId, detailRow, listColumns, listedSelected])
   const viewIndex = selected ? indexOnPage(selected.id, items, page, pageSize) : null
   const stepViewRecord = async (delta: -1 | 1) => {
     if (!selected || steppingView.current) return

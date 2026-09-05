@@ -460,6 +460,26 @@ export function groupRecords(rows: DbRecord[], schema: CollectionSchema | undefi
   return listed
 }
 
+export function overlayListed(base: DbRecord, listed: DbRecord, projected?: string[] | null): DbRecord {
+  let changed = false
+  const next: DbRecord = { ...base }
+  for (const [key, value] of Object.entries(listed)) {
+    if (!Object.is(next[key], value)) {
+      next[key] = value
+      changed = true
+    }
+  }
+  const keys = projected?.length ? projected : Object.keys(base)
+  for (const key of keys) {
+    if (key === 'id') continue
+    if (Object.prototype.hasOwnProperty.call(listed, key)) continue
+    if (next[key] !== true) continue
+    next[key] = false
+    changed = true
+  }
+  return changed ? next : base
+}
+
 export function matchActionWhen(record: DbRecord, when?: Record<string, unknown>) {
   if (!when) return true
   for (const [key, expected] of Object.entries(when)) {
