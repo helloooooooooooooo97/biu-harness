@@ -168,6 +168,29 @@ function matchModelOption(catalog: ModelOption[], provider: string, model: strin
   )
 }
 
+function caretPlace(editor: Editor, form: HTMLElement) {
+  const rect = form.getBoundingClientRect()
+  try {
+    const coords = editor.view.coordsAtPos(editor.state.selection.head)
+    if (coords.left > 1 || coords.top > 1) {
+      const caretH = Math.max(coords.bottom - coords.top, 16)
+      return {
+        left: coords.left - rect.left + CARET_MASCOT_GAP,
+        top: coords.top - rect.top + (caretH - CARET_MASCOT_SIZE) / 2,
+      }
+    }
+  } catch {
+    /* caret not mapped yet */
+  }
+  const editorDom = form.querySelector('.composer-editor')
+  if (!(editorDom instanceof HTMLElement)) return null
+  const box = editorDom.getBoundingClientRect()
+  return {
+    left: box.left - rect.left + 4,
+    top: box.top - rect.top + Math.max(0, (box.height - CARET_MASCOT_SIZE) / 2),
+  }
+}
+
 function CaretMascot({
   editor,
   formRef,
@@ -185,32 +208,28 @@ function CaretMascot({
 
   useEffect(() => {
     if (!editor) return
+    let raf = 0
     const update = () => {
       const form = formRef.current
       if (!form) return
-      try {
-        const coords = editor.view.coordsAtPos(editor.state.selection.head)
-        const rect = form.getBoundingClientRect()
-        const caretH = Math.max(coords.bottom - coords.top, 16)
-        setPlace({
-          left: coords.left - rect.left + CARET_MASCOT_GAP,
-          top: coords.top - rect.top + (caretH - CARET_MASCOT_SIZE) / 2,
-        })
-      } catch {
-        /* caret not mapped yet */
-      }
+      const next = caretPlace(editor, form)
+      if (next) setPlace(next)
     }
     update()
+    raf = requestAnimationFrame(update)
     editor.on('transaction', update)
     editor.on('selectionUpdate', update)
     editor.on('focus', update)
+    editor.on('blur', update)
     const editorDom = formRef.current?.querySelector('.composer-editor')
     editorDom?.addEventListener('scroll', update, true)
     window.addEventListener('resize', update)
     return () => {
+      cancelAnimationFrame(raf)
       editor.off('transaction', update)
       editor.off('selectionUpdate', update)
       editor.off('focus', update)
+      editor.off('blur', update)
       editorDom?.removeEventListener('scroll', update, true)
       window.removeEventListener('resize', update)
     }

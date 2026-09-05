@@ -4883,10 +4883,23 @@ body {
 
 .composer-caret-mascot {
   position: absolute;
-  z-index: 2;
+  z-index: 6;
   width: 22px;
   height: 22px;
   pointer-events: auto;
+}
+
+.composer-caret-mascot .brand-corner-cluster {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  z-index: 2;
+}
+
+.composer-caret-mascot .brand-corner-mascot-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
 }
 
 .composer-tiptap {

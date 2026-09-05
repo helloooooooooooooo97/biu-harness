@@ -54,6 +54,7 @@ describe('composer dock stacking above sticky user', () => {
     expect(composer).toContain('caret-mascot')
     expect(composer).toContain('CARET_MASCOT_GAP')
     expect(composer).toContain('variant="popover"')
+    expect(css).toMatch(/\.composer-caret-mascot \.brand-corner-cluster\s*\{[^}]*position:\s*relative/s)
     expect(approvals).not.toContain('dock-session-mascot')
     expect(approvals).not.toContain('BrandAgentMenu')
     expect(approvals).not.toContain('setSessionPickerOpen')
