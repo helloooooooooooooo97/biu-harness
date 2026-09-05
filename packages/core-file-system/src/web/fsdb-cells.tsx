@@ -29,6 +29,7 @@ import type { CollectionViewType } from '@biu/type-file-system/ui'
 import {
   asStringList,
   formatField,
+  isRecordLinkField,
   matchActionWhen,
   resolveFieldType,
   type ViewMode,
@@ -36,7 +37,9 @@ import {
 import { LocalText, TokenMultiSelect } from './controls.tsx'
 import { CellDateTime } from '@biu/database-ui'
 import { AttachmentFile, MediaField, UrlHref } from './cell-media.tsx'
+import { crumbRecordLabel } from './sidebar-preview.ts'
 import { PersonFace, PersonPickPanel } from './person-cell.tsx'
+import { RecordLinkChips, RecordPickPanel } from './record-link-cell.tsx'
 
 export function actionIcon(id: string) {
   const cls = 'size-[14px]'
@@ -301,18 +304,29 @@ export function DefaultCell({
   field,
   value,
   fieldKey,
+  records,
   onRun,
   onChange,
 }: {
   field: FieldSpec
   value: unknown
   fieldKey?: string
+  records?: DbRecord[]
   onRun?: () => void
   onChange?: (next: unknown) => void
 }) {
   const kind = resolveFieldType(field)
   if (kind === 'action') {
     return <ActionCell field={field} fieldKey={fieldKey ?? ''} onRun={onRun} />
+  }
+  if (fieldKey && isRecordLinkField(fieldKey)) {
+    return (
+      <RecordLinkChips
+        fieldKey={fieldKey}
+        value={value}
+        peers={records?.map((row) => ({ id: row.id, label: crumbRecordLabel(row) }))}
+      />
+    )
   }
   if (kind === 'select' || kind === 'multi-select') {
     const tags = kind === 'multi-select' ? asStringList(value) : String(value ?? '') ? [String(value)] : []
@@ -381,6 +395,7 @@ export function FieldEditor({
   source,
   onCommit,
   compact = false,
+  excludeId,
 }: {
   fieldKey: string
   field: FieldSpec
@@ -393,10 +408,25 @@ export function FieldEditor({
   source?: unknown
   onCommit?: (next: unknown) => void
   compact?: boolean
+  excludeId?: string
 }) {
   const kind = resolveFieldType(field)
   if (kind === 'action') {
     return <ActionCell field={field} fieldKey={fieldKey} onRun={onAction} />
+  }
+  if (isRecordLinkField(fieldKey) && collectionPath) {
+    return (
+      <RecordPickPanel
+        fieldKey={fieldKey}
+        value={source ?? value}
+        collectionPath={collectionPath}
+        excludeId={excludeId}
+        onChange={(next) => {
+          if (onCommit) onCommit(next)
+          else onChange(typeof next === 'string' ? next : JSON.stringify(next))
+        }}
+      />
+    )
   }
   if (kind === 'select' || kind === 'multi-select') {
     const selected = kind === 'multi-select' ? asStringList(value) : value ? [value] : []

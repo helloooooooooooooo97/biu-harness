@@ -322,6 +322,27 @@ export function contentFieldKey(schema: CollectionSchema | undefined) {
   return null
 }
 
+export function isParentLinkField(key: string) {
+  return key === 'parentId' || key === 'parent'
+}
+
+export function isDependsLinkField(key: string) {
+  return key === 'dependsOn'
+}
+
+export function isRecordLinkField(key: string) {
+  return isParentLinkField(key) || isDependsLinkField(key)
+}
+
+export function recordLinkIds(fieldKey: string, value: unknown): string[] {
+  if (isParentLinkField(fieldKey)) {
+    const id = String(value ?? '').trim()
+    return id ? [id] : []
+  }
+  if (isDependsLinkField(fieldKey)) return asStringList(value)
+  return []
+}
+
 export function uniqueValues(rows: DbRecord[], key: string, field: FieldSpec): string[] {
   const set = new Set<string>()
   for (const row of rows) {

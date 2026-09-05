@@ -263,6 +263,29 @@ function pickWritablePatch(schema: CollectionSchema, patch: Record<string, unkno
   return next
 }
 
+async function assertSameTableLinks(spec: CollectionSpec, patch: Record<string, unknown>, selfId?: string) {
+  const ids: string[] = []
+  if ('parentId' in patch) {
+    const parent = String(patch.parentId ?? '').trim()
+    if (parent) {
+      if (selfId && parent === selfId) throw new Error('cannot link a record to itself')
+      ids.push(parent)
+    }
+  }
+  if ('dependsOn' in patch) {
+    const list = Array.isArray(patch.dependsOn) ? patch.dependsOn.map((item) => String(item)) : []
+    for (const id of list) {
+      if (!id) continue
+      if (selfId && id === selfId) throw new Error('cannot link a record to itself')
+      ids.push(id)
+    }
+  }
+  for (const id of [...new Set(ids)]) {
+    const hit = await spec.get(id)
+    if (!hit) throw new Error(`unknown record in this table: ${id}`)
+  }
+}
+
 function navPath(path: string) {
   return normalizeCollectionPath(path)
 }
@@ -683,6 +706,7 @@ export class DatabaseService extends Service implements Database {
       }
     }
     const patch = pickWritablePatch(schema, raw)
+    await assertSameTableLinks(spec, patch, parts[1])
     const actor = currentPerson()
     let record = await spec.update(parts[1]!, patch)
     const existing = this.facets.recordMeta(spec.path, record.id)
@@ -714,7 +738,13 @@ export class DatabaseService extends Service implements Database {
     if (!spec.records?.create || !spec.create) throw new Error(`collection cannot create: ${spec.path}`)
     const schema = schemaFor(spec)
     const actor = currentPerson()
-    const records = parseRecords(content).map((row) => pickWritablePatch(schema, row))
+    const rows = parseRecords(content)
+    const records: Record<string, unknown>[] = []
+    for (const row of rows) {
+      const patch = pickWritablePatch(schema, row)
+      await assertSameTableLinks(spec, patch)
+      records.push(patch)
+    }
     const created = await spec.create(records)
     for (const record of created) {
       this.facets.writeRecordMeta(spec.path, record.id, {

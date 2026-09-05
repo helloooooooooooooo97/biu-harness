@@ -11,6 +11,7 @@ import { runWithSession } from '@biu/host-sessions/scope'
 function notesCollection(): CollectionSpec {
   const rows = new Map<string, { id: string; title: string; status: string; pinned: boolean }>()
   rows.set('n1', { id: 'n1', title: '草稿', status: 'open', pinned: false })
+  rows.set('n2', { id: 'n2', title: '另一篇', status: 'open', pinned: false })
   return {
     id: 'notes',
     path: '/notes',
@@ -66,7 +67,7 @@ test('root lists registered collections; record read/update follows schema', asy
   const listed = await db.list('/notes')
   assert.equal(listed.kind, 'collection')
   if (listed.kind !== 'collection') return
-  assert.equal(listed.items.length, 1)
+  assert.equal(listed.items.length, 2)
   assert.equal(listed.items[0]?.title, '草稿')
 
   const read = await db.read('/notes/n1')
@@ -116,7 +117,7 @@ test('stat returns schema; list can filter by any field', async () => {
   if (stat.kind !== 'collection') return
   assert.equal(stat.schema.fields.status?.enum?.[0], 'open')
   const filtered = await db.list('/notes', { status: 'open' })
-  assert.equal(filtered.items.length, 1)
+  assert.equal(filtered.items.length, 2)
   const empty = await db.list('/notes', { status: 'done' })
   assert.equal(empty.items.length, 0)
 })
@@ -142,10 +143,10 @@ test('every collection schema includes id, title, createdAt and updatedAt', asyn
   assert.equal(stat.schema.fields.facet?.writable, true)
   assert.equal(stat.schema.fields.parentId?.type, 'string')
   assert.equal(stat.schema.fields.parentId?.writable, true)
-  assert.equal(stat.schema.fields.parentId?.label, 'Parent ID')
+  assert.equal(stat.schema.fields.parentId?.label, '父级')
   assert.equal(stat.schema.fields.dependsOn?.type, 'multi-select')
   assert.equal(stat.schema.fields.dependsOn?.writable, true)
-  assert.equal(stat.schema.fields.dependsOn?.label, 'Dependency')
+  assert.equal(stat.schema.fields.dependsOn?.label, '依赖')
   assert.equal(stat.schema.fields.createdBy?.type, 'person')
   assert.equal(stat.schema.fields.createdBy?.writable, false)
   assert.equal(stat.schema.fields.createdBy?.label, '创建人')
@@ -164,6 +165,20 @@ test('every collection schema includes id, title, createdAt and updatedAt', asyn
   await assert.rejects(() => db.update('/notes/n1', { createdBy: { kind: 'system', name: '系统' } }), /not writable/)
   await assert.rejects(() => db.update('/notes/n1', { updatedBy: { kind: 'system', name: '系统' } }), /not writable/)
   await assert.rejects(() => db.update('/notes/n1', { id: 'other' }), /not writable/)
+})
+
+test('parentId is single-select and dependsOn is multi-select within the same table', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  db.register(notesCollection())
+  const parented = await db.update('/notes/n1', { parentId: 'n2' })
+  assert.equal(parented.value.parentId, 'n2')
+  const deps = await db.update('/notes/n1', { dependsOn: ['n2'] })
+  assert.deepEqual(deps.value.dependsOn, ['n2'])
+  await assert.rejects(() => db.update('/notes/n1', { parentId: 'missing' }), /unknown record/)
+  await assert.rejects(() => db.update('/notes/n1', { dependsOn: ['missing'] }), /unknown record/)
+  await assert.rejects(() => db.update('/notes/n1', { parentId: 'n1' }), /itself/)
+  await assert.rejects(() => db.update('/notes/n1', { dependsOn: ['n1'] }), /itself/)
 })
 
 test('updates stamp createdBy and updatedBy from the current actor', async () => {
