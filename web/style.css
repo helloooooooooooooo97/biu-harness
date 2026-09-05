@@ -2524,9 +2524,7 @@ body {
   color: var(--dsw-sidebar-fg-active);
 }
 
-.project-chip.project-chip-clear-ctx {
-  border: 1px solid #d9730d;
-  background: transparent;
+.project-chip.project-chip-clear-ctx:hover:not(:disabled) {
   color: #d9730d;
 }
 
@@ -2550,25 +2548,9 @@ body {
   transition: height 0.2s ease;
 }
 
-.project-chip.project-chip-pick-toggle {
-  border: 1px solid #5b9fd6;
-  background: transparent;
-  color: #5b9fd6;
-}
-
-.project-chip.project-chip-pick-toggle:hover:not(:disabled) {
-  color: #5b9fd6;
-}
-
-.project-chip.project-chip-pick-toggle.is-active {
-  --biu-tag: #5b9fd6;
-  border: 1px solid #5b9fd6;
-  background: color-mix(in srgb, var(--biu-tag, #5b9fd6) 22%, transparent);
-  color: #5b9fd6;
-}
-
+.project-chip.project-chip-pick-toggle:hover:not(:disabled),
+.project-chip.project-chip-pick-toggle.is-active,
 .project-chip.project-chip-pick-toggle.is-active:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--biu-tag, #5b9fd6) 34%, transparent);
   color: #5b9fd6;
 }
 
@@ -2599,6 +2581,13 @@ body {
   border-color: var(--dsw-pick-stroke);
   background: var(--dsw-pick-fill);
   color: var(--dsw-sidebar-fg-active);
+}
+
+.project-chip.project-chip-pick-toggle.is-active,
+.project-chip.project-chip-pick-toggle.is-active:hover:not(:disabled) {
+  border-color: var(--dsw-border);
+  background: #262626;
+  color: #5b9fd6;
 }
 
 .dock-icon-wrap {
@@ -2649,13 +2638,6 @@ body {
   transform: none;
 }
 
-.project-chip-clear-ctx[data-dock-tip]::after {
-  border-color: #d9730d;
-}
-
-.project-chip-pick-toggle[data-dock-tip]::after {
-  border-color: #5b9fd6;
-}
 
 .dock-icon-btn {
   position: relative;
