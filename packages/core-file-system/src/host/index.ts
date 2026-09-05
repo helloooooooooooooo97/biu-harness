@@ -1015,6 +1015,20 @@ function asColumnKeys(value: unknown): string[] | undefined {
   return keys.length ? keys : undefined
 }
 
+function parseListColumnsParam(raw: string | null): string[] | undefined {
+  if (!raw) return undefined
+  const text = raw.trim()
+  if (!text) return undefined
+  if (text.startsWith('[')) {
+    try {
+      return asColumnKeys(JSON.parse(text) as unknown)
+    } catch {
+      return undefined
+    }
+  }
+  return asColumnKeys(text.split(','))
+}
+
 function asFilter(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
   return value as Record<string, unknown>
@@ -1306,6 +1320,7 @@ export function apply(ctx: Context) {
         sortDir: route.query.get('dir') === 'desc' ? 'desc' : 'asc',
         limit: route.query.get('limit') ? Number(route.query.get('limit')) : undefined,
         offset: route.query.get('offset') ? Number(route.query.get('offset')) : undefined,
+        columns: parseListColumnsParam(route.query.get('columns')),
       })
     }),
   )
