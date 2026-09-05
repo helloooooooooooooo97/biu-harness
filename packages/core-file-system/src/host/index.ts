@@ -190,10 +190,16 @@ function coerceList(value: unknown) {
   throw new Error('expected string list')
 }
 
-function currentPerson(): PersonValue {
-  const sid = currentSessionId()?.trim()
-  if (sid) return { kind: 'agent', name: sid.slice(0, 8), sessionId: sid }
-  return { kind: 'user', name: '用户' }
+function sessionTitleFromRow(row: unknown): string {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return ''
+  const rec = row as Record<string, unknown>
+  const title = String(rec.title ?? rec.name ?? '').trim()
+  if (title) return title
+  const config = rec.config
+  if (config && typeof config === 'object' && !Array.isArray(config)) {
+    return String((config as { title?: unknown }).title ?? '').trim()
+  }
+  return ''
 }
 
 function coerceUrl(value: unknown) {
@@ -622,9 +628,52 @@ export class DatabaseService extends Service implements Database {
     if (!meta) return row
     return {
       ...row,
-      ...(meta.createdBy ? { createdBy: meta.createdBy } : {}),
-      ...(meta.updatedBy ? { updatedBy: meta.updatedBy } : {}),
+      ...(meta.createdBy ? { createdBy: this.namedPerson(meta.createdBy) } : {}),
+      ...(meta.updatedBy ? { updatedBy: this.namedPerson(meta.updatedBy) } : {}),
     }
+  }
+
+  private async currentPerson(): Promise<PersonValue> {
+    const sid = currentSessionId()?.trim()
+    if (!sid) return { kind: 'user', name: '用户' }
+    const name = (await this.querySessionName(sid)) || sid.slice(0, 8)
+    return { kind: 'agent', name, sessionId: sid }
+  }
+
+  private namedPerson(person: PersonValue): PersonValue {
+    if (person.kind !== 'agent' || !person.sessionId) return person
+    const peeked = this.peekSessionName(person.sessionId)
+    return peeked ? { ...person, name: peeked } : person
+  }
+
+  private peekSessionName(sessionId: string): string {
+    const sessions = this.collection('/sessions')
+    const row = sessions?.get?.(sessionId)
+    if (row && typeof (row as Promise<unknown>).then !== 'function') {
+      return sessionTitleFromRow(row)
+    }
+    return sessionTitleFromRow(this.sessionsService()?.peek?.(sessionId))
+  }
+
+  private sessionsService(): { peek?: (id: string) => unknown; get?: (id: string) => Promise<unknown> } | undefined {
+    try {
+      return this.ctx.get('sessions') as { peek?: (id: string) => unknown; get?: (id: string) => Promise<unknown> }
+    } catch {
+      return undefined
+    }
+  }
+
+  private async querySessionName(sessionId: string): Promise<string> {
+    const peeked = this.peekSessionName(sessionId)
+    if (peeked) return peeked
+    const sessions = this.collection('/sessions')
+    if (sessions?.get) {
+      const row = await sessions.get(sessionId)
+      const title = sessionTitleFromRow(row)
+      if (title) return title
+    }
+    const row = await this.sessionsService()?.get?.(sessionId)
+    return sessionTitleFromRow(row)
   }
 
   private applyFacetOverlay(spec: CollectionSpec, row: DbRecord): DbRecord {
@@ -720,7 +769,7 @@ export class DatabaseService extends Service implements Database {
     }
     const patch = pickWritablePatch(schema, raw)
     await assertSameTableLinks(spec, patch, parts[1])
-    const actor = currentPerson()
+    const actor = await this.currentPerson()
     let record = await spec.update(parts[1]!, patch)
     const existing = this.facets.recordMeta(spec.path, record.id)
     this.facets.writeRecordMeta(spec.path, record.id, {
@@ -750,7 +799,7 @@ export class DatabaseService extends Service implements Database {
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     if (!spec.records?.create || !spec.create) throw new Error(`collection cannot create: ${spec.path}`)
     const schema = schemaFor(spec)
-    const actor = currentPerson()
+    const actor = await this.currentPerson()
     const rows = parseRecords(content)
     const records: Record<string, unknown>[] = []
     for (const row of rows) {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowPathIcon, CpuChipIcon, UserIcon } from '@heroicons/react/16/solid'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { asPerson, personKey, type PersonValue } from '@biu/type-file-system'
+import { listCollection } from './db-client.ts'
 
 type ChatPerson = {
   id: string
@@ -12,24 +13,68 @@ type ChatPerson = {
 const USER: PersonValue = { kind: 'user', name: '用户' }
 const SYSTEM: PersonValue = { kind: 'system', name: '系统' }
 
-async function loadAgents(): Promise<ChatPerson[]> {
-  const res = await fetch('/api/sessions')
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const body = (await res.json()) as {
-    sessions?: Array<{ id?: string; title?: string; mascot?: ChatPerson['mascot'] }>
-  }
-  if (!Array.isArray(body.sessions)) return []
-  return body.sessions
-    .filter((item) => typeof item?.id === 'string' && item.id)
-    .map((item) => ({
-      id: item.id as string,
-      name: item.title?.trim() || (item.id as string).slice(0, 8),
-      ...(item.mascot ? { mascot: item.mascot } : {}),
-    }))
+let agentsInflight: Promise<ChatPerson[]> | null = null
+
+export function agentNameLooksLikeId(name: string, sessionId: string) {
+  const text = name.trim()
+  if (!text || !sessionId) return false
+  return text === sessionId || text === sessionId.slice(0, 8)
+}
+
+export function resolveAgentName(person: PersonValue, sessions: ReadonlyMap<string, string>): string {
+  if (person.kind !== 'agent' || !person.sessionId) return person.name
+  const queried = sessions.get(person.sessionId)?.trim()
+  if (queried) return queried
+  if (agentNameLooksLikeId(person.name, person.sessionId)) return ''
+  return person.name
+}
+
+export async function loadAgents(): Promise<ChatPerson[]> {
+  if (agentsInflight) return agentsInflight
+  const request = listCollection({ path: '/sessions', limit: 500, sortField: 'updatedAt', sortDir: 'desc' })
+    .then((page) =>
+      page.items
+        .filter((item) => typeof item?.id === 'string' && item.id)
+        .map((item) => {
+          const id = String(item.id)
+          const mascot =
+            item.mascot && typeof item.mascot === 'object' && !Array.isArray(item.mascot)
+              ? (item.mascot as ChatPerson['mascot'])
+              : undefined
+          return {
+            id,
+            name: String(item.title ?? '').trim() || id.slice(0, 8),
+            ...(mascot ? { mascot } : {}),
+          }
+        }),
+    )
+    .finally(() => {
+      agentsInflight = null
+    })
+  agentsInflight = request
+  return request
 }
 
 export function PersonFace({ value, empty = '' }: { value: unknown; empty?: string }) {
   const person = asPerson(value)
+  const [sessionNames, setSessionNames] = useState<Map<string, string>>(() => new Map())
+
+  useEffect(() => {
+    if (!person || person.kind !== 'agent' || !person.sessionId) return
+    let cancelled = false
+    void loadAgents()
+      .then((rows) => {
+        if (cancelled) return
+        setSessionNames(new Map(rows.map((row) => [row.id, row.name])))
+      })
+      .catch(() => {
+        if (!cancelled) setSessionNames(new Map())
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [person?.kind, person?.sessionId])
+
   if (!person) {
     return empty ? (
       <span className="fsdb-person is-empty">
@@ -38,8 +83,12 @@ export function PersonFace({ value, empty = '' }: { value: unknown; empty?: stri
       </span>
     ) : null
   }
+
+  const displayName = resolveAgentName(person, sessionNames) || (person.kind === 'agent' ? '' : person.name)
+  const label = displayName || empty
+
   return (
-    <span className="fsdb-person" title={person.sessionId ? `${person.name} · ${person.sessionId.slice(0, 8)}` : person.name}>
+    <span className="fsdb-person" title={label || undefined}>
       {person.kind === 'agent' && person.sessionId ? (
         <span className="fsdb-person-face" aria-hidden>
           <SidebarMascot
@@ -47,7 +96,7 @@ export function PersonFace({ value, empty = '' }: { value: unknown; empty?: stri
             sessionId={person.sessionId}
             identity={resolveSessionMascot(person.sessionId)}
             animate={false}
-            title={person.name}
+            title={label || person.sessionId}
           />
         </span>
       ) : (
@@ -55,7 +104,7 @@ export function PersonFace({ value, empty = '' }: { value: unknown; empty?: stri
           {person.kind === 'system' ? <CpuChipIcon className="size-[14px]" /> : <UserIcon className="size-[14px]" />}
         </span>
       )}
-      <span className="fsdb-person-name">{person.name}</span>
+      {label ? <span className="fsdb-person-name">{label}</span> : null}
     </span>
   )
 }
