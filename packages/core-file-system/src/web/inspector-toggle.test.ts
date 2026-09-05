@@ -344,6 +344,7 @@ test('database extras sit after the record detail, not in the inspector', () => 
   assert.match(style, /\.fsdb-fileview-img\{[^}]*max-height:none/)
   assert.match(style, /\.fsdb-right-body\{[^}]*overflow:auto/)
   assert.match(browser, /app-pane-in/)
+  assert.doesNotMatch(browser, /nested \? undefined : 'app-pane-in'/)
   assert.match(browser, /key=\{nested \? 'embed' : `\$\{collectionPath\}:\$\{detailId \?\? ''\}`\}/)
   assert.match(style, /\.fsdb-detail-split\{[^}]*overflow:visible/)
   assert.doesNotMatch(style, /\.fsdb-fileview-pre\{[^}]*overflow:auto/)

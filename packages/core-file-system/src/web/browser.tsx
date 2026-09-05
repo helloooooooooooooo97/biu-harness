@@ -2041,7 +2041,7 @@ export function CollectionBrowser({
         <div className="fsdb-right-body">
         <div
           key={nested ? 'embed' : `${collectionPath}:${detailId ?? ''}`}
-          className={nested ? undefined : 'app-pane-in'}
+          className="app-pane-in"
         >
         {!detailId ? (
         <div className="tasks-main fsdb-main">
