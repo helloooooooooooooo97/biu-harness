@@ -149,7 +149,8 @@ test('title cell row tools skip the overflow action menu', () => {
   const css = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8')
   assert.match(css, /\.fsdb-detail-actions\{/)
   assert.match(css, /\.fsdb-detail-actionbar\{/)
-  assert.match(css, /top:calc\(100% - 95px\)/)
+  assert.match(css, /top:calc\(100% - 60px\)/)
+  assert.doesNotMatch(css, /top:calc\(100% - 95px\)/)
   assert.match(css, /\.fsdb-page \.fsdb-detail-actions \.dock-icon-btn,\.fsdb-page \.fsdb-detail-actions \.tasks-icon-btn\{[^}]*width:32px/)
   assert.match(css, /\.fsdb-page \.fsdb-detail-actions \.dock-icon-btn,\.fsdb-page \.fsdb-detail-actions \.tasks-icon-btn\{[^}]*height:32px/)
   assert.match(css, /\.fsdb-page \.fsdb-detail-actions \.dock-icon-btn,\.fsdb-page \.fsdb-detail-actions \.tasks-icon-btn\{[^}]*color:#F0EFED/)
@@ -161,6 +162,10 @@ test('title cell row tools skip the overflow action menu', () => {
   assert.match(browser, /className: 'size-4'/)
   const detailBar = browser.slice(browser.indexOf('fsdb-detail-actionbar'), browser.indexOf('function GroupHead'))
   assert.doesNotMatch(detailBar, /if \(Action\)/)
+  assert.match(detailBar, /rowShown\.map/)
+  assert.match(browser, /listedSelected/)
+  assert.match(browser, /\.\.\.detailRow, \.\.\.listedSelected/)
+  assert.match(browser, /setDetailRow\(\(prev\) => \(prev\?\.id === openId \? \{ \.\.\.prev, \.\.\.hit \} : prev\)\)/)
 })
 
 test('deletable tables can pick rows and bulk-delete next to refresh', () => {
