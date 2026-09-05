@@ -180,32 +180,6 @@ export function RecordDetail({
                   <h1 className="fsdb-detail-title">{labelOf(selected)}</h1>
                 )}
                 </div>
-                {chrome?.Board ? <chrome.Board record={selected} openRecord={onOpenRecord} /> : null}
-                {chrome?.Board ? null : (
-                <div className="fsdb-detail-aside">
-                  <div className="fsdb-prop">
-                    <span>
-                      <HashtagIcon aria-hidden className="size-[14px]" />
-                      ID
-                    </span>
-                    <span className="fsdb-detail-id" title={selected.id}>
-                      {selected.id}
-                    </span>
-                  </div>
-                  {Object.entries(schema.fields).map(([key, field]) => {
-                    if (key === 'id' || key === schema.labelField || key === contentFieldKey(schema)) return null
-                    const kind = resolveFieldType(field)
-                    if (kind === 'facet' && !field.writable) return null
-                    return (
-                      <PropertyRow key={key} field={field} fieldKey={key} stacked={kind === 'facet'}>
-                        <div className={kind === 'facet' ? 'fsdb-prop-val is-schema' : 'fsdb-prop-val'} title={formatField(field, selected[key])}>
-                          {renderCell(selected, key, field)}
-                        </div>
-                      </PropertyRow>
-                    )
-                  })}
-                </div>
-                )}
                 {contentFieldKey(schema) && schema.fields[contentFieldKey(schema)!] ? (() => {
                   const key = contentFieldKey(schema)!
                   const spec = schema.fields[key]!
@@ -257,6 +231,32 @@ export function RecordDetail({
                     </div>
                   )
                 })() : null}
+                {chrome?.Board ? <chrome.Board record={selected} openRecord={onOpenRecord} /> : null}
+                {chrome?.Board ? null : (
+                <div className="fsdb-detail-aside">
+                  <div className="fsdb-prop">
+                    <span>
+                      <HashtagIcon aria-hidden className="size-[14px]" />
+                      ID
+                    </span>
+                    <span className="fsdb-detail-id" title={selected.id}>
+                      {selected.id}
+                    </span>
+                  </div>
+                  {Object.entries(schema.fields).map(([key, field]) => {
+                    if (key === 'id' || key === schema.labelField || key === contentFieldKey(schema)) return null
+                    const kind = resolveFieldType(field)
+                    if (kind === 'facet' && !field.writable) return null
+                    return (
+                      <PropertyRow key={key} field={field} fieldKey={key} stacked={kind === 'facet'}>
+                        <div className={kind === 'facet' ? 'fsdb-prop-val is-schema' : 'fsdb-prop-val'} title={formatField(field, selected[key])}>
+                          {renderCell(selected, key, field)}
+                        </div>
+                      </PropertyRow>
+                    )
+                  })}
+                </div>
+                )}
                 {chrome?.panes?.length ? (
                   <div className="fsdb-detail-extras">
                     {chrome.panes.map((pane) => {

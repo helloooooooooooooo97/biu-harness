@@ -68,6 +68,7 @@ export class FacetStore {
         id TEXT PRIMARY KEY,
         label TEXT NOT NULL,
         fields_json TEXT NOT NULL DEFAULT '[]',
+        notes TEXT NOT NULL DEFAULT '',
         updated_at INTEGER NOT NULL
       );
       CREATE INDEX IF NOT EXISTS facets_label ON facets(label);
@@ -94,7 +95,36 @@ export class FacetStore {
         PRIMARY KEY (collection, record_id)
       );
     `)
+    this.ensureNotesColumn()
     return this
+  }
+
+  private ensureNotesColumn() {
+    const db = this.db!
+    const cols = db.prepare('PRAGMA table_info(facets)').all() as Array<{ name: string }>
+    if (cols.some((col) => col.name === 'notes')) return
+    db.exec(`ALTER TABLE facets ADD COLUMN notes TEXT NOT NULL DEFAULT ''`)
+  }
+
+  notes(id: string) {
+    const want = String(id ?? '').trim()
+    if (!want) return ''
+    const row = this.ensure().prepare('SELECT notes FROM facets WHERE id = ?').get(want) as { notes?: string } | undefined
+    return typeof row?.notes === 'string' ? row.notes : ''
+  }
+
+  private savePack(pack: CollectionSchemaPack, notes: string) {
+    this.ensure()
+      .prepare(
+        `INSERT INTO facets (id, label, fields_json, updated_at, notes)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           label = excluded.label,
+           fields_json = excluded.fields_json,
+           updated_at = excluded.updated_at,
+           notes = excluded.notes`,
+      )
+      .run(pack.id, pack.label, JSON.stringify(pack.fields), Date.now(), notes)
   }
 
   private ensure() {
@@ -133,15 +163,10 @@ export class FacetStore {
     const db = this.ensure()
     const next = tags.map((item) => normalizeSchemaPack(item)).filter((item): item is CollectionSchemaPack => Boolean(item))
     const keep = new Set(next.map((tag) => tag.id))
-    const upsert = db.prepare(
-      `INSERT INTO facets (id, label, fields_json, updated_at)
-       VALUES (?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET label = excluded.label, fields_json = excluded.fields_json, updated_at = excluded.updated_at`,
-    )
     db.exec('BEGIN IMMEDIATE')
     try {
       for (const tag of next) {
-        upsert.run(tag.id, tag.label, JSON.stringify(tag.fields), Date.now())
+        this.savePack(tag, this.notes(tag.id))
       }
       const existing = db.prepare('SELECT id FROM facets').all() as Array<{ id: string }>
       for (const row of existing) {
@@ -157,16 +182,11 @@ export class FacetStore {
     return this.list()
   }
 
-  upsert(raw: unknown): CollectionSchemaPack {
+  upsert(raw: unknown, notes?: string): CollectionSchemaPack {
     const pack = normalizeSchemaPack(raw)
     if (!pack) throw new Error('invalid 合集')
-    this.ensure()
-      .prepare(
-        `INSERT INTO facets (id, label, fields_json, updated_at)
-         VALUES (?, ?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET label = excluded.label, fields_json = excluded.fields_json, updated_at = excluded.updated_at`,
-      )
-      .run(pack.id, pack.label, JSON.stringify(pack.fields), Date.now())
+    const nextNotes = notes !== undefined ? String(notes) : this.notes(pack.id)
+    this.savePack(pack, nextNotes)
     return pack
   }
 

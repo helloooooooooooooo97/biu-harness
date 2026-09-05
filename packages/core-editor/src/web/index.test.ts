@@ -29,10 +29,10 @@ class FakeDatabaseUi extends Service implements DatabaseUi {
   }
 }
 
-test('core-editor paints Content on pages, tasks and plugins, not sessions', async () => {
+test('core-editor paints Content on pages, tasks, plugins and facets, not sessions', async () => {
   const ctx = new Context()
   const ui = new FakeDatabaseUi(ctx)
   await ctx.plugin(editorUi)
-  assert.deepEqual(ui.paths, ['/pages', '/tasks', '/plugins'])
+  assert.deepEqual(ui.paths, ['/pages', '/tasks', '/plugins', '/facets'])
   assert.ok(ctx.pageEditor)
 })

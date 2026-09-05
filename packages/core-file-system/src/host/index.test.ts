@@ -698,6 +698,14 @@ test('db_update /facets writes facet field packs', async () => {
   })
   assert.equal(updated.value.fieldCount, 1)
   assert.equal(db.facets.get(id)?.fields[0]?.key, 'complexity')
+  const body = await db.writeContent(`/facets/${id}`, '# 合集说明')
+  assert.equal(body.field, 'notes')
+  assert.equal(body.value, '# 合集说明')
+  const listed = await db.list('/facets')
+  if (listed.kind !== 'collection') return
+  assert.equal('notes' in listed.items[0]!, false)
+  const read = await db.content(`/facets/${id}`)
+  assert.equal(read.value, '# 合集说明')
 })
 
 test('tables without records.create/delete reject create and delete', async () => {

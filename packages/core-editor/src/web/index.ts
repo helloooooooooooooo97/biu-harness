@@ -12,7 +12,7 @@ export { pageEditorExtensions } from './kit.ts'
 export const name = 'core-editor-ui'
 export const inject = ['databaseUi']
 
-const EDITOR_COLLECTIONS = ['/pages', '/tasks', '/plugins'] as const
+const EDITOR_COLLECTIONS = ['/pages', '/tasks', '/plugins', '/facets'] as const
 
 export function apply(ctx: Context) {
   new PageEditorService(ctx)
