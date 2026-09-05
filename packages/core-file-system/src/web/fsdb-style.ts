@@ -333,9 +333,8 @@ const CSS = `
 .fsdb-schema-prop.is-orphan .fsdb-schema-prop-k{color:#7C7A76;font-weight:500}
 .fsdb-schema-prop.is-orphan .fsdb-schema-prop-k svg{opacity:.45}
 .fsdb-schema-prop.is-orphan .fsdb-schema-prop-v > :first-child{flex:1;min-width:0}
-.fsdb-schema-prop-restore{flex:none;height:22px;margin:0;border:0;border-radius:6px;padding:0 6px;background:transparent;color:var(--dsw-label-3);font:inherit;font-size:13px;font-weight:650;cursor:pointer}
-.fsdb-schema-prop.is-orphan .fsdb-schema-prop-restore{opacity:1}
-.fsdb-schema-prop-restore:hover{background:var(--dsw-hover);color:var(--dsw-label)}
+.fsdb-schema-prop-restore{opacity:1;display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);cursor:pointer}
+.fsdb-schema-prop-restore:hover{color:var(--dsw-label);background:var(--dsw-hover)}
 .fsdb-schema-addprop{display:inline-flex;align-items:center;gap:4px;margin:2px 4px 0;height:28px;padding:0 6px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-3);font:inherit;font-size:14px;cursor:pointer}
 .fsdb-schema-addprop:hover{background:var(--dsw-hover);color:var(--dsw-label)}
 .fsdb-schema-addprop-form{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:2px 4px 0;min-width:0}

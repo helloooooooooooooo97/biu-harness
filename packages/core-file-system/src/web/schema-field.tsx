@@ -10,7 +10,7 @@ import {
   type SchemaFieldValue,
   type SchemaPackField,
 } from '@biu/type-file-system'
-import { ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
+import { ArrowUturnLeftIcon, ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
 import { TagChip, TagChips, tagTone, HeadlessPopover } from '@biu/public-ui'
 import { CellMulti } from '@biu/database-ui'
 import { DefaultCell, FieldEditor, FieldGlyph, fieldDraftValue, parseFieldValue } from './fsdb-cells.tsx'
@@ -381,9 +381,10 @@ export function SchemaFieldEditor({
                     type="button"
                     className="fsdb-schema-prop-restore"
                     aria-label={`恢复 ${orphan.key}`}
+                    data-dock-tip="恢复"
                     onClick={() => restoreField(tag, orphan.key, orphan.value)}
                   >
-                    恢复
+                    <ArrowUturnLeftIcon aria-hidden className="size-3" />
                   </button>
                 </div>
               </div>
