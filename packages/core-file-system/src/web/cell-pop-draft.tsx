@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import type { DbRecord, FieldSpec } from '@biu/type-file-system'
+import {
+  normalizeSchemaValue,
+  type CollectionSchemaPack,
+  type DbRecord,
+  type FieldSpec,
+  type SchemaFieldValue,
+} from '@biu/type-file-system'
 import { TagChip, TagChips } from '@biu/public-ui'
 import { DbSearchOption, ensureDbSearchStyle } from '@biu/database-ui'
 import { FieldEditor, fieldDraftValue, parseFieldValue } from './fsdb-cells.tsx'
-import { SchemaFieldEditor } from './schema-field.tsx'
 import { asStringList, parseFacetFlatColumnKey, resolveFieldType } from './fields.ts'
+import { loadFacets, persistFacets, slugFacetId, subscribeFacets } from './facet-catalog.ts'
+
+type TagOption = { value: string; label: string }
 
 function TagPickPanel({
   values,
@@ -14,7 +22,7 @@ function TagPickPanel({
   onPicked,
 }: {
   values: string[]
-  options: string[]
+  options: TagOption[]
   multiple: boolean
   onChange: (next: string[]) => void
   onPicked?: () => void
@@ -22,11 +30,18 @@ function TagPickPanel({
   ensureDbSearchStyle()
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
+  const byValue = new Map(options.map((item) => [item.value, item.label]))
   const available = options.filter(
-    (item) => Boolean(item) && !values.includes(item) && (!q || item.toLowerCase().includes(q)),
+    (item) =>
+      Boolean(item.value) &&
+      !values.includes(item.value) &&
+      (!q || item.label.toLowerCase().includes(q) || item.value.toLowerCase().includes(q)),
   )
   const draft = query.trim()
-  const canCreate = Boolean(draft) && !values.includes(draft) && !options.includes(draft)
+  const canCreate =
+    Boolean(draft) &&
+    !values.includes(draft) &&
+    !options.some((item) => item.value === draft || item.label === draft)
   function add(value: string) {
     if (!value) return
     if (multiple) {
@@ -43,7 +58,12 @@ function TagPickPanel({
         <div className="fsdb-cell-pop-picked">
           <TagChips>
             {values.map((value) => (
-              <TagChip key={value} id={value} label={value} onRemove={() => onChange(values.filter((item) => item !== value))} />
+              <TagChip
+                key={value}
+                id={value}
+                label={byValue.get(value) ?? value}
+                onRemove={() => onChange(values.filter((item) => item !== value))}
+              />
             ))}
           </TagChips>
         </div>
@@ -57,7 +77,7 @@ function TagPickPanel({
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault()
-              if (available[0]) add(available[0])
+              if (available[0]) add(available[0].value)
               else if (canCreate) add(draft)
             }
           }}
@@ -65,8 +85,8 @@ function TagPickPanel({
       </label>
       <div className="db-search-list">
         {available.map((item) => (
-          <DbSearchOption key={item} onClick={() => add(item)}>
-            <TagChip id={item} label={item} />
+          <DbSearchOption key={item.value} onClick={() => add(item.value)}>
+            <TagChip id={item.value} label={item.label} />
           </DbSearchOption>
         ))}
         {canCreate ? (
@@ -79,8 +99,45 @@ function TagPickPanel({
   )
 }
 
+function applyFacetTags(parsed: SchemaFieldValue, catalog: CollectionSchemaPack[], nextIds: string[]) {
+  let packs = catalog
+  const used = new Set(packs.map((tag) => tag.id))
+  const resolved: string[] = []
+  for (const item of nextIds) {
+    if (used.has(item)) {
+      resolved.push(item)
+      continue
+    }
+    const hit = packs.find((tag) => tag.label === item)
+    if (hit) {
+      resolved.push(hit.id)
+      continue
+    }
+    const id = slugFacetId(item, used)
+    packs = [...packs, { id, label: item, fields: [] }]
+    used.add(id)
+    resolved.push(id)
+  }
+  if (packs !== catalog) persistFacets(packs)
+  return { tags: resolved, values: parsed.values }
+}
+
+function FacetPickPanel({ value, onChange }: { value: unknown; onChange: (next: SchemaFieldValue) => void }) {
+  const parsed = normalizeSchemaValue(value)
+  const [catalog, setCatalog] = useState(() => loadFacets())
+  useEffect(() => subscribeFacets(undefined, () => setCatalog(loadFacets())), [])
+  return (
+    <TagPickPanel
+      values={parsed.tags}
+      options={catalog.map((tag) => ({ value: tag.id, label: tag.label }))}
+      multiple
+      onChange={(next) => onChange(applyFacetTags(parsed, catalog, next))}
+    />
+  )
+}
+
 export function CellPopDraft({
-  record,
+  record: _record,
   fieldKey,
   field,
   initial,
@@ -127,7 +184,7 @@ export function CellPopDraft({
     return (
       <TagPickPanel
         values={selected}
-        options={list}
+        options={list.map((item) => ({ value: item, label: item }))}
         multiple={kind === 'multi-select'}
         onChange={(next) => {
           const value = kind === 'multi-select' ? next : next[0] ?? ''
@@ -140,9 +197,7 @@ export function CellPopDraft({
   }
 
   if (kind === 'facet') {
-    return (
-      <SchemaFieldEditor collectionPath={collectionPath} record={record} value={raw} writable autoOpen onChange={(next) => put(next)} />
-    )
+    return <FacetPickPanel value={raw} onChange={(next) => put(next)} />
   }
 
   if (kind === 'datetime' || kind === 'image' || kind === 'attachment' || kind === 'url') {
