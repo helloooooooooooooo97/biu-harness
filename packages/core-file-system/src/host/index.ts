@@ -42,7 +42,9 @@ import {
 } from './content-edit.ts'
 import { currentSessionId } from '@biu/host-sessions/scope'
 import { databaseRevealForTool, normalizeCollectionPath } from '../paths.ts'
-import { AGENT_DB_STAT_BLURB, compactAgentToolResult, compactAgentWriteResult } from './agent-payload.ts'
+import { AgentDbCompact } from './agent-payload.ts'
+
+const agentDbCompact = new AgentDbCompact()
 
 function publicAction(action: CollectionAction): CollectionActionInfo {
   const { run: _run, ...info } = action
@@ -1180,7 +1182,7 @@ export function apply(ctx: Context) {
             offset: args.offset != null ? Number(args.offset) : undefined,
             columns: asColumnKeys(args.columns),
           })
-          .then((body) => compactAgentToolResult(body)),
+          .then((body) => agentDbCompact.query(body)),
       )
     },
   })
@@ -1189,7 +1191,7 @@ export function apply(ctx: Context) {
     description: '读取 File System 路径：表返回列式列表 columns/rows（不含 schema，结构用 db_stat），记录返回该行 JSON（空字段省略，不含 content 正文，正文用 db_content）。',
     parameters: PATH_PARAM,
     execute: (args) =>
-      withInspectorReveal(ctx, String(args.path), () => db.read(String(args.path)).then((body) => compactAgentToolResult(body))),
+      withInspectorReveal(ctx, String(args.path), () => db.read(String(args.path)).then((body) => agentDbCompact.query(body))),
   })
   ctx.tools.register({
     name: 'db_update',
@@ -1204,7 +1206,7 @@ export function apply(ctx: Context) {
     },
     execute: (args) =>
       withInspectorReveal(ctx, String(args.path), () => db.update(String(args.path), args.content)).then(
-        compactAgentWriteResult,
+        (body) => agentDbCompact.write(body),
       ),
   })
   ctx.tools.register({
@@ -1220,7 +1222,7 @@ export function apply(ctx: Context) {
     },
     execute: (args) =>
       withInspectorReveal(ctx, String(args.path), () => db.create(String(args.path), asCreateRecords(args))).then(
-        compactAgentWriteResult,
+        (body) => agentDbCompact.write(body),
       ),
   })
   ctx.tools.register({
@@ -1238,7 +1240,7 @@ export function apply(ctx: Context) {
     },
     execute: (args) =>
       withInspectorReveal(ctx, String(args.path), () => db.remove(String(args.path), asDeleteQuery(args)), true).then(
-        compactAgentWriteResult,
+        (body) => agentDbCompact.write(body),
       ),
   })
   ctx.tools.register({
@@ -1263,13 +1265,13 @@ export function apply(ctx: Context) {
             ? (args.args as Record<string, unknown>)
             : undefined,
         ),
-      ).then(compactAgentWriteResult),
+      ).then((body) => agentDbCompact.write(body)),
   })
   ctx.tools.register({
     name: 'db_stat',
-    description: AGENT_DB_STAT_BLURB,
+    description: agentDbCompact.statBlurb,
     parameters: PATH_PARAM,
-    execute: (args) => Promise.resolve(db.stat(String(args.path))).then((body) => compactAgentToolResult(body)),
+    execute: (args) => Promise.resolve(db.stat(String(args.path))).then((body) => agentDbCompact.query(body)),
   })
   ctx.tools.register({
     name: 'db_content',
@@ -1306,7 +1308,7 @@ export function apply(ctx: Context) {
     },
     execute: (args) =>
       withInspectorReveal(ctx, String(args.path), () =>
-        db.editContent(String(args.path), args).then(compactAgentToolResult),
+        db.editContent(String(args.path), args).then((body) => agentDbCompact.query(body)),
       ),
   })
 
