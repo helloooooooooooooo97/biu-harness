@@ -357,7 +357,7 @@ export function DefaultCell({
   }
   const text = formatField(field, value)
   if (!text) return null
-  return <span className={kind === 'datetime' ? 'fsdb-meta' : undefined}>{text}</span>
+  return <span>{text}</span>
 }
 
 export function fieldActionId(fieldKey: string, field: FieldSpec) {

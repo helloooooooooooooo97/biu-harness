@@ -480,6 +480,7 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-person-option.is-selected{background:color-mix(in srgb,var(--dsw-pick) 14%,transparent)}
 .fsdb-person-loading{display:flex;align-items:center;gap:6px;padding:6px;color:var(--dsw-label-3);font-size:12px}
 .fsdb-pop-host,.fsdb-ref-host{display:flex;align-items:center;min-width:0;width:100%;min-height:22px;cursor:pointer}
+.fsdb-pop-empty,.fsdb-detail-aside .fsdb-pop-empty{color:var(--dsw-label-3);font-size:13px;font-weight:400;user-select:none}
 .fsdb-ref-chips{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:0;max-width:100%}
 .fsdb-ref-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;margin:0;border:0;border-radius:4px;padding:1px 6px 1px 7px;background:var(--dsw-hover);color:var(--dsw-label);font:inherit;font-size:13px;line-height:20px;cursor:pointer;text-align:left}
 .fsdb-ref-chip:hover{background:color-mix(in srgb,var(--dsw-pick) 16%,transparent)}
