@@ -4881,24 +4881,17 @@ body {
   overflow-y: auto;
 }
 
-.composer-caret-mascot {
-  position: absolute;
-  z-index: 6;
-  width: 22px;
-  height: 22px;
-  pointer-events: auto;
-}
-
-.composer-caret-mascot .brand-corner-cluster {
+.chat-dock-toolbar .brand-corner-cluster {
   position: relative;
   right: auto;
   bottom: auto;
   z-index: 2;
+  flex: none;
 }
 
-.composer-caret-mascot .brand-corner-mascot-btn {
-  width: 22px;
-  height: 22px;
+.chat-dock-toolbar .brand-corner-mascot-btn {
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
 }
 

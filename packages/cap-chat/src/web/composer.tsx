@@ -1,12 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent } from 'react'
 import { ArrowUpIcon, ChevronDownIcon, PlusIcon, Cog6ToothIcon } from '@heroicons/react/16/solid'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { EditorContent, useEditor, type Editor } from '@tiptap/react'
+import { EditorContent, useEditor } from '@tiptap/react'
 import Placeholder from '@tiptap/extension-placeholder'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import { pickKey, usePickState, type PickService } from '@biu/cap-pick/web'
-import { BrandCornerMascot } from '@biu/public-mascot'
 import { HeadlessDismiss } from '@biu/public-ui'
 import { composerDocExtensions } from './composer-kit.ts'
 import {
@@ -21,11 +20,7 @@ import { ModelConfigDialog } from './model-config-dialog.tsx'
 import { ImageThumbs } from './image-thumbs.tsx'
 import { collectClipboardImages, collectImageFiles } from './clipboard-images.ts'
 import { revealOverlayThread, isComposerFocusPending } from '@biu/web-app-shell/chat-overlay'
-import { ChatSidebar } from '@biu/web-app-shell/chat-sidebar'
 import { shouldNavigateToSession } from './composer-nav.ts'
-
-const CARET_MASCOT_SIZE = 22
-const CARET_MASCOT_GAP = 8
 
 /** 按键不驱动受控 value；仅防抖更新发送按钮可用态，避免每个字符打穿 React 渲染。 */
 const INPUT_DEBOUNCE_MS = 120
@@ -165,95 +160,6 @@ function matchModelOption(catalog: ModelOption[], provider: string, model: strin
       endpointId: provider || 'deepseek',
       model,
     }
-  )
-}
-
-function caretPlace(editor: Editor, form: HTMLElement) {
-  const rect = form.getBoundingClientRect()
-  try {
-    const coords = editor.view.coordsAtPos(editor.state.selection.head)
-    if (coords.left > 1 || coords.top > 1) {
-      const caretH = Math.max(coords.bottom - coords.top, 16)
-      return {
-        left: coords.left - rect.left + CARET_MASCOT_GAP,
-        top: coords.top - rect.top + (caretH - CARET_MASCOT_SIZE) / 2,
-      }
-    }
-  } catch {
-    /* caret not mapped yet */
-  }
-  const editorDom = form.querySelector('.composer-editor')
-  if (!(editorDom instanceof HTMLElement)) return null
-  const box = editorDom.getBoundingClientRect()
-  return {
-    left: box.left - rect.left + 4,
-    top: box.top - rect.top + Math.max(0, (box.height - CARET_MASCOT_SIZE) / 2),
-  }
-}
-
-function CaretMascot({
-  editor,
-  formRef,
-  useSessionView,
-  sessionView,
-}: {
-  editor: Editor | null
-  formRef: { current: HTMLFormElement | null }
-  useSessionView: ReturnType<typeof bindSessionView>
-  sessionView: SessionViewService
-}) {
-  const sessionId = useSessionView((state) => state.sessionId)
-  const sessions = useSessionView((state) => state.sessions)
-  const [place, setPlace] = useState<{ left: number; top: number } | null>(null)
-
-  useEffect(() => {
-    if (!editor) return
-    let raf = 0
-    const update = () => {
-      const form = formRef.current
-      if (!form) return
-      const next = caretPlace(editor, form)
-      if (next) setPlace(next)
-    }
-    update()
-    raf = requestAnimationFrame(update)
-    editor.on('transaction', update)
-    editor.on('selectionUpdate', update)
-    editor.on('focus', update)
-    editor.on('blur', update)
-    const editorDom = formRef.current?.querySelector('.composer-editor')
-    editorDom?.addEventListener('scroll', update, true)
-    window.addEventListener('resize', update)
-    return () => {
-      cancelAnimationFrame(raf)
-      editor.off('transaction', update)
-      editor.off('selectionUpdate', update)
-      editor.off('focus', update)
-      editor.off('blur', update)
-      editorDom?.removeEventListener('scroll', update, true)
-      window.removeEventListener('resize', update)
-    }
-  }, [editor, formRef])
-
-  if (!sessionId || !place) return null
-  return (
-    <div className="composer-caret-mascot" style={{ left: place.left, top: place.top }} data-testid="caret-mascot">
-      <BrandCornerMascot
-        agents={sessions}
-        activeId={sessionId}
-        size={CARET_MASCOT_SIZE}
-        menu={(close) => (
-          <ChatSidebar
-            variant="popover"
-            visible
-            routeSessionId={sessionId}
-            useSessionView={useSessionView}
-            sessionView={sessionView}
-            onActivate={close}
-          />
-        )}
-      />
-    </div>
   )
 }
 
@@ -1033,7 +939,6 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           </button>
         </div>
       </div>
-      <CaretMascot editor={editor} formRef={formRef} useSessionView={useSessionView} sessionView={sessionView} />
     </form>
     <ModelConfigDialog open={configOpen} onClose={() => setConfigOpen(false)} />
     </div>
