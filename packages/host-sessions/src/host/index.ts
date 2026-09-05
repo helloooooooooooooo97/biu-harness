@@ -28,7 +28,6 @@ import {
 } from './session-mascot.ts'
 import { rebuildHealedEvents } from './session-heal.ts'
 import { sessionsCollection } from './sessions-collection.ts'
-import { eventsCollection } from './events-collection.ts'
 
 export type { SessionEvent, SessionEventBody, SessionProject, SessionRecord, SessionMascot, SessionConfig }
 export { SESSION_FORMAT_VERSION, normalizeSessionConfig, mergeSessionConfig }
@@ -293,12 +292,6 @@ export class SessionsService extends Service {
               return 0
             }
           },
-        }),
-      )
-      inner.database.register(
-        eventsCollection({
-          listSummaries: () => this.listSummaries(),
-          require: (id) => this.require(id),
         }),
       )
     })
@@ -583,7 +576,6 @@ async function resolveHostProject(input: string): Promise<SessionProject> {
 }
 
 export { sessionsCollection } from './sessions-collection.ts'
-export { eventsCollection } from './events-collection.ts'
 export { lastUsageBeforeCompact, retrieveHistory } from './session-compact.ts'
 
 export const name = 'sessions'

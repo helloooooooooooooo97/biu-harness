@@ -1,7 +1,5 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { Context } from 'cordis'
 import { MapIcon } from '@heroicons/react/16/solid'
 import '@biu/type-host-context'
@@ -41,13 +39,3 @@ test('one plugin fills thread, trajectory, composer and approvals dock', async (
   assert.deepEqual(usage.props?.().centerKinds, ['session'])
 })
 
-test('chat registers session event traj and usage views on /events', () => {
-  const src = readFileSync(resolve(import.meta.dirname, './index.ts'), 'utf8')
-  const views = readFileSync(resolve(import.meta.dirname, './events-views.tsx'), 'utf8')
-  assert.match(src, /registerView\('\/events', eventsTrajViewType\)/)
-  assert.match(src, /registerView\('\/events', eventsUsageViewType\)/)
-  assert.match(src, /decorate\('\/events', eventsChrome\)/)
-  assert.match(views, /id: 'traj'/)
-  assert.match(views, /id: 'usage'/)
-  assert.match(views, /EVENTS_TRAJ_VIEW_ID/)
-})
