@@ -134,7 +134,10 @@ const CSS = `
 .fsdb-file{display:inline-flex;align-items:center;gap:6px;min-width:0;width:100%;color:inherit;text-underline-offset:2px}
 .fsdb-file:hover{text-decoration:none}
 .fsdb-file-name{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis}
-.fsdb-file-tools{display:inline-flex;align-items:center;gap:0;flex:none;margin-left:auto}
+.fsdb-file-tools{display:inline-flex;align-items:center;gap:2px;flex:none;margin-left:auto}
+.fsdb-file-tools .tasks-icon-btn{border:0;border-radius:5px;padding:3px;background:transparent;color:var(--dsw-label-3);cursor:pointer;font:inherit;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.fsdb-file-tools .tasks-icon-btn:hover,.fsdb-file-tools .tasks-icon-btn.is-active{background:var(--dsw-hover);color:var(--dsw-label)}
+.fsdb-file-tools .tasks-icon-btn.is-danger:hover{background:var(--dsw-danger-soft);color:var(--dsw-danger)}
 .fsdb-files{display:flex;flex-direction:column;gap:2px;min-width:0;width:100%;flex:1}
 .fsdb-fileview{min-width:0;flex:none;height:auto;min-height:0;max-height:none;overflow:visible}
 .fsdb-fileview-pre{margin:0;padding:10px 12px;border-radius:8px;background:var(--dsw-input);color:var(--dsw-label);font:inherit;font-size:14px;font-family:var(--font-mono);white-space:pre-wrap;overflow:visible;height:auto;min-height:0;max-height:none}
@@ -447,12 +450,14 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-thumbs{display:inline-flex;align-items:center;gap:2px;min-width:0;max-width:100%}
 .fsdb-fileview-imgs{display:flex;flex-wrap:wrap;gap:8px}
 .fsdb-cell-pop{box-sizing:border-box;padding:8px;background:#202020;border:1px solid var(--dsw-border);border-radius:8px;box-shadow:0 1px 2px rgba(15,15,15,.04),0 10px 32px rgba(0,0,0,.28);display:flex;flex-direction:column;gap:8px;max-height:min(70vh,480px);overflow:auto;font-size:14px}
-.fsdb-cell-pop.is-select,.fsdb-cell-pop.is-multi-select,.fsdb-cell-pop.is-facet{min-width:260px;padding:8px}
+.fsdb-cell-pop.is-select,.fsdb-cell-pop.is-multi-select,.fsdb-cell-pop.is-facet,.fsdb-cell-pop.is-attachment{min-width:260px;padding:8px}
 .fsdb-cell-pop.is-string,.fsdb-cell-pop.is-title,.fsdb-cell-pop.is-number{padding:6px 8px}
 .fsdb-cell-pop-tags{display:flex;flex-direction:column;gap:8px;min-width:0}
 .fsdb-cell-pop-picked{display:flex;min-width:0}
 .fsdb-cell-pop-text{box-sizing:border-box;width:100%;min-height:72px;margin:0;border:0;border-radius:6px;padding:4px 2px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;line-height:1.45;resize:vertical;outline:none}
 .fsdb-media-field{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px;min-width:0;width:100%;max-width:100%;min-height:22px;height:auto}
+.fsdb-media-field.is-files{flex-direction:column;flex-wrap:nowrap;align-items:stretch;align-content:stretch}
+.fsdb-media-field.is-files .fsdb-media-pick{align-self:flex-start;height:24px;padding:0 2px}
 .fsdb-media-preview{display:block;width:18px;height:18px;flex:none;object-fit:cover;border-radius:3px;background:#111}
 .fsdb-media-thumb .ant-image-img{display:block;width:18px;height:18px;object-fit:cover;border-radius:3px}
 .fsdb-media-thumbs{display:inline-flex;align-items:center;gap:4px;min-width:0;overflow:auto}

@@ -184,7 +184,7 @@ export function MediaField({
 
   return (
     <div
-      className={`fsdb-media-field${compact ? ' is-compact' : ''}`}
+      className={`fsdb-media-field${compact ? ' is-compact' : ''}${kind === 'attachment' ? ' is-files' : ''}`}
       tabIndex={0}
       title={error || undefined}
       onPaste={
@@ -229,7 +229,7 @@ export function MediaField({
         </span>
       ) : null}
       <button type="button" className="fsdb-media-pick" title={label} onClick={() => inputRef.current?.click()}>
-        {kind === 'image' ? <PhotoIcon aria-hidden className="size-[14px]" /> : null}
+        {kind === 'image' ? <PhotoIcon aria-hidden className="size-[14px]" /> : <PaperClipIcon aria-hidden className="size-[14px]" />}
         <span className="fsdb-media-pick-label">{label}</span>
       </button>
       <input

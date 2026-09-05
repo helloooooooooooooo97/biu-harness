@@ -171,6 +171,8 @@ test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.match(media, /download=\{file\.name\}/)
   assert.match(media, /commitAttachments/)
   assert.match(media, /添加附件/)
+  assert.match(media, /is-files/)
+  assert.match(media, /kind === 'image' \? <PhotoIcon/)
   assert.match(media, /multiple=\{kind === 'image' \|\| kind === 'attachment'\}/)
   assert.match(browser, /fsdb-file-tools/)
   assert.match(media, /file\.name/)
