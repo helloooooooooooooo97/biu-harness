@@ -1713,12 +1713,11 @@ export function CollectionBrowser({
         {actions.map((action) => {
           const run = () => void runAction(row, action)
           if (Action) return <Action key={action.id} action={action} record={row} busy={busy} run={run} />
-          const primary = action.tone !== 'danger' && action.id === primaryId
           return (
             <button
               key={action.id}
               type="button"
-              className={`dock-icon-btn${primary ? ' is-active' : ''}${action.tone === 'danger' ? ' is-danger' : ''}`}
+              className="dock-icon-btn"
               title={action.label}
               data-dock-tip={action.label}
               aria-label={`${action.label} ${labelOf(row)}`}
