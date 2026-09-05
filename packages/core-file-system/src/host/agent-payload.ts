@@ -49,7 +49,6 @@ function compactAction(action: CollectionActionInfo) {
   if (action.when) out.when = action.when
   if (action.parameters) out.parameters = action.parameters
   if (action.allowMissing) out.allowMissing = true
-  if (action.confirm) out.confirm = action.confirm
   return out
 }
 
@@ -66,7 +65,6 @@ export function compactAgentSchema(schema: CollectionSchema) {
   if (schema.labelField && schema.labelField !== 'title') out.labelField = schema.labelField
   if (schema.contentField && schema.contentField !== 'content') out.contentField = schema.contentField
   if (schema.parentField) out.parentField = schema.parentField
-  if (schema.columns?.length) out.columns = schema.columns
   if (Object.keys(fields).length) out.fields = fields
   if (actions.length) out.actions = actions
   return out
@@ -84,14 +82,27 @@ function isEmptyCell(value: unknown) {
   return false
 }
 
-/** 列名只出现一次；path/kind 可从表路径+id 推出，空列整列丢掉。 */
+const LIST_META_KEYS = new Set(['createdAt', 'updatedAt', 'createdBy', 'updatedBy'])
+
+function skipListKey(key: string, keepMeta: boolean) {
+  if (key === 'path' || key === 'kind') return true
+  if (!keepMeta && LIST_META_KEYS.has(key)) return true
+  return false
+}
+
+function listHasNonMetaFields(rows: Record<string, unknown>[]) {
+  return rows.some((row) => Object.keys(row).some((key) => key !== 'id' && !skipListKey(key, true) && !LIST_META_KEYS.has(key)))
+}
+
+/** 列名只出现一次；path/kind 可从表路径+id 推出；空列与默认时间/人员列丢掉。 */
 export function recordsToColumnar(items: unknown[]) {
   const rowsIn = items.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+  const keepMeta = !listHasNonMetaFields(rowsIn)
   const order: string[] = []
   const seen = new Set<string>()
   for (const row of rowsIn) {
     for (const key of Object.keys(row)) {
-      if (key === 'path' || key === 'kind' || seen.has(key)) continue
+      if (skipListKey(key, keepMeta) || seen.has(key)) continue
       seen.add(key)
       order.push(key)
     }
@@ -99,6 +110,21 @@ export function recordsToColumnar(items: unknown[]) {
   const columns = order.filter((key) => key === 'id' || rowsIn.some((row) => !isEmptyCell(row[key])))
   const rows = rowsIn.map((row) => columns.map((key) => (isEmptyCell(row[key]) ? null : row[key])))
   return { columns, rows }
+}
+
+function compactRootTables(entries: unknown) {
+  if (!Array.isArray(entries)) return []
+  return entries.flatMap((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return []
+    const rec = item as { path?: unknown; label?: unknown; id?: unknown }
+    const path = typeof rec.path === 'string' ? rec.path : typeof rec.id === 'string' ? `/${rec.id}` : ''
+    if (!path) return []
+    const label = typeof rec.label === 'string' ? rec.label : ''
+    const slug = path.slice(1)
+    const next: Record<string, unknown> = { path }
+    if (label && label !== slug) next.label = label
+    return [next]
+  })
 }
 
 function compactRecordValue(value: unknown) {
@@ -115,7 +141,10 @@ export function compactAgentToolResult(result: unknown) {
   if (!result || typeof result !== 'object' || Array.isArray(result)) return result
   const rec = result as Record<string, unknown>
   const kind = rec.kind
-  if (kind === 'root') return result
+  if (kind === 'root') {
+    const tables = compactRootTables(rec.items ?? rec.collections)
+    return { kind: 'root', items: tables }
+  }
   if (kind === 'collection') {
     const path = String(rec.path ?? '')
     const next: Record<string, unknown> = { kind: 'collection', path }
@@ -125,19 +154,35 @@ export function compactAgentToolResult(result: unknown) {
     if (Array.isArray(rec.caps)) next.caps = rec.caps
     if (Array.isArray(rec.items)) {
       if (typeof rec.total === 'number') next.total = rec.total
-      if (typeof rec.offset === 'number') next.offset = rec.offset
+      if (typeof rec.offset === 'number' && rec.offset) next.offset = rec.offset
       if (typeof rec.limit === 'number') next.limit = rec.limit
       const table = recordsToColumnar(rec.items)
       next.columns = table.columns
       next.rows = table.rows
       return next
     }
-    if (rec.schema && typeof rec.schema === 'object') next.schema = compactAgentSchema(rec.schema as CollectionSchema)
+    if (rec.schema && typeof rec.schema === 'object') {
+      const schema = compactAgentSchema(rec.schema as CollectionSchema)
+      if (Object.keys(schema).length) next.schema = schema
+    }
     return next
   }
   if (kind === 'record') {
     const next: Record<string, unknown> = { kind: 'record', path: rec.path, value: compactRecordValue(rec.value) }
     if (rec.result !== undefined) next.result = rec.result
+    return next
+  }
+  if (kind === 'content') {
+    if (rec.ok === true || (typeof rec.command === 'string' && rec.command !== 'view')) {
+      const next: Record<string, unknown> = { ok: true, path: rec.path }
+      if (typeof rec.command === 'string' && rec.command !== 'write') next.command = rec.command
+      return next
+    }
+    const next: Record<string, unknown> = { path: rec.path, text: rec.text }
+    if (typeof rec.start === 'number') next.start = rec.start
+    if (typeof rec.end === 'number') next.end = rec.end
+    if (typeof rec.total === 'number') next.total = rec.total
+    if (rec.truncated) next.truncated = true
     return next
   }
   return result

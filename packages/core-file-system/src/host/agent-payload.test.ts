@@ -121,6 +121,58 @@ test('compact list uses columns once; drops empty and path/kind', () => {
   ])
 })
 
+test('compact list drops createdAt/people unless those are the projected columns', () => {
+  const listed = compactAgentToolResult({
+    kind: 'collection',
+    path: '/notes',
+    items: [
+      {
+        id: 'n1',
+        title: '草稿',
+        createdAt: 1,
+        updatedAt: 2,
+        createdBy: { kind: 'user', name: '用户' },
+        path: '/notes/n1',
+        kind: 'record',
+      },
+    ],
+  }) as Record<string, unknown>
+  assert.deepEqual(listed.columns, ['id', 'title'])
+
+  const times = compactAgentToolResult({
+    kind: 'collection',
+    path: '/notes',
+    items: [{ id: 'n1', createdAt: 1, path: '/notes/n1', kind: 'record' }],
+  }) as Record<string, unknown>
+  assert.deepEqual(times.columns, ['id', 'createdAt'])
+  assert.deepEqual(times.rows, [['n1', 1]])
+})
+
+test('compact root drops view chrome; content write is ok only', () => {
+  const root = compactAgentToolResult({
+    kind: 'root',
+    path: '/',
+    items: [
+      { id: 'notes', path: '/notes', kind: 'collection', label: '笔记', view: { moduleId: 'notes', route: '/notes', title: '笔记' } },
+      { id: 'views', path: '/views', kind: 'collection', label: 'views', view: null },
+    ],
+  }) as Record<string, unknown>
+  assert.deepEqual(root, {
+    kind: 'root',
+    items: [{ path: '/notes', label: '笔记' }, { path: '/views' }],
+  })
+
+  const written = compactAgentToolResult({
+    kind: 'content',
+    path: '/notes/n1',
+    field: 'content',
+    command: 'write',
+    ok: true,
+  }) as Record<string, unknown>
+  assert.deepEqual(written, { ok: true, path: '/notes/n1' })
+})
+
+
 test('compact write drops full record; create keeps ids', () => {
   const updated = compactAgentWriteResult({
     kind: 'record',

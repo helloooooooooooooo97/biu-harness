@@ -1149,7 +1149,7 @@ export function apply(ctx: Context) {
   }))))
   ctx.tools.register({
     name: 'db_list',
-    description: '列出 File System 路径：/ 为已登记表，/<表> 为该表记录（不含 content 正文）。默认每页 50 条，最多 200。表记录为列式：columns 列名只出现一次，rows 为值数组；path=/<表>/<id>。可用 columns 参数只取需要的列。表结构用 db_stat，列表不重复 schema。',
+    description: '列出 File System 路径：/ 为已登记表（path + 中文名），/<表> 为列式记录（不含 content、默认不含 createdAt/updatedAt/createdBy/updatedBy）。默认每页 50，最多 200。columns 参数只取需要的列。表结构用 db_stat。',
     parameters: {
       type: 'object',
       properties: {
@@ -1225,7 +1225,7 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_delete',
-    description: '按条件删除记录。路径为 /<表>，必须带 ids、q 或 filter 之一，禁止无条件清空全表。能否删除看 db_stat 的 caps 与 schema.records。调用后会进入审批，用户同意才真正删。',
+    description: '按条件删除记录。路径为 /<表>，必须带 ids、q 或 filter 之一，禁止无条件清空全表。能否删除看 db_stat 的 caps。调用后会进入审批，用户同意才真正删。成功返回 {ok, path, ids}。',
     parameters: {
       type: 'object',
       properties: {
@@ -1279,7 +1279,7 @@ export function apply(ctx: Context) {
       'command=str_replace：old_str 必须在正文里唯一，替换为 new_str。',
       'command=replace_lines：按 1-based 闭区间 start_line..end_line 换成 new_str。',
       'command=insert：在 insert_line 之后插入 new_str（0 插到第一行前）。',
-      'command=write：整篇覆盖，传 value。写成功只返回 ok，不含全文。',
+      'command=write：整篇覆盖，传 value。写成功只返回 {ok, path}，不含全文。',
     ].join(' '),
     parameters: {
       type: 'object',
@@ -1305,7 +1305,9 @@ export function apply(ctx: Context) {
       required: ['path'],
     },
     execute: (args) =>
-      withInspectorReveal(ctx, String(args.path), () => db.editContent(String(args.path), args)),
+      withInspectorReveal(ctx, String(args.path), () =>
+        db.editContent(String(args.path), args).then(compactAgentToolResult),
+      ),
   })
 
   const send = async (route: { query: URLSearchParams; send: (status: number, body: unknown) => void }, op: () => unknown) => {
