@@ -232,6 +232,48 @@ test('content is omitted from list/read and served on its own path', async () =>
   assert.deepEqual(written.value, { kind: 'note', body: { a: 2 } })
 })
 
+test('editContent view/str_replace/replace_lines/insert/write', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  const rows = new Map<string, Record<string, unknown>>([
+    ['n1', { id: 'n1', title: 'a', content: 'one\ntwo\nthree\nfour' }],
+  ])
+  db.register({
+    id: 'docs',
+    path: '/docs',
+    schema: {
+      fields: {
+        ...REQUIRED_RECORD_FIELDS,
+        title: { type: 'string', writable: true },
+        content: { type: 'file', writable: true },
+      },
+    },
+    list: () => [...rows.values()] as { id: string }[],
+    get: (id) => rows.get(id) as { id: string } | undefined,
+    records: { update: true },
+    update: (id, patch) => {
+      const next = { ...rows.get(id), ...patch, id }
+      rows.set(id, next)
+      return next as { id: string }
+    },
+  })
+  const viewed = await db.editContent('/docs/n1', { command: 'view', view_range: [2, 3] })
+  assert.equal(viewed.command, 'view')
+  assert.equal(viewed.truncated, true)
+  assert.match(String(viewed.text), /2\ttwo/)
+  assert.equal('value' in viewed, false)
+  const replaced = await db.editContent('/docs/n1', { command: 'str_replace', old_str: 'two', new_str: 'TWO' })
+  assert.equal(replaced.ok, true)
+  assert.equal('value' in replaced, false)
+  assert.equal((await db.content('/docs/n1')).value, 'one\nTWO\nthree\nfour')
+  await db.editContent('/docs/n1', { command: 'replace_lines', start_line: 3, end_line: 4, new_str: 'C\nD' })
+  assert.equal((await db.content('/docs/n1')).value, 'one\nTWO\nC\nD')
+  await db.editContent('/docs/n1', { command: 'insert', insert_line: 1, new_str: 'mid' })
+  assert.equal((await db.content('/docs/n1')).value, 'one\nmid\nTWO\nC\nD')
+  await db.editContent('/docs/n1', { command: 'write', value: 'done' })
+  assert.equal((await db.content('/docs/n1')).value, 'done')
+})
+
 test('list paginates collection records and reports total', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)

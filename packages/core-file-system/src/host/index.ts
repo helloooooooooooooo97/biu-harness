@@ -28,6 +28,15 @@ import {
 import { SavedViewsStore, viewsCollection, type StoredView } from './saved-views.ts'
 import { FacetStore, FILE_SYSTEM_SQLITE } from './facets-store.ts'
 import { facetsCollection } from './facets-collection.ts'
+import {
+  asContentText,
+  insertText,
+  replaceLinesText,
+  resolveContentCommand,
+  strReplaceText,
+  viewContent,
+  writeContentText,
+} from './content-edit.ts'
 import { currentSessionId } from '@biu/host-sessions/scope'
 import { databaseRevealForTool, normalizeCollectionPath } from '../paths.ts'
 
@@ -760,6 +769,42 @@ export class DatabaseService extends Service implements Database {
       value: record[field] ?? null,
     }
   }
+
+  async editContent(path: string, args: Record<string, unknown> = {}) {
+    const command = resolveContentCommand(args)
+    const current = await this.content(path)
+    const text = asContentText(current.value)
+    if (command === 'view') {
+      const viewed = viewContent(text, args.view_range)
+      return {
+        kind: 'content' as const,
+        path: current.path,
+        field: current.field,
+        command,
+        start: viewed.start,
+        end: viewed.end,
+        total: viewed.total,
+        truncated: viewed.truncated,
+        text: viewed.text,
+      }
+    }
+    const next =
+      command === 'write'
+        ? writeContentText(args.value ?? args.new_str)
+        : command === 'str_replace'
+          ? strReplaceText(text, args.old_str, args.new_str)
+          : command === 'insert'
+            ? insertText(text, args.insert_line, args.new_str)
+            : replaceLinesText(text, args.start_line, args.end_line, args.new_str)
+    await this.writeContent(path, next)
+    return {
+      kind: 'content' as const,
+      path: current.path,
+      field: current.field,
+      command,
+      ok: true as const,
+    }
+  }
 }
 
 function parseContent(content: unknown): Record<string, unknown> {
@@ -1009,19 +1054,39 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_content',
-    description: '读写一条记录的正文（content 字段）。list/read 不含正文。path 为 /<表>/<id>，写时传 value。',
+    description: [
+      '读写一条记录的正文。list/read 不含正文。path 为 /<表>/<id>。',
+      'command=view：带行号读一段正文，默认前 80 行，可用 view_range=[start,end]（1-based，end=-1 到末尾）；truncated 表示还有未读行。',
+      'command=str_replace：old_str 必须在正文里唯一，替换为 new_str。',
+      'command=replace_lines：按 1-based 闭区间 start_line..end_line 换成 new_str。',
+      'command=insert：在 insert_line 之后插入 new_str（0 插到第一行前）。',
+      'command=write：整篇覆盖，传 value。写成功只返回 ok，不含全文。',
+    ].join(' '),
     parameters: {
       type: 'object',
       properties: {
         path: { type: 'string' },
-        value: { description: '要写入的正文；不传则只读' },
+        command: {
+          type: 'string',
+          enum: ['view', 'str_replace', 'replace_lines', 'insert', 'write'],
+          description: 'view | str_replace | replace_lines | insert | write。省略时：有 value 则 write，否则 view。',
+        },
+        value: { type: 'string', description: 'write 的全文' },
+        old_str: { type: 'string', description: 'str_replace 要替换的原文，必须唯一' },
+        new_str: { type: 'string', description: 'str_replace / insert / replace_lines 的新文本' },
+        insert_line: { type: 'integer', description: 'insert：在该行之后插入' },
+        start_line: { type: 'integer', description: 'replace_lines 起始行（含）' },
+        end_line: { type: 'integer', description: 'replace_lines 结束行（含）' },
+        view_range: {
+          type: 'array',
+          items: { type: 'integer' },
+          description: 'view 的行区间，如 [11, 20] 或 [80, -1]',
+        },
       },
       required: ['path'],
     },
     execute: (args) =>
-      withInspectorReveal(ctx, String(args.path), () =>
-        args.value !== undefined ? db.writeContent(String(args.path), args.value) : db.content(String(args.path)),
-      ),
+      withInspectorReveal(ctx, String(args.path), () => db.editContent(String(args.path), args)),
   })
 
   const send = async (route: { query: URLSearchParams; send: (status: number, body: unknown) => void }, op: () => unknown) => {
