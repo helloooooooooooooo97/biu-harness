@@ -368,14 +368,17 @@ const CSS = `
 .fsdb-prop-val .fsdb-plain-input:focus{text-overflow:clip}
 .fsdb-prop-val .fsdb-link{display:block;overflow-wrap:normal}
 .fsdb-detail-title-row{display:flex;align-items:flex-start;gap:12px;min-width:0;padding-bottom:16px}
-.fsdb-detail-title-block{display:flex;flex:1;min-width:0;flex-direction:column;gap:10px}
+.fsdb-detail-title-block{display:flex;flex:1;min-width:0;flex-direction:column;gap:6px}
 .fsdb-detail-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
-.fsdb-detail-action{display:inline-flex;align-items:center;gap:6px;height:26px;margin:0;border:0;border-radius:6px;padding:0 10px;background:transparent;color:#F0EFED;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
-.fsdb-detail-action:hover{background:var(--dsw-hover)}
+.fsdb-detail-action{display:inline-flex;align-items:center;gap:4px;height:22px;margin:0;border:0;border-radius:11px;padding:0 9px;background:color-mix(in srgb,var(--dsw-label) 6%,transparent);color:var(--dsw-label-2);font:inherit;font-size:13px;font-weight:600;line-height:1;cursor:pointer}
+.fsdb-detail-action:hover{background:color-mix(in srgb,var(--dsw-label) 10%,transparent);color:var(--dsw-label)}
 .fsdb-detail-action:disabled{opacity:.45;cursor:default}
-.fsdb-detail-action.is-danger{color:var(--dsw-danger)}
+.fsdb-detail-action.is-primary{color:var(--dsw-business);background:color-mix(in srgb,var(--dsw-business) 12%,transparent)}
+.fsdb-detail-action.is-primary:hover{background:color-mix(in srgb,var(--dsw-business) 18%,transparent);color:var(--dsw-business)}
+.fsdb-detail-action.is-danger{color:var(--dsw-danger);background:color-mix(in srgb,var(--dsw-danger) 10%,transparent)}
 .fsdb-detail-action.is-danger:hover{background:color-mix(in srgb,var(--dsw-danger) 16%,transparent)}
-.fsdb-detail-actions .tasks-icon-btn{height:26px;width:auto;padding:0 8px}
+.fsdb-detail-action svg{width:13px;height:13px}
+.fsdb-detail-actions .tasks-icon-btn{height:22px;width:auto;padding:0 8px;border-radius:11px}
 .fsdb-detail-title-icon-wrap{position:relative;flex:none;margin-top:2px}
 .fsdb-detail-title-icon{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;margin:0;border:0;border-radius:10px;padding:0;background:transparent;color:var(--dsw-label-2);font-size:22px;line-height:1;overflow:hidden}
 button.fsdb-detail-title-icon{cursor:pointer}

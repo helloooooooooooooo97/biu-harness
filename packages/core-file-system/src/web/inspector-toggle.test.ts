@@ -148,6 +148,9 @@ test('title cell row tools skip the overflow action menu', () => {
   const css = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8')
   assert.match(css, /\.fsdb-detail-action\{/)
   assert.match(css, /\.fsdb-detail-actions\{/)
+  assert.match(css, /\.fsdb-detail-action\.is-primary\{/)
+  assert.match(browser, /is-primary/)
+  assert.match(browser, /fallback: false/)
 })
 
 test('deletable tables can pick rows and bulk-delete next to refresh', () => {
