@@ -49,11 +49,31 @@ function uniqueImageFiles(files: Array<File | null | undefined>): File[] {
   return out
 }
 
+function uniqueFiles(files: Array<File | null | undefined>): File[] {
+  const seen = new Set<string>()
+  const out: File[] = []
+  for (const file of files) {
+    if (!file) continue
+    const key = `${file.name}\0${file.size}\0${file.lastModified}\0${file.type}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(file)
+  }
+  return out
+}
+
 function collectClipboardImages(clipboard: DataTransfer | null | undefined): File[] {
   if (!clipboard) return []
   const fromFiles = uniqueImageFiles(Array.from(clipboard.files ?? []))
   if (fromFiles.length) return fromFiles
   return uniqueImageFiles(Array.from(clipboard.items ?? []).map((item) => (item.kind === 'file' ? item.getAsFile() : null)))
+}
+
+function collectClipboardFiles(clipboard: DataTransfer | null | undefined): File[] {
+  if (!clipboard) return []
+  const fromFiles = uniqueFiles(Array.from(clipboard.files ?? []))
+  if (fromFiles.length) return fromFiles
+  return uniqueFiles(Array.from(clipboard.items ?? []).map((item) => (item.kind === 'file' ? item.getAsFile() : null)))
 }
 
 function pasteTargetIsField(target: EventTarget | null) {
@@ -146,6 +166,7 @@ export function MediaField({
   const inputRef = useRef<HTMLInputElement>(null)
   const takeFilesRef = useRef<(picked: File[]) => Promise<void>>(async () => {})
   const [error, setError] = useState('')
+  const [dragOver, setDragOver] = useState(false)
   const pageAssets = collectionPath === '/pages'
   const images = kind === 'image' ? asImageSrcList(value) : []
   const imagesRef = useRef(images)
@@ -185,10 +206,10 @@ export function MediaField({
   takeFilesRef.current = takeFiles
 
   useEffect(() => {
-    if (kind !== 'image') return
+    if (kind !== 'image' && kind !== 'attachment') return
     const onPaste = (event: ClipboardEvent) => {
       if (pasteTargetIsField(event.target)) return
-      const next = collectClipboardImages(event.clipboardData)
+      const next = kind === 'image' ? collectClipboardImages(event.clipboardData) : collectClipboardFiles(event.clipboardData)
       if (!next.length) return
       event.preventDefault()
       void takeFilesRef.current(next)
@@ -197,36 +218,31 @@ export function MediaField({
     return () => document.removeEventListener('paste', onPaste, true)
   }, [kind])
 
+  function dropFiles(transfer: DataTransfer | null | undefined) {
+    const next = uniqueFiles(Array.from(transfer?.files ?? []))
+    if (next.length) void takeFiles(next)
+  }
+
   if (kind === 'url') {
     return (
       <LocalText className="fsdb-plain-input" value={href} placeholder="https://" onCommit={(next) => onCommit(next.trim())} />
     )
   }
 
-  const label = kind === 'image' ? '上传' : files.length ? '添加附件' : '选择文件'
+  const label = kind === 'image' ? '上传图片' : '上传附件'
 
   return (
     <div
-      className={`fsdb-media-field${compact ? ' is-compact' : ''}${kind === 'attachment' ? ' is-files' : ''}`}
+      className={`fsdb-media-field${compact ? ' is-compact' : ''} is-stack${kind === 'attachment' ? ' is-files' : ' is-image'}`}
       tabIndex={0}
       title={error || undefined}
-      onPaste={
-        kind === 'image'
-          ? (event) => {
-              const next = collectClipboardImages(event.clipboardData)
-              if (!next.length) return
-              event.preventDefault()
-              void takeFiles(next)
-            }
-          : (event) => event.preventDefault()
-      }
     >
       {kind === 'image' && images.length ? (
         <Image.PreviewGroup>
         <span className="fsdb-media-thumbs">
           {images.map((src, index) => (
             <span key={`${src}-${index}`} className="fsdb-media-thumb">
-              <Image className="fsdb-media-preview" src={src} alt="" width={18} height={18} preview={{ mask: false }} />
+              <Image className="fsdb-media-preview" src={src} alt="" width={56} height={56} preview={{ mask: false }} />
               <button
                 type="button"
                 className="fsdb-media-remove"
@@ -253,13 +269,34 @@ export function MediaField({
       ) : null}
       <button
         type="button"
-        className={`fsdb-media-pick${kind === 'image' ? ' is-upload' : ''}`}
+        className={`fsdb-media-drop${kind === 'attachment' ? ' is-files' : ''}${dragOver ? ' is-over' : ''}`}
         aria-label={label}
-        title={kind === 'image' ? undefined : label}
+        title={label}
         onClick={() => inputRef.current?.click()}
+        onDragEnter={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          setDragOver(true)
+        }}
+        onDragOver={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          event.dataTransfer.dropEffect = 'copy'
+        }}
+        onDragLeave={(event) => {
+          event.preventDefault()
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragOver(false)
+        }}
+        onDrop={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          setDragOver(false)
+          dropFiles(event.dataTransfer)
+        }}
       >
-        {kind === 'image' ? <ArrowUpTrayIcon aria-hidden className="size-[14px]" /> : <PaperClipIcon aria-hidden className="size-[14px]" />}
-        {kind === 'image' ? null : <span className="fsdb-media-pick-label">{label}</span>}
+        <span className="fsdb-media-pick is-upload">
+          <ArrowUpTrayIcon aria-hidden className="size-[16px]" />
+        </span>
       </button>
       <input
         ref={inputRef}
