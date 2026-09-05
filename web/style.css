@@ -2649,7 +2649,7 @@ body {
   padding: 0;
   border: 1px solid var(--dsw-border);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--dsw-bg) 82%, transparent);
+  background: #252525;
   color: #F0EFED;
   cursor: pointer;
   box-shadow: none;
@@ -2661,8 +2661,8 @@ body {
 }
 
 .dock-icon-btn.is-active {
-  border-color: var(--dsw-pick-stroke);
-  background: var(--dsw-pick-fill);
+  border-color: var(--dsw-border);
+  background: #252525;
   color: var(--dsw-sidebar-fg-active);
 }
 

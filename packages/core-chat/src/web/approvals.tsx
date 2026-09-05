@@ -305,7 +305,7 @@ export function ApprovalsRail(props: SlotProps) {
             <BrandCornerMascot
               agents={sessions}
               activeId={sessionId}
-              size={22}
+              size={28}
               menu={(close) => (
                 <ChatSidebar
                   variant="popover"
