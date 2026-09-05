@@ -350,23 +350,16 @@ export const OVERLAY_WIN_MIN_W = 320
 export const OVERLAY_WIN_MIN_H = 280
 export const OVERLAY_WIN_DEFAULT_W = 420
 export const OVERLAY_WIN_DEFAULT_H = 520
-export const OVERLAY_DOCK_CLEARANCE = 80
 const OVERLAY_WIN_GEOM_KEY = 'cordis.overlay.geom'
 const OVERLAY_MARGIN = 12
 
-export const OVERLAY_LAYOUTS: Array<{ id: OverlayLayout; label: string }> = [
-  { id: 'right', label: '右侧居中' },
-  { id: 'bottom', label: '底部居中' },
-]
-
-export function parseOverlayLayout(value: unknown): OverlayLayout {
-  if (value === 'bottom') return 'bottom'
+export function parseOverlayLayout(_value: unknown): OverlayLayout {
   return 'right'
 }
 
 export function defaultOverlayWinGeom(vw = 1280, vh = 800): OverlayWinGeom {
   const w = Math.min(OVERLAY_WIN_DEFAULT_W, Math.max(OVERLAY_WIN_MIN_W, vw - 40))
-  const h = Math.min(OVERLAY_WIN_DEFAULT_H, Math.max(OVERLAY_WIN_MIN_H, vh - OVERLAY_DOCK_CLEARANCE - 24))
+  const h = Math.min(OVERLAY_WIN_DEFAULT_H, Math.max(OVERLAY_WIN_MIN_H, vh - OVERLAY_MARGIN * 2))
   return overlayLayoutGeom('right', { x: 0, y: 0, w, h }, vw, vh)
 }
 
@@ -379,41 +372,25 @@ export function clampOverlayWinGeom(geom: OverlayWinGeom, vw = 1280, vh = 800): 
 }
 
 export function overlayLayoutGeom(
-  layout: OverlayLayout,
+  _layout: OverlayLayout,
   prev: OverlayWinGeom,
   vw = 1280,
   vh = 800,
 ): OverlayWinGeom {
   const maxW = Math.max(OVERLAY_WIN_MIN_W, vw - OVERLAY_MARGIN * 2)
-  const maxH = Math.max(OVERLAY_WIN_MIN_H, vh - OVERLAY_DOCK_CLEARANCE - OVERLAY_MARGIN)
+  const maxH = Math.max(OVERLAY_WIN_MIN_H, vh - OVERLAY_MARGIN * 2)
   const w = Math.min(Math.max(prev.w, OVERLAY_WIN_MIN_W), maxW)
   const h = Math.min(Math.max(prev.h, OVERLAY_WIN_MIN_H), maxH)
-  if (layout === 'bottom') {
-    return clampOverlayWinGeom(
-      {
-        w,
-        h,
-        x: Math.round((vw - w) / 2),
-        y: vh - OVERLAY_DOCK_CLEARANCE - h,
-      },
-      vw,
-      vh,
-    )
-  }
-  if (layout === 'right') {
-    const avail = vh - OVERLAY_DOCK_CLEARANCE
-    return clampOverlayWinGeom(
-      {
-        w,
-        h,
-        x: vw - w - OVERLAY_MARGIN,
-        y: Math.round(Math.max(OVERLAY_MARGIN, (avail - h) / 2)),
-      },
-      vw,
-      vh,
-    )
-  }
-  return clampOverlayWinGeom(prev, vw, vh)
+  return clampOverlayWinGeom(
+    {
+      w,
+      h,
+      x: vw - w - OVERLAY_MARGIN,
+      y: Math.round(Math.max(OVERLAY_MARGIN, (vh - h) / 2)),
+    },
+    vw,
+    vh,
+  )
 }
 
 export function readOverlayWinState(): OverlayWinState {

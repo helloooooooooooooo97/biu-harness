@@ -500,14 +500,44 @@ body {
   transform: translateX(-50%);
 }
 
-.chat-view-session-title {
+.chat-view-session-title-pop {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 180px;
+  transform: translateX(-50%);
+  padding: 6px;
+  border: 1px solid var(--dsw-border);
+  border-radius: 10px;
+  background: #202020;
+  box-shadow: 0 1px 2px rgba(15, 15, 15, 0.04), 0 10px 32px rgba(0, 0, 0, 0.28);
+  pointer-events: auto;
+}
+
+.chat-view-session-title-input {
+  box-sizing: border-box;
   width: 100%;
+  border: 0;
+  border-radius: 6px;
+  background: var(--dsw-input);
+  padding: 6px 8px;
+  color: #F0EFED;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.chat-view-session-title {
+  width: auto;
+  max-width: 100%;
   min-width: 80px;
   border: 0;
   border-radius: 6px;
   background: transparent;
   padding: 4px 10px;
   color: #F0EFED;
+  font: inherit;
   font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
@@ -517,6 +547,7 @@ body {
   overflow: hidden;
   outline: none;
   pointer-events: auto;
+  cursor: pointer;
 }
 
 ::placeholder {
@@ -1412,7 +1443,7 @@ body {
 }
 
 .chat-overlay-panel .chat-view-session-title-wrap {
-  position: static;
+  position: relative;
   left: auto;
   max-width: min(220px, 100%);
   transform: none;
@@ -1440,6 +1471,12 @@ body {
   position: static;
 }
 
+.chat-overlay-panel .chat-pane {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
 .chat-overlay-panel .chat-overlay-thread {
   padding-block: 0;
 }
@@ -1450,7 +1487,7 @@ body {
   bottom: 0;
   z-index: 20;
   flex: none;
-  height: 0;
+  height: auto;
   overflow: visible;
   padding: 0;
   background: transparent;
@@ -4829,10 +4866,19 @@ body {
 
 .composer-editor {
   grid-area: editor;
+  position: relative;
   min-width: 0;
   max-height: calc(8 * 28px);
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+.composer-caret-mascot {
+  position: absolute;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  pointer-events: auto;
 }
 
 .composer-tiptap {

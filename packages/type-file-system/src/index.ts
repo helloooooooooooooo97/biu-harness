@@ -45,9 +45,10 @@ export function asHttpHref(value: unknown): string {
 
 const SAME_ORIGIN_IMAGE = /^\/(?!\/)[^\s]*\.(?:png|jpe?g|gif|webp|svg|avif|bmp)(?:[?#][^\s]*)?$/i
 
-/** 图片地址：http(s)、data:image，或同源相对路径（如 /page-covers/red.svg）。 */
+/** 图片地址：http(s)、data:image，或同源相对路径（如 /page-covers/red.svg）。数组取第一张。 */
 export function asImageSrc(value: unknown): string {
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
+  if (Array.isArray(value)) return asImageSrc(value[0])
+  if (value && typeof value === 'object') {
     return asImageSrc(hrefFromRecord(value as Record<string, unknown>))
   }
   const text = String(value ?? '').trim()
@@ -55,6 +56,21 @@ export function asImageSrc(value: unknown): string {
   if (/^data:image\//i.test(text)) return text
   if (SAME_ORIGIN_IMAGE.test(text)) return text
   return ''
+}
+
+/** 图片字段可存多张；单字符串仍当一张。非法地址丢掉。 */
+export function asImageSrcList(value: unknown): string[] {
+  if (value == null || value === '') return []
+  if (Array.isArray(value)) {
+    const out: string[] = []
+    for (const item of value) {
+      const src = asImageSrc(item)
+      if (src) out.push(src)
+    }
+    return out
+  }
+  const src = asImageSrc(value)
+  return src ? [src] : []
 }
 
 function asLocalHref(text: string) {

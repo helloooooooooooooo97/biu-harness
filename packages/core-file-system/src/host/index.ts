@@ -5,6 +5,7 @@ import {
   asAttachment,
   asHttpHref,
   asImageSrc,
+  asImageSrcList,
   isFacetFieldType,
   normalizeSchemaValue,
   schemaSearchHaystack,
@@ -198,9 +199,9 @@ function coerce(field: FieldSpec, value: unknown) {
   }
   if (kind === 'image') {
     if (value == null || value === '') return ''
-    const src = asImageSrc(value)
-    if (!src) throw new Error('expected image')
-    return typeof value === 'string' ? String(value).trim() : src
+    const list = asImageSrcList(value)
+    if (!list.length) throw new Error('expected image')
+    return list.length === 1 ? list[0] : list
   }
   if (kind === 'attachment') {
     if (value == null || value === '') return ''

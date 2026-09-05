@@ -102,7 +102,7 @@ const AgentMainPanels = memo(function AgentMainPanels({
   showCenter,
 }: {
   renderSlot: SlotProps['renderSlot']
-  header: ReactNode | ((layoutTools: ReactNode) => ReactNode)
+  header: ReactNode
   showCenter: boolean
 }) {
   const overlayOpen = useSyncExternalStore(subscribeChatOverlay, getChatOverlay, () => false)
@@ -666,7 +666,7 @@ function Shell(props: SlotProps) {
     </header>
   )
 
-  const overlayHeader = (layoutTools: ReactNode) => (
+  const overlayHeader = (
     <header className="chat-view-header" data-biu-ignore>
       <div className="chat-view-header-left">
         {project ? (
@@ -676,9 +676,8 @@ function Shell(props: SlotProps) {
           </div>
         ) : null}
       </div>
-      <ChatSessionTitle useSessionView={useSessionView} sessionView={sessionView} />
+      <ChatSessionTitle useSessionView={useSessionView} sessionView={sessionView} showMascot={false} />
       <div className="chat-view-header-right">
-        {layoutTools}
         <button
           type="button"
           className="chat-view-header-expand"

@@ -121,7 +121,7 @@ test('selected table cells use Super Tag blue when writable and gray when locked
   assert.match(css, /\.fsdb-page \.tasks-table td \.db-cell-select-trigger,.fsdb-page \.tasks-table td \.fsdb-cellselect-trigger\{[^}]*width:100%/)
   assert.match(css, /\.fsdb-page \.tasks-table td \.db-cell-select-trigger,.fsdb-page \.tasks-table td \.fsdb-cellselect-trigger\{[^}]*max-width:none/)
   assert.match(css, /\.fsdb-page \.tasks-table td \.db-cell-select-trigger,.fsdb-page \.tasks-table td \.fsdb-cellselect-trigger\{[^}]*background:transparent/)
-  assert.match(css, /\.fsdb-page \.tasks-table td \.biu-tag\{[^}]*background:transparent/)
+  assert.doesNotMatch(css, /\.fsdb-page \.tasks-table td \.biu-tag\{[^}]*background:transparent/)
   assert.match(css, /\.fsdb-media-field\{[^}]*flex-direction:row/)
   assert.match(css, /\.fsdb-media-field\{[^}]*flex-wrap:nowrap/)
   assert.match(css, /\.fsdb-media-field\{[^}]*height:22px/)

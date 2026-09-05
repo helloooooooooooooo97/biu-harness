@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { asImageSrc, actionVisibleToUser, emptySchemaValue, hasCollectionDeleteQuery, isReservedSchemaFieldKey, isReservedSchemaFieldLabel, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, schemaSearchHaystack, withBuiltinFields } from './index.ts'
+import { asImageSrc, asImageSrcList, actionVisibleToUser, emptySchemaValue, hasCollectionDeleteQuery, isReservedSchemaFieldKey, isReservedSchemaFieldLabel, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, schemaSearchHaystack, withBuiltinFields } from './index.ts'
 
 test('asImageSrc keeps http, data:image, and same-origin image paths', () => {
   assert.equal(asImageSrc('https://example.com/a.png'), 'https://example.com/a.png')
@@ -8,6 +8,16 @@ test('asImageSrc keeps http, data:image, and same-origin image paths', () => {
   assert.equal(asImageSrc('/page-covers/red.png'), '/page-covers/red.png')
   assert.equal(asImageSrc('/covers/photo.webp?v=1'), '/covers/photo.webp?v=1')
   assert.equal(asImageSrc({ src: '/page-covers/blue.png' }), '/page-covers/blue.png')
+})
+
+test('asImageSrcList keeps multiple images and asImageSrc takes the first', () => {
+  assert.deepEqual(asImageSrcList(['/page-covers/red.png', 'https://example.com/a.png']), [
+    '/page-covers/red.png',
+    'https://example.com/a.png',
+  ])
+  assert.equal(asImageSrc(['/page-covers/red.png', 'https://example.com/a.png']), '/page-covers/red.png')
+  assert.deepEqual(asImageSrcList('/page-covers/blue.png'), ['/page-covers/blue.png'])
+  assert.deepEqual(asImageSrcList(['javascript:alert(1)', '/page-covers/red.png']), ['/page-covers/red.png'])
 })
 
 test('asImageSrc rejects scripts and non-image paths', () => {

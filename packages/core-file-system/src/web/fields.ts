@@ -1,5 +1,5 @@
 import type { CollectionSchema, CollectionSchemaPack, DbRecord, FieldSpec, FieldType, SchemaFieldValue } from '@biu/type-file-system'
-import { asAttachment, asHttpHref, asImageSrc, BUILTIN_FIELD_KEYS, isFacetFieldType, normalizeSchemaValue } from '@biu/type-file-system'
+import { asAttachment, asHttpHref, asImageSrc, asImageSrcList, BUILTIN_FIELD_KEYS, isFacetFieldType, normalizeSchemaValue } from '@biu/type-file-system'
 
 export const BUILTIN_VIEW_MODES = ['table'] as const
 export type BuiltinViewMode = (typeof BUILTIN_VIEW_MODES)[number]
@@ -222,8 +222,16 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
     })
   }
   if (kind === 'boolean') return value === true || value === 'true' ? '是' : '否'
+  if (kind === 'number') {
+    const n = Number(value)
+    if (!Number.isFinite(n) || n === 0) return ''
+    return String(n)
+  }
   if (kind === 'url') return asHttpHref(value) || ''
-  if (kind === 'image') return asImageSrc(value) || ''
+  if (kind === 'image') {
+    const list = asImageSrcList(value)
+    return list.length ? list.join(', ') : ''
+  }
   if (kind === 'attachment') {
     const file = asAttachment(value)
     return file ? file.name : ''

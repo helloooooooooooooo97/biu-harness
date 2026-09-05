@@ -1,11 +1,12 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent } from 'react'
 import { ArrowUpIcon, ChevronDownIcon, PlusIcon, Cog6ToothIcon } from '@heroicons/react/16/solid'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { EditorContent, useEditor } from '@tiptap/react'
+import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import Placeholder from '@tiptap/extension-placeholder'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import { pickKey, usePickState, type PickService } from '@biu/cap-pick/web'
+import { BrandCornerMascot } from '@biu/public-mascot'
 import { composerDocExtensions } from './composer-kit.ts'
 import {
   collectPickKeys,
@@ -159,6 +160,63 @@ function matchModelOption(catalog: ModelOption[], provider: string, model: strin
       endpointId: provider || 'deepseek',
       model,
     }
+  )
+}
+
+function OverlayCaretMascot({
+  editor,
+  formRef,
+  useSessionView,
+  sessionView,
+}: {
+  editor: Editor | null
+  formRef: { current: HTMLFormElement | null }
+  useSessionView: ReturnType<typeof bindSessionView>
+  sessionView: SessionViewService
+}) {
+  const sessionId = useSessionView((state) => state.sessionId)
+  const sessions = useSessionView((state) => state.sessions)
+  const [inOverlay, setInOverlay] = useState(false)
+  const [place, setPlace] = useState<{ left: number; top: number } | null>(null)
+
+  useEffect(() => {
+    setInOverlay(Boolean(formRef.current?.closest('.chat-overlay-panel')))
+  }, [formRef])
+
+  useEffect(() => {
+    if (!inOverlay || !editor) return
+    const update = () => {
+      const editorDom = formRef.current?.querySelector('.composer-editor') as HTMLElement | null
+      if (!editorDom) return
+      try {
+        const coords = editor.view.coordsAtPos(editor.state.selection.head)
+        const rect = editorDom.getBoundingClientRect()
+        setPlace({ left: coords.left - rect.left + 2, top: coords.top - rect.top })
+      } catch {
+        /* caret not mapped yet */
+      }
+    }
+    update()
+    editor.on('transaction', update)
+    editor.on('selectionUpdate', update)
+    return () => {
+      editor.off('transaction', update)
+      editor.off('selectionUpdate', update)
+    }
+  }, [editor, formRef, inOverlay])
+
+  if (!inOverlay || !sessionId || !place) return null
+  return (
+    <div className="composer-caret-mascot" style={{ left: place.left, top: place.top }} data-testid="overlay-caret-mascot">
+      <BrandCornerMascot
+        agents={sessions}
+        activeId={sessionId}
+        size={18}
+        onSelect={(id) => {
+          void sessionView.load(id)
+        }}
+      />
+    </div>
   )
 }
 
@@ -828,7 +886,10 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           <PlusIcon className="size-4" />
         </button>
 
-        <EditorContent editor={editor} className="composer-editor" />
+        <div className="composer-editor">
+          <EditorContent editor={editor} />
+          <OverlayCaretMascot editor={editor} formRef={formRef} useSessionView={useSessionView} sessionView={sessionView} />
+        </div>
 
         <div className="composer-pill-right">
           <div className="composer-model">

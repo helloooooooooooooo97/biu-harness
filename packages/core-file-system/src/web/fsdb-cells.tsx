@@ -23,7 +23,7 @@ import {
 } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import type { CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
-import { actionVisibleToUser, asAttachment, asHttpHref, asImageSrc } from '@biu/type-file-system'
+import { actionVisibleToUser, asAttachment, asHttpHref, asImageSrc, asImageSrcList } from '@biu/type-file-system'
 import type { CollectionViewType } from '@biu/type-file-system/ui'
 import {
   asStringList,
@@ -65,7 +65,11 @@ export function fieldDraftValue(field: FieldSpec, value: unknown): string {
   if (kind === 'multi-select') return asStringList(value).join(', ')
   if (kind === 'boolean') return value === true || value === 'true' ? 'true' : 'false'
   if (kind === 'url') return asHttpHref(value)
-  if (kind === 'image') return asImageSrc(value)
+  if (kind === 'image') {
+    const list = asImageSrcList(value)
+    if (list.length <= 1) return list[0] ?? ''
+    return JSON.stringify(list)
+  }
   if (kind === 'attachment') return asAttachment(value)?.href ?? ''
   if (kind === 'file') {
     if (value == null || value === '') return ''
@@ -214,10 +218,10 @@ export function parseFieldValue(field: FieldSpec, raw: string): unknown {
 }
 
 function previewImageSrc(kind: FieldType | undefined, value: unknown): string {
-  if (kind === 'attachment' || kind === 'url') return ''
+  if (kind === 'attachment' || kind === 'url' || kind === 'image') return ''
   const src = asImageSrc(value)
   if (!src) return ''
-  if (kind === 'image' || !kind) return src
+  if (!kind) return src
   if (/^data:image\//i.test(src)) return src
   if (/\.(?:png|jpe?g|gif|webp|svg|avif|bmp)(?:[?#]|$)/i.test(src)) return src
   return ''
@@ -233,6 +237,27 @@ export function FilePreview({
   kind?: FieldType
 }) {
   if (value == null || value === '') return null
+  if (kind === 'image') {
+    const list = asImageSrcList(value)
+    if (!list.length) return null
+    if (compact) {
+      return (
+        <span className="fsdb-thumbs">
+          {list.slice(0, 4).map((src, index) => (
+            <ImageThumb key={`${src}-${index}`} src={src} />
+          ))}
+          {list.length > 4 ? <span className="fsdb-meta">+{list.length - 4}</span> : null}
+        </span>
+      )
+    }
+    return (
+      <div className="fsdb-fileview-imgs">
+        {list.map((src, index) => (
+          <img key={`${src}-${index}`} className="fsdb-fileview-img" src={src} alt="" decoding="async" />
+        ))}
+      </div>
+    )
+  }
   const src = previewImageSrc(kind, value)
   if (src) {
     if (compact) return <ImageThumb src={src} />
@@ -255,6 +280,7 @@ export function FilePreview({
       </a>
     )
   }
+  if (kind === 'url' || kind === 'attachment' || kind === 'image') return null
   const text = typeof value === 'string' ? value : JSON.stringify(value, null, compact ? 0 : 2)
   if (compact) return <span className="fsdb-meta">{text.length > 80 ? `${text.slice(0, 80)}…` : text}</span>
   return text ? <pre className="fsdb-fileview-pre">{text}</pre> : null

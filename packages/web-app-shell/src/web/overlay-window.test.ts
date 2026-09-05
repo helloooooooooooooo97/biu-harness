@@ -78,34 +78,27 @@ test('overlay opens docked to the right and vertically centered', () => {
   const height = Number.parseFloat(panel.style.height)
   assert.ok(top > 40)
   assert.ok(top + height < 800)
-  const toggle = document.querySelector('[data-testid="chat-overlay-layout-toggle"]')
-  assert.ok(toggle)
-  act(() => {
-    toggle!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-  })
-  assert.ok(document.querySelector('[data-testid="chat-overlay-layout-bottom"]'))
-  assert.equal(document.querySelector('[data-testid="chat-overlay-layout-free"]'), null)
+  assert.equal(document.querySelector('[data-testid="chat-overlay-layout-toggle"]'), null)
+  assert.equal(document.querySelector('[data-testid="chat-overlay-layout"]'), null)
 })
 
-test('layout button sits in the header next to close', () => {
+test('overlay header close button has no layout control beside it', () => {
   host = document.createElement('div')
   document.body.append(host)
   root = createRoot(host)
   act(() => {
     root!.render(
       createElement(OverlayChatWindow, {
-        header: (layoutTools: unknown) =>
+        header: createElement(
+          'header',
+          { className: 'chat-view-header' },
+          createElement('div', { className: 'chat-view-header-left' }, 'project'),
           createElement(
-            'header',
-            { className: 'chat-view-header' },
-            createElement('div', { className: 'chat-view-header-left' }, 'project'),
-            createElement(
-              'div',
-              { className: 'chat-view-header-right' },
-              layoutTools as never,
-              createElement('button', { type: 'button', 'data-testid': 'chat-overlay-close' }, 'x'),
-            ),
+            'div',
+            { className: 'chat-view-header-right' },
+            createElement('button', { type: 'button', 'data-testid': 'chat-overlay-close' }, 'x'),
           ),
+        ),
         thread: createElement('div'),
         dock: createElement('div'),
       }),
@@ -113,9 +106,6 @@ test('layout button sits in the header next to close', () => {
   })
   const right = document.querySelector('.chat-view-header-right')
   assert.ok(right)
-  const layout = right.querySelector('[data-testid="chat-overlay-layout-toggle"]')
-  const close = right.querySelector('[data-testid="chat-overlay-close"]')
-  assert.ok(layout)
-  assert.ok(close)
-  assert.equal(layout!.parentElement?.parentElement, close!.parentElement)
+  assert.equal(right.querySelector('[data-testid="chat-overlay-layout-toggle"]'), null)
+  assert.ok(right.querySelector('[data-testid="chat-overlay-close"]'))
 })

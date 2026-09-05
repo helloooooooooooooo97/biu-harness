@@ -34,7 +34,6 @@ import {
   readOverlayWinState,
   writeOverlayWinState,
   OVERLAY_CHAT_HEIGHT_MIN,
-  OVERLAY_DOCK_CLEARANCE,
   OVERLAY_WIN_MIN_H,
   OVERLAY_WIN_MIN_W,
   inspectorTabFromEvent,
@@ -254,29 +253,29 @@ test('overlay window geom clamps and docks to the right, vertically centered', (
   assert.ok(def.w >= OVERLAY_WIN_MIN_W)
   assert.ok(def.h >= OVERLAY_WIN_MIN_H)
   assert.equal(def.x, 1280 - def.w - 12)
-  assert.equal(def.y, Math.round((800 - OVERLAY_DOCK_CLEARANCE - def.h) / 2))
-  assert.ok(def.y + def.h <= 800 - OVERLAY_DOCK_CLEARANCE)
+  assert.equal(def.y, Math.round((800 - def.h) / 2))
+  assert.ok(def.y + def.h <= 800)
   const tiny = clampOverlayWinGeom({ x: -400, y: -20, w: 10, h: 10 }, 1280, 800)
   assert.equal(tiny.w, OVERLAY_WIN_MIN_W)
   assert.equal(tiny.h, OVERLAY_WIN_MIN_H)
 })
 
-test('layout presets pin the overlay to the viewport', () => {
+test('layout always pins the overlay to the right of the viewport', () => {
   const prev = { x: 100, y: 80, w: 420, h: 400 }
   const bottom = overlayLayoutGeom('bottom', prev, 1280, 800)
-  assert.equal(bottom.x, Math.round((1280 - 420) / 2))
+  assert.equal(bottom.x, 1280 - 420 - 12)
   assert.equal(bottom.w, 420)
-  assert.equal(bottom.y + bottom.h, 800 - OVERLAY_DOCK_CLEARANCE)
+  assert.equal(bottom.y, Math.round((800 - 400) / 2))
   const wide = overlayLayoutGeom('bottom', { ...prev, w: 640 }, 1600, 900)
-  assert.equal(wide.x, Math.round((1600 - 640) / 2))
+  assert.equal(wide.x, 1600 - 640 - 12)
   assert.equal(wide.w, 640)
   const right = overlayLayoutGeom('right', prev, 1280, 800)
   assert.equal(right.x, 1280 - 420 - 12)
   assert.equal(right.h, 400)
-  assert.equal(right.y, Math.round((800 - OVERLAY_DOCK_CLEARANCE - 400) / 2))
+  assert.equal(right.y, Math.round((800 - 400) / 2))
   const tall = overlayLayoutGeom('right', { ...prev, h: 560 }, 1280, 900)
   assert.equal(tall.h, 560)
-  assert.equal(tall.y, Math.round((900 - OVERLAY_DOCK_CLEARANCE - 560) / 2))
+  assert.equal(tall.y, Math.round((900 - 560) / 2))
 })
 
 test('saved layout recomputes when the viewport changes', () => {
@@ -290,19 +289,20 @@ test('saved layout recomputes when the viewport changes', () => {
   assert.equal(state.layout, 'right')
   assert.equal(state.x, 1600 - state.w - 12)
   assert.equal(state.h, 400)
-  assert.equal(state.y, Math.round((900 - OVERLAY_DOCK_CLEARANCE - 400) / 2))
+  assert.equal(state.y, Math.round((900 - 400) / 2))
   writeOverlayWinState({ x: 0, y: 0, w: 500, h: 360, layout: 'bottom' })
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1400 })
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: 820 })
   const bottom = readOverlayWinState()
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: original.innerWidth })
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: original.innerHeight })
-  assert.equal(bottom.layout, 'bottom')
+  assert.equal(bottom.layout, 'right')
   assert.equal(bottom.w, 500)
-  assert.equal(bottom.x, Math.round((1400 - 500) / 2))
+  assert.equal(bottom.x, 1400 - 500 - 12)
   assert.equal(parseOverlayLayout('nope'), 'right')
   assert.equal(parseOverlayLayout('free'), 'right')
   assert.equal(parseOverlayLayout('left'), 'right')
+  assert.equal(parseOverlayLayout('bottom'), 'right')
 })
 
 test('overlay chat height clamps', () => {
