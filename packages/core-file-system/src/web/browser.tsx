@@ -1391,7 +1391,16 @@ export function CollectionBrowser({
           />
         )
       }
-      return <SchemaChips value={row[key]} tags={loadFacets()} />
+      return (
+        <FieldValuePop
+          record={row}
+          fieldKey={key}
+          field={field}
+          value={row[key]}
+          collectionPath={collectionPath}
+          onSubmit={() => {}}
+        />
+      )
     }
     if (kind === 'action') {
       const actionId = fieldActionId(key, field)
@@ -1407,7 +1416,7 @@ export function CollectionBrowser({
     const Custom = chrome?.cells?.[key]
     const fallback = formatField(field, row[key])
     if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={fallback} />
-    if (field.writable && kind !== 'file') {
+    if (kind !== 'file') {
       return (
         <FieldValuePop
           record={row}
@@ -1417,7 +1426,7 @@ export function CollectionBrowser({
           collectionPath={collectionPath}
           options={uniqueValues(items, key, field)}
           records={items}
-          onSubmit={(next) => writeCellValue(row, key, field, next)}
+          onSubmit={field.writable ? (next) => writeCellValue(row, key, field, next) : () => {}}
         />
       )
     }

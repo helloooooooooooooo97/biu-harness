@@ -133,6 +133,12 @@ export function ShellSidePlaces({
         }}
       />
       <SideAction
+        title="设置"
+        testId="chrome-settings"
+        icon={<Cog6ToothIcon {...chromeIcon} />}
+        onClick={onSettings}
+      />
+      <SideAction
         title="会话"
         active={activeId === 'agent'}
         testId="chrome-chat-panel"
@@ -165,12 +171,6 @@ export function ShellSidePlaces({
           </div>
         ) : null}
       </div>
-      <SideAction
-        title="设置"
-        testId="chrome-settings"
-        icon={<Cog6ToothIcon {...chromeIcon} />}
-        onClick={onSettings}
-      />
     </div>
   )
 }
