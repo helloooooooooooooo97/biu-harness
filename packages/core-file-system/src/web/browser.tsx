@@ -1708,7 +1708,8 @@ export function CollectionBrowser({
     }
     const primaryId = actions.find((item) => item.tone !== 'danger')?.id
     return (
-      <div className="fsdb-detail-actions" data-testid="fsdb-detail-actions" data-biu-ignore>
+      <div className="fsdb-detail-actionbar" data-testid="fsdb-detail-actions" data-biu-ignore aria-label="记录操作">
+        <div className="fsdb-detail-actions">
         {actions.map((action) => {
           const run = () => void runAction(row, action)
           if (Action) return <Action key={action.id} action={action} record={row} busy={busy} run={run} />
@@ -1728,6 +1729,7 @@ export function CollectionBrowser({
             </button>
           )
         })}
+        </div>
       </div>
     )
   }
