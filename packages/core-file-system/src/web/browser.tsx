@@ -133,6 +133,18 @@ function recordsFingerprint(rows: Array<DbRecord & { path?: string }>) {
   return JSON.stringify(rows)
 }
 
+function mergeRecord(base: DbRecord, patch: DbRecord): DbRecord {
+  let changed = false
+  const next: DbRecord = { ...base }
+  for (const [key, value] of Object.entries(patch)) {
+    if (!Object.is(next[key], value)) {
+      next[key] = value
+      changed = true
+    }
+  }
+  return changed ? next : base
+}
+
 const LIST_CACHE_MAX = 8
 const listCache = new Map<string, { items: Array<DbRecord & { path?: string }>; total: number; stat: StatResult | null }>()
 
@@ -497,7 +509,7 @@ export function CollectionBrowser({
       const openId = detailIdRef.current
       if (openId) {
         const hit = listed.items.find((item) => item.id === openId)
-        if (hit) setDetailRow((prev) => (prev?.id === openId ? { ...prev, ...hit } : prev))
+        if (hit) setDetailRow((prev) => (prev?.id === openId ? mergeRecord(prev, hit) : prev))
       }
       setTotal(listed.total)
       rememberListCache(dataPath, { items: listed.items, total: listed.total, stat: { ...nextStat, schema: nextSchema } })
@@ -803,13 +815,11 @@ export function CollectionBrowser({
   const tableColSpan = Math.max(columns.length, 1)
 
   const listedSelected = detailId ? items.find((item) => item.id === detailId) : undefined
-  const selected = !detailId
-    ? null
-    : detailRow?.id === detailId
-      ? listedSelected
-        ? { ...detailRow, ...listedSelected }
-        : detailRow
-      : listedSelected ?? null
+  const selected = useMemo(() => {
+    if (!detailId) return null
+    if (detailRow?.id === detailId) return listedSelected ? mergeRecord(detailRow, listedSelected) : detailRow
+    return listedSelected ?? null
+  }, [detailId, detailRow, listedSelected])
   const viewIndex = selected ? indexOnPage(selected.id, items, page, pageSize) : null
   const stepViewRecord = async (delta: -1 | 1) => {
     if (!selected || steppingView.current) return
