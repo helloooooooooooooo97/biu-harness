@@ -62,6 +62,8 @@ test('tag collect table lives on the record board, not as sidebar views', () => 
   assert.match(collect, /<CollectionBrowser/)
   assert.match(browser, /sheet\?: boolean/)
   assert.match(detail, /chrome\?\.Board/)
+  assert.doesNotMatch(detail, /chrome\?\.Board \? null/)
+  assert.match(chrome, /label: '属性'/)
   assert.doesNotMatch(views, /normalized === '\/views'/)
   assert.doesNotMatch(views, /normalized === '\/facets'/)
   const viewsUi = readFileSync(resolve(import.meta.dirname, './views-chrome.ts'), 'utf8')

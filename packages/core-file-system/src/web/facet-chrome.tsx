@@ -11,5 +11,5 @@ function FacetFieldsPane({ record }: { record: { id: string } }) {
 
 export const facetsChrome: CollectionChrome = {
   Board: FacetCollectBoard,
-  panes: [{ id: 'fields', label: '字段', Pane: FacetFieldsPane }],
+  panes: [{ id: 'fields', label: '属性', Pane: FacetFieldsPane }],
 }

@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode, type Dispatch, type SetStateAction
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import type { CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
 import { ChevronDownIcon, ChevronUpIcon, HashtagIcon } from '@heroicons/react/16/solid'
-import { contentFieldKey, formatField, resolveFieldType } from './fields.ts'
+import { contentFieldKey, fieldHasValue, formatField, resolveFieldType } from './fields.ts'
 import { LocalText } from './controls.tsx'
 import { FilePreview } from './fsdb-cells.tsx'
 import { PropertyRow } from './property-row.tsx'
@@ -180,6 +180,31 @@ export function RecordDetail({
                   <h1 className="fsdb-detail-title">{labelOf(selected)}</h1>
                 )}
                 </div>
+                <div className="fsdb-detail-aside">
+                  <div className="fsdb-prop">
+                    <span>
+                      <HashtagIcon aria-hidden className="size-[14px]" />
+                      ID
+                    </span>
+                    <span className="fsdb-detail-id" title={selected.id}>
+                      {selected.id}
+                    </span>
+                  </div>
+                  {Object.entries(schema.fields).map(([key, field]) => {
+                    if (key === 'id' || key === schema.labelField || key === contentFieldKey(schema)) return null
+                    if (chrome?.panes?.some((pane) => pane.id === key)) return null
+                    const kind = resolveFieldType(field)
+                    if (kind === 'facet' && !field.writable) return null
+                    if (field.computed && !fieldHasValue(field, selected[key])) return null
+                    return (
+                      <PropertyRow key={key} field={field} fieldKey={key} stacked={kind === 'facet'}>
+                        <div className={kind === 'facet' ? 'fsdb-prop-val is-schema' : 'fsdb-prop-val'} title={formatField(field, selected[key])}>
+                          {renderCell(selected, key, field)}
+                        </div>
+                      </PropertyRow>
+                    )
+                  })}
+                </div>
                 {contentFieldKey(schema) && schema.fields[contentFieldKey(schema)!] ? (() => {
                   const key = contentFieldKey(schema)!
                   const spec = schema.fields[key]!
@@ -231,32 +256,6 @@ export function RecordDetail({
                     </div>
                   )
                 })() : null}
-                {chrome?.Board ? <chrome.Board record={selected} openRecord={onOpenRecord} /> : null}
-                {chrome?.Board ? null : (
-                <div className="fsdb-detail-aside">
-                  <div className="fsdb-prop">
-                    <span>
-                      <HashtagIcon aria-hidden className="size-[14px]" />
-                      ID
-                    </span>
-                    <span className="fsdb-detail-id" title={selected.id}>
-                      {selected.id}
-                    </span>
-                  </div>
-                  {Object.entries(schema.fields).map(([key, field]) => {
-                    if (key === 'id' || key === schema.labelField || key === contentFieldKey(schema)) return null
-                    const kind = resolveFieldType(field)
-                    if (kind === 'facet' && !field.writable) return null
-                    return (
-                      <PropertyRow key={key} field={field} fieldKey={key} stacked={kind === 'facet'}>
-                        <div className={kind === 'facet' ? 'fsdb-prop-val is-schema' : 'fsdb-prop-val'} title={formatField(field, selected[key])}>
-                          {renderCell(selected, key, field)}
-                        </div>
-                      </PropertyRow>
-                    )
-                  })}
-                </div>
-                )}
                 {chrome?.panes?.length ? (
                   <div className="fsdb-detail-extras">
                     {chrome.panes.map((pane) => {
@@ -274,6 +273,7 @@ export function RecordDetail({
                     })}
                   </div>
                 ) : null}
+                {chrome?.Board ? <chrome.Board record={selected} openRecord={onOpenRecord} /> : null}
               </div>
             </div>
           </div>
