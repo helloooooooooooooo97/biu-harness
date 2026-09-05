@@ -1,5 +1,5 @@
-import type { CollectionSchema, CollectionSchemaPack, DbRecord, FieldSpec, FieldType, SchemaFieldValue } from '@biu/type-file-system'
-import { asAttachment, asHttpHref, asImageSrc, asImageSrcList, BUILTIN_FIELD_KEYS, isFacetFieldType, normalizeSchemaValue } from '@biu/type-file-system'
+import type { AtomicFieldType, CollectionSchema, CollectionSchemaPack, DbRecord, FieldSpec, FieldType, SchemaFieldValue } from '@biu/type-file-system'
+import { asAttachment, asHttpHref, asImageSrc, asImageSrcList, BUILTIN_FIELD_KEYS, isFacetFieldType, isReservedSchemaFieldKey, normalizeSchemaValue } from '@biu/type-file-system'
 
 export const BUILTIN_VIEW_MODES = ['table'] as const
 export type BuiltinViewMode = (typeof BUILTIN_VIEW_MODES)[number]
@@ -187,6 +187,36 @@ export function patchFacetFlatValue(row: DbRecord, columnKey: string, next: unkn
       [parsed.packId]: { ...(current.values[parsed.packId] ?? {}), [parsed.fieldKey]: next },
     },
   }
+}
+
+export function inferPackFieldType(value: unknown): AtomicFieldType {
+  if (typeof value === 'boolean' || value === 'true' || value === 'false') return 'boolean'
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value > 1e11 ? 'datetime' : 'number'
+  }
+  if (Array.isArray(value)) return 'multi-select'
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const rec = value as Record<string, unknown>
+    if (Array.isArray(rec.tags)) return 'facet'
+    if (asAttachment(value)) return 'attachment'
+    if (asImageSrcList(value).length) return 'image'
+  }
+  if (asHttpHref(value) && typeof value === 'string') return 'url'
+  return 'string'
+}
+
+export function orphanPackEntries(fields: Array<{ key: string }>, bag: Record<string, unknown> | undefined) {
+  const known = new Set(fields.map((item) => item.key))
+  const out: Array<{ key: string; value: unknown; type: AtomicFieldType }> = []
+  if (!bag) return out
+  for (const [key, value] of Object.entries(bag)) {
+    if (known.has(key) || isReservedSchemaFieldKey(key)) continue
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key)) continue
+    if (value == null || value === '') continue
+    if (typeof value === 'string' && !value.trim()) continue
+    out.push({ key, value, type: inferPackFieldType(value) })
+  }
+  return out
 }
 
 export function asStringList(value: unknown): string[] {
