@@ -1338,7 +1338,6 @@ export function CollectionBrowser({
             value={fieldDraftValue(field, value)}
             source={value}
             collectionPath={collectionPath}
-            autoOpen
             options={uniqueValues(
               items.map((item) => ({ ...item, [key]: readFacetFlatValue(item, key, source) })),
               key,
@@ -1359,7 +1358,6 @@ export function CollectionBrowser({
             record={row}
             value={row[key]}
             writable
-            autoOpen
             onChange={(next) => void writePatch(row, { [key]: next })}
           />
         )
