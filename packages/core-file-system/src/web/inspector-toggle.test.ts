@@ -241,6 +241,8 @@ test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.match(refs, /fsdb-ref-pick/)
   assert.match(refs, /showRecordInInspector/)
   assert.match(refs, /fsdb-ref-jump/)
+  assert.match(refs, /\/api\/db\/read/)
+  assert.doesNotMatch(refs, /fsdb-ref-id/)
   assert.doesNotMatch(refs, /function RefFieldPop/)
   assert.doesNotMatch(refs, /<CellPop/)
   assert.doesNotMatch(refs, /TagChip/)

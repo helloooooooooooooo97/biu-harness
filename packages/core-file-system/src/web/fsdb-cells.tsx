@@ -37,7 +37,6 @@ import {
 import { LocalText, TokenMultiSelect } from './controls.tsx'
 import { CellDateTime } from '@biu/database-ui'
 import { AttachmentFile, MediaField, UrlHref } from './cell-media.tsx'
-import { crumbRecordLabel } from './sidebar-preview.ts'
 import { PersonFace, PersonPickPanel } from './person-cell.tsx'
 import { RecordLinkChips } from './record-link-cell.tsx'
 
@@ -309,6 +308,7 @@ export function DefaultCell({
   fieldKey,
   records,
   collectionPath,
+  labelField,
   onRun,
   onChange,
 }: {
@@ -317,6 +317,7 @@ export function DefaultCell({
   fieldKey?: string
   records?: DbRecord[]
   collectionPath?: string
+  labelField?: string
   onRun?: () => void
   onChange?: (next: unknown) => void
 }) {
@@ -331,7 +332,8 @@ export function DefaultCell({
         fieldKey={fieldKey}
         value={value}
         collectionPath={collectionPath}
-        peers={records?.map((row) => ({ id: row.id, label: crumbRecordLabel(row) }))}
+        records={records}
+        labelField={labelField}
       />
     )
   }

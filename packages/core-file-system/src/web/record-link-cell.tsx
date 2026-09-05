@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowPathIcon, ArrowTopRightOnSquareIcon, CheckIcon } from '@heroicons/react/16/solid'
 import { ensureDbSearchStyle } from '@biu/database-ui'
 import type { DbRecord, FieldSpec } from '@biu/type-file-system'
-import { listCollection } from './db-client.ts'
+import { listCollection, readJson } from './db-client.ts'
 import { showRecordInInspector } from './inspector-db-route.ts'
 import { crumbRecordLabel } from './sidebar-preview.ts'
 import { isSingleRefField, recordLinkIds } from './fields.ts'
@@ -31,44 +31,98 @@ async function loadTablePeers(path: string, labelField?: string): Promise<Record
   return asPeers(rows, labelField ?? first.schema?.labelField)
 }
 
+async function readPeer(collectionPath: string, id: string, labelField?: string): Promise<RecordLinkPeer | null> {
+  try {
+    const body = await readJson<{ value?: DbRecord }>(
+      `/api/db/read?path=${encodeURIComponent(`${collectionPath}/${id}`)}`,
+    )
+    const row = body.value
+    if (!row?.id) return null
+    return { id: row.id, label: labelOf(row, labelField) }
+  } catch {
+    return null
+  }
+}
+
 function jumpRecord(collectionPath: string | undefined, id: string) {
   if (!collectionPath || !id) return
   showRecordInInspector(collectionPath, id)
+}
+
+function useResolvedPeerLabels(
+  ids: string[],
+  seed: RecordLinkPeer[] | undefined,
+  collectionPath: string | undefined,
+  labelField?: string,
+) {
+  const seedMap = useMemo(() => new Map((seed ?? []).map((item) => [item.id, item.label])), [seed])
+  const idKey = ids.join('\0')
+  const [extra, setExtra] = useState<Record<string, string>>({})
+  useEffect(() => {
+    const missing = ids.filter((id) => !seedMap.has(id))
+    if (!collectionPath || !missing.length) {
+      setExtra({})
+      return
+    }
+    let cancelled = false
+    void Promise.all(missing.map((id) => readPeer(collectionPath, id, labelField))).then((rows) => {
+      if (cancelled) return
+      const next: Record<string, string> = {}
+      missing.forEach((id, index) => {
+        const peer = rows[index]
+        next[id] = peer?.label || ''
+      })
+      setExtra(next)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [collectionPath, idKey, labelField, seedMap])
+  return (id: string) => {
+    const labeled = seedMap.get(id) || extra[id]
+    return labeled && labeled.trim() ? labeled : ''
+  }
 }
 
 export function RecordLinkChips({
   field,
   fieldKey,
   value,
-  peers,
+  records,
   collectionPath,
+  labelField,
 }: {
   field?: FieldSpec
   fieldKey: string
   value: unknown
-  peers?: RecordLinkPeer[]
+  records?: DbRecord[]
   collectionPath?: string
+  labelField?: string
 }) {
   const ids = recordLinkIds(field, value, fieldKey)
+  const seed = useMemo(() => asPeers(records ?? [], labelField), [labelField, records])
+  const labelOfId = useResolvedPeerLabels(ids, seed, collectionPath, labelField)
   if (!ids.length) return null
-  const byId = new Map((peers ?? []).map((item) => [item.id, item.label]))
   return (
     <span className="fsdb-ref-chips">
-      {ids.map((id) => (
-        <button
-          key={id}
-          type="button"
-          className="fsdb-ref-chip"
-          title={`在右侧打开 ${byId.get(id) ?? id}`}
-          onClick={(event) => {
-            event.stopPropagation()
-            jumpRecord(collectionPath, id)
-          }}
-        >
-          <span className="fsdb-ref-chip-title">{byId.get(id) ?? id}</span>
-          <ArrowTopRightOnSquareIcon className="size-3 shrink-0 opacity-70" aria-hidden />
-        </button>
-      ))}
+      {ids.map((id) => {
+        const label = labelOfId(id)
+        return (
+          <button
+            key={id}
+            type="button"
+            className="fsdb-ref-chip"
+            title={label ? `在右侧打开 ${label}` : '在右侧打开'}
+            onClick={(event) => {
+              event.stopPropagation()
+              jumpRecord(collectionPath, id)
+            }}
+          >
+            <span className="fsdb-ref-chip-title">{label || '…'}</span>
+            <ArrowTopRightOnSquareIcon className="size-3 shrink-0 opacity-70" aria-hidden />
+          </button>
+        )
+      })}
     </span>
   )
 }
@@ -122,6 +176,32 @@ export function RecordPickPanel({
   }, [collectionPath, labelField])
 
   const byId = useMemo(() => new Map(peers.map((item) => [item.id, item.label])), [peers])
+  const selectedKey = selected.join('\0')
+  const [extra, setExtra] = useState<Record<string, string>>({})
+  useEffect(() => {
+    const missing = selected.filter((id) => !byId.has(id))
+    if (!missing.length) {
+      setExtra({})
+      return
+    }
+    let cancelled = false
+    void Promise.all(missing.map((id) => readPeer(collectionPath, id, labelField))).then((rows) => {
+      if (cancelled) return
+      const next: Record<string, string> = {}
+      missing.forEach((id, index) => {
+        const peer = rows[index]
+        next[id] = peer?.label || ''
+      })
+      setExtra(next)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [byId, collectionPath, labelField, selectedKey])
+  const titleOf = (id: string) => {
+    const labeled = byId.get(id) || extra[id]
+    return labeled && labeled.trim() ? labeled : ''
+  }
   const q = query.trim().toLowerCase()
   const available = peers.filter(
     (item) =>
@@ -157,15 +237,14 @@ export function RecordPickPanel({
         <div className="fsdb-ref-picked">
           {selected.map((id) => (
             <div key={id} className="fsdb-ref-picked-row">
-              <button type="button" className="fsdb-ref-jump" onClick={() => jump(id)} title="在右侧打开">
-                <span className="fsdb-ref-title">{byId.get(id) ?? id}</span>
-                <span className="fsdb-ref-id">{id.slice(0, 8)}</span>
+              <button type="button" className="fsdb-ref-jump" onClick={() => jump(id)} title={titleOf(id) || '在右侧打开'}>
+                <span className="fsdb-ref-title">{titleOf(id) || '…'}</span>
                 <ArrowTopRightOnSquareIcon className="size-3 shrink-0 opacity-70" aria-hidden />
               </button>
               <button
                 type="button"
                 className="fsdb-ref-x"
-                aria-label={`取消引用 ${byId.get(id) ?? id}`}
+                aria-label={`取消引用 ${titleOf(id) || '记录'}`}
                 onClick={() => commit(selected.filter((item) => item !== id))}
               >
                 ×
@@ -202,9 +281,8 @@ export function RecordPickPanel({
               >
                 {on ? <CheckIcon className="size-3" aria-hidden /> : null}
               </button>
-              <button type="button" className="fsdb-ref-jump" onClick={() => jump(item.id)} title="在右侧打开">
+              <button type="button" className="fsdb-ref-jump" onClick={() => jump(item.id)} title={item.label}>
                 <span className="fsdb-ref-title">{item.label}</span>
-                <span className="fsdb-ref-id">{item.id.slice(0, 8)}</span>
                 <ArrowTopRightOnSquareIcon className="size-3 shrink-0 opacity-70" aria-hidden />
               </button>
             </div>

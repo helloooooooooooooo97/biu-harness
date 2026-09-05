@@ -160,6 +160,8 @@ export function CellPopDraft({
   initial,
   options,
   collectionPath,
+  seed,
+  labelField,
   onClose,
   onSubmit,
 }: {
@@ -169,6 +171,8 @@ export function CellPopDraft({
   initial: unknown
   options: string[]
   collectionPath: string
+  seed?: DbRecord[]
+  labelField?: string
   onClose: () => void
   onSubmit: (raw: unknown) => void
 }) {
@@ -213,6 +217,8 @@ export function CellPopDraft({
         value={raw}
         collectionPath={collectionPath}
         excludeId={record.id}
+        labelField={labelField}
+        seed={seed}
         onChange={(next) => put(next)}
         onPicked={isSingleRefField(field, fieldKey) ? onClose : undefined}
         onJump={onClose}

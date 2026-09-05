@@ -1334,6 +1334,7 @@ export function CollectionBrowser({
             fieldKey={key}
             records={items}
             collectionPath={collectionPath}
+            labelField={schema?.labelField}
             value={readFacetFlatValue(row, key, facetSourceKey(schema))}
             onChange={
               field.writable && (kind === 'attachment' || kind === 'datetime')
@@ -1351,6 +1352,7 @@ export function CollectionBrowser({
           fieldKey={key}
           records={items}
           collectionPath={collectionPath}
+          labelField={schema?.labelField}
           value={row[key]}
           onChange={
             field.writable && (kind === 'attachment' || kind === 'datetime')
@@ -1377,11 +1379,12 @@ export function CollectionBrowser({
               field,
             )}
             records={items}
+            labelField={schema?.labelField}
             onSubmit={(next) => writeCellValue(row, key, field, next)}
           />
         )
       }
-      return <DefaultCell field={field} fieldKey={key} records={items} collectionPath={collectionPath} value={value} />
+      return <DefaultCell field={field} fieldKey={key} records={items} collectionPath={collectionPath} labelField={schema?.labelField} value={value} />
     }
     if (kind === 'facet') {
       if (field.writable) {
@@ -1430,11 +1433,12 @@ export function CollectionBrowser({
           collectionPath={collectionPath}
           options={uniqueValues(items, key, field)}
           records={items}
+          labelField={schema?.labelField}
           onSubmit={field.writable ? (next) => writeCellValue(row, key, field, next) : () => {}}
         />
       )
     }
-    return <DefaultCell field={field} fieldKey={key} records={items} collectionPath={collectionPath} value={row[key]} />
+    return <DefaultCell field={field} fieldKey={key} records={items} collectionPath={collectionPath} labelField={schema?.labelField} value={row[key]} />
   }
 
   function renderCellPop() {
@@ -1468,6 +1472,8 @@ export function CollectionBrowser({
           initial={initial}
           options={options}
           collectionPath={collectionPath}
+          seed={items}
+          labelField={schema?.labelField}
           onClose={() => setCellPop(null)}
           onSubmit={(raw) => writeCellValue(row, key, field, raw)}
         />

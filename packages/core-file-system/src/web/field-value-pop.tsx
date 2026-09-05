@@ -16,6 +16,7 @@ export function FieldValuePop({
   collectionPath,
   options = [],
   records,
+  labelField,
   onSubmit,
 }: {
   record: DbRecord
@@ -25,6 +26,7 @@ export function FieldValuePop({
   collectionPath: string
   options?: string[]
   records?: DbRecord[]
+  labelField?: string
   onSubmit: (raw: unknown) => void
 }) {
   const hostRef = useRef<HTMLSpanElement>(null)
@@ -56,6 +58,7 @@ export function FieldValuePop({
       fieldKey={fieldKey}
       records={records}
       collectionPath={collectionPath}
+      labelField={labelField}
       value={value}
       onChange={field.writable && kind === 'attachment' ? onSubmit : undefined}
     />
@@ -88,6 +91,8 @@ export function FieldValuePop({
           initial={value}
           options={options}
           collectionPath={collectionPath}
+          seed={records}
+          labelField={labelField}
           onClose={() => setOpen(false)}
           onSubmit={onSubmit}
         />
