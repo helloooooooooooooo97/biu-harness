@@ -62,6 +62,30 @@ test('minimal unlocks extras; standard includes store tools', () => {
     }),
     false,
   )
+  assert.equal(
+    isToolActiveForSession({
+      name: 'db_list',
+      mode: 'file',
+      pinnedExtras: [],
+    }),
+    true,
+  )
+  assert.equal(
+    isToolActiveForSession({
+      name: 'bash',
+      mode: 'file',
+      pinnedExtras: ['bash'],
+    }),
+    false,
+  )
+  assert.equal(
+    isToolActiveForSession({
+      name: 'fs_read',
+      mode: 'file',
+      pinnedExtras: ['fs_read'],
+    }),
+    false,
+  )
 })
 
 test('buildInspectorTools marks configurable plugin tools in minimal mode', () => {
@@ -88,8 +112,12 @@ test('inspector tool sources do not use a live type', async () => {
   const { resolve } = await import('node:path')
   const src = readFileSync(resolve(import.meta.dirname, './inspector.ts'), 'utf8')
   const dialog = readFileSync(resolve(import.meta.dirname, '../../../web-session-view/src/web/session-config-dialog.tsx'), 'utf8')
+  const approvals = readFileSync(resolve(import.meta.dirname, '../web/approvals.tsx'), 'utf8')
   assert.doesNotMatch(src, /Live 调度/)
   assert.doesNotMatch(src, /id: 'live'/)
   assert.match(src, /id: 'db'/)
   assert.doesNotMatch(dialog, /'live'/)
+  assert.match(approvals, /id: 'file'/)
+  assert.match(approvals, /id: 'minimal'/)
+  assert.match(approvals, /id: 'standard'/)
 })

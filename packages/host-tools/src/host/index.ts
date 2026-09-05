@@ -24,21 +24,33 @@ export interface ToolRequest {
 
 export type ToolGuard = (req: ToolRequest) => ToolRequest | Promise<ToolRequest>
 
-/** 极简=底座；标准=内置 + 商店插件。旧创造配置并入标准。 */
-export const AGENT_TOOL_MODES = ['minimal', 'standard'] as const
+/** 极简=底座两工具；文件=文件系统 db_*；标准=全部。旧创造配置并入标准。 */
+export const AGENT_TOOL_MODES = ['minimal', 'file', 'standard'] as const
 export type AgentToolMode = (typeof AGENT_TOOL_MODES)[number]
 
 export function isAgentToolMode(value: unknown): value is AgentToolMode {
-  return value === 'minimal' || value === 'standard'
+  return value === 'minimal' || value === 'file' || value === 'standard'
 }
 
 export function normalizeAgentMode(value: unknown, fallback: AgentToolMode = 'standard'): AgentToolMode {
-  if (value === 'minimal') return 'minimal'
+  if (value === 'minimal' || value === 'file') return value
   if (value === 'standard' || value === 'create') return 'standard'
   return fallback
 }
 
 export const MINIMAL_TOOL_NAMES = ['bash', 'str_replace_editor'] as const
+
+/** Biu 文件系统 DB 工具；文件模式下只开放这些。 */
+export const FILE_TOOL_NAMES = [
+  'db_list',
+  'db_read',
+  'db_update',
+  'db_create',
+  'db_delete',
+  'db_stat',
+  'db_action',
+  'db_content',
+] as const
 
 /** 本回合 slash 选中的额外工具（极简模式下临时放开）。 */
 const extraToolsStorage = new AsyncLocalStorage<ReadonlySet<string>>()
@@ -103,23 +115,13 @@ export class ToolsService extends Service {
   }
 
   setPinnedExtras(names: readonly string[]) {
-    const dbTools = new Set<string>([
-      'db_list',
-      'db_read',
-      'db_update',
-      'db_create',
-      'db_delete',
-      'db_stat',
-      'db_action',
-      'db_content',
-    ])
     const cleaned = [
       ...new Set(
         names
           .map((name) => name.trim())
           .filter(Boolean)
           .filter((name) => !(MINIMAL_TOOL_NAMES as readonly string[]).includes(name))
-          .filter((name) => !dbTools.has(name)),
+          .filter((name) => !(FILE_TOOL_NAMES as readonly string[]).includes(name)),
       ),
     ]
     const same =
@@ -134,6 +136,7 @@ export class ToolsService extends Service {
     const mode = policy?.mode ?? this.mode
     if (mode === 'standard') return true
     if (this.originOf(name) === 'store') return false
+    if (mode === 'file') return (FILE_TOOL_NAMES as readonly string[]).includes(name)
     if ((MINIMAL_TOOL_NAMES as readonly string[]).includes(name)) return true
     if ((policy?.extras ?? new Set()).has(name)) return true
     if (!policy && this.pinnedExtras.includes(name)) return true

@@ -4,6 +4,7 @@ import {
   CheckCircleIcon,
   CommandLineIcon,
   ExclamationCircleIcon,
+  FolderIcon,
   PaintBrushIcon,
   PauseIcon,
   Squares2X2Icon,
@@ -15,10 +16,11 @@ import { HeadlessDismiss } from '@biu/public-ui'
 import { ChatSidebar } from '@biu/web-app-shell/chat-sidebar'
 import { SessionProjectPanel } from './project-panel.tsx'
 
-type AgentMode = 'minimal' | 'standard'
+type AgentMode = 'minimal' | 'file' | 'standard'
 
 function parseAgentMode(value: unknown): AgentMode {
-  return value === 'minimal' ? 'minimal' : 'standard'
+  if (value === 'minimal' || value === 'file') return value
+  return 'standard'
 }
 
 /** 最新一条回复里，上下文（更早 turn）占发给模型的输入文字的比例（0..1）。 */
@@ -375,6 +377,12 @@ export function ApprovalsRail(props: SlotProps) {
                 label: '极简',
                 icon: <CommandLineIcon className="size-4" aria-hidden />,
                 hint: '只开放 bash 和文件编辑。上下文更省，适合改一小段、少打扰。',
+              },
+              {
+                id: 'file',
+                label: '文件',
+                icon: <FolderIcon className="size-4" aria-hidden />,
+                hint: '只开放 Biu 文件系统的 db 工具，用来查表、改记录。',
               },
               {
                 id: 'standard',

@@ -1,6 +1,5 @@
 import type { Context } from 'cordis'
-import { MINIMAL_TOOL_NAMES, type AgentToolMode } from '@biu/host-tools'
-import { LIVE_TOOL_NAMES } from '@biu/host-live-sessions'
+import { FILE_TOOL_NAMES, MINIMAL_TOOL_NAMES, normalizeAgentMode, type AgentToolMode } from '@biu/host-tools'
 import {
   collectLiveDispatchedTasks,
   type DispatchedTask,
@@ -33,7 +32,7 @@ const SOURCE_INFO: InspectorSourceInfo[] = [
   {
     id: 'db',
     label: '数据库',
-    description: '数据库读写与动作工具。',
+    description: 'agentMode=file 时仅开放这些 db_* 工具（Biu 文件系统）。',
   },
   {
     id: 'plugin',
@@ -49,7 +48,7 @@ const SOURCE_INFO: InspectorSourceInfo[] = [
 
 export function toolSourceOf(name: string, origin?: 'core' | 'store'): ToolSourceId {
   if ((MINIMAL_TOOL_NAMES as readonly string[]).includes(name)) return 'minimal'
-  if ((LIVE_TOOL_NAMES as readonly string[]).includes(name)) return 'db'
+  if ((FILE_TOOL_NAMES as readonly string[]).includes(name)) return 'db'
   if (origin === 'store') return 'store'
   return 'plugin'
 }
@@ -62,6 +61,7 @@ export function isToolActiveForSession(opts: {
 }): boolean {
   if (opts.mode === 'standard') return true
   if (opts.origin === 'store' || toolSourceOf(opts.name, opts.origin) === 'store') return false
+  if (opts.mode === 'file') return (FILE_TOOL_NAMES as readonly string[]).includes(opts.name)
   if ((MINIMAL_TOOL_NAMES as readonly string[]).includes(opts.name)) return true
   return opts.pinnedExtras.includes(opts.name)
 }
@@ -99,8 +99,7 @@ export function registerChatInspectorRoutes(ctx: Context) {
     const record = await ctx.sessions.get(id)
     if (!record) return route.send(404, { error: 'unknown session' })
     const resolved = ctx.chat.resolveEffective(id)
-    const rawMode = resolved.effective.agentMode
-    const mode: AgentToolMode = rawMode === 'minimal' ? 'minimal' : 'standard'
+    const mode: AgentToolMode = normalizeAgentMode(resolved.effective.agentMode)
     const pinnedExtras = Array.isArray(resolved.effective.extraTools) ? resolved.effective.extraTools : []
     const tools = buildInspectorTools(ctx.tools.catalog(), { mode, pinnedExtras })
     const title =

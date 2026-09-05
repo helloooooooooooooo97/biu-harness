@@ -70,7 +70,7 @@ export interface SessionConfig {
   provider?: 'deepseek' | 'openai' | 'anthropic'
   model?: string
   systemPrompt?: string
-  agentMode?: 'standard' | 'minimal'
+  agentMode?: 'standard' | 'minimal' | 'file'
   /** 极简模式下常驻额外工具 */
   extraTools?: string[]
   /** 侧栏标签；一条会话可属于多个标签组 */
@@ -92,7 +92,7 @@ export function normalizeSessionConfig(value: unknown): SessionConfig | undefine
   if (raw.provider === 'deepseek' || raw.provider === 'openai' || raw.provider === 'anthropic') next.provider = raw.provider
   if (typeof raw.model === 'string' && raw.model.trim()) next.model = raw.model.trim()
   if (typeof raw.systemPrompt === 'string') next.systemPrompt = raw.systemPrompt
-  if (raw.agentMode === 'minimal') next.agentMode = 'minimal'
+  if (raw.agentMode === 'minimal' || raw.agentMode === 'file') next.agentMode = raw.agentMode
   if (raw.agentMode === 'standard' || raw.agentMode === 'create') next.agentMode = 'standard'
   if (Array.isArray(raw.extraTools)) {
     next.extraTools = [...new Set(raw.extraTools.map((name) => String(name).trim()).filter(Boolean))]
@@ -135,7 +135,7 @@ export function mergeSessionConfig(
     if (patch.systemPrompt == null) delete next.systemPrompt
     else next.systemPrompt = String(patch.systemPrompt)
   }
-  if (patch.agentMode === 'minimal') next.agentMode = 'minimal'
+  if (patch.agentMode === 'minimal' || patch.agentMode === 'file') next.agentMode = patch.agentMode
   if (patch.agentMode === 'standard' || patch.agentMode === 'create') next.agentMode = 'standard'
   if (Array.isArray(patch.extraTools)) {
     next.extraTools = [...new Set(patch.extraTools.map((name) => String(name).trim()).filter(Boolean))]

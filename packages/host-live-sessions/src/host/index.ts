@@ -1,6 +1,7 @@
 import type { Context } from 'cordis'
 import type { SessionEvent } from '@biu/type-session'
 
+/** 与 @biu/host-tools FILE_TOOL_NAMES 一致：Biu 文件系统 db_*。 */
 export const LIVE_TOOL_NAMES = [
   'db_list',
   'db_read',

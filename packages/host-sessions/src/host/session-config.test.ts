@@ -19,6 +19,9 @@ test('session config title overrides derived title', async () => {
   const again = await ctx.sessions.require(record.id)
   assert.equal(again.config?.model, 'deepseek-reasoner')
   assert.equal(again.config?.agentMode, 'minimal')
+  await ctx.sessions.patchConfig(record.id, { agentMode: 'file' })
+  const filed = await ctx.sessions.require(record.id)
+  assert.equal(filed.config?.agentMode, 'file')
   assert.equal(again.config?.title, '指挥台-A')
 })
 

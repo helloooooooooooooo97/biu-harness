@@ -124,6 +124,28 @@ test('store tools appear in standard mode', async () => {
   await assert.rejects(() => ctx.tools.invoke('store_ping'), /not available in minimal mode/)
 })
 
+test('file mode only exposes filesystem db tools', async () => {
+  const ctx = new Context()
+  await ctx.plugin(tools)
+  for (const name of ['bash', 'str_replace_editor', 'db_list', 'db_read', 'fs_read']) {
+    ctx.tools.register({
+      name,
+      description: name,
+      parameters: { type: 'object', properties: {} },
+      execute: () => name,
+    })
+  }
+  ctx.tools.setMode('file')
+  assert.equal(ctx.tools.getMode(), 'file')
+  assert.deepEqual(ctx.tools.names().sort(), ['db_list', 'db_read'])
+  assert.equal(await ctx.tools.invoke('db_list'), 'db_list')
+  await assert.rejects(() => ctx.tools.invoke('bash'), /not available in file mode/)
+  await assert.rejects(() => ctx.tools.invoke('fs_read'), /not available in file mode/)
+  await tools.runWithExtraTools(['fs_read'], async () => {
+    await assert.rejects(() => ctx.tools.invoke('fs_read'), /not available in file mode/)
+  })
+})
+
 test('invoke rejects promptly when aborted during a hung execute', async () => {
   const ctx = new Context()
   await ctx.plugin(tools)

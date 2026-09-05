@@ -41,10 +41,11 @@ export class AgentLoop implements AgentRunner {
         if (!extras.includes(name)) extras.push(name)
       }
     }
-    // 极简是底座；Slash 增量放开。商店插件跟标准模式一起可见。
+    // 极简是底座；Slash 增量放开。文件模式只开放 db_*。商店插件跟标准模式一起可见。
     if (mode === 'minimal') {
       extras = extras.filter((name) => this.ctx.tools.originOf(name) !== 'store')
     }
+    if (mode === 'file') extras = []
     return runWithSession(this.sessionId, () =>
       runWithToolPolicy({ mode, extras }, () => this.runInSession(claimed)),
     )

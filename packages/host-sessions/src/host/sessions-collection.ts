@@ -152,7 +152,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         model: { type: 'string', label: '模型', writable: true },
         provider: { type: 'select', label: '服务商', enum: ['deepseek', 'openai', 'anthropic'], writable: true },
         systemPrompt: { type: 'string', label: '系统提示', writable: true },
-        agentMode: { type: 'select', label: '模式', enum: ['standard', 'minimal'], writable: true },
+        agentMode: { type: 'select', label: '模式', enum: ['standard', 'file', 'minimal'], writable: true },
         extraTools: { type: 'multi-select', label: '额外工具', writable: true },
         updatedAt: { type: 'datetime', label: '更新时间', sortable: true },
         mascotName: { type: 'string', label: '形象', computed: true },
@@ -176,7 +176,7 @@ export function sessionsCollection(sessions: SessionsLike): CollectionSpec {
         config.provider = patch.provider
       }
       if (typeof patch.systemPrompt === 'string') config.systemPrompt = patch.systemPrompt
-      if (patch.agentMode === 'minimal') config.agentMode = 'minimal'
+      if (patch.agentMode === 'minimal' || patch.agentMode === 'file') config.agentMode = patch.agentMode
       if (patch.agentMode === 'standard' || patch.agentMode === 'create') config.agentMode = 'standard'
       if (Array.isArray(patch.extraTools)) config.extraTools = patch.extraTools.map((item) => String(item))
       if (Object.keys(config).length) await sessions.patchConfig(id, config)

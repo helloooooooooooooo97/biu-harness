@@ -7,7 +7,7 @@ import {
 import { ChatOutlineFilterFields } from './chat-outline-fields.tsx'
 
 type ToolSourceId = 'minimal' | 'db' | 'plugin' | 'store'
-type AgentMode = 'standard' | 'minimal'
+type AgentMode = 'standard' | 'file' | 'minimal'
 type ChatProvider = 'deepseek' | 'openai'
 
 interface InspectorTool {
