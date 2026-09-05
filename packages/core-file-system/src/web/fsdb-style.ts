@@ -292,8 +292,10 @@ const CSS = `
 .fsdb-detail-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;flex-direction:column;gap:8px;padding:80px 80px 24px;min-width:0}
 .fsdb-tag-collect{display:flex;flex:none;min-width:0;width:100%;min-height:320px}
 .fsdb-tag-collect>.fsdb-page{flex:1;min-width:0;min-height:320px;background:transparent}
-.fsdb-page.is-sheet .tasks-main{padding:0 0 0 var(--fsdb-check-gutter);gap:8px;max-width:none}
+.fsdb-page.is-sheet .tasks-main{padding:0;gap:8px;max-width:none}
 .fsdb-page.is-sheet .fsdb-right-body{overflow:hidden}
+.fsdb-page.is-sheet .tasks-table-wrap{width:100%;margin-left:0;padding-left:0}
+.fsdb-page.is-sheet .tasks-table td:first-child::before,.fsdb-page.is-sheet .tasks-table th:first-child::before{content:none;width:0}
 .fsdb-detail-aside{display:flex;flex-direction:column;gap:2px;padding:0 0 12px}
 .fsdb-detail-aside .fsdb-proprow-k,.fsdb-detail-aside .fsdb-prop>span:first-child,.fsdb-detail-aside .fsdb-proprow-label{color:#ACA9A4}
 .fsdb-detail-aside .fsdb-proprow-k svg,.fsdb-detail-aside .fsdb-prop>span:first-child svg{color:#ACA9A4;opacity:1}
