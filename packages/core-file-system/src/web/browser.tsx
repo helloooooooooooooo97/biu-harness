@@ -49,6 +49,7 @@ import {
   isRecordLinkField,
   listProjectionKeys,
   overlayListed,
+  previewActionRecord,
   parentFieldKey,
   parseFacetFlatColumnKey,
   patchFacetFlatValue,
@@ -220,7 +221,7 @@ export function CollectionBrowser({
   const [detailRow, setDetailRow] = useState<DbRecord | null>(null)
   const [detailBody, setDetailBody] = useState<unknown>(null)
   const [draft, setDraft] = useState<Record<string, string>>({})
-  const [busyKey, setBusyKey] = useState<string | null>(null)
+  const actingRef = useRef(false)
   const initialView = viewForPath(collectionPath, routeViewId)
   const dbUi = getDatabaseUi()
   const extraViews = useSyncExternalStore(
@@ -1166,8 +1167,13 @@ export function CollectionBrowser({
   }
 
   async function executeAction(row: DbRecord, action: CollectionActionInfo) {
-    const key = `${action.id}:${row.id}`
-    setBusyKey(key)
+    if (actingRef.current) return
+    const preview = previewActionRecord(row, action)
+    actingRef.current = true
+    if (preview !== row) {
+      setItems((prev) => prev.map((item) => (item.id === row.id ? overlayListed(item, preview, listColumns) : item)))
+      setDetailRow((prev) => (prev?.id === row.id ? overlayListed(prev, preview, listColumns) : prev))
+    }
     try {
       await readJson('/api/db/action', {
         method: 'POST',
@@ -1178,8 +1184,10 @@ export function CollectionBrowser({
       await reload()
     } catch (err) {
       setDlg({ kind: 'alert', title: `${action.label}失败`, body: String(err) })
+      quietUntil.current = 0
+      await reload()
     } finally {
-      setBusyKey(null)
+      actingRef.current = false
     }
   }
 
@@ -1688,7 +1696,7 @@ export function CollectionBrowser({
     const rowShown = actions.filter(
       (action) => Action || actionIcon(action.id) || action.id === 'open-split' || action.id === 'open-page',
     )
-    const busy = Boolean(busyKey?.endsWith(`:${row.id}`))
+    const busy = actingRef.current
     const renderOne = (action: CollectionActionInfo) => {
       const run = () => void runAction(row, action)
       if (Action) return <Action key={action.id} action={action} record={row} busy={busy} run={run} />
@@ -1724,7 +1732,7 @@ export function CollectionBrowser({
           const run = () => void runAction(row, action)
           return (
             <button
-              key={action.id}
+              key={action.id === 'start' || action.id === 'stop' ? `${row.id}:run` : action.id}
               type="button"
               className="dock-icon-btn"
               title={action.label}

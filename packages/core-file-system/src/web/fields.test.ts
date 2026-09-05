@@ -2,7 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import type { CollectionSchema } from '@biu/type-file-system'
 import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
-import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, inferPackFieldType, listProjectionKeys, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, overlayListed, parentFieldKey, readFacetFlatValue, recordLinkIds, resolveFieldType, uniqueValues } from './fields'
+import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, inferPackFieldType, listProjectionKeys, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, overlayListed, previewActionRecord, parentFieldKey, readFacetFlatValue, recordLinkIds, resolveFieldType, uniqueValues } from './fields'
 import { visibleActions } from './fsdb-cells.tsx'
 
 test('isViewModeId accepts builtin and custom slugs', () => {
@@ -85,6 +85,13 @@ test('overlayListed clears omitted false flags from sparse list rows', () => {
   assert.equal(matchActionWhen(next, { installed: true, running: true }), false)
   assert.equal(overlayListed(next, listed), next)
   assert.equal(overlayListed(base, { ...listed, running: true }).running, true)
+})
+
+test('previewActionRecord flips running from action when', () => {
+  const row = { id: '1', installed: true, running: false }
+  assert.equal(previewActionRecord(row, { when: { installed: true, running: false } }).running, true)
+  assert.equal(previewActionRecord({ ...row, running: true }, { when: { installed: true, running: true } }).running, false)
+  assert.equal(previewActionRecord(row, { when: { installed: true } }), row)
 })
 
 test('visibleActions hides agent-only actions from the page', () => {

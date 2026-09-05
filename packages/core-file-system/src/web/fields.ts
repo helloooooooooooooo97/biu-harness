@@ -460,6 +460,14 @@ export function groupRecords(rows: DbRecord[], schema: CollectionSchema | undefi
   return listed
 }
 
+export function previewActionRecord(row: DbRecord, action: { when?: Record<string, unknown> }): DbRecord {
+  const when = action.when
+  if (!when || !('running' in when) || typeof when.running !== 'boolean') return row
+  const running = when.running === false
+  if (Object.is(row.running, running)) return row
+  return { ...row, running }
+}
+
 export function overlayListed(base: DbRecord, listed: DbRecord, projected?: string[] | null): DbRecord {
   let changed = false
   const next: DbRecord = { ...base }
