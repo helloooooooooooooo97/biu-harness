@@ -42,6 +42,7 @@ import {
 } from './content-edit.ts'
 import { currentSessionId } from '@biu/host-sessions/scope'
 import { databaseRevealForTool, normalizeCollectionPath } from '../paths.ts'
+import { AGENT_DB_STAT_BLURB, compactAgentToolResult } from './agent-payload.ts'
 
 function publicAction(action: CollectionAction): CollectionActionInfo {
   const { run: _run, ...info } = action
@@ -1148,7 +1149,7 @@ export function apply(ctx: Context) {
   }))))
   ctx.tools.register({
     name: 'db_list',
-    description: '列出 File System 路径：/ 为已登记表，/<表> 为该表记录（不含 content 正文）。默认每页 50 条，最多 200。可用 columns 只取需要的列。',
+    description: '列出 File System 路径：/ 为已登记表，/<表> 为该表记录（不含 content 正文）。默认每页 50 条，最多 200。可用 columns 只取需要的列。表结构用 db_stat，列表不重复 schema。',
     parameters: {
       type: 'object',
       properties: {
@@ -1170,22 +1171,25 @@ export function apply(ctx: Context) {
     execute: (args) => {
       const path = String(args.path)
       return withInspectorReveal(ctx, path, () =>
-        db.list(path, asFilter(args.filter), {
-          q: args.q != null ? String(args.q) : '',
-          sortField: args.sortField != null ? String(args.sortField) : '',
-          sortDir: args.sortDir === 'desc' ? 'desc' : 'asc',
-          limit: args.limit != null ? Number(args.limit) : undefined,
-          offset: args.offset != null ? Number(args.offset) : undefined,
-          columns: asColumnKeys(args.columns),
-        }),
+        db
+          .list(path, asFilter(args.filter), {
+            q: args.q != null ? String(args.q) : '',
+            sortField: args.sortField != null ? String(args.sortField) : '',
+            sortDir: args.sortDir === 'desc' ? 'desc' : 'asc',
+            limit: args.limit != null ? Number(args.limit) : undefined,
+            offset: args.offset != null ? Number(args.offset) : undefined,
+            columns: asColumnKeys(args.columns),
+          })
+          .then((body) => compactAgentToolResult(body)),
       )
     },
   })
   ctx.tools.register({
     name: 'db_read',
-    description: '读取 File System 路径：表返回列表，记录返回该行 JSON（不含 content 正文，正文用 db_content）。',
+    description: '读取 File System 路径：表返回列表（不含 schema，结构用 db_stat），记录返回该行 JSON（不含 content 正文，正文用 db_content）。',
     parameters: PATH_PARAM,
-    execute: (args) => withInspectorReveal(ctx, String(args.path), () => db.read(String(args.path))),
+    execute: (args) =>
+      withInspectorReveal(ctx, String(args.path), () => db.read(String(args.path)).then((body) => compactAgentToolResult(body))),
   })
   ctx.tools.register({
     name: 'db_update',
@@ -1254,9 +1258,9 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_stat',
-    description: '查看路径元数据：根目录看有哪些表，表路径返回 schema。',
+    description: AGENT_DB_STAT_BLURB,
     parameters: PATH_PARAM,
-    execute: (args) => db.stat(String(args.path)),
+    execute: (args) => Promise.resolve(db.stat(String(args.path))).then((body) => compactAgentToolResult(body)),
   })
   ctx.tools.register({
     name: 'db_content',

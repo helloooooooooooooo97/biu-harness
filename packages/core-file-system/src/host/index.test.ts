@@ -507,6 +507,40 @@ test('db_list columns returns only those fields plus id', async () => {
   assert.equal('status' in (row ?? {}), false)
 })
 
+test('agent db_stat omits builtin fields; service stat and list still include them', async () => {
+  const ctx = new Context()
+  await ctx.plugin(tools)
+  class HttpStub extends Service {
+    constructor(c: Context) {
+      super(c, 'http')
+    }
+    route() {}
+  }
+  new HttpStub(ctx)
+  await ctx.plugin({ inject: ['tools', 'http'], apply: applyFileSystem })
+  const db = ctx.get('database') as DatabaseService
+  db.register(notesCollection())
+  const serviceStat = await db.stat('/notes')
+  if (serviceStat.kind !== 'collection') return
+  assert.equal(serviceStat.schema.fields.id?.type, 'string')
+  assert.equal(serviceStat.schema.fields.facet?.type, 'facet')
+  const listed = await db.list('/notes')
+  assert.ok(listed.schema.fields.status)
+  const agentStat = (await ctx.tools.invoke('db_stat', { path: '/notes' })) as {
+    schema?: { fields?: Record<string, unknown>; records?: unknown }
+    caps?: string[]
+  }
+  assert.equal(agentStat.schema?.fields && 'id' in agentStat.schema.fields, false)
+  assert.equal(agentStat.schema?.fields && 'facet' in agentStat.schema.fields, false)
+  assert.ok(agentStat.schema?.fields && 'status' in agentStat.schema.fields)
+  assert.equal(agentStat.schema?.records, undefined)
+  assert.ok(agentStat.caps?.includes('list'))
+  const agentList = (await ctx.tools.invoke('db_list', { path: '/notes' })) as { schema?: unknown; items: unknown[] }
+  assert.equal(agentList.schema, undefined)
+  assert.ok(agentList.items.length)
+})
+
+
 test('db_list on a table broadcasts inspector working then done', async () => {
   const seen: Array<{ type: string; payload: unknown }> = []
   const ctx = new Context()
