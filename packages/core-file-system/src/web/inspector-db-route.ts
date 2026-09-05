@@ -9,6 +9,7 @@ const DEFAULT_PANE = 'database'
 const STORAGE_PREFIX = 'inspector.dbPath:'
 const listeners = new Set<() => void>()
 const paths = new Map<string, string>()
+const abandonedPanes = new Set<string>()
 const working = new Set<string>()
 const workingListeners = new Set<() => void>()
 
@@ -118,12 +119,14 @@ export function getInspectorDbPath(paneId = DEFAULT_PANE) {
 /** 测试用：清空内存路径，模拟整页刷新后只剩 localStorage。 */
 export function resetInspectorDbPathMemory() {
   paths.clear()
+  abandonedPanes.clear()
 }
 
 export function setInspectorDbPath(paneId: string, next?: string) {
   const id = next === undefined ? DEFAULT_PANE : paneId
   const path = next === undefined ? paneId : next
   const stored = isInspectorDatabasePath(path) ? path : ''
+  if (stored) abandonedPanes.delete(id)
   if ((paths.get(id) ?? '') === stored) {
     writeStoredPath(id, stored)
     return
@@ -132,6 +135,17 @@ export function setInspectorDbPath(paneId: string, next?: string) {
   else paths.set(id, stored)
   writeStoredPath(id, stored)
   bump()
+}
+
+/** 关掉检查器里这一栏时清掉路径，避免左侧再点同一页又把右侧弹回来。 */
+export function clearInspectorDbPath(paneId: string) {
+  if (!paneId) return
+  abandonedPanes.add(paneId)
+  setInspectorDbPath(paneId, '')
+}
+
+export function isInspectorPaneAbandoned(paneId: string) {
+  return abandonedPanes.has(paneId)
 }
 
 export function inspectorCollectionTabId(collection: string) {
@@ -255,11 +269,19 @@ function savedViewFromPayload(raw: unknown, revealViewId: unknown): SavedView | 
 }
 
 export const INSPECTOR_REVEAL_EVENT = 'biu:inspector-reveal'
+export const INSPECTOR_PANE_CLOSED_EVENT = 'biu:inspector-pane-closed'
 
 function onInspectorReveal(event: Event) {
   applyDatabaseReveal((event as CustomEvent).detail)
 }
 
+function onInspectorPaneClosed(event: Event) {
+  const detail = (event as CustomEvent).detail
+  const paneId = typeof detail === 'string' ? detail : String((detail as { paneId?: unknown })?.paneId ?? '')
+  if (paneId) clearInspectorDbPath(paneId)
+}
+
 if (typeof window !== 'undefined') {
   window.addEventListener(INSPECTOR_REVEAL_EVENT, onInspectorReveal)
+  window.addEventListener(INSPECTOR_PANE_CLOSED_EVENT, onInspectorPaneClosed)
 }

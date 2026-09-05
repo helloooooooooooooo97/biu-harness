@@ -317,6 +317,9 @@ export const SessionInspector = memo(function SessionInspector({
     const next = opened.filter((item) => item !== id)
     persistOpened(next)
     if (tab === id) setTab(next.at(-1) ?? '')
+    queueMicrotask(() => {
+      window.dispatchEvent(new CustomEvent('biu:inspector-pane-closed', { detail: id }))
+    })
   }
 
   return (

@@ -14,6 +14,7 @@ import { DATA_MODULE, DATA_MODULE_ID, databaseAllViewPath, databaseRecordPath, d
 import {
   getInspectorDbPath,
   isInspectorAgentWorking,
+  isInspectorPaneAbandoned,
   setInspectorDbPath,
   subscribeInspectorAgentWorking,
   subscribeInspectorDbPath,
@@ -108,6 +109,7 @@ function useBindInspectorDbPath(paneId: string, tables: CollectionInfo[], seedCo
   const inspectorPath = useInspectorDbPath(paneId)
   useEffect(() => {
     if (inspectorPath) return
+    if (isInspectorPaneAbandoned(paneId)) return
     const fallback = defaultInspectorDbPath(tables, seedCollection)
     if (fallback) setInspectorDbPath(paneId, fallback)
   }, [inspectorPath, paneId, seedCollection, tables])

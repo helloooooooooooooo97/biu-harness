@@ -13,6 +13,8 @@ import {
   applyDatabaseChannelPayload,
   isInspectorAgentWorking,
   setInspectorAgentWorking,
+  clearInspectorDbPath,
+  isInspectorPaneAbandoned,
 } from './inspector-db-route.ts'
 
 function clearInspectorPanes() {
@@ -128,6 +130,19 @@ test('focusInspectorIfOpen only focuses when that page is already in the inspect
   assert.equal(getInspectorDbPath('database:/pages'), '/database/pages/record/p1?view=all')
   assert.equal(focusInspectorIfOpen('/pages', '/database/pages/record/p2'), false)
   assert.equal(getInspectorDbPath('database:/pages'), '/database/pages/record/p1?view=all')
+})
+
+test('closing an inspector pane removes the stored path so it is no longer considered open', () => {
+  setInspectorDbPath('database:/pages', '/database/pages/record/p1')
+  clearInspectorDbPath('database:/pages')
+  assert.equal(getInspectorDbPath('database:/pages'), '')
+  assert.equal(isInspectorPaneAbandoned('database:/pages'), true)
+  assert.equal(localStorage.getItem('inspector.dbPath:database:/pages'), null)
+  assert.equal(focusInspectorIfOpen('/pages', '/database/pages/record/p1'), false)
+  window.dispatchEvent(new CustomEvent('biu:inspector-pane-closed', { detail: 'database:/pages::old' }))
+  setInspectorDbPath('database:/pages::old', '/database/pages/record/p2')
+  window.dispatchEvent(new CustomEvent('biu:inspector-pane-closed', { detail: 'database:/pages::old' }))
+  assert.equal(getInspectorDbPath('database:/pages::old'), '')
 })
 
 test('showInInspector opens a collection href in the inspector', async () => {
