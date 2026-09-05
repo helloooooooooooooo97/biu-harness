@@ -42,7 +42,9 @@ import {
 } from './content-edit.ts'
 import { currentSessionId } from '@biu/host-sessions/scope'
 import { databaseRevealForTool, normalizeCollectionPath } from '../paths.ts'
-import { AGENT_DB_STAT_BLURB, compactAgentToolResult } from './agent-payload.ts'
+import { AgentDbCompact } from './agent-payload.ts'
+
+const agentDbCompact = new AgentDbCompact()
 
 function publicAction(action: CollectionAction): CollectionActionInfo {
   const { run: _run, ...info } = action
@@ -1149,7 +1151,7 @@ export function apply(ctx: Context) {
   }))))
   ctx.tools.register({
     name: 'db_list',
-    description: '列出 File System 路径：/ 为已登记表，/<表> 为该表记录（不含 content 正文）。默认每页 50 条，最多 200。可用 columns 只取需要的列。表结构用 db_stat，列表不重复 schema。',
+    description: '列出 File System 路径：/ 为已登记表（path + 中文名），/<表> 为列式记录（不含 content、默认不含 createdAt/updatedAt/createdBy/updatedBy）。默认每页 50，最多 200。columns 参数只取需要的列。表结构用 db_stat。',
     parameters: {
       type: 'object',
       properties: {
@@ -1180,20 +1182,20 @@ export function apply(ctx: Context) {
             offset: args.offset != null ? Number(args.offset) : undefined,
             columns: asColumnKeys(args.columns),
           })
-          .then((body) => compactAgentToolResult(body)),
+          .then((body) => agentDbCompact.query(body)),
       )
     },
   })
   ctx.tools.register({
     name: 'db_read',
-    description: '读取 File System 路径：表返回列表（不含 schema，结构用 db_stat），记录返回该行 JSON（不含 content 正文，正文用 db_content）。',
+    description: '读取 File System 路径：表返回列式列表 columns/rows（不含 schema，结构用 db_stat），记录返回该行 JSON（空字段省略，不含 content 正文，正文用 db_content）。',
     parameters: PATH_PARAM,
     execute: (args) =>
-      withInspectorReveal(ctx, String(args.path), () => db.read(String(args.path)).then((body) => compactAgentToolResult(body))),
+      withInspectorReveal(ctx, String(args.path), () => db.read(String(args.path)).then((body) => agentDbCompact.query(body))),
   })
   ctx.tools.register({
     name: 'db_update',
-    description: '按表结构 schema 的可写字段更新一条已有记录，路径为 /<表>/<id>。合集（facet 字段）在所有表都可写，包括 records.update 为 false 的表（如 /plugins）；其它字段仍看 caps。新建用 db_create，正文用 db_content。改合集属性用 db_update path=/facets/<id> content.fields。',
+    description: '按表结构 schema 的可写字段更新一条已有记录，路径为 /<表>/<id>。成功只返回 {ok, path}，不回整行。合集（facet 字段）在所有表都可写，包括 records.update 为 false 的表（如 /plugins）；其它字段仍看 caps。新建用 db_create，正文用 db_content。改合集属性用 db_update path=/facets/<id> content.fields。',
     parameters: {
       type: 'object',
       properties: {
@@ -1202,11 +1204,14 @@ export function apply(ctx: Context) {
       },
       required: ['path', 'content'],
     },
-    execute: (args) => withInspectorReveal(ctx, String(args.path), () => db.update(String(args.path), args.content)),
+    execute: (args) =>
+      withInspectorReveal(ctx, String(args.path), () => db.update(String(args.path), args.content)).then(
+        (body) => agentDbCompact.write(body),
+      ),
   })
   ctx.tools.register({
     name: 'db_create',
-    description: '在已登记且允许新建的表中批量新增记录。路径为 /<表>，records 为对象数组。能否新建看 db_stat 的 caps 与 schema.records。新建合集用 db_create path=/facets records=[{title}]。',
+    description: '在已登记且允许新建的表中批量新增记录。路径为 /<表>，records 为对象数组。成功返回 {ok, path, ids}，不回整行。能否新建看 db_stat 的 caps。新建合集用 db_create path=/facets records=[{title}]。',
     parameters: {
       type: 'object',
       properties: {
@@ -1215,11 +1220,14 @@ export function apply(ctx: Context) {
       },
       required: ['path', 'records'],
     },
-    execute: (args) => withInspectorReveal(ctx, String(args.path), () => db.create(String(args.path), asCreateRecords(args))),
+    execute: (args) =>
+      withInspectorReveal(ctx, String(args.path), () => db.create(String(args.path), asCreateRecords(args))).then(
+        (body) => agentDbCompact.write(body),
+      ),
   })
   ctx.tools.register({
     name: 'db_delete',
-    description: '按条件删除记录。路径为 /<表>，必须带 ids、q 或 filter 之一，禁止无条件清空全表。能否删除看 db_stat 的 caps 与 schema.records。调用后会进入审批，用户同意才真正删。',
+    description: '按条件删除记录。路径为 /<表>，必须带 ids、q 或 filter 之一，禁止无条件清空全表。能否删除看 db_stat 的 caps。调用后会进入审批，用户同意才真正删。成功返回 {ok, path, ids}。',
     parameters: {
       type: 'object',
       properties: {
@@ -1230,12 +1238,15 @@ export function apply(ctx: Context) {
       },
       required: ['path'],
     },
-    execute: (args) => withInspectorReveal(ctx, String(args.path), () => db.remove(String(args.path), asDeleteQuery(args)), true),
+    execute: (args) =>
+      withInspectorReveal(ctx, String(args.path), () => db.remove(String(args.path), asDeleteQuery(args)), true).then(
+        (body) => agentDbCompact.write(body),
+      ),
   })
   ctx.tools.register({
     name: 'db_action',
     description:
-      '对一条记录执行该表登记的动作。路径为 /<表>/<id>，action 为动作 id（见 db_stat 的 schema.actions）。需要参数时放在 args。任务派工/汇报、会话压缩/进度、插件创建/打包一律走这里。',
+      '对一条记录执行该表登记的动作。路径为 /<表>/<id>，action 为动作 id（见 db_stat 的 schema.actions）。成功返回 {ok, path}，有返回值时带 result，不回整行。需要参数时放在 args。任务派工/汇报、会话压缩/进度、插件创建/打包一律走这里。',
     parameters: {
       type: 'object',
       properties: {
@@ -1254,13 +1265,13 @@ export function apply(ctx: Context) {
             ? (args.args as Record<string, unknown>)
             : undefined,
         ),
-      ),
+      ).then((body) => agentDbCompact.write(body)),
   })
   ctx.tools.register({
     name: 'db_stat',
-    description: AGENT_DB_STAT_BLURB,
+    description: agentDbCompact.statBlurb,
     parameters: PATH_PARAM,
-    execute: (args) => Promise.resolve(db.stat(String(args.path))).then((body) => compactAgentToolResult(body)),
+    execute: (args) => Promise.resolve(db.stat(String(args.path))).then((body) => agentDbCompact.query(body)),
   })
   ctx.tools.register({
     name: 'db_content',
@@ -1270,7 +1281,7 @@ export function apply(ctx: Context) {
       'command=str_replace：old_str 必须在正文里唯一，替换为 new_str。',
       'command=replace_lines：按 1-based 闭区间 start_line..end_line 换成 new_str。',
       'command=insert：在 insert_line 之后插入 new_str（0 插到第一行前）。',
-      'command=write：整篇覆盖，传 value。写成功只返回 ok，不含全文。',
+      'command=write：整篇覆盖，传 value。写成功只返回 {ok, path}，不含全文。',
     ].join(' '),
     parameters: {
       type: 'object',
@@ -1296,7 +1307,9 @@ export function apply(ctx: Context) {
       required: ['path'],
     },
     execute: (args) =>
-      withInspectorReveal(ctx, String(args.path), () => db.editContent(String(args.path), args)),
+      withInspectorReveal(ctx, String(args.path), () =>
+        db.editContent(String(args.path), args).then((body) => agentDbCompact.query(body)),
+      ),
   })
 
   const send = async (route: { query: URLSearchParams; send: (status: number, body: unknown) => void }, op: () => unknown) => {
