@@ -83,4 +83,7 @@ test('detail facet property sits last, starts collapsed, and the glyph becomes a
   assert.match(row, /ChevronRightIcon/)
   assert.match(css, /\.fsdb-proprow\.is-facet-fold:hover \.fsdb-proprow-chevron/)
   assert.match(css, /\.fsdb-proprow\.is-facet-fold:not\(\.is-open\) \.fsdb-schema-pack\{display:none\}/)
+  assert.doesNotMatch(detail, /stacked=\{facet && facetOpen\}/)
+  assert.match(css, /\.fsdb-proprow\.is-facet-fold\{align-items:start\}/)
+  assert.match(css, /\.fsdb-proprow\.is-facet-fold \.fsdb-schema>:first-child\{[^}]*min-height:32px/)
 })

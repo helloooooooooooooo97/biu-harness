@@ -214,7 +214,6 @@ export function RecordDetail({
                         key={key}
                         field={field}
                         fieldKey={key}
-                        stacked={facet && facetOpen}
                         collapsible={facet}
                         expanded={facet ? facetOpen : undefined}
                         onToggle={facet ? () => setFacetOpen((open) => !open) : undefined}

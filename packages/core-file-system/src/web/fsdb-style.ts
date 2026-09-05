@@ -310,6 +310,10 @@ const CSS = `
 .fsdb-proprow-chevron{position:absolute;inset:0;opacity:0;pointer-events:none}
 .fsdb-proprow.is-facet-fold:hover .fsdb-proprow-glyph,.fsdb-proprow.is-facet-fold:focus-within .fsdb-proprow-glyph{opacity:0}
 .fsdb-proprow.is-facet-fold:hover .fsdb-proprow-chevron,.fsdb-proprow.is-facet-fold:focus-within .fsdb-proprow-chevron{opacity:1}
+.fsdb-proprow.is-facet-fold{align-items:start}
+.fsdb-proprow.is-facet-fold .fsdb-proprow-k{min-height:32px;padding-top:0}
+.fsdb-proprow.is-facet-fold .fsdb-proprow-v,.fsdb-proprow.is-facet-fold .fsdb-prop-val.is-schema{min-height:32px}
+.fsdb-proprow.is-facet-fold .fsdb-schema>:first-child{min-height:32px;display:flex;align-items:center}
 .fsdb-proprow.is-facet-fold:not(.is-open) .fsdb-schema-pack{display:none}
 .fsdb-prop-val.is-schema{overflow:visible;white-space:normal;max-width:none}
 .fsdb-schema{display:flex;flex-direction:column;gap:2px;min-width:0;width:100%}
