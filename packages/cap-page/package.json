@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Page：工作区 .page/pages.sqlite 存页面，assets 里放图片和附件",
+  "description": "Page：工作区 .page/pages.sqlite 存页面，图片和附件走仓库 .cordis/assets",
   "exports": {
     "./host": "./src/host/index.ts",
     "./web": "./src/web/index.ts"

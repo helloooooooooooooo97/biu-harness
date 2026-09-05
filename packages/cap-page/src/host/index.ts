@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import type { Context } from 'cordis'
 import type { CollectionSpec } from '@biu/type-file-system'
 import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
@@ -15,7 +16,7 @@ export function pagesCollection(store: PagesStore): CollectionSpec {
       route: '/pages',
       title: '页面',
       inspector: true,
-      blurb: '页面存在工作区 .page/pages.sqlite。列表 db_list /pages 走 SQLite，不扫全部 Markdown；正文 notes 用 db_content / db_update。图片和附件仍在 .page/assets。树用 parentId。新建 db_create，删除 db_delete。本表没有 db_action。',
+      blurb: '页面存在工作区 .page/pages.sqlite。列表 db_list /pages 走 SQLite，不扫全部 Markdown；正文 notes 用 db_content / db_update。图片和附件与其它表一样在仓库 .cordis/assets。树用 parentId。新建 db_create，删除 db_delete。本表没有 db_action。',
       order: 25,
       icon: 'document',
     },
@@ -102,7 +103,7 @@ export const inject = ['database', 'fs']
 export function apply(ctx: Context) {
   // 页面固定存到工作区根（defaultRoot），不随 Session 绑定项目路径漂移，
   // 否则工具调用（绑定项目）与 HTTP 请求（无 Session）会落到不同目录。
-  const store = new PagesStore(ctx.fs.workspace as WorkspaceFs)
+  const store = new PagesStore(ctx.fs.workspace as WorkspaceFs, join(process.cwd(), '.cordis/assets'))
   ctx.database.register(pagesCollection(store))
   servePageFile(ctx, store)
 }

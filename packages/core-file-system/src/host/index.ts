@@ -29,6 +29,7 @@ import {
 } from '@biu/type-file-system'
 import { SavedViewsStore, viewsCollection, type StoredView } from './saved-views.ts'
 import { FacetStore, FILE_SYSTEM_SQLITE } from './facets-store.ts'
+import { FileSystemAssets } from './assets-store.ts'
 import { facetsCollection } from './facets-collection.ts'
 import {
   asContentText,
@@ -1076,6 +1077,7 @@ export const inject = ['tools', 'http']
 export function apply(ctx: Context) {
   const db = new DatabaseService(ctx)
   db.facets.open(join(process.cwd(), FILE_SYSTEM_SQLITE))
+  const assets = new FileSystemAssets()
   const savedViews = new SavedViewsStore()
   savedViews.open(process.env.VITEST ? ':memory:' : join(process.cwd(), FILE_SYSTEM_SQLITE))
   const facets = db.facets
@@ -1326,6 +1328,23 @@ export function apply(ctx: Context) {
       facets.replace(Array.isArray(body.facets) ? body.facets : [])
       ctx.emit('database/change')
       route.send(200, { ok: true, facets: facets.list() })
+    } catch (error) {
+      route.send(400, { error: String(error) })
+    }
+  })
+  ctx.http.route('GET', '/api/db/file/:name', async (route) => {
+    try {
+      const { bytes, type } = await assets.read(route.params.name ?? '')
+      route.res.writeHead(200, { 'content-type': type, 'cache-control': 'private, max-age=60' })
+      route.res.end(bytes)
+    } catch {
+      route.send(404, { error: 'not found' })
+    }
+  })
+  ctx.http.route('PUT', '/api/db/file/:name', async (route) => {
+    try {
+      const written = await assets.write(route.params.name ?? '', await route.bytes())
+      route.send(200, { ok: true, ...written })
     } catch (error) {
       route.send(400, { error: String(error) })
     }

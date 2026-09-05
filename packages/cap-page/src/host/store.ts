@@ -1,5 +1,5 @@
 import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises'
-import { basename, dirname } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import type { AttachmentValue, DbRecord, SchemaFieldValue } from '@biu/type-file-system'
 import { asAttachmentList, emptySchemaValue, normalizeSchemaValue } from '@biu/type-file-system'
@@ -8,12 +8,13 @@ import { dumpMarkdown, splitMarkdown } from './markdown.ts'
 export const PAGE_ROOT = '.page'
 export const PAGE_DB = '.page/pages.sqlite'
 export const PAGE_ASSETS = '.page/assets'
+const SHARED_ASSETS = '.cordis/assets'
 /** 正文不再引用后，附件再留一天，避免撤销/未落盘指针误删。 */
 export const ASSET_GC_GRACE_MS = 24 * 60 * 60 * 1000
 
 const ID_RE = /^[A-Za-z0-9._-]+$/
 const ASSET_FILE_RE = /^[\p{L}\p{N}._-]+$/u
-const ASSET_REF_RE = /(?:(?:\.page\/)?assets\/|\/api\/page\/file\/)([\p{L}\p{N}._-]+)/gu
+const ASSET_REF_RE = /(?:(?:\.page\/)?assets\/|\/api\/(?:page|db)\/file\/)([\p{L}\p{N}._-]+)/gu
 
 export function isPageAssetFileName(name: string) {
   return Boolean(name) && name === basename(name) && name !== '.gitkeep' && ASSET_FILE_RE.test(name)
@@ -110,9 +111,20 @@ function publicPackValue(value: unknown): AttachmentValue | AttachmentValue[] {
   return files
 }
 
+function fromAssetApi(text: string) {
+  for (const prefix of ['/api/page/file/', '/api/db/file/'] as const) {
+    if (text.startsWith(prefix)) {
+      return decodeURIComponent(text.slice(prefix.length).split(/[?#]/)[0] ?? '')
+    }
+  }
+  return ''
+}
+
 function assetName(ref: string) {
   const trimmed = ref.trim()
   if (!trimmed) return ''
+  const fromApi = fromAssetApi(trimmed)
+  if (fromApi) return basename(fromApi)
   const cleaned = trimmed.replace(/^\/+/, '')
   if (cleaned.startsWith(`${PAGE_ASSETS}/`)) return basename(cleaned)
   if (cleaned.startsWith('assets/')) return basename(cleaned)
@@ -146,11 +158,8 @@ function storedCoverItem(value: unknown): string {
   if (!text) return ''
   const name = assetName(text)
   if (name) return `assets/${name}`
-  if (text.startsWith('/api/page/file/')) {
-    const file = decodeURIComponent(text.slice('/api/page/file/'.length).split(/[?#]/)[0] ?? '')
-    return file ? `assets/${basename(file)}` : ''
-  }
-  return text
+  const file = fromAssetApi(text)
+  return file ? `assets/${basename(file)}` : text
 }
 
 function coverList(value: unknown): string[] {
@@ -190,11 +199,8 @@ function storedCoverMatter(value: unknown, fallback: string) {
 function storedPackHref(href: string) {
   const name = assetName(href)
   if (name) return `assets/${name}`
-  if (href.startsWith('/api/page/file/')) {
-    const file = decodeURIComponent(href.slice('/api/page/file/'.length).split(/[?#]/)[0] ?? '')
-    return file ? `assets/${basename(file)}` : href
-  }
-  return href
+  const file = fromAssetApi(href)
+  return file ? `assets/${basename(file)}` : href
 }
 
 function storedPackJson(value: unknown) {
@@ -319,13 +325,17 @@ function applyPatch(current: PageRow, patch: Record<string, unknown>): PageRow {
 }
 
 export class PagesStore {
-  constructor(private fs: WorkspaceFs) {}
+  constructor(
+    private fs: WorkspaceFs,
+    private assetsDir = join(process.cwd(), SHARED_ASSETS),
+  ) {}
 
   private db: import('node:sqlite').DatabaseSync | null = null
 
   private async ensureDirs() {
     await mkdir(dirname(this.fs.resolve(`${PAGE_ROOT}/x.md`)), { recursive: true })
     await mkdir(this.fs.resolve(PAGE_ASSETS), { recursive: true })
+    await mkdir(this.assetsDir, { recursive: true })
   }
 
   private async openDb() {
@@ -486,17 +496,22 @@ export class PagesStore {
   async writeAsset(name: string, content: string | Buffer | Uint8Array) {
     const file = basename(name)
     if (!file || file !== name.replace(/\\/g, '/') || !isPageAssetFileName(file)) throw new Error('invalid asset')
-    await this.ensureDirs()
+    await mkdir(this.assetsDir, { recursive: true })
     const bytes = typeof content === 'string' ? Buffer.from(content) : Buffer.from(content)
-    await writeFile(this.fs.resolve(`${PAGE_ASSETS}/${file}`), bytes)
+    await writeFile(join(this.assetsDir, file), bytes)
     return { name: file, href: fileUrl(file) }
   }
 
   async readAsset(name: string): Promise<{ bytes: Buffer; type: string }> {
     const file = basename(name)
     if (!file || file !== name.replace(/\\/g, '/')) throw new Error('invalid asset')
-    const bytes = await readFile(this.fs.resolve(`${PAGE_ASSETS}/${file}`))
-    return { bytes, type: mimeOf(file) }
+    try {
+      const bytes = await readFile(join(this.assetsDir, file))
+      return { bytes, type: mimeOf(file) }
+    } catch {
+      const bytes = await readFile(this.fs.resolve(`${PAGE_ASSETS}/${file}`))
+      return { bytes, type: mimeOf(file) }
+    }
   }
 
   async gcAssets(opts?: { graceMs?: number; now?: number }) {

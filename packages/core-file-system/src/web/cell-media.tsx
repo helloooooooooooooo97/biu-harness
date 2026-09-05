@@ -9,25 +9,16 @@ function safeFileName(name: string) {
   return base || `file-${Date.now()}`
 }
 
-async function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result ?? ''))
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(file)
-  })
-}
-
-async function uploadPageAsset(file: File) {
+async function uploadDbAsset(file: File) {
   const name = `${Date.now()}-${safeFileName(file.name)}`
-  const res = await fetch(`/api/page/file/${encodeURIComponent(name)}`, {
+  const res = await fetch(`/api/db/file/${encodeURIComponent(name)}`, {
     method: 'PUT',
     headers: { 'content-type': file.type || 'application/octet-stream' },
     body: file,
   })
   const body = (await res.json().catch(() => ({}))) as { error?: string; href?: string; name?: string }
   if (!res.ok) throw new Error(body.error || res.statusText)
-  return { name: body.name || name, href: body.href || `/api/page/file/${encodeURIComponent(name)}` }
+  return { name: body.name || name, href: body.href || `/api/db/file/${encodeURIComponent(name)}` }
 }
 
 function commitImages(list: string[], onCommit: (next: unknown) => void) {
@@ -167,7 +158,6 @@ export function MediaField({
   const takeFilesRef = useRef<(picked: File[]) => Promise<void>>(async () => {})
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(false)
-  const pageAssets = collectionPath === '/pages'
   const images = kind === 'image' ? asImageSrcList(value) : []
   const imagesRef = useRef(images)
   imagesRef.current = images
@@ -186,15 +176,9 @@ export function MediaField({
       const addedImages: string[] = []
       const addedFiles: Array<{ name: string; href: string; bytes?: number }> = []
       for (const item of files) {
-        if (pageAssets) {
-          const written = await uploadPageAsset(item)
-          if (kind === 'image') addedImages.push(written.href)
-          else addedFiles.push({ name: item.name || written.name, href: written.href, bytes: item.size })
-        } else if (kind === 'image') {
-          addedImages.push(await fileToDataUrl(item))
-        } else {
-          throw new Error('这张表还没有附件存储')
-        }
+        const written = await uploadDbAsset(item)
+        if (kind === 'image') addedImages.push(written.href)
+        else addedFiles.push({ name: item.name || written.name, href: written.href, bytes: item.size })
       }
       if (kind === 'image') commitImages([...imagesRef.current, ...addedImages], onCommit)
       else onCommit(commitAttachments([...filesRef.current, ...addedFiles]))

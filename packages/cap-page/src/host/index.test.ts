@@ -125,10 +125,11 @@ test('page plugin stores pages in SQLite under .page', async () => {
   await spec.remove!({ ids: [created[0]!.id] })
   assert.equal((await spec.list()).length, 0)
 
-  const store = new PagesStore(ctx.fs.workspace as never)
+  const assetsDir = join(root, '.cordis/assets')
+  const store = new PagesStore(ctx.fs.workspace as never, assetsDir)
   const asset = await store.writeAsset('board.json', '{\n  "elements": []\n}\n')
   assert.equal(asset.name, 'board.json')
-  const diskAsset = await readFile(join(root, PAGE_ASSETS, 'board.json'), 'utf8')
+  const diskAsset = await readFile(join(assetsDir, 'board.json'), 'utf8')
   assert.match(diskAsset, /elements/)
   const read = await store.readAsset('board.json')
   assert.equal(read.type, 'application/json; charset=utf-8')
@@ -188,10 +189,12 @@ test('collectPageAssetNames picks page asset pointers', () => {
     'cover: assets/hero.png\n',
     ':::pageBlock {kind=excalidraw}\n{"file":"assets/excalidraw-aa.json"}\n:::\n',
     { href: '/api/page/file/pack.zip' },
+    { href: '/api/db/file/shared.bin' },
   )
   assert.equal(names.has('hero.png'), true)
   assert.equal(names.has('excalidraw-aa.json'), true)
   assert.equal(names.has('pack.zip'), true)
+  assert.equal(names.has('shared.bin'), true)
   assert.equal(collectPageAssetNames('assets/画板-ab.json').has('画板-ab.json'), true)
   assert.equal(ASSET_GC_GRACE_MS, 24 * 60 * 60 * 1000)
 })
@@ -201,7 +204,7 @@ test('gcAssets deletes unreferenced files after one day', async () => {
   await ctx.plugin(tools)
   const root = await mkdtemp(join(tmpdir(), 'page-gc-'))
   await ctx.plugin(fsPlugin, { root })
-  const store = new PagesStore(ctx.fs.workspace as never)
+  const store = new PagesStore(ctx.fs.workspace as never, join(root, '.cordis/assets'))
   const a = await store.create({
     title: 'A',
     notes: ':::pageBlock {kind=excalidraw}\n{"file":"assets/excalidraw-keep.json"}\n:::\n',
@@ -210,9 +213,10 @@ test('gcAssets deletes unreferenced files after one day', async () => {
     title: 'B',
     notes: ':::pageBlock {kind=excalidraw}\n{"file":"assets/excalidraw-drop.json"}\n:::\n',
   })
-  await store.writeAsset('excalidraw-keep.json', '{"ok":1}')
-  await store.writeAsset('excalidraw-drop.json', '{"ok":2}')
-  await store.writeAsset('orphan.json', '{"ok":3}')
+  await mkdir(join(root, PAGE_ASSETS), { recursive: true })
+  await writeFile(join(root, PAGE_ASSETS, 'excalidraw-keep.json'), '{"ok":1}')
+  await writeFile(join(root, PAGE_ASSETS, 'excalidraw-drop.json'), '{"ok":2}')
+  await writeFile(join(root, PAGE_ASSETS, 'orphan.json'), '{"ok":3}')
   const stale = Date.now() / 1000 - 2 * 24 * 60 * 60
   await utimes(join(root, PAGE_ASSETS, 'excalidraw-drop.json'), stale, stale)
   await utimes(join(root, PAGE_ASSETS, 'orphan.json'), stale, stale)
@@ -235,7 +239,7 @@ test('gcAssets deletes unreferenced files after one day', async () => {
 
   await store.writeAsset('fresh-orphan.json', '{}')
   await store.gcAssets()
-  const fresh = await readFile(join(root, PAGE_ASSETS, 'fresh-orphan.json'), 'utf8')
+  const fresh = await readFile(join(root, '.cordis/assets', 'fresh-orphan.json'), 'utf8')
   assert.equal(fresh, '{}')
   assert.equal(a.title, 'A')
 })
