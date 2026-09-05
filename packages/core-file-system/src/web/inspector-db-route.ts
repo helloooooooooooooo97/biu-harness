@@ -142,8 +142,27 @@ function hrefPathKey(href: string) {
   return String(href || '').split('?')[0]
 }
 
+function paneWithHref(tabId: string, href: string) {
+  const key = hrefPathKey(href)
+  return paneIdsForTab(tabId).find((id) => hrefPathKey(getInspectorDbPath(id)) === key)
+}
+
+function revealInspectorPane(paneId: string, href: string) {
+  setInspectorDbPath(paneId, href)
+  window.dispatchEvent(new Event('biu:inspector-open'))
+  window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: paneId }))
+}
+
 function nextInspectorPaneId(tabId: string) {
   return `${tabId}::${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+}
+
+/** 右侧已经打开同一路径时只聚焦，不新开。 */
+export function focusInspectorIfOpen(collection: string, href: string) {
+  const pane = paneWithHref(inspectorCollectionTabId(collection), href)
+  if (!pane) return false
+  revealInspectorPane(pane, href)
+  return true
 }
 
 /** 右侧检查器打开这条路径，中间主界面不动。默认同表实例一起改路径；unique 时同页只聚焦、不同页新开。 */
@@ -152,18 +171,14 @@ export function showInInspector(collection: string, href: string, opts?: { uniqu
   const unique = opts?.unique === true
   const paneIds = paneIdsForTab(tabId)
   if (unique) {
-    const same = paneIds.find((id) => hrefPathKey(getInspectorDbPath(id)) === hrefPathKey(href))
+    const same = paneWithHref(tabId, href)
     if (same) {
-      setInspectorDbPath(same, href)
-      window.dispatchEvent(new Event('biu:inspector-open'))
-      window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: same }))
+      revealInspectorPane(same, href)
       return
     }
     const live = paneIds.filter((id) => getInspectorDbPath(id))
     const target = live.length ? nextInspectorPaneId(tabId) : tabId
-    setInspectorDbPath(target, href)
-    window.dispatchEvent(new Event('biu:inspector-open'))
-    window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: target }))
+    revealInspectorPane(target, href)
     return
   }
   for (const paneId of paneIds) setInspectorDbPath(paneId, href)
@@ -171,9 +186,9 @@ export function showInInspector(collection: string, href: string, opts?: { uniqu
   window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: tabId }))
 }
 
-/** 右侧检查器打开这条记录，中间主界面不动。 */
+/** 右侧检查器打开这条记录。同一页已在检查器里则只聚焦。 */
 export function showRecordInInspector(collection: string, recordId: string) {
-  showInInspector(collection, databaseRecordPath(collection, recordId))
+  showInInspector(collection, databaseRecordPath(collection, recordId), { unique: true })
 }
 
 /** 工具查/改/删某张表后：打开右侧检查器并切到该表（中间主界面不动）。 */

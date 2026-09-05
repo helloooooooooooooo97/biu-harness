@@ -1,4 +1,4 @@
-import { test } from 'vitest'
+import { beforeEach, test } from 'vitest'
 import assert from 'node:assert/strict'
 import { databaseAllViewPath } from './database-path.ts'
 import {
@@ -6,6 +6,7 @@ import {
   isInspectorDatabasePath,
   setInspectorDbPath,
   resetInspectorDbPathMemory,
+  focusInspectorIfOpen,
   showRecordInInspector,
   showInInspector,
   applyDatabaseReveal,
@@ -13,6 +14,20 @@ import {
   isInspectorAgentWorking,
   setInspectorAgentWorking,
 } from './inspector-db-route.ts'
+
+function clearInspectorPanes() {
+  resetInspectorDbPathMemory()
+  const keys: string[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key?.startsWith('inspector.dbPath:')) keys.push(key)
+  }
+  for (const key of keys) localStorage.removeItem(key)
+}
+
+beforeEach(() => {
+  clearInspectorPanes()
+})
 
 test('inspector database path is set explicitly', () => {
   setInspectorDbPath('')
@@ -69,12 +84,12 @@ test('window reveal event opens the inspector record path', async () => {
   window.removeEventListener('biu:inspector-tab', onTab)
 })
 
-test('showRecordInInspector updates an already-open repeatable pane, not just the canonical tab id', async () => {
+test('showRecordInInspector focuses an already-open pane for the same page', () => {
   const pane = 'database:/pages::abc123'
-  setInspectorDbPath(pane, '/database/pages/view/builtin-all:/pages')
+  setInspectorDbPath(pane, '/database/pages/record/p1?view=all')
   showRecordInInspector('/pages', 'p1')
   assert.equal(getInspectorDbPath(pane), '/database/pages/record/p1')
-  assert.equal(getInspectorDbPath('database:/pages'), '/database/pages/record/p1')
+  assert.equal(getInspectorDbPath('database:/pages'), '')
 })
 
 test('showRecordInInspector opens the inspector on this record', async () => {
@@ -105,6 +120,14 @@ test('unique inspector reveal focuses the same page and opens a new pane for a d
     .map((key) => key.slice('inspector.dbPath:'.length))
   assert.equal(extra.length, 1)
   assert.equal(getInspectorDbPath(extra[0]!), '/database/notes/record/n2')
+})
+
+test('focusInspectorIfOpen only focuses when that page is already in the inspector', () => {
+  setInspectorDbPath('database:/pages', '/database/pages/record/p1')
+  assert.equal(focusInspectorIfOpen('/pages', '/database/pages/record/p1?view=all'), true)
+  assert.equal(getInspectorDbPath('database:/pages'), '/database/pages/record/p1?view=all')
+  assert.equal(focusInspectorIfOpen('/pages', '/database/pages/record/p2'), false)
+  assert.equal(getInspectorDbPath('database:/pages'), '/database/pages/record/p1?view=all')
 })
 
 test('showInInspector opens a collection href in the inspector', async () => {

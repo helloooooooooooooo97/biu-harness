@@ -110,6 +110,7 @@ test('table title opens record from the title-side button', () => {
   assert.match(browser, /const treeOn = treeable && showTree/)
   assert.match(browser, /const tree = openDetail && treeOn/)
   assert.match(browser, /openRow\(row\)/)
+  assert.match(browser, /focusInspectorIfOpen\(collectionPath, databaseRecordPath\(collectionPath, row.id\)\)/)
   assert.match(browser, /chrome\?\.openRow/)
   assert.doesNotMatch(browser, /catalogRowOpenTarget/)
   assert.doesNotMatch(browser, /tagRowOpenTarget/)
