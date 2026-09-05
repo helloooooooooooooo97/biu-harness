@@ -10,6 +10,7 @@ import {
 import { TagChip, TagChips } from '@biu/public-ui'
 import { DbSearchOption, ensureDbSearchStyle } from '@biu/database-ui'
 import { FieldEditor, fieldDraftValue, parseFieldValue } from './fsdb-cells.tsx'
+import { loadFacets, persistFacets, slugFacetId, subscribeFacets } from './facet-catalog.ts'
 import { PersonPickPanel } from './person-cell.tsx'
 import { RecordPickPanel } from './record-link-cell.tsx'
 import { asStringList, isParentLinkField, isRecordLinkField, parseFacetFlatColumnKey, resolveFieldType } from './fields.ts'

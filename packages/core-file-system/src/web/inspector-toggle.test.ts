@@ -204,6 +204,7 @@ test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.match(browser, /if \(surface === 'table'\)/)
   assert.match(browser, /<CellPopDraft/)
   const popDraft = readFileSync(resolve(import.meta.dirname, './cell-pop-draft.tsx'), 'utf8')
+  assert.match(popDraft, /loadFacets, persistFacets, slugFacetId, subscribeFacets/)
   assert.doesNotMatch(popDraft, /提交/)
   assert.doesNotMatch(popDraft, /取消/)
   assert.match(popDraft, /fsdb-cell-pop-tags/)
