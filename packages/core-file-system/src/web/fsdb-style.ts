@@ -484,15 +484,17 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-person-option:hover{background:var(--dsw-hover)}
 .fsdb-person-option.is-selected{background:color-mix(in srgb,var(--dsw-pick) 14%,transparent)}
 .fsdb-person-loading{display:flex;align-items:center;gap:6px;padding:6px;color:var(--dsw-label-3);font-size:12px}
-.fsdb-pop-host,.fsdb-ref-host{display:flex;align-items:center;min-width:0;width:100%;min-height:22px;cursor:pointer}
+.fsdb-pop-host,.fsdb-ref-host{display:flex;align-items:flex-start;min-width:0;width:100%;min-height:22px;cursor:pointer}
 .fsdb-pop-empty,.fsdb-detail-aside .fsdb-pop-empty{color:var(--dsw-label-3);font-size:14px;font-weight:600;user-select:none}
-.fsdb-ref-chips{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:0;max-width:100%}
-.fsdb-ref-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;margin:0;border:0;border-radius:4px;padding:1px 6px 1px 7px;background:var(--dsw-hover);color:var(--dsw-label);font:inherit;font-size:13px;line-height:20px;cursor:pointer;text-align:left}
+.fsdb-ref-chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center;align-content:flex-start;min-width:0;width:100%;max-width:100%}
+.fsdb-ref-chip{display:inline-flex;align-items:center;gap:4px;flex:none;width:auto;max-width:100%;margin:0;border:0;border-radius:4px;padding:1px 6px 1px 7px;background:var(--dsw-hover);color:var(--dsw-label);font:inherit;font-size:13px;line-height:20px;cursor:pointer;text-align:left}
 .fsdb-ref-chip:hover{background:color-mix(in srgb,var(--dsw-pick) 16%,transparent)}
 .fsdb-ref-chip-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:underline;text-underline-offset:2px}
 .fsdb-ref-pick{display:flex;flex-direction:column;gap:6px;min-width:0}
-.fsdb-ref-picked{display:flex;flex-direction:column;gap:2px}
-.fsdb-ref-picked-row,.fsdb-ref-row{display:flex;align-items:center;gap:4px;min-width:0}
+.fsdb-ref-picked{display:flex;flex-wrap:wrap;gap:4px;align-items:center;align-content:flex-start;min-width:0;width:100%}
+.fsdb-ref-picked-row{display:inline-flex;align-items:center;gap:2px;flex:none;width:auto;max-width:100%;min-width:0;border-radius:4px;padding:1px 2px 1px 4px;background:var(--dsw-hover)}
+.fsdb-ref-picked-row .fsdb-ref-jump{flex:none;width:auto;max-width:100%;padding:2px 4px}
+.fsdb-ref-row{display:flex;align-items:center;gap:4px;min-width:0;width:100%}
 .fsdb-ref-row{border-radius:5px;padding:1px}
 .fsdb-ref-row.is-on,.fsdb-ref-row:hover{background:var(--dsw-hover)}
 .fsdb-ref-check{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex:none;margin:0;border:1px solid var(--dsw-border);border-radius:4px;padding:0;background:transparent;color:var(--dsw-label);cursor:pointer}
