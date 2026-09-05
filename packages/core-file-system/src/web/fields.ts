@@ -133,6 +133,35 @@ export function defaultColumnKeys(schema: CollectionSchema | undefined, allKeys:
   return pinLabelColumn(schema, keys)
 }
 
+/** 列表投影：可见列 + 标题/图标/树/分组/合集源字段。不传则服务端仍返回除正文外全字段。 */
+export function listProjectionKeys(opts: {
+  schema?: CollectionSchema
+  columns: string[]
+  groupBy?: string
+}): string[] {
+  const keys: string[] = []
+  const seen = new Set<string>()
+  const add = (key?: string | null) => {
+    const next = String(key ?? '').trim()
+    if (!next || seen.has(next)) return
+    seen.add(next)
+    keys.push(next)
+  }
+  add('id')
+  add(opts.schema?.labelField ?? 'title')
+  add('emoji')
+  add('mascot')
+  add(declaredParentField(opts.schema))
+  add(opts.groupBy)
+  let needFacet = false
+  for (const key of opts.columns) {
+    add(key)
+    if (parseFacetFlatColumnKey(key)) needFacet = true
+  }
+  if (needFacet) add(facetSourceKey(opts.schema))
+  return keys
+}
+
 export const FACET_FLAT_PREFIX = 'facet::'
 
 export function facetFlatColumnKey(packId: string, fieldKey: string) {

@@ -185,7 +185,28 @@ export function savedViewFromRecord(row: { viewId?: unknown; title?: unknown; mo
 
 export async function pullSavedViews() {
   try {
-    const page = await listCollection({ path: '/views', limit: 200, offset: 0 })
+    const page = await listCollection({
+      path: '/views',
+      limit: 200,
+      offset: 0,
+      columns: [
+        'title',
+        'tablePath',
+        'viewId',
+        'mode',
+        'sortField',
+        'sortDir',
+        'query',
+        'groupBy',
+        'columns',
+        'filters',
+        'tree',
+        'wrap',
+        'truncate',
+        'pageSize',
+        'columnWidths',
+      ],
+    })
     const byPath = new Map<string, SavedView[]>()
     for (const row of page.items) {
       const tablePath = String(row.tablePath ?? '').trim()

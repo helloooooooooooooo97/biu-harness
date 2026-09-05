@@ -23,6 +23,7 @@ export async function listCollection(opts: {
   sortField?: string
   sortDir?: string
   filters?: Record<string, string>
+  columns?: string[]
 }): Promise<ListPage> {
   const params = new URLSearchParams({
     path: opts.path,
@@ -33,6 +34,7 @@ export async function listCollection(opts: {
     dir: opts.sortDir === 'desc' ? 'desc' : 'asc',
     filter: JSON.stringify(opts.filters ?? {}),
   })
+  if (opts.columns?.length) params.set('columns', opts.columns.join(','))
   const key = params.toString()
   const pending = listInflight.get(key)
   if (pending) return pending

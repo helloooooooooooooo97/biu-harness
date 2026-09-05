@@ -47,6 +47,7 @@ import {
   groupableFields,
   hasTreeLinks,
   isRecordLinkField,
+  listProjectionKeys,
   parentFieldKey,
   parseFacetFlatColumnKey,
   patchFacetFlatValue,
@@ -323,6 +324,22 @@ export function CollectionBrowser({
   const [showTree, setShowTree] = useState(initialView?.tree !== false)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
+  const listColumns = useMemo(() => {
+    if (chrome?.cells) return undefined
+    const currentSchema = stat?.schema
+    const fieldKeys = currentSchema
+      ? Object.keys(currentSchema.fields).filter(
+          (key) => isListColumn(key) && resolveFieldType(currentSchema.fields[key]!) !== 'file',
+        )
+      : []
+    const facetKeys = flattenFacetColumns(facetCatalog).map((item) => item.key)
+    const allowed = new Set([...fieldKeys, ...facetKeys])
+    const requested = columnKeys.length ? columnKeys : defaultColumnKeys(currentSchema, [...allowed])
+    const visible = requested.filter((key) => allowed.has(key) || Boolean(parseFacetFlatColumnKey(key)))
+    if (!visible.length) return undefined
+    return listProjectionKeys({ schema: currentSchema, columns: visible, groupBy })
+  }, [chrome, columnKeys, facetCatalog, groupBy, stat])
+  const listColumnsKey = listColumns?.join('\0') ?? ''
   const [refreshing, setRefreshing] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [notice, setNotice] = useState('')
@@ -470,6 +487,7 @@ export function CollectionBrowser({
           sortField,
           sortDir,
           filters: queryFilters,
+          columns: listColumns,
         }),
       ])
       if (gen !== reloadGen.current) return true
@@ -499,10 +517,10 @@ export function CollectionBrowser({
       setError(String(err))
       return false
     }
-  }, [activeViewId, collectionPath, dataPath, fetchQuery, queryFilters, page, pageSize, sortDir, sortField])
+  }, [activeViewId, collectionPath, dataPath, fetchQuery, listColumns, queryFilters, page, pageSize, sortDir, sortField])
   const reloadRef = useRef(reload)
   reloadRef.current = reload
-  const reloadKey = `${dataPath}\0${page}\0${pageSize}\0${fetchQuery}\0${sortField}\0${sortDir}\0${JSON.stringify(queryFilters)}\0${activeViewId ?? ''}`
+  const reloadKey = `${dataPath}\0${page}\0${pageSize}\0${fetchQuery}\0${sortField}\0${sortDir}\0${JSON.stringify(queryFilters)}\0${activeViewId ?? ''}\0${listColumnsKey}`
   const detailIdRef = useRef<string | null>(null)
   detailIdRef.current = detailId
   const contentGen = useRef(0)
@@ -632,12 +650,6 @@ export function CollectionBrowser({
       setDetailRow(null)
       return
     }
-    const hit = items.find((row) => row.id === detailId)
-    if (hit) {
-      setDetailRow(hit)
-      return
-    }
-    if (detailRow?.id === detailId) return
     let cancelled = false
     void readJson<{ value?: DbRecord }>(`/api/db/read?path=${encodeURIComponent(`${dataPath}/${detailId}`)}`)
       .then((data) => {
@@ -649,7 +661,7 @@ export function CollectionBrowser({
     return () => {
       cancelled = true
     }
-  }, [collectionPath, dataPath, detailId, detailRow?.id, items])
+  }, [collectionPath, dataPath, detailId, reloadKey])
 
   useEffect(() => () => window.clearTimeout(noticeTimer.current), [])
 
@@ -788,9 +800,7 @@ export function CollectionBrowser({
   const tableColSpan = Math.max(columns.length, 1)
 
   const selected =
-    (detailId &&
-      (items.find((item) => item.id === detailId) ?? (detailRow?.id === detailId ? detailRow : null))) ||
-    null
+    (detailId && (detailRow?.id === detailId ? detailRow : items.find((item) => item.id === detailId))) || null
   const viewIndex = selected ? indexOnPage(selected.id, items, page, pageSize) : null
   const stepViewRecord = async (delta: -1 | 1) => {
     if (!selected || steppingView.current) return
@@ -809,6 +819,7 @@ export function CollectionBrowser({
           sortField,
           sortDir,
           filters: queryFilters,
+          columns: listColumns,
         },
         list: listCollection,
       })
@@ -854,11 +865,10 @@ export function CollectionBrowser({
 
   useEffect(() => {
     if (!detailId || !schema) return
-    const row = items.find((item) => item.id === detailId)
-    if (!row || hydratedDetail.current === detailId) return
-    setDraft(draftFromRecord(schema, row, bodyKey, detailBody))
+    if (detailRow?.id !== detailId) return
+    setDraft(draftFromRecord(schema, detailRow, bodyKey, detailBody))
     hydratedDetail.current = detailId
-  }, [bodyKey, detailBody, detailId, items, schema])
+  }, [bodyKey, detailBody, detailId, detailRow, schema])
 
   useEffect(() => {
     if (!bodyKey || !detailId || !schema) return

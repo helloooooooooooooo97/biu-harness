@@ -113,5 +113,6 @@ export async function fetchViewPreview(
     sortField: view.sortField,
     sortDir: view.sortDir,
     filters: view.filters,
+    columns: ['title', 'emoji', 'mascot'],
   })
 }
