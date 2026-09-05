@@ -40,7 +40,7 @@ function escapeId(id: string) {
   return typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(id) : id
 }
 
-/** 只读扫描。会话详情只收用户气泡；页面/任务只收 h1–h3。禁止给标题写 data-*。 */
+/** 只读扫描。会话详情只收用户气泡，刻度用二级标题长度；页面/任务只收 h1–h3。禁止给标题写 data-*。 */
 export function headingsFromRoot(root: ParentNode): HeadingOutlineItem[] {
   if (root.querySelector('[data-testid="session-record-chat"]')) {
     const items: HeadingOutlineItem[] = []
@@ -49,7 +49,7 @@ export function headingsFromRoot(root: ParentNode): HeadingOutlineItem[] {
       const id = wrap instanceof HTMLElement ? wrap.getAttribute('data-node-id')?.trim() : ''
       const text = preview(el.textContent ?? '')
       if (!id || !text) continue
-      items.push({ id, text, level: 1 })
+      items.push({ id, text, level: 2 })
     }
     return items
   }

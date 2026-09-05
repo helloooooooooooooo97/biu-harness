@@ -22,9 +22,9 @@ test('deriveChatOutline can hide robot-initiated user nodes', () => {
   assert.deepEqual(
     deriveChatOutline(nodes, 'all').map((item) => [item.id, item.robot, item.level]),
     [
-      ['u-1', false, 1],
-      ['u-2', true, 1],
-      ['u-3', false, 1],
+      ['u-1', false, 2],
+      ['u-2', true, 2],
+      ['u-3', false, 2],
     ],
   )
 })

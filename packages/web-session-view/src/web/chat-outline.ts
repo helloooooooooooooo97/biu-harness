@@ -6,7 +6,7 @@ export type ChatOutlineItem = {
   id: string
   text: string
   robot: boolean
-  level: 1
+  level: 2
 }
 
 const OPEN_KEY = 'cordis.chatOutline.open'
@@ -75,7 +75,7 @@ export function deriveChatOutline(nodes: ChatNode[], filter: ChatOutlineFilter):
     if (node.kind !== 'user') continue
     const robot = !isHumanUserNode(node)
     if (filter === 'user' && robot) continue
-    items.push({ id: node.id, text: outlinePreview(node.text), robot, level: 1 })
+    items.push({ id: node.id, text: outlinePreview(node.text), robot, level: 2 })
   }
   return items
 }

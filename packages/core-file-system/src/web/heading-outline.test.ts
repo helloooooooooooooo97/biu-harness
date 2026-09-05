@@ -66,8 +66,8 @@ test('session outline is one tick per user bubble, never reply headings', () => 
   assert.deepEqual(
     headingsFromRoot(root).map((item) => [item.id, item.text, item.level]),
     [
-      ['u-1', 'hello from me', 1],
-      ['u-2', 'second question', 1],
+      ['u-1', 'hello from me', 2],
+      ['u-2', 'second question', 2],
     ],
   )
 })
