@@ -108,11 +108,17 @@ export function PageEditor({ record, value, writable, onChange }: FsContentProps
 
   useEffect(() => {
     if (!editor || editor.isDestroyed) return
-    if (value == null) return
-    if (hydratedId.current === record.id) return
     const md = asMarkdown(value)
+    if (hydratedId.current !== record.id) {
+      if (value == null) return
+      saved.current = md
+      hydratedId.current = record.id
+      editor.commands.setContent(md, { contentType: 'markdown', emitUpdate: false })
+      return
+    }
+    if (md === saved.current) return
+    if (editor.isFocused) return
     saved.current = md
-    hydratedId.current = record.id
     editor.commands.setContent(md, { contentType: 'markdown', emitUpdate: false })
   }, [editor, record.id, value])
 

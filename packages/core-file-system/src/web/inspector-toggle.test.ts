@@ -361,6 +361,11 @@ test('list polling pauses while a record is open', () => {
   assert.match(browser, /}, 20000\)/)
 })
 
+test('open detail still reloads body when the collection changes', () => {
+  assert.match(browser, /if \(detailIdRef\.current\) pullDetailBody/)
+  assert.match(browser, /window.dispatchEvent\(new Event\('fsdb:change'\)\)/)
+})
+
 test('collection reload does not follow callback identity', () => {
   assert.match(browser, /const reloadKey = /)
   assert.match(browser, /void reloadRef\.current\(\)/)

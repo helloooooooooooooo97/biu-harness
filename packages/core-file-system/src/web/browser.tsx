@@ -498,6 +498,24 @@ export function CollectionBrowser({
   const reloadKey = `${dataPath}\0${page}\0${pageSize}\0${fetchQuery}\0${sortField}\0${sortDir}\0${JSON.stringify(queryFilters)}\0${activeViewId ?? ''}`
   const detailIdRef = useRef<string | null>(null)
   detailIdRef.current = detailId
+  const contentGen = useRef(0)
+  const pullDetailBody = useCallback(() => {
+    const id = detailIdRef.current
+    if (!id) {
+      setDetailBody(null)
+      return
+    }
+    const gen = ++contentGen.current
+    void readJson<{ value?: unknown }>(`/api/db/content?path=${encodeURIComponent(`${dataPath}/${id}`)}`)
+      .then((data) => {
+        if (gen !== contentGen.current) return
+        setDetailBody(data.value ?? null)
+      })
+      .catch(() => {
+        if (gen !== contentGen.current) return
+        setDetailBody(null)
+      })
+  }, [dataPath])
   const steppingView = useRef(false)
 
   useEffect(() => {
@@ -567,9 +585,11 @@ export function CollectionBrowser({
   useEffect(() => {
     let debounce = 0
     const onChange = () => {
-      if (detailIdRef.current) return
       window.clearTimeout(debounce)
-      debounce = window.setTimeout(() => void reloadRef.current(), 120)
+      debounce = window.setTimeout(() => {
+        void reloadRef.current()
+        if (detailIdRef.current) pullDetailBody()
+      }, 120)
     }
     window.addEventListener('fsdb:change', onChange)
     const timer = nested
@@ -583,7 +603,7 @@ export function CollectionBrowser({
       window.clearInterval(timer)
       window.removeEventListener('fsdb:change', onChange)
     }
-  }, [collectionPath, dataPath, nested])
+  }, [collectionPath, dataPath, nested, pullDetailBody])
 
   useEffect(() => {
     void pullFacets()
@@ -841,21 +861,12 @@ export function CollectionBrowser({
 
   useEffect(() => {
     if (!detailId) {
+      contentGen.current += 1
       setDetailBody(null)
       return
     }
-    let cancelled = false
-    void readJson<{ value?: unknown }>(`/api/db/content?path=${encodeURIComponent(`${dataPath}/${detailId}`)}`)
-      .then((data) => {
-        if (!cancelled) setDetailBody(data.value ?? null)
-      })
-      .catch(() => {
-        if (!cancelled) setDetailBody(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [collectionPath, dataPath, detailId])
+    pullDetailBody()
+  }, [collectionPath, dataPath, detailId, pullDetailBody])
 
   useEffect(() => {
     if (nested || !detailId) return
@@ -1158,6 +1169,7 @@ export function CollectionBrowser({
           body: JSON.stringify({ path: `${dataPath}/${row.id}`, value: content[bodyKey] }),
         })
         setDetailBody(data.value ?? content[bodyKey])
+        window.dispatchEvent(new Event('fsdb:change'))
         return
       }
       const data = await readJson<{ value?: DbRecord }>('/api/db/update', {
@@ -1169,6 +1181,7 @@ export function CollectionBrowser({
       if (next) {
         setItems((prev) => prev.map((item) => (item.id === next.id ? { ...item, ...next } : item)))
         setDetailRow((prev) => (prev?.id === next.id ? { ...prev, ...next } : prev))
+        window.dispatchEvent(new Event('fsdb:change'))
         return
       }
       quietUntil.current = 0

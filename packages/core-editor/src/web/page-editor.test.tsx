@@ -137,3 +137,11 @@ test('page editor hydrates markdown after content fetch', async () => {
   assert.match(container.textContent ?? '', /一段正文/)
 })
 
+test('page editor applies later value when it is not focused', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const { resolve } = await import('node:path')
+  const src = await readFile(resolve(import.meta.dirname, './page-editor.tsx'), 'utf8')
+  assert.match(src, /if \(editor\.isFocused\) return/)
+  assert.match(src, /md === saved\.current/)
+})
+
