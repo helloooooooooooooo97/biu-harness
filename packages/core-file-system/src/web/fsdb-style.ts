@@ -125,15 +125,16 @@ const CSS = `
 .fsdb-link{color:inherit;text-underline-offset:2px;overflow-wrap:anywhere}
 .fsdb-link:hover{text-decoration:underline}
 .fsdb-thumb-btn{display:inline-flex;align-items:center;justify-content:center;line-height:0;border:0;padding:0;background:transparent;cursor:zoom-in;vertical-align:middle}
+.fsdb-thumb-btn .ant-image{display:inline-flex;line-height:0}
 .fsdb-thumb{display:block;width:28px;height:18px;object-fit:cover;border-radius:3px;background:var(--dsw-hover);flex:none;box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--dsw-border) 70%, transparent)}
-.fsdb-lightbox{position:fixed;inset:0;z-index:140;display:flex;align-items:center;justify-content:center;padding:28px;background:rgba(0,0,0,.72);cursor:zoom-out}
-.fsdb-lightbox img{max-width:min(92vw,1100px);max-height:88vh;object-fit:contain;border-radius:10px;box-shadow:0 16px 48px rgba(0,0,0,.45);cursor:default}
+.fsdb-thumb-btn .ant-image-img{display:block;width:28px;height:18px;object-fit:cover;border-radius:3px}
 .fsdb-file{display:inline-flex;align-items:center;gap:6px;min-width:0;color:inherit;text-underline-offset:2px}
 .fsdb-file:hover{text-decoration:underline}
 .fsdb-file-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .fsdb-fileview{min-width:0;flex:none;height:auto;min-height:0;max-height:none;overflow:visible}
 .fsdb-fileview-pre{margin:0;padding:10px 12px;border-radius:8px;background:var(--dsw-input);color:var(--dsw-label);font:inherit;font-size:14px;font-family:var(--font-mono);white-space:pre-wrap;overflow:visible;height:auto;min-height:0;max-height:none}
 .fsdb-fileview-img{display:block;width:auto;max-width:100%;height:auto;max-height:none;object-fit:contain;border-radius:8px;background:var(--dsw-hover)}
+.fsdb-fileview-img .ant-image-img{display:block;width:auto;max-width:100%;height:auto;max-height:none;object-fit:contain;border-radius:8px}
 .fsdb-page .tasks-table td:has(.fsdb-title-host){position:relative}
 .fsdb-page .tasks-tree-toggle{width:20px;height:20px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--dsw-label-3);border-radius:4px;cursor:pointer;padding:0}
 .fsdb-page .tasks-tree-toggle:hover{background:var(--dsw-hover)}
@@ -431,6 +432,7 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-cell-pop-text{box-sizing:border-box;width:100%;min-height:72px;margin:0;border:0;border-radius:6px;padding:4px 2px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;line-height:1.45;resize:vertical;outline:none}
 .fsdb-media-field{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:6px;min-width:0;max-width:100%;height:22px}
 .fsdb-media-preview{display:block;width:18px;height:18px;flex:none;object-fit:cover;border-radius:3px;background:#111}
+.fsdb-media-thumb .ant-image-img{display:block;width:18px;height:18px;object-fit:cover;border-radius:3px}
 .fsdb-media-thumbs{display:inline-flex;align-items:center;gap:4px;min-width:0;overflow:auto}
 .fsdb-media-thumb{position:relative;flex:none;line-height:0}
 .fsdb-media-remove{position:absolute;top:-3px;right:-3px;display:grid;place-items:center;width:12px;height:12px;margin:0;border:0;border-radius:6px;padding:0;background:#202020;color:var(--dsw-label);cursor:pointer}

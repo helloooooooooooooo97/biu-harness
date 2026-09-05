@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Image } from 'antd'
 import { PaperClipIcon, PhotoIcon, XMarkIcon } from '@heroicons/react/16/solid'
 import { asAttachment, asHttpHref, asImageSrcList } from '@biu/type-file-system'
 import { LocalText } from './controls.tsx'
@@ -153,10 +154,11 @@ export function MediaField({
       }
     >
       {kind === 'image' && images.length ? (
+        <Image.PreviewGroup>
         <span className="fsdb-media-thumbs">
           {images.map((src, index) => (
             <span key={`${src}-${index}`} className="fsdb-media-thumb">
-              <img className="fsdb-media-preview" src={src} alt="" />
+              <Image className="fsdb-media-preview" src={src} alt="" width={18} height={18} preview={{ mask: false }} />
               <button
                 type="button"
                 className="fsdb-media-remove"
@@ -168,6 +170,7 @@ export function MediaField({
             </span>
           ))}
         </span>
+        </Image.PreviewGroup>
       ) : null}
       {kind === 'attachment' && file ? <PaperClipIcon aria-hidden className="size-[14px] shrink-0 opacity-80" /> : null}
       <button type="button" className="fsdb-media-pick" title={label} onClick={() => inputRef.current?.click()}>

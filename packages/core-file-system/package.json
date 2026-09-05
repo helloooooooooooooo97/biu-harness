@@ -15,7 +15,8 @@
     "@biu/database-ui": "0.1.0",
     "@biu/web-session-view": "0.1.0",
     "@biu/web-snapshot": "0.1.0",
-    "@biu/host-sessions": "0.1.0"
+    "@biu/host-sessions": "0.1.0",
+    "antd": "^6.6.1"
   },
   "peerDependencies": {
     "cordis": "4.0.0-rc.8",

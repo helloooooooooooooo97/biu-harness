@@ -5310,7 +5310,8 @@ body {
   height: 56px;
 }
 
-.composer-image-thumb {
+.composer-image-thumb,
+.composer-image-thumb.ant-image {
   display: block;
   width: 56px;
   height: 56px;
@@ -5322,7 +5323,8 @@ body {
   cursor: zoom-in;
 }
 
-.composer-image-thumb img {
+.composer-image-thumb img,
+.composer-image-thumb .ant-image-img {
   display: block;
   width: 100%;
   height: 100%;
@@ -5344,25 +5346,6 @@ body {
   font-size: 11px;
   line-height: 1;
   cursor: pointer;
-}
-
-.composer-image-lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(0, 0, 0, 0.72);
-  cursor: zoom-out;
-}
-
-.composer-image-lightbox img {
-  max-width: min(920px, 92vw);
-  max-height: 88vh;
-  border-radius: 10px;
-  box-shadow: var(--dsw-shadow-lv2);
-  object-fit: contain;
 }
 
 .user-pick-chips {

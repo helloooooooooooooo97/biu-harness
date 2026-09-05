@@ -194,7 +194,7 @@ test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.match(browser, /is-cell-ro/)
   assert.match(browser, /cellFieldWritable/)
   assert.match(browser, /<CellPop/)
-  assert.match(browser, /\.fsdb-thumb-btn, \.fsdb-thumb/)
+  assert.match(browser, /\.fsdb-thumb-btn, \.fsdb-thumb, \.ant-image/)
   assert.doesNotMatch(browser, /skipBoolean/)
 })
 

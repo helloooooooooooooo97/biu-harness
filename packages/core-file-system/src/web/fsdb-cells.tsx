@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useState } from 'react'
+import { Image } from 'antd'
 import { BoolBox, TagChip, TagChips } from '@biu/public-ui'
 import {
   ArchiveBoxArrowDownIcon,
@@ -145,47 +145,46 @@ export function BoolCell({
 }
 
 function ImageThumb({ src }: { src: string }) {
-  const [open, setOpen] = useState(false)
-  useEffect(() => {
-    if (!open) return
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
   return (
-    <>
-      <button
-        type="button"
-        className="fsdb-thumb-btn"
-        title="查看大图"
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={(event) => {
-          event.stopPropagation()
-          setOpen(true)
-        }}
-      >
-        <img className="fsdb-thumb" src={src} alt="" decoding="async" width={28} height={18} />
-      </button>
-      {open
-        ? createPortal(
-            <div
-              className="fsdb-lightbox"
-              role="dialog"
-              aria-modal="true"
-              aria-label="查看图片"
-              onMouseDown={(event) => {
-                event.stopPropagation()
-                if (event.target === event.currentTarget) setOpen(false)
-              }}
-            >
-              <img src={src} alt="" decoding="async" onClick={(event) => event.stopPropagation()} />
-            </div>,
-            document.body,
-          )
-        : null}
-    </>
+    <span className="fsdb-thumb-btn" onPointerDown={(event) => event.stopPropagation()}>
+      <Image
+        src={src}
+        alt=""
+        width={28}
+        height={18}
+        className="fsdb-thumb"
+        preview={{ mask: false }}
+      />
+    </span>
+  )
+}
+
+function ImageThumbs({ srcs, compact }: { srcs: string[]; compact?: boolean }) {
+  if (!srcs.length) return null
+  const shown = compact ? srcs.slice(0, 4) : srcs
+  return (
+    <Image.PreviewGroup>
+      {compact ? (
+        <span className="fsdb-thumbs">
+          {shown.map((src, index) => (
+            <ImageThumb key={`${src}-${index}`} src={src} />
+          ))}
+          {srcs.length > 4 ? <span className="fsdb-meta">+{srcs.length - 4}</span> : null}
+        </span>
+      ) : (
+        <div className="fsdb-fileview-imgs">
+          {shown.map((src, index) => (
+            <Image
+              key={`${src}-${index}`}
+              className="fsdb-fileview-img"
+              src={src}
+              alt=""
+              preview={{ mask: false }}
+            />
+          ))}
+        </div>
+      )}
+    </Image.PreviewGroup>
   )
 }
 
@@ -241,28 +240,12 @@ export function FilePreview({
   if (kind === 'image') {
     const list = asImageSrcList(value)
     if (!list.length) return null
-    if (compact) {
-      return (
-        <span className="fsdb-thumbs">
-          {list.slice(0, 4).map((src, index) => (
-            <ImageThumb key={`${src}-${index}`} src={src} />
-          ))}
-          {list.length > 4 ? <span className="fsdb-meta">+{list.length - 4}</span> : null}
-        </span>
-      )
-    }
-    return (
-      <div className="fsdb-fileview-imgs">
-        {list.map((src, index) => (
-          <img key={`${src}-${index}`} className="fsdb-fileview-img" src={src} alt="" decoding="async" />
-        ))}
-      </div>
-    )
+    return <ImageThumbs srcs={list} compact={compact} />
   }
   const src = previewImageSrc(kind, value)
   if (src) {
     if (compact) return <ImageThumb src={src} />
-    return <img className="fsdb-fileview-img" src={src} alt="" decoding="async" />
+    return <Image className="fsdb-fileview-img" src={src} alt="" preview={{ mask: false }} />
   }
   const file = asAttachment(value)
   if (file) {
