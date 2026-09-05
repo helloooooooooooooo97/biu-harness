@@ -8,6 +8,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckIcon, ChevronDownIcon, ArrowPathIcon, PlusIcon, MagnifyingGlassIcon, SignalSlashIcon, XMarkIcon } from '@heroicons/react/16/solid'
+import { HeadlessDismiss } from '@biu/public-ui'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 
 type ChatProvider = 'deepseek' | 'openai' | 'anthropic'
@@ -195,24 +196,6 @@ export function ChatConfig(props?: { onClose?: () => void }) {
     const exact = presets.some((e) => e.label.toLowerCase() === q.toLowerCase() || e.id === q)
     return !exact
   }, [pickerQuery, presets])
-
-  useEffect(() => {
-    if (!pickerOpen) return
-    function onDoc(e: MouseEvent) {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        setPickerOpen(false)
-      }
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setPickerOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc, true)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDoc, true)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [pickerOpen])
 
   function resetAddForm() {
     setPresetId('')
@@ -749,6 +732,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                     )}
 
                     {pickerOpen ? (
+                      <HeadlessDismiss onDismiss={() => setPickerOpen(false)} insideRef={pickerRef}>
                       <div
                         id="connection-picker-menu"
                         role="listbox"
@@ -841,6 +825,7 @@ export function ChatConfig(props?: { onClose?: () => void }) {
                           </>
                         ) : null}
                       </div>
+                      </HeadlessDismiss>
                     ) : null}
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import { BrandCornerMascot } from '@biu/public-mascot'
-import { listenOutsideDismiss } from '@biu/public-ui'
+import { HeadlessDismiss } from '@biu/public-ui'
 import { ChatSidebar } from './chat-sidebar.tsx'
 
 export const ChatSessionTitle = memo(function ChatSessionTitle({
@@ -33,7 +33,6 @@ export const ChatSessionTitle = memo(function ChatSessionTitle({
     if (!open) return
     inputRef.current?.focus()
     inputRef.current?.select()
-    return listenOutsideDismiss(() => setOpen(false), (target) => Boolean(wrapRef.current?.contains(target)))
   }, [open])
 
   function commit() {
@@ -65,27 +64,29 @@ export const ChatSessionTitle = memo(function ChatSessionTitle({
         {title || '未命名会话'}
       </button>
       {open ? (
-        <div className="chat-view-session-title-pop" data-testid="chat-session-title-pop">
-          <input
-            ref={inputRef}
-            className="chat-view-session-title-input"
-            value={draft}
-            placeholder="未命名会话"
-            aria-label="编辑会话名称"
-            onChange={(event) => setDraft(event.target.value)}
-            onBlur={commit}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                setDraft(title)
-                setOpen(false)
-                return
-              }
-              if (event.key !== 'Enter') return
-              event.preventDefault()
-              commit()
-            }}
-          />
-        </div>
+        <HeadlessDismiss onDismiss={() => setOpen(false)} insideRef={wrapRef}>
+          <div className="chat-view-session-title-pop" data-testid="chat-session-title-pop">
+            <input
+              ref={inputRef}
+              className="chat-view-session-title-input"
+              value={draft}
+              placeholder="未命名会话"
+              aria-label="编辑会话名称"
+              onChange={(event) => setDraft(event.target.value)}
+              onBlur={commit}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setDraft(title)
+                  setOpen(false)
+                  return
+                }
+                if (event.key !== 'Enter') return
+                event.preventDefault()
+                commit()
+              }}
+            />
+          </div>
+        </HeadlessDismiss>
       ) : null}
       {showMascot ? (
         <BrandCornerMascot

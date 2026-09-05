@@ -254,7 +254,7 @@ const CSS = `
 .fsdb-pager-nav{display:inline-flex;align-items:center;gap:2px;flex:none;margin-left:auto}
 .fsdb-pager-size{position:relative;display:inline-flex;align-items:center}
 .fsdb-pager-size-btn{gap:4px;width:auto;min-width:0;height:26px;padding:0 6px;border-radius:6px;font-variant-numeric:tabular-nums}
-.fsdb-pager-size-menu{position:fixed;z-index:130;min-width:96px;padding:6px;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:2px}
+.fsdb-pager-size-menu{z-index:130;min-width:96px;padding:6px;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:2px}
 .fsdb-pager-size-option{display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:0;border-radius:7px;padding:6px 8px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;cursor:pointer;text-align:left}
 .fsdb-pager-size-option:hover{background:var(--dsw-hover)}
 .fsdb-pager-size-option.is-active{color:var(--dsw-business);font-weight:650}
@@ -326,7 +326,7 @@ const CSS = `
 .fsdb-schema-type-btn{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 6px;border:0;border-radius:6px;background:transparent;color:var(--dsw-label-2);font:inherit;font-size:13px;cursor:pointer}
 .fsdb-schema-type-btn:hover{background:var(--dsw-hover);color:var(--dsw-label)}
 .fsdb-schema-type-caret{opacity:.55}
-.fsdb-schema-type-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:70;display:flex;flex-direction:column;min-width:160px;max-height:240px;overflow:auto;padding:4px;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.fsdb-schema-type-menu{z-index:70;display:flex;flex-direction:column;min-width:160px;max-height:240px;overflow:auto;padding:4px;background:var(--dsw-sidebar);border:1px solid var(--dsw-border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 .fsdb-schema-type-option{display:flex;align-items:center;gap:6px;width:100%;border:0;border-radius:6px;padding:6px 8px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;text-align:left;cursor:pointer}
 .fsdb-schema-type-option:hover,.fsdb-schema-type-option.is-on{background:var(--dsw-hover)}
 .fsdb-prop-val{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#7C7A76}

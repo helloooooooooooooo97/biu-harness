@@ -10,7 +10,7 @@ import {
   UserIcon,
   XMarkIcon,
 } from '@heroicons/react/16/solid'
-import { listenOutsideDismiss } from '@biu/public-ui'
+import { HeadlessDismiss } from '@biu/public-ui'
 import { CellMulti, CellSelect, CellDateTime } from '@biu/database-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import type { DbRecord } from '@biu/type-file-system'
@@ -123,12 +123,9 @@ function FloatMenu({
     }
   }, [anchor, minWidth])
 
-  useEffect(() => {
-    return listenOutsideDismiss(onClose, (target) => Boolean(menuRef.current?.contains(target) || anchor?.contains(target)))
-  }, [anchor, onClose])
-
   if (!anchor) return null
   return createPortal(
+    <HeadlessDismiss onDismiss={onClose} inside={(node) => Boolean(anchor.contains(node))}>
     <div
       ref={menuRef}
       className="tasks-float-menu"
@@ -136,7 +133,8 @@ function FloatMenu({
       style={{ position: 'fixed', top: box.top, left: box.left, minWidth: box.width, zIndex: 80 }}
     >
       {children}
-    </div>,
+    </div>
+    </HeadlessDismiss>,
     document.body,
   )
 }

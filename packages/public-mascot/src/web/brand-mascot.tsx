@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { isValidElement, useCallback, useMemo, useState, type ReactElement, type ReactNode } from 'react'
+import { HeadlessDismiss } from '@biu/public-ui'
 import { SidebarMascot } from './sidebar-mascot.tsx'
 import { resolveSessionMascot } from './session-mascot.ts'
 
@@ -115,26 +116,12 @@ export function BrandCornerMascot({
   size?: number
 }) {
   const [agentsOpen, setAgentsOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
   const ranked = useMemo(() => rankCornerAgents(agents), [agents])
   const current = ranked.find((item) => item.id === activeId) ?? ranked[0]
   const identity = current ? resolveSessionMascot(current.id, current.mascot) : undefined
   const name = current?.title?.trim() || (onToggle ? '聊天' : '切换 Agent')
   const closeMenu = useCallback(() => setAgentsOpen(false), [])
   const expanded = onToggle ? Boolean(open) : agentsOpen
-
-  useEffect(() => {
-    if (!agentsOpen || onToggle) return
-    function onPointer(event: MouseEvent) {
-      const target = event.target as Node | null
-      if (rootRef.current?.contains(target)) return
-      if (target instanceof Element && target.closest('[data-testid="chat-session-delete-dialog"]')) return
-      setAgentsOpen(false)
-    }
-    window.addEventListener('mousedown', onPointer, true)
-    return () => window.removeEventListener('mousedown', onPointer, true)
-  }, [agentsOpen, onToggle])
-
   const panel = onToggle || !agentsOpen
     ? null
     : menu
@@ -153,7 +140,7 @@ export function BrandCornerMascot({
       )
 
   return (
-    <div className="brand-corner-cluster" ref={rootRef} data-testid="brand-corner-mascot">
+    <div className="brand-corner-cluster" data-testid="brand-corner-mascot">
       {leading ? <div className="brand-corner-leading">{leading}</div> : null}
       <div className="brand-corner-mascot">
         <button
@@ -179,7 +166,18 @@ export function BrandCornerMascot({
             <BrandMascot className="size-9" />
           )}
         </button>
-        {panel}
+        {isValidElement(panel) ? (
+          <HeadlessDismiss
+            onDismiss={closeMenu}
+            inside={(node) =>
+              Boolean(node instanceof Element && node.closest('.brand-corner-cluster, [data-testid="chat-session-delete-dialog"]'))
+            }
+          >
+            {panel as ReactElement}
+          </HeadlessDismiss>
+        ) : (
+          panel
+        )}
       </div>
     </div>
   )

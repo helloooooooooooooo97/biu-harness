@@ -2,6 +2,8 @@ export { SidebarFold } from './sidebar-fold.tsx'
 export { ChatCount } from './chat-count.tsx'
 export { BoolBox } from './bool-box.tsx'
 export { listenOutsideDismiss } from './outside-dismiss.ts'
+export { HeadlessDismiss, HEADLESS_DISMISS_IGNORE } from './headless-dismiss.tsx'
+export { HeadlessPopover } from './headless-popover.tsx'
 export { AnchorMenu } from './anchor-menu.tsx'
 export { RecordEmojiBoard } from './emoji-board.tsx'
 export {

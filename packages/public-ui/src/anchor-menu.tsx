@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type HTMLAttributes, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type HTMLAttributes, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { listenOutsideDismiss } from './outside-dismiss.ts'
+import { HeadlessDismiss } from './headless-dismiss.tsx'
 
 export function AnchorMenu({
   anchor,
@@ -41,21 +41,19 @@ export function AnchorMenu({
     }
   }, [anchor, minWidth])
 
-  useEffect(() => {
-    return listenOutsideDismiss(onClose, (target) => Boolean(menuRef.current?.contains(target) || anchor?.contains(target)))
-  }, [anchor, onClose])
-
   if (!anchor) return null
   return createPortal(
-    <div
-      ref={menuRef}
-      className={className}
-      role={role}
-      style={{ position: 'fixed', top: box.top, left: box.left, width: box.width, zIndex }}
-      {...rest}
-    >
-      {children}
-    </div>,
+    <HeadlessDismiss onDismiss={onClose} inside={(node) => Boolean(anchor.contains(node))}>
+      <div
+        ref={menuRef}
+        className={className}
+        role={role}
+        style={{ position: 'fixed', top: box.top, left: box.left, width: box.width, zIndex }}
+        {...rest}
+      >
+        {children}
+      </div>
+    </HeadlessDismiss>,
     document.body,
   )
 }

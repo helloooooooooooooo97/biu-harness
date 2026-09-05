@@ -7,6 +7,7 @@ import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
 import { pickKey, usePickState, type PickService } from '@biu/cap-pick/web'
 import { BrandCornerMascot } from '@biu/public-mascot'
+import { HeadlessDismiss } from '@biu/public-ui'
 import { composerDocExtensions } from './composer-kit.ts'
 import {
   collectPickKeys,
@@ -402,13 +403,6 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
       .catch(() => {
         /* ignore */
       })
-    const onPointer = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null
-      if (target?.closest('.composer-model')) return
-      setModelOpen(false)
-    }
-    window.addEventListener('mousedown', onPointer, true)
-    return () => window.removeEventListener('mousedown', onPointer, true)
     // endpointLabels 仅作合并基础，不纳入依赖避免循环刷新
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modelOpen])
@@ -906,6 +900,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
               <ChevronDownIcon className="size-3.5 opacity-70" />
             </button>
             {modelOpen ? (
+              <HeadlessDismiss onDismiss={() => setModelOpen(false)} inside={(node) => Boolean((node instanceof Element ? node.closest('.composer-model') : null))}>
               <div className="composer-model-menu" role="listbox" aria-label="模型">
                 <div className="composer-model-config-head">
                   <span className="composer-model-config-title">Models</span>
@@ -977,6 +972,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
                   })
                 })()}
               </div>
+              </HeadlessDismiss>
             ) : null}
           </div>
 

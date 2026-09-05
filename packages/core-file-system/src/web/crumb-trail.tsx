@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent, type Ref } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/16/solid'
-import { listenOutsideDismiss } from '@biu/public-ui'
+import { HeadlessDismiss } from '@biu/public-ui'
 import { CrumbItemGlyph, TableGlyph } from './nav-glyphs.tsx'
 import { crumbButtonAction, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
 
@@ -23,6 +23,7 @@ function CrumbMenu({
   onCreate,
   canCreateView,
   canCreateRecord,
+  trailRef,
 }: {
   crumb: Crumb
   crumbs: Crumb[]
@@ -31,6 +32,7 @@ function CrumbMenu({
   onCreate?: (kind: 'view' | 'record') => void
   canCreateView?: boolean
   canCreateRecord?: boolean
+  trailRef: RefObject<HTMLElement | null>
 }) {
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
@@ -43,6 +45,7 @@ function CrumbMenu({
     (createKind === 'view' && canCreateView && onCreate) || (createKind === 'record' && canCreateRecord && onCreate)
 
   return (
+    <HeadlessDismiss onDismiss={() => onOpenId(null)} insideRef={trailRef}>
     <div
       className="fsdb-crumb-menu is-fixed"
       role="menu"
@@ -126,6 +129,7 @@ function CrumbMenu({
         </div>
       ) : null}
     </div>
+    </HeadlessDismiss>
   )
 }
 
@@ -165,17 +169,6 @@ export function CrumbTrail({
   useEffect(() => {
     if (!allowMenu) setOpenId(null)
   }, [allowMenu])
-
-  useEffect(() => {
-    return listenOutsideDismiss(
-      () => setOpenId(null),
-      (target) =>
-        Boolean(
-          trailRef.current?.contains(target) ||
-            (target instanceof Element && target.closest('[data-fsdb-crumb-menu]')),
-        ),
-    )
-  }, [])
 
   return (
     <nav
@@ -254,6 +247,7 @@ export function CrumbTrail({
               key={openCrumb.id}
               crumb={openCrumb}
               crumbs={crumbs}
+              trailRef={trailRef}
               onPick={onPick}
               onOpenId={(id) => {
                 if (!id) setOpenId(null)

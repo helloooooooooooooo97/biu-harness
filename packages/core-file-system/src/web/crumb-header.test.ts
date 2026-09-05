@@ -37,7 +37,7 @@ describe('顶栏三级标题', () => {
     expect(trail).not.toContain('useLayoutEffect')
     expect(style).toContain('anchor-name:--fsdb-crumb')
     expect(style).toContain('anchor(--fsdb-crumb left)')
-    expect(trail).toContain('listenOutsideDismiss')
+    expect(trail).toContain('HeadlessDismiss')
     expect(browser).not.toContain('setCrumbOpen')
     expect(browser).not.toContain('openId={crumbOpen}')
     expect(browser).not.toContain('if (!searchRef.current?.contains(target) && !query) setSearchOpen(false)')

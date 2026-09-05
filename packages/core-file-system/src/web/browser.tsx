@@ -33,7 +33,7 @@ import {
 import type { CollectionActionInfo, CollectionInfo, CollectionSchema, DbRecord, FieldSpec } from '@biu/type-file-system'
 import type { CollectionChrome, CollectionViewType, DatabaseUi } from '@biu/type-file-system/ui'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
-import { BoolBox, ChatCount, RecordEmojiBoard, listenOutsideDismiss } from '@biu/public-ui'
+import { BoolBox, ChatCount, RecordEmojiBoard, HeadlessDismiss } from '@biu/public-ui'
 import {
   contentFieldKey,
   defaultColumnKeys,
@@ -410,36 +410,6 @@ export function CollectionBrowser({
       window.removeEventListener('biu:inspector-toggle', onToggle)
     }
   }, [nested])
-
-  useEffect(() => {
-    return listenOutsideDismiss(
-      () => {
-        setViewMenuOpen(false)
-        setModeMenuOpen(false)
-        setSortMenuOpen(false)
-        setColumnMenuOpen(false)
-        setFilterOpen(false)
-        setConfigOpen(false)
-        setGroupOpen(false)
-        setLayoutOpen(false)
-        setSearchOpen((open) => (query ? open : false))
-      },
-      (target) =>
-        Boolean(
-          crumbRef.current?.contains(target) ||
-            (target instanceof Element && target.closest('[data-fsdb-crumb-menu]')) ||
-            searchRef.current?.contains(target) ||
-            viewRef.current?.contains(target) ||
-            modeRef.current?.contains(target) ||
-            sortRef.current?.contains(target) ||
-            columnRef.current?.contains(target) ||
-            filterRef.current?.contains(target) ||
-            configRef.current?.contains(target) ||
-            groupRef.current?.contains(target) ||
-            layoutRef.current?.contains(target),
-        ),
-    )
-  }, [query])
 
   useLayoutEffect(() => {
     if (sheet) return
@@ -2009,6 +1979,7 @@ export function CollectionBrowser({
                 <AdjustmentsHorizontalIcon aria-hidden className="size-4" />
               </button>
               {layoutOpen ? (
+                <HeadlessDismiss onDismiss={() => setLayoutOpen(false)} insideRef={layoutRef}>
                 <div className="fsdb-layout-menu" role="menu" data-testid="fsdb-layout-menu">
                   <button
                     type="button"
@@ -2035,6 +2006,7 @@ export function CollectionBrowser({
                     <ArrowsPointingOutIcon aria-hidden className="size-4" />
                   </button>
                 </div>
+                </HeadlessDismiss>
               ) : null}
             </div>
             <button
@@ -2116,6 +2088,7 @@ export function CollectionBrowser({
                 ) : null}
               </div>
               {viewMenuOpen ? (
+                <HeadlessDismiss onDismiss={() => setViewMenuOpen(false)} insideRef={viewRef}>
                 <div className="tasks-viewdd-menu" role="menu">
                   <div className="tasks-viewdd-head">视图</div>
                   {views.length === 0 ? <div className="tasks-viewdd-empty">还没有已保存的视图</div> : null}
@@ -2148,6 +2121,7 @@ export function CollectionBrowser({
                     </button>
                   </div>
                 </div>
+                </HeadlessDismiss>
               ) : null}
             </div>
             )}
@@ -2160,6 +2134,15 @@ export function CollectionBrowser({
             ) : null}
           </div>
           <div className="tasks-toolbar-right" ref={toolbarRightRef}>
+            <HeadlessDismiss
+              enabled={searchExpanded}
+              onDismiss={() => {
+                if (!query) setSearchOpen(false)
+              }}
+              onEscapeKeyDown={(event) => {
+                if (query) event.preventDefault()
+              }}
+            >
             <div className={`tasks-search-wrap${searchExpanded ? ' is-open' : ''}`} ref={searchRef}>
               <button
                 type="button"
@@ -2187,6 +2170,7 @@ export function CollectionBrowser({
                 />
               ) : null}
             </div>
+            </HeadlessDismiss>
             <div className="tasks-sort-wrap" ref={modeRef}>
               <button
                 type="button"
@@ -2198,6 +2182,7 @@ export function CollectionBrowser({
                 <ModeGlyph id={mode} extra={extraViews} />
               </button>
               {modeMenuOpen ? (
+                <HeadlessDismiss onDismiss={() => setModeMenuOpen(false)} insideRef={modeRef}>
                 <div className="tasks-sort-menu" role="menu">
                   <div className="tasks-sort-head">查看模式</div>
                   {modeChoices.map((opt) => (
@@ -2214,6 +2199,7 @@ export function CollectionBrowser({
                     />
                   ))}
                 </div>
+                </HeadlessDismiss>
               ) : null}
             </div>
             <div className="tasks-sort-wrap" ref={sortRef}>
@@ -2227,6 +2213,7 @@ export function CollectionBrowser({
                 <ArrowsUpDownIcon aria-hidden className="size-[14px]" />
               </button>
               {sortMenuOpen ? (
+                <HeadlessDismiss onDismiss={() => setSortMenuOpen(false)} insideRef={sortRef}>
                 <div className="tasks-sort-menu" role="menu">
                   <div className="tasks-sort-head">排序依据</div>
                   {sortFields.map((item) => {
@@ -2257,6 +2244,7 @@ export function CollectionBrowser({
                     )
                   })}
                 </div>
+                </HeadlessDismiss>
               ) : null}
             </div>
             <div className="tasks-sort-wrap" ref={groupRef}>
@@ -2270,6 +2258,7 @@ export function CollectionBrowser({
                 <RectangleStackIcon aria-hidden className="size-[14px]" />
               </button>
               {groupOpen ? (
+                <HeadlessDismiss onDismiss={() => setGroupOpen(false)} insideRef={groupRef}>
                 <div className="tasks-sort-menu" role="menu">
                   <div className="tasks-sort-head">分组依据</div>
                   <CheckRow
@@ -2298,6 +2287,7 @@ export function CollectionBrowser({
                     <div className="tasks-viewdd-empty">没有单选或多选字段</div>
                   )}
                 </div>
+                </HeadlessDismiss>
               ) : null}
             </div>
             <div className="tasks-sort-wrap" ref={columnRef}>
@@ -2312,6 +2302,7 @@ export function CollectionBrowser({
                 {columnCustom ? <span className="tasks-sort-dot" aria-hidden /> : null}
               </button>
               {columnMenuOpen ? (
+                <HeadlessDismiss onDismiss={() => setColumnMenuOpen(false)} insideRef={columnRef}>
                 <div className="tasks-sort-menu fsdb-col-menu" role="menu">
                   <div className="tasks-sort-head">可见列</div>
                   <div className="fsdb-col-menu-list">
@@ -2341,6 +2332,7 @@ export function CollectionBrowser({
                   })}
                   </div>
                 </div>
+                </HeadlessDismiss>
               ) : null}
             </div>
             {activeView?.builtin ? null : (
@@ -2356,6 +2348,7 @@ export function CollectionBrowser({
                 {filterActive ? <span className="tasks-filter-dot" aria-hidden /> : null}
               </button>
               {filterOpen ? (
+                <HeadlessDismiss onDismiss={() => setFilterOpen(false)} insideRef={filterRef}>
                 <div className="tasks-filter-menu" role="menu">
                   {filterFields.map((item) => {
                     const options =
@@ -2400,6 +2393,7 @@ export function CollectionBrowser({
                     </button>
                   ) : null}
                 </div>
+                </HeadlessDismiss>
               ) : null}
             </div>
             )}
@@ -2418,6 +2412,7 @@ export function CollectionBrowser({
                 ) : null}
               </button>
               {configOpen ? (
+                <HeadlessDismiss onDismiss={() => setConfigOpen(false)} insideRef={configRef}>
                 <div className="tasks-filter-menu" role="menu">
                   <div className="tasks-sort-head">表格显示</div>
                   <CheckRow
@@ -2441,6 +2436,7 @@ export function CollectionBrowser({
                     />
                   ) : null}
                 </div>
+                </HeadlessDismiss>
               ) : null}
             </div>
             ) : null}

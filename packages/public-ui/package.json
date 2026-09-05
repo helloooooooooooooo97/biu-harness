@@ -9,5 +9,9 @@
   },
   "peerDependencies": {
     "react": "^19.1.1"
+  },
+  "dependencies": {
+    "@radix-ui/react-dismissable-layer": "^1.1.19",
+    "@radix-ui/react-popover": "^1.1.6"
   }
 }

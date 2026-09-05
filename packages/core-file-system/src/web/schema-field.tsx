@@ -11,7 +11,7 @@ import {
   type SchemaPackField,
 } from '@biu/type-file-system'
 import { ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
-import { TagChip, TagChips, tagTone, listenOutsideDismiss } from '@biu/public-ui'
+import { TagChip, TagChips, tagTone, HeadlessPopover } from '@biu/public-ui'
 import { CellMulti } from '@biu/database-ui'
 import { FieldEditor, FieldGlyph, fieldDraftValue, parseFieldValue } from './fsdb-cells.tsx'
 import { loadFacets, persistFacets, registerFacetFieldKey, slugFacetId, subscribeFacets } from './facet-catalog.ts'
@@ -68,22 +68,19 @@ export function SchemaChips({ value, tags }: { value: unknown; tags: CollectionS
 
 function TypeMenu({ value, onChange }: { value: AtomicFieldType; onChange: (next: AtomicFieldType) => void }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    return listenOutsideDismiss(
-      () => setOpen(false),
-      (target) => Boolean(ref.current?.contains(target)),
-    )
-  }, [open])
   return (
-    <div className="fsdb-schema-type" ref={ref}>
-      <button type="button" className="fsdb-schema-type-btn" onClick={() => setOpen((prev) => !prev)}>
-        <FieldGlyph kind={value} />
-        <span>{TYPE_LABEL[value]}</span>
-        <ChevronDownIcon aria-hidden className="size-3 fsdb-schema-type-caret" />
-      </button>
-      {open ? (
+    <div className="fsdb-schema-type">
+      <HeadlessPopover
+        open={open}
+        onOpenChange={setOpen}
+        trigger={
+          <button type="button" className="fsdb-schema-type-btn">
+            <FieldGlyph kind={value} />
+            <span>{TYPE_LABEL[value]}</span>
+            <ChevronDownIcon aria-hidden className="size-3 fsdb-schema-type-caret" />
+          </button>
+        }
+      >
         <div className="fsdb-schema-type-menu" role="listbox">
           {ATOMIC_FIELD_TYPES.map((type) => (
             <button
@@ -100,7 +97,7 @@ function TypeMenu({ value, onChange }: { value: AtomicFieldType; onChange: (next
             </button>
           ))}
         </div>
-      ) : null}
+      </HeadlessPopover>
     </div>
   )
 }

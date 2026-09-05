@@ -4,7 +4,7 @@ import type { SlotProps } from '@biu/type-slots'
 import type { CollectionInfo } from '@biu/type-file-system'
 import type { CollectionChrome } from '@biu/type-file-system/ui'
 import { parseAppPath } from '@biu/web-session-view'
-import { listenOutsideDismiss } from '@biu/public-ui'
+import { HeadlessDismiss, HEADLESS_DISMISS_IGNORE } from '@biu/public-ui'
 import { buildCrumbs, pathForCrumbTarget, type Crumb, type CrumbTarget } from './sidebar-nav.ts'
 import { CollectionBrowser } from './browser.tsx'
 import { CrumbTrail } from './crumb-trail.tsx'
@@ -196,15 +196,6 @@ export function DatabaseInspectorTab({
   const crumbRef = useRef<HTMLElement>(null)
   const tabRef = useRef<HTMLDivElement>(null)
   useViewTick()
-  useEffect(() => {
-    return listenOutsideDismiss(
-      () => {
-        setTrailOpen(false)
-      },
-      (target) =>
-        Boolean(tabRef.current?.contains(target) || (target instanceof Element && target.closest('[data-fsdb-crumb-menu]'))),
-    )
-  }, [])
   const { crumbs } = crumbsForRoute(inspectorPath, tables)
   const leaf = crumbs.at(-1)
   const leafChoice = leaf?.choices.find((item) => item.id === leaf.id)
@@ -224,6 +215,11 @@ export function DatabaseInspectorTab({
   }, [id, leaf?.id, leaf?.kind, leaf?.label, leafChoice?.emoji, leafChoice?.icon, leafChoice?.mode])
 
   return (
+    <HeadlessDismiss
+      enabled={trailOpen}
+      onDismiss={() => setTrailOpen(false)}
+      ignoreSelector={`${HEADLESS_DISMISS_IGNORE}, [data-fsdb-crumb-menu]`}
+    >
     <div
       ref={tabRef}
       className={`inspector-tab inspector-crumb-tab${active ? ' is-active' : ''}${trailOpen ? ' is-crumb-open' : ''}${agentWorking ? ' is-agent-working' : ''}`}
@@ -295,6 +291,7 @@ export function DatabaseInspectorTab({
         ) : null}
       </span>
     </div>
+    </HeadlessDismiss>
   )
 }
 

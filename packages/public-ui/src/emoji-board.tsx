@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { listenOutsideDismiss } from './outside-dismiss.ts'
+import { HeadlessDismiss } from './headless-dismiss.tsx'
 
 const RECORD_EMOJI_PRESETS = ['⭐', '🔥', '✅', '📌', '💡', '🎯', '📦', '🧩', '📄', '⚡']
 
@@ -37,14 +37,9 @@ export function RecordEmojiBoard({
       window.removeEventListener('scroll', place, true)
     }
   }, [anchor])
-  useEffect(() => {
-    return listenOutsideDismiss(onClose, (target) => {
-      if (anchor.contains(target)) return true
-      return target instanceof Element && Boolean(target.closest('.fsdb-emoji-picker'))
-    })
-  }, [anchor, onClose])
   if (typeof document === 'undefined') return null
   return createPortal(
+    <HeadlessDismiss onDismiss={onClose} inside={(node) => anchor.contains(node)}>
     <div
       className="fsdb-emoji-picker is-fixed"
       data-biu-ignore
@@ -78,7 +73,8 @@ export function RecordEmojiBoard({
       <button type="button" className="fsdb-emoji-picker-clear" onClick={onClear}>
         恢复默认
       </button>
-    </div>,
+    </div>
+    </HeadlessDismiss>,
     document.body,
   )
 }

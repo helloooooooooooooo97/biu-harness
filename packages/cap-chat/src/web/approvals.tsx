@@ -11,6 +11,7 @@ import {
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type ChatNode, type DispatchedTaskRow, type SessionViewService } from '@biu/web-session-view'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
+import { HeadlessDismiss } from '@biu/public-ui'
 import { SessionProjectPanel } from './project-panel.tsx'
 
 type AgentMode = 'minimal' | 'standard'
@@ -65,6 +66,7 @@ function DockIconMenu<T extends string>({
         {current.icon}
       </button>
       {open ? (
+        <HeadlessDismiss onDismiss={() => onOpenChange(false)} insideRef={wrapRef}>
         <div className="dock-icon-menu" role="menu">
           <div className="dock-icon-head">{label}</div>
           {options.map((opt) => (
@@ -100,6 +102,7 @@ function DockIconMenu<T extends string>({
             </button>
           ))}
         </div>
+        </HeadlessDismiss>
       ) : null}
     </div>
   )
@@ -172,29 +175,6 @@ export function ApprovalsRail(props: SlotProps) {
   useEffect(() => {
     void refreshAgentMode()
   }, [refreshAgentMode])
-
-  useEffect(() => {
-    if (!agentMenuOpen && !approvalMenuOpen) return
-    const onDown = (event: MouseEvent) => {
-      const node = event.target as Node
-      if (agentMenuRef.current?.contains(node) || approvalMenuRef.current?.contains(node)) {
-        return
-      }
-      setAgentMenuOpen(false)
-      setApprovalMenuOpen(false)
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      setAgentMenuOpen(false)
-      setApprovalMenuOpen(false)
-    }
-    window.addEventListener('mousedown', onDown, true)
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('mousedown', onDown, true)
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [agentMenuOpen, approvalMenuOpen])
 
   // 快捷键：command+e / ctrl+e 触发清空上下文（在输入框中同样生效）
   const clearContextRef = useRef<() => void>(() => {})

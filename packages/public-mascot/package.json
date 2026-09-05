@@ -7,6 +7,9 @@
   "exports": {
     ".": "./src/web/index.ts"
   },
+  "dependencies": {
+    "@biu/public-ui": "0.1.0"
+  },
   "peerDependencies": {
     "react": "^19.1.1"
   }

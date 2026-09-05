@@ -12,6 +12,6 @@ test('page-size menu is a local control, not CollectionBrowser state', () => {
   assert.doesNotMatch(browser, /pageSizeOpen/)
   assert.doesNotMatch(browser, /toggleMenu\('pageSize'\)/)
   assert.doesNotMatch(browser, /pageSizeMenuPos/)
-  assert.match(pager, /setPos\(menuPos\(wrapRef\.current\)\)/)
+  assert.match(pager, /HeadlessPopover/)
   assert.match(pager, /if \(next !== pageSize\) onChange\(next\)/)
 })

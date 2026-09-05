@@ -1,4 +1,4 @@
-/** Capture-phase：格子上的 stopPropagation 挡不住，点别处会关掉已打开的弹层。 */
+/** 兼容旧调用。新产品弹层请用 HeadlessDismiss / HeadlessPopover（Radix，无样式）。 */
 export function listenOutsideDismiss(onClose: () => void, isInside: (target: Node) => boolean) {
   const onDown = (event: MouseEvent) => {
     const target = event.target

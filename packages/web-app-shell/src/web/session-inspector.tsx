@@ -26,6 +26,7 @@ import type { SlotsService } from '@biu/web-slots'
 import { inspectorTabFromEvent, requestInspectorAction } from './chat-overlay.ts'
 import { getInspectorCaption, getInspectorCaptionVersion, subscribeInspectorCaptions } from './inspector-captions.ts'
 import { inspectorPanelMatches, inspectorViewProps, nextRepeatableTabId, pruneOpenedForCollections, resolveInspectorTab, slotTabId } from './inspector-panels.ts'
+import { HeadlessDismiss } from '@biu/public-ui'
 import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 
 function captionTableIcon(icon?: string) {
@@ -259,16 +260,6 @@ export const SessionInspector = memo(function SessionInspector({
   }, [plusOpen])
 
   useEffect(() => {
-    function onPointer(event: MouseEvent) {
-      const target = event.target as Node
-      if (plusRef.current?.contains(target) || plusMenuRef.current?.contains(target)) return
-      setPlusOpen(false)
-    }
-    window.addEventListener('mousedown', onPointer, true)
-    return () => window.removeEventListener('mousedown', onPointer, true)
-  }, [])
-
-  useEffect(() => {
     const onMove = (event: PointerEvent) => {
       const drag = dragRef.current
       if (!drag) return
@@ -417,6 +408,7 @@ export const SessionInspector = memo(function SessionInspector({
           </button>
           {plusOpen && plusPos
             ? createPortal(
+            <HeadlessDismiss onDismiss={() => setPlusOpen(false)} insideRef={plusRef}>
             <div
               ref={plusMenuRef}
               className="inspector-add-menu is-fixed"
@@ -501,7 +493,8 @@ export const SessionInspector = memo(function SessionInspector({
                   </button>
                 ))}
               </div>
-            </div>,
+            </div>
+            </HeadlessDismiss>,
             document.body,
           )
           : null}
