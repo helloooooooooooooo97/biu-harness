@@ -1332,8 +1332,8 @@ export function CollectionBrowser({
           <DefaultCell
             field={field}
             value={readFacetFlatValue(row, key, facetSourceKey(schema))}
-            onRemove={
-              field.writable && kind === 'attachment' ? () => writeCellValue(row, key, field, '') : undefined
+            onChange={
+              field.writable && kind === 'attachment' ? (next) => writeCellValue(row, key, field, next) : undefined
             }
           />
         )
@@ -1344,8 +1344,8 @@ export function CollectionBrowser({
         <DefaultCell
           field={field}
           value={row[key]}
-          onRemove={
-            field.writable && kind === 'attachment' ? () => writeCellValue(row, key, field, '') : undefined
+          onChange={
+            field.writable && kind === 'attachment' ? (next) => writeCellValue(row, key, field, next) : undefined
           }
         />
       )

@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, readFile, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context, Service } from 'cordis'
-import { asImageSrc, type CollectionSpec, type FieldType } from '@biu/type-file-system'
+import { asAttachmentList, asImageSrc, type CollectionSpec, type FieldType } from '@biu/type-file-system'
 import * as tools from '@biu/host-tools'
 import * as fsPlugin from '@biu/host-fs'
 import * as page from './index.ts'
@@ -85,6 +85,23 @@ test('page plugin stores pages in SQLite under .page', async () => {
   })
   assert.deepEqual(manyCovers.cover, ['/api/page/file/hero.png', '/api/page/file/hero-b.png'])
   assert.deepEqual((await spec.get!(created[0]!.id))?.cover, ['/api/page/file/hero.png', '/api/page/file/hero-b.png'])
+  const manyPacks = await spec.update!(created[0]!.id, {
+    pack: [
+      { name: 'a.bin', href: '/api/page/file/hero.png' },
+      { name: 'b.bin', href: '/api/page/file/hero-b.png' },
+    ],
+  })
+  assert.deepEqual(
+    asAttachmentList(manyPacks.pack).map((file) => file.name),
+    ['a.bin', 'b.bin'],
+  )
+  assert.deepEqual(
+    asAttachmentList((await spec.get!(created[0]!.id))?.pack).map((file) => file.name),
+    ['a.bin', 'b.bin'],
+  )
+  const clearedPack = await spec.update!(created[0]!.id, { pack: '' })
+  assert.equal((clearedPack.pack as { href?: string }).href, '')
+  assert.deepEqual(asAttachmentList((await spec.get!(created[0]!.id))?.pack), [])
   const loaded = await spec.get!(created[0]!.id)
   assert.equal(loaded?.notes, '# 标题\n内容')
   assert.equal(loaded?.title, '新页面')

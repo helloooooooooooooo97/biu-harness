@@ -1,5 +1,5 @@
 import type { AtomicFieldType, CollectionSchema, CollectionSchemaPack, DbRecord, FieldSpec, FieldType, SchemaFieldValue } from '@biu/type-file-system'
-import { asAttachment, asHttpHref, asImageSrc, asImageSrcList, BUILTIN_FIELD_KEYS, isFacetFieldType, isReservedSchemaFieldKey, normalizeSchemaValue } from '@biu/type-file-system'
+import { asAttachment, asAttachmentList, asHttpHref, asImageSrc, asImageSrcList, BUILTIN_FIELD_KEYS, isFacetFieldType, isReservedSchemaFieldKey, normalizeSchemaValue } from '@biu/type-file-system'
 
 export const BUILTIN_VIEW_MODES = ['table'] as const
 export type BuiltinViewMode = (typeof BUILTIN_VIEW_MODES)[number]
@@ -194,7 +194,10 @@ export function inferPackFieldType(value: unknown): AtomicFieldType {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value > 1e11 ? 'datetime' : 'number'
   }
-  if (Array.isArray(value)) return 'multi-select'
+  if (Array.isArray(value)) {
+    if (asAttachmentList(value).length) return 'attachment'
+    return 'multi-select'
+  }
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     const rec = value as Record<string, unknown>
     if (Array.isArray(rec.tags)) return 'facet'
@@ -263,8 +266,8 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
     return list.length ? list.join(', ') : ''
   }
   if (kind === 'attachment') {
-    const file = asAttachment(value)
-    return file ? file.name : ''
+    const list = asAttachmentList(value)
+    return list.length ? list.map((file) => file.name).join(', ') : ''
   }
   if (kind === 'file') {
     if (value == null || value === '') return ''

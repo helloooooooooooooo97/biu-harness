@@ -1,8 +1,8 @@
 import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname } from 'node:path'
 import { createRequire } from 'node:module'
-import type { DbRecord, SchemaFieldValue } from '@biu/type-file-system'
-import { emptySchemaValue, normalizeSchemaValue } from '@biu/type-file-system'
+import type { AttachmentValue, DbRecord, SchemaFieldValue } from '@biu/type-file-system'
+import { asAttachmentList, emptySchemaValue, normalizeSchemaValue } from '@biu/type-file-system'
 import { dumpMarkdown, splitMarkdown } from './markdown.ts'
 
 export const PAGE_ROOT = '.page'
@@ -49,7 +49,7 @@ export type PageRow = DbRecord & {
   size: number
   homepage: string
   cover: string | string[]
-  pack: { name: string; href: string; bytes: number }
+  pack: AttachmentValue | AttachmentValue[]
   notes: string
   score: number
   parentId: string | null
@@ -94,14 +94,19 @@ function asNotes(value: unknown): string | undefined {
   return String(value)
 }
 
-function asPack(value: unknown): { name: string; href: string; bytes: number } | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  const rec = value as Record<string, unknown>
-  return {
-    name: String(rec.name ?? ''),
-    href: String(rec.href ?? rec.url ?? ''),
-    bytes: Number(rec.bytes) || 0,
-  }
+function emptyPack(): AttachmentValue {
+  return { name: '', href: '', bytes: 0 }
+}
+
+function storedPack(file: AttachmentValue): AttachmentValue {
+  return { name: file.name, href: storedPackHref(file.href), bytes: file.bytes ?? 0 }
+}
+
+function publicPackValue(value: unknown): AttachmentValue | AttachmentValue[] {
+  const files = asAttachmentList(value).map((file) => publicPack(storedPack(file)))
+  if (!files.length) return emptyPack()
+  if (files.length === 1) return files[0]!
+  return files
 }
 
 function assetName(ref: string) {
@@ -191,6 +196,13 @@ function storedPackHref(href: string) {
   return href
 }
 
+function storedPackJson(value: unknown) {
+  const files = asAttachmentList(value).map((file) => storedPack(file))
+  if (!files.length) return emptyPack()
+  if (files.length === 1) return files[0]!
+  return files
+}
+
 function pageRel(id: string) {
   if (!ID_RE.test(id)) throw new Error(`invalid page id: ${id}`)
   return `${PAGE_ROOT}/${id}.md`
@@ -209,11 +221,7 @@ function matterOf(row: PageRow): Record<string, unknown> {
     size: row.size,
     homepage: row.homepage,
     cover: storedCoverMatter(row.cover, ''),
-    pack: {
-      name: row.pack.name,
-      href: storedPackHref(row.pack.href),
-      bytes: row.pack.bytes,
-    },
+    pack: storedPackJson(row.pack),
     score: row.score,
     parentId: row.parentId,
     facet: row.facet,
@@ -226,7 +234,6 @@ function matterOf(row: PageRow): Record<string, unknown> {
 function rowFromFile(id: string, raw: string): PageRow {
   const { matter, body } = splitMarkdown(raw)
   const now = Date.now()
-  const pack = asPack(matter.pack) ?? { name: '', href: '', bytes: 0 }
   const status = STATUS.includes(matter.status as (typeof STATUS)[number])
     ? (matter.status as (typeof STATUS)[number])
     : 'draft'
@@ -245,7 +252,7 @@ function rowFromFile(id: string, raw: string): PageRow {
     size: Number(matter.size) || 0,
     homepage: String(matter.homepage ?? ''),
     cover: publicCover(matter.cover),
-    pack: publicPack(pack),
+    pack: publicPackValue(matter.pack),
     notes: body,
     score: Number(matter.score) || 0,
     parentId: matter.parentId == null || matter.parentId === '' ? null : String(matter.parentId),
@@ -283,7 +290,6 @@ function emptyRow(id: string, ts: number): PageRow {
 
 function applyPatch(current: PageRow, patch: Record<string, unknown>): PageRow {
   const notes = asNotes(patch.notes)
-  const pack = patch.pack !== undefined ? asPack(patch.pack) ?? current.pack : current.pack
   const next: PageRow = {
     ...current,
     ...patch,
@@ -293,11 +299,7 @@ function applyPatch(current: PageRow, patch: Record<string, unknown>): PageRow {
         ? patch.title.trim()
         : current.title,
     notes: notes ?? current.notes,
-    pack: {
-      name: pack.name,
-      href: storedPackHref(pack.href),
-      bytes: pack.bytes,
-    },
+    pack: patch.pack !== undefined ? publicPackValue(patch.pack) : current.pack,
     cover: publicCover(patch.cover !== undefined ? patch.cover : current.cover),
     parentId: 'parentId' in patch
       ? patch.parentId == null || patch.parentId === '' ? null : String(patch.parentId)
@@ -570,11 +572,7 @@ function sqlPayload(row: PageRow) {
     size: row.size,
     homepage: row.homepage,
     cover: storedCover(row.cover, ''),
-    pack_json: JSON.stringify({
-      name: row.pack.name,
-      href: storedPackHref(row.pack.href),
-      bytes: row.pack.bytes,
-    }),
+    pack_json: JSON.stringify(storedPackJson(row.pack)),
     notes: row.notes ?? '',
     score: row.score,
     parent_id: row.parentId,
@@ -612,7 +610,6 @@ function sqlValues(row: PageRow) {
 }
 
 function rowFromSql(row: SqlPage): PageRow {
-  const pack = asPack(parseJson(row.pack_json, {})) ?? { name: '', href: '', bytes: 0 }
   const status = STATUS.includes(row.status as (typeof STATUS)[number])
     ? (row.status as (typeof STATUS)[number])
     : 'draft'
@@ -629,7 +626,7 @@ function rowFromSql(row: SqlPage): PageRow {
     size: Number(row.size) || 0,
     homepage: row.homepage,
     cover: publicCover(row.cover),
-    pack: publicPack(pack),
+    pack: publicPackValue(parseJson(row.pack_json, {})),
     notes: row.notes,
     score: Number(row.score) || 0,
     parentId: row.parent_id == null || row.parent_id === '' ? null : String(row.parent_id),

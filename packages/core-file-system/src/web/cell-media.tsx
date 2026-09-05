@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Image } from 'antd'
 import { PaperClipIcon, PhotoIcon, XMarkIcon, ArrowDownTrayIcon } from '@heroicons/react/16/solid'
-import { asAttachment, asHttpHref, asImageSrcList } from '@biu/type-file-system'
+import { asAttachmentList, asHttpHref, asImageSrcList, commitAttachments } from '@biu/type-file-system'
 import { LocalText } from './controls.tsx'
 
 function safeFileName(name: string) {
@@ -82,6 +82,7 @@ export function AttachmentFile({
           aria-label={`下载 ${file.name}`}
           data-testid="fsdb-file-download"
           onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
         >
           <ArrowDownTrayIcon aria-hidden className="size-[14px]" />
         </a>
@@ -96,6 +97,7 @@ export function AttachmentFile({
               event.stopPropagation()
               onRemove()
             }}
+            onPointerDown={(event) => event.stopPropagation()}
           >
             <XMarkIcon aria-hidden className="size-[14px]" />
           </button>
@@ -125,31 +127,33 @@ export function MediaField({
   const images = kind === 'image' ? asImageSrcList(value) : []
   const imagesRef = useRef(images)
   imagesRef.current = images
-  const file = kind === 'attachment' ? asAttachment(value) : null
+  const files = kind === 'attachment' ? asAttachmentList(value) : []
+  const filesRef = useRef(files)
+  filesRef.current = files
   const href = kind === 'url' ? asHttpHref(value) : ''
 
   async function takeFiles(picked: File[]) {
     setError('')
     try {
       if (kind === 'url') return
-      const files = kind === 'image' ? picked.filter((item) => item.type.startsWith('image/')) : picked.slice(0, 1)
+      const files = kind === 'image' ? picked.filter((item) => item.type.startsWith('image/')) : picked
       if (kind === 'image' && !files.length) throw new Error('请选择图片')
-      const added: string[] = []
+      if (kind === 'attachment' && !files.length) throw new Error('请选择文件')
+      const addedImages: string[] = []
+      const addedFiles: Array<{ name: string; href: string; bytes?: number }> = []
       for (const item of files) {
         if (pageAssets) {
           const written = await uploadPageAsset(item)
-          if (kind === 'image') added.push(written.href)
-          else {
-            onCommit({ name: item.name || written.name, href: written.href, bytes: item.size })
-            return
-          }
+          if (kind === 'image') addedImages.push(written.href)
+          else addedFiles.push({ name: item.name || written.name, href: written.href, bytes: item.size })
         } else if (kind === 'image') {
-          added.push(await fileToDataUrl(item))
+          addedImages.push(await fileToDataUrl(item))
         } else {
           throw new Error('这张表还没有附件存储')
         }
       }
-      if (kind === 'image') commitImages([...imagesRef.current, ...added], onCommit)
+      if (kind === 'image') commitImages([...imagesRef.current, ...addedImages], onCommit)
+      else onCommit(commitAttachments([...filesRef.current, ...addedFiles]))
     } catch (err) {
       setError(String(err instanceof Error ? err.message : err))
     }
@@ -176,7 +180,7 @@ export function MediaField({
     )
   }
 
-  const label = kind === 'image' ? '粘贴或选择图片' : file ? file.name : '选择文件'
+  const label = kind === 'image' ? '粘贴或选择图片' : files.length ? '添加附件' : '选择文件'
 
   return (
     <div
@@ -213,19 +217,26 @@ export function MediaField({
         </span>
         </Image.PreviewGroup>
       ) : null}
-      {kind === 'attachment' && file ? (
-        <AttachmentFile file={file} onRemove={() => onCommit('')} />
-      ) : (
+      {kind === 'attachment' && files.length ? (
+        <span className="fsdb-files">
+          {files.map((item, index) => (
+            <AttachmentFile
+              key={`${item.href}-${index}`}
+              file={item}
+              onRemove={() => onCommit(commitAttachments(files.filter((_, i) => i !== index)))}
+            />
+          ))}
+        </span>
+      ) : null}
       <button type="button" className="fsdb-media-pick" title={label} onClick={() => inputRef.current?.click()}>
         {kind === 'image' ? <PhotoIcon aria-hidden className="size-[14px]" /> : null}
         <span className="fsdb-media-pick-label">{label}</span>
       </button>
-      )}
       <input
         ref={inputRef}
         type="file"
         hidden
-        multiple={kind === 'image'}
+        multiple={kind === 'image' || kind === 'attachment'}
         accept={kind === 'image' ? 'image/*' : undefined}
         onChange={(event) => {
           const next = Array.from(event.target.files ?? [])

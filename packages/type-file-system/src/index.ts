@@ -88,12 +88,14 @@ function asLocalHref(text: string) {
   const value = text.trim()
   if (/^https?:\/\//i.test(value)) return value
   if (/^\/(?!\/)[^\s]+$/.test(value)) return value
+  if (/^(?:\.page\/)?assets\/[^\s/]+$/.test(value)) return value
   return ''
 }
 
 export function asAttachment(value: unknown): AttachmentValue | null {
   if (value == null || value === '') return null
-  if (typeof value === 'object' && !Array.isArray(value)) {
+  if (Array.isArray(value)) return asAttachment(value[0])
+  if (typeof value === 'object') {
     const rec = value as Record<string, unknown>
     const href = asLocalHref(String(rec.href ?? rec.url ?? ''))
     if (!href) return null
@@ -102,12 +104,46 @@ export function asAttachment(value: unknown): AttachmentValue | null {
     return {
       name: name || href.split('/').filter(Boolean).pop() || href,
       href,
-      bytes: Number.isFinite(bytes) && bytes > 0 ? bytes : undefined,
+      ...(Number.isFinite(bytes) && bytes > 0 ? { bytes } : {}),
     }
   }
   const href = asLocalHref(String(value ?? ''))
   if (!href) return null
   return { name: href.split('/').filter(Boolean).pop() || href, href }
+}
+
+/** 附件字段可存多个；单对象仍当一个。非法地址丢掉。 */
+export function asAttachmentList(value: unknown): AttachmentValue[] {
+  if (value == null || value === '') return []
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed) as unknown
+        if (Array.isArray(parsed)) return asAttachmentList(parsed)
+      } catch {
+        /* one path */
+      }
+    }
+    const one = asAttachment(trimmed)
+    return one ? [one] : []
+  }
+  if (Array.isArray(value)) {
+    const out: AttachmentValue[] = []
+    for (const item of value) {
+      const file = asAttachment(item)
+      if (file) out.push(file)
+    }
+    return out
+  }
+  const one = asAttachment(value)
+  return one ? [one] : []
+}
+
+export function commitAttachments(list: AttachmentValue[]): unknown {
+  if (!list.length) return ''
+  if (list.length === 1) return list[0]
+  return list
 }
 
 /** 每张表都有。id / 时间列默认不可写，表格默认不展开 id 与时间列。标题列始终存在。 */

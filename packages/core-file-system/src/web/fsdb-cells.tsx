@@ -23,7 +23,7 @@ import {
 } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import type { CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
-import { actionVisibleToUser, asAttachment, asHttpHref, asImageSrc, asImageSrcList } from '@biu/type-file-system'
+import { actionVisibleToUser, asAttachmentList, asHttpHref, asImageSrc, asImageSrcList, commitAttachments } from '@biu/type-file-system'
 import type { CollectionViewType } from '@biu/type-file-system/ui'
 import {
   asStringList,
@@ -70,7 +70,11 @@ export function fieldDraftValue(field: FieldSpec, value: unknown): string {
     if (list.length <= 1) return list[0] ?? ''
     return JSON.stringify(list)
   }
-  if (kind === 'attachment') return asAttachment(value)?.href ?? ''
+  if (kind === 'attachment') {
+    const list = asAttachmentList(value)
+    if (list.length <= 1) return list[0] ? JSON.stringify(list[0]) : ''
+    return JSON.stringify(list)
+  }
   if (kind === 'file') {
     if (value == null || value === '') return ''
     if (typeof value === 'string') return value
@@ -231,12 +235,12 @@ export function FilePreview({
   value,
   compact = false,
   kind,
-  onRemove,
+  onChange,
 }: {
   value: unknown
   compact?: boolean
   kind?: FieldType
-  onRemove?: () => void
+  onChange?: (next: unknown) => void
 }) {
   if (value == null || value === '') return null
   if (kind === 'image') {
@@ -249,9 +253,23 @@ export function FilePreview({
     if (compact) return <ImageThumb src={src} />
     return <Image className="fsdb-fileview-img" src={src} alt="" preview={{ mask: false }} />
   }
-  const file = asAttachment(value)
-  if (file) {
-    return <AttachmentFile file={file} onRemove={onRemove} />
+  const files = asAttachmentList(value)
+  if (files.length) {
+    return (
+      <span className="fsdb-files">
+        {files.map((file, index) => (
+          <AttachmentFile
+            key={`${file.href}-${index}`}
+            file={file}
+            onRemove={
+              onChange
+                ? () => onChange(commitAttachments(files.filter((_, i) => i !== index)))
+                : undefined
+            }
+          />
+        ))}
+      </span>
+    )
   }
   const href = asHttpHref(value)
   if (href && typeof value !== 'object') {
@@ -272,13 +290,13 @@ export function DefaultCell({
   value,
   fieldKey,
   onRun,
-  onRemove,
+  onChange,
 }: {
   field: FieldSpec
   value: unknown
   fieldKey?: string
   onRun?: () => void
-  onRemove?: () => void
+  onChange?: (next: unknown) => void
 }) {
   const kind = resolveFieldType(field)
   if (kind === 'action') {
@@ -299,7 +317,7 @@ export function DefaultCell({
     return <BoolCell on={value === true || value === 'true'} />
   }
   if (kind === 'url' || kind === 'image' || kind === 'attachment' || kind === 'file') {
-    return <FilePreview value={value} compact kind={kind} onRemove={kind === 'attachment' ? onRemove : undefined} />
+    return <FilePreview value={value} compact kind={kind} onChange={kind === 'attachment' ? onChange : undefined} />
   }
   const text = formatField(field, value)
   if (!text) return null

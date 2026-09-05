@@ -19,20 +19,34 @@ test('attachment cells render a file link, not a broken image', () => {
 })
 
 test('writable attachment cells can delete the file', () => {
-  let cleared = false
+  let next: unknown = null
   const { container } = render(
     <DefaultCell
       field={{ type: 'attachment', writable: true }}
       value={{ name: 'notes.pdf', href: 'https://cdn.example/notes.pdf' }}
-      onRemove={() => {
-        cleared = true
+      onChange={(value) => {
+        next = value
       }}
     />,
   )
   const remove = container.querySelector('[data-testid="fsdb-file-remove"]') as HTMLButtonElement
   assert.equal(Boolean(remove), true)
   remove.click()
-  assert.equal(cleared, true)
+  assert.equal(next, '')
+})
+
+test('attachment cells can show more than one file', () => {
+  const { container } = render(
+    <DefaultCell
+      field={{ type: 'attachment' }}
+      value={[
+        { name: 'a.pdf', href: 'https://cdn.example/a.pdf' },
+        { name: 'b.pdf', href: 'https://cdn.example/b.pdf' },
+      ]}
+    />,
+  )
+  assert.equal(container.querySelectorAll('.fsdb-file-name').length, 2)
+  assert.equal(container.querySelectorAll('a.fsdb-file-dl').length, 2)
 })
 
 test('image cells still render a thumbnail', () => {

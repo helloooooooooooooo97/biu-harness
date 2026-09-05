@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { asImageSrc, asImageSrcList, actionVisibleToUser, emptySchemaValue, hasCollectionDeleteQuery, isReservedSchemaFieldKey, isReservedSchemaFieldLabel, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, retagSchemaValue, schemaSearchHaystack, withBuiltinFields } from './index.ts'
+import { asImageSrc, asImageSrcList, asAttachment, asAttachmentList, actionVisibleToUser, emptySchemaValue, hasCollectionDeleteQuery, isReservedSchemaFieldKey, isReservedSchemaFieldLabel, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, retagSchemaValue, schemaSearchHaystack, withBuiltinFields } from './index.ts'
 
 test('asImageSrc keeps http, data:image, and same-origin image paths', () => {
   assert.equal(asImageSrc('https://example.com/a.png'), 'https://example.com/a.png')
@@ -21,6 +21,23 @@ test('asImageSrcList keeps multiple images and asImageSrc takes the first', () =
   assert.deepEqual(
     asImageSrcList(JSON.stringify(['/page-covers/red.png', '/page-covers/blue.png'])),
     ['/page-covers/red.png', '/page-covers/blue.png'],
+  )
+})
+
+test('asAttachmentList keeps multiple files and asAttachment takes the first', () => {
+  const a = { name: 'a.pdf', href: 'https://cdn.example/a.pdf' }
+  const b = { name: 'b.pdf', href: '/api/page/file/b.pdf' }
+  assert.deepEqual(asAttachmentList([a, b]), [a, b])
+  assert.equal(asAttachment([a, b])?.href, a.href)
+  assert.deepEqual(asAttachmentList(''), [])
+  assert.deepEqual(asAttachmentList({ name: '', href: '' }), [])
+  assert.equal(asAttachment({ name: 'pack.zip', href: 'assets/pack.zip' })?.href, 'assets/pack.zip')
+  assert.deepEqual(
+    asAttachmentList([
+      { name: 'a.bin', href: 'assets/a.bin' },
+      { name: 'b.bin', href: '/api/page/file/b.bin' },
+    ]).map((file) => file.name),
+    ['a.bin', 'b.bin'],
   )
 })
 

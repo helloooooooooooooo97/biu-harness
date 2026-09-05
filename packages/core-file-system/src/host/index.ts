@@ -2,7 +2,7 @@ import { join } from 'node:path'
 import { Service, type Context } from 'cordis'
 import {
   DATABASE_CHANNEL,
-  asAttachment,
+  asAttachmentList,
   asHttpHref,
   asImageSrc,
   asImageSrcList,
@@ -212,9 +212,9 @@ function coerce(field: FieldSpec, value: unknown) {
   }
   if (kind === 'attachment') {
     if (value == null || value === '') return ''
-    const file = asAttachment(value)
-    if (!file) return ''
-    return typeof value === 'object' ? file : file.href
+    const list = asAttachmentList(value)
+    if (!list.length) return ''
+    return list.length === 1 ? list[0] : list
   }
   if (kind === 'file') {
     if (value == null || value === '') return null
