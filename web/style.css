@@ -258,7 +258,12 @@ body {
   padding: 0 4px 0 0;
   color: var(--dsw-label);
   font-size: 15px;
+  font-weight: 600;
   outline: none;
+}
+
+.shell-search-input::placeholder {
+  font-weight: 600;
 }
 
 .shell-search-scopes {
@@ -269,8 +274,10 @@ body {
   padding: 10px 12px 8px;
 }
 
-.shell-search-scopes .biu-tag {
+.shell-search-scopes .biu-tag,
+.shell-search-hit-tags .biu-tag {
   max-width: none;
+  font-weight: 400;
 }
 
 .shell-search-body {
@@ -305,6 +312,7 @@ body {
   padding: 8px;
   color: var(--dsw-label);
   font-size: 14px;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
 }
@@ -407,6 +415,7 @@ body {
   margin: 8px;
   color: var(--dsw-label-3);
   font-size: 13px;
+  font-weight: 600;
   line-height: 1.45;
 }
 
@@ -418,6 +427,7 @@ body {
   padding: 8px 14px;
   color: var(--dsw-label-3);
   font-size: 11px;
+  font-weight: 600;
 }
 
 .shell-chrome-search-input {
