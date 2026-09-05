@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowPathIcon, ArrowTopRightOnSquareIcon, CheckIcon } from '@heroicons/react/16/solid'
 import { ensureDbSearchStyle } from '@biu/database-ui'
 import type { DbRecord, FieldSpec } from '@biu/type-file-system'
 import { listCollection } from './db-client.ts'
-import { CellPop } from './cell-pop.tsx'
 import { showRecordInInspector } from './inspector-db-route.ts'
 import { crumbRecordLabel } from './sidebar-preview.ts'
 import { isSingleRefField, recordLinkIds } from './fields.ts'
@@ -220,65 +219,5 @@ export function RecordPickPanel({
         {!loading && !available.length ? <div className="fsdb-person-loading">本表没有可选项</div> : null}
       </div>
     </div>
-  )
-}
-
-/** 详情/内联：先显示引用，点击后用和格子相同的浮窗来改。 */
-export function RefFieldPop({
-  field,
-  fieldKey,
-  value,
-  collectionPath,
-  excludeId,
-  peers,
-  onChange,
-}: {
-  field?: FieldSpec
-  fieldKey: string
-  value: unknown
-  collectionPath: string
-  excludeId?: string
-  peers?: RecordLinkPeer[]
-  onChange: (next: unknown) => void
-}) {
-  const hostRef = useRef<HTMLSpanElement>(null)
-  const [open, setOpen] = useState(false)
-  const kind = isSingleRefField(field, fieldKey) ? 'ref' : 'multi-ref'
-  return (
-    <>
-      <span
-        ref={hostRef}
-        className="fsdb-ref-host"
-        onClick={(event) => {
-          if ((event.target as HTMLElement).closest('.fsdb-ref-chip')) return
-          setOpen(true)
-        }}
-      >
-        <RecordLinkChips
-          field={field}
-          fieldKey={fieldKey}
-          value={value}
-          peers={peers}
-          collectionPath={collectionPath}
-        />
-      </span>
-      <CellPop
-        open={open}
-        anchor={hostRef.current}
-        className={`is-${kind} is-record-link`}
-        onClose={() => setOpen(false)}
-      >
-        <RecordPickPanel
-          field={field}
-          fieldKey={fieldKey}
-          value={value}
-          collectionPath={collectionPath}
-          excludeId={excludeId}
-          onChange={onChange}
-          onPicked={kind === 'ref' ? () => setOpen(false) : undefined}
-          onJump={() => setOpen(false)}
-        />
-      </CellPop>
-    </>
   )
 }

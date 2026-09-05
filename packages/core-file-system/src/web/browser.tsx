@@ -72,11 +72,9 @@ import {
   BoolCell,
   DefaultCell,
   draftFromRecord,
-  FieldEditor,
   fieldActionId,
   FieldGlyph,
   FilePreview,
-  fieldDraftValue,
   ModeGlyph,
   parseFieldValue,
   VIEW_MODES,
@@ -119,6 +117,7 @@ import { showRecordInInspector } from './inspector-db-route.ts'
 import { SchemaChips, SchemaFieldEditor, schemaTagTone } from './schema-field.tsx'
 import { CellPop, cellUsesPop } from './cell-pop.tsx'
 import { CellPopDraft } from './cell-pop-draft.tsx'
+import { FieldValuePop } from './field-value-pop.tsx'
 import { loadFacets, pullFacets, subscribeFacets } from './facet-catalog.ts'
 
 const EMPTY_VIEWS: CollectionViewType[] = []
@@ -1362,19 +1361,19 @@ export function CollectionBrowser({
       const value = readFacetFlatValue(row, key, source)
       if (field.writable && kind !== 'file') {
         return (
-          <FieldEditor
-            fieldKey={field.label ?? flat.fieldKey}
+          <FieldValuePop
+            record={row}
+            fieldKey={key}
             field={field}
-            value={fieldDraftValue(field, value)}
-            source={value}
+            value={value}
             collectionPath={collectionPath}
             options={uniqueValues(
               items.map((item) => ({ ...item, [key]: readFacetFlatValue(item, key, source) })),
               key,
               field,
             )}
-            onChange={(next) => void writePatch(row, { [source]: patchFacetFlatValue(row, key, parseFieldValue(field, next), source) })}
-            onCommit={(next) => writeCellValue(row, key, field, next)}
+            records={items}
+            onSubmit={(next) => writeCellValue(row, key, field, next)}
           />
         )
       }
@@ -1410,17 +1409,15 @@ export function CollectionBrowser({
     if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={fallback} />
     if (field.writable && kind !== 'file') {
       return (
-        <FieldEditor
+        <FieldValuePop
+          record={row}
           fieldKey={key}
           field={field}
-          value={fieldDraftValue(field, row[key])}
-          source={row[key]}
+          value={row[key]}
           collectionPath={collectionPath}
-          excludeId={row.id}
-          autoOpen={false}
           options={uniqueValues(items, key, field)}
-          onChange={(next) => void writeOne(row, key, field, next)}
-          onCommit={(next) => writeCellValue(row, key, field, next)}
+          records={items}
+          onSubmit={(next) => writeCellValue(row, key, field, next)}
         />
       )
     }

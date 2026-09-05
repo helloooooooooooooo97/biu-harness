@@ -6,7 +6,6 @@ import {
   type AtomicFieldType,
   type CollectionSchemaPack,
   type DbRecord,
-  type FieldSpec,
   type FieldType,
   type SchemaFieldValue,
   type SchemaPackField,
@@ -14,7 +13,8 @@ import {
 import { ArrowUturnLeftIcon, ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
 import { TagChip, TagChips, tagTone, HeadlessPopover } from '@biu/public-ui'
 import { CellMulti } from '@biu/database-ui'
-import { DefaultCell, FieldEditor, FieldGlyph, fieldDraftValue, parseFieldValue } from './fsdb-cells.tsx'
+import { DefaultCell, FieldGlyph } from './fsdb-cells.tsx'
+import { FieldValuePop } from './field-value-pop.tsx'
 import { inferPackFieldType, orphanPackEntries } from './fields.ts'
 import { loadFacets, persistFacets, registerFacetFieldKey, slugFacetId, subscribeFacets } from './facet-catalog.ts'
 
@@ -37,10 +37,6 @@ const TYPE_LABEL: Partial<Record<FieldType, string>> = {
 }
 
 export const schemaTagTone = tagTone
-
-function asDraft(value: unknown, field: FieldSpec): string {
-  return fieldDraftValue(field, value)
-}
 
 export function SchemaChip({
   id,
@@ -320,12 +316,6 @@ export function SchemaFieldEditor({
     saveCatalog([...catalog, { id: tag.id, label: tag.label, fields: [field] }])
   }
 
-  function writeField(tagId: string, field: SchemaPackField, raw: string) {
-    const bag = { ...(parsed.values[tagId] ?? {}) }
-    bag[field.key] = parseFieldValue(field, raw)
-    patchValue({ tags: parsed.tags, values: { ...parsed.values, [tagId]: bag } })
-  }
-
   if (!writable) return <SchemaChips value={value} tags={catalog} />
 
   return (
@@ -355,14 +345,13 @@ export function SchemaFieldEditor({
                   {field.label ?? field.key}
                 </span>
                 <div className="fsdb-schema-prop-v">
-                  <FieldEditor
-                    fieldKey={field.label ?? field.key}
+                  <FieldValuePop
+                    record={record}
+                    fieldKey={field.key}
                     field={field}
-                    value={asDraft(bag[field.key], field)}
-                    source={bag[field.key]}
+                    value={bag[field.key]}
                     collectionPath={_collectionPath}
-                    onChange={(next) => writeField(tag.id, field, next)}
-                    onCommit={(next) => {
+                    onSubmit={(next) => {
                       const bagNext = { ...(parsed.values[tag.id] ?? {}) }
                       bagNext[field.key] = next
                       patchValue({ tags: parsed.tags, values: { ...parsed.values, [tag.id]: bagNext } })

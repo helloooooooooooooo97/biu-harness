@@ -39,7 +39,7 @@ import { CellDateTime } from '@biu/database-ui'
 import { AttachmentFile, MediaField, UrlHref } from './cell-media.tsx'
 import { crumbRecordLabel } from './sidebar-preview.ts'
 import { PersonFace, PersonPickPanel } from './person-cell.tsx'
-import { RecordLinkChips, RefFieldPop } from './record-link-cell.tsx'
+import { RecordLinkChips } from './record-link-cell.tsx'
 
 export function actionIcon(id: string) {
   const cls = 'size-[14px]'
@@ -420,21 +420,6 @@ export function FieldEditor({
   const kind = resolveFieldType(field)
   if (kind === 'action') {
     return <ActionCell field={field} fieldKey={fieldKey} onRun={onAction} />
-  }
-  if (isRecordLinkField(field, fieldKey) && collectionPath) {
-    return (
-      <RefFieldPop
-        field={field}
-        fieldKey={fieldKey}
-        value={source ?? value}
-        collectionPath={collectionPath}
-        excludeId={excludeId}
-        onChange={(next) => {
-          if (onCommit) onCommit(next)
-          else onChange(typeof next === 'string' ? next : JSON.stringify(next))
-        }}
-      />
-    )
   }
   if (kind === 'select' || kind === 'multi-select') {
     const selected = kind === 'multi-select' ? asStringList(value) : value ? [value] : []
