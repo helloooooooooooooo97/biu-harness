@@ -39,7 +39,7 @@ import { CellDateTime } from '@biu/database-ui'
 import { AttachmentFile, MediaField, UrlHref } from './cell-media.tsx'
 import { crumbRecordLabel } from './sidebar-preview.ts'
 import { PersonFace, PersonPickPanel } from './person-cell.tsx'
-import { RecordLinkChips, RecordPickPanel } from './record-link-cell.tsx'
+import { RecordLinkChips, RefFieldPop } from './record-link-cell.tsx'
 
 export function actionIcon(id: string) {
   const cls = 'size-[14px]'
@@ -423,7 +423,7 @@ export function FieldEditor({
   }
   if (isRecordLinkField(field, fieldKey) && collectionPath) {
     return (
-      <RecordPickPanel
+      <RefFieldPop
         field={field}
         fieldKey={fieldKey}
         value={source ?? value}
