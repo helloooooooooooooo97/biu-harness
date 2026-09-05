@@ -450,24 +450,26 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-thumbs{display:inline-flex;align-items:center;gap:2px;min-width:0;max-width:100%}
 .fsdb-fileview-imgs{display:flex;flex-wrap:wrap;gap:8px}
 .fsdb-cell-pop{box-sizing:border-box;padding:8px;background:#202020;border:1px solid var(--dsw-border);border-radius:8px;box-shadow:0 1px 2px rgba(15,15,15,.04),0 10px 32px rgba(0,0,0,.28);display:flex;flex-direction:column;gap:8px;max-height:min(70vh,480px);overflow:auto;font-size:14px}
-.fsdb-cell-pop.is-select,.fsdb-cell-pop.is-multi-select,.fsdb-cell-pop.is-facet,.fsdb-cell-pop.is-attachment,.fsdb-cell-pop.is-person,.fsdb-cell-pop.is-record-link,.fsdb-cell-pop.is-ref,.fsdb-cell-pop.is-multi-ref{min-width:260px;padding:8px}
+.fsdb-cell-pop.is-select,.fsdb-cell-pop.is-multi-select,.fsdb-cell-pop.is-facet,.fsdb-cell-pop.is-attachment,.fsdb-cell-pop.is-image,.fsdb-cell-pop.is-person,.fsdb-cell-pop.is-record-link,.fsdb-cell-pop.is-ref,.fsdb-cell-pop.is-multi-ref{min-width:280px;padding:8px}
 .fsdb-cell-pop.is-string,.fsdb-cell-pop.is-title,.fsdb-cell-pop.is-number{padding:6px 8px}
 .fsdb-cell-pop-tags{display:flex;flex-direction:column;gap:8px;min-width:0}
 .fsdb-cell-pop-picked{display:flex;min-width:0}
 .fsdb-cell-pop-text{box-sizing:border-box;width:100%;min-height:72px;margin:0;border:0;border-radius:6px;padding:4px 2px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;line-height:1.45;resize:vertical;outline:none}
 .fsdb-cell-pop-url{box-sizing:border-box;width:100%;margin:0;border:0;border-radius:6px;padding:4px 2px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;line-height:1.45;outline:none}
-.fsdb-media-field{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px;min-width:0;width:100%;max-width:100%;min-height:22px;height:auto}
+.fsdb-media-field{display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:8px;min-width:0;width:100%;max-width:100%;min-height:22px;height:auto}
 .fsdb-media-field.is-files{flex-direction:column;flex-wrap:nowrap;align-items:stretch;align-content:stretch}
-.fsdb-media-field.is-files .fsdb-media-pick{align-self:flex-start;height:24px;padding:0 2px}
-.fsdb-media-preview{display:block;width:18px;height:18px;flex:none;object-fit:cover;border-radius:3px;background:#111}
-.fsdb-media-thumb .ant-image-img{display:block;width:18px;height:18px;object-fit:cover;border-radius:3px}
-.fsdb-media-thumbs{display:inline-flex;align-items:center;gap:4px;min-width:0;overflow:auto}
+.fsdb-media-preview{display:block;width:56px;height:56px;flex:none;object-fit:cover;border-radius:8px;background:#111}
+.fsdb-media-thumb .ant-image-img{display:block;width:56px;height:56px;object-fit:cover;border-radius:8px}
+.fsdb-media-thumbs{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;min-width:0}
 .fsdb-media-thumb{position:relative;flex:none;line-height:0}
-.fsdb-media-remove{position:absolute;top:-3px;right:-3px;display:grid;place-items:center;width:12px;height:12px;margin:0;border:0;border-radius:6px;padding:0;background:#202020;color:var(--dsw-label);cursor:pointer}
+.fsdb-media-remove{position:absolute;top:-4px;right:-4px;display:grid;place-items:center;width:16px;height:16px;margin:0;border:0;border-radius:8px;padding:0;background:#202020;color:var(--dsw-label);cursor:pointer;box-shadow:0 0 0 1px var(--dsw-border)}
 .fsdb-media-row{display:flex;align-items:center;gap:6px;min-width:0}
-.fsdb-media-pick.is-upload{width:22px;padding:0;justify-content:center}
+.fsdb-media-drop{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;min-height:72px;margin:0;border:1px dashed var(--dsw-border);border-radius:8px;padding:12px;background:transparent;color:var(--dsw-label-2);cursor:pointer}
+.fsdb-media-drop.is-files{min-height:88px}
+.fsdb-media-drop:hover,.fsdb-media-drop.is-over{border-color:var(--dsw-label-2);background:var(--dsw-hover);color:var(--dsw-label)}
+.fsdb-media-pick{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;margin:0;border:0;border-radius:8px;padding:0;background:color-mix(in srgb,var(--dsw-hover) 80%,transparent);color:inherit;pointer-events:none}
+.fsdb-media-pick.is-upload{width:32px;padding:0;justify-content:center}
 .fsdb-media-pick-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fsdb-media-pick:hover{background:transparent}
 .fsdb-media-error{display:none}
 .fsdb-person{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%}
 .fsdb-person.is-empty{color:var(--dsw-label-3)}
