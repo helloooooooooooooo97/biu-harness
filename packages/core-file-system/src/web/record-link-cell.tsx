@@ -21,10 +21,10 @@ const TABLE_PAGE = 200
 const TABLE_CAP = 500
 
 async function loadTablePeers(path: string, labelField?: string): Promise<RecordLinkPeer[]> {
-  const first = await listCollection({ path, limit: TABLE_PAGE, offset: 0, sortField: 'id' })
+  const first = await listCollection({ path, limit: TABLE_PAGE, offset: 0, sortField: 'id', columns: ['label'] })
   const rows = [...first.items]
   while (rows.length < first.total && rows.length < TABLE_CAP) {
-    const more = await listCollection({ path, limit: TABLE_PAGE, offset: rows.length, sortField: 'id' })
+    const more = await listCollection({ path, limit: TABLE_PAGE, offset: rows.length, sortField: 'id', columns: ['label'] })
     if (!more.items.length) break
     rows.push(...more.items)
   }

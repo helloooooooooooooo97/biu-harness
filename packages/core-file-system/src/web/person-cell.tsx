@@ -31,7 +31,13 @@ export function resolveAgentName(person: PersonValue, sessions: ReadonlyMap<stri
 
 export async function loadAgents(): Promise<ChatPerson[]> {
   if (agentsInflight) return agentsInflight
-  const request = listCollection({ path: '/sessions', limit: 500, sortField: 'updatedAt', sortDir: 'desc' })
+  const request = listCollection({
+    path: '/sessions',
+    limit: 500,
+    sortField: 'updatedAt',
+    sortDir: 'desc',
+    columns: ['title', 'mascot'],
+  })
     .then((page) =>
       page.items
         .filter((item) => typeof item?.id === 'string' && item.id)

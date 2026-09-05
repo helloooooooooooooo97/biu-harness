@@ -20,6 +20,7 @@ export type ViewNeighborQuery = {
   sortField?: string
   sortDir?: string
   filters?: Record<string, string>
+  columns?: string[]
 }
 
 export type ViewNeighborHit = {
@@ -44,6 +45,7 @@ export async function findViewNeighbor(opts: {
     sortField?: string
     sortDir?: string
     filters?: Record<string, string>
+    columns?: string[]
   }) => Promise<{ items: Array<{ id: string }>; total: number }>
 }): Promise<ViewNeighborHit | null> {
   const pageSize = Math.max(1, opts.pageSize)
@@ -70,6 +72,7 @@ export async function findViewNeighbor(opts: {
     sortField: opts.query.sortField,
     sortDir: opts.query.sortDir,
     filters: opts.query.filters,
+    columns: opts.query.columns,
   })
   const row = listed.items[next - nextPage * pageSize]
   return row ? { id: row.id, page: nextPage, row } : null
@@ -93,6 +96,7 @@ async function locateInView(
       sortField: query.sortField,
       sortDir: query.sortDir,
       filters: query.filters,
+      columns: query.columns,
     })
     if (listed.total > total) total = listed.total
     const local = listed.items.findIndex((row) => row.id === id)

@@ -2,7 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import type { CollectionSchema } from '@biu/type-file-system'
 import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
-import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, inferPackFieldType, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, parentFieldKey, readFacetFlatValue, recordLinkIds, resolveFieldType, uniqueValues } from './fields'
+import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, inferPackFieldType, listProjectionKeys, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, parentFieldKey, readFacetFlatValue, recordLinkIds, resolveFieldType, uniqueValues } from './fields'
 import { visibleActions } from './fsdb-cells.tsx'
 
 test('isViewModeId accepts builtin and custom slugs', () => {
@@ -112,6 +112,19 @@ test('default columns omit flattened type properties', () => {
   const row = { id: '1', facet: { tags: ['haohao'], values: { haohao: { dede: 'v' } } } }
   assert.equal(readFacetFlatValue(row, nested), 'v')
   assert.deepEqual(patchFacetFlatValue(row, nested, 'next').values.haohao?.dede, 'next')
+})
+
+test('list projection keeps visible columns plus title, emoji, and parent', () => {
+  const nested = facetFlatColumnKey('haohao', 'dede')
+  const keys = listProjectionKeys({ schema, columns: ['status'], groupBy: 'tags' })
+  assert.equal(keys.includes('id'), true)
+  assert.equal(keys.includes('title'), true)
+  assert.equal(keys.includes('status'), true)
+  assert.equal(keys.includes('emoji'), true)
+  assert.equal(keys.includes('tags'), true)
+  assert.equal(keys.includes('dueAt'), false)
+  const withFacet = listProjectionKeys({ schema: { ...schema, fields: { ...schema.fields, facet: { type: 'facet' } } }, columns: [nested] })
+  assert.equal(withFacet.includes('facet'), true)
 })
 
 test('contentFieldKey prefers content then contentField then notes', () => {
