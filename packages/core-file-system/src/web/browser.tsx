@@ -114,8 +114,7 @@ import { listCollection, readJson } from './db-client.ts'
 import { findViewNeighbor, indexOnPage } from './view-adjacent.ts'
 import { rememberPreviewTotal, viewTotalKey } from './sidebar-preview.ts'
 import { mergeTableViews } from '../catalog-views.ts'
-import { databaseRecordPath } from './database-path.ts'
-import { focusInspectorIfOpen, showRecordInInspector } from './inspector-db-route.ts'
+import { showRecordInInspector } from './inspector-db-route.ts'
 import { SchemaChips, SchemaFieldEditor, schemaTagTone } from './schema-field.tsx'
 import { CellPop, cellUsesPop } from './cell-pop.tsx'
 import { CellPopDraft } from './cell-pop-draft.tsx'
@@ -292,7 +291,6 @@ export function CollectionBrowser({
       return
     }
     if (onOpenRow?.(row)) return
-    if (focusInspectorIfOpen(collectionPath, databaseRecordPath(collectionPath, row.id))) return
     setDetailId(row.id, row)
   }
   const [hydrated, setHydrated] = useState(false)
