@@ -4,7 +4,9 @@ import { builtinAllView, builtinAllViewId, builtinCatalogViewId } from '../catal
 import { VIEWS_COLLECTION_PATH } from './database-path.ts'
 import {
   defaultViewId,
+  loadRecords,
   persistViewDisplay,
+  rememberRecords,
   savedViewFromRecord,
   viewDisplayKey,
   viewForPath,
@@ -90,4 +92,12 @@ test('savedViewFromRecord skips builtin rows and keeps filters', () => {
     columnWidths: { title: 240 },
   })
   assert.equal(withWidths?.columnWidths?.title, 240)
+})
+
+test('rememberRecords keeps titles when another inspector page overwrites the same collection', () => {
+  rememberRecords('/pages', [{ id: 'home', label: '首页' }])
+  rememberRecords('/pages', [{ id: 'draft', label: 'draft' }, { id: 'home', label: 'home' }])
+  const listed = loadRecords('/pages')
+  assert.equal(listed.find((row) => row.id === 'home')?.label, '首页')
+  assert.equal(listed.find((row) => row.id === 'draft')?.label, 'draft')
 })

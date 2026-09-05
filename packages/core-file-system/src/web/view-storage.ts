@@ -33,8 +33,27 @@ export type CrumbRecord = { id: string; label: string; emoji?: string; mascot?: 
 
 const memoryRecords = new Map<string, CrumbRecord[]>()
 
+function keepCrumbLabel(row: CrumbRecord, prev?: CrumbRecord) {
+  const next = String(row.label ?? '').trim()
+  const last = String(prev?.label ?? '').trim()
+  if (next && next !== row.id) return next
+  if (last && last !== row.id) return last
+  return next || last || row.id
+}
+
 export function rememberRecords(collectionPath: string, rows: CrumbRecord[]) {
-  memoryRecords.set(collectionPath, rows)
+  const prev = memoryRecords.get(collectionPath) ?? []
+  const byId = new Map(prev.map((row) => [row.id, row]))
+  for (const row of rows) {
+    const last = byId.get(row.id)
+    byId.set(row.id, {
+      ...last,
+      ...row,
+      label: keepCrumbLabel(row, last),
+      emoji: row.emoji || last?.emoji,
+    })
+  }
+  memoryRecords.set(collectionPath, [...byId.values()])
 }
 
 export function loadRecords(collectionPath: string): CrumbRecord[] {
