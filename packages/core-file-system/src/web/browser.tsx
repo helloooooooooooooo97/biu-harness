@@ -1711,7 +1711,6 @@ export function CollectionBrowser({
         <div className="fsdb-detail-actions">
         {actions.map((action) => {
           const run = () => void runAction(row, action)
-          if (Action) return <Action key={action.id} action={action} record={row} busy={busy} run={run} />
           return (
             <button
               key={action.id}
