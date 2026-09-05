@@ -61,6 +61,17 @@ export function asImageSrc(value: unknown): string {
 /** 图片字段可存多张；单字符串仍当一张。非法地址丢掉。 */
 export function asImageSrcList(value: unknown): string[] {
   if (value == null || value === '') return []
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed) as unknown
+        if (Array.isArray(parsed)) return asImageSrcList(parsed)
+      } catch {
+        /* one path */
+      }
+    }
+  }
   if (Array.isArray(value)) {
     const out: string[] = []
     for (const item of value) {

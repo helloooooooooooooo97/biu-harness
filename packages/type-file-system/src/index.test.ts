@@ -18,6 +18,10 @@ test('asImageSrcList keeps multiple images and asImageSrc takes the first', () =
   assert.equal(asImageSrc(['/page-covers/red.png', 'https://example.com/a.png']), '/page-covers/red.png')
   assert.deepEqual(asImageSrcList('/page-covers/blue.png'), ['/page-covers/blue.png'])
   assert.deepEqual(asImageSrcList(['javascript:alert(1)', '/page-covers/red.png']), ['/page-covers/red.png'])
+  assert.deepEqual(
+    asImageSrcList(JSON.stringify(['/page-covers/red.png', '/page-covers/blue.png'])),
+    ['/page-covers/red.png', '/page-covers/blue.png'],
+  )
 })
 
 test('asImageSrc rejects scripts and non-image paths', () => {

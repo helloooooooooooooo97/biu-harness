@@ -36,16 +36,12 @@ function commitImages(list: string[], onCommit: (next: unknown) => void) {
   else onCommit(list)
 }
 
-function fileFingerprint(file: File) {
-  return `${file.type}\0${file.size}`
-}
-
 function uniqueImageFiles(files: Array<File | null | undefined>): File[] {
   const seen = new Set<string>()
   const out: File[] = []
   for (const file of files) {
     if (!file || !file.type.startsWith('image/')) continue
-    const key = fileFingerprint(file)
+    const key = `${file.name}\0${file.size}\0${file.lastModified}\0${file.type}`
     if (seen.has(key)) continue
     seen.add(key)
     out.push(file)
@@ -84,6 +80,8 @@ export function MediaField({
   const [error, setError] = useState('')
   const pageAssets = collectionPath === '/pages'
   const images = kind === 'image' ? asImageSrcList(value) : []
+  const imagesRef = useRef(images)
+  imagesRef.current = images
   const file = kind === 'attachment' ? asAttachment(value) : null
   const href = kind === 'url' ? asHttpHref(value) : ''
 
@@ -108,7 +106,7 @@ export function MediaField({
           throw new Error('这张表还没有附件存储')
         }
       }
-      if (kind === 'image') commitImages([...images, ...added], onCommit)
+      if (kind === 'image') commitImages([...imagesRef.current, ...added], onCommit)
     } catch (err) {
       setError(String(err instanceof Error ? err.message : err))
     }
