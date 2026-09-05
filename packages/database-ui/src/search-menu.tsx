@@ -14,7 +14,7 @@ const CSS = `
 .db-search-empty{padding:8px;color:var(--dsw-label-3);font-size:14px}
 .db-search-foot{border-top:1px solid var(--dsw-border);margin-top:4px;padding-top:4px}
 .db-cell-select{display:inline-flex;position:relative;min-width:0;max-width:100%;box-sizing:border-box;vertical-align:middle}
-.db-cell-select-trigger{display:inline-flex;align-items:center;gap:5px;max-width:none;height:22px;border:0;border-radius:4px;padding:0 6px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;font-weight:500;line-height:22px;cursor:pointer;text-align:left}
+.db-cell-select-trigger{display:inline-flex;align-items:center;gap:5px;max-width:none;height:22px;border:0;border-radius:4px;padding:0 6px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;font-weight:600;line-height:22px;cursor:pointer;text-align:left}
 .db-cell-select-trigger:hover,.db-cell-select-trigger[data-open]{background:transparent}
 .db-cell-select-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .db-cell-select-caret{flex:none;opacity:.55;color:var(--dsw-label-2)}
@@ -32,9 +32,10 @@ const CSS = `
 .db-cell-multi-box:hover,.db-cell-multi-box[aria-expanded="true"]{background:transparent}
 .db-datetime{display:inline-flex;align-items:center;gap:4px;position:relative;min-width:0;width:100%;max-width:100%;vertical-align:middle;color:var(--dsw-label-2)}
 .db-datetime .ant-picker{width:auto;max-width:100%;padding:0 4px;background:transparent;border:0;box-shadow:none}
-.db-datetime .ant-picker-input > input{font-size:14px;font-weight:500;color:inherit}
+.db-datetime .ant-picker-input > input{font-size:14px;font-weight:600;color:inherit}
 .db-datetime.is-overdue .ant-picker-input > input,.db-datetime.is-overdue{color:var(--dsw-danger)}
 .db-datetime .ant-picker-suffix,.db-datetime .ant-picker-clear{color:var(--dsw-label-3)}
+.db-datetime-icon{display:block;width:14px;height:14px;flex:none}
 `
 
 export function ensureDbSearchStyle() {
