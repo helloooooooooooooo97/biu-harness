@@ -1,5 +1,4 @@
 import { DatePicker, ConfigProvider, theme } from 'antd'
-import { CalendarDaysIcon } from '@heroicons/react/16/solid'
 import zhCN from 'antd/locale/zh_CN'
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
@@ -84,7 +83,7 @@ export function CellDateTime({
           variant="borderless"
           placeholder={empty}
           format="YYYY/MM/DD HH:mm"
-          suffixIcon={<CalendarDaysIcon className="db-datetime-icon" aria-hidden />}
+          suffixIcon={null}
           value={stamp ? dayjs(stamp) : null}
           onChange={(next) => {
             if (!writable) return

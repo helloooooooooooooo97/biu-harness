@@ -34,8 +34,8 @@ const CSS = `
 .db-datetime .ant-picker{width:auto;max-width:100%;padding:0 4px;background:transparent;border:0;box-shadow:none}
 .db-datetime .ant-picker-input > input{font-size:14px;font-weight:600;color:inherit}
 .db-datetime.is-overdue .ant-picker-input > input,.db-datetime.is-overdue{color:var(--dsw-danger)}
-.db-datetime .ant-picker-suffix,.db-datetime .ant-picker-clear{color:var(--dsw-label-3)}
-.db-datetime-icon{display:block;width:14px;height:14px;flex:none}
+.db-datetime .ant-picker-suffix{display:none}
+.db-datetime .ant-picker-clear{color:var(--dsw-label-3)}
 `
 
 export function ensureDbSearchStyle() {

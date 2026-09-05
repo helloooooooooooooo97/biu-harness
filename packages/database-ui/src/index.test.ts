@@ -52,6 +52,6 @@ test('datetime cell uses antd DatePicker, not datetime-local', () => {
   assert.match(index, /CellDateTime/)
   assert.match(menu, /\.db-datetime\{[^}]*color:var\(--dsw-label-2\)/)
   assert.match(picker, /format="YYYY\/MM\/DD HH:mm"/)
-  assert.match(picker, /CalendarDaysIcon/)
-  assert.match(picker, /suffixIcon/)
+  assert.match(picker, /suffixIcon=\{null\}/)
+  assert.doesNotMatch(picker, /CalendarDaysIcon/)
 })
