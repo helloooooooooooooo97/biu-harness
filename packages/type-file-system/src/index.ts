@@ -222,6 +222,21 @@ export function emptySchemaValue(): SchemaFieldValue {
   return { tags: [], values: {} }
 }
 
+/** 只保留仍贴着的合集下的值；从页面拿掉合集时元数据一起丢掉。 */
+export function bindSchemaValue(
+  tags: string[],
+  values: SchemaFieldValue['values'] = {},
+): SchemaFieldValue {
+  const nextTags = [...new Set(tags.map((item) => String(item).trim()).filter(Boolean))]
+  const next: SchemaFieldValue['values'] = {}
+  for (const id of nextTags) {
+    const bag = values[id]
+    if (!bag || typeof bag !== 'object' || Array.isArray(bag)) continue
+    next[id] = { ...bag }
+  }
+  return { tags: nextTags, values: next }
+}
+
 export function normalizeSchemaValue(raw: unknown): SchemaFieldValue {
   if (raw == null || raw === '') return emptySchemaValue()
   if (typeof raw === 'string') {
@@ -232,21 +247,21 @@ export function normalizeSchemaValue(raw: unknown): SchemaFieldValue {
     }
   }
   if (Array.isArray(raw)) {
-    return { tags: [...new Set(raw.map((item) => String(item).trim()).filter(Boolean))], values: {} }
+    return bindSchemaValue(raw.map((item) => String(item).trim()))
   }
   if (typeof raw !== 'object') return emptySchemaValue()
   const rec = raw as Record<string, unknown>
   const tags = Array.isArray(rec.tags)
-    ? [...new Set(rec.tags.map((item) => String(item).trim()).filter(Boolean))]
+    ? rec.tags.map((item) => String(item).trim())
     : []
-  const values: Record<string, Record<string, unknown>> = {}
+  const values: SchemaFieldValue['values'] = {}
   if (rec.values && typeof rec.values === 'object' && !Array.isArray(rec.values)) {
     for (const [key, item] of Object.entries(rec.values as Record<string, unknown>)) {
       if (!item || typeof item !== 'object' || Array.isArray(item)) continue
       values[key] = { ...(item as Record<string, unknown>) }
     }
   }
-  return { tags, values }
+  return bindSchemaValue(tags, values)
 }
 
 export function recordBuiltinValues(row: Record<string, unknown> = {}) {

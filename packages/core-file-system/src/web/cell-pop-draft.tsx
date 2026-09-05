@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   normalizeSchemaValue,
+  bindSchemaValue,
   type CollectionSchemaPack,
   type DbRecord,
   type FieldSpec,
@@ -119,7 +120,7 @@ function applyFacetTags(parsed: SchemaFieldValue, catalog: CollectionSchemaPack[
     resolved.push(id)
   }
   if (packs !== catalog) persistFacets(packs)
-  return { tags: resolved, values: parsed.values }
+  return bindSchemaValue(resolved, parsed.values)
 }
 
 function FacetPickPanel({ value, onChange }: { value: unknown; onChange: (next: SchemaFieldValue) => void }) {

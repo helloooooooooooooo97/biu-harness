@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ATOMIC_FIELD_TYPES,
   normalizeSchemaValue,
+  bindSchemaValue,
   type AtomicFieldType,
   type CollectionSchemaPack,
   type DbRecord,
@@ -280,7 +281,7 @@ export function SchemaFieldEditor({
       resolved.push(id)
     }
     if (packs !== catalog) saveCatalog(packs)
-    patchValue({ tags: resolved, values: parsed.values })
+    patchValue(bindSchemaValue(resolved, parsed.values))
   }
 
   function addField(tag: CollectionSchemaPack, name: string, type: AtomicFieldType) {
