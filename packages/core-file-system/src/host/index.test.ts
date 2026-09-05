@@ -70,6 +70,22 @@ test('root lists registered collections; record read/update follows schema', asy
   assert.equal(listed.items.length, 2)
   assert.equal(listed.items[0]?.title, '草稿')
 
+  const slim = await db.list('/notes', undefined, { columns: ['title'] })
+  assert.equal(slim.kind, 'collection')
+  if (slim.kind !== 'collection') return
+  const row = slim.items[0]
+  assert.equal(row?.id, 'n1')
+  assert.equal(row?.title, '草稿')
+  assert.equal(row?.path, '/notes/n1')
+  assert.equal(row?.kind, 'record')
+  assert.equal('status' in (row ?? {}), false)
+  assert.equal('pinned' in (row ?? {}), false)
+  const labeled = await db.list('/notes', undefined, { columns: ['label'] })
+  assert.equal(labeled.kind, 'collection')
+  if (labeled.kind !== 'collection') return
+  assert.equal(labeled.items[0]?.title, '草稿')
+  assert.equal('status' in (labeled.items[0] ?? {}), false)
+
   const read = await db.read('/notes/n1')
   assert.equal(read.kind, 'record')
   if (read.kind !== 'record') return
@@ -467,6 +483,28 @@ test('apply registers db_* tools', async () => {
   const paths = ((listed as { items: Array<{ path: string }> }).items ?? []).map((item) => item.path)
   assert.equal(paths.includes('/views'), true)
   assert.equal(paths.includes('/facets'), true)
+})
+
+test('db_list columns returns only those fields plus id', async () => {
+  const ctx = new Context()
+  await ctx.plugin(tools)
+  class HttpStub extends Service {
+    constructor(c: Context) {
+      super(c, 'http')
+    }
+    route() {}
+  }
+  new HttpStub(ctx)
+  await ctx.plugin({ inject: ['tools', 'http'], apply: applyFileSystem })
+  const db = ctx.get('database') as DatabaseService
+  db.register(notesCollection())
+  const listed = await ctx.tools.invoke('db_list', { path: '/notes', columns: ['label'] }) as {
+    items: Array<Record<string, unknown>>
+  }
+  const row = listed.items[0]
+  assert.equal(row?.title, '草稿')
+  assert.equal(row?.id, 'n1')
+  assert.equal('status' in (row ?? {}), false)
 })
 
 test('db_list on a table broadcasts inspector working then done', async () => {

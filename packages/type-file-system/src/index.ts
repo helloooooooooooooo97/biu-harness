@@ -595,6 +595,8 @@ export type ListPage = {
   /** 缺省 50，最大 200；列表接口不会一次返回整表。 */
   limit?: number
   offset?: number
+  /** 只返回这些列；空或不传则除 content 外全返回。id 始终带上。 */
+  columns?: string[]
 }
 
 /** File System 实现必须满足的服务面。换实现时只要还叫 ctx.database 并遵守这套方法。 */

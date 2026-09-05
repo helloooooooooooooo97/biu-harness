@@ -150,6 +150,34 @@ function withoutContent(spec: CollectionSpec, row: DbRecord): DbRecord {
   return next
 }
 
+function listedColumnKeys(requested: unknown, labelField: string): string[] | null {
+  if (!Array.isArray(requested) || !requested.length) return null
+  const keys: string[] = []
+  const seen = new Set<string>()
+  const add = (key: string) => {
+    const next = key.trim()
+    if (!next || seen.has(next)) return
+    seen.add(next)
+    keys.push(next)
+  }
+  add('id')
+  for (const item of requested) {
+    const raw = String(item ?? '').trim()
+    if (!raw) continue
+    add(raw === 'label' ? labelField : raw)
+  }
+  return keys
+}
+
+function pickListedFields(row: DbRecord, keys: string[]): DbRecord {
+  const next: DbRecord = { id: row.id }
+  for (const key of keys) {
+    if (key === 'path' || key === 'kind') continue
+    if (Object.prototype.hasOwnProperty.call(row, key)) next[key] = row[key]
+  }
+  return next
+}
+
 export function matchActionWhen(record: DbRecord, when?: Record<string, unknown>) {
   if (!when) return true
   for (const [key, expected] of Object.entries(when)) {
@@ -564,6 +592,7 @@ export class DatabaseService extends Service implements Database {
     const sortField = page?.sortField ?? ''
     const sortDir = page?.sortDir === 'desc' ? 'desc' : 'asc'
     const schemaFilter = filter?.facet != null && filter.facet !== '' ? String(filter.facet) : ''
+    const columnKeys = listedColumnKeys(page?.columns, schema.labelField ?? 'title')
     const query: CollectionListQuery = { q, filter }
     if (schemaFilter && schema.fields.facet && spec.path !== '/facets') {
       const stamped = this.facets.stampedIds(spec.path, schemaFilter)
@@ -597,11 +626,15 @@ export class DatabaseService extends Service implements Database {
       total,
       offset,
       limit,
-      items: slice.map((row): DbRecord & { path: string; kind: 'record' } => ({
-        ...withoutContent(spec, row),
-        path: `${spec.path}/${row.id}`,
-        kind: 'record',
-      })),
+      items: slice.map((row): DbRecord & { path: string; kind: 'record' } => {
+        const value = withoutContent(spec, row)
+        const picked = columnKeys ? pickListedFields(value, columnKeys) : value
+        return {
+          ...picked,
+          path: `${spec.path}/${row.id}`,
+          kind: 'record',
+        }
+      }),
     }
   }
 
@@ -976,6 +1009,12 @@ function parseRecords(content: unknown): Record<string, unknown>[] {
 
 const PATH_PARAM = { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] } as const
 
+function asColumnKeys(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const keys = value.map((item) => String(item).trim()).filter(Boolean)
+  return keys.length ? keys : undefined
+}
+
 function asFilter(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
   return value as Record<string, unknown>
@@ -1095,7 +1134,7 @@ export function apply(ctx: Context) {
   }))))
   ctx.tools.register({
     name: 'db_list',
-    description: '列出 File System 路径：/ 为已登记表，/<表> 为该表记录（不含 content 正文）。默认每页 50 条，最多 200。',
+    description: '列出 File System 路径：/ 为已登记表，/<表> 为该表记录（不含 content 正文）。默认每页 50 条，最多 200。可用 columns 只取需要的列。',
     parameters: {
       type: 'object',
       properties: {
@@ -1106,6 +1145,11 @@ export function apply(ctx: Context) {
         sortDir: { type: 'string', enum: ['asc', 'desc'] },
         limit: { type: 'number', description: '每页条数，默认 50，最大 200' },
         offset: { type: 'number' },
+        columns: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '可选，只返回这些列。始终带 id。label 等于标题列（默认 title）。不传则除 content 外全返回。',
+        },
       },
       required: ['path'],
     },
@@ -1118,6 +1162,7 @@ export function apply(ctx: Context) {
           sortDir: args.sortDir === 'desc' ? 'desc' : 'asc',
           limit: args.limit != null ? Number(args.limit) : undefined,
           offset: args.offset != null ? Number(args.offset) : undefined,
+          columns: asColumnKeys(args.columns),
         }),
       )
     },
