@@ -149,6 +149,10 @@ function rememberListCache(
 }
 
 const EMPTY_FILTERS: Record<string, string> = {}
+/** 与选区拖选同一阈值：位移超过这个距离只当拖，不当点击。 */
+const CELL_POP_DRAG_PX = 6
+const CELL_POP_IGNORE =
+  '.fsdb-row-check, .fsdb-col-resizer, .tasks-row-tools, .tasks-title-open, .fsdb-action-btn, .fsdb-boolbtn, .fsdb-thumb-btn, .fsdb-thumb, .ant-image, .fsdb-file-tools'
 
 export function CollectionBrowser({
   moduleId,
@@ -242,6 +246,7 @@ export function CollectionBrowser({
   const [cellPop, setCellPop] = useState<{ id: string; key: string } | null>(null)
   const cellPickRef = useRef<{ id: string; key: string } | null>(null)
   const cellAnchorRef = useRef<HTMLElement | null>(null)
+  const cellPopPtrRef = useRef<{ x: number; y: number; dragged: boolean } | null>(null)
   const [facetCatalog, setFacetCatalog] = useState(() => loadFacets())
   const tablePathsKey = tables
     .map((table) => table.path)
@@ -1803,11 +1808,27 @@ export function CollectionBrowser({
                 onPointerDown={(event) => {
                   if (event.button !== 0) return
                   const hit = event.target as HTMLElement | null
-                  if (hit?.closest('.fsdb-row-check, .fsdb-col-resizer, .tasks-row-tools, .tasks-title-open, .fsdb-action-btn, .fsdb-boolbtn, .fsdb-thumb-btn, .fsdb-thumb, .ant-image, .fsdb-file-tools')) return
+                  if (hit?.closest(CELL_POP_IGNORE)) return
                   const td = event.currentTarget
                   cellAnchorRef.current = td
                   cellPickRef.current = { id: row.id, key: col.key }
                   markCellOn(td, cellFieldWritable(col.field))
+                  cellPopPtrRef.current = { x: event.clientX, y: event.clientY, dragged: false }
+                }}
+                onPointerMove={(event) => {
+                  const start = cellPopPtrRef.current
+                  if (!start || start.dragged) return
+                  if (Math.hypot(event.clientX - start.x, event.clientY - start.y) < CELL_POP_DRAG_PX) return
+                  start.dragged = true
+                  setCellPop(null)
+                }}
+                onClick={(event) => {
+                  const hit = event.target as HTMLElement | null
+                  if (hit?.closest(CELL_POP_IGNORE)) return
+                  const start = cellPopPtrRef.current
+                  cellPopPtrRef.current = null
+                  if (start?.dragged) return
+                  if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) >= CELL_POP_DRAG_PX) return
                   const kind = resolveFieldType(col.field)
                   setCellPop(cellUsesPop(kind, col.field.writable) ? { id: row.id, key: col.key } : null)
                 }}
