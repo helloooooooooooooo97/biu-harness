@@ -217,7 +217,29 @@ export function CellPopDraft({
     return <FacetPickPanel value={raw} onChange={(next) => put(next)} />
   }
 
-  if (kind === 'datetime' || kind === 'image' || kind === 'attachment' || kind === 'url') {
+  if (kind === 'url') {
+    return (
+      <input
+        className="fsdb-cell-pop-url"
+        autoFocus
+        placeholder="https://"
+        value={text}
+        onChange={(event) => {
+          const next = event.target.value
+          setText(next)
+          rawRef.current = next.trim()
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            onClose()
+          }
+        }}
+      />
+    )
+  }
+
+  if (kind === 'datetime' || kind === 'image' || kind === 'attachment') {
     return (
       <FieldEditor
         fieldKey={flat ? field.label ?? flat.fieldKey : fieldKey}

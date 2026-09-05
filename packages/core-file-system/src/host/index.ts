@@ -188,6 +188,17 @@ function coerceList(value: unknown) {
   throw new Error('expected string list')
 }
 
+function coerceUrl(value: unknown) {
+  const text = String(value ?? '').trim()
+  if (!text) return ''
+  const direct = asHttpHref(text)
+  if (direct) return direct
+  if (/^[a-z][a-z0-9+.-]*:/i.test(text)) throw new Error('expected url')
+  const prefixed = asHttpHref(`https://${text}`)
+  if (!prefixed) throw new Error('expected url')
+  return prefixed
+}
+
 function coerce(field: FieldSpec, value: unknown) {
   const kind = field.type === 'string[]' ? 'multi-select' : field.format && field.type === 'string' ? field.format : field.type
   if (kind === 'boolean') return value === true || value === 'true'
@@ -198,12 +209,7 @@ function coerce(field: FieldSpec, value: unknown) {
     if (!Number.isFinite(n)) throw new Error(`expected ${kind}`)
     return n
   }
-  if (kind === 'url') {
-    const text = String(value ?? '').trim()
-    if (!text) return ''
-    if (!asHttpHref(text)) throw new Error('expected url')
-    return text
-  }
+  if (kind === 'url') return coerceUrl(value)
   if (kind === 'image') {
     if (value == null || value === '') return ''
     const list = asImageSrcList(value)

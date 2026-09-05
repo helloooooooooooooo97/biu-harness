@@ -176,9 +176,14 @@ export function LocalText({
   useEffect(() => {
     setDraft(value)
   }, [value])
+  const valueRef = useRef(value)
+  valueRef.current = value
+  const onCommitRef = useRef(onCommit)
+  onCommitRef.current = onCommit
   const commit = () => {
-    if (draftRef.current !== value) onCommit(draftRef.current)
+    if (draftRef.current !== valueRef.current) onCommitRef.current(draftRef.current)
   }
+  useEffect(() => () => commit(), [])
   const shared = {
     className,
     value: draft,

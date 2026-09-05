@@ -185,6 +185,10 @@ test('update accepts url image and attachment values', async () => {
     file: { name: 'a.pdf', href: 'https://example.com/a.pdf' },
   })
   assert.equal(written.value.link, 'https://example.com')
+  const bare = await db.update('/media/n1', { link: 'example.com/x' })
+  assert.equal(bare.value.link, 'https://example.com/x')
+  const emptied = await db.update('/media/n1', { link: '' })
+  assert.equal(emptied.value.link, '')
   assert.equal(written.value.cover, 'https://example.com/a.png')
   assert.equal((written.value.file as { name: string }).name, 'a.pdf')
   const local = await db.update('/media/n1', { cover: '/page-covers/red.png' })
