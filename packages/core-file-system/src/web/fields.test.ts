@@ -2,7 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import type { CollectionSchema } from '@biu/type-file-system'
 import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
-import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, inferPackFieldType, listProjectionKeys, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, parentFieldKey, readFacetFlatValue, recordLinkIds, resolveFieldType, uniqueValues } from './fields'
+import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, inferPackFieldType, listProjectionKeys, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, overlayListed, parentFieldKey, readFacetFlatValue, recordLinkIds, resolveFieldType, uniqueValues } from './fields'
 import { visibleActions } from './fsdb-cells.tsx'
 
 test('isViewModeId accepts builtin and custom slugs', () => {
@@ -75,9 +75,16 @@ test('formatField renders datetime tags and media', () => {
   assert.equal(inferPackFieldType({ kind: 'user', name: '用户' }), 'person')
 })
 
-test('matchActionWhen uses field equality including booleans', () => {
-  assert.equal(matchActionWhen({ id: '1', enabled: false }, { enabled: false }), true)
-  assert.equal(matchActionWhen({ id: '1', enabled: true }, { enabled: false }), false)
+test('overlayListed clears omitted false flags from sparse list rows', () => {
+  const base = { id: '1', running: true, installed: true, name: '插件' }
+  const listed = { id: '1', installed: true, name: '插件' }
+  const next = overlayListed(base, listed)
+  assert.equal(next.running, false)
+  assert.equal(next.installed, true)
+  assert.equal(matchActionWhen(next, { installed: true, running: false }), true)
+  assert.equal(matchActionWhen(next, { installed: true, running: true }), false)
+  assert.equal(overlayListed(next, listed), next)
+  assert.equal(overlayListed(base, { ...listed, running: true }).running, true)
 })
 
 test('visibleActions hides agent-only actions from the page', () => {

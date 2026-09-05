@@ -164,10 +164,9 @@ test('title cell row tools skip the overflow action menu', () => {
   assert.doesNotMatch(detailBar, /if \(Action\)/)
   assert.match(detailBar, /rowShown\.map/)
   assert.match(browser, /listedSelected/)
-  assert.match(browser, /function mergeRecord/)
-  assert.match(browser, /useMemo\(\(\) => \{/)
-  assert.match(browser, /mergeRecord\(detailRow, listedSelected\)/)
-  assert.match(browser, /mergeRecord\(prev, hit\)/)
+  assert.match(browser, /overlayListed/)
+  assert.match(browser, /overlayListed\(detailRow, listedSelected, listColumns\)/)
+  assert.match(browser, /overlayListed\(prev, hit, listColumns\)/)
 })
 
 test('deletable tables can pick rows and bulk-delete next to refresh', () => {
