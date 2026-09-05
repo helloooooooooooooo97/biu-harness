@@ -34,7 +34,7 @@ import {
 } from './fields.ts'
 import { LocalText, TokenMultiSelect } from './controls.tsx'
 import { CellDateTime } from '@biu/database-ui'
-import { AttachmentFile, MediaField } from './cell-media.tsx'
+import { AttachmentFile, MediaField, UrlHref } from './cell-media.tsx'
 
 export function actionIcon(id: string) {
   const cls = 'size-[14px]'
@@ -243,6 +243,11 @@ export function FilePreview({
   onChange?: (next: unknown) => void
 }) {
   if (value == null || value === '') return null
+  if (kind === 'url') {
+    const href = asHttpHref(value)
+    if (!href) return null
+    return <UrlHref href={href} />
+  }
   if (kind === 'image') {
     const list = asImageSrcList(value)
     if (!list.length) return null

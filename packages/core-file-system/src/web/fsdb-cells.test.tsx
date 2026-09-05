@@ -64,6 +64,17 @@ test('image cells can show more than one thumbnail', () => {
   assert.equal(container.querySelectorAll('img').length, 2)
 })
 
+test('url cells open in a new tab instead of downloading', () => {
+  const { container } = render(<DefaultCell field={{ type: 'url' }} value="https://example.com/page" />)
+  assert.equal(container.querySelector('.fsdb-file-dl'), null)
+  const open = container.querySelector('a.fsdb-file-open') as HTMLAnchorElement
+  assert.equal(open?.href, 'https://example.com/page')
+  assert.equal(open?.target, '_blank')
+  assert.equal(open?.rel.includes('noopener'), true)
+  assert.equal(open?.getAttribute('download'), null)
+  assert.equal(container.querySelector('.fsdb-file-name')?.textContent, 'https://example.com/page')
+})
+
 test('empty cells render no placeholder copy', () => {
   const text = render(<DefaultCell field={{ type: 'string' }} value="" />)
   assert.equal(text.container.textContent, '')

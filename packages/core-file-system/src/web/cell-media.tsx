@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Image } from 'antd'
-import { PaperClipIcon, PhotoIcon, XMarkIcon, ArrowDownTrayIcon } from '@heroicons/react/16/solid'
+import { PaperClipIcon, PhotoIcon, XMarkIcon, ArrowDownTrayIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/16/solid'
 import { asAttachmentList, asHttpHref, asImageSrcList, commitAttachments } from '@biu/type-file-system'
 import { LocalText } from './controls.tsx'
 
@@ -102,6 +102,29 @@ export function AttachmentFile({
             <XMarkIcon aria-hidden className="size-[14px]" />
           </button>
         ) : null}
+      </span>
+    </span>
+  )
+}
+
+export function UrlHref({ href }: { href: string }) {
+  return (
+    <span className="fsdb-file">
+      <span className="fsdb-file-name">{href}</span>
+      <span className="fsdb-file-tools">
+        <a
+          className="tasks-icon-btn fsdb-file-open"
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="新标签页打开"
+          aria-label="新标签页打开"
+          data-testid="fsdb-url-open"
+          onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <ArrowTopRightOnSquareIcon aria-hidden className="size-[14px]" />
+        </a>
       </span>
     </span>
   )
