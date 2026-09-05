@@ -465,7 +465,7 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-media-thumb{position:relative;flex:none;line-height:0}
 .fsdb-media-remove{position:absolute;top:-3px;right:-3px;display:grid;place-items:center;width:12px;height:12px;margin:0;border:0;border-radius:6px;padding:0;background:#202020;color:var(--dsw-label);cursor:pointer}
 .fsdb-media-row{display:flex;align-items:center;gap:6px;min-width:0}
-.fsdb-media-pick{display:inline-flex;align-items:center;gap:4px;min-width:0;height:22px;margin:0;border:0;border-radius:4px;padding:0 4px;background:transparent;color:var(--dsw-label);font:inherit;font-size:13px;cursor:pointer}
+.fsdb-media-pick.is-upload{width:22px;padding:0;justify-content:center}
 .fsdb-media-pick-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-media-pick:hover{background:transparent}
 .fsdb-media-error{display:none}

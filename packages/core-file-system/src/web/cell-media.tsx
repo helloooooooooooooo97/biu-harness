@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Image } from 'antd'
-import { PaperClipIcon, PhotoIcon, XMarkIcon, ArrowDownTrayIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/16/solid'
+import { ArrowUpTrayIcon, PaperClipIcon, XMarkIcon, ArrowDownTrayIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/16/solid'
 import { asAttachmentList, asHttpHref, asImageSrcList, commitAttachments } from '@biu/type-file-system'
 import { LocalText } from './controls.tsx'
 
@@ -203,7 +203,7 @@ export function MediaField({
     )
   }
 
-  const label = kind === 'image' ? '粘贴或选择图片' : files.length ? '添加附件' : '选择文件'
+  const label = kind === 'image' ? '上传' : files.length ? '添加附件' : '选择文件'
 
   return (
     <div
@@ -251,9 +251,15 @@ export function MediaField({
           ))}
         </span>
       ) : null}
-      <button type="button" className="fsdb-media-pick" title={label} onClick={() => inputRef.current?.click()}>
-        {kind === 'image' ? <PhotoIcon aria-hidden className="size-[14px]" /> : <PaperClipIcon aria-hidden className="size-[14px]" />}
-        <span className="fsdb-media-pick-label">{label}</span>
+      <button
+        type="button"
+        className={`fsdb-media-pick${kind === 'image' ? ' is-upload' : ''}`}
+        aria-label={label}
+        title={kind === 'image' ? undefined : label}
+        onClick={() => inputRef.current?.click()}
+      >
+        {kind === 'image' ? <ArrowUpTrayIcon aria-hidden className="size-[14px]" /> : <PaperClipIcon aria-hidden className="size-[14px]" />}
+        {kind === 'image' ? null : <span className="fsdb-media-pick-label">{label}</span>}
       </button>
       <input
         ref={inputRef}
