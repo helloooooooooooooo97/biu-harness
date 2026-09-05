@@ -15,6 +15,7 @@ dist/
 .workspace/
 *.log
 .DS_Store
+.vscode/
 src/**/*.js
 src/**/*.js.map
 
