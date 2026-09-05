@@ -1,5 +1,0 @@
-{
-  "typescript.tsc.autoDetect": "off",
-  "compile-hero.disable-compile-files-on-did-save-code": true,
-  "compilets.autoStart": false
-}
