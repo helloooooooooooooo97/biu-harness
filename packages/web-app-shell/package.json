@@ -6,7 +6,8 @@
   "description": "应用壳",
   "exports": {
     ".": "./src/web/index.tsx",
-    "./chat-overlay": "./src/web/chat-overlay.ts"
+    "./chat-overlay": "./src/web/chat-overlay.ts",
+    "./chat-sidebar": "./src/web/chat-sidebar.tsx"
   },
   "dependencies": {
     "@biu/public-ui": "0.1.0",

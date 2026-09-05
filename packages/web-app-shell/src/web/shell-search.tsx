@@ -187,7 +187,7 @@ export function openSearchHit(hit: { kind: SearchKind; id: string; record?: Reco
   const view = viewOpenTarget(hit)
   window.dispatchEvent(
     new CustomEvent('biu:inspector-reveal', {
-      detail: view ?? { collection: searchCollection(hit.kind), recordId: hit.id },
+      detail: { ...(view ?? { collection: searchCollection(hit.kind), recordId: hit.id }), unique: true },
     }),
   )
 }

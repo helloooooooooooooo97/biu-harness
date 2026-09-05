@@ -1787,7 +1787,7 @@ export function CollectionBrowser({
                 onPointerDown={(event) => {
                   if (event.button !== 0) return
                   const hit = event.target as HTMLElement | null
-                  if (hit?.closest('.fsdb-row-check, .fsdb-col-resizer, .tasks-row-tools, .tasks-title-open, .fsdb-action-btn, .fsdb-boolbtn')) return
+                  if (hit?.closest('.fsdb-row-check, .fsdb-col-resizer, .tasks-row-tools, .tasks-title-open, .fsdb-action-btn, .fsdb-boolbtn, .fsdb-thumb-btn, .fsdb-thumb')) return
                   const td = event.currentTarget
                   cellAnchorRef.current = td
                   cellPickRef.current = { id: row.id, key: col.key }

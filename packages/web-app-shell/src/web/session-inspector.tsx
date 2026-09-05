@@ -231,7 +231,9 @@ export const SessionInspector = memo(function SessionInspector({
       if (!next) return
       const allowed = allowedTabs.includes(next) || allowedTabs.includes(slotTabId(next))
       if (!allowed) return
-      const existing = opened.find((id) => id === next || slotTabId(id) === next)
+      const existing = next.includes('::')
+        ? opened.find((id) => id === next)
+        : opened.find((id) => id === next || slotTabId(id) === next)
       const id = existing ?? next
       persistOpened(opened.includes(id) ? opened : [...opened, id])
       setTab(id)

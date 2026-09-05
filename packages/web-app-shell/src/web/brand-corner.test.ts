@@ -12,8 +12,10 @@ const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css
 test('brand mascot lives at the corner; sidebar head is title plus collapse', () => {
   assert.match(shell, /--sidebar-flyout-width/)
   assert.match(shell, /DockSessionMascot/)
-  assert.match(title, /BrandCornerMascot/)
-  assert.match(title, /variant="popover"/)
+  assert.doesNotMatch(title, /BrandCornerMascot/)
+  const approvals = readFileSync(resolve(import.meta.dirname, '../../../cap-chat/src/web/approvals.tsx'), 'utf8')
+  assert.match(approvals, /BrandCornerMascot/)
+  assert.match(approvals, /variant="popover"/)
   assert.match(frame, /data-testid="sidebar-collapse"/)
   assert.match(frame, /app-side-bar-head-brand/)
   assert.match(frame, /SidebarBrandLockup/)

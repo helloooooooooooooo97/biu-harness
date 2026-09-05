@@ -1,20 +1,15 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { bindSessionView, type SessionViewService } from '@biu/web-session-view'
-import { BrandCornerMascot } from '@biu/public-mascot'
 import { HeadlessDismiss } from '@biu/public-ui'
-import { ChatSidebar } from './chat-sidebar.tsx'
 
 export const ChatSessionTitle = memo(function ChatSessionTitle({
   useSessionView,
   sessionView,
-  showMascot = true,
 }: {
   useSessionView: ReturnType<typeof bindSessionView>
   sessionView: SessionViewService
-  showMascot?: boolean
 }) {
   const sessionId = useSessionView((state) => state.sessionId)
-  const sessions = useSessionView((state) => state.sessions)
   const title = useSessionView((state) => {
     const id = state.sessionId
     if (!id) return ''
@@ -87,23 +82,6 @@ export const ChatSessionTitle = memo(function ChatSessionTitle({
             />
           </div>
         </HeadlessDismiss>
-      ) : null}
-      {showMascot ? (
-        <BrandCornerMascot
-          agents={sessions}
-          activeId={sessionId}
-          size={22}
-          menu={(close) => (
-            <ChatSidebar
-              variant="popover"
-              visible
-              routeSessionId={sessionId}
-              useSessionView={useSessionView}
-              sessionView={sessionView}
-              onActivate={close}
-            />
-          )}
-        />
       ) : null}
     </div>
   )

@@ -676,7 +676,7 @@ function Shell(props: SlotProps) {
           </div>
         ) : null}
       </div>
-      <ChatSessionTitle useSessionView={useSessionView} sessionView={sessionView} showMascot={false} />
+      <ChatSessionTitle useSessionView={useSessionView} sessionView={sessionView} />
       <div className="chat-view-header-right">
         <button
           type="button"

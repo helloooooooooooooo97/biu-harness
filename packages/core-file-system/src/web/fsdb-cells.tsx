@@ -160,6 +160,7 @@ function ImageThumb({ src }: { src: string }) {
         type="button"
         className="fsdb-thumb-btn"
         title="查看大图"
+        onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => {
           event.stopPropagation()
           setOpen(true)

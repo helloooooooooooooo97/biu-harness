@@ -38,9 +38,9 @@ test('openSearchHit reveals the record in the inspector', () => {
   openSearchHit({ kind: 'view', id: 'pages::mine', record: { tablePath: '/pages', viewId: 'mine' } })
   window.removeEventListener('biu:inspector-reveal', onReveal)
   assert.deepEqual(seen, [
-    { collection: '/pages', recordId: 'p1' },
-    { collection: '/sessions', recordId: 'abc' },
-    { collection: '/pages', viewId: 'mine' },
+    { collection: '/pages', recordId: 'p1', unique: true },
+    { collection: '/sessions', recordId: 'abc', unique: true },
+    { collection: '/pages', viewId: 'mine', unique: true },
   ])
 })
 

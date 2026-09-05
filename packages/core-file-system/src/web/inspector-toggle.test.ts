@@ -166,6 +166,8 @@ test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.match(media, /type="file"/)
   assert.match(media, /inputRef\.current\?\.click\(\)/)
   assert.match(media, /item\.type\.startsWith\('image\/'\)/)
+  assert.match(media, /function collectClipboardImages/)
+  assert.match(media, /document\.addEventListener\('paste', onPaste, true\)/)
   assert.match(browser, /fieldDraftValue\(field, row\[key\]\)/)
   assert.match(browser, /const Custom = chrome\?\.cells\?\.\[key\][\s\S]*if \(field.writable && kind !== 'file'\)/)
   assert.match(browser, /key && field\?\.writable \?/)
@@ -192,6 +194,7 @@ test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.match(browser, /is-cell-ro/)
   assert.match(browser, /cellFieldWritable/)
   assert.match(browser, /<CellPop/)
+  assert.match(browser, /\.fsdb-thumb-btn, \.fsdb-thumb/)
   assert.doesNotMatch(browser, /skipBoolean/)
 })
 

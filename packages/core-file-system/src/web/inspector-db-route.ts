@@ -138,10 +138,35 @@ export function inspectorCollectionTabId(collection: string) {
   return `database:${collection}`
 }
 
-/** 右侧检查器打开这条路径，中间主界面不动。已打开的同表实例（含 :: 副本）一起改路径。 */
-export function showInInspector(collection: string, href: string) {
+function hrefPathKey(href: string) {
+  return String(href || '').split('?')[0]
+}
+
+function nextInspectorPaneId(tabId: string) {
+  return `${tabId}::${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+}
+
+/** 右侧检查器打开这条路径，中间主界面不动。默认同表实例一起改路径；unique 时同页只聚焦、不同页新开。 */
+export function showInInspector(collection: string, href: string, opts?: { unique?: boolean }) {
   const tabId = inspectorCollectionTabId(collection)
-  for (const paneId of paneIdsForTab(tabId)) setInspectorDbPath(paneId, href)
+  const unique = opts?.unique === true
+  const paneIds = paneIdsForTab(tabId)
+  if (unique) {
+    const same = paneIds.find((id) => hrefPathKey(getInspectorDbPath(id)) === hrefPathKey(href))
+    if (same) {
+      setInspectorDbPath(same, href)
+      window.dispatchEvent(new Event('biu:inspector-open'))
+      window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: same }))
+      return
+    }
+    const live = paneIds.filter((id) => getInspectorDbPath(id))
+    const target = live.length ? nextInspectorPaneId(tabId) : tabId
+    setInspectorDbPath(target, href)
+    window.dispatchEvent(new Event('biu:inspector-open'))
+    window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: target }))
+    return
+  }
+  for (const paneId of paneIds) setInspectorDbPath(paneId, href)
   window.dispatchEvent(new Event('biu:inspector-open'))
   window.dispatchEvent(new CustomEvent('biu:inspector-tab', { detail: tabId }))
 }
@@ -154,19 +179,21 @@ export function showRecordInInspector(collection: string, recordId: string) {
 /** 工具查/改/删某张表后：打开右侧检查器并切到该表（中间主界面不动）。 */
 export function applyDatabaseReveal(reveal: unknown) {
   if (!reveal || typeof reveal !== 'object' || Array.isArray(reveal)) return
-  const collection = normalizeCollectionPath(String((reveal as { collection?: unknown }).collection ?? ''))
+  const rec = reveal as { collection?: unknown; recordId?: unknown; viewId?: unknown; unique?: unknown }
+  const collection = normalizeCollectionPath(String(rec.collection ?? ''))
   if (!collection || collection === '/') return
-  const recordId = String((reveal as { recordId?: unknown }).recordId ?? '').trim()
+  const unique = rec.unique === true
+  const recordId = String(rec.recordId ?? '').trim()
   if (recordId) {
-    showRecordInInspector(collection, recordId)
+    showInInspector(collection, databaseRecordPath(collection, recordId), { unique })
     return
   }
-  const viewId = String((reveal as { viewId?: unknown }).viewId ?? '').trim()
+  const viewId = String(rec.viewId ?? '').trim()
   if (viewId) {
-    showInInspector(collection, databaseViewPath(collection, viewId))
+    showInInspector(collection, databaseViewPath(collection, viewId), { unique })
     return
   }
-  showInInspector(collection, databaseAllViewPath(collection))
+  showInInspector(collection, databaseAllViewPath(collection), { unique })
 }
 
 /** Agent 工具推送：只跟当前主 Session。表格刷新仍走 fsdb:change。 */

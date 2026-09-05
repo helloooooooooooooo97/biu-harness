@@ -94,6 +94,19 @@ test('showRecordInInspector opens the inspector on this record', async () => {
   window.removeEventListener('biu:inspector-tab', onTab)
 })
 
+test('unique inspector reveal focuses the same page and opens a new pane for a different page', () => {
+  setInspectorDbPath('database:/notes', '/database/notes/record/n1')
+  showInInspector('/notes', '/database/notes/record/n1?view=all', { unique: true })
+  assert.equal(getInspectorDbPath('database:/notes'), '/database/notes/record/n1?view=all')
+  showInInspector('/notes', '/database/notes/record/n2', { unique: true })
+  assert.equal(getInspectorDbPath('database:/notes'), '/database/notes/record/n1?view=all')
+  const extra = [...Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i) ?? '')]
+    .filter((key) => key.startsWith('inspector.dbPath:database:/notes::'))
+    .map((key) => key.slice('inspector.dbPath:'.length))
+  assert.equal(extra.length, 1)
+  assert.equal(getInspectorDbPath(extra[0]!), '/database/notes/record/n2')
+})
+
 test('showInInspector opens a collection href in the inspector', async () => {
   const tabs: string[] = []
   const onTab = (event: Event) => {

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PaperClipIcon, PhotoIcon, XMarkIcon } from '@heroicons/react/16/solid'
 import { asAttachment, asHttpHref, asImageSrcList } from '@biu/type-file-system'
 import { LocalText } from './controls.tsx'
@@ -35,6 +35,36 @@ function commitImages(list: string[], onCommit: (next: unknown) => void) {
   else onCommit(list)
 }
 
+function fileFingerprint(file: File) {
+  return `${file.type}\0${file.size}`
+}
+
+function uniqueImageFiles(files: Array<File | null | undefined>): File[] {
+  const seen = new Set<string>()
+  const out: File[] = []
+  for (const file of files) {
+    if (!file || !file.type.startsWith('image/')) continue
+    const key = fileFingerprint(file)
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(file)
+  }
+  return out
+}
+
+function collectClipboardImages(clipboard: DataTransfer | null | undefined): File[] {
+  if (!clipboard) return []
+  const fromFiles = uniqueImageFiles(Array.from(clipboard.files ?? []))
+  if (fromFiles.length) return fromFiles
+  return uniqueImageFiles(Array.from(clipboard.items ?? []).map((item) => (item.kind === 'file' ? item.getAsFile() : null)))
+}
+
+function pasteTargetIsField(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false
+  const tag = target.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable
+}
+
 export function MediaField({
   kind,
   value,
@@ -49,6 +79,7 @@ export function MediaField({
   onCommit: (next: unknown) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const takeFilesRef = useRef<(picked: File[]) => Promise<void>>(async () => {})
   const [error, setError] = useState('')
   const pageAssets = collectionPath === '/pages'
   const images = kind === 'image' ? asImageSrcList(value) : []
@@ -82,6 +113,21 @@ export function MediaField({
     }
   }
 
+  takeFilesRef.current = takeFiles
+
+  useEffect(() => {
+    if (kind !== 'image') return
+    const onPaste = (event: ClipboardEvent) => {
+      if (pasteTargetIsField(event.target)) return
+      const next = collectClipboardImages(event.clipboardData)
+      if (!next.length) return
+      event.preventDefault()
+      void takeFilesRef.current(next)
+    }
+    document.addEventListener('paste', onPaste, true)
+    return () => document.removeEventListener('paste', onPaste, true)
+  }, [kind])
+
   if (kind === 'url') {
     return (
       <LocalText className="fsdb-plain-input" value={href} placeholder="https://" onCommit={(next) => onCommit(next.trim())} />
@@ -98,11 +144,8 @@ export function MediaField({
       onPaste={
         kind === 'image'
           ? (event) => {
-              const next = Array.from(event.clipboardData?.files ?? []).filter((item) => item.type.startsWith('image/'))
-              if (!next.length) {
-                event.preventDefault()
-                return
-              }
+              const next = collectClipboardImages(event.clipboardData)
+              if (!next.length) return
               event.preventDefault()
               void takeFiles(next)
             }
