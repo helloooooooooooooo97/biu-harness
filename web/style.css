@@ -1489,7 +1489,8 @@ body {
   flex: none;
   height: auto;
   overflow: visible;
-  padding: 0;
+  box-sizing: border-box;
+  padding: 0 16px;
   background: transparent;
   pointer-events: none;
 }
@@ -1499,6 +1500,10 @@ body {
   width: 100%;
   max-width: var(--dsw-chat-max-width);
   margin-inline: auto;
+}
+
+.chat-overlay-panel .composer-pill {
+  border: 1px solid var(--dsw-border);
 }
 
 .chat-pane .chat-composer-dock {
