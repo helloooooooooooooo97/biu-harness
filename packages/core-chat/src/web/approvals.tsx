@@ -4,7 +4,7 @@ import {
   CheckCircleIcon,
   CommandLineIcon,
   ExclamationCircleIcon,
-  FolderIcon,
+  CircleStackIcon,
   PaintBrushIcon,
   PauseIcon,
   Squares2X2Icon,
@@ -380,9 +380,9 @@ export function ApprovalsRail(props: SlotProps) {
               },
               {
                 id: 'file',
-                label: '文件',
-                icon: <FolderIcon className="size-4" aria-hidden />,
-                hint: '只开放 Biu 文件系统的 db 工具，用来查表、改记录。',
+                label: '数据',
+                icon: <CircleStackIcon className="size-4" aria-hidden />,
+                hint: '只开放 Biu 数据表的 db 工具，用来查表、改记录。',
               },
               {
                 id: 'standard',
