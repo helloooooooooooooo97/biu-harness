@@ -10,9 +10,8 @@ import {
 } from '@heroicons/react/16/solid'
 import type { SlotProps } from '@biu/web-slots'
 import { bindSessionView, type ChatNode, type DispatchedTaskRow, type SessionViewService } from '@biu/web-session-view'
-import { BrandCornerMascot, SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
+import { SidebarMascot, resolveSessionMascot } from '@biu/public-mascot'
 import { HeadlessDismiss } from '@biu/public-ui'
-import { ChatSidebar } from '@biu/web-app-shell/chat-sidebar'
 import { SessionProjectPanel } from './project-panel.tsx'
 
 type AgentMode = 'minimal' | 'standard'
@@ -301,23 +300,6 @@ export function ApprovalsRail(props: SlotProps) {
             <PaintBrushIcon className="size-4 relative z-1" aria-hidden />
           </button>
           {typeof props.renderSlot === 'function' ? props.renderSlot('header-tools') : null}
-          {sessionId ? (
-            <BrandCornerMascot
-              agents={sessions}
-              activeId={sessionId}
-              size={22}
-              menu={(close) => (
-                <ChatSidebar
-                  variant="popover"
-                  visible
-                  routeSessionId={sessionId}
-                  useSessionView={useSessionView}
-                  sessionView={sessionView}
-                  onActivate={close}
-                />
-              )}
-            />
-          ) : null}
             {visibleWorkers.length ? (
             <span className="dock-agent-stack" data-testid="dock-agent-stack">
               {visibleWorkers.map((worker, index) => {

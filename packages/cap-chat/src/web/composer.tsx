@@ -21,7 +21,11 @@ import { ModelConfigDialog } from './model-config-dialog.tsx'
 import { ImageThumbs } from './image-thumbs.tsx'
 import { collectClipboardImages, collectImageFiles } from './clipboard-images.ts'
 import { revealOverlayThread, isComposerFocusPending } from '@biu/web-app-shell/chat-overlay'
+import { ChatSidebar } from '@biu/web-app-shell/chat-sidebar'
 import { shouldNavigateToSession } from './composer-nav.ts'
+
+const CARET_MASCOT_SIZE = 22
+const CARET_MASCOT_GAP = 8
 
 /** 按键不驱动受控 value；仅防抖更新发送按钮可用态，避免每个字符打穿 React 渲染。 */
 const INPUT_DEBOUNCE_MS = 120
@@ -164,7 +168,7 @@ function matchModelOption(catalog: ModelOption[], provider: string, model: strin
   )
 }
 
-function OverlayCaretMascot({
+function CaretMascot({
   editor,
   formRef,
   useSessionView,
@@ -177,22 +181,21 @@ function OverlayCaretMascot({
 }) {
   const sessionId = useSessionView((state) => state.sessionId)
   const sessions = useSessionView((state) => state.sessions)
-  const [inOverlay, setInOverlay] = useState(false)
   const [place, setPlace] = useState<{ left: number; top: number } | null>(null)
 
   useEffect(() => {
-    setInOverlay(Boolean(formRef.current?.closest('.chat-overlay-panel')))
-  }, [formRef])
-
-  useEffect(() => {
-    if (!inOverlay || !editor) return
+    if (!editor) return
     const update = () => {
-      const editorDom = formRef.current?.querySelector('.composer-editor') as HTMLElement | null
-      if (!editorDom) return
+      const form = formRef.current
+      if (!form) return
       try {
         const coords = editor.view.coordsAtPos(editor.state.selection.head)
-        const rect = editorDom.getBoundingClientRect()
-        setPlace({ left: coords.left - rect.left + 2, top: coords.top - rect.top })
+        const rect = form.getBoundingClientRect()
+        const caretH = Math.max(coords.bottom - coords.top, 16)
+        setPlace({
+          left: coords.left - rect.left + CARET_MASCOT_GAP,
+          top: coords.top - rect.top + (caretH - CARET_MASCOT_SIZE) / 2,
+        })
       } catch {
         /* caret not mapped yet */
       }
@@ -200,22 +203,36 @@ function OverlayCaretMascot({
     update()
     editor.on('transaction', update)
     editor.on('selectionUpdate', update)
+    editor.on('focus', update)
+    const editorDom = formRef.current?.querySelector('.composer-editor')
+    editorDom?.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
     return () => {
       editor.off('transaction', update)
       editor.off('selectionUpdate', update)
+      editor.off('focus', update)
+      editorDom?.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
     }
-  }, [editor, formRef, inOverlay])
+  }, [editor, formRef])
 
-  if (!inOverlay || !sessionId || !place) return null
+  if (!sessionId || !place) return null
   return (
-    <div className="composer-caret-mascot" style={{ left: place.left, top: place.top }} data-testid="overlay-caret-mascot">
+    <div className="composer-caret-mascot" style={{ left: place.left, top: place.top }} data-testid="caret-mascot">
       <BrandCornerMascot
         agents={sessions}
         activeId={sessionId}
-        size={18}
-        onSelect={(id) => {
-          void sessionView.load(id)
-        }}
+        size={CARET_MASCOT_SIZE}
+        menu={(close) => (
+          <ChatSidebar
+            variant="popover"
+            visible
+            routeSessionId={sessionId}
+            useSessionView={useSessionView}
+            sessionView={sessionView}
+            onActivate={close}
+          />
+        )}
       />
     </div>
   )
@@ -882,7 +899,6 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
 
         <div className="composer-editor">
           <EditorContent editor={editor} />
-          <OverlayCaretMascot editor={editor} formRef={formRef} useSessionView={useSessionView} sessionView={sessionView} />
         </div>
 
         <div className="composer-pill-right">
@@ -998,6 +1014,7 @@ export const ChatComposer = memo(function ChatComposer(props: SlotProps) {
           </button>
         </div>
       </div>
+      <CaretMascot editor={editor} formRef={formRef} useSessionView={useSessionView} sessionView={sessionView} />
     </form>
     <ModelConfigDialog open={configOpen} onClose={() => setConfigOpen(false)} />
     </div>

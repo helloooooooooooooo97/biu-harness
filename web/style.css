@@ -2505,7 +2505,7 @@ body {
 }
 
 .project-chip.project-chip-clear-ctx {
-  border: 0;
+  border: 1px solid #d9730d;
   background: transparent;
   color: #d9730d;
 }
@@ -2531,7 +2531,7 @@ body {
 }
 
 .project-chip.project-chip-pick-toggle {
-  border: 0;
+  border: 1px solid #5b9fd6;
   background: transparent;
   color: #5b9fd6;
 }
@@ -2542,7 +2542,7 @@ body {
 
 .project-chip.project-chip-pick-toggle.is-active {
   --biu-tag: #5b9fd6;
-  border: 0;
+  border: 1px solid #5b9fd6;
   background: color-mix(in srgb, var(--biu-tag, #5b9fd6) 22%, transparent);
   color: #5b9fd6;
 }
