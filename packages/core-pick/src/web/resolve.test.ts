@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { resolvePickFromNode, resolvePickAtPoint, resolvePicksInRect, visiblePickBox } from './resolve.ts'
+import { pickSurfaceAtPoint, resolvePickFromNode, resolvePickAtPoint, resolvePicksInRect, visiblePickBox } from './resolve.ts'
 import { formatPicks, parsePicks, splitPickStream, chipLabel, dedupePicks, textPickFromSelection } from './types.ts'
 
 test('splitPickStream keeps text and chips in order', () => {
@@ -186,6 +186,28 @@ test('marquee in the inspector does not take center-pane rows at the same height
   assert.equal(vis.width, 120)
   center.remove()
   inspector.remove()
+})
+
+test('clicking over the inspector does not pick overflowing center chat', () => {
+  const inspector = document.createElement('aside')
+  inspector.setAttribute('data-testid', 'session-inspector')
+  const chrome = document.createElement('div')
+  inspector.append(chrome)
+  const chat = document.createElement('div')
+  chat.setAttribute('data-biu-kind', 'message')
+  chat.setAttribute('data-biu-id', 'm1')
+  document.body.append(inspector, chat)
+  stubBox(inspector, 220, 0, 200, 400)
+  stubBox(chrome, 220, 0, 200, 400)
+  stubBox(chat, 0, 10, 480, 40)
+  Object.defineProperty(document, 'elementsFromPoint', {
+    configurable: true,
+    value: () => [chat],
+  })
+  assert.equal(pickSurfaceAtPoint(240, 20), inspector)
+  assert.equal(resolvePickAtPoint(240, 20, '/s/abc'), null)
+  inspector.remove()
+  chat.remove()
 })
 
 test('clicking the inspector table does not pick chat stacked underneath', () => {

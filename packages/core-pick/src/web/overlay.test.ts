@@ -51,5 +51,5 @@ test('Command/Ctrl+Q toggles pick mode', () => {
 })
 
 test('marquee inside inspector uses the inspector as the query root', () => {
-  assert.match(overlay, /pickSurfaceFromNode/)
+  assert.match(overlay, /pickSurfaceAtPoint/)
 })

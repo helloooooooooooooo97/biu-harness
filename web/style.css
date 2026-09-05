@@ -988,6 +988,11 @@ body {
   content-visibility: hidden;
 }
 
+.inspector-stage-pane:not(.is-active) *,
+.app-stage-pane:not(.is-active) * {
+  pointer-events: none !important;
+}
+
 .inspector-stage-pane.is-active,
 .app-stage-pane.is-active {
   opacity: 1;

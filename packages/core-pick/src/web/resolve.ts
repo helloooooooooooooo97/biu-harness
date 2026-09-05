@@ -19,10 +19,14 @@ function inHiddenPane(node: Element | null) {
   )
 }
 
+function isOpenPickSurface(node: HTMLElement | null): node is HTMLElement {
+  return Boolean(node && !node.classList.contains('is-closed'))
+}
+
 /** 点落在哪一栏：检查器 / 侧栏 / 中间台。框选和点选都不跨栏。 */
 export function pickSurfaceFromNode(node: Element | null): HTMLElement | null {
   if (!node) return null
-  return node.closest('[data-testid="session-inspector"], .app-side-bar')
+  return node.closest('[data-testid="session-inspector"], .session-inspector, .app-side-bar')
 }
 
 function pointInBox(box: ClientBox, x: number, y: number) {
@@ -35,8 +39,13 @@ function read(el: Element, attr: string) {
 }
 
 /** 从命中节点向上合并 data-biu-*，子覆盖父；必须同时有 kind 与 id。 */
-export function resolvePickFromNode(start: Element | null, route: string): { el: HTMLElement; ref: PickRef } | null {
+export function resolvePickFromNode(
+  start: Element | null,
+  route: string,
+  surface: Element | null = null,
+): { el: HTMLElement; ref: PickRef } | null {
   if (!start || isPickIgnored(start) || inHiddenPane(start)) return null
+  if (surface && !surface.contains(start)) return null
   let kind: string | undefined
   let id: string | undefined
   let action: string | undefined
@@ -44,6 +53,7 @@ export function resolvePickFromNode(start: Element | null, route: string): { el:
   let highlight: HTMLElement | null = null
   let node: Element | null = start
   while (node && node !== document.documentElement) {
+    if (surface && !surface.contains(node)) break
     if (node instanceof HTMLElement) {
       const nextKind = read(node, KIND)
       const nextId = read(node, ID)
@@ -71,19 +81,41 @@ export function resolvePickFromNode(start: Element | null, route: string): { el:
   }
 }
 
+function unignoredAncestor(node: Element, surface: Element | null) {
+  let current: Element | null = node
+  while (current && isPickIgnored(current)) current = current.parentElement
+  if (!current || inHiddenPane(current)) return null
+  if (surface && !surface.contains(current)) return null
+  return current
+}
+
+/** 指针所在栏：检查器或侧栏。中间栏溢出盒可以盖住检查器坐标，不能靠命中栈单独判断。 */
+export function pickSurfaceAtPoint(x: number, y: number): HTMLElement | null {
+  for (const el of document.elementsFromPoint(x, y)) {
+    if (!(el instanceof Element)) continue
+    const surface = pickSurfaceFromNode(el)
+    if (isOpenPickSurface(surface)) return surface
+  }
+  for (const el of document.querySelectorAll('[data-testid="session-inspector"], .session-inspector, .app-side-bar')) {
+    if (!(el instanceof HTMLElement) || !isOpenPickSurface(el)) continue
+    if (pointInBox(boxOf(el), x, y)) return el
+  }
+  return null
+}
+
 export function resolvePickAtPoint(x: number, y: number, route: string) {
   const stacked = document.elementsFromPoint(x, y)
   if (stacked.some((el) => el instanceof Element && el.closest('[data-testid="chat-overlay-panel"]'))) return null
-  const surface =
-    stacked
-      .map((el) => (el instanceof Element ? pickSurfaceFromNode(el) : null))
-      .find((node) => node && !node.classList.contains('is-closed')) ?? null
-  for (const el of stacked) {
-    if (!(el instanceof Element) || isPickIgnored(el) || inHiddenPane(el)) continue
-    if (surface && !surface.contains(el)) continue
-    const hit = resolvePickFromNode(el, route)
+  const surface = pickSurfaceAtPoint(x, y)
+  const pool = surface
+    ? stacked.filter((el): el is Element => el instanceof Element && surface.contains(el))
+    : stacked.filter((el): el is Element => el instanceof Element && !pickSurfaceFromNode(el))
+  for (const el of pool) {
+    if (inHiddenPane(el)) continue
+    const start = unignoredAncestor(el, surface)
+    if (!start) continue
+    const hit = resolvePickFromNode(start, route, surface)
     if (!hit) continue
-    if (surface && !surface.contains(hit.el)) continue
     const vis = visiblePickBox(hit.el)
     if (!vis || !pointInBox(vis, x, y)) continue
     return hit
