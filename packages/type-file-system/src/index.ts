@@ -195,8 +195,8 @@ export const BUILTIN_FIELDS = {
   facet: { type: 'facet', label: '合集', writable: true },
   parentId: { type: 'string', label: 'Parent ID', writable: true },
   dependsOn: { type: 'multi-select', label: 'Dependency', writable: true },
-  createdBy: { type: 'person', label: '创建人', writable: true },
-  updatedBy: { type: 'person', label: '编辑人', writable: true },
+  createdBy: { type: 'person', label: '创建人', writable: false },
+  updatedBy: { type: 'person', label: '编辑人', writable: false },
 } as const satisfies Record<string, FieldSpec>
 
 /** 登记 CollectionSpec.schema.fields 必须声明的记录列。由登记方自己存；创建人/编辑人也可由 Core 叠一层。 */
@@ -447,9 +447,9 @@ export function withBuiltinFields(
   if (!next.dependsOn) next.dependsOn = BUILTIN_FIELDS.dependsOn
   else if (!next.dependsOn.computed) next.dependsOn = { ...BUILTIN_FIELDS.dependsOn, ...next.dependsOn, type: 'multi-select', writable: true }
   if (!next.createdBy) next.createdBy = BUILTIN_FIELDS.createdBy
-  else if (!next.createdBy.computed) next.createdBy = { ...BUILTIN_FIELDS.createdBy, ...next.createdBy, type: 'person', writable: true }
+  else next.createdBy = { ...BUILTIN_FIELDS.createdBy, ...next.createdBy, type: 'person', writable: false }
   if (!next.updatedBy) next.updatedBy = BUILTIN_FIELDS.updatedBy
-  else if (!next.updatedBy.computed) next.updatedBy = { ...BUILTIN_FIELDS.updatedBy, ...next.updatedBy, type: 'person', writable: true }
+  else next.updatedBy = { ...BUILTIN_FIELDS.updatedBy, ...next.updatedBy, type: 'person', writable: false }
   if (contentField === 'content' && !next.content) next.content = BUILTIN_FIELDS.content
   const ordered: Record<string, FieldSpec> = {
     id: next.id,

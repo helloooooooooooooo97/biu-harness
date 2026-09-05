@@ -644,7 +644,7 @@ export class DatabaseService extends Service implements Database {
     const raw = parseContent(content)
     if (!this.collectionCanUpdate(spec)) {
       const keys = Object.keys(raw)
-      const overlayKeys = new Set(['facet', 'emoji', 'tags', 'createdBy', 'updatedBy'])
+      const overlayKeys = new Set(['facet', 'emoji', 'tags'])
       if (!keys.length || keys.some((key) => !overlayKeys.has(key))) {
         throw new Error(`collection cannot update: ${spec.path}`)
       }
@@ -675,17 +675,6 @@ export class DatabaseService extends Service implements Database {
           ...(meta.tags !== null ? { tags: meta.tags } : {}),
         }
       }
-      if ('createdBy' in raw || 'updatedBy' in raw) {
-        const meta = this.facets.writeRecordMeta(spec.path, current.id, {
-          ...('createdBy' in raw ? { createdBy: asPerson(coerce(schema.fields.createdBy!, raw.createdBy)) } : {}),
-          ...('updatedBy' in raw ? { updatedBy: asPerson(coerce(schema.fields.updatedBy!, raw.updatedBy)) } : {}),
-        })
-        next = {
-          ...next,
-          ...(meta.createdBy ? { createdBy: meta.createdBy } : {}),
-          ...(meta.updatedBy ? { updatedBy: meta.updatedBy } : {}),
-        }
-      }
       this.bump()
       return {
         kind: 'record' as const,
@@ -695,15 +684,11 @@ export class DatabaseService extends Service implements Database {
     }
     const patch = pickWritablePatch(schema, raw)
     const actor = currentPerson()
-    if (!('updatedBy' in patch) && schema.fields.updatedBy) patch.updatedBy = actor
-    if (schema.fields.createdBy && !('createdBy' in patch)) {
-      const existing = this.facets.recordMeta(spec.path, parts[1]!)
-      if (!existing?.createdBy) patch.createdBy = actor
-    }
     let record = await spec.update(parts[1]!, patch)
+    const existing = this.facets.recordMeta(spec.path, record.id)
     this.facets.writeRecordMeta(spec.path, record.id, {
-      ...('createdBy' in patch ? { createdBy: asPerson(patch.createdBy) } : {}),
-      updatedBy: asPerson(patch.updatedBy) ?? currentPerson(),
+      ...(existing?.createdBy ? {} : { createdBy: actor }),
+      updatedBy: actor,
     })
     if (spec.path === '/facets' && schema.fields.facet && 'facet' in patch) {
       const nextFacet = coerce(schema.fields.facet, patch.facet)
@@ -729,17 +714,12 @@ export class DatabaseService extends Service implements Database {
     if (!spec.records?.create || !spec.create) throw new Error(`collection cannot create: ${spec.path}`)
     const schema = schemaFor(spec)
     const actor = currentPerson()
-    const records = parseRecords(content).map((row) => {
-      const patch = pickWritablePatch(schema, row)
-      if (!asPerson(patch.createdBy)) patch.createdBy = actor
-      if (!asPerson(patch.updatedBy)) patch.updatedBy = asPerson(patch.createdBy) ?? actor
-      return patch
-    })
+    const records = parseRecords(content).map((row) => pickWritablePatch(schema, row))
     const created = await spec.create(records)
     for (const record of created) {
       this.facets.writeRecordMeta(spec.path, record.id, {
-        createdBy: asPerson(record.createdBy) ?? asPerson(records.find((item) => item.id === record.id)?.createdBy) ?? actor,
-        updatedBy: asPerson(record.updatedBy) ?? asPerson(record.createdBy) ?? actor,
+        createdBy: actor,
+        updatedBy: actor,
       })
       this.indexFacetRecord(spec, record)
     }

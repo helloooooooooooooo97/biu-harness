@@ -126,8 +126,9 @@ test('withBuiltinFields always includes writable facet and tags', () => {
   assert.equal(fields.dependsOn?.type, 'multi-select')
   assert.equal(fields.dependsOn?.writable, true)
   assert.equal(fields.createdBy?.type, 'person')
-  assert.equal(fields.createdBy?.writable, true)
+  assert.equal(fields.createdBy?.writable, false)
   assert.equal(fields.updatedBy?.type, 'person')
+  assert.equal(fields.updatedBy?.writable, false)
 })
 
 test('recordBuiltinValues fills required record columns', () => {
