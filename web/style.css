@@ -1431,27 +1431,33 @@ body {
   overflow-y: auto;
 }
 
+.chat-overlay-panel .chat-stage {
+  padding-block: 0;
+}
+
 .chat-overlay-panel .chat-stage .sticky,
 .chat-pane .chat-stage .sticky {
   position: static;
 }
 
 .chat-overlay-panel .chat-overlay-thread {
-  padding-bottom: 5.5rem;
+  padding-block: 0;
 }
 
-.chat-overlay-panel .chat-composer-dock {
+.chat-overlay-panel .chat-pane .chat-composer-dock {
   position: absolute;
   inset-inline: 0;
   bottom: 0;
   z-index: 20;
   flex: none;
-  padding: 0 12px 12px;
+  height: 0;
+  overflow: visible;
+  padding: 0;
   background: transparent;
   pointer-events: none;
 }
 
-.chat-overlay-panel .chat-composer-dock > * {
+.chat-overlay-panel .chat-pane .chat-composer-dock > * {
   pointer-events: auto;
   width: 100%;
   max-width: var(--dsw-chat-max-width);
