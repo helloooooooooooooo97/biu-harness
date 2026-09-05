@@ -1484,7 +1484,7 @@ body {
 .chat-overlay-panel .chat-pane .chat-composer-dock {
   position: absolute;
   inset-inline: 0;
-  bottom: 0;
+  bottom: 20px;
   z-index: 20;
   flex: none;
   height: auto;
