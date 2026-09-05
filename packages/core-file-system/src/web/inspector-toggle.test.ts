@@ -159,6 +159,8 @@ test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.match(schemaUi, /<CellMulti/)
   assert.doesNotMatch(schemaUi, /function TagPicker/)
   assert.match(schemaUi, /<FieldValuePop/)
+  assert.match(schemaUi, /!parsed.tags.length/)
+  assert.match(schemaUi, /type: 'facet'/)
   assert.doesNotMatch(schemaUi, /<FieldEditor/)
   assert.doesNotMatch(cells, /placeholder=\{fieldKey\}/)
   assert.doesNotMatch(cells, /YYYY-MM-DDTHH:mm/)

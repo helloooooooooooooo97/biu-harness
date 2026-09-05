@@ -317,6 +317,18 @@ export function SchemaFieldEditor({
   }
 
   if (!writable) return <SchemaChips value={value} tags={catalog} />
+  if (!parsed.tags.length) {
+    return (
+      <FieldValuePop
+        record={record}
+        fieldKey="facet"
+        field={{ type: 'facet', writable: true }}
+        value={value}
+        collectionPath={_collectionPath}
+        onSubmit={(next) => onChange(normalizeSchemaValue(next))}
+      />
+    )
+  }
 
   return (
     <div className="fsdb-schema" data-testid="fsdb-schema">
