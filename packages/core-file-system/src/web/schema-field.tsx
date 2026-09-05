@@ -10,10 +10,11 @@ import {
   type SchemaFieldValue,
   type SchemaPackField,
 } from '@biu/type-file-system'
-import { ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
+import { ArrowUturnLeftIcon, ChevronDownIcon, PlusIcon, XMarkIcon } from '@heroicons/react/16/solid'
 import { TagChip, TagChips, tagTone, HeadlessPopover } from '@biu/public-ui'
 import { CellMulti } from '@biu/database-ui'
-import { FieldEditor, FieldGlyph, fieldDraftValue, parseFieldValue } from './fsdb-cells.tsx'
+import { DefaultCell, FieldEditor, FieldGlyph, fieldDraftValue, parseFieldValue } from './fsdb-cells.tsx'
+import { inferPackFieldType, orphanPackEntries } from './fields.ts'
 import { loadFacets, persistFacets, registerFacetFieldKey, slugFacetId, subscribeFacets } from './facet-catalog.ts'
 
 const TYPE_LABEL: Partial<Record<FieldType, string>> = {
@@ -297,6 +298,18 @@ export function SchemaFieldEditor({
     saveCatalog(catalog.map((tag) => (tag.id === tagId ? { ...tag, fields: tag.fields.filter((item) => item.key !== key) } : tag)))
   }
 
+  function restoreField(tag: CollectionSchemaPack, key: string, value: unknown) {
+    const type = inferPackFieldType(value)
+    const field: SchemaPackField = { key, type, label: key, writable: true }
+    const hit = catalog.find((item) => item.id === tag.id)
+    if (hit?.fields.some((item) => item.key === key)) return
+    if (hit) {
+      saveCatalog(catalog.map((item) => (item.id === tag.id ? { ...item, fields: [...item.fields, field] } : item)))
+      return
+    }
+    saveCatalog([...catalog, { id: tag.id, label: tag.label, fields: [field] }])
+  }
+
   function writeField(tagId: string, field: SchemaPackField, raw: string) {
     const bag = { ...(parsed.values[tagId] ?? {}) }
     bag[field.key] = parseFieldValue(field, raw)
@@ -319,6 +332,7 @@ export function SchemaFieldEditor({
         ? null
         : selected.map((tag) => {
         const bag = parsed.values[tag.id] ?? {}
+        const orphans = orphanPackEntries(tag.fields, bag)
         return (
           <div key={tag.id} className="fsdb-schema-pack">
             <div className="fsdb-schema-pack-head">
@@ -351,6 +365,26 @@ export function SchemaFieldEditor({
                     onClick={() => removeField(tag.id, field.key)}
                   >
                     <XMarkIcon aria-hidden className="size-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {orphans.map((orphan) => (
+              <div key={`orphan:${orphan.key}`} className="fsdb-schema-prop is-orphan">
+                <span className="fsdb-schema-prop-k" title={orphan.key}>
+                  <FieldGlyph kind={orphan.type} />
+                  {orphan.key}
+                </span>
+                <div className="fsdb-schema-prop-v">
+                  <DefaultCell field={{ type: orphan.type, label: orphan.key, writable: false }} value={orphan.value} />
+                  <button
+                    type="button"
+                    className="fsdb-schema-prop-restore"
+                    aria-label={`恢复 ${orphan.key}`}
+                    data-dock-tip="恢复"
+                    onClick={() => restoreField(tag, orphan.key, orphan.value)}
+                  >
+                    <ArrowUturnLeftIcon aria-hidden className="size-3" />
                   </button>
                 </div>
               </div>
