@@ -167,6 +167,9 @@ test('title cell row tools skip the overflow action menu', () => {
   assert.match(browser, /overlayListed/)
   assert.match(browser, /overlayListed\(detailRow, listedSelected, listColumns\)/)
   assert.match(browser, /overlayListed\(prev, hit, listColumns\)/)
+  assert.match(browser, /previewActionRecord/)
+  assert.match(browser, /actingRef/)
+  assert.match(browser, /\$\{row\.id\}:run/)
 })
 
 test('deletable tables can pick rows and bulk-delete next to refresh', () => {
