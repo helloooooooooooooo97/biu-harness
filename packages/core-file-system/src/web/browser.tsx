@@ -1718,14 +1718,14 @@ export function CollectionBrowser({
             <button
               key={action.id}
               type="button"
-              className={`fsdb-detail-action${primary ? ' is-primary' : ''}${action.tone === 'danger' ? ' is-danger' : ''}`}
+              className={`dock-icon-btn${primary ? ' is-active' : ''}${action.tone === 'danger' ? ' is-danger' : ''}`}
               title={action.label}
+              data-dock-tip={action.label}
               aria-label={`${action.label} ${labelOf(row)}`}
               disabled={busy}
               onClick={run}
             >
-              {actionIcon(action.id, { fallback: false })}
-              {action.label}
+              {actionIcon(action.id, { className: 'size-4' })}
             </button>
           )
         })}

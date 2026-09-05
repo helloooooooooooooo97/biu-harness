@@ -42,8 +42,8 @@ import { AttachmentFile, MediaField, UrlHref } from './cell-media.tsx'
 import { PersonFace, PersonPickPanel } from './person-cell.tsx'
 import { RecordLinkChips } from './record-link-cell.tsx'
 
-export function actionIcon(id: string, opts?: { fallback?: boolean }) {
-  const cls = 'size-[14px]'
+export function actionIcon(id: string, opts?: { fallback?: boolean; className?: string }) {
+  const cls = opts?.className ?? 'size-[14px]'
   if (id === 'start' || id === 'play' || id === 'run' || id === 'open') return <PlayIcon aria-hidden className={cls} />
   if (id === 'stop' || id === 'close' || id === 'pause') return <StopIcon aria-hidden className={cls} />
   if (id === 'pack') return <ArchiveBoxArrowDownIcon aria-hidden className={cls} />
