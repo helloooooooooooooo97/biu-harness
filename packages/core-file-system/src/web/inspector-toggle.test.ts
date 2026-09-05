@@ -69,6 +69,7 @@ test('table and view rows only expand from the fold column', () => {
   assert.match(sidebar, /data-testid="sidebar-system-collections"/)
   assert.match(sidebar, /className="flex min-w-0 flex-col gap-px" data-testid="sidebar-user-collections"/)
   assert.match(sidebar, /className="flex min-w-0 flex-col gap-px" data-testid="sidebar-system-collections"/)
+  assert.match(sidebar, /className="flex min-w-0 flex-col gap-px" data-collection-kind/)
   assert.match(sidebar, /className="sidebar-group-head"/)
   assert.doesNotMatch(sidebar, /sidebar-group-head mb-0\.5/)
   assert.match(sidebar, /data-collection-kind/)
