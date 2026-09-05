@@ -305,6 +305,12 @@ const CSS = `
 .fsdb-proprow-v,.fsdb-prop-val,.fsdb-detail-id{min-width:0;color:#7C7A76}
 .fsdb-proprow.is-stack,.fsdb-prop.is-stack{align-items:flex-start;flex-wrap:wrap}
 .fsdb-proprow.is-stack .fsdb-proprow-k,.fsdb-prop.is-stack>span:first-child{padding-top:6px}
+.fsdb-proprow-fold{position:relative;display:inline-grid;place-items:center;width:14px;height:14px;flex:none;margin:0;border:0;padding:0;background:transparent;color:inherit;cursor:pointer}
+.fsdb-proprow-glyph,.fsdb-proprow-chevron{display:grid;place-items:center;width:14px;height:14px}
+.fsdb-proprow-chevron{position:absolute;inset:0;opacity:0;pointer-events:none}
+.fsdb-proprow.is-facet-fold:hover .fsdb-proprow-glyph,.fsdb-proprow.is-facet-fold:focus-within .fsdb-proprow-glyph{opacity:0}
+.fsdb-proprow.is-facet-fold:hover .fsdb-proprow-chevron,.fsdb-proprow.is-facet-fold:focus-within .fsdb-proprow-chevron{opacity:1}
+.fsdb-proprow.is-facet-fold:not(.is-open) .fsdb-schema-pack{display:none}
 .fsdb-prop-val.is-schema{overflow:visible;white-space:normal;max-width:none}
 .fsdb-schema{display:flex;flex-direction:column;gap:2px;min-width:0;width:100%}
 .fsdb-schema-pack{display:flex;flex-direction:column;gap:0;min-width:0;padding:4px 0 8px}

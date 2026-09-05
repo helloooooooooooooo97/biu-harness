@@ -70,3 +70,17 @@ test('tag collect table lives on the record board, not as sidebar views', () => 
   assert.match(viewsUi, /openRow/)
   assert.match(viewsUi, /mergeCatalogViews/)
 })
+
+test('detail facet property sits last, starts collapsed, and the glyph becomes a fold control on hover', () => {
+  const detail = readFileSync(resolve(import.meta.dirname, './record-detail.tsx'), 'utf8')
+  const row = readFileSync(resolve(import.meta.dirname, './property-row.tsx'), 'utf8')
+  const css = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8')
+  assert.match(detail, /resolveFieldType\(a\) === 'facet'/)
+  assert.match(detail, /useState\(false\)/)
+  assert.match(detail, /collapsible=\{facet\}/)
+  assert.match(row, /收起合集/)
+  assert.match(row, /展开合集/)
+  assert.match(row, /ChevronRightIcon/)
+  assert.match(css, /\.fsdb-proprow\.is-facet-fold:hover \.fsdb-proprow-chevron/)
+  assert.match(css, /\.fsdb-proprow\.is-facet-fold:not\(\.is-open\) \.fsdb-schema-pack\{display:none\}/)
+})

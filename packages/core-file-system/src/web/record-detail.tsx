@@ -134,6 +134,22 @@ export function RecordDetail({
     return () => window.removeEventListener(FOCUS_RECORD_TITLE, onTitle)
   }, [])
 
+  const [facetOpen, setFacetOpen] = useState(false)
+  useEffect(() => {
+    setFacetOpen(false)
+  }, [selected.id])
+
+  const propertyEntries = Object.entries(schema.fields)
+    .filter(([key, field]) => {
+      if (key === 'id' || key === schema.labelField || key === contentFieldKey(schema)) return false
+      if (chrome?.panes?.some((pane) => pane.id === key)) return false
+      const kind = resolveFieldType(field)
+      if (kind === 'facet' && !field.writable) return false
+      if (field.computed && !fieldHasValue(field, selected[key])) return false
+      return true
+    })
+    .sort(([, a], [, b]) => Number(resolveFieldType(a) === 'facet') - Number(resolveFieldType(b) === 'facet'))
+
   return (
 <div className="fsdb-detail-stage">
           <div className="fsdb-detail-screen" role="main" aria-label="记录详情">
@@ -190,15 +206,20 @@ export function RecordDetail({
                       {selected.id}
                     </span>
                   </div>
-                  {Object.entries(schema.fields).map(([key, field]) => {
-                    if (key === 'id' || key === schema.labelField || key === contentFieldKey(schema)) return null
-                    if (chrome?.panes?.some((pane) => pane.id === key)) return null
+                  {propertyEntries.map(([key, field]) => {
                     const kind = resolveFieldType(field)
-                    if (kind === 'facet' && !field.writable) return null
-                    if (field.computed && !fieldHasValue(field, selected[key])) return null
+                    const facet = kind === 'facet'
                     return (
-                      <PropertyRow key={key} field={field} fieldKey={key} stacked={kind === 'facet'}>
-                        <div className={kind === 'facet' ? 'fsdb-prop-val is-schema' : 'fsdb-prop-val'} title={formatField(field, selected[key])}>
+                      <PropertyRow
+                        key={key}
+                        field={field}
+                        fieldKey={key}
+                        stacked={facet && facetOpen}
+                        collapsible={facet}
+                        expanded={facet ? facetOpen : undefined}
+                        onToggle={facet ? () => setFacetOpen((open) => !open) : undefined}
+                      >
+                        <div className={facet ? 'fsdb-prop-val is-schema' : 'fsdb-prop-val'} title={formatField(field, selected[key])}>
                           {renderCell(selected, key, field)}
                         </div>
                       </PropertyRow>
