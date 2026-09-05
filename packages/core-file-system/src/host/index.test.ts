@@ -499,12 +499,11 @@ test('db_list columns returns only those fields plus id', async () => {
   const db = ctx.get('database') as DatabaseService
   db.register(notesCollection())
   const listed = await ctx.tools.invoke('db_list', { path: '/notes', columns: ['label'] }) as {
-    items: Array<Record<string, unknown>>
+    columns: string[]
+    rows: unknown[][]
   }
-  const row = listed.items[0]
-  assert.equal(row?.title, '草稿')
-  assert.equal(row?.id, 'n1')
-  assert.equal('status' in (row ?? {}), false)
+  assert.deepEqual(listed.columns, ['id', 'title'])
+  assert.deepEqual(listed.rows[0], ['n1', '草稿'])
 })
 
 test('agent db_stat omits builtin fields; service stat and list still include them', async () => {
@@ -535,9 +534,18 @@ test('agent db_stat omits builtin fields; service stat and list still include th
   assert.ok(agentStat.schema?.fields && 'status' in agentStat.schema.fields)
   assert.equal(agentStat.schema?.records, undefined)
   assert.ok(agentStat.caps?.includes('list'))
-  const agentList = (await ctx.tools.invoke('db_list', { path: '/notes' })) as { schema?: unknown; items: unknown[] }
+  const agentList = (await ctx.tools.invoke('db_list', { path: '/notes' })) as {
+    schema?: unknown
+    columns?: string[]
+    rows?: unknown[][]
+    items?: unknown
+  }
   assert.equal(agentList.schema, undefined)
-  assert.ok(agentList.items.length)
+  assert.equal(agentList.items, undefined)
+  assert.ok(agentList.columns?.includes('id'))
+  assert.ok(agentList.columns?.includes('title'))
+  assert.equal(agentList.columns?.includes('path'), false)
+  assert.ok((agentList.rows?.length ?? 0) >= 1)
 })
 
 

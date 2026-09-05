@@ -77,6 +77,40 @@ function omitRedundantId(path: string, id: unknown) {
   return `/${id}` === path ? undefined : id
 }
 
+function isEmptyCell(value: unknown) {
+  if (value == null || value === '') return true
+  if (Array.isArray(value) && value.length === 0) return true
+  if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) return true
+  return false
+}
+
+/** 列名只出现一次；path/kind 可从表路径+id 推出，空列整列丢掉。 */
+export function recordsToColumnar(items: unknown[]) {
+  const rowsIn = items.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+  const order: string[] = []
+  const seen = new Set<string>()
+  for (const row of rowsIn) {
+    for (const key of Object.keys(row)) {
+      if (key === 'path' || key === 'kind' || seen.has(key)) continue
+      seen.add(key)
+      order.push(key)
+    }
+  }
+  const columns = order.filter((key) => key === 'id' || rowsIn.some((row) => !isEmptyCell(row[key])))
+  const rows = rowsIn.map((row) => columns.map((key) => (isEmptyCell(row[key]) ? null : row[key])))
+  return { columns, rows }
+}
+
+function compactRecordValue(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value
+  const next: Record<string, unknown> = {}
+  for (const [key, cell] of Object.entries(value as Record<string, unknown>)) {
+    if (isEmptyCell(cell)) continue
+    next[key] = cell
+  }
+  return next
+}
+
 export function compactAgentToolResult(result: unknown) {
   if (!result || typeof result !== 'object' || Array.isArray(result)) return result
   const rec = result as Record<string, unknown>
@@ -93,14 +127,16 @@ export function compactAgentToolResult(result: unknown) {
       if (typeof rec.total === 'number') next.total = rec.total
       if (typeof rec.offset === 'number') next.offset = rec.offset
       if (typeof rec.limit === 'number') next.limit = rec.limit
-      next.items = rec.items
+      const table = recordsToColumnar(rec.items)
+      next.columns = table.columns
+      next.rows = table.rows
       return next
     }
     if (rec.schema && typeof rec.schema === 'object') next.schema = compactAgentSchema(rec.schema as CollectionSchema)
     return next
   }
   if (kind === 'record') {
-    const next: Record<string, unknown> = { kind: 'record', path: rec.path, value: rec.value }
+    const next: Record<string, unknown> = { kind: 'record', path: rec.path, value: compactRecordValue(rec.value) }
     if (rec.result !== undefined) next.result = rec.result
     return next
   }

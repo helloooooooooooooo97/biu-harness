@@ -1149,7 +1149,7 @@ export function apply(ctx: Context) {
   }))))
   ctx.tools.register({
     name: 'db_list',
-    description: '列出 File System 路径：/ 为已登记表，/<表> 为该表记录（不含 content 正文）。默认每页 50 条，最多 200。可用 columns 只取需要的列。表结构用 db_stat，列表不重复 schema。',
+    description: '列出 File System 路径：/ 为已登记表，/<表> 为该表记录（不含 content 正文）。默认每页 50 条，最多 200。表记录为列式：columns 列名只出现一次，rows 为值数组；path=/<表>/<id>。可用 columns 参数只取需要的列。表结构用 db_stat，列表不重复 schema。',
     parameters: {
       type: 'object',
       properties: {
@@ -1186,7 +1186,7 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_read',
-    description: '读取 File System 路径：表返回列表（不含 schema，结构用 db_stat），记录返回该行 JSON（不含 content 正文，正文用 db_content）。',
+    description: '读取 File System 路径：表返回列式列表 columns/rows（不含 schema，结构用 db_stat），记录返回该行 JSON（空字段省略，不含 content 正文，正文用 db_content）。',
     parameters: PATH_PARAM,
     execute: (args) =>
       withInspectorReveal(ctx, String(args.path), () => db.read(String(args.path)).then((body) => compactAgentToolResult(body))),

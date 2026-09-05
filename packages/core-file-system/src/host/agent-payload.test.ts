@@ -73,8 +73,10 @@ test('compact list drops schema; compact stat keeps caps and slim schema', () =>
     items: [{ id: 'n1', title: '草稿' }],
   }) as Record<string, unknown>
   assert.equal('schema' in listed, false)
+  assert.equal('items' in listed, false)
   assert.equal(listed.total, 2)
-  assert.deepEqual(listed.items, [{ id: 'n1', title: '草稿' }])
+  assert.deepEqual(listed.columns, ['id', 'title'])
+  assert.deepEqual(listed.rows, [['n1', '草稿']])
 
   const stat = compactAgentToolResult({
     kind: 'collection',
@@ -100,4 +102,21 @@ test('compact record read omits schema', () => {
   }) as Record<string, unknown>
   assert.equal('schema' in read, false)
   assert.deepEqual(read.value, { id: 'n1', title: '草稿' })
+})
+
+test('compact list uses columns once; drops empty and path/kind', () => {
+  const listed = compactAgentToolResult({
+    kind: 'collection',
+    path: '/notes',
+    total: 2,
+    items: [
+      { id: 'n1', title: '草稿', tags: [], facet: {}, path: '/notes/n1', kind: 'record' },
+      { id: 'n2', title: '另一篇', tags: [], path: '/notes/n2', kind: 'record' },
+    ],
+  }) as Record<string, unknown>
+  assert.deepEqual(listed.columns, ['id', 'title'])
+  assert.deepEqual(listed.rows, [
+    ['n1', '草稿'],
+    ['n2', '另一篇'],
+  ])
 })
