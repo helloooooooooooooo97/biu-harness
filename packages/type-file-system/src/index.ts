@@ -144,7 +144,7 @@ export function isReservedSchemaFieldLabel(label: string) {
   return Object.values(BUILTIN_FIELDS).some((field) => String(field.label ?? '').trim().toLowerCase() === want)
 }
 
-/** 分面包内允许的原子类型；不能再套一层分面。 */
+/** 分面包内允许的字段类型，含合集（可再贴合集）。 */
 export const ATOMIC_FIELD_TYPES = [
   'string',
   'number',
@@ -157,6 +157,7 @@ export const ATOMIC_FIELD_TYPES = [
   'attachment',
   'file',
   'action',
+  'facet',
 ] as const satisfies readonly FieldType[]
 
 export function isFacetFieldType(type: unknown): boolean {
@@ -195,7 +196,7 @@ export function normalizeSchemaPack(raw: unknown): CollectionSchemaPack | null {
     const row = item as Record<string, unknown>
     const key = String(row.key ?? '').trim()
     if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key) || seen.has(key) || isReservedSchemaFieldKey(key)) continue
-    if (isFacetFieldType(row.type) || !isAtomicFieldType(row.type)) continue
+    if (!isAtomicFieldType(row.type)) continue
     const fieldLabel = String(row.label ?? key).trim() || key
     if (isReservedSchemaFieldLabel(fieldLabel) || seenLabels.has(fieldLabel.toLowerCase())) continue
     seen.add(key)

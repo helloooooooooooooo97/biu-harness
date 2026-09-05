@@ -105,9 +105,7 @@ function schemaFor(spec: CollectionSpec): CollectionSchema {
     contentField,
     fields,
     columns:
-      spec.path === '/facets'
-        ? ensureColumn(spec.schema.columns, 'tags')
-        : ensureColumn(ensureColumn(spec.schema.columns, 'facet'), 'tags'),
+      ensureColumn(ensureColumn(spec.schema.columns, 'facet'), 'tags'),
     actions: (spec.actions ?? []).map(publicAction),
     records: {
       update: Boolean(spec.records?.update),
@@ -563,7 +561,7 @@ export class DatabaseService extends Service implements Database {
   }
 
   private applyFacetOverlay(spec: CollectionSpec, row: DbRecord): DbRecord {
-    if (spec.path === '/facets' || !schemaFor(spec).fields.facet) return row
+    if (!schemaFor(spec).fields.facet) return row
     const overlay = this.facets.recordFacet(spec.path, row.id)
     if (!overlay) return row
     return { ...row, facet: overlay }
@@ -584,7 +582,7 @@ export class DatabaseService extends Service implements Database {
   }
 
   private indexFacetRecord(spec: CollectionSpec, record: DbRecord) {
-    if (spec.path === '/facets' || !schemaFor(spec).fields.facet) return
+    if (!schemaFor(spec).fields.facet) return
     const labelKey = schemaFor(spec).labelField ?? 'title'
     this.facets.indexRecord(
       spec.path,
@@ -654,8 +652,19 @@ export class DatabaseService extends Service implements Database {
       }
     }
     const patch = pickWritablePatch(schema, raw)
-    const record = await spec.update(parts[1]!, patch)
-    this.indexFacetRecord(spec, record)
+    let record = await spec.update(parts[1]!, patch)
+    if (spec.path === '/facets' && schema.fields.facet && 'facet' in patch) {
+      const nextFacet = coerce(schema.fields.facet, patch.facet)
+      const labelKey = schema.labelField ?? 'title'
+      this.facets.writeRecordFacet(
+        spec.path,
+        record.id,
+        nextFacet as ReturnType<typeof normalizeSchemaValue>,
+        String(record[labelKey] ?? record.id),
+      )
+      record = { ...record, facet: nextFacet }
+    }
+    this.indexFacetRecord(spec, this.decorateRecord(spec, record))
     this.bump()
     return { kind: 'record' as const, path: `${spec.path}/${record.id}`, value: withoutContent(spec, record) }
   }

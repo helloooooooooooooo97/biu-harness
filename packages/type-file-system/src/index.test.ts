@@ -46,7 +46,7 @@ test('reserved schema fields include 合集 / facet by key or label', () => {
   assert.equal(isReservedSchemaFieldLabel('复杂度'), false)
 })
 
-test('normalizeSchemaPack drops nested facet fields and keeps action', () => {
+test('normalizeSchemaPack keeps nested facet fields and action', () => {
   const pack = normalizeSchemaPack({
     id: 'dp',
     label: '动态规划',
@@ -57,7 +57,8 @@ test('normalizeSchemaPack drops nested facet fields and keeps action', () => {
     ],
   })
   assert.equal(pack?.id, 'dp')
-  assert.deepEqual(pack?.fields.map((field) => field.key), ['complexity', 'run'])
+  assert.deepEqual(pack?.fields.map((field) => field.key), ['complexity', 'nested', 'run'])
+  assert.equal(pack?.fields.find((field) => field.key === 'nested')?.type, 'facet')
 })
 
 test('normalizeSchemaPack drops fields that reuse file-system keys or labels', () => {

@@ -21,7 +21,21 @@ export type FacetStamp = {
   title: string
 }
 
-type TagRow = { id: string; label: string; fields_json: string; updated_at?: number }
+type TagRow = {
+  id: string
+  label: string
+  fields_json: string
+  notes?: string
+  created_at?: number
+  updated_at?: number
+}
+
+export type FacetEntry = {
+  pack: CollectionSchemaPack
+  notes: string
+  createdAt: number
+  updatedAt: number
+}
 type StampRow = { facet_id: string; collection: string; record_id: string; title: string }
 
 export function slugFacetId(label: string, used: Set<string>) {
@@ -52,6 +66,23 @@ function packFromRow(row: TagRow): CollectionSchemaPack | null {
   return normalizeSchemaPack({ id: row.id, label: row.label, fields })
 }
 
+function entryFromRow(row: TagRow): FacetEntry | null {
+  const pack = packFromRow(row)
+  if (!pack) return null
+  const updated = Number(row.updated_at) || 0
+  const created = Number(row.created_at) || 0
+  const createdAt = created > 0 ? created : updated
+  const updatedAt = updated > 0 ? updated : createdAt
+  return {
+    pack,
+    notes: typeof row.notes === 'string' ? row.notes : '',
+    createdAt,
+    updatedAt,
+  }
+}
+
+const FACET_ROW_SQL = 'id, label, fields_json, notes, created_at, updated_at'
+
 /** 分面目录由 File System 用 SQLite 管：目录 + 跨表倒排，查询不扫全表。 */
 export class FacetStore {
   private db: DatabaseSync | null = null
@@ -69,6 +100,7 @@ export class FacetStore {
         label TEXT NOT NULL,
         fields_json TEXT NOT NULL DEFAULT '[]',
         notes TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL DEFAULT 0,
         updated_at INTEGER NOT NULL
       );
       CREATE INDEX IF NOT EXISTS facets_label ON facets(label);
@@ -96,6 +128,7 @@ export class FacetStore {
       );
     `)
     this.ensureNotesColumn()
+    this.ensureCreatedAtColumn()
     return this
   }
 
@@ -106,6 +139,15 @@ export class FacetStore {
     db.exec(`ALTER TABLE facets ADD COLUMN notes TEXT NOT NULL DEFAULT ''`)
   }
 
+  private ensureCreatedAtColumn() {
+    const db = this.db!
+    const cols = db.prepare('PRAGMA table_info(facets)').all() as Array<{ name: string }>
+    if (!cols.some((col) => col.name === 'created_at')) {
+      db.exec(`ALTER TABLE facets ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0`)
+    }
+    db.exec(`UPDATE facets SET created_at = updated_at WHERE created_at = 0 AND updated_at > 0`)
+  }
+
   notes(id: string) {
     const want = String(id ?? '').trim()
     if (!want) return ''
@@ -114,17 +156,18 @@ export class FacetStore {
   }
 
   private savePack(pack: CollectionSchemaPack, notes: string) {
+    const now = Date.now()
     this.ensure()
       .prepare(
-        `INSERT INTO facets (id, label, fields_json, updated_at, notes)
-         VALUES (?, ?, ?, ?, ?)
+        `INSERT INTO facets (id, label, fields_json, created_at, updated_at, notes)
+         VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            label = excluded.label,
            fields_json = excluded.fields_json,
            updated_at = excluded.updated_at,
            notes = excluded.notes`,
       )
-      .run(pack.id, pack.label, JSON.stringify(pack.fields), Date.now(), notes)
+      .run(pack.id, pack.label, JSON.stringify(pack.fields), now, now, notes)
   }
 
   private ensure() {
@@ -133,30 +176,37 @@ export class FacetStore {
   }
 
   list(query = ''): CollectionSchemaPack[] {
+    return this.entries(query).map((item) => item.pack)
+  }
+
+  entries(query = ''): FacetEntry[] {
     const db = this.ensure()
     const q = query.trim().toLowerCase()
     const rows = (
       q
         ? (db
             .prepare(
-              `SELECT id, label, fields_json, updated_at FROM facets
+              `SELECT ${FACET_ROW_SQL} FROM facets
                WHERE instr(lower(id), ?) > 0 OR instr(lower(label), ?) > 0
                ORDER BY label`,
             )
             .all(q, q) as TagRow[])
-        : (db.prepare('SELECT id, label, fields_json, updated_at FROM facets ORDER BY label').all() as TagRow[])
+        : (db.prepare(`SELECT ${FACET_ROW_SQL} FROM facets ORDER BY label`).all() as TagRow[])
     )
-    return rows.map((row) => packFromRow(row)).filter((item): item is CollectionSchemaPack => Boolean(item))
+    return rows.map((row) => entryFromRow(row)).filter((item): item is FacetEntry => Boolean(item))
   }
 
   get(idOrLabel: string): CollectionSchemaPack | null {
+    return this.entry(idOrLabel)?.pack ?? null
+  }
+
+  entry(idOrLabel: string): FacetEntry | null {
     const want = String(idOrLabel ?? '').trim()
     if (!want) return null
-    const db = this.ensure()
-    const row = db
-      .prepare('SELECT id, label, fields_json, updated_at FROM facets WHERE id = ? OR label = ? LIMIT 1')
+    const row = this.ensure()
+      .prepare(`SELECT ${FACET_ROW_SQL} FROM facets WHERE id = ? OR label = ? LIMIT 1`)
       .get(want, want) as TagRow | undefined
-    return row ? packFromRow(row) : null
+    return row ? entryFromRow(row) : null
   }
 
   replace(tags: unknown[]): CollectionSchemaPack[] {

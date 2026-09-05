@@ -35,14 +35,22 @@ export function facetsCollection(
   store: FacetStore,
   tables: () => Array<Pick<CollectionInfo, 'path' | 'label' | 'id'>> = () => [],
 ): CollectionSpec {
-  const asFacet = (id: string, label: string, fields: unknown[], stampCount: number, notes = ''): DbRecord => ({
+  const asFacet = (
+    id: string,
+    label: string,
+    fields: unknown[],
+    stampCount: number,
+    notes = '',
+    createdAt = 0,
+    updatedAt = 0,
+  ): DbRecord => ({
     id,
     title: label,
     fieldCount: fields.length,
     stampCount,
     fields: JSON.stringify(fields),
     notes,
-    ...recordBuiltinValues(),
+    ...recordBuiltinValues({ createdAt, updatedAt }),
   })
 
   const tableLabel = (path: string) => {
@@ -50,9 +58,33 @@ export function facetsCollection(
     return hit?.label ?? hit?.id ?? path
   }
 
+  const fromEntry = (id: string, stampCount: number) => {
+    const item = store.entry(id)
+    if (!item) return asFacet(id, id, [], stampCount)
+    return asFacet(
+      item.pack.id,
+      item.pack.label,
+      item.pack.fields,
+      stampCount,
+      item.notes,
+      item.createdAt,
+      item.updatedAt,
+    )
+  }
+
   const facetRows = () => {
     const counts = store.stampCounts()
-    return store.list().map((facet) => asFacet(facet.id, facet.label, facet.fields, counts[facet.id] ?? 0, store.notes(facet.id)))
+    return store.entries().map((item) =>
+      asFacet(
+        item.pack.id,
+        item.pack.label,
+        item.pack.fields,
+        counts[item.pack.id] ?? 0,
+        item.notes,
+        item.createdAt,
+        item.updatedAt,
+      ),
+    )
   }
 
   const stampRows = (facetId: string) => {
@@ -129,7 +161,7 @@ export function facetsCollection(
         const title = String(fields.title ?? '').trim() || '未命名合集'
         const id = slugFacetId(title, new Set(store.list().map((facet) => facet.id)))
         const pack = store.upsert({ id, label: title, fields: parseFields(fields.fields) }, fields.notes != null ? String(fields.notes) : '')
-        return asFacet(pack.id, pack.label, pack.fields, 0, store.notes(pack.id))
+        return fromEntry(pack.id, 0)
       }),
     update: (id, patch) => {
       if (parseStampRecordId(id)) throw new Error(`cannot update collected row: ${id}`)
@@ -139,7 +171,7 @@ export function facetsCollection(
       const fields = patch.fields != null ? parseFields(patch.fields) : current.fields
       const notes = patch.notes != null ? String(patch.notes) : store.notes(current.id)
       const pack = store.upsert({ id: current.id, label, fields }, notes)
-      return asFacet(pack.id, pack.label, pack.fields, store.stampCounts()[pack.id] ?? 0, store.notes(pack.id))
+      return fromEntry(pack.id, store.stampCounts()[pack.id] ?? 0)
     },
     remove: (query) => {
       const ids = query.ids ?? []

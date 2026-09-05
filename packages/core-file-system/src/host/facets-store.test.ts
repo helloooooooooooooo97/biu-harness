@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { FacetStore } from './facets-store.ts'
 
-test('FacetStore keeps packs in sqlite and drops nested facet types', () => {
+test('FacetStore keeps packs in sqlite including nested facet types', () => {
   const store = new FacetStore()
   store.replace([
     {
@@ -21,9 +21,24 @@ test('FacetStore keeps packs in sqlite and drops nested facet types', () => {
   const facets = store.list()
   assert.equal(facets.length, 1)
   assert.equal(facets[0]?.id, 'dp')
-  assert.deepEqual(facets[0]?.fields.map((field) => field.key), ['complexity'])
+  assert.deepEqual(facets[0]?.fields.map((field) => field.key), ['complexity', 'nested'])
   assert.equal(store.list('动态').length, 1)
   assert.equal(store.list('nope').length, 0)
+})
+
+test('FacetStore writes createdAt on insert and keeps it across updates', () => {
+  const store = new FacetStore()
+  const before = Date.now()
+  store.upsert({ id: 'dp', label: '动态规划', fields: [] })
+  const first = store.entry('dp')
+  assert.ok(first)
+  assert.ok(first!.createdAt >= before)
+  assert.ok(first!.updatedAt >= first!.createdAt)
+  const createdAt = first!.createdAt
+  store.upsert({ id: 'dp', label: 'DP', fields: [{ key: 'complexity', type: 'string' }] })
+  const again = store.entry('dp')
+  assert.equal(again?.createdAt, createdAt)
+  assert.ok((again?.updatedAt ?? 0) >= first!.updatedAt)
 })
 
 test('sqlite file round-trips facet catalog and stamp index', async () => {
