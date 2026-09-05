@@ -446,7 +446,7 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-page .tasks-table td.is-cell-on.is-cell-ro{box-shadow:inset 0 0 0 2px #787774}
 .fsdb-page .tasks-table td:has(.db-cell-select),.fsdb-page .tasks-table td:has(.db-cell-multi),.fsdb-page .tasks-table td:has(.fsdb-cellselect),.fsdb-page .tasks-table td:has(.fsdb-tokens),.fsdb-page .tasks-table td:has(.fsdb-ref-chips){min-width:0}
 .fsdb-page .tasks-table td:has(.db-cell-select) .fsdb-cell,.fsdb-page .tasks-table td:has(.db-cell-multi) .fsdb-cell,.fsdb-page .tasks-table td:has(.fsdb-cellselect) .fsdb-cell,.fsdb-page .tasks-table td:has(.fsdb-tokens) .fsdb-cell,.fsdb-page .tasks-table td:has(.fsdb-ref-chips) .fsdb-cell{display:flex;width:100%;max-width:none;min-height:100%;align-self:stretch}
-.fsdb-page .tasks-table td:has(.fsdb-ref-chips) .fsdb-cell,.fsdb-page .tasks-table.is-wrap td:has(.fsdb-ref-chips) .fsdb-cell{flex-direction:row;flex-wrap:wrap;align-items:center;align-content:flex-start;gap:4px;overflow-wrap:normal;word-break:normal}
+.fsdb-page .tasks-table td:has(.fsdb-ref-chips) .fsdb-cell,.fsdb-page .tasks-table.is-wrap td:has(.fsdb-ref-chips) .fsdb-cell{display:block;width:100%;max-width:100%;overflow-wrap:normal;word-break:normal}
 .fsdb-page .tasks-table td .db-cell-select,.fsdb-page .tasks-table td .db-cell-multi,.fsdb-page .tasks-table td .fsdb-cellselect,.fsdb-page .tasks-table td .fsdb-tokens{display:flex;width:100%;max-width:none;min-width:0}
 .fsdb-page .tasks-table td .db-cell-select-trigger,.fsdb-page .tasks-table td .fsdb-cellselect-trigger{width:100%;max-width:none;justify-content:space-between;background:transparent}
 .fsdb-page .tasks-table td .db-cell-multi-box,.fsdb-page .tasks-table td .fsdb-tokens-box{width:100%;max-width:none;background:transparent}
@@ -487,7 +487,8 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-person-loading{display:flex;align-items:center;gap:6px;padding:6px;color:var(--dsw-label-3);font-size:12px}
 .fsdb-pop-host,.fsdb-ref-host{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;align-content:flex-start;gap:4px;min-width:0;width:100%;min-height:22px;cursor:pointer}
 .fsdb-pop-empty,.fsdb-detail-aside .fsdb-pop-empty{color:var(--dsw-label-3);font-size:14px;font-weight:600;user-select:none}
-.fsdb-ref-chips{display:contents}
+.fsdb-ref-chips{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;align-content:flex-start;gap:4px;min-width:0;width:100%;max-width:100%}
+.fsdb-page .tasks-table td:has(.fsdb-ref-chips) .fsdb-ref-chips,.fsdb-page .tasks-table.is-wrap td:has(.fsdb-ref-chips) .fsdb-ref-chips{display:flex;flex-direction:row;flex-wrap:wrap;width:100%;min-width:0}
 .fsdb-ref-chip{display:inline-flex;flex-direction:row;align-items:center;gap:4px;flex:0 0 auto;width:auto;max-width:100%;margin:0;border:0;border-radius:4px;padding:1px 6px 1px 7px;background:var(--dsw-hover);color:var(--dsw-label);font:inherit;font-size:13px;line-height:20px;cursor:pointer;text-align:left;white-space:nowrap;overflow-wrap:normal;word-break:keep-all}
 .fsdb-ref-chip:hover{background:color-mix(in srgb,var(--dsw-pick) 16%,transparent)}
 .fsdb-ref-chip-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:underline;text-underline-offset:2px}
