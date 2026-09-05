@@ -494,6 +494,11 @@ export function CollectionBrowser({
         prev?.schema && JSON.stringify(prev.schema) === JSON.stringify(nextSchema) ? prev : { ...nextStat, schema: nextSchema },
       )
       setItems((prev) => (recordsFingerprint(prev) === recordsFingerprint(listed.items) ? prev : listed.items))
+      const openId = detailIdRef.current
+      if (openId) {
+        const hit = listed.items.find((item) => item.id === openId)
+        if (hit) setDetailRow((prev) => (prev?.id === openId ? { ...prev, ...hit } : prev))
+      }
       setTotal(listed.total)
       rememberListCache(dataPath, { items: listed.items, total: listed.total, stat: { ...nextStat, schema: nextSchema } })
       if (activeViewId) {
@@ -797,8 +802,14 @@ export function CollectionBrowser({
   }, [flattenRows, grouped, grouping, visible])
   const tableColSpan = Math.max(columns.length, 1)
 
-  const selected =
-    (detailId && (detailRow?.id === detailId ? detailRow : items.find((item) => item.id === detailId))) || null
+  const listedSelected = detailId ? items.find((item) => item.id === detailId) : undefined
+  const selected = !detailId
+    ? null
+    : detailRow?.id === detailId
+      ? listedSelected
+        ? { ...detailRow, ...listedSelected }
+        : detailRow
+      : listedSelected ?? null
   const viewIndex = selected ? indexOnPage(selected.id, items, page, pageSize) : null
   const stepViewRecord = async (delta: -1 | 1) => {
     if (!selected || steppingView.current) return
@@ -1706,10 +1717,11 @@ export function CollectionBrowser({
         </div>
       )
     }
+    if (!rowShown.length) return null
     return (
       <div className="fsdb-detail-actionbar" data-testid="fsdb-detail-actions" data-biu-ignore aria-label="记录操作">
         <div className="fsdb-detail-actions">
-        {actions.map((action) => {
+        {rowShown.map((action) => {
           const run = () => void runAction(row, action)
           return (
             <button
