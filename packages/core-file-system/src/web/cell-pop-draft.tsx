@@ -11,7 +11,7 @@ import { TagChip, TagChips } from '@biu/public-ui'
 import { DbSearchOption, ensureDbSearchStyle } from '@biu/database-ui'
 import { FieldEditor, fieldDraftValue, parseFieldValue } from './fsdb-cells.tsx'
 import { asStringList, parseFacetFlatColumnKey, resolveFieldType } from './fields.ts'
-import { loadFacets, persistFacets, slugFacetId, subscribeFacets } from './facet-catalog.ts'
+import { PersonPickPanel } from './person-cell.tsx'
 
 type TagOption = { value: string; label: string }
 
@@ -177,7 +177,7 @@ export function CellPopDraft({
   const rawRef = useRef(initial)
   const onSubmitRef = useRef(onSubmit)
   onSubmitRef.current = onSubmit
-  const live = kind === 'select' || kind === 'multi-select' || kind === 'datetime' || kind === 'image' || kind === 'attachment' || kind === 'facet'
+  const live = kind === 'select' || kind === 'multi-select' || kind === 'datetime' || kind === 'image' || kind === 'attachment' || kind === 'facet' || kind === 'person'
 
   function put(next: unknown, nextText?: string) {
     rawRef.current = next
@@ -215,6 +215,10 @@ export function CellPopDraft({
 
   if (kind === 'facet') {
     return <FacetPickPanel value={raw} onChange={(next) => put(next)} />
+  }
+
+  if (kind === 'person') {
+    return <PersonPickPanel value={raw} onChange={(next) => put(next)} onPicked={onClose} />
   }
 
   if (kind === 'url') {

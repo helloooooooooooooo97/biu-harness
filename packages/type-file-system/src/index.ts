@@ -13,6 +13,7 @@ export type FieldType =
   | 'string[]'
   | 'facet'
   | 'action'
+  | 'person'
 
 export type FieldSpec = {
   type: FieldType
@@ -29,6 +30,42 @@ export type FieldSpec = {
 }
 
 export type AttachmentValue = { name: string; href: string; bytes?: number }
+
+export type PersonKind = 'user' | 'agent' | 'system'
+
+export type PersonValue = { kind: PersonKind; name: string; sessionId?: string }
+
+export function asPerson(value: unknown): PersonValue | null {
+  if (value == null || value === '') return null
+  if (typeof value === 'string') {
+    const text = value.trim()
+    if (!text) return null
+    if (text === 'user' || text === '用户') return { kind: 'user', name: '用户' }
+    if (text === 'system' || text === '系统') return { kind: 'system', name: '系统' }
+    return { kind: 'agent', name: text, sessionId: text }
+  }
+  if (typeof value !== 'object' || Array.isArray(value)) return null
+  const rec = value as Record<string, unknown>
+  const sessionId = String(rec.sessionId ?? rec.id ?? '').trim()
+  const kind: PersonKind =
+    rec.kind === 'system' || rec.kind === 'agent' || rec.kind === 'user'
+      ? rec.kind
+      : sessionId
+        ? 'agent'
+        : 'user'
+  const name =
+    String(rec.name ?? rec.title ?? '').trim() ||
+    (kind === 'system' ? '系统' : kind === 'user' ? '用户' : sessionId.slice(0, 8) || '')
+  if (!name && !sessionId) return null
+  return { kind, name: name || 'Agent', ...(sessionId ? { sessionId } : {}) }
+}
+
+export function personKey(person: PersonValue | null | undefined): string {
+  if (!person) return ''
+  if (person.kind === 'user') return 'user'
+  if (person.kind === 'system') return 'system'
+  return person.sessionId || person.name
+}
 
 function hrefFromRecord(value: Record<string, unknown>) {
   return value.href ?? value.url ?? value.src
@@ -158,10 +195,22 @@ export const BUILTIN_FIELDS = {
   facet: { type: 'facet', label: '合集', writable: true },
   parentId: { type: 'string', label: 'Parent ID', writable: true },
   dependsOn: { type: 'multi-select', label: 'Dependency', writable: true },
+  createdBy: { type: 'person', label: '创建人', writable: true },
+  updatedBy: { type: 'person', label: '编辑人', writable: true },
 } as const satisfies Record<string, FieldSpec>
 
-/** 登记 CollectionSpec.schema.fields 必须声明：图标、标签、创建/更新时间、分面、父级、依赖。由登记方自己存。 */
-export const REQUIRED_RECORD_FIELD_KEYS = ['createdAt', 'updatedAt', 'emoji', 'tags', 'facet', 'parentId', 'dependsOn'] as const
+/** 登记 CollectionSpec.schema.fields 必须声明的记录列。由登记方自己存；创建人/编辑人也可由 Core 叠一层。 */
+export const REQUIRED_RECORD_FIELD_KEYS = [
+  'createdAt',
+  'updatedAt',
+  'emoji',
+  'tags',
+  'facet',
+  'parentId',
+  'dependsOn',
+  'createdBy',
+  'updatedBy',
+] as const
 
 export type RequiredRecordFieldKey = (typeof REQUIRED_RECORD_FIELD_KEYS)[number]
 
@@ -177,10 +226,12 @@ export const REQUIRED_RECORD_FIELDS: RequiredRecordFields = {
   facet: BUILTIN_FIELDS.facet,
   parentId: BUILTIN_FIELDS.parentId,
   dependsOn: BUILTIN_FIELDS.dependsOn,
+  createdBy: BUILTIN_FIELDS.createdBy,
+  updatedBy: BUILTIN_FIELDS.updatedBy,
 }
 
 /** 表格默认不展开这些内置列（标题除外）。分面作为默认业务列留下。 */
-export const BUILTIN_FIELD_KEYS = ['id', 'createdAt', 'updatedAt', 'content', 'emoji', 'parentId', 'dependsOn'] as const
+export const BUILTIN_FIELD_KEYS = ['id', 'createdAt', 'updatedAt', 'content', 'emoji', 'parentId', 'dependsOn', 'createdBy', 'updatedBy'] as const
 
 export const RESERVED_SCHEMA_FIELD_KEYS = Object.keys(BUILTIN_FIELDS)
 
@@ -209,6 +260,7 @@ export const ATOMIC_FIELD_TYPES = [
   'file',
   'action',
   'facet',
+  'person',
 ] as const satisfies readonly FieldType[]
 
 export function isFacetFieldType(type: unknown): boolean {
@@ -349,6 +401,8 @@ export function recordBuiltinValues(row: Record<string, unknown> = {}) {
     facet: normalizeSchemaValue(row.facet),
     parentId,
     dependsOn,
+    createdBy: asPerson(row.createdBy),
+    updatedBy: asPerson(row.updatedBy),
   }
 }
 
@@ -392,6 +446,10 @@ export function withBuiltinFields(
   else if (!next.parentId.computed) next.parentId = { ...BUILTIN_FIELDS.parentId, ...next.parentId, writable: true }
   if (!next.dependsOn) next.dependsOn = BUILTIN_FIELDS.dependsOn
   else if (!next.dependsOn.computed) next.dependsOn = { ...BUILTIN_FIELDS.dependsOn, ...next.dependsOn, type: 'multi-select', writable: true }
+  if (!next.createdBy) next.createdBy = BUILTIN_FIELDS.createdBy
+  else if (!next.createdBy.computed) next.createdBy = { ...BUILTIN_FIELDS.createdBy, ...next.createdBy, type: 'person', writable: true }
+  if (!next.updatedBy) next.updatedBy = BUILTIN_FIELDS.updatedBy
+  else if (!next.updatedBy.computed) next.updatedBy = { ...BUILTIN_FIELDS.updatedBy, ...next.updatedBy, type: 'person', writable: true }
   if (contentField === 'content' && !next.content) next.content = BUILTIN_FIELDS.content
   const ordered: Record<string, FieldSpec> = {
     id: next.id,
@@ -435,7 +493,7 @@ export type CollectionSchema = {
   labelField?: string
   /** 记录正文：真正存的文件内容。默认 `content`。结构由登记方自定。 */
   contentField?: string
-  /** 必须包含图标、创建/更新时间、分面、父级、依赖；登记方自己持久化。 */
+  /** 必须包含图标、创建/更新时间、分面、父级、依赖、创建人/编辑人；登记方自己持久化。 */
   fields: CollectionFields
   /** 表格默认可见列（须为 fields 的键）。不写则列出全部列表列。详情仍显示全部字段。 */
   columns?: string[]

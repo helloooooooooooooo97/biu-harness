@@ -2,9 +2,11 @@ import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { createRequire } from 'node:module'
 import {
+  asPerson,
   normalizeSchemaPack,
   normalizeSchemaValue,
   type CollectionSchemaPack,
+  type PersonValue,
   type SchemaFieldValue,
 } from '@biu/type-file-system'
 
@@ -124,11 +126,14 @@ export class FacetStore {
         record_id TEXT NOT NULL,
         emoji TEXT,
         tags_json TEXT,
+        created_by_json TEXT,
+        updated_by_json TEXT,
         PRIMARY KEY (collection, record_id)
       );
     `)
     this.ensureNotesColumn()
     this.ensureCreatedAtColumn()
+    this.ensurePersonMetaColumns()
     return this
   }
 
@@ -146,6 +151,14 @@ export class FacetStore {
       db.exec(`ALTER TABLE facets ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0`)
     }
     db.exec(`UPDATE facets SET created_at = updated_at WHERE created_at = 0 AND updated_at > 0`)
+  }
+
+  private ensurePersonMetaColumns() {
+    const db = this.db!
+    const cols = db.prepare('PRAGMA table_info(record_meta)').all() as Array<{ name: string }>
+    const names = new Set(cols.map((col) => col.name))
+    if (!names.has('created_by_json')) db.exec(`ALTER TABLE record_meta ADD COLUMN created_by_json TEXT`)
+    if (!names.has('updated_by_json')) db.exec(`ALTER TABLE record_meta ADD COLUMN updated_by_json TEXT`)
   }
 
   notes(id: string) {
@@ -303,10 +316,20 @@ export class FacetStore {
     return value
   }
 
-  recordMeta(collection: string, recordId: string): { emoji: string | null; tags: string[] | null } | null {
+  recordMeta(collection: string, recordId: string): {
+    emoji: string | null
+    tags: string[] | null
+    createdBy: PersonValue | null
+    updatedBy: PersonValue | null
+  } | null {
     const row = this.ensure()
-      .prepare('SELECT emoji, tags_json FROM record_meta WHERE collection = ? AND record_id = ?')
-      .get(collection, recordId) as { emoji: string | null; tags_json: string | null } | undefined
+      .prepare('SELECT emoji, tags_json, created_by_json, updated_by_json FROM record_meta WHERE collection = ? AND record_id = ?')
+      .get(collection, recordId) as {
+        emoji: string | null
+        tags_json: string | null
+        created_by_json?: string | null
+        updated_by_json?: string | null
+      } | undefined
     if (!row) return null
     let tags: string[] | null = null
     if (row.tags_json != null) {
@@ -319,24 +342,36 @@ export class FacetStore {
         tags = []
       }
     }
+    const parsePerson = (raw: string | null | undefined) => {
+      if (raw == null || raw === '') return null
+      try {
+        return asPerson(JSON.parse(raw))
+      } catch {
+        return asPerson(raw)
+      }
+    }
     return {
       emoji: row.emoji != null ? String(row.emoji) : null,
       tags,
+      createdBy: parsePerson(row.created_by_json),
+      updatedBy: parsePerson(row.updated_by_json),
     }
   }
 
   writeRecordMeta(
     collection: string,
     recordId: string,
-    patch: { emoji?: string; tags?: string[] },
-  ): { emoji: string | null; tags: string[] | null } {
+    patch: { emoji?: string; tags?: string[]; createdBy?: PersonValue | null; updatedBy?: PersonValue | null },
+  ): { emoji: string | null; tags: string[] | null; createdBy: PersonValue | null; updatedBy: PersonValue | null } {
     this.ensure()
       .prepare(
-        `INSERT INTO record_meta (collection, record_id, emoji, tags_json)
-         VALUES (?, ?, ?, ?)
+        `INSERT INTO record_meta (collection, record_id, emoji, tags_json, created_by_json, updated_by_json)
+         VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT(collection, record_id) DO UPDATE SET
            emoji = COALESCE(excluded.emoji, record_meta.emoji),
-           tags_json = COALESCE(excluded.tags_json, record_meta.tags_json)`,
+           tags_json = COALESCE(excluded.tags_json, record_meta.tags_json),
+           created_by_json = COALESCE(excluded.created_by_json, record_meta.created_by_json),
+           updated_by_json = COALESCE(excluded.updated_by_json, record_meta.updated_by_json)`,
       )
       .run(
         collection,
@@ -345,8 +380,10 @@ export class FacetStore {
         patch.tags !== undefined
           ? JSON.stringify([...new Set(patch.tags.map((item) => String(item).trim()).filter(Boolean))])
           : null,
+        patch.createdBy !== undefined ? JSON.stringify(patch.createdBy) : null,
+        patch.updatedBy !== undefined ? JSON.stringify(patch.updatedBy) : null,
       )
-    return this.recordMeta(collection, recordId) ?? { emoji: null, tags: null }
+    return this.recordMeta(collection, recordId) ?? { emoji: null, tags: null, createdBy: null, updatedBy: null }
   }
 
   removeRecord(collection: string, recordId: string) {

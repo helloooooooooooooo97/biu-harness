@@ -1,5 +1,5 @@
 import type { AtomicFieldType, CollectionSchema, CollectionSchemaPack, DbRecord, FieldSpec, FieldType, SchemaFieldValue } from '@biu/type-file-system'
-import { asAttachment, asAttachmentList, asHttpHref, asImageSrc, asImageSrcList, BUILTIN_FIELD_KEYS, isFacetFieldType, isReservedSchemaFieldKey, normalizeSchemaValue } from '@biu/type-file-system'
+import { asAttachment, asAttachmentList, asHttpHref, asImageSrc, asImageSrcList, asPerson, BUILTIN_FIELD_KEYS, isFacetFieldType, isReservedSchemaFieldKey, normalizeSchemaValue } from '@biu/type-file-system'
 
 export const BUILTIN_VIEW_MODES = ['table'] as const
 export type BuiltinViewMode = (typeof BUILTIN_VIEW_MODES)[number]
@@ -201,6 +201,7 @@ export function inferPackFieldType(value: unknown): AtomicFieldType {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     const rec = value as Record<string, unknown>
     if (Array.isArray(rec.tags)) return 'facet'
+    if (asPerson(value)) return 'person'
     if (asAttachment(value)) return 'attachment'
     if (asImageSrcList(value).length) return 'image'
   }
@@ -291,6 +292,7 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
     const parsed = normalizeSchemaValue(value)
     return parsed.tags.length ? parsed.tags.join(', ') : ''
   }
+  if (kind === 'person') return asPerson(value)?.name ?? ''
   return String(value)
 }
 

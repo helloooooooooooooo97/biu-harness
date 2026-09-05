@@ -31,6 +31,7 @@ const TYPE_LABEL: Partial<Record<FieldType, string>> = {
   file: '正文',
   action: '动作',
   facet: '合集',
+  person: '人物',
 }
 
 export const schemaTagTone = tagTone

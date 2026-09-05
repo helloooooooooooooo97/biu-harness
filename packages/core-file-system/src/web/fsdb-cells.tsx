@@ -20,10 +20,11 @@ import {
   StopIcon,
   TableCellsIcon,
   ShareIcon,
+  UserIcon,
 } from '@heroicons/react/16/solid'
 import { TrashGlyph } from '@biu/web-session-view/trash-glyph'
 import type { CollectionSchema, DbRecord, FieldSpec, FieldType } from '@biu/type-file-system'
-import { actionVisibleToUser, asAttachmentList, asHttpHref, asImageSrc, asImageSrcList, commitAttachments } from '@biu/type-file-system'
+import { actionVisibleToUser, asAttachmentList, asHttpHref, asImageSrc, asImageSrcList, asPerson, commitAttachments } from '@biu/type-file-system'
 import type { CollectionViewType } from '@biu/type-file-system/ui'
 import {
   asStringList,
@@ -35,6 +36,7 @@ import {
 import { LocalText, TokenMultiSelect } from './controls.tsx'
 import { CellDateTime } from '@biu/database-ui'
 import { AttachmentFile, MediaField, UrlHref } from './cell-media.tsx'
+import { PersonFace, PersonPickPanel } from './person-cell.tsx'
 
 export function actionIcon(id: string) {
   const cls = 'size-[14px]'
@@ -75,6 +77,10 @@ export function fieldDraftValue(field: FieldSpec, value: unknown): string {
     if (list.length <= 1) return list[0] ? JSON.stringify(list[0]) : ''
     return JSON.stringify(list)
   }
+  if (kind === 'person') {
+    const person = asPerson(value)
+    return person ? JSON.stringify(person) : ''
+  }
   if (kind === 'file') {
     if (value == null || value === '') return ''
     if (typeof value === 'string') return value
@@ -105,6 +111,7 @@ export function FieldGlyph({ kind }: { kind: FieldType }) {
   if (kind === 'attachment') return <PaperClipIcon aria-hidden className={cls} />
   if (kind === 'file') return <DocumentTextIcon aria-hidden className={cls} />
   if (kind === 'facet') return <RectangleStackIcon aria-hidden className={cls} />
+  if (kind === 'person') return <UserIcon aria-hidden className={cls} />
   if (kind === 'action') return <PlayIcon aria-hidden className={cls} />
   return <Bars3BottomLeftIcon aria-hidden className={cls} />
 }
@@ -206,7 +213,7 @@ export function parseFieldValue(field: FieldSpec, raw: string): unknown {
       return { tags: [], values: {} }
     }
   }
-  if (kind === 'file' || kind === 'attachment' || kind === 'image') {
+  if (kind === 'file' || kind === 'attachment' || kind === 'image' || kind === 'person') {
     const trimmed = raw.trim()
     if (!trimmed) return kind === 'file' ? null : ''
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
@@ -321,6 +328,9 @@ export function DefaultCell({
   if (kind === 'boolean') {
     return <BoolCell on={value === true || value === 'true'} />
   }
+  if (kind === 'person') {
+    return <PersonFace value={value} />
+  }
   if (kind === 'url' || kind === 'image' || kind === 'attachment' || kind === 'file') {
     return <FilePreview value={value} compact kind={kind} onChange={kind === 'attachment' ? onChange : undefined} />
   }
@@ -409,6 +419,17 @@ export function FieldEditor({
       <CellDateTime
         value={value}
         onChange={(next) => onChange(next == null ? '' : String(next))}
+      />
+    )
+  }
+  if (kind === 'person') {
+    return (
+      <PersonPickPanel
+        value={source ?? value}
+        onChange={(next) => {
+          if (onCommit) onCommit(next)
+          else onChange(JSON.stringify(next))
+        }}
       />
     )
   }

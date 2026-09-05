@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { asImageSrc, asImageSrcList, asAttachment, asAttachmentList, actionVisibleToUser, emptySchemaValue, hasCollectionDeleteQuery, isReservedSchemaFieldKey, isReservedSchemaFieldLabel, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, retagSchemaValue, schemaSearchHaystack, withBuiltinFields } from './index.ts'
+import { asImageSrc, asImageSrcList, asAttachment, asAttachmentList, asPerson, personKey, actionVisibleToUser, emptySchemaValue, hasCollectionDeleteQuery, isReservedSchemaFieldKey, isReservedSchemaFieldLabel, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, retagSchemaValue, schemaSearchHaystack, withBuiltinFields } from './index.ts'
 
 test('asImageSrc keeps http, data:image, and same-origin image paths', () => {
   assert.equal(asImageSrc('https://example.com/a.png'), 'https://example.com/a.png')
@@ -77,6 +77,10 @@ test('reserved schema fields include 合集 / facet by key or label', () => {
   assert.equal(isReservedSchemaFieldKey('dependsOn'), true)
   assert.equal(isReservedSchemaFieldLabel('Parent ID'), true)
   assert.equal(isReservedSchemaFieldLabel('Dependency'), true)
+  assert.equal(isReservedSchemaFieldKey('createdBy'), true)
+  assert.equal(isReservedSchemaFieldKey('updatedBy'), true)
+  assert.equal(isReservedSchemaFieldLabel('创建人'), true)
+  assert.equal(isReservedSchemaFieldLabel('编辑人'), true)
 })
 
 test('normalizeSchemaPack keeps nested facet fields and action', () => {
@@ -121,6 +125,9 @@ test('withBuiltinFields always includes writable facet and tags', () => {
   assert.equal(fields.parentId?.label, 'Parent ID')
   assert.equal(fields.dependsOn?.type, 'multi-select')
   assert.equal(fields.dependsOn?.writable, true)
+  assert.equal(fields.createdBy?.type, 'person')
+  assert.equal(fields.createdBy?.writable, true)
+  assert.equal(fields.updatedBy?.type, 'person')
 })
 
 test('recordBuiltinValues fills required record columns', () => {
@@ -132,6 +139,8 @@ test('recordBuiltinValues fills required record columns', () => {
     facet: { tags: [], values: {} },
     parentId: '',
     dependsOn: [],
+    createdBy: null,
+    updatedBy: null,
   })
   assert.equal(recordBuiltinValues({ createdAt: 10, emoji: '📄' }).emoji, '📄')
   assert.deepEqual(recordBuiltinValues({ tags: ['a', 'a', ''] }).tags, ['a'])
@@ -142,13 +151,17 @@ test('recordBuiltinValues fills required record columns', () => {
 test('required record fields are icon, tags, timestamps, facet, parent, and dependency', () => {
   assert.deepEqual([...REQUIRED_RECORD_FIELD_KEYS].sort(), [
     'createdAt',
+    'createdBy',
     'dependsOn',
     'emoji',
     'facet',
     'parentId',
     'tags',
     'updatedAt',
+    'updatedBy',
   ])
+  assert.equal(REQUIRED_RECORD_FIELDS.createdBy.type, 'person')
+  assert.equal(REQUIRED_RECORD_FIELDS.updatedBy.type, 'person')
   assert.equal(REQUIRED_RECORD_FIELDS.emoji.type, 'string')
   assert.equal(REQUIRED_RECORD_FIELDS.tags.type, 'multi-select')
   assert.equal(REQUIRED_RECORD_FIELDS.facet.type, 'facet')
@@ -156,6 +169,13 @@ test('required record fields are icon, tags, timestamps, facet, parent, and depe
   assert.equal(REQUIRED_RECORD_FIELDS.updatedAt.type, 'datetime')
   assert.equal(REQUIRED_RECORD_FIELDS.parentId.type, 'string')
   assert.equal(REQUIRED_RECORD_FIELDS.dependsOn.type, 'multi-select')
+})
+
+test('asPerson reads user, system, and agent session ids', () => {
+  assert.deepEqual(asPerson('用户'), { kind: 'user', name: '用户' })
+  assert.deepEqual(asPerson('系统'), { kind: 'system', name: '系统' })
+  assert.equal(personKey(asPerson({ kind: 'agent', name: '指挥', sessionId: 's1' })), 's1')
+  assert.equal(asPerson(''), null)
 })
 
 test('hasCollectionDeleteQuery requires ids, q, or a non-empty filter', () => {

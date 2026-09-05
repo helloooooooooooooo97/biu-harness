@@ -3,6 +3,7 @@ import { Service, type Context } from 'cordis'
 import {
   DATABASE_CHANNEL,
   asAttachmentList,
+  asPerson,
   asHttpHref,
   asImageSrc,
   asImageSrcList,
@@ -24,6 +25,7 @@ import {
   type DbRecord,
   type FieldSpec,
   type ListPage,
+  type PersonValue,
 } from '@biu/type-file-system'
 import { SavedViewsStore, viewsCollection, type StoredView } from './saved-views.ts'
 import { FacetStore, FILE_SYSTEM_SQLITE } from './facets-store.ts'
@@ -188,6 +190,12 @@ function coerceList(value: unknown) {
   throw new Error('expected string list')
 }
 
+function currentPerson(): PersonValue {
+  const sid = currentSessionId()?.trim()
+  if (sid) return { kind: 'agent', name: sid.slice(0, 8), sessionId: sid }
+  return { kind: 'user', name: '用户' }
+}
+
 function coerceUrl(value: unknown) {
   const text = String(value ?? '').trim()
   if (!text) return ''
@@ -210,6 +218,12 @@ function coerce(field: FieldSpec, value: unknown) {
     return n
   }
   if (kind === 'url') return coerceUrl(value)
+  if (kind === 'person') {
+    if (value == null || value === '') return null
+    const person = asPerson(value)
+    if (!person) throw new Error('expected person')
+    return person
+  }
   if (kind === 'image') {
     if (value == null || value === '') return ''
     const list = asImageSrcList(value)
@@ -562,8 +576,19 @@ export class DatabaseService extends Service implements Database {
 
   private decorateRecord(spec: CollectionSpec, row: DbRecord): DbRecord {
     const withFacet = this.applyFacetOverlay(spec, row)
-    if (this.collectionCanUpdate(spec)) return withFacet
-    return this.applyMetaOverlay(spec, withFacet)
+    const withPeople = this.applyPersonOverlay(spec, withFacet)
+    if (this.collectionCanUpdate(spec)) return withPeople
+    return this.applyMetaOverlay(spec, withPeople)
+  }
+
+  private applyPersonOverlay(spec: CollectionSpec, row: DbRecord): DbRecord {
+    const meta = this.facets.recordMeta(spec.path, row.id)
+    if (!meta) return row
+    return {
+      ...row,
+      ...(meta.createdBy ? { createdBy: meta.createdBy } : {}),
+      ...(meta.updatedBy ? { updatedBy: meta.updatedBy } : {}),
+    }
   }
 
   private applyFacetOverlay(spec: CollectionSpec, row: DbRecord): DbRecord {
@@ -619,7 +644,7 @@ export class DatabaseService extends Service implements Database {
     const raw = parseContent(content)
     if (!this.collectionCanUpdate(spec)) {
       const keys = Object.keys(raw)
-      const overlayKeys = new Set(['facet', 'emoji', 'tags'])
+      const overlayKeys = new Set(['facet', 'emoji', 'tags', 'createdBy', 'updatedBy'])
       if (!keys.length || keys.some((key) => !overlayKeys.has(key))) {
         throw new Error(`collection cannot update: ${spec.path}`)
       }
@@ -650,6 +675,17 @@ export class DatabaseService extends Service implements Database {
           ...(meta.tags !== null ? { tags: meta.tags } : {}),
         }
       }
+      if ('createdBy' in raw || 'updatedBy' in raw) {
+        const meta = this.facets.writeRecordMeta(spec.path, current.id, {
+          ...('createdBy' in raw ? { createdBy: asPerson(coerce(schema.fields.createdBy!, raw.createdBy)) } : {}),
+          ...('updatedBy' in raw ? { updatedBy: asPerson(coerce(schema.fields.updatedBy!, raw.updatedBy)) } : {}),
+        })
+        next = {
+          ...next,
+          ...(meta.createdBy ? { createdBy: meta.createdBy } : {}),
+          ...(meta.updatedBy ? { updatedBy: meta.updatedBy } : {}),
+        }
+      }
       this.bump()
       return {
         kind: 'record' as const,
@@ -658,7 +694,17 @@ export class DatabaseService extends Service implements Database {
       }
     }
     const patch = pickWritablePatch(schema, raw)
+    const actor = currentPerson()
+    if (!('updatedBy' in patch) && schema.fields.updatedBy) patch.updatedBy = actor
+    if (schema.fields.createdBy && !('createdBy' in patch)) {
+      const existing = this.facets.recordMeta(spec.path, parts[1]!)
+      if (!existing?.createdBy) patch.createdBy = actor
+    }
     let record = await spec.update(parts[1]!, patch)
+    this.facets.writeRecordMeta(spec.path, record.id, {
+      ...('createdBy' in patch ? { createdBy: asPerson(patch.createdBy) } : {}),
+      updatedBy: asPerson(patch.updatedBy) ?? currentPerson(),
+    })
     if (spec.path === '/facets' && schema.fields.facet && 'facet' in patch) {
       const nextFacet = coerce(schema.fields.facet, patch.facet)
       const labelKey = schema.labelField ?? 'title'
@@ -672,7 +718,7 @@ export class DatabaseService extends Service implements Database {
     }
     this.indexFacetRecord(spec, this.decorateRecord(spec, record))
     this.bump()
-    return { kind: 'record' as const, path: `${spec.path}/${record.id}`, value: withoutContent(spec, record) }
+    return { kind: 'record' as const, path: `${spec.path}/${record.id}`, value: withoutContent(spec, this.decorateRecord(spec, record)) }
   }
 
   async create(path: string, content?: unknown) {
@@ -682,9 +728,21 @@ export class DatabaseService extends Service implements Database {
     if (!spec) throw new Error(`unknown collection: /${parts[0]}`)
     if (!spec.records?.create || !spec.create) throw new Error(`collection cannot create: ${spec.path}`)
     const schema = schemaFor(spec)
-    const records = parseRecords(content).map((row) => pickWritablePatch(schema, row))
+    const actor = currentPerson()
+    const records = parseRecords(content).map((row) => {
+      const patch = pickWritablePatch(schema, row)
+      if (!asPerson(patch.createdBy)) patch.createdBy = actor
+      if (!asPerson(patch.updatedBy)) patch.updatedBy = asPerson(patch.createdBy) ?? actor
+      return patch
+    })
     const created = await spec.create(records)
-    for (const record of created) this.indexFacetRecord(spec, record)
+    for (const record of created) {
+      this.facets.writeRecordMeta(spec.path, record.id, {
+        createdBy: asPerson(record.createdBy) ?? asPerson(records.find((item) => item.id === record.id)?.createdBy) ?? actor,
+        updatedBy: asPerson(record.updatedBy) ?? asPerson(record.createdBy) ?? actor,
+      })
+      this.indexFacetRecord(spec, record)
+    }
     this.bump()
     return {
       kind: 'created' as const,
@@ -692,7 +750,7 @@ export class DatabaseService extends Service implements Database {
       items: created.map((record) => ({
         kind: 'record' as const,
         path: `${spec.path}/${record.id}`,
-        value: withoutContent(spec, record),
+        value: withoutContent(spec, this.decorateRecord(spec, record)),
       })),
     }
   }

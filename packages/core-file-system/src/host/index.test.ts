@@ -146,6 +146,12 @@ test('every collection schema includes id, title, createdAt and updatedAt', asyn
   assert.equal(stat.schema.fields.dependsOn?.type, 'multi-select')
   assert.equal(stat.schema.fields.dependsOn?.writable, true)
   assert.equal(stat.schema.fields.dependsOn?.label, 'Dependency')
+  assert.equal(stat.schema.fields.createdBy?.type, 'person')
+  assert.equal(stat.schema.fields.createdBy?.writable, true)
+  assert.equal(stat.schema.fields.createdBy?.label, '创建人')
+  assert.equal(stat.schema.fields.updatedBy?.type, 'person')
+  assert.equal(stat.schema.fields.updatedBy?.writable, true)
+  assert.equal(stat.schema.fields.updatedBy?.label, '编辑人')
   assert.equal(stat.schema.contentField, 'content')
   const tagged = await db.update('/notes/n1', { facet: { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } } })
   assert.deepEqual(tagged.value.facet, { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } })
@@ -156,6 +162,47 @@ test('every collection schema includes id, title, createdAt and updatedAt', asyn
   assert.equal(byFilter.items.length, 1)
   await assert.rejects(() => db.update('/notes/n1', { createdAt: Date.now() }), /not writable/)
   await assert.rejects(() => db.update('/notes/n1', { id: 'other' }), /not writable/)
+})
+
+test('updates stamp createdBy and updatedBy from the current actor', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  db.register(notesCollection())
+  const written = await db.update('/notes/n1', { status: 'done' })
+  assert.deepEqual(written.value.createdBy, { kind: 'user', name: '用户' })
+  assert.deepEqual(written.value.updatedBy, { kind: 'user', name: '用户' })
+  const edited = await db.update('/notes/n1', { updatedBy: { kind: 'system', name: '系统' } })
+  assert.deepEqual(edited.value.createdBy, { kind: 'user', name: '用户' })
+  assert.deepEqual(edited.value.updatedBy, { kind: 'system', name: '系统' })
+})
+
+test('person fields accept user system and agent values', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  const rows = new Map<string, Record<string, unknown>>([['n1', { id: 'n1', title: 'a', owner: null }]])
+  db.register({
+    id: 'people',
+    path: '/people',
+    schema: {
+      fields: {
+        ...REQUIRED_RECORD_FIELDS,
+        title: { type: 'string', writable: true },
+        owner: { type: 'person', writable: true },
+      },
+    },
+    list: () => [...rows.values()] as { id: string }[],
+    get: (id) => rows.get(id) as { id: string } | undefined,
+    records: { update: true },
+    update: (id, patch) => {
+      const next = { ...rows.get(id), ...patch, id }
+      rows.set(id, next)
+      return next as { id: string }
+    },
+  })
+  const written = await db.update('/people/n1', { owner: { kind: 'agent', name: '指挥', sessionId: 'sess-1' } })
+  assert.deepEqual(written.value.owner, { kind: 'agent', name: '指挥', sessionId: 'sess-1' })
+  const system = await db.update('/people/n1', { owner: '系统' })
+  assert.deepEqual(system.value.owner, { kind: 'system', name: '系统' })
 })
 
 test('update accepts url image and attachment values', async () => {

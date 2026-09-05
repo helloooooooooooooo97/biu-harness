@@ -450,7 +450,7 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-thumbs{display:inline-flex;align-items:center;gap:2px;min-width:0;max-width:100%}
 .fsdb-fileview-imgs{display:flex;flex-wrap:wrap;gap:8px}
 .fsdb-cell-pop{box-sizing:border-box;padding:8px;background:#202020;border:1px solid var(--dsw-border);border-radius:8px;box-shadow:0 1px 2px rgba(15,15,15,.04),0 10px 32px rgba(0,0,0,.28);display:flex;flex-direction:column;gap:8px;max-height:min(70vh,480px);overflow:auto;font-size:14px}
-.fsdb-cell-pop.is-select,.fsdb-cell-pop.is-multi-select,.fsdb-cell-pop.is-facet,.fsdb-cell-pop.is-attachment{min-width:260px;padding:8px}
+.fsdb-cell-pop.is-select,.fsdb-cell-pop.is-multi-select,.fsdb-cell-pop.is-facet,.fsdb-cell-pop.is-attachment,.fsdb-cell-pop.is-person{min-width:260px;padding:8px}
 .fsdb-cell-pop.is-string,.fsdb-cell-pop.is-title,.fsdb-cell-pop.is-number{padding:6px 8px}
 .fsdb-cell-pop-tags{display:flex;flex-direction:column;gap:8px;min-width:0}
 .fsdb-cell-pop-picked{display:flex;min-width:0}
@@ -469,6 +469,16 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-media-pick-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-media-pick:hover{background:transparent}
 .fsdb-media-error{display:none}
+.fsdb-person{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%}
+.fsdb-person.is-empty{color:var(--dsw-label-3)}
+.fsdb-person-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fsdb-person-face{display:inline-flex;flex:none;line-height:0}
+.fsdb-person-avatar{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex:none;border-radius:50%;background:var(--dsw-hover);color:var(--dsw-label-2)}
+.fsdb-person-pick{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fsdb-person-option{display:flex;align-items:center;gap:6px;width:100%;margin:0;border:0;border-radius:5px;padding:5px 6px;background:transparent;color:var(--dsw-label);font:inherit;cursor:pointer;text-align:left}
+.fsdb-person-option:hover{background:var(--dsw-hover)}
+.fsdb-person-option.is-selected{background:color-mix(in srgb,var(--dsw-pick) 14%,transparent)}
+.fsdb-person-loading{display:flex;align-items:center;gap:6px;padding:6px;color:var(--dsw-label-3);font-size:12px}
 @media (max-width:900px){.fsdb-page{flex-direction:column}.fsdb-views{width:100%}}
 `
 

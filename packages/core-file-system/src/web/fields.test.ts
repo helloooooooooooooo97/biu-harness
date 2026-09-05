@@ -2,7 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import type { CollectionSchema } from '@biu/type-file-system'
 import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
-import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, parentFieldKey, readFacetFlatValue, resolveFieldType, uniqueValues } from './fields'
+import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, inferPackFieldType, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, parentFieldKey, readFacetFlatValue, resolveFieldType, uniqueValues } from './fields'
 import { visibleActions } from './fsdb-cells.tsx'
 
 test('isViewModeId accepts builtin and custom slugs', () => {
@@ -65,6 +65,9 @@ test('formatField renders datetime tags and media', () => {
   assert.equal(formatField({ type: 'url' }, 'https://example.com/x'), 'https://example.com/x')
   assert.equal(formatField({ type: 'url' }, 'javascript:alert(1)'), '')
   assert.equal(formatField({ type: 'attachment' }, { name: 'a.pdf', href: 'https://cdn.example/a.pdf' }), 'a.pdf')
+  assert.equal(formatField({ type: 'person' }, { kind: 'user', name: '用户' }), '用户')
+  assert.equal(formatField({ type: 'person' }, { kind: 'system', name: '系统' }), '系统')
+  assert.equal(inferPackFieldType({ kind: 'user', name: '用户' }), 'person')
 })
 
 test('matchActionWhen uses field equality including booleans', () => {
@@ -244,6 +247,10 @@ test('defaultColumnKeys omits parentId', () => {
     fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string' }, parentId: { type: 'string' }, status: { type: 'select' } },
   }
   assert.deepEqual(defaultColumnKeys(treeSchema, ['title', 'parentId', 'dependsOn', 'status', 'createdAt']), ['title', 'status'])
+  assert.deepEqual(
+    defaultColumnKeys(treeSchema, ['title', 'createdBy', 'updatedBy', 'status']),
+    ['title', 'status'],
+  )
 })
 
 test('uniqueValues lists tags already on the table, not schema enum', () => {
