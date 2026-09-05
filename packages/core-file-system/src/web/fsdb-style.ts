@@ -29,8 +29,9 @@ const CSS = `
 .fsdb-right-body{display:flex;min-width:0;min-height:0;flex:1;flex-direction:column;overflow:auto}
 .fsdb-right-body .app-pane-in{display:flex;flex-direction:column;min-width:0;min-height:0;flex:1}
 .fsdb-right-body:has(.fsdb-detail-stage) .app-pane-in{flex:none;width:100%;align-self:stretch;min-height:min-content;height:auto;overflow:visible}
-.fsdb-right-body:has(.fsdb-pager){overflow:hidden}
-.fsdb-right-body:has(.fsdb-pager)>*,.fsdb-right-body:has(.fsdb-pager) .fsdb-main{display:flex;flex-direction:column;min-height:0;flex:1;height:100%;overflow:hidden}
+.fsdb-right-body:has(> * > .fsdb-workspace > .fsdb-pager){overflow:hidden}
+.fsdb-right-body:has(> * > .fsdb-workspace > .fsdb-pager)>*,.fsdb-right-body:has(> * > .fsdb-workspace > .fsdb-pager) .fsdb-main{display:flex;flex-direction:column;min-height:0;flex:1;height:100%;overflow:hidden}
+.fsdb-right-body:has(.fsdb-detail-stage){overflow:auto}
 .fsdb-views{display:flex;width:100%;max-width:none;min-width:0;flex:1;flex-direction:column;min-height:0;overflow:hidden;box-sizing:border-box}
 .fsdb-page>.fsdb-views{width:var(--sidebar-col,var(--dsw-sidebar-min,160px));max-width:var(--dsw-sidebar-max,360px);flex:none}
 .fsdb-views .chat-session-row-main{border:0;background:transparent;color:inherit;cursor:default}
@@ -289,8 +290,8 @@ const CSS = `
 .fsdb-detail-float-btn:disabled{opacity:.3;cursor:default}
 .fsdb-detail-split{display:flex;flex-direction:column;flex:none;width:100%;min-height:min-content;overflow:visible}
 .fsdb-detail-main{box-sizing:border-box;width:100%;max-width:var(--dsw-chat-max-width);margin-inline:auto;display:flex;flex-direction:column;gap:8px;padding:80px 80px 24px;min-width:0}
-.fsdb-tag-collect{display:flex;flex:1;min-width:0;min-height:320px}
-.fsdb-tag-collect>.fsdb-page{flex:1;min-width:0;min-height:0;background:transparent}
+.fsdb-tag-collect{display:flex;flex:none;min-width:0;width:100%;min-height:320px}
+.fsdb-tag-collect>.fsdb-page{flex:1;min-width:0;min-height:320px;background:transparent}
 .fsdb-page.is-sheet .tasks-main{padding:0 0 0 var(--fsdb-check-gutter);gap:8px;max-width:none}
 .fsdb-page.is-sheet .fsdb-right-body{overflow:hidden}
 .fsdb-detail-aside{display:flex;flex-direction:column;gap:2px;padding:0 0 12px}
