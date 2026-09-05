@@ -191,6 +191,8 @@ test('update accepts url image and attachment values', async () => {
   assert.equal(local.value.cover, '/page-covers/red.png')
   const many = await db.update('/media/n1', { cover: ['/page-covers/red.png', 'https://example.com/b.png'] })
   assert.deepEqual(many.value.cover, ['/page-covers/red.png', 'https://example.com/b.png'])
+  const emptyPack = await db.update('/media/n1', { file: { name: '', href: '', bytes: 0 } })
+  assert.equal(emptyPack.value.file, '')
   await assert.rejects(() => db.update('/media/n1', { link: 'javascript:alert(1)' }), /expected url/)
   await assert.rejects(() => db.update('/media/n1', { cover: 'javascript:alert(1)' }), /expected image/)
 })

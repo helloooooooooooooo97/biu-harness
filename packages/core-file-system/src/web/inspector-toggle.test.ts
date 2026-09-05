@@ -184,6 +184,7 @@ test('deletable tables can pick rows and bulk-delete next to refresh', () => {
   assert.match(popDraft, /fsdb-cell-pop-text/)
   assert.match(popDraft, /kind === 'facet'/)
   assert.match(popDraft, /retagSchemaValue\(parsed, resolved\)/)
+  assert.match(popDraft, /sameDraft\(next, initial\)/)
   assert.doesNotMatch(popDraft, /SchemaFieldEditor/)
   assert.doesNotMatch(browser, /if \(pop\) return <DefaultCell field=\{field\} value=\{row\[key\]\}/)
   const pop = readFileSync(resolve(import.meta.dirname, './cell-pop.tsx'), 'utf8')

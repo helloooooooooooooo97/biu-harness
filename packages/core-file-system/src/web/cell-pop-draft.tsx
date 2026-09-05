@@ -142,6 +142,15 @@ function FacetPickPanel({ value, onChange }: { value: unknown; onChange: (next: 
   )
 }
 
+function sameDraft(left: unknown, right: unknown) {
+  if (left === right) return true
+  try {
+    return JSON.stringify(left) === JSON.stringify(right)
+  } catch {
+    return false
+  }
+}
+
 export function CellPopDraft({
   record: _record,
   fieldKey,
@@ -174,12 +183,14 @@ export function CellPopDraft({
     rawRef.current = next
     setRaw(next)
     if (nextText != null) setText(nextText)
-    if (live) onSubmitRef.current(next)
+    if (live && !sameDraft(next, initial)) onSubmitRef.current(next)
   }
 
   useEffect(
     () => () => {
-      onSubmitRef.current(rawRef.current)
+      const next = rawRef.current
+      if (sameDraft(next, initial)) return
+      onSubmitRef.current(next)
     },
     [],
   )

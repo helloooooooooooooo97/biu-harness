@@ -213,7 +213,7 @@ function coerce(field: FieldSpec, value: unknown) {
   if (kind === 'attachment') {
     if (value == null || value === '') return ''
     const file = asAttachment(value)
-    if (!file) throw new Error('expected attachment')
+    if (!file) return ''
     return typeof value === 'object' ? file : file.href
   }
   if (kind === 'file') {
