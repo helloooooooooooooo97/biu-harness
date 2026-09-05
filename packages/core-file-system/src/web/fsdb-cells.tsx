@@ -5,7 +5,9 @@ import {
   ArchiveBoxArrowDownIcon,
   ArrowPathIcon,
   Bars3BottomLeftIcon,
+  BoltIcon,
   CalendarDaysIcon,
+  ChatBubbleLeftRightIcon,
   CheckIcon,
   DocumentTextIcon,
   HashtagIcon,
@@ -49,7 +51,8 @@ export function actionIcon(id: string) {
   if (id === 'edit' || id === 'rename') return <PencilSquareIcon aria-hidden className={cls} />
   if (id === 'refresh') return <ArrowPathIcon aria-hidden className={cls} />
   if (id === 'deliver') return <PaperAirplaneIcon aria-hidden className={cls} />
-  return null
+  if (id === 'report' || id === 'progress') return <ChatBubbleLeftRightIcon aria-hidden className={cls} />
+  return <BoltIcon aria-hidden className={cls} />
 }
 
 export function ModeGlyph({ id, extra }: { id: ViewMode; extra?: CollectionViewType[] }) {

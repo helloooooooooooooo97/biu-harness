@@ -103,6 +103,7 @@ export function RecordDetail({
   canPrev,
   canNext,
   headingOutline = true,
+  toolbar,
 }: {
   selected: DbRecord
   schema: CollectionSchema
@@ -121,6 +122,7 @@ export function RecordDetail({
   canPrev?: boolean
   canNext?: boolean
   headingOutline?: boolean
+  toolbar?: ReactNode
 }) {
   useEffect(() => {
     const onTitle = () => {
@@ -168,6 +170,7 @@ export function RecordDetail({
                     })
                   }}
                 />
+                <div className="fsdb-detail-title-block">
                 {schema.labelField && schema.fields[schema.labelField]?.writable ? (
                   <h1 className="fsdb-detail-title">
                     <LocalText
@@ -195,6 +198,8 @@ export function RecordDetail({
                 ) : (
                   <h1 className="fsdb-detail-title">{labelOf(selected)}</h1>
                 )}
+                {toolbar}
+                </div>
                 </div>
                 <div className="fsdb-detail-aside">
                   <div className="fsdb-prop">

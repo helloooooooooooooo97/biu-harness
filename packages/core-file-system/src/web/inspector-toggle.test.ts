@@ -139,6 +139,15 @@ test('table title opens record from the title-side button', () => {
 test('title cell row tools skip the overflow action menu', () => {
   assert.match(browser, /if \(place === 'row'\)/)
   assert.match(browser, /rowShown\.map\(renderOne\)/)
+  assert.match(browser, /toolbar=\{<RecordActions row=\{selected\} place="detail" \/>\}/)
+  assert.match(browser, /data-testid="fsdb-detail-actions"/)
+  assert.doesNotMatch(browser, /selected \? <RecordActions row=\{selected\} place="detail" \/> : null/)
+  const detail = readFileSync(resolve(import.meta.dirname, './record-detail.tsx'), 'utf8')
+  assert.match(detail, /toolbar/)
+  assert.match(detail, /fsdb-detail-title-block/)
+  const css = readFileSync(resolve(import.meta.dirname, './fsdb-style.ts'), 'utf8')
+  assert.match(css, /\.fsdb-detail-action\{/)
+  assert.match(css, /\.fsdb-detail-actions\{/)
 })
 
 test('deletable tables can pick rows and bulk-delete next to refresh', () => {
