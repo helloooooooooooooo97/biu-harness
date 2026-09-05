@@ -42,7 +42,7 @@ import {
 } from './content-edit.ts'
 import { currentSessionId } from '@biu/host-sessions/scope'
 import { databaseRevealForTool, normalizeCollectionPath } from '../paths.ts'
-import { AGENT_DB_STAT_BLURB, compactAgentToolResult } from './agent-payload.ts'
+import { AGENT_DB_STAT_BLURB, compactAgentToolResult, compactAgentWriteResult } from './agent-payload.ts'
 
 function publicAction(action: CollectionAction): CollectionActionInfo {
   const { run: _run, ...info } = action
@@ -1193,7 +1193,7 @@ export function apply(ctx: Context) {
   })
   ctx.tools.register({
     name: 'db_update',
-    description: '按表结构 schema 的可写字段更新一条已有记录，路径为 /<表>/<id>。合集（facet 字段）在所有表都可写，包括 records.update 为 false 的表（如 /plugins）；其它字段仍看 caps。新建用 db_create，正文用 db_content。改合集属性用 db_update path=/facets/<id> content.fields。',
+    description: '按表结构 schema 的可写字段更新一条已有记录，路径为 /<表>/<id>。成功只返回 {ok, path}，不回整行。合集（facet 字段）在所有表都可写，包括 records.update 为 false 的表（如 /plugins）；其它字段仍看 caps。新建用 db_create，正文用 db_content。改合集属性用 db_update path=/facets/<id> content.fields。',
     parameters: {
       type: 'object',
       properties: {
@@ -1202,11 +1202,14 @@ export function apply(ctx: Context) {
       },
       required: ['path', 'content'],
     },
-    execute: (args) => withInspectorReveal(ctx, String(args.path), () => db.update(String(args.path), args.content)),
+    execute: (args) =>
+      withInspectorReveal(ctx, String(args.path), () => db.update(String(args.path), args.content)).then(
+        compactAgentWriteResult,
+      ),
   })
   ctx.tools.register({
     name: 'db_create',
-    description: '在已登记且允许新建的表中批量新增记录。路径为 /<表>，records 为对象数组。能否新建看 db_stat 的 caps 与 schema.records。新建合集用 db_create path=/facets records=[{title}]。',
+    description: '在已登记且允许新建的表中批量新增记录。路径为 /<表>，records 为对象数组。成功返回 {ok, path, ids}，不回整行。能否新建看 db_stat 的 caps。新建合集用 db_create path=/facets records=[{title}]。',
     parameters: {
       type: 'object',
       properties: {
@@ -1215,7 +1218,10 @@ export function apply(ctx: Context) {
       },
       required: ['path', 'records'],
     },
-    execute: (args) => withInspectorReveal(ctx, String(args.path), () => db.create(String(args.path), asCreateRecords(args))),
+    execute: (args) =>
+      withInspectorReveal(ctx, String(args.path), () => db.create(String(args.path), asCreateRecords(args))).then(
+        compactAgentWriteResult,
+      ),
   })
   ctx.tools.register({
     name: 'db_delete',
@@ -1230,12 +1236,15 @@ export function apply(ctx: Context) {
       },
       required: ['path'],
     },
-    execute: (args) => withInspectorReveal(ctx, String(args.path), () => db.remove(String(args.path), asDeleteQuery(args)), true),
+    execute: (args) =>
+      withInspectorReveal(ctx, String(args.path), () => db.remove(String(args.path), asDeleteQuery(args)), true).then(
+        compactAgentWriteResult,
+      ),
   })
   ctx.tools.register({
     name: 'db_action',
     description:
-      '对一条记录执行该表登记的动作。路径为 /<表>/<id>，action 为动作 id（见 db_stat 的 schema.actions）。需要参数时放在 args。任务派工/汇报、会话压缩/进度、插件创建/打包一律走这里。',
+      '对一条记录执行该表登记的动作。路径为 /<表>/<id>，action 为动作 id（见 db_stat 的 schema.actions）。成功返回 {ok, path}，有返回值时带 result，不回整行。需要参数时放在 args。任务派工/汇报、会话压缩/进度、插件创建/打包一律走这里。',
     parameters: {
       type: 'object',
       properties: {
@@ -1254,7 +1263,7 @@ export function apply(ctx: Context) {
             ? (args.args as Record<string, unknown>)
             : undefined,
         ),
-      ),
+      ).then(compactAgentWriteResult),
   })
   ctx.tools.register({
     name: 'db_stat',

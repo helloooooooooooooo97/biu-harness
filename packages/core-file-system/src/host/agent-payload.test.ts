@@ -1,7 +1,7 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { REQUIRED_RECORD_FIELDS, withBuiltinFields, type CollectionSchema } from '@biu/type-file-system'
-import { compactAgentSchema, compactAgentToolResult } from './agent-payload.ts'
+import { compactAgentSchema, compactAgentToolResult, compactAgentWriteResult } from './agent-payload.ts'
 
 function notesSchema(): CollectionSchema {
   const fields = withBuiltinFields({
@@ -119,4 +119,28 @@ test('compact list uses columns once; drops empty and path/kind', () => {
     ['n1', '草稿'],
     ['n2', '另一篇'],
   ])
+})
+
+test('compact write drops full record; create keeps ids', () => {
+  const updated = compactAgentWriteResult({
+    kind: 'record',
+    path: '/notes/n1',
+    value: { id: 'n1', title: '草稿', status: 'open', createdAt: 'x' },
+  }) as Record<string, unknown>
+  assert.deepEqual(updated, { ok: true, path: '/notes/n1' })
+
+  const acted = compactAgentWriteResult({
+    kind: 'record',
+    path: '/notes/n1',
+    value: { id: 'n1', title: '草稿' },
+    result: { assigned: true },
+  }) as Record<string, unknown>
+  assert.deepEqual(acted, { ok: true, path: '/notes/n1', result: { assigned: true } })
+
+  const created = compactAgentWriteResult({
+    kind: 'created',
+    path: '/notes',
+    items: [{ kind: 'record', path: '/notes/n3', value: { id: 'n3', title: '新' } }],
+  }) as Record<string, unknown>
+  assert.deepEqual(created, { ok: true, path: '/notes', ids: ['n3'] })
 })

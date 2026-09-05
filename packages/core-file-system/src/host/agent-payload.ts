@@ -143,6 +143,36 @@ export function compactAgentToolResult(result: unknown) {
   return result
 }
 
+function createdIds(items: unknown) {
+  if (!Array.isArray(items)) return [] as string[]
+  const ids: string[] = []
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue
+    const row = item as { path?: unknown; value?: { id?: unknown } }
+    const id = typeof row.value?.id === 'string'
+      ? row.value.id
+      : typeof row.path === 'string'
+        ? row.path.slice(row.path.lastIndexOf('/') + 1)
+        : ''
+    if (id) ids.push(id)
+  }
+  return ids
+}
+
+/** 写操作 Agent 已提交过字段，回包只确认路径；新建补 ids，动作补 result。 */
+export function compactAgentWriteResult(result: unknown) {
+  if (!result || typeof result !== 'object' || Array.isArray(result)) return result
+  const rec = result as Record<string, unknown>
+  if (rec.kind === 'record') {
+    const next: Record<string, unknown> = { ok: true, path: rec.path }
+    if (rec.result !== undefined) next.result = rec.result
+    return next
+  }
+  if (rec.kind === 'created') return { ok: true, path: rec.path, ids: createdIds(rec.items) }
+  if (rec.kind === 'deleted') return { ok: true, path: rec.path, ids: rec.ids ?? [] }
+  return result
+}
+
 export const AGENT_DB_STAT_BLURB =
   '查看路径元数据。根目录列出表。表路径返回相对默认的 schema：每张表都有 id、title（标题）、createdAt、updatedAt、emoji、tags、facet、parentId（父级）、dependsOn、createdBy、updatedBy；正文默认字段 content（file，用 db_content）。fields 只含本表多出来的列，或覆盖了这些默认的列。caps 表示能否 list/read/update/create/delete/action/content。'
 

@@ -546,6 +546,12 @@ test('agent db_stat omits builtin fields; service stat and list still include th
   assert.ok(agentList.columns?.includes('title'))
   assert.equal(agentList.columns?.includes('path'), false)
   assert.ok((agentList.rows?.length ?? 0) >= 1)
+  const updated = (await ctx.tools.invoke('db_update', { path: '/notes/n1', content: { status: 'done' } })) as {
+    ok?: boolean
+    path?: string
+    value?: unknown
+  }
+  assert.deepEqual(updated, { ok: true, path: '/notes/n1' })
 })
 
 
@@ -604,11 +610,11 @@ test('db_create /views reveals the source table and view', async () => {
       path: '/views',
       records: [{ tablePath: '/notes', title: '看板', mode: 'graph' }],
     }),
-  )
-  const row = (created as { items: Array<{ value: { tablePath?: string; viewId?: string; title?: string } }> }).items[0]?.value
-  assert.equal(row?.tablePath, '/notes')
-  assert.equal(row?.title, '看板')
-  assert.equal(typeof row?.viewId, 'string')
+  ) as { ids?: string[] }
+  const id = created.ids?.[0]
+  assert.equal(typeof id, 'string')
+  const viewId = String(id).split('::')[1]
+  assert.equal(typeof viewId, 'string')
   const done = [...seen].reverse().find((item) => {
     const payload = item.payload as { phase?: string; reveal?: { collection?: string; viewId?: string } }
     return item.type === 'database' && payload?.phase === 'done' && payload.reveal?.collection === '/notes'
@@ -619,7 +625,7 @@ test('db_create /views reveals the source table and view', async () => {
     savedView?: { name?: string; mode?: string }
   }
   assert.equal(payload.sessionId, 's1')
-  assert.equal(payload.reveal?.viewId, row?.viewId)
+  assert.equal(payload.reveal?.viewId, viewId)
   assert.equal(payload.savedView?.name, '看板')
   assert.equal(payload.savedView?.mode, 'graph')
 })
