@@ -106,7 +106,7 @@ export function RecordLinkChips({
   return (
     <span className="fsdb-ref-chips">
       {ids.map((id) => {
-        const label = labelOfId(id)
+        const label = labelOfId(id).replace(/\s+/g, ' ').trim()
         return (
           <button
             key={id}
