@@ -41,14 +41,7 @@ export function isBuiltinAllViewId(id: string) {
 }
 
 export function isReadOnlyViewId(id: string) {
-  return isBuiltinAllViewId(id) || isBuiltinCatalogViewId(id) || isBuiltinTagViewId(id) || isBuiltinEventsViewId(id)
-}
-
-export const EVENTS_TRAJ_VIEW_ID = 'builtin-traj:/events'
-export const EVENTS_USAGE_VIEW_ID = 'builtin-usage:/events'
-
-export function isBuiltinEventsViewId(id: string) {
-  return id === EVENTS_TRAJ_VIEW_ID || id === EVENTS_USAGE_VIEW_ID
+  return isBuiltinAllViewId(id) || isBuiltinCatalogViewId(id) || isBuiltinTagViewId(id)
 }
 
 export function collectionNoun(table: TableRef) {

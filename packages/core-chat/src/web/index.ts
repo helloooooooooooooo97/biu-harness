@@ -15,7 +15,6 @@ import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
 import type { PickService } from '@biu/core-pick/web'
 import type { DatabaseUi } from '@biu/type-file-system/ui'
 import { sessionsChrome } from './sessions-chrome.tsx'
-import { eventsChrome, eventsTrajViewType, eventsUsageViewType } from './events-views.tsx'
 
 export const name = 'chat-ui'
 export const inject = ['slots', 'sessionView', 'projectView']
@@ -89,14 +88,8 @@ export function apply(ctx: Context) {
   ctx.inject(['databaseUi'], (inner) => {
     const ui = inner.get('databaseUi') as DatabaseUi
     const sessions = ui.decorate('/sessions', sessionsChrome())
-    const events = ui.decorate('/events', eventsChrome)
-    const traj = ui.registerView('/events', eventsTrajViewType)
-    const usage = ui.registerView('/events', eventsUsageViewType)
     return () => {
       sessions.dispose()
-      events.dispose()
-      traj.dispose()
-      usage.dispose()
     }
   })
 }

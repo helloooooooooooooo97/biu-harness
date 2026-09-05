@@ -67,7 +67,7 @@ export function eventsCollection(sessions: SessionsLike): CollectionSpec {
       route: '/db-events',
       title: '事件',
       inspector: false,
-      blurb: '会话时间线日志。每一行是某会话里的一条 seq。列表 db_list /events（可用 filter.sessionId 只看一个会话，q 搜 type/摘要）。轨迹和用量是本表的特殊呈现。只读，没有 db_action。',
+      blurb: '会话时间线日志。每一行是某会话里的一条 seq。列表 db_list /events（可用 filter.sessionId 只看一个会话，q 搜 type/摘要）。只读，没有 db_action。',
       order: 19,
       icon: 'bolt',
     },
