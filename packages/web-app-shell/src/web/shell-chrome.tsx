@@ -123,6 +123,16 @@ export function ShellSidePlaces({
   return (
     <div className="app-side-actions shell-side-places" role="navigation" aria-label="面板" data-testid="shell-side-places">
       <SideAction
+        title="搜索"
+        active={searchOpen}
+        testId="chrome-search"
+        icon={<MagnifyingGlassIcon {...chromeIcon} />}
+        onClick={() => {
+          setNotifyOpen(false)
+          onSearch?.()
+        }}
+      />
+      <SideAction
         title="会话"
         active={activeId === 'agent'}
         testId="chrome-chat-panel"
@@ -138,16 +148,6 @@ export function ShellSidePlaces({
         testId="chrome-data-panel"
         icon={<CircleStackIcon {...chromeIcon} />}
         onClick={() => navigate('/database')}
-      />
-      <SideAction
-        title="搜索"
-        active={searchOpen}
-        testId="chrome-search"
-        icon={<MagnifyingGlassIcon {...chromeIcon} />}
-        onClick={() => {
-          setNotifyOpen(false)
-          onSearch?.()
-        }}
       />
       <div className="shell-side-pop-wrap">
         <SideAction
