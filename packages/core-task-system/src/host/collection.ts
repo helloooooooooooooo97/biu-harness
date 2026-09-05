@@ -211,7 +211,7 @@ export function tasksCollection(tasks: TasksLike, recordActions?: TaskRecordActi
         creator: { type: 'string', label: '创建人', writable: true },
         assignee: { type: 'string', label: '执行人', writable: true },
         parentId: { type: 'string', label: '父任务', writable: true },
-        dependsOn: { type: 'multi-select', label: '依赖' },
+        dependsOn: { type: 'multi-select', label: '依赖', writable: true },
       },
     },
     records: { update: true, create: true, delete: true },

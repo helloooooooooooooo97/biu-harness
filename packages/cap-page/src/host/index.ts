@@ -54,6 +54,7 @@ export function pagesCollection(store: PagesStore): CollectionSpec {
         notes: { type: 'file', label: '正文', writable: true },
         score: { type: 'number', label: '得分', computed: true, sortable: true },
         parentId: { type: 'string', label: '父页面', writable: true },
+        dependsOn: { type: 'multi-select', label: 'Dependency', writable: true },
       },
     },
     records: { update: true, create: true, delete: true },

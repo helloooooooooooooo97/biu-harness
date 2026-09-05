@@ -164,7 +164,7 @@ test('groupRecords puts multi-select rows in every matching column', () => {
 })
 
 test('parentFieldKey reads schema then parentId then data links', () => {
-  assert.equal(parentFieldKey(schema), null)
+  assert.equal(parentFieldKey(schema), 'parentId')
   assert.equal(
     parentFieldKey({
       labelField: 'title',
@@ -182,7 +182,7 @@ test('parentFieldKey reads schema then parentId then data links', () => {
   )
   assert.equal(
     parentFieldKey(
-      { labelField: 'title', fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string' }, folder: { type: 'string' } } },
+      { labelField: 'title', parentField: 'folder', fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string' }, folder: { type: 'string' } } },
       [
         { id: 'a', title: 'root', folder: '' },
         { id: 'b', title: 'child', folder: 'a' },
@@ -243,7 +243,7 @@ test('defaultColumnKeys omits parentId', () => {
     labelField: 'title',
     fields: { ...REQUIRED_RECORD_FIELDS, title: { type: 'string' }, parentId: { type: 'string' }, status: { type: 'select' } },
   }
-  assert.deepEqual(defaultColumnKeys(treeSchema, ['title', 'parentId', 'status', 'createdAt']), ['title', 'status'])
+  assert.deepEqual(defaultColumnKeys(treeSchema, ['title', 'parentId', 'dependsOn', 'status', 'createdAt']), ['title', 'status'])
 })
 
 test('uniqueValues lists tags already on the table, not schema enum', () => {

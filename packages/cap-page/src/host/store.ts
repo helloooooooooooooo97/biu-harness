@@ -53,6 +53,7 @@ export type PageRow = DbRecord & {
   notes: string
   score: number
   parentId: string | null
+  dependsOn: string[]
   facet: SchemaFieldValue
   emoji: string
   createdAt: number
@@ -224,6 +225,7 @@ function matterOf(row: PageRow): Record<string, unknown> {
     pack: storedPackJson(row.pack),
     score: row.score,
     parentId: row.parentId,
+    dependsOn: row.dependsOn,
     facet: row.facet,
     emoji: row.emoji,
     createdAt: new Date(row.createdAt).toISOString(),
@@ -256,6 +258,7 @@ function rowFromFile(id: string, raw: string): PageRow {
     notes: body,
     score: Number(matter.score) || 0,
     parentId: matter.parentId == null || matter.parentId === '' ? null : String(matter.parentId),
+    dependsOn: asStringList(matter.dependsOn),
     facet: normalizeSchemaValue(matter.facet),
     emoji: String(matter.emoji ?? ''),
     createdAt,
@@ -281,6 +284,7 @@ function emptyRow(id: string, ts: number): PageRow {
     notes: '',
     score: 0,
     parentId: null,
+    dependsOn: [],
     facet: emptySchemaValue(),
     emoji: '',
     createdAt: ts,
@@ -304,6 +308,7 @@ function applyPatch(current: PageRow, patch: Record<string, unknown>): PageRow {
     parentId: 'parentId' in patch
       ? patch.parentId == null || patch.parentId === '' ? null : String(patch.parentId)
       : current.parentId,
+    dependsOn: 'dependsOn' in patch ? asStringList(patch.dependsOn) : current.dependsOn,
     facet: 'facet' in patch ? normalizeSchemaValue(patch.facet) : current.facet,
     emoji: 'emoji' in patch ? String(patch.emoji ?? '') : current.emoji,
     score: current.score,
@@ -348,12 +353,17 @@ export class PagesStore {
         notes TEXT NOT NULL DEFAULT '',
         score REAL NOT NULL DEFAULT 0,
         parent_id TEXT,
+        depends_on_json TEXT NOT NULL DEFAULT '[]',
         facet_json TEXT NOT NULL DEFAULT '{}',
         emoji TEXT NOT NULL DEFAULT '',
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL
       )
     `)
+    const cols = db.prepare('PRAGMA table_info(pages)').all() as Array<{ name: string }>
+    if (!cols.some((col) => col.name === 'depends_on_json')) {
+      db.exec(`ALTER TABLE pages ADD COLUMN depends_on_json TEXT NOT NULL DEFAULT '[]'`)
+    }
     this.db = db
     return db
   }
@@ -389,14 +399,14 @@ export class PagesStore {
       INSERT INTO pages (
         id, title, blurb, count, enabled, status, tags_json, aliases_json,
         published_at, size, homepage, cover, pack_json, notes, score, parent_id,
-        facet_json, emoji, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        depends_on_json, facet_json, emoji, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         title=excluded.title, blurb=excluded.blurb, count=excluded.count, enabled=excluded.enabled,
         status=excluded.status, tags_json=excluded.tags_json, aliases_json=excluded.aliases_json,
         published_at=excluded.published_at, size=excluded.size, homepage=excluded.homepage,
         cover=excluded.cover, pack_json=excluded.pack_json, notes=excluded.notes, score=excluded.score,
-        parent_id=excluded.parent_id, facet_json=excluded.facet_json, emoji=excluded.emoji,
+        parent_id=excluded.parent_id, depends_on_json=excluded.depends_on_json, facet_json=excluded.facet_json, emoji=excluded.emoji,
         updated_at=excluded.updated_at
     `).run(...sqlValues(row))
   }
@@ -416,7 +426,7 @@ export class PagesStore {
     const listed = db.prepare(`
       SELECT id, title, blurb, count, enabled, status, tags_json, aliases_json,
         published_at, size, homepage, cover, pack_json, '' AS notes, score, parent_id,
-        facet_json, emoji, created_at, updated_at
+        depends_on_json, facet_json, emoji, created_at, updated_at
       FROM pages ORDER BY id
     `).all() as SqlPage[]
     return listed.map(rowFromSql)
@@ -544,6 +554,7 @@ type SqlPage = {
   notes: string
   score: number
   parent_id: string | null
+  depends_on_json: string
   facet_json: string
   emoji: string
   created_at: number
@@ -576,6 +587,7 @@ function sqlPayload(row: PageRow) {
     notes: row.notes ?? '',
     score: row.score,
     parent_id: row.parentId,
+    depends_on_json: JSON.stringify(row.dependsOn),
     facet_json: JSON.stringify(row.facet),
     emoji: row.emoji,
     created_at: row.createdAt,
@@ -602,6 +614,7 @@ function sqlValues(row: PageRow) {
     payload.notes,
     payload.score,
     payload.parent_id,
+    payload.depends_on_json,
     payload.facet_json,
     payload.emoji,
     payload.created_at,
@@ -630,6 +643,7 @@ function rowFromSql(row: SqlPage): PageRow {
     notes: row.notes,
     score: Number(row.score) || 0,
     parentId: row.parent_id == null || row.parent_id === '' ? null : String(row.parent_id),
+    dependsOn: asStringList(parseJson(row.depends_on_json ?? '[]', [])),
     facet: normalizeSchemaValue(parseJson(row.facet_json, emptySchemaValue())),
     emoji: row.emoji ?? '',
     createdAt: Number(row.created_at) || 0,

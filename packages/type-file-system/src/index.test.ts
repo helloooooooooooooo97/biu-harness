@@ -73,7 +73,10 @@ test('reserved schema fields include 合集 / facet by key or label', () => {
   assert.equal(isReservedSchemaFieldLabel('类型'), false)
   assert.equal(isReservedSchemaFieldLabel('标题'), true)
   assert.equal(isReservedSchemaFieldLabel('facet'), true)
-  assert.equal(isReservedSchemaFieldLabel('复杂度'), false)
+  assert.equal(isReservedSchemaFieldKey('parentId'), true)
+  assert.equal(isReservedSchemaFieldKey('dependsOn'), true)
+  assert.equal(isReservedSchemaFieldLabel('Parent ID'), true)
+  assert.equal(isReservedSchemaFieldLabel('Dependency'), true)
 })
 
 test('normalizeSchemaPack keeps nested facet fields and action', () => {
@@ -114,6 +117,10 @@ test('withBuiltinFields always includes writable facet and tags', () => {
   assert.equal(fields.tags?.type, 'multi-select')
   assert.equal(fields.tags?.writable, true)
   assert.equal(fields.emoji?.writable, true)
+  assert.equal(fields.parentId?.writable, true)
+  assert.equal(fields.parentId?.label, 'Parent ID')
+  assert.equal(fields.dependsOn?.type, 'multi-select')
+  assert.equal(fields.dependsOn?.writable, true)
 })
 
 test('recordBuiltinValues fills required record columns', () => {
@@ -123,18 +130,32 @@ test('recordBuiltinValues fills required record columns', () => {
     emoji: '',
     tags: [],
     facet: { tags: [], values: {} },
+    parentId: '',
+    dependsOn: [],
   })
   assert.equal(recordBuiltinValues({ createdAt: 10, emoji: '📄' }).emoji, '📄')
   assert.deepEqual(recordBuiltinValues({ tags: ['a', 'a', ''] }).tags, ['a'])
+  assert.equal(recordBuiltinValues({ parentId: 'p1' }).parentId, 'p1')
+  assert.deepEqual(recordBuiltinValues({ dependsOn: ['a', 'a', ''] }).dependsOn, ['a'])
 })
 
-test('required record fields are icon, tags, timestamps, and facet', () => {
-  assert.deepEqual([...REQUIRED_RECORD_FIELD_KEYS].sort(), ['createdAt', 'emoji', 'facet', 'tags', 'updatedAt'])
+test('required record fields are icon, tags, timestamps, facet, parent, and dependency', () => {
+  assert.deepEqual([...REQUIRED_RECORD_FIELD_KEYS].sort(), [
+    'createdAt',
+    'dependsOn',
+    'emoji',
+    'facet',
+    'parentId',
+    'tags',
+    'updatedAt',
+  ])
   assert.equal(REQUIRED_RECORD_FIELDS.emoji.type, 'string')
   assert.equal(REQUIRED_RECORD_FIELDS.tags.type, 'multi-select')
   assert.equal(REQUIRED_RECORD_FIELDS.facet.type, 'facet')
   assert.equal(REQUIRED_RECORD_FIELDS.createdAt.type, 'datetime')
   assert.equal(REQUIRED_RECORD_FIELDS.updatedAt.type, 'datetime')
+  assert.equal(REQUIRED_RECORD_FIELDS.parentId.type, 'string')
+  assert.equal(REQUIRED_RECORD_FIELDS.dependsOn.type, 'multi-select')
 })
 
 test('hasCollectionDeleteQuery requires ids, q, or a non-empty filter', () => {
