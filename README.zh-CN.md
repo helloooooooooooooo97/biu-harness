@@ -273,8 +273,9 @@ biu-harness
     ├── core-file-system/      # 登记表 + db_* 工具 + File System UI
     ├── core-plugin-system/    # 已安装插件、安装卸载、File System 入口
     ├── core-task-system/      # 任务数据、心跳、派工 / 汇报 + 任务表
+    ├── core-chat/             # 会话表 + 轨迹 / 用量
+    ├── core-page/             # 页面表
     │
-    ├── cap-chat/              # 对话 + 轨迹 / 用量
     ├── cap-logger/
     └── cap-mascot-easter-egg/
 ```

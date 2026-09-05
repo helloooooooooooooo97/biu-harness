@@ -125,7 +125,7 @@ test('page plugin stores pages in SQLite under .page', async () => {
   await spec.remove!({ ids: [created[0]!.id] })
   assert.equal((await spec.list()).length, 0)
 
-  const assetsDir = join(root, '.cordis/assets')
+  const assetsDir = join(root, '.biu/assets')
   const store = new PagesStore(ctx.fs.workspace as never, assetsDir)
   const asset = await store.writeAsset('board.json', '{\n  "elements": []\n}\n')
   assert.equal(asset.name, 'board.json')
@@ -204,7 +204,7 @@ test('gcAssets deletes unreferenced files after one day', async () => {
   await ctx.plugin(tools)
   const root = await mkdtemp(join(tmpdir(), 'page-gc-'))
   await ctx.plugin(fsPlugin, { root })
-  const store = new PagesStore(ctx.fs.workspace as never, join(root, '.cordis/assets'))
+  const store = new PagesStore(ctx.fs.workspace as never, join(root, '.biu/assets'))
   const a = await store.create({
     title: 'A',
     notes: ':::pageBlock {kind=excalidraw}\n{"file":"assets/excalidraw-keep.json"}\n:::\n',
@@ -239,7 +239,7 @@ test('gcAssets deletes unreferenced files after one day', async () => {
 
   await store.writeAsset('fresh-orphan.json', '{}')
   await store.gcAssets()
-  const fresh = await readFile(join(root, '.cordis/assets', 'fresh-orphan.json'), 'utf8')
+  const fresh = await readFile(join(root, '.biu/assets', 'fresh-orphan.json'), 'utf8')
   assert.equal(fresh, '{}')
   assert.equal(a.title, 'A')
 })

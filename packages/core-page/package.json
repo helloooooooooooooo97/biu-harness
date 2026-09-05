@@ -1,9 +1,9 @@
 {
-  "name": "@biu/cap-page",
+  "name": "@biu/core-page",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Page：工作区 .page/pages.sqlite 存页面，图片和附件走仓库 .cordis/assets",
+  "description": "Core-Page：工作区 .page/pages.sqlite 存页面，图片和附件走仓库 .biu/assets",
   "exports": {
     "./host": "./src/host/index.ts",
     "./web": "./src/web/index.ts"
@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@biu/core-editor": "0.1.0",
+    "@biu/host-plugin-loader": "0.1.0",
     "@biu/type-file-system": "0.1.0",
     "yaml": "^2.9.0"
   }

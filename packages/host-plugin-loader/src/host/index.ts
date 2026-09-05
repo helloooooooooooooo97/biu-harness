@@ -7,7 +7,7 @@ export interface CordisPluginEntry {
   id: string
   name?: string
   package?: string
-  /** 前端入口 specifier，如 @biu/cap-chat/web */
+  /** 前端入口 specifier，如 @biu/core-chat/web */
   web?: string
   layer?: string
   blurb?: string
@@ -26,6 +26,8 @@ const VIRTUAL_UI = 'virtual:cordis-ui-loaders'
 const RESOLVED_UI = `\0${VIRTUAL_UI}`
 const VIRTUAL_WEB = 'virtual:cordis-web-runtime'
 const RESOLVED_WEB = `\0${VIRTUAL_WEB}`
+
+export { DATA_DIR_NAME, LEGACY_DATA_DIR_NAME, dataDir, dataPath, migrateDataDir } from './data-dir.ts'
 
 export function pluginWebSpecifier(item: CordisPluginEntry): string | undefined {
   return item.web

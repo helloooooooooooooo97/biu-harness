@@ -1,4 +1,4 @@
-import { join } from 'node:path'
+import { dataPath } from '@biu/host-plugin-loader/data-dir'
 import { Service, type Context } from 'cordis'
 import {
   DATABASE_CHANNEL,
@@ -28,7 +28,7 @@ import {
   type PersonValue,
 } from '@biu/type-file-system'
 import { SavedViewsStore, viewsCollection, type StoredView } from './saved-views.ts'
-import { FacetStore, FILE_SYSTEM_SQLITE } from './facets-store.ts'
+import { FacetStore } from './facets-store.ts'
 import { FileSystemAssets } from './assets-store.ts'
 import { facetsCollection } from './facets-collection.ts'
 import {
@@ -1076,10 +1076,10 @@ export const inject = ['tools', 'http']
 
 export function apply(ctx: Context) {
   const db = new DatabaseService(ctx)
-  db.facets.open(join(process.cwd(), FILE_SYSTEM_SQLITE))
+  db.facets.open(dataPath(process.cwd(), 'file-system.sqlite'))
   const assets = new FileSystemAssets()
   const savedViews = new SavedViewsStore()
-  savedViews.open(process.env.VITEST ? ':memory:' : join(process.cwd(), FILE_SYSTEM_SQLITE))
+  savedViews.open(process.env.VITEST ? ':memory:' : dataPath(process.cwd(), 'file-system.sqlite'))
   const facets = db.facets
   db.register(viewsCollection(savedViews, () => db.collectionsList().map((item) => ({
     id: item.id,

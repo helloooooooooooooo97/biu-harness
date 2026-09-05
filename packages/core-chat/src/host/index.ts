@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dataDir, dataPath } from '@biu/host-plugin-loader/data-dir'
 import { Service, type Context } from 'cordis'
 import type { ChatMessage } from './chat-types.ts'
 import { isAgentToolMode, normalizeAgentMode, type AgentToolMode } from '@biu/host-tools'
@@ -61,7 +61,7 @@ interface ChatConfig {
 }
 
 function configPath() {
-  return join(process.cwd(), '.cordis', 'chat-config.json')
+  return dataPath(process.cwd(), 'chat-config.json')
 }
 
 function emptyKeys(): Record<string, string> {
@@ -109,7 +109,7 @@ function readPersisted(): Partial<ChatConfig> | null {
 }
 
 function writePersisted(config: ChatConfig) {
-  const dir = join(process.cwd(), '.cordis')
+  const dir = dataDir(process.cwd())
   mkdirSync(dir, { recursive: true })
   writeFileSync(
     configPath(),

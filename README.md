@@ -281,8 +281,9 @@ biu-harness
     ├── core-file-system/      # Collections + db_* tools + File System UI
     ├── core-plugin-system/    # Installed plugins, install/uninstall, File System entry
     ├── core-task-system/      # Task data, heartbeat, dispatch / report + Task table
+    ├── core-chat/             # Sessions table + trajectory / usage
+    ├── core-page/             # Pages table
     │
-    ├── cap-chat/              # Chat + trajectory / usage
     ├── cap-logger/
     └── cap-mascot-easter-egg/
 ```

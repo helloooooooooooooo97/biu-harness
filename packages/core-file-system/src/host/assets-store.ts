@@ -1,7 +1,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
+import { DATA_DIR_NAME, dataPath } from '@biu/host-plugin-loader/data-dir'
 
-export const FILE_SYSTEM_ASSETS = '.cordis/assets'
+export const FILE_SYSTEM_ASSETS = `${DATA_DIR_NAME}/assets`
 export const FILE_SYSTEM_ASSET_PREFIX = '/api/db/file/'
 
 const ASSET_FILE_RE = /^[\p{L}\p{N}._-]+$/u
@@ -29,7 +30,7 @@ export function mimeOfAsset(name: string) {
 }
 
 export class FileSystemAssets {
-  constructor(private dir = join(process.cwd(), FILE_SYSTEM_ASSETS)) {}
+  constructor(private dir = dataPath(process.cwd(), 'assets')) {}
 
   root() {
     return this.dir

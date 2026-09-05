@@ -48,12 +48,12 @@
       "enabled": true
     },
     {
-      "id": "chat",
-      "name": "对话",
+      "id": "core-chat",
+      "name": "Core-Chat",
       "layer": "capability",
       "blurb": "会话表 /sessions：一行=一个代理（agent）。用户要「再开一个 agent」就是 db_create 一行会话。改元数据 db_update；动作 inspect/progress/status/compact/clear/retrieve 都是针对那一个代理。",
-      "package": "@biu/cap-chat/host",
-      "web": "@biu/cap-chat/web",
+      "package": "@biu/core-chat/host",
+      "web": "@biu/core-chat/web",
       "togglable": true,
       "enabled": true
     },
@@ -116,12 +116,12 @@
       "enabled": true
     },
     {
-      "id": "page",
-      "name": "Page",
+      "id": "core-page",
+      "name": "Core-Page",
       "layer": "capability",
-      "blurb": "页面表 /pages，文件在工作区 .page。属性 db_update，正文 db_content（notes）。图和附件在 .page/assets。",
-      "package": "@biu/cap-page/host",
-      "web": "@biu/cap-page/web",
+      "blurb": "页面表 /pages。属性 db_update，正文 db_content（notes）。图和附件在仓库 .biu/assets。",
+      "package": "@biu/core-page/host",
+      "web": "@biu/core-page/web",
       "togglable": true,
       "enabled": true
     }

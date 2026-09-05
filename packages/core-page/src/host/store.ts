@@ -3,12 +3,11 @@ import { basename, dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import type { AttachmentValue, DbRecord, SchemaFieldValue } from '@biu/type-file-system'
 import { asAttachmentList, emptySchemaValue, normalizeSchemaValue } from '@biu/type-file-system'
-import { dumpMarkdown, splitMarkdown } from './markdown.ts'
+import { dataPath } from '@biu/host-plugin-loader/data-dir'
 
 export const PAGE_ROOT = '.page'
 export const PAGE_DB = '.page/pages.sqlite'
 export const PAGE_ASSETS = '.page/assets'
-const SHARED_ASSETS = '.cordis/assets'
 /** 正文不再引用后，附件再留一天，避免撤销/未落盘指针误删。 */
 export const ASSET_GC_GRACE_MS = 24 * 60 * 60 * 1000
 
@@ -327,7 +326,7 @@ function applyPatch(current: PageRow, patch: Record<string, unknown>): PageRow {
 export class PagesStore {
   constructor(
     private fs: WorkspaceFs,
-    private assetsDir = join(process.cwd(), SHARED_ASSETS),
+    private assetsDir = dataPath(process.cwd(), 'assets'),
   ) {}
 
   private db: import('node:sqlite').DatabaseSync | null = null

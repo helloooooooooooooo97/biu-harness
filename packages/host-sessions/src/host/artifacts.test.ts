@@ -21,8 +21,8 @@ test('extractImagePathCandidates finds relative and absolute image paths', () =>
   assert.deepEqual(extractImagePathCandidates(text), ['shot.png', './shots/a.jpg', '/tmp/out.webp'])
 })
 
-test('ingestSessionImages copies workspace images into .cordis/artifacts', async () => {
-  const baseDir = await mkdtemp(join(tmpdir(), 'cordis-art-'))
+test('ingestSessionImages copies workspace images into .biu/artifacts', async () => {
+  const baseDir = await mkdtemp(join(tmpdir(), 'biu-art-'))
   const workspace = join(baseDir, 'ws')
   await mkdir(join(workspace, 'shots'), { recursive: true })
   await writeFile(join(workspace, 'shots', 'demo.png'), TINY_PNG)

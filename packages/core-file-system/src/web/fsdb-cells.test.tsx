@@ -93,8 +93,8 @@ test('empty cells render no placeholder copy', () => {
 test('image zoom uses antd Image preview', () => {
   const cells = readFileSync(resolve(import.meta.dirname, './fsdb-cells.tsx'), 'utf8')
   const media = readFileSync(resolve(import.meta.dirname, './cell-media.tsx'), 'utf8')
-  const thumbs = readFileSync(resolve(import.meta.dirname, '../../../cap-chat/src/web/image-thumbs.tsx'), 'utf8')
-  const tools = readFileSync(resolve(import.meta.dirname, '../../../cap-chat/src/web/tool-card.tsx'), 'utf8')
+  const thumbs = readFileSync(resolve(import.meta.dirname, '../../../core-chat/src/web/image-thumbs.tsx'), 'utf8')
+  const tools = readFileSync(resolve(import.meta.dirname, '../../../core-chat/src/web/tool-card.tsx'), 'utf8')
   assert.match(cells, /from 'antd'/)
   assert.match(cells, /Image\.PreviewGroup/)
   assert.doesNotMatch(cells, /fsdb-lightbox/)

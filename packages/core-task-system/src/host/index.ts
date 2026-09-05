@@ -1,5 +1,6 @@
 import { mkdirSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname } from 'node:path'
+import { dataPath } from '@biu/host-plugin-loader/data-dir'
 import { createRequire } from 'node:module'
 import { Service, type Context } from 'cordis'
 import { currentSessionId } from '@biu/host-sessions/scope'
@@ -1414,7 +1415,7 @@ export { tasksCollection } from './collection.ts'
 export function apply(ctx: Context) {
   startTaskClock(ctx)
   const host = ctx as HostCtx
-  const dbPath = join(process.cwd(), '.cordis', 'tasks.sqlite')
+  const dbPath = dataPath(process.cwd(), 'tasks.sqlite')
   const tasks = new TasksService(ctx, dbPath).open()
 
   async function present(row: TaskRow): Promise<TaskRow> {
@@ -1745,7 +1746,7 @@ export function apply(ctx: Context) {
   })
 }
 
-// 供其它 plugin（如 cap-chat）通过 inject 'tasks' 注入本服务，做 Live 派工统计按 creator 取数。
+// 供其它 plugin（如 core-chat）通过 inject 'tasks' 注入本服务，做 Live 派工统计按 creator 取数。
 declare module 'cordis' {
   interface Context {
     tasks: TasksService

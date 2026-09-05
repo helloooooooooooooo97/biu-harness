@@ -1,6 +1,7 @@
 import { copyFile, mkdir, readFile, access, readdir, stat } from 'node:fs/promises'
 import { basename, extname, isAbsolute, join, resolve, relative } from 'node:path'
 import { constants } from 'node:fs'
+import { DATA_DIR_NAME, LEGACY_DATA_DIR_NAME, dataDir } from '@biu/host-plugin-loader/data-dir'
 
 export const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'])
 
@@ -15,7 +16,7 @@ const PATH_CANDIDATE =
   /(?:^|[\s"'=`(,\[{])((?:\/|\.\/|\.\.\/)?[^\s"'`)\]},;]+?\.(?:png|jpe?g|gif|webp|svg))\b/gi
 
 export function artifactsDir(sessionId: string, baseDir = process.cwd()) {
-  return join(baseDir, '.cordis', 'artifacts', sessionId)
+  return join(dataDir(baseDir), 'artifacts', sessionId)
 }
 
 export function artifactMime(name: string) {
@@ -91,7 +92,7 @@ export async function findRecentImageFiles(root: string, sinceMs: number, maxDep
       return
     }
     for (const entry of entries) {
-      if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === '.cordis') continue
+      if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === DATA_DIR_NAME || entry.name === LEGACY_DATA_DIR_NAME) continue
       const full = join(dir, entry.name)
       if (entry.isDirectory()) {
         await walk(full, depth + 1)
@@ -111,7 +112,7 @@ export async function findRecentImageFiles(root: string, sinceMs: number, maxDep
   return out
 }
 
-/** 将图片复制到 `.cordis/artifacts/<sessionId>/`。工作区内相对路径 + 可读绝对路径均可。 */
+/** 将图片复制到 `.biu/artifacts/<sessionId>/`。工作区内相对路径 + 可读绝对路径均可。 */
 export async function ingestSessionImages(options: {
   sessionId: string
   candidates: string[]

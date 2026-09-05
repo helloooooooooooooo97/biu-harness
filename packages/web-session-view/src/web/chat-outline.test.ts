@@ -32,7 +32,7 @@ test('deriveChatOutline can hide robot-initiated user nodes', () => {
 test('message outline is a left rail of ticks with a hover menu', () => {
   const css = readFileSync(resolve(import.meta.dirname, '../../../../web/style.css'), 'utf8')
   const outline = readFileSync(resolve(import.meta.dirname, '../../../public-ui/src/outline-nav.tsx'), 'utf8')
-  const bound = readFileSync(resolve(import.meta.dirname, '../../../cap-chat/src/web/message-outline.tsx'), 'utf8')
+  const bound = readFileSync(resolve(import.meta.dirname, '../../../core-chat/src/web/message-outline.tsx'), 'utf8')
   const shell = readFileSync(resolve(import.meta.dirname, '../../../web-app-shell/src/web/index.tsx'), 'utf8')
   assert.match(css, /\.chat-outline\s*\{[^}]*left:\s*8px/s)
   assert.match(css, /\.chat-outline-rail\s*\{[^}]*align-items:\s*flex-start/s)

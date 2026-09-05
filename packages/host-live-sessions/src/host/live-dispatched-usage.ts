@@ -48,7 +48,7 @@ function usageOrUndefined(usage: TokenUsageSum): TokenUsageSum | undefined {
   return { ...usage }
 }
 
-/** Live 本回合派工对应的任务最小视图（由 cap-chat 从 task 体系取数传入）。 */
+/** Live 本回合派工对应的任务最小视图（由 core-chat 从 task 体系取数传入）。 */
 export type TaskDispatchSource = {
   /** 任务 id */
   id: string

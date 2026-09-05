@@ -1,8 +1,10 @@
 import { Context } from 'cordis'
 import { importConfiguredPackage, readCordisConfig, findRepoRoot } from '@biu/host-plugin-loader'
+import { migrateDataDir } from '@biu/host-plugin-loader/data-dir'
 import './types.ts'
 
 const rootDir = findRepoRoot()
+migrateDataDir(rootDir)
 
 const ctx = new Context()
 ctx.logger.exporter({

@@ -13,7 +13,7 @@ describe('composer dock stacking above sticky user', () => {
   it('isolates chat-stage and keeps composer-dock above sticky user z-index', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const shell = readFileSync(resolve(root, 'packages/web-app-shell/src/web/index.tsx'), 'utf8')
-    const thread = readFileSync(resolve(root, 'packages/cap-chat/src/web/thread.tsx'), 'utf8')
+    const thread = readFileSync(resolve(root, 'packages/core-chat/src/web/thread.tsx'), 'utf8')
 
     expect(css).toMatch(/--dsw-chat-font-size:\s*14px/)
     expect(css).toMatch(/--dsw-chat-composer-font-size:\s*16px/)
@@ -32,7 +32,7 @@ describe('composer dock stacking above sticky user', () => {
 
   it('compose-only overlay hides the reply thread until send', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
-    const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
+    const composer = readFileSync(resolve(root, 'packages/core-chat/src/web/composer.tsx'), 'utf8')
     expect(css).toMatch(/\.chat-overlay-panel \{/)
     expect(css).not.toMatch(/\.chat-overlay-panel\.is-compose-only \.chat-overlay-thread/)
     expect(composer).toContain('revealOverlayThread')
@@ -41,12 +41,12 @@ describe('composer dock stacking above sticky user', () => {
   })
 
   it('puts the session mascot after the header name, with the dock session picker', () => {
-    const approvals = readFileSync(resolve(root, 'packages/cap-chat/src/web/approvals.tsx'), 'utf8')
+    const approvals = readFileSync(resolve(root, 'packages/core-chat/src/web/approvals.tsx'), 'utf8')
     const title = readFileSync(resolve(root, 'packages/web-app-shell/src/web/chat-session-title.tsx'), 'utf8')
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const shell = readFileSync(resolve(root, 'packages/web-app-shell/src/web/index.tsx'), 'utf8')
     const overlayWin = readFileSync(resolve(root, 'packages/web-app-shell/src/web/overlay-window.tsx'), 'utf8')
-    const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
+    const composer = readFileSync(resolve(root, 'packages/core-chat/src/web/composer.tsx'), 'utf8')
     expect(title).not.toContain('BrandCornerMascot')
     expect(title).toContain('chat-session-title-pop')
     expect(approvals).toContain('BrandCornerMascot')
@@ -99,7 +99,7 @@ describe('composer dock stacking above sticky user', () => {
 
   it('squares the composer when pick chips are present', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
-    const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
+    const composer = readFileSync(resolve(root, 'packages/core-chat/src/web/composer.tsx'), 'utf8')
     expect(composer).toMatch(/has-chips/)
     expect(css).toMatch(/\.composer-pill\.has-chips[\s\S]*border-radius:\s*var\(--dsw-radius-bubble\)/)
   })
@@ -107,8 +107,8 @@ describe('composer dock stacking above sticky user', () => {
   it('uses facet tones for pick chips and the clear-context control, not the plus', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
     const chip = readFileSync(resolve(root, 'packages/cap-pick/src/web/chip.tsx'), 'utf8')
-    const node = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer-pick-node.tsx'), 'utf8')
-    const approvals = readFileSync(resolve(root, 'packages/cap-chat/src/web/approvals.tsx'), 'utf8')
+    const node = readFileSync(resolve(root, 'packages/core-chat/src/web/composer-pick-node.tsx'), 'utf8')
+    const approvals = readFileSync(resolve(root, 'packages/core-chat/src/web/approvals.tsx'), 'utf8')
     expect(css).toMatch(/\.project-chip\.project-chip-clear-ctx\s*\{[^}]*background:\s*transparent/s)
     expect(css).toMatch(/\.project-chip-hist-bar\s*\{[^}]*color-mix\(in srgb, var\(--biu-tag, #d9730d\) 22%, transparent\)/s)
     expect(css).toMatch(/\.project-chip\.project-chip-clear-ctx\s*\{[^}]*color:\s*#d9730d/s)
@@ -165,7 +165,7 @@ describe('composer dock stacking above sticky user', () => {
 
   it('uses facet orange fill on clear-context only when there is history', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
-    const approvals = readFileSync(resolve(root, 'packages/cap-chat/src/web/approvals.tsx'), 'utf8')
+    const approvals = readFileSync(resolve(root, 'packages/core-chat/src/web/approvals.tsx'), 'utf8')
     expect(css).toMatch(/\.project-chip-hist-bar\s*\{[^}]*color-mix\(in srgb, var\(--biu-tag, #d9730d\) 22%, transparent\)/s)
     expect(approvals).toMatch(/project-chip-hist-bar/)
     expect(css).toMatch(/\.chat-pane\s*\{[^}]*--dsw-ok:\s*#448361/s)
@@ -182,7 +182,7 @@ describe('composer dock stacking above sticky user', () => {
     expect(css).toMatch(/\.tool-call-head:hover \.tool-call-inspect/s)
     expect(css).toMatch(/\.traj-usage-ring\.is-cache\s*\{[^}]*color:\s*#448361/s)
     expect(css).toMatch(/\.traj-usage-ring\.is-hist\s*\{[^}]*color:\s*#d9730d/s)
-    const usage = readFileSync(resolve(root, 'packages/cap-chat/src/web/usage-inline.tsx'), 'utf8')
+    const usage = readFileSync(resolve(root, 'packages/core-chat/src/web/usage-inline.tsx'), 'utf8')
     expect(usage).toMatch(/TAG_TONE_GREEN/)
     expect(usage).toMatch(/TAG_TONE_ORANGE/)
     expect(usage).toMatch(/stroke="currentColor"/)
@@ -216,8 +216,8 @@ describe('composer dock stacking above sticky user', () => {
   })
 
   it('uses Tiptap for inline pick chips in the composer', () => {
-    const composer = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer.tsx'), 'utf8')
-    const node = readFileSync(resolve(root, 'packages/cap-chat/src/web/composer-pick-node.tsx'), 'utf8')
+    const composer = readFileSync(resolve(root, 'packages/core-chat/src/web/composer.tsx'), 'utf8')
+    const node = readFileSync(resolve(root, 'packages/core-chat/src/web/composer-pick-node.tsx'), 'utf8')
     expect(composer).toMatch(/useEditor/)
     expect(composer).toMatch(/composerDocExtensions/)
     expect(composer).toMatch(/EditorContent/)
