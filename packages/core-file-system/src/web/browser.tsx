@@ -1706,19 +1706,17 @@ export function CollectionBrowser({
         </div>
       )
     }
-    const primaryId = actions.find((item) => item.tone !== 'danger')?.id
     return (
       <div className="fsdb-detail-actionbar" data-testid="fsdb-detail-actions" data-biu-ignore aria-label="记录操作">
         <div className="fsdb-detail-actions">
         {actions.map((action) => {
           const run = () => void runAction(row, action)
           if (Action) return <Action key={action.id} action={action} record={row} busy={busy} run={run} />
-          const primary = action.tone !== 'danger' && action.id === primaryId
           return (
             <button
               key={action.id}
               type="button"
-              className={`dock-icon-btn${primary ? ' is-active' : ''}${action.tone === 'danger' ? ' is-danger' : ''}`}
+              className="dock-icon-btn"
               title={action.label}
               data-dock-tip={action.label}
               aria-label={`${action.label} ${labelOf(row)}`}

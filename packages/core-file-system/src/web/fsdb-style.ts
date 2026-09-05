@@ -372,9 +372,10 @@ const CSS = `
 .fsdb-detail-title-block{display:flex;flex:1;min-width:0;flex-direction:column;gap:6px}
 .fsdb-detail-actionbar{position:sticky;top:calc(100% - 95px);z-index:26;display:flex;justify-content:center;width:100%;height:0;min-height:0;overflow:visible;pointer-events:none}
 .fsdb-detail-actions{pointer-events:auto;display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px;margin:0;padding:0;background:transparent;transform:translateY(-100%)}
-.fsdb-detail-actionbar .dock-icon-btn.is-danger{color:var(--dsw-danger)}
-.fsdb-detail-actionbar .dock-icon-btn.is-danger:hover:not(:disabled){color:var(--dsw-danger)}
-.fsdb-detail-actionbar .dock-icon-btn svg{width:16px;height:16px}
+.fsdb-detail-actions .dock-icon-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border:1px solid var(--dsw-border);border-radius:50%;background:#252525;color:#F0EFED;cursor:pointer;box-shadow:none}
+.fsdb-detail-actions .dock-icon-btn:hover:not(:disabled){color:var(--dsw-sidebar-fg-active)}
+.fsdb-detail-actions .dock-icon-btn:disabled{opacity:.45;cursor:default}
+.fsdb-detail-actions .dock-icon-btn svg{width:16px;height:16px}
 .fsdb-detail-title-icon-wrap{position:relative;flex:none;margin-top:2px}
 .fsdb-detail-title-icon{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;margin:0;border:0;border-radius:10px;padding:0;background:transparent;color:var(--dsw-label-2);font-size:22px;line-height:1;overflow:hidden}
 button.fsdb-detail-title-icon{cursor:pointer}
