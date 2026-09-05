@@ -362,10 +362,10 @@ const CSS = `
 .fsdb-prop-val .fsdb-link{display:block;overflow-wrap:normal}
 .fsdb-detail-title-row{display:flex;align-items:flex-start;gap:12px;min-width:0;padding-bottom:16px}
 .fsdb-detail-title-icon-wrap{position:relative;flex:none;margin-top:2px}
-.fsdb-detail-title-icon{display:grid;place-items:center;width:36px;height:36px;margin:0;border:0;border-radius:10px;padding:0;background:transparent;color:var(--dsw-label-2);font-size:28px;line-height:1;overflow:visible}
+.fsdb-detail-title-icon{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;margin:0;border:0;border-radius:10px;padding:0;background:transparent;color:var(--dsw-label-2);font-size:22px;line-height:1;overflow:hidden}
 button.fsdb-detail-title-icon{cursor:pointer}
 button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-label)}
-.fsdb-detail-title-icon .fsdb-record-emoji{font-size:28px;line-height:1}
+.fsdb-detail-title-icon .fsdb-record-emoji{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:22px;line-height:1}
 .fsdb-record-mark{display:inline-grid;place-items:center;flex:none;overflow:hidden;line-height:0}
 .fsdb-record-mark.is-sm{width:16px;height:16px}
 .fsdb-record-mark.is-lg{width:32px;height:32px}

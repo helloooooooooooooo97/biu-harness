@@ -132,6 +132,22 @@ export function ShellSidePlaces({
           onSearch?.()
         }}
       />
+      <div className="shell-side-pop-wrap">
+        <SideAction
+          title="通知"
+          active={notifyOpen}
+          testId="chrome-notify"
+          icon={<BellIcon {...chromeIcon} />}
+          onClick={() => {
+            setNotifyOpen((open) => !open)
+          }}
+        />
+        {notifyOpen ? (
+          <div className="shell-side-pop" role="dialog" aria-label="通知">
+            <p className="shell-chrome-pop-empty">暂无通知</p>
+          </div>
+        ) : null}
+      </div>
       <SideAction
         title="设置"
         testId="chrome-settings"
@@ -155,22 +171,6 @@ export function ShellSidePlaces({
         icon={<CircleStackIcon {...chromeIcon} />}
         onClick={() => navigate('/database')}
       />
-      <div className="shell-side-pop-wrap">
-        <SideAction
-          title="通知"
-          active={notifyOpen}
-          testId="chrome-notify"
-          icon={<BellIcon {...chromeIcon} />}
-          onClick={() => {
-            setNotifyOpen((open) => !open)
-          }}
-        />
-        {notifyOpen ? (
-          <div className="shell-side-pop" role="dialog" aria-label="通知">
-            <p className="shell-chrome-pop-empty">暂无通知</p>
-          </div>
-        ) : null}
-      </div>
     </div>
   )
 }
