@@ -237,6 +237,20 @@ export function bindSchemaValue(
   return { tags: nextTags, values: next }
 }
 
+/** 仍贴着的合集保留原值；新贴上的合集从空开始。 */
+export function retagSchemaValue(prev: SchemaFieldValue, nextTags: string[]): SchemaFieldValue {
+  const attached = new Set(prev.tags)
+  const carried: SchemaFieldValue['values'] = {}
+  for (const id of nextTags) {
+    const want = String(id).trim()
+    if (!want || !attached.has(want)) continue
+    const bag = prev.values[want]
+    if (!bag || typeof bag !== 'object' || Array.isArray(bag)) continue
+    carried[want] = bag
+  }
+  return bindSchemaValue(nextTags, carried)
+}
+
 export function normalizeSchemaValue(raw: unknown): SchemaFieldValue {
   if (raw == null || raw === '') return emptySchemaValue()
   if (typeof raw === 'string') {

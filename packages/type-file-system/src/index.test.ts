@@ -1,6 +1,6 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { asImageSrc, asImageSrcList, actionVisibleToUser, bindSchemaValue, emptySchemaValue, hasCollectionDeleteQuery, isReservedSchemaFieldKey, isReservedSchemaFieldLabel, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, schemaSearchHaystack, withBuiltinFields } from './index.ts'
+import { asImageSrc, asImageSrcList, actionVisibleToUser, emptySchemaValue, hasCollectionDeleteQuery, isReservedSchemaFieldKey, isReservedSchemaFieldLabel, normalizeSchemaPack, normalizeSchemaValue, recordBuiltinValues, REQUIRED_RECORD_FIELD_KEYS, REQUIRED_RECORD_FIELDS, retagSchemaValue, schemaSearchHaystack, withBuiltinFields } from './index.ts'
 
 test('asImageSrc keeps http, data:image, and same-origin image paths', () => {
   assert.equal(asImageSrc('https://example.com/a.png'), 'https://example.com/a.png')
@@ -36,20 +36,13 @@ test('schemaSearchHaystack includes facet labels and field values', () => {
   assert.match(text, /O\(n\)/)
 })
 
-test('bindSchemaValue drops values for collections no longer tagged', () => {
-  const next = bindSchemaValue(['graph'], {
-    dp: { complexity: 'O(n)' },
-    graph: { nodes: 3 },
-  })
-  assert.deepEqual(next.tags, ['graph'])
-  assert.deepEqual(next.values, { graph: { nodes: 3 } })
-  assert.deepEqual(
-    normalizeSchemaValue({
-      tags: ['graph'],
-      values: { dp: { complexity: 'O(n)' }, graph: { nodes: 3 } },
-    }),
-    { tags: ['graph'], values: { graph: { nodes: 3 } } },
-  )
+test('retagSchemaValue does not revive bags for a collection that was removed then attached again', () => {
+  const leftover = { tags: ['dp'], values: { dp: { complexity: 'O(n)' } } }
+  const cleared = retagSchemaValue(leftover, [])
+  assert.deepEqual(cleared, { tags: [], values: {} })
+  assert.deepEqual(retagSchemaValue(cleared, ['dp']), { tags: ['dp'], values: {} })
+  assert.deepEqual(retagSchemaValue({ tags: [], values: leftover.values }, ['dp']), { tags: ['dp'], values: {} })
+  assert.deepEqual(retagSchemaValue(leftover, ['dp']), leftover)
 })
 
 test('reserved schema fields include 合集 / facet by key or label', () => {

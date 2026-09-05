@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   normalizeSchemaValue,
-  bindSchemaValue,
+  retagSchemaValue,
   type CollectionSchemaPack,
   type DbRecord,
   type FieldSpec,
@@ -120,11 +120,12 @@ function applyFacetTags(parsed: SchemaFieldValue, catalog: CollectionSchemaPack[
     resolved.push(id)
   }
   if (packs !== catalog) persistFacets(packs)
-  return bindSchemaValue(resolved, parsed.values)
+  return retagSchemaValue(parsed, resolved)
 }
 
 function FacetPickPanel({ value, onChange }: { value: unknown; onChange: (next: SchemaFieldValue) => void }) {
   const parsed = normalizeSchemaValue(value)
+  const liveRef = useRef(parsed)
   const [catalog, setCatalog] = useState(() => loadFacets())
   useEffect(() => subscribeFacets(undefined, () => setCatalog(loadFacets())), [])
   return (
@@ -132,7 +133,11 @@ function FacetPickPanel({ value, onChange }: { value: unknown; onChange: (next: 
       values={parsed.tags}
       options={catalog.map((tag) => ({ value: tag.id, label: tag.label }))}
       multiple
-      onChange={(next) => onChange(applyFacetTags(parsed, catalog, next))}
+      onChange={(next) => {
+        const updated = applyFacetTags(liveRef.current, catalog, next)
+        liveRef.current = updated
+        onChange(updated)
+      }}
     />
   )
 }

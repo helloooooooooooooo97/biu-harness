@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ATOMIC_FIELD_TYPES,
   normalizeSchemaValue,
-  bindSchemaValue,
+  retagSchemaValue,
   type AtomicFieldType,
   type CollectionSchemaPack,
   type DbRecord,
@@ -242,6 +242,10 @@ export function SchemaFieldEditor({
   autoOpen?: boolean
 }) {
   const parsed = normalizeSchemaValue(value)
+  const liveRef = useRef(parsed)
+  useEffect(() => {
+    liveRef.current = normalizeSchemaValue(value)
+  }, [record.id])
   const [catalog, setCatalog] = useState(() => loadFacets())
 
   useEffect(() => subscribeFacets(undefined, () => setCatalog(loadFacets())), [])
@@ -281,7 +285,9 @@ export function SchemaFieldEditor({
       resolved.push(id)
     }
     if (packs !== catalog) saveCatalog(packs)
-    patchValue(bindSchemaValue(resolved, parsed.values))
+    const next = retagSchemaValue(liveRef.current, resolved)
+    liveRef.current = next
+    patchValue(next)
   }
 
   function addField(tag: CollectionSchemaPack, name: string, type: AtomicFieldType) {
