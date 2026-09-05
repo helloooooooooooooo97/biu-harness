@@ -2,7 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { pickDomAttrs, recordPickKind, viewPickId } from './pick-dom.ts'
 
-test('pickDomAttrs writes the same handles cap-pick reads', () => {
+test('pickDomAttrs writes the same handles core-pick reads', () => {
   assert.deepEqual(pickDomAttrs('page', 'p000', '页面 1'), {
     'data-biu-kind': 'page',
     'data-biu-id': 'p000',

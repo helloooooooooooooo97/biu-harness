@@ -5,7 +5,7 @@ import { EventDetailBody } from './trajectory.tsx'
 import { type SessionViewService } from '@biu/web-session-view'
 import type { DerivedMessage, SessionEvent } from '@biu/web-session-view'
 import type { UsageTrend, UsageTrendPoint } from '@biu/web-session-view'
-import { pickDomAttrs } from '@biu/cap-pick/web'
+import { pickDomAttrs } from '@biu/core-pick/web'
 
 export interface UsagePanelProps {
   useSessionView: <T>(selector: (state: unknown) => T) => T

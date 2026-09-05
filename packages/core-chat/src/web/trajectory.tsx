@@ -12,7 +12,7 @@ import {
   type TrajectoryUsage,
 } from '@biu/web-session-view'
 import { UsageInline } from './usage-inline.tsx'
-import { pickDomAttrs, pickPreview } from '@biu/cap-pick/web'
+import { pickDomAttrs, pickPreview } from '@biu/core-pick/web'
 
 type TagTone = 'user' | 'assistant' | 'tool' | 'system' | 'turn' | 'step'
 

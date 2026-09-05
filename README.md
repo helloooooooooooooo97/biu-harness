@@ -283,6 +283,7 @@ biu-harness
     ├── core-task-system/      # Task data, heartbeat, dispatch / report + Task table
     ├── core-chat/             # Sessions table + trajectory / usage
     ├── core-page/             # Pages table
+    ├── core-pick/             # Point-select data handles
     │
     ├── cap-logger/
     └── cap-mascot-easter-egg/

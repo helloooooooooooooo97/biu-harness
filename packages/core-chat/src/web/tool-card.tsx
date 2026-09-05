@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Image } from 'antd'
 import { ChevronDownIcon, ChevronRightIcon, MapIcon } from '@heroicons/react/16/solid'
 import type { ChatToolPart } from '@biu/web-session-view'
-import { pickDomAttrs } from '@biu/cap-pick/web'
+import { pickDomAttrs } from '@biu/core-pick/web'
 import {
   diffStats,
   formatToolDetail,

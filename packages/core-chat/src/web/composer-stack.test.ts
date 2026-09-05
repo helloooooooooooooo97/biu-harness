@@ -106,7 +106,7 @@ describe('composer dock stacking above sticky user', () => {
 
   it('uses facet tones for pick chips and the clear-context control, not the plus', () => {
     const css = readFileSync(resolve(root, 'web/style.css'), 'utf8')
-    const chip = readFileSync(resolve(root, 'packages/cap-pick/src/web/chip.tsx'), 'utf8')
+    const chip = readFileSync(resolve(root, 'packages/core-pick/src/web/chip.tsx'), 'utf8')
     const node = readFileSync(resolve(root, 'packages/core-chat/src/web/composer-pick-node.tsx'), 'utf8')
     const approvals = readFileSync(resolve(root, 'packages/core-chat/src/web/approvals.tsx'), 'utf8')
     expect(css).toMatch(/\.project-chip\.project-chip-clear-ctx\s*\{[^}]*background:\s*transparent/s)

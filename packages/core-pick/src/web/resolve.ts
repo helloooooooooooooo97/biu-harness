@@ -5,8 +5,28 @@ const ID = 'data-biu-id'
 const ACTION = 'data-biu-action'
 const LABEL = 'data-biu-label'
 
+type ClientBox = { left: number; top: number; width: number; height: number }
+
 function isPickIgnored(node: Element | null) {
   return Boolean(node?.closest('[data-biu-ignore]'))
+}
+
+function inHiddenPane(node: Element | null) {
+  return Boolean(
+    node?.closest(
+      '.inspector-stage-pane:not(.is-active), .app-stage-pane:not(.is-active), .session-inspector.is-closed, .app-side-bar.is-closed',
+    ),
+  )
+}
+
+/** 点落在哪一栏：检查器 / 侧栏 / 中间台。框选和点选都不跨栏。 */
+export function pickSurfaceFromNode(node: Element | null): HTMLElement | null {
+  if (!node) return null
+  return node.closest('[data-testid="session-inspector"], .app-side-bar')
+}
+
+function pointInBox(box: ClientBox, x: number, y: number) {
+  return x >= box.left && y >= box.top && x <= box.left + box.width && y <= box.top + box.height
 }
 
 function read(el: Element, attr: string) {
@@ -16,7 +36,7 @@ function read(el: Element, attr: string) {
 
 /** 从命中节点向上合并 data-biu-*，子覆盖父；必须同时有 kind 与 id。 */
 export function resolvePickFromNode(start: Element | null, route: string): { el: HTMLElement; ref: PickRef } | null {
-  if (!start || isPickIgnored(start)) return null
+  if (!start || isPickIgnored(start) || inHiddenPane(start)) return null
   let kind: string | undefined
   let id: string | undefined
   let action: string | undefined
@@ -54,15 +74,22 @@ export function resolvePickFromNode(start: Element | null, route: string): { el:
 export function resolvePickAtPoint(x: number, y: number, route: string) {
   const stacked = document.elementsFromPoint(x, y)
   if (stacked.some((el) => el instanceof Element && el.closest('[data-testid="chat-overlay-panel"]'))) return null
+  const surface =
+    stacked
+      .map((el) => (el instanceof Element ? pickSurfaceFromNode(el) : null))
+      .find((node) => node && !node.classList.contains('is-closed')) ?? null
   for (const el of stacked) {
-    if (el instanceof Element && isPickIgnored(el)) continue
+    if (!(el instanceof Element) || isPickIgnored(el) || inHiddenPane(el)) continue
+    if (surface && !surface.contains(el)) continue
     const hit = resolvePickFromNode(el, route)
-    if (hit) return hit
+    if (!hit) continue
+    if (surface && !surface.contains(hit.el)) continue
+    const vis = visiblePickBox(hit.el)
+    if (!vis || !pointInBox(vis, x, y)) continue
+    return hit
   }
   return null
 }
-
-type ClientBox = { left: number; top: number; width: number; height: number }
 
 export function boxFromPoints(ax: number, ay: number, bx: number, by: number): ClientBox {
   const left = Math.min(ax, bx)
@@ -123,7 +150,7 @@ export function resolvePicksInRect(box: ClientBox, route: string, root: ParentNo
   const seen = new Set<string>()
   const hits: { el: HTMLElement; ref: PickRef }[] = []
   for (const node of Array.from(nodes)) {
-    if (!(node instanceof HTMLElement) || isPickIgnored(node)) continue
+    if (!(node instanceof HTMLElement) || isPickIgnored(node) || inHiddenPane(node)) continue
     const vis = visiblePickBox(node)
     if (!vis || !boxesOverlap(box, vis)) continue
     const hit = resolvePickFromNode(node, route)

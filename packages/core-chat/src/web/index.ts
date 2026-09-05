@@ -12,7 +12,7 @@ import { ChatMessageOutline } from './message-outline.tsx'
 import { TrajectoryView } from './trajectory.tsx'
 import { UsagePanel } from './usage-panel.tsx'
 import { bindProjectView, type ProjectViewService } from '@biu/web-project-view'
-import type { PickService } from '@biu/cap-pick/web'
+import type { PickService } from '@biu/core-pick/web'
 import type { DatabaseUi } from '@biu/type-file-system/ui'
 import { sessionsChrome } from './sessions-chrome.tsx'
 

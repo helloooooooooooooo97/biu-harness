@@ -1,5 +1,5 @@
 import type { Editor } from '@tiptap/react'
-import { formatPick, pickKey, splitPickStream, type PickRef } from '@biu/cap-pick/web'
+import { formatPick, pickKey, splitPickStream, type PickRef } from '@biu/core-pick/web'
 
 function attrsToRef(attrs: Record<string, unknown>): PickRef | null {
   const kind = String(attrs.kind ?? '').trim()

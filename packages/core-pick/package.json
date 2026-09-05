@@ -1,9 +1,9 @@
 {
-  "name": "@biu/cap-pick",
+  "name": "@biu/core-pick",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "页面对象选取：采集数据句柄，不采集 UI",
+  "description": "Core-Pick：界面点选数据句柄（合集/记录），不采集 UI",
   "exports": {
     "./host": "./src/host/index.ts",
     "./web": "./src/web/index.tsx"

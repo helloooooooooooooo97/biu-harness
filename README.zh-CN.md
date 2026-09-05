@@ -275,6 +275,7 @@ biu-harness
     ├── core-task-system/      # 任务数据、心跳、派工 / 汇报 + 任务表
     ├── core-chat/             # 会话表 + 轨迹 / 用量
     ├── core-page/             # 页面表
+    ├── core-pick/             # 点选数据句柄
     │
     ├── cap-logger/
     └── cap-mascot-easter-egg/

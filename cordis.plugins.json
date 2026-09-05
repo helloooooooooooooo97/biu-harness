@@ -38,12 +38,12 @@
   ],
   "plugins": [
     {
-      "id": "pick",
-      "name": "选取",
+      "id": "core-pick",
+      "name": "Core-Pick",
       "layer": "capability",
       "blurb": "界面点选数据句柄（合集/记录）。给 Agent 的是选中结果，不是自己去点 DOM。",
-      "package": "@biu/cap-pick/host",
-      "web": "@biu/cap-pick/web",
+      "package": "@biu/core-pick/host",
+      "web": "@biu/core-pick/web",
       "togglable": true,
       "enabled": true
     },

@@ -7,7 +7,7 @@ import { PickOverlay } from './overlay.tsx'
 export { PickService, usePickState } from './service.ts'
 export { formatPicks, formatPick, parsePicks, splitPickStream, dedupePicks, chipLabel, pickKey, pickPreview, textPickFromSelection, pickDomAttrs, type PickRef } from './types.ts'
 export { PickChip, PickChipLabel, PickKindGlyph, pickKindIcon, pickKindTone, canonicalPickKind } from './chip.tsx'
-export { resolvePickFromNode, resolvePickAtPoint, resolvePicksInRect, visiblePickBox } from './resolve.ts'
+export { resolvePickFromNode, resolvePickAtPoint, resolvePicksInRect, visiblePickBox, pickSurfaceFromNode } from './resolve.ts'
 
 export const name = 'pick-ui'
 export const inject = ['slots']

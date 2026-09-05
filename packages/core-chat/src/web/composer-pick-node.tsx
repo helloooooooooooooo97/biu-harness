@@ -1,6 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { createRoot, type Root } from 'react-dom/client'
-import { PickChip, type PickRef } from '@biu/cap-pick/web'
+import { PickChip, type PickRef } from '@biu/core-pick/web'
 
 function refFromAttrs(attrs: Record<string, unknown>): PickRef {
   const kind = String(attrs.kind ?? '')

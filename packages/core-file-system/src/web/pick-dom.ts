@@ -1,4 +1,4 @@
-/** 与 @biu/cap-pick 的 data-biu-* 句柄对齐，Core 不依赖 pick 包。 */
+/** 与 @biu/core-pick 的 data-biu-* 句柄对齐，Core 不依赖 pick 包。 */
 export function pickDomAttrs(kind: string, id: string, label?: string) {
   return {
     'data-biu-kind': kind,

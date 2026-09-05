@@ -188,6 +188,75 @@ test('marquee in the inspector does not take center-pane rows at the same height
   inspector.remove()
 })
 
+test('clicking the inspector table does not pick chat stacked underneath', () => {
+  const inspector = document.createElement('aside')
+  inspector.setAttribute('data-testid', 'session-inspector')
+  const pane = document.createElement('div')
+  pane.className = 'inspector-stage-pane is-active'
+  const row = document.createElement('tr')
+  row.setAttribute('data-biu-kind', 'task')
+  row.setAttribute('data-biu-id', 't-row')
+  pane.append(row)
+  inspector.append(pane)
+  const chat = document.createElement('div')
+  chat.setAttribute('data-biu-kind', 'message')
+  chat.setAttribute('data-biu-id', 'm1')
+  document.body.append(inspector, chat)
+  stubBox(row, 220, 10, 80, 20)
+  stubBox(chat, 0, 10, 400, 20)
+  Object.defineProperty(document, 'elementsFromPoint', {
+    configurable: true,
+    value: () => [chat, row],
+  })
+  const hit = resolvePickAtPoint(240, 16, '/tasks')
+  assert.equal(hit?.ref.kind, 'task')
+  assert.equal(hit?.ref.id, 't-row')
+  inspector.remove()
+  chat.remove()
+})
+
+test('inactive inspector trajectory pane is not pickable', () => {
+  const inspector = document.createElement('aside')
+  inspector.setAttribute('data-testid', 'session-inspector')
+  const hidden = document.createElement('div')
+  hidden.className = 'inspector-stage-pane'
+  const msg = document.createElement('div')
+  msg.setAttribute('data-biu-kind', 'message')
+  msg.setAttribute('data-biu-id', 'ghost')
+  hidden.append(msg)
+  inspector.append(hidden)
+  document.body.append(inspector)
+  stubBox(msg, 220, 10, 80, 40)
+  Object.defineProperty(document, 'elementsFromPoint', {
+    configurable: true,
+    value: () => [msg],
+  })
+  assert.equal(resolvePickAtPoint(240, 20, '/s/abc'), null)
+  inspector.remove()
+})
+
+test('marquee scoped to inspector skips center chat', () => {
+  const inspector = document.createElement('aside')
+  inspector.setAttribute('data-testid', 'session-inspector')
+  const row = document.createElement('div')
+  row.setAttribute('data-biu-kind', 'task')
+  row.setAttribute('data-biu-id', 't-row')
+  inspector.append(row)
+  const chat = document.createElement('div')
+  chat.setAttribute('data-biu-kind', 'message')
+  chat.setAttribute('data-biu-id', 'm1')
+  document.body.append(inspector, chat)
+  stubBox(row, 220, 10, 80, 20)
+  stubBox(chat, 220, 10, 80, 20)
+  const hits = resolvePicksInRect({ left: 220, top: 8, width: 60, height: 24 }, '/tasks', inspector)
+  assert.deepEqual(
+    hits.map((item) => item.ref.id),
+    ['t-row'],
+  )
+  inspector.remove()
+  chat.remove()
+})
+
 test('dedupePicks keeps one chip per kind+id', () => {
   const refs = dedupePicks([
     { kind: 'task', id: 't1', label: '甲', route: '/tasks' },

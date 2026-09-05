@@ -1,5 +1,5 @@
 import { Fragment, memo, useMemo } from 'react'
-import { PickChip, splitPickStream } from '@biu/cap-pick/web'
+import { PickChip, splitPickStream } from '@biu/core-pick/web'
 
 /** 已发送用户消息：静态渲染，不挂 Tiptap，避免切回聊天时每条消息都新建编辑器。 */
 export const UserBubbleEditor = memo(function UserBubbleEditor({ text }: { text: string }) {

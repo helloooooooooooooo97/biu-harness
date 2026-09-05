@@ -50,6 +50,6 @@ test('Command/Ctrl+Q toggles pick mode', () => {
   assert.match(overlay, /key === 'q'/)
 })
 
-test('pick highlight uses the visible clipped box, not the raw layout box', () => {
-  assert.match(overlay, /visiblePickBox/)
+test('marquee inside inspector uses the inspector as the query root', () => {
+  assert.match(overlay, /pickSurfaceFromNode/)
 })
