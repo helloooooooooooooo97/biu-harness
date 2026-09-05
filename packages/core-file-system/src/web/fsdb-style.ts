@@ -389,7 +389,7 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-cellselect-trigger:hover,.fsdb-cellselect-trigger[data-open]{background:transparent}
 .fsdb-cellselect-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-cellselect-caret{flex:none;opacity:.55;color:var(--dsw-label-2)}
-.fsdb-cellselect-trigger.is-empty{max-width:none;color:var(--dsw-label-3);background:transparent;font-weight:500}
+.fsdb-cellselect-trigger.is-empty{max-width:none;color:var(--dsw-label-3);background:transparent;font-weight:600}
 .fsdb-cellselect.is-field{display:block;width:100%}
 .fsdb-cellselect.is-field .fsdb-cellselect-trigger{display:flex;justify-content:space-between;gap:6px;width:100%;max-width:none;min-height:28px;border:1px solid var(--dsw-border);border-radius:7px;padding:5px 8px;background:var(--dsw-input);color:var(--dsw-label)}
 .fsdb-cellselect.is-field .fsdb-cellselect-trigger:hover,.fsdb-cellselect.is-field .fsdb-cellselect-trigger[data-open]{background:var(--dsw-hover);filter:none}
@@ -483,7 +483,7 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-person-option.is-selected{background:color-mix(in srgb,var(--dsw-pick) 14%,transparent)}
 .fsdb-person-loading{display:flex;align-items:center;gap:6px;padding:6px;color:var(--dsw-label-3);font-size:12px}
 .fsdb-pop-host,.fsdb-ref-host{display:flex;align-items:center;min-width:0;width:100%;min-height:22px;cursor:pointer}
-.fsdb-pop-empty,.fsdb-detail-aside .fsdb-pop-empty{color:var(--dsw-label-3);font-size:13px;font-weight:400;user-select:none}
+.fsdb-pop-empty,.fsdb-detail-aside .fsdb-pop-empty{color:var(--dsw-label-3);font-size:14px;font-weight:600;user-select:none}
 .fsdb-ref-chips{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:0;max-width:100%}
 .fsdb-ref-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;margin:0;border:0;border-radius:4px;padding:1px 6px 1px 7px;background:var(--dsw-hover);color:var(--dsw-label);font:inherit;font-size:13px;line-height:20px;cursor:pointer;text-align:left}
 .fsdb-ref-chip:hover{background:color-mix(in srgb,var(--dsw-pick) 16%,transparent)}

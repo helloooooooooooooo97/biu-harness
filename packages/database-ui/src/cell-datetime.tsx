@@ -38,7 +38,7 @@ const NOTION_DARK = {
     colorFillTertiary: '#2c2c2c',
     controlOutline: 'transparent',
     borderRadius: 6,
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: 'inherit',
     boxShadowSecondary: '0 0 0 1px rgba(242, 241, 237, 0.06), 0 8px 24px rgba(0, 0, 0, 0.35)',
   },
