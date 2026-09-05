@@ -431,7 +431,7 @@ export const DataSidebar = memo(function DataSidebar({
       const system = isSystemCollection(table.path)
       return (
         <div key={table.path} className="min-w-0" data-collection-kind={system ? 'system' : 'user'}>
-          <div className="sidebar-group-head mb-0.5">
+          <div className="sidebar-group-head">
             <div
               className="flex min-h-8 min-w-0 flex-1 items-center gap-1.5 rounded-md text-left text-[14px] font-medium tracking-normal text-inherit"
               title={name}
@@ -699,7 +699,7 @@ export const DataSidebar = memo(function DataSidebar({
               <ChatCount count={userTables.length} />
             </div>
             <SidebarFold open={userOpen}>
-              <div className="min-w-0 space-y-1.5 pt-0.5" data-testid="sidebar-user-collections">
+              <div className="flex min-w-0 flex-col gap-px" data-testid="sidebar-user-collections">
                 {userTables.length ? renderTableRows(userTables) : (
                   <div className="px-1 py-1 text-[12px] text-(--dsw-label-3)">还没有可改的表</div>
                 )}
@@ -724,7 +724,7 @@ export const DataSidebar = memo(function DataSidebar({
                 <ChatCount count={systemTables.length} />
               </div>
               <SidebarFold open={systemOpen}>
-                <div className="min-w-0 space-y-1.5 pt-0.5" data-testid="sidebar-system-collections">
+                <div className="flex min-w-0 flex-col gap-px" data-testid="sidebar-system-collections">
                   {renderTableRows(systemTables)}
                 </div>
               </SidebarFold>
