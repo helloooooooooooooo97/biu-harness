@@ -14,6 +14,8 @@ export type FieldType =
   | 'facet'
   | 'action'
   | 'person'
+  | 'ref'
+  | 'multi-ref'
 
 export type FieldSpec = {
   type: FieldType
@@ -193,8 +195,8 @@ export const BUILTIN_FIELDS = {
   emoji: { type: 'string', label: '图标', writable: true },
   tags: { type: 'multi-select', label: '标签', writable: true },
   facet: { type: 'facet', label: '合集', writable: true },
-  parentId: { type: 'string', label: '父级', writable: true },
-  dependsOn: { type: 'multi-select', label: '依赖', writable: true },
+  parentId: { type: 'ref', label: '父级', writable: true },
+  dependsOn: { type: 'multi-ref', label: '依赖', writable: true },
   createdBy: { type: 'person', label: '创建人', writable: false },
   updatedBy: { type: 'person', label: '编辑人', writable: false },
 } as const satisfies Record<string, FieldSpec>
@@ -261,10 +263,16 @@ export const ATOMIC_FIELD_TYPES = [
   'action',
   'facet',
   'person',
+  'ref',
+  'multi-ref',
 ] as const satisfies readonly FieldType[]
 
 export function isFacetFieldType(type: unknown): boolean {
   return type === 'facet'
+}
+
+export function isRefFieldType(type: unknown): type is 'ref' | 'multi-ref' {
+  return type === 'ref' || type === 'multi-ref'
 }
 
 export type AtomicFieldType = (typeof ATOMIC_FIELD_TYPES)[number]
@@ -443,9 +451,9 @@ export function withBuiltinFields(
   else if (!next.tags.computed) next.tags = { ...BUILTIN_FIELDS.tags, ...next.tags, type: 'multi-select', writable: true }
   if (!next.facet) next.facet = BUILTIN_FIELDS.facet
   if (!next.parentId) next.parentId = BUILTIN_FIELDS.parentId
-  else if (!next.parentId.computed) next.parentId = { ...BUILTIN_FIELDS.parentId, ...next.parentId, writable: true }
+  else if (!next.parentId.computed) next.parentId = { ...BUILTIN_FIELDS.parentId, ...next.parentId, type: 'ref', writable: true }
   if (!next.dependsOn) next.dependsOn = BUILTIN_FIELDS.dependsOn
-  else if (!next.dependsOn.computed) next.dependsOn = { ...BUILTIN_FIELDS.dependsOn, ...next.dependsOn, type: 'multi-select', writable: true }
+  else if (!next.dependsOn.computed) next.dependsOn = { ...BUILTIN_FIELDS.dependsOn, ...next.dependsOn, type: 'multi-ref', writable: true }
   if (!next.createdBy) next.createdBy = BUILTIN_FIELDS.createdBy
   else next.createdBy = { ...BUILTIN_FIELDS.createdBy, ...next.createdBy, type: 'person', writable: false }
   if (!next.updatedBy) next.updatedBy = BUILTIN_FIELDS.updatedBy

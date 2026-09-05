@@ -32,6 +32,8 @@ const TYPE_LABEL: Partial<Record<FieldType, string>> = {
   action: '动作',
   facet: '合集',
   person: '人物',
+  ref: '引用',
+  'multi-ref': '多引用',
 }
 
 export const schemaTagTone = tagTone

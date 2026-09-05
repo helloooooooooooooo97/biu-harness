@@ -84,6 +84,8 @@ export function fieldDraftValue(field: FieldSpec, value: unknown): string {
     const person = asPerson(value)
     return person ? JSON.stringify(person) : ''
   }
+  if (kind === 'multi-ref') return asStringList(value).join(', ')
+  if (kind === 'ref') return String(value ?? '')
   if (kind === 'file') {
     if (value == null || value === '') return ''
     if (typeof value === 'string') return value
@@ -115,6 +117,7 @@ export function FieldGlyph({ kind }: { kind: FieldType }) {
   if (kind === 'file') return <DocumentTextIcon aria-hidden className={cls} />
   if (kind === 'facet') return <RectangleStackIcon aria-hidden className={cls} />
   if (kind === 'person') return <UserIcon aria-hidden className={cls} />
+  if (kind === 'ref' || kind === 'multi-ref') return <ShareIcon aria-hidden className={cls} />
   if (kind === 'action') return <PlayIcon aria-hidden className={cls} />
   return <Bars3BottomLeftIcon aria-hidden className={cls} />
 }
@@ -305,6 +308,7 @@ export function DefaultCell({
   value,
   fieldKey,
   records,
+  collectionPath,
   onRun,
   onChange,
 }: {
@@ -312,6 +316,7 @@ export function DefaultCell({
   value: unknown
   fieldKey?: string
   records?: DbRecord[]
+  collectionPath?: string
   onRun?: () => void
   onChange?: (next: unknown) => void
 }) {
@@ -319,11 +324,13 @@ export function DefaultCell({
   if (kind === 'action') {
     return <ActionCell field={field} fieldKey={fieldKey ?? ''} onRun={onRun} />
   }
-  if (fieldKey && isRecordLinkField(fieldKey)) {
+  if (fieldKey && isRecordLinkField(field, fieldKey)) {
     return (
       <RecordLinkChips
+        field={field}
         fieldKey={fieldKey}
         value={value}
+        collectionPath={collectionPath}
         peers={records?.map((row) => ({ id: row.id, label: crumbRecordLabel(row) }))}
       />
     )
@@ -414,9 +421,10 @@ export function FieldEditor({
   if (kind === 'action') {
     return <ActionCell field={field} fieldKey={fieldKey} onRun={onAction} />
   }
-  if (isRecordLinkField(fieldKey) && collectionPath) {
+  if (isRecordLinkField(field, fieldKey) && collectionPath) {
     return (
       <RecordPickPanel
+        field={field}
         fieldKey={fieldKey}
         value={source ?? value}
         collectionPath={collectionPath}

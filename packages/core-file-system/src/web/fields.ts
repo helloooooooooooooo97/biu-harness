@@ -1,5 +1,5 @@
 import type { AtomicFieldType, CollectionSchema, CollectionSchemaPack, DbRecord, FieldSpec, FieldType, SchemaFieldValue } from '@biu/type-file-system'
-import { asAttachment, asAttachmentList, asHttpHref, asImageSrc, asImageSrcList, asPerson, BUILTIN_FIELD_KEYS, isFacetFieldType, isReservedSchemaFieldKey, normalizeSchemaValue } from '@biu/type-file-system'
+import { asAttachment, asAttachmentList, asHttpHref, asImageSrc, asImageSrcList, asPerson, BUILTIN_FIELD_KEYS, isFacetFieldType, isRefFieldType, isReservedSchemaFieldKey, normalizeSchemaValue } from '@biu/type-file-system'
 
 export const BUILTIN_VIEW_MODES = ['table'] as const
 export type BuiltinViewMode = (typeof BUILTIN_VIEW_MODES)[number]
@@ -34,6 +34,8 @@ function declaredParentField(schema: CollectionSchema | undefined) {
   if (schema?.parentField && schema.fields[schema.parentField]) return schema.parentField
   if (schema?.fields.parentId) return 'parentId'
   if (schema?.fields.parent) return 'parent'
+  const firstRef = fieldEntries(schema).find((item) => item.kind === 'ref')
+  if (firstRef) return firstRef.key
   return null
 }
 
@@ -293,6 +295,14 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
     return parsed.tags.length ? parsed.tags.join(', ') : ''
   }
   if (kind === 'person') return asPerson(value)?.name ?? ''
+  if (kind === 'ref') {
+    const id = String(value ?? '').trim()
+    return id
+  }
+  if (kind === 'multi-ref') {
+    const tags = asStringList(value)
+    return tags.length ? tags.join(', ') : ''
+  }
   return String(value)
 }
 
@@ -330,23 +340,33 @@ export function isDependsLinkField(key: string) {
   return key === 'dependsOn'
 }
 
-export function isRecordLinkField(key: string) {
-  return isParentLinkField(key) || isDependsLinkField(key)
+export function isRecordLinkField(field: FieldSpec | undefined, key?: string) {
+  if (field && isRefFieldType(resolveFieldType(field))) return true
+  return Boolean(key && (isParentLinkField(key) || isDependsLinkField(key)))
 }
 
-export function recordLinkIds(fieldKey: string, value: unknown): string[] {
-  if (isParentLinkField(fieldKey)) {
+export function isSingleRefField(field: FieldSpec | undefined, key?: string) {
+  if (field && resolveFieldType(field) === 'ref') return true
+  if (field && resolveFieldType(field) === 'multi-ref') return false
+  return Boolean(key && isParentLinkField(key))
+}
+
+export function recordLinkIds(field: FieldSpec | string | undefined, value: unknown, key?: string): string[] {
+  if (typeof field === 'string') {
+    return recordLinkIds(undefined, value, field)
+  }
+  if (isSingleRefField(field, key)) {
     const id = String(value ?? '').trim()
     return id ? [id] : []
   }
-  if (isDependsLinkField(fieldKey)) return asStringList(value)
+  if ((field && resolveFieldType(field) === 'multi-ref') || (key && isDependsLinkField(key))) return asStringList(value)
   return []
 }
 
 export function uniqueValues(rows: DbRecord[], key: string, field: FieldSpec): string[] {
   const set = new Set<string>()
   for (const row of rows) {
-    if (resolveFieldType(field) === 'multi-select') {
+    if (resolveFieldType(field) === 'multi-select' || resolveFieldType(field) === 'multi-ref') {
       for (const item of asStringList(row[key])) set.add(item)
     } else if (resolveFieldType(field) === 'facet') {
       for (const item of normalizeSchemaValue(row[key]).tags) set.add(item)

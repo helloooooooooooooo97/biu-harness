@@ -13,7 +13,7 @@ import { FieldEditor, fieldDraftValue, parseFieldValue } from './fsdb-cells.tsx'
 import { loadFacets, persistFacets, slugFacetId, subscribeFacets } from './facet-catalog.ts'
 import { PersonPickPanel } from './person-cell.tsx'
 import { RecordPickPanel } from './record-link-cell.tsx'
-import { asStringList, isParentLinkField, isRecordLinkField, parseFacetFlatColumnKey, resolveFieldType } from './fields.ts'
+import { asStringList, isRecordLinkField, isSingleRefField, parseFacetFlatColumnKey, resolveFieldType } from './fields.ts'
 
 type TagOption = { value: string; label: string }
 
@@ -187,7 +187,7 @@ export function CellPopDraft({
     kind === 'attachment' ||
     kind === 'facet' ||
     kind === 'person' ||
-    isRecordLinkField(fieldKey)
+    isRecordLinkField(field, fieldKey)
 
   function put(next: unknown, nextText?: string) {
     rawRef.current = next
@@ -205,15 +205,17 @@ export function CellPopDraft({
     [],
   )
 
-  if (isRecordLinkField(fieldKey)) {
+  if (isRecordLinkField(field, fieldKey)) {
     return (
       <RecordPickPanel
+        field={field}
         fieldKey={fieldKey}
         value={raw}
         collectionPath={collectionPath}
         excludeId={record.id}
         onChange={(next) => put(next)}
-        onPicked={isParentLinkField(fieldKey) ? onClose : undefined}
+        onPicked={isSingleRefField(field, fieldKey) ? onClose : undefined}
+        onJump={onClose}
       />
     )
   }

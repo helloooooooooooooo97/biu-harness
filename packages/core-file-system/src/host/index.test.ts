@@ -141,10 +141,10 @@ test('every collection schema includes id, title, createdAt and updatedAt', asyn
   assert.equal(stat.schema.fields.facet?.type, 'facet')
   assert.equal(stat.schema.fields.facet?.label, '合集')
   assert.equal(stat.schema.fields.facet?.writable, true)
-  assert.equal(stat.schema.fields.parentId?.type, 'string')
+  assert.equal(stat.schema.fields.parentId?.type, 'ref')
   assert.equal(stat.schema.fields.parentId?.writable, true)
   assert.equal(stat.schema.fields.parentId?.label, '父级')
-  assert.equal(stat.schema.fields.dependsOn?.type, 'multi-select')
+  assert.equal(stat.schema.fields.dependsOn?.type, 'multi-ref')
   assert.equal(stat.schema.fields.dependsOn?.writable, true)
   assert.equal(stat.schema.fields.dependsOn?.label, '依赖')
   assert.equal(stat.schema.fields.createdBy?.type, 'person')
@@ -167,7 +167,7 @@ test('every collection schema includes id, title, createdAt and updatedAt', asyn
   await assert.rejects(() => db.update('/notes/n1', { id: 'other' }), /not writable/)
 })
 
-test('parentId is single-select and dependsOn is multi-select within the same table', async () => {
+test('parentId is a ref and dependsOn is a multi-ref within the same table', async () => {
   const ctx = new Context()
   const db = new DatabaseService(ctx)
   db.register(notesCollection())
@@ -179,6 +179,39 @@ test('parentId is single-select and dependsOn is multi-select within the same ta
   await assert.rejects(() => db.update('/notes/n1', { dependsOn: ['missing'] }), /unknown record/)
   await assert.rejects(() => db.update('/notes/n1', { parentId: 'n1' }), /itself/)
   await assert.rejects(() => db.update('/notes/n1', { dependsOn: ['n1'] }), /itself/)
+})
+
+test('custom ref fields also stay inside the same table', async () => {
+  const ctx = new Context()
+  const db = new DatabaseService(ctx)
+  const rows = new Map<string, Record<string, unknown>>([
+    ['n1', { id: 'n1', title: 'a', related: '' }],
+    ['n2', { id: 'n2', title: 'b', related: '' }],
+  ])
+  db.register({
+    id: 'refs',
+    path: '/notes',
+    schema: {
+      fields: {
+        ...REQUIRED_RECORD_FIELDS,
+        title: { type: 'string', writable: true },
+        related: { type: 'ref', writable: true },
+        also: { type: 'multi-ref', writable: true },
+      },
+    },
+    list: () => [...rows.values()] as { id: string }[],
+    get: (id) => rows.get(id) as { id: string } | undefined,
+    records: { update: true },
+    update: (id, patch) => {
+      const next = { ...rows.get(id), ...patch, id }
+      rows.set(id, next)
+      return next as { id: string }
+    },
+  })
+  const linked = await db.update('/notes/n1', { related: 'n2', also: ['n2'] })
+  assert.equal(linked.value.related, 'n2')
+  assert.deepEqual(linked.value.also, ['n2'])
+  await assert.rejects(() => db.update('/notes/n1', { related: 'missing' }), /unknown record/)
 })
 
 test('updates stamp createdBy and updatedBy from the current actor', async () => {

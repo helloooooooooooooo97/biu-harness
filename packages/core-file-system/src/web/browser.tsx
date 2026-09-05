@@ -1334,6 +1334,7 @@ export function CollectionBrowser({
             field={field}
             fieldKey={key}
             records={items}
+            collectionPath={collectionPath}
             value={readFacetFlatValue(row, key, facetSourceKey(schema))}
             onChange={
               field.writable && kind === 'attachment' ? (next) => writeCellValue(row, key, field, next) : undefined
@@ -1348,6 +1349,7 @@ export function CollectionBrowser({
           field={field}
           fieldKey={key}
           records={items}
+          collectionPath={collectionPath}
           value={row[key]}
           onChange={
             field.writable && kind === 'attachment' ? (next) => writeCellValue(row, key, field, next) : undefined
@@ -1376,7 +1378,7 @@ export function CollectionBrowser({
           />
         )
       }
-      return <DefaultCell field={field} fieldKey={key} records={items} value={value} />
+      return <DefaultCell field={field} fieldKey={key} records={items} collectionPath={collectionPath} value={value} />
     }
     if (kind === 'facet') {
       if (field.writable) {
@@ -1422,7 +1424,7 @@ export function CollectionBrowser({
         />
       )
     }
-    return <DefaultCell field={field} fieldKey={key} records={items} value={row[key]} />
+    return <DefaultCell field={field} fieldKey={key} records={items} collectionPath={collectionPath} value={row[key]} />
   }
 
   function renderCellPop() {
@@ -1445,7 +1447,7 @@ export function CollectionBrowser({
       <CellPop
         key={`${cellPop.id}:${cellPop.key}`}
         open
-        className={`is-${resolveFieldType(field)}${isRecordLinkField(key) ? ' is-record-link' : ''}`}
+        className={`is-${resolveFieldType(field)}${isRecordLinkField(field, key) ? ' is-record-link' : ''}`}
         anchor={cellAnchorRef.current}
         onClose={() => setCellPop(null)}
       >

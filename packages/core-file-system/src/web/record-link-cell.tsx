@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowPathIcon } from '@heroicons/react/16/solid'
-import { TagChip, TagChips } from '@biu/public-ui'
-import { DbSearchOption, ensureDbSearchStyle } from '@biu/database-ui'
-import type { DbRecord } from '@biu/type-file-system'
+import { ArrowPathIcon, ArrowTopRightOnSquareIcon, CheckIcon } from '@heroicons/react/16/solid'
+import { ensureDbSearchStyle } from '@biu/database-ui'
+import type { DbRecord, FieldSpec } from '@biu/type-file-system'
 import { listCollection } from './db-client.ts'
+import { showRecordInInspector } from './inspector-db-route.ts'
 import { crumbRecordLabel } from './sidebar-preview.ts'
-import { isParentLinkField, recordLinkIds } from './fields.ts'
+import { isSingleRefField, recordLinkIds } from './fields.ts'
 
 export type RecordLinkPeer = { id: string; label: string }
 
@@ -31,28 +31,50 @@ async function loadTablePeers(path: string, labelField?: string): Promise<Record
   return asPeers(rows, labelField ?? first.schema?.labelField)
 }
 
+function jumpRecord(collectionPath: string | undefined, id: string) {
+  if (!collectionPath || !id) return
+  showRecordInInspector(collectionPath, id)
+}
+
 export function RecordLinkChips({
+  field,
   fieldKey,
   value,
   peers,
+  collectionPath,
 }: {
+  field?: FieldSpec
   fieldKey: string
   value: unknown
   peers?: RecordLinkPeer[]
+  collectionPath?: string
 }) {
-  const ids = recordLinkIds(fieldKey, value)
+  const ids = recordLinkIds(field, value, fieldKey)
   if (!ids.length) return null
   const byId = new Map((peers ?? []).map((item) => [item.id, item.label]))
   return (
-    <TagChips>
+    <span className="fsdb-ref-chips">
       {ids.map((id) => (
-        <TagChip key={id} id={id} label={byId.get(id) ?? id} />
+        <button
+          key={id}
+          type="button"
+          className="fsdb-ref-chip"
+          title={`在右侧打开 ${byId.get(id) ?? id}`}
+          onClick={(event) => {
+            event.stopPropagation()
+            jumpRecord(collectionPath, id)
+          }}
+        >
+          <span className="fsdb-ref-chip-title">{byId.get(id) ?? id}</span>
+          <ArrowTopRightOnSquareIcon className="size-3 shrink-0 opacity-70" aria-hidden />
+        </button>
       ))}
-    </TagChips>
+    </span>
   )
 }
 
 export function RecordPickPanel({
+  field,
   fieldKey,
   value,
   collectionPath,
@@ -61,7 +83,9 @@ export function RecordPickPanel({
   seed,
   onChange,
   onPicked,
+  onJump,
 }: {
+  field?: FieldSpec
   fieldKey: string
   value: unknown
   collectionPath: string
@@ -70,10 +94,11 @@ export function RecordPickPanel({
   seed?: DbRecord[]
   onChange: (next: unknown) => void
   onPicked?: () => void
+  onJump?: () => void
 }) {
   ensureDbSearchStyle()
-  const multiple = !isParentLinkField(fieldKey)
-  const selected = recordLinkIds(fieldKey, value)
+  const multiple = !isSingleRefField(field, fieldKey)
+  const selected = recordLinkIds(field, value, fieldKey)
   const [query, setQuery] = useState('')
   const [peers, setPeers] = useState<RecordLinkPeer[]>(() => asPeers(seed ?? [], labelField))
   const [loading, setLoading] = useState(true)
@@ -121,20 +146,32 @@ export function RecordPickPanel({
     setQuery('')
   }
 
+  function jump(id: string) {
+    jumpRecord(collectionPath, id)
+    onJump?.()
+  }
+
   return (
-    <div className="fsdb-cell-pop-tags">
+    <div className="fsdb-ref-pick">
       {selected.length ? (
-        <div className="fsdb-cell-pop-picked">
-          <TagChips>
-            {selected.map((id) => (
-              <TagChip
-                key={id}
-                id={id}
-                label={byId.get(id) ?? id}
-                onRemove={() => commit(selected.filter((item) => item !== id))}
-              />
-            ))}
-          </TagChips>
+        <div className="fsdb-ref-picked">
+          {selected.map((id) => (
+            <div key={id} className="fsdb-ref-picked-row">
+              <button type="button" className="fsdb-ref-jump" onClick={() => jump(id)} title="在右侧打开">
+                <span className="fsdb-ref-title">{byId.get(id) ?? id}</span>
+                <span className="fsdb-ref-id">{id.slice(0, 8)}</span>
+                <ArrowTopRightOnSquareIcon className="size-3 shrink-0 opacity-70" aria-hidden />
+              </button>
+              <button
+                type="button"
+                className="fsdb-ref-x"
+                aria-label={`取消引用 ${byId.get(id) ?? id}`}
+                onClick={() => commit(selected.filter((item) => item !== id))}
+              >
+                ×
+              </button>
+            </div>
+          ))}
         </div>
       ) : null}
       <label className="db-search-field">
@@ -151,12 +188,28 @@ export function RecordPickPanel({
           }}
         />
       </label>
-      <div className="db-search-list">
-        {available.map((item) => (
-          <DbSearchOption key={item.id} selected={!multiple && selected[0] === item.id} onClick={() => pick(item.id)}>
-            <TagChip id={item.id} label={item.label} />
-          </DbSearchOption>
-        ))}
+      <div className="fsdb-ref-list">
+        {available.map((item) => {
+          const on = !multiple && selected[0] === item.id
+          return (
+            <div key={item.id} className={`fsdb-ref-row${on ? ' is-on' : ''}`}>
+              <button
+                type="button"
+                className={`fsdb-ref-check${on ? ' is-on' : ''}`}
+                aria-pressed={on}
+                aria-label={on ? `取消引用 ${item.label}` : `引用 ${item.label}`}
+                onClick={() => pick(item.id)}
+              >
+                {on ? <CheckIcon className="size-3" aria-hidden /> : null}
+              </button>
+              <button type="button" className="fsdb-ref-jump" onClick={() => jump(item.id)} title="在右侧打开">
+                <span className="fsdb-ref-title">{item.label}</span>
+                <span className="fsdb-ref-id">{item.id.slice(0, 8)}</span>
+                <ArrowTopRightOnSquareIcon className="size-3 shrink-0 opacity-70" aria-hidden />
+              </button>
+            </div>
+          )
+        })}
         {loading ? (
           <div className="fsdb-person-loading">
             <ArrowPathIcon className="size-[14px] fsdb-spin" aria-hidden />

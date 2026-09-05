@@ -133,6 +133,6 @@ test('selected table cells use Super Tag blue when writable and gray when locked
   assert.match(css, /\.fsdb-file-tools \.tasks-icon-btn\{[^}]*padding:3px/)
   assert.match(css, /\.fsdb-files\{[^}]*flex-direction:column/)
   assert.match(css, /\.fsdb-cell-pop\{[^}]*background:#202020/)
-  assert.match(css, /\.fsdb-cell-pop\.is-select,\.fsdb-cell-pop\.is-multi-select,\.fsdb-cell-pop\.is-facet,\.fsdb-cell-pop\.is-attachment,\.fsdb-cell-pop\.is-person,\.fsdb-cell-pop\.is-record-link\{[^}]*min-width:260px/)
+  assert.match(css, /\.fsdb-cell-pop\.is-select,\.fsdb-cell-pop\.is-multi-select,\.fsdb-cell-pop\.is-facet,\.fsdb-cell-pop\.is-attachment,\.fsdb-cell-pop\.is-person,\.fsdb-cell-pop\.is-record-link,\.fsdb-cell-pop\.is-ref,\.fsdb-cell-pop\.is-multi-ref\{[^}]*min-width:260px/)
   assert.match(css, /\.fsdb-cell-pop-url\{[^}]*width:100%/)
 })

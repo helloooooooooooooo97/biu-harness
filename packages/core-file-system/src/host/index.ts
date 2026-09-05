@@ -224,6 +224,14 @@ function coerce(field: FieldSpec, value: unknown) {
     if (!person) throw new Error('expected person')
     return person
   }
+  if (kind === 'ref') {
+    if (value == null || value === '') return ''
+    if (Array.isArray(value)) return String(value[0] ?? '').trim()
+    return String(value).trim()
+  }
+  if (kind === 'multi-ref') {
+    return [...new Set(coerceList(value).map((item) => item.trim()).filter(Boolean))]
+  }
   if (kind === 'image') {
     if (value == null || value === '') return ''
     const list = asImageSrcList(value)
@@ -265,19 +273,24 @@ function pickWritablePatch(schema: CollectionSchema, patch: Record<string, unkno
 
 async function assertSameTableLinks(spec: CollectionSpec, patch: Record<string, unknown>, selfId?: string) {
   const ids: string[] = []
-  if ('parentId' in patch) {
-    const parent = String(patch.parentId ?? '').trim()
-    if (parent) {
+  for (const [key, value] of Object.entries(patch)) {
+    const field = spec.schema.fields[key]
+    if (!field) continue
+    const kind = field.type === 'string[]' ? 'multi-select' : field.type
+    if (kind === 'ref') {
+      const parent = String(value ?? '').trim()
+      if (!parent) continue
       if (selfId && parent === selfId) throw new Error('cannot link a record to itself')
       ids.push(parent)
+      continue
     }
-  }
-  if ('dependsOn' in patch) {
-    const list = Array.isArray(patch.dependsOn) ? patch.dependsOn.map((item) => String(item)) : []
-    for (const id of list) {
-      if (!id) continue
-      if (selfId && id === selfId) throw new Error('cannot link a record to itself')
-      ids.push(id)
+    if (kind === 'multi-ref') {
+      const list = Array.isArray(value) ? value.map((item) => String(item)) : []
+      for (const id of list) {
+        if (!id) continue
+        if (selfId && id === selfId) throw new Error('cannot link a record to itself')
+        ids.push(id)
+      }
     }
   }
   for (const id of [...new Set(ids)]) {

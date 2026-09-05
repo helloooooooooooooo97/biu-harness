@@ -35,6 +35,8 @@ test('resolveFieldType maps legacy aliases', () => {
   assert.equal(resolveFieldType({ type: 'attachment' }), 'attachment')
   assert.equal(resolveFieldType({ type: 'facet' }), 'facet')
   assert.equal(resolveFieldType({ type: 'action' }), 'action')
+  assert.equal(resolveFieldType({ type: 'ref' }), 'ref')
+  assert.equal(resolveFieldType({ type: 'multi-ref' }), 'multi-ref')
 })
 
 test('fieldHasValue hides missing list/card/board chips', () => {
@@ -67,6 +69,8 @@ test('formatField renders datetime tags and media', () => {
   assert.equal(formatField({ type: 'attachment' }, { name: 'a.pdf', href: 'https://cdn.example/a.pdf' }), 'a.pdf')
   assert.equal(formatField({ type: 'person' }, { kind: 'user', name: '用户' }), '用户')
   assert.equal(formatField({ type: 'person' }, { kind: 'system', name: '系统' }), '系统')
+  assert.equal(formatField({ type: 'ref' }, 'rec-1'), 'rec-1')
+  assert.equal(formatField({ type: 'multi-ref' }, ['a', 'b']), 'a, b')
   assert.equal(inferPackFieldType({ kind: 'user', name: '用户' }), 'person')
 })
 
@@ -263,9 +267,10 @@ test('uniqueValues lists tags already on the table, not schema enum', () => {
   assert.equal(uniqueValues(rows, 'status', schema.fields.status!).includes('todo'), false)
 })
 
-test('recordLinkIds treats parent as one id and dependsOn as many', () => {
+test('recordLinkIds treats ref as one id and multi-ref as many', () => {
+  assert.deepEqual(recordLinkIds({ type: 'ref' }, 'p1'), ['p1'])
+  assert.deepEqual(recordLinkIds({ type: 'ref' }, ''), [])
+  assert.deepEqual(recordLinkIds({ type: 'multi-ref' }, ['a', 'b']), ['a', 'b'])
   assert.deepEqual(recordLinkIds('parentId', 'p1'), ['p1'])
-  assert.deepEqual(recordLinkIds('parentId', ''), [])
-  assert.deepEqual(recordLinkIds('dependsOn', ['a', 'b']), ['a', 'b'])
 })
 

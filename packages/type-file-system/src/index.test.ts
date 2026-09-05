@@ -114,6 +114,7 @@ test('normalizeSchemaPack drops fields that reuse file-system keys or labels', (
 })
 
 test('withBuiltinFields always includes writable facet and tags', () => {
+  const fields = withBuiltinFields({ title: { type: 'string', writable: true }, parentId: { type: 'string', label: '父级', writable: true } })
   const fields = withBuiltinFields({ title: { type: 'string', writable: true } })
   assert.equal(fields.facet?.type, 'facet')
   assert.equal(fields.facet?.writable, true)
@@ -123,7 +124,8 @@ test('withBuiltinFields always includes writable facet and tags', () => {
   assert.equal(fields.emoji?.writable, true)
   assert.equal(fields.parentId?.writable, true)
   assert.equal(fields.parentId?.label, '父级')
-  assert.equal(fields.dependsOn?.type, 'multi-select')
+  assert.equal(fields.parentId?.type, 'ref')
+  assert.equal(fields.dependsOn?.type, 'multi-ref')
   assert.equal(fields.dependsOn?.writable, true)
   assert.equal(fields.dependsOn?.label, '依赖')
   assert.equal(fields.createdBy?.type, 'person')
@@ -169,8 +171,8 @@ test('required record fields are icon, tags, timestamps, facet, parent, and depe
   assert.equal(REQUIRED_RECORD_FIELDS.facet.type, 'facet')
   assert.equal(REQUIRED_RECORD_FIELDS.createdAt.type, 'datetime')
   assert.equal(REQUIRED_RECORD_FIELDS.updatedAt.type, 'datetime')
-  assert.equal(REQUIRED_RECORD_FIELDS.parentId.type, 'string')
-  assert.equal(REQUIRED_RECORD_FIELDS.dependsOn.type, 'multi-select')
+  assert.equal(REQUIRED_RECORD_FIELDS.parentId.type, 'ref')
+  assert.equal(REQUIRED_RECORD_FIELDS.dependsOn.type, 'multi-ref')
 })
 
 test('asPerson reads user, system, and agent session ids', () => {
