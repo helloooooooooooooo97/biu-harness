@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import type { AttachmentValue, DbRecord, SchemaFieldValue } from '@biu/type-file-system'
 import { asAttachmentList, emptySchemaValue, normalizeSchemaValue } from '@biu/type-file-system'
 import { dataPath } from '@biu/host-plugin-loader/data-dir'
+import { splitMarkdown } from './markdown.ts'
 
 export const PAGE_ROOT = '.page'
 export const PAGE_DB = '.page/pages.sqlite'
