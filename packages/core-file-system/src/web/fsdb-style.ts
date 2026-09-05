@@ -122,7 +122,8 @@ const CSS = `
 .fsdb-page .tasks-table.is-wrap{width:100%;max-width:100%;white-space:normal}
 .fsdb-page .tasks-table.is-wrap td{white-space:normal;vertical-align:top;max-width:28rem}
 .fsdb-page .tasks-table th,.fsdb-page .tasks-table.is-wrap th{white-space:nowrap}
-.fsdb-cell{display:flex;align-items:center;min-width:0;max-width:100%;min-height:18px;font-weight:600}
+.fsdb-cell{display:flex;align-items:center;min-width:0;max-width:100%;min-height:18px;overflow:hidden;font-weight:600}
+.fsdb-page .tasks-table:not(.is-wrap) .fsdb-cell > span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fsdb-page .tasks-table .biu-tag,.fsdb-page .fsdb-cell .biu-tag,.fsdb-page .fsdb-proprow-v .biu-tag,.fsdb-page .fsdb-proprow-v .fsdb-token,.fsdb-page .tasks-table .fsdb-token{font-weight:400}
 .fsdb-page .fsdb-cell .traj-usage,.fsdb-page .fsdb-cell .traj-usage-empty,.fsdb-page .tasks-table .traj-usage,.fsdb-page .tasks-table .traj-usage-empty{font-size:14px;line-height:inherit}
 .fsdb-page .chat-pane .traj-usage,.fsdb-page .chat-pane .traj-usage-empty{font-size:var(--dsw-chat-ui-font-size);line-height:1;font-weight:400;color:var(--dsw-sidebar-fg)}
@@ -173,7 +174,8 @@ const CSS = `
 .fsdb-page .tasks-table.is-wrap .fsdb-cell{white-space:normal;overflow-wrap:anywhere;word-break:break-word;max-width:100%;align-items:flex-start}
 .fsdb-page .tasks-table.is-wrap.is-truncate .fsdb-cell{overflow:hidden;max-width:100%;max-height:2.8em}
 .fsdb-page .tasks-table.is-wrap.is-truncate .fsdb-title-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:normal}
-.fsdb-page .tasks-table th,.fsdb-page .tasks-table td{overflow:visible}
+.fsdb-page .tasks-table td{overflow:hidden}
+.fsdb-page .tasks-table td:first-child,.fsdb-page .tasks-table th{overflow:visible}
 .fsdb-page .tasks-table tbody tr:hover{position:relative;z-index:6}
 .fsdb-page .tasks-table [data-dock-tip]::after{z-index:80}
 .fsdb-page .tasks-table th{padding:6px 6px;color:var(--dsw-label-2);font-size:14px;font-weight:600;position:sticky;top:0;background:var(--dsw-surface);z-index:5;white-space:nowrap}
