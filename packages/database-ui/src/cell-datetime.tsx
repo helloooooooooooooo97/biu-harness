@@ -14,14 +14,9 @@ function asStamp(value: unknown) {
 export function formatDateTimeLabel(value: unknown) {
   const n = asStamp(value)
   if (!n) return ''
-  return new Date(n).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
+  const d = new Date(n)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 const NOTION_DARK = {
@@ -61,17 +56,19 @@ export function CellDateTime({
   onChange,
   empty = '',
   overdue = false,
+  writable = true,
 }: {
   value: unknown
   onChange: (next: number | null) => void
   empty?: string
   overdue?: boolean
+  writable?: boolean
 }) {
   ensureDbSearchStyle()
   const stamp = asStamp(value)
   return (
     <div
-      className={`db-datetime${overdue ? ' is-overdue' : ''}`}
+      className={`db-datetime${overdue ? ' is-overdue' : ''}${writable ? '' : ' is-ro'}`}
       onClick={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}
     >
@@ -79,13 +76,18 @@ export function CellDateTime({
         <DatePicker
           showTime={{ format: 'HH:mm' }}
           needConfirm={false}
-          allowClear
+          allowClear={writable}
+          inputReadOnly={!writable}
+          open={writable ? undefined : false}
           size="small"
           variant="borderless"
           placeholder={empty}
           format="YYYY/MM/DD HH:mm"
           value={stamp ? dayjs(stamp) : null}
-          onChange={(next) => onChange(next ? next.valueOf() : null)}
+          onChange={(next) => {
+            if (!writable) return
+            onChange(next ? next.valueOf() : null)
+          }}
           getPopupContainer={() => document.body}
         />
       </ConfigProvider>

@@ -352,6 +352,16 @@ export function DefaultCell({
   if (kind === 'person') {
     return <PersonFace value={value} />
   }
+  if (kind === 'datetime') {
+    return (
+      <CellDateTime
+        value={value}
+        empty="空"
+        writable={Boolean(onChange)}
+        onChange={(next) => onChange?.(next)}
+      />
+    )
+  }
   if (kind === 'url' || kind === 'image' || kind === 'attachment' || kind === 'file') {
     return <FilePreview value={value} compact kind={kind} onChange={kind === 'attachment' ? onChange : undefined} />
   }

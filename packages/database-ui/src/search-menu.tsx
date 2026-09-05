@@ -30,10 +30,10 @@ const CSS = `
 .db-cell-multi-box{display:flex;flex-wrap:wrap;align-items:center;gap:4px;width:100%;max-width:none;min-height:20px;border:0;border-radius:6px;padding:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .db-cell-multi-box.is-empty{display:flex;width:100%;min-height:22px;min-width:0;align-self:stretch}
 .db-cell-multi-box:hover,.db-cell-multi-box[aria-expanded="true"]{background:transparent}
-.db-datetime{display:inline-flex;position:relative;min-width:0;max-width:100%;vertical-align:middle}
+.db-datetime{display:inline-flex;align-items:center;gap:4px;position:relative;min-width:0;width:100%;max-width:100%;vertical-align:middle;color:var(--dsw-label-2)}
 .db-datetime .ant-picker{width:auto;max-width:100%;padding:0 4px;background:transparent;border:0;box-shadow:none}
-.db-datetime .ant-picker-input > input{font-size:14px;font-weight:500;color:var(--dsw-label)}
-.db-datetime.is-overdue .ant-picker-input > input{color:var(--dsw-danger)}
+.db-datetime .ant-picker-input > input{font-size:14px;font-weight:500;color:inherit}
+.db-datetime.is-overdue .ant-picker-input > input,.db-datetime.is-overdue{color:var(--dsw-danger)}
 .db-datetime .ant-picker-suffix,.db-datetime .ant-picker-clear{color:var(--dsw-label-3)}
 `
 

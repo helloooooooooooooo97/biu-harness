@@ -5,7 +5,7 @@ import type { FieldType } from '@biu/type-file-system'
 
 export function cellUsesPop(kind: FieldType, writable?: boolean) {
   if (!writable) return false
-  return kind !== 'action' && kind !== 'file' && kind !== 'boolean'
+  return kind !== 'action' && kind !== 'file' && kind !== 'boolean' && kind !== 'datetime'
 }
 
 export function CellPop({

@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react'
 import type { DbRecord, FieldSpec } from '@biu/type-file-system'
+import { CellDateTime } from '@biu/database-ui'
 import { CellPop, cellUsesPop } from './cell-pop.tsx'
 import { CellPopDraft } from './cell-pop-draft.tsx'
 import { ActionCell, BoolCell, DefaultCell } from './fsdb-cells.tsx'
 import { fieldHasValue, isRecordLinkField, resolveFieldType } from './fields.ts'
 
-const POP_HOST_IGNORE = '.fsdb-ref-chip, .fsdb-boolbtn, .fsdb-thumb-btn, .fsdb-thumb, .ant-image, .fsdb-file-tools, .fsdb-action-btn'
+const POP_HOST_IGNORE = '.fsdb-ref-chip, .fsdb-boolbtn, .fsdb-thumb-btn, .fsdb-thumb, .ant-image, .fsdb-file-tools, .fsdb-action-btn, .db-datetime, .ant-picker'
 
 export function FieldValuePop({
   record,
@@ -36,6 +37,18 @@ export function FieldValuePop({
     const on = value === true || value === 'true'
     if (!field.writable) return <BoolCell on={on} />
     return <BoolCell on={on} writable onToggle={() => onSubmit(!on)} />
+  }
+  if (kind === 'datetime') {
+    return (
+      <CellDateTime
+        value={value}
+        empty="空"
+        writable={Boolean(field.writable)}
+        onChange={(next) => {
+          if (field.writable) onSubmit(next)
+        }}
+      />
+    )
   }
   const display = fieldHasValue(field, value) ? (
     <DefaultCell

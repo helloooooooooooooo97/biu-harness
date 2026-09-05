@@ -248,14 +248,9 @@ export function formatField(field: FieldSpec | undefined, value: unknown): strin
   if (kind === 'datetime') {
     const n = asTime(value)
     if (!n) return ''
-    return new Date(n).toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    })
+    const d = new Date(n)
+    const pad = (part: number) => String(part).padStart(2, '0')
+    return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
   }
   if (kind === 'boolean') return value === true || value === 'true' ? '是' : '否'
   if (kind === 'number') {

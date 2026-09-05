@@ -152,7 +152,7 @@ const EMPTY_FILTERS: Record<string, string> = {}
 /** 与选区拖选同一阈值：位移超过这个距离只当拖，不当点击。 */
 const CELL_POP_DRAG_PX = 6
 const CELL_POP_IGNORE =
-  '.fsdb-row-check, .fsdb-col-resizer, .tasks-row-tools, .tasks-title-open, .fsdb-action-btn, .fsdb-boolbtn, .fsdb-thumb-btn, .fsdb-thumb, .ant-image, .fsdb-file-tools, .fsdb-ref-chip'
+  '.fsdb-row-check, .fsdb-col-resizer, .tasks-row-tools, .tasks-title-open, .fsdb-action-btn, .fsdb-boolbtn, .fsdb-thumb-btn, .fsdb-thumb, .ant-image, .fsdb-file-tools, .fsdb-ref-chip, .db-datetime, .ant-picker'
 
 export function CollectionBrowser({
   moduleId,
@@ -1336,7 +1336,9 @@ export function CollectionBrowser({
             collectionPath={collectionPath}
             value={readFacetFlatValue(row, key, facetSourceKey(schema))}
             onChange={
-              field.writable && kind === 'attachment' ? (next) => writeCellValue(row, key, field, next) : undefined
+              field.writable && (kind === 'attachment' || kind === 'datetime')
+                ? (next) => writeCellValue(row, key, field, next)
+                : undefined
             }
           />
         )
@@ -1351,7 +1353,9 @@ export function CollectionBrowser({
           collectionPath={collectionPath}
           value={row[key]}
           onChange={
-            field.writable && kind === 'attachment' ? (next) => writeCellValue(row, key, field, next) : undefined
+            field.writable && (kind === 'attachment' || kind === 'datetime')
+              ? (next) => writeCellValue(row, key, field, next)
+              : undefined
           }
         />
       )
