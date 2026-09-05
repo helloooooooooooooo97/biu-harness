@@ -1669,13 +1669,12 @@ export function CollectionBrowser({
   }
 
   function RecordActions({ row, place }: { row: DbRecord; place: 'row' | 'detail' }) {
-    const actions = visibleActions(schema, row, place)
-    const [moreOpen, setMoreOpen] = useState(false)
-    const moreRef = useRef<HTMLButtonElement>(null)
+    const actions = visibleActions(schema, row, place).filter((action) => {
+      if (place !== 'detail' || !nested) return true
+      return action.id !== 'open-split' && action.id !== 'open-page'
+    })
     if (!actions.length) return null
     const Action = chrome?.Action
-    const shown = actions.filter((action) => action.id === 'open-split' || action.id === 'open-page')
-    const overflow = actions.filter((action) => action.id !== 'open-split' && action.id !== 'open-page')
     const rowShown = actions.filter(
       (action) => Action || actionIcon(action.id) || action.id === 'open-split' || action.id === 'open-page',
     )
@@ -1708,41 +1707,25 @@ export function CollectionBrowser({
       )
     }
     return (
-      <div className="tasks-row-actions" data-biu-ignore onClick={(event) => event.stopPropagation()}>
-        {shown.map(renderOne)}
-        {overflow.length ? (
-          <>
+      <div className="fsdb-detail-actions" data-testid="fsdb-detail-actions" data-biu-ignore>
+        {actions.map((action) => {
+          const run = () => void runAction(row, action)
+          if (Action) return <Action key={action.id} action={action} record={row} busy={busy} run={run} />
+          return (
             <button
-              ref={moreRef}
+              key={action.id}
               type="button"
-              className="tasks-icon-btn"
-              title="更多"
-              data-dock-tip="更多"
-              aria-label="更多操作"
-              aria-expanded={moreOpen}
+              className={`fsdb-detail-action${action.tone === 'danger' ? ' is-danger' : ''}`}
+              title={action.label}
+              aria-label={`${action.label} ${labelOf(row)}`}
               disabled={busy}
-              onClick={() => setMoreOpen((open) => !open)}
+              onClick={run}
             >
-              <EllipsisHorizontalIcon aria-hidden className="size-[14px]" />
+              {actionIcon(action.id)}
+              {action.label}
             </button>
-            {moreOpen ? (
-              <DbMenu anchor={moreRef.current} onClose={() => setMoreOpen(false)}>
-                {overflow.map((action) => (
-                  <DbSearchOption
-                    key={action.id}
-                    onClick={() => {
-                      setMoreOpen(false)
-                      void runAction(row, action)
-                    }}
-                  >
-                    {actionIcon(action.id)}
-                    {action.label}
-                  </DbSearchOption>
-                ))}
-              </DbMenu>
-            ) : null}
-          </>
-        ) : null}
+          )
+        })}
       </div>
     )
   }
@@ -2036,7 +2019,6 @@ export function CollectionBrowser({
             />
           </div>
           <div className="chat-view-header-right">
-            {selected ? <RecordActions row={selected} place="detail" /> : null}
             {activeViewId && !selected ? (
               <button
                 type="button"
@@ -2675,6 +2657,7 @@ export function CollectionBrowser({
           writeOne={writeOne}
           writePatch={writePatch}
           tableIcon={currentTable?.view?.icon}
+          toolbar={<RecordActions row={selected} place="detail" />}
           onOpenRecord={(recordId, collection) => onOpenRecord?.(recordId, activeViewId, collection)}
           onPrev={total > 1 ? () => void stepViewRecord(-1) : undefined}
           onNext={total > 1 ? () => void stepViewRecord(1) : undefined}

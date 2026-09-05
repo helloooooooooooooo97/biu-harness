@@ -368,6 +368,14 @@ const CSS = `
 .fsdb-prop-val .fsdb-plain-input:focus{text-overflow:clip}
 .fsdb-prop-val .fsdb-link{display:block;overflow-wrap:normal}
 .fsdb-detail-title-row{display:flex;align-items:flex-start;gap:12px;min-width:0;padding-bottom:16px}
+.fsdb-detail-title-block{display:flex;flex:1;min-width:0;flex-direction:column;gap:10px}
+.fsdb-detail-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+.fsdb-detail-action{display:inline-flex;align-items:center;gap:6px;height:26px;margin:0;border:0;border-radius:6px;padding:0 10px;background:transparent;color:#F0EFED;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.fsdb-detail-action:hover{background:var(--dsw-hover)}
+.fsdb-detail-action:disabled{opacity:.45;cursor:default}
+.fsdb-detail-action.is-danger{color:var(--dsw-danger)}
+.fsdb-detail-action.is-danger:hover{background:color-mix(in srgb,var(--dsw-danger) 16%,transparent)}
+.fsdb-detail-actions .tasks-icon-btn{height:26px;width:auto;padding:0 8px}
 .fsdb-detail-title-icon-wrap{position:relative;flex:none;margin-top:2px}
 .fsdb-detail-title-icon{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;margin:0;border:0;border-radius:10px;padding:0;background:transparent;color:var(--dsw-label-2);font-size:22px;line-height:1;overflow:hidden}
 button.fsdb-detail-title-icon{cursor:pointer}
@@ -378,7 +386,7 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-record-mark.is-lg{width:32px;height:32px}
 .fsdb-crumbs .fsdb-record-mark.is-sm,.fsdb-crumb-option .fsdb-record-mark.is-sm{width:14px;height:14px}
 .fsdb-record-mark .sidebar-mascot{display:block}
-.fsdb-detail-title{flex:1;min-width:0;margin:0;color:var(--dsw-label);font-size:32px;font-weight:700;line-height:1.2}
+.fsdb-detail-title{min-width:0;margin:0;color:var(--dsw-label);font-size:32px;font-weight:700;line-height:1.2}
 .fsdb-detail-title-input{display:block;width:100%;margin:0;border:0;background:transparent;color:inherit;font:inherit;font-size:inherit;font-weight:inherit;line-height:inherit;outline:none;padding:0;resize:none}
 .fsdb-detail-title-row .fsdb-detail-title-input{flex:none}
 .fsdb-page .tasks-icon-btn.is-danger:hover{background:color-mix(in srgb,var(--dsw-danger) 16%,transparent);color:var(--dsw-danger)}
