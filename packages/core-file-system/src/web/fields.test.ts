@@ -2,7 +2,7 @@ import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import type { CollectionSchema } from '@biu/type-file-system'
 import { REQUIRED_RECORD_FIELDS } from '@biu/type-file-system'
-import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, inferPackFieldType, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, parentFieldKey, readFacetFlatValue, resolveFieldType, uniqueValues } from './fields'
+import { defaultColumnKeys, facetFlatColumnKey, flattenFacetColumns, inferPackFieldType, parseFacetFlatColumnKey, patchFacetFlatValue, pinLabelColumn, contentFieldKey, flattenTree, formatField, fieldHasValue, groupField, groupRecords, hasTreeLinks, isViewModeId, matchActionWhen, parentFieldKey, readFacetFlatValue, recordLinkIds, resolveFieldType, uniqueValues } from './fields'
 import { visibleActions } from './fsdb-cells.tsx'
 
 test('isViewModeId accepts builtin and custom slugs', () => {
@@ -261,5 +261,11 @@ test('uniqueValues lists tags already on the table, not schema enum', () => {
   assert.deepEqual(uniqueValues(rows, 'tags', schema.fields.tags!), ['docs', 'wip'])
   assert.deepEqual(uniqueValues(rows, 'status', schema.fields.status!), ['doing'])
   assert.equal(uniqueValues(rows, 'status', schema.fields.status!).includes('todo'), false)
+})
+
+test('recordLinkIds treats parent as one id and dependsOn as many', () => {
+  assert.deepEqual(recordLinkIds('parentId', 'p1'), ['p1'])
+  assert.deepEqual(recordLinkIds('parentId', ''), [])
+  assert.deepEqual(recordLinkIds('dependsOn', ['a', 'b']), ['a', 'b'])
 })
 

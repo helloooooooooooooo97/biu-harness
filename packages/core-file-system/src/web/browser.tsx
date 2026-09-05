@@ -46,6 +46,7 @@ import {
   groupRecords,
   groupableFields,
   hasTreeLinks,
+  isRecordLinkField,
   parentFieldKey,
   parseFacetFlatColumnKey,
   patchFacetFlatValue,
@@ -1331,6 +1332,8 @@ export function CollectionBrowser({
         return (
           <DefaultCell
             field={field}
+            fieldKey={key}
+            records={items}
             value={readFacetFlatValue(row, key, facetSourceKey(schema))}
             onChange={
               field.writable && kind === 'attachment' ? (next) => writeCellValue(row, key, field, next) : undefined
@@ -1343,6 +1346,8 @@ export function CollectionBrowser({
       return (
         <DefaultCell
           field={field}
+          fieldKey={key}
+          records={items}
           value={row[key]}
           onChange={
             field.writable && kind === 'attachment' ? (next) => writeCellValue(row, key, field, next) : undefined
@@ -1371,7 +1376,7 @@ export function CollectionBrowser({
           />
         )
       }
-      return <DefaultCell field={field} value={value} />
+      return <DefaultCell field={field} fieldKey={key} records={items} value={value} />
     }
     if (kind === 'facet') {
       if (field.writable) {
@@ -1409,6 +1414,7 @@ export function CollectionBrowser({
           value={fieldDraftValue(field, row[key])}
           source={row[key]}
           collectionPath={collectionPath}
+          excludeId={row.id}
           autoOpen={false}
           options={uniqueValues(items, key, field)}
           onChange={(next) => void writeOne(row, key, field, next)}
@@ -1416,7 +1422,7 @@ export function CollectionBrowser({
         />
       )
     }
-    return <DefaultCell field={field} value={row[key]} />
+    return <DefaultCell field={field} fieldKey={key} records={items} value={row[key]} />
   }
 
   function renderCellPop() {
@@ -1439,7 +1445,7 @@ export function CollectionBrowser({
       <CellPop
         key={`${cellPop.id}:${cellPop.key}`}
         open
-        className={`is-${resolveFieldType(field)}`}
+        className={`is-${resolveFieldType(field)}${isRecordLinkField(key) ? ' is-record-link' : ''}`}
         anchor={cellAnchorRef.current}
         onClose={() => setCellPop(null)}
       >

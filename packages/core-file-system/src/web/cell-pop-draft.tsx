@@ -10,8 +10,9 @@ import {
 import { TagChip, TagChips } from '@biu/public-ui'
 import { DbSearchOption, ensureDbSearchStyle } from '@biu/database-ui'
 import { FieldEditor, fieldDraftValue, parseFieldValue } from './fsdb-cells.tsx'
-import { asStringList, parseFacetFlatColumnKey, resolveFieldType } from './fields.ts'
 import { PersonPickPanel } from './person-cell.tsx'
+import { RecordPickPanel } from './record-link-cell.tsx'
+import { asStringList, isParentLinkField, isRecordLinkField, parseFacetFlatColumnKey, resolveFieldType } from './fields.ts'
 
 type TagOption = { value: string; label: string }
 
@@ -152,7 +153,7 @@ function sameDraft(left: unknown, right: unknown) {
 }
 
 export function CellPopDraft({
-  record: _record,
+  record,
   fieldKey,
   field,
   initial,
@@ -177,7 +178,15 @@ export function CellPopDraft({
   const rawRef = useRef(initial)
   const onSubmitRef = useRef(onSubmit)
   onSubmitRef.current = onSubmit
-  const live = kind === 'select' || kind === 'multi-select' || kind === 'datetime' || kind === 'image' || kind === 'attachment' || kind === 'facet' || kind === 'person'
+  const live =
+    kind === 'select' ||
+    kind === 'multi-select' ||
+    kind === 'datetime' ||
+    kind === 'image' ||
+    kind === 'attachment' ||
+    kind === 'facet' ||
+    kind === 'person' ||
+    isRecordLinkField(fieldKey)
 
   function put(next: unknown, nextText?: string) {
     rawRef.current = next
@@ -194,6 +203,19 @@ export function CellPopDraft({
     },
     [],
   )
+
+  if (isRecordLinkField(fieldKey)) {
+    return (
+      <RecordPickPanel
+        fieldKey={fieldKey}
+        value={raw}
+        collectionPath={collectionPath}
+        excludeId={record.id}
+        onChange={(next) => put(next)}
+        onPicked={isParentLinkField(fieldKey) ? onClose : undefined}
+      />
+    )
+  }
 
   if (kind === 'select' || kind === 'multi-select') {
     const selected = kind === 'multi-select' ? asStringList(raw) : text ? [text] : asStringList(raw)

@@ -193,8 +193,8 @@ export const BUILTIN_FIELDS = {
   emoji: { type: 'string', label: '图标', writable: true },
   tags: { type: 'multi-select', label: '标签', writable: true },
   facet: { type: 'facet', label: '合集', writable: true },
-  parentId: { type: 'string', label: 'Parent ID', writable: true },
-  dependsOn: { type: 'multi-select', label: 'Dependency', writable: true },
+  parentId: { type: 'string', label: '父页', writable: true },
+  dependsOn: { type: 'multi-select', label: '依赖', writable: true },
   createdBy: { type: 'person', label: '创建人', writable: true },
   updatedBy: { type: 'person', label: '编辑人', writable: true },
 } as const satisfies Record<string, FieldSpec>
