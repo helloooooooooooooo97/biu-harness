@@ -1322,10 +1322,28 @@ export function CollectionBrowser({
         return <ActionCell field={field} fieldKey={key} onRun={action ? () => void runAction(row, action) : undefined} />
       }
       if (kind === 'facet') return <SchemaChips value={row[key]} tags={loadFacets()} />
-      if (flat) return <DefaultCell field={field} value={readFacetFlatValue(row, key, facetSourceKey(schema))} />
+      if (flat) {
+        return (
+          <DefaultCell
+            field={field}
+            value={readFacetFlatValue(row, key, facetSourceKey(schema))}
+            onRemove={
+              field.writable && kind === 'attachment' ? () => writeCellValue(row, key, field, '') : undefined
+            }
+          />
+        )
+      }
       const Custom = chrome?.cells?.[key]
       if (Custom) return <Custom field={key} spec={field} value={row[key]} record={row} fallback={formatField(field, row[key])} />
-      return <DefaultCell field={field} value={row[key]} />
+      return (
+        <DefaultCell
+          field={field}
+          value={row[key]}
+          onRemove={
+            field.writable && kind === 'attachment' ? () => writeCellValue(row, key, field, '') : undefined
+          }
+        />
+      )
     }
     if (flat) {
       const source = facetSourceKey(schema)
@@ -1785,7 +1803,7 @@ export function CollectionBrowser({
                 onPointerDown={(event) => {
                   if (event.button !== 0) return
                   const hit = event.target as HTMLElement | null
-                  if (hit?.closest('.fsdb-row-check, .fsdb-col-resizer, .tasks-row-tools, .tasks-title-open, .fsdb-action-btn, .fsdb-boolbtn, .fsdb-thumb-btn, .fsdb-thumb, .ant-image')) return
+                  if (hit?.closest('.fsdb-row-check, .fsdb-col-resizer, .tasks-row-tools, .tasks-title-open, .fsdb-action-btn, .fsdb-boolbtn, .fsdb-thumb-btn, .fsdb-thumb, .ant-image, .fsdb-file-tools')) return
                   const td = event.currentTarget
                   cellAnchorRef.current = td
                   cellPickRef.current = { id: row.id, key: col.key }

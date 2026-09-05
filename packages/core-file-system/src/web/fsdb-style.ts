@@ -131,9 +131,10 @@ const CSS = `
 .fsdb-thumb-btn .ant-image{display:inline-flex;line-height:0}
 .fsdb-thumb{display:block;width:28px;height:18px;object-fit:cover;border-radius:3px;background:var(--dsw-hover);flex:none;box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--dsw-border) 70%, transparent)}
 .fsdb-thumb-btn .ant-image-img{display:block;width:28px;height:18px;object-fit:cover;border-radius:3px}
-.fsdb-file{display:inline-flex;align-items:center;gap:6px;min-width:0;color:inherit;text-underline-offset:2px}
-.fsdb-file:hover{text-decoration:underline}
-.fsdb-file-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.fsdb-file{display:inline-flex;align-items:center;gap:6px;min-width:0;width:100%;color:inherit;text-underline-offset:2px}
+.fsdb-file:hover{text-decoration:none}
+.fsdb-file-name{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis}
+.fsdb-file-tools{display:inline-flex;align-items:center;gap:0;flex:none;margin-left:auto}
 .fsdb-fileview{min-width:0;flex:none;height:auto;min-height:0;max-height:none;overflow:visible}
 .fsdb-fileview-pre{margin:0;padding:10px 12px;border-radius:8px;background:var(--dsw-input);color:var(--dsw-label);font:inherit;font-size:14px;font-family:var(--font-mono);white-space:pre-wrap;overflow:visible;height:auto;min-height:0;max-height:none}
 .fsdb-fileview-img{display:block;width:auto;max-width:100%;height:auto;max-height:none;object-fit:contain;border-radius:8px;background:var(--dsw-hover)}
@@ -450,7 +451,7 @@ button.fsdb-detail-title-icon:hover{background:var(--dsw-hover);color:var(--dsw-
 .fsdb-cell-pop-tags{display:flex;flex-direction:column;gap:8px;min-width:0}
 .fsdb-cell-pop-picked{display:flex;min-width:0}
 .fsdb-cell-pop-text{box-sizing:border-box;width:100%;min-height:72px;margin:0;border:0;border-radius:6px;padding:4px 2px;background:transparent;color:var(--dsw-label);font:inherit;font-size:14px;line-height:1.45;resize:vertical;outline:none}
-.fsdb-media-field{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:6px;min-width:0;max-width:100%;height:22px}
+.fsdb-media-field{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:6px;min-width:0;width:100%;max-width:100%;height:22px}
 .fsdb-media-preview{display:block;width:18px;height:18px;flex:none;object-fit:cover;border-radius:3px;background:#111}
 .fsdb-media-thumb .ant-image-img{display:block;width:18px;height:18px;object-fit:cover;border-radius:3px}
 .fsdb-media-thumbs{display:inline-flex;align-items:center;gap:4px;min-width:0;overflow:auto}

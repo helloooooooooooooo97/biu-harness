@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Image } from 'antd'
-import { PaperClipIcon, PhotoIcon, XMarkIcon } from '@heroicons/react/16/solid'
+import { PaperClipIcon, PhotoIcon, XMarkIcon, ArrowDownTrayIcon } from '@heroicons/react/16/solid'
 import { asAttachment, asHttpHref, asImageSrcList } from '@biu/type-file-system'
 import { LocalText } from './controls.tsx'
 
@@ -60,6 +60,49 @@ function pasteTargetIsField(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false
   const tag = target.tagName
   return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable
+}
+
+export function AttachmentFile({
+  file,
+  onRemove,
+}: {
+  file: { name: string; href: string }
+  onRemove?: () => void
+}) {
+  return (
+    <span className="fsdb-file">
+      <PaperClipIcon aria-hidden className="size-[14px] shrink-0 opacity-80" />
+      <span className="fsdb-file-name">{file.name}</span>
+      <span className="fsdb-file-tools">
+        <a
+          className="tasks-icon-btn fsdb-file-dl"
+          href={file.href}
+          download={file.name}
+          title="下载"
+          aria-label={`下载 ${file.name}`}
+          data-testid="fsdb-file-download"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <ArrowDownTrayIcon aria-hidden className="size-[14px]" />
+        </a>
+        {onRemove ? (
+          <button
+            type="button"
+            className="tasks-icon-btn is-danger fsdb-file-del"
+            title="删除"
+            aria-label={`删除 ${file.name}`}
+            data-testid="fsdb-file-remove"
+            onClick={(event) => {
+              event.stopPropagation()
+              onRemove()
+            }}
+          >
+            <XMarkIcon aria-hidden className="size-[14px]" />
+          </button>
+        ) : null}
+      </span>
+    </span>
+  )
 }
 
 export function MediaField({
@@ -170,11 +213,14 @@ export function MediaField({
         </span>
         </Image.PreviewGroup>
       ) : null}
-      {kind === 'attachment' && file ? <PaperClipIcon aria-hidden className="size-[14px] shrink-0 opacity-80" /> : null}
+      {kind === 'attachment' && file ? (
+        <AttachmentFile file={file} onRemove={() => onCommit('')} />
+      ) : (
       <button type="button" className="fsdb-media-pick" title={label} onClick={() => inputRef.current?.click()}>
         {kind === 'image' ? <PhotoIcon aria-hidden className="size-[14px]" /> : null}
         <span className="fsdb-media-pick-label">{label}</span>
       </button>
+      )}
       <input
         ref={inputRef}
         type="file"

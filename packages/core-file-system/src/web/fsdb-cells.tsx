@@ -34,7 +34,7 @@ import {
 } from './fields.ts'
 import { LocalText, TokenMultiSelect } from './controls.tsx'
 import { CellDateTime } from '@biu/database-ui'
-import { MediaField } from './cell-media.tsx'
+import { AttachmentFile, MediaField } from './cell-media.tsx'
 
 export function actionIcon(id: string) {
   const cls = 'size-[14px]'
@@ -231,10 +231,12 @@ export function FilePreview({
   value,
   compact = false,
   kind,
+  onRemove,
 }: {
   value: unknown
   compact?: boolean
   kind?: FieldType
+  onRemove?: () => void
 }) {
   if (value == null || value === '') return null
   if (kind === 'image') {
@@ -249,12 +251,7 @@ export function FilePreview({
   }
   const file = asAttachment(value)
   if (file) {
-    return (
-      <a className="fsdb-file" href={file.href} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-        <PaperClipIcon aria-hidden className="size-[14px] shrink-0" />
-        <span className="fsdb-file-name">{file.name}</span>
-      </a>
-    )
+    return <AttachmentFile file={file} onRemove={onRemove} />
   }
   const href = asHttpHref(value)
   if (href && typeof value !== 'object') {
@@ -270,7 +267,19 @@ export function FilePreview({
   return text ? <pre className="fsdb-fileview-pre">{text}</pre> : null
 }
 
-export function DefaultCell({ field, value, fieldKey, onRun }: { field: FieldSpec; value: unknown; fieldKey?: string; onRun?: () => void }) {
+export function DefaultCell({
+  field,
+  value,
+  fieldKey,
+  onRun,
+  onRemove,
+}: {
+  field: FieldSpec
+  value: unknown
+  fieldKey?: string
+  onRun?: () => void
+  onRemove?: () => void
+}) {
   const kind = resolveFieldType(field)
   if (kind === 'action') {
     return <ActionCell field={field} fieldKey={fieldKey ?? ''} onRun={onRun} />
@@ -290,7 +299,7 @@ export function DefaultCell({ field, value, fieldKey, onRun }: { field: FieldSpe
     return <BoolCell on={value === true || value === 'true'} />
   }
   if (kind === 'url' || kind === 'image' || kind === 'attachment' || kind === 'file') {
-    return <FilePreview value={value} compact kind={kind} />
+    return <FilePreview value={value} compact kind={kind} onRemove={kind === 'attachment' ? onRemove : undefined} />
   }
   const text = formatField(field, value)
   if (!text) return null

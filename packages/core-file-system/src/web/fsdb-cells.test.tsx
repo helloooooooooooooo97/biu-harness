@@ -10,9 +10,29 @@ test('attachment cells render a file link, not a broken image', () => {
     <DefaultCell field={{ type: 'attachment' }} value={{ name: 'notes.pdf', href: 'https://cdn.example/notes.pdf' }} />,
   )
   assert.equal(container.querySelector('img'), null)
-  const link = container.querySelector('a.fsdb-file') as HTMLAnchorElement
-  assert.equal(link?.textContent?.includes('notes.pdf'), true)
-  assert.equal(link?.href, 'https://cdn.example/notes.pdf')
+  const name = container.querySelector('.fsdb-file-name')
+  assert.equal(name?.textContent, 'notes.pdf')
+  const download = container.querySelector('a.fsdb-file-dl') as HTMLAnchorElement
+  assert.equal(download?.href, 'https://cdn.example/notes.pdf')
+  assert.equal(download?.getAttribute('download'), 'notes.pdf')
+  assert.equal(container.querySelector('[data-testid="fsdb-file-remove"]'), null)
+})
+
+test('writable attachment cells can delete the file', () => {
+  let cleared = false
+  const { container } = render(
+    <DefaultCell
+      field={{ type: 'attachment', writable: true }}
+      value={{ name: 'notes.pdf', href: 'https://cdn.example/notes.pdf' }}
+      onRemove={() => {
+        cleared = true
+      }}
+    />,
+  )
+  const remove = container.querySelector('[data-testid="fsdb-file-remove"]') as HTMLButtonElement
+  assert.equal(Boolean(remove), true)
+  remove.click()
+  assert.equal(cleared, true)
 })
 
 test('image cells still render a thumbnail', () => {
