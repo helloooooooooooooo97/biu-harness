@@ -7,7 +7,7 @@ import { textPickFromSelection } from './types.ts'
 const DRAG_PX = 6
 
 export const PICK_NAV_GUARD =
-  '[data-biu-ignore], .app-side-bar, .brand-corner-cluster, [data-testid="inspector-toggle"], [data-testid="fsdb-inspector-toggle"], [data-testid="chat-overlay-panel"]'
+  '[data-biu-ignore], .brand-corner-cluster, [data-testid="inspector-toggle"], [data-testid="fsdb-inspector-toggle"], [data-testid="chat-overlay-panel"]'
 
 export function ignorePickCapture(target: EventTarget | null, event?: Event) {
   const path = event && 'composedPath' in event ? event.composedPath() : []

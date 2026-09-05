@@ -86,7 +86,7 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
           }}
         />
       ) : null}
-      <div className="app-side-bar-head app-side-bar-head-brand">
+      <div className="app-side-bar-head app-side-bar-head-brand" data-biu-ignore>
         <SidebarBrandLockup />
         {!visible || narrow ? (
           <button
@@ -113,7 +113,7 @@ export const ShellSidebarFrame = memo(function ShellSidebarFrame({
         )}
       </div>
       {onSettings && agentHref && activeId != null ? (
-        <div className="shrink-0 px-2 pt-1">
+        <div className="shrink-0 px-2 pt-1" data-biu-ignore>
           <ShellSidePlaces
             activeId={activeId}
             agentHref={agentHref}

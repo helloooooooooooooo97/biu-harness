@@ -5,14 +5,31 @@ import assert from 'node:assert/strict'
 
 const overlay = readFileSync(resolve(import.meta.dirname, './overlay.tsx'), 'utf8')
 
-test('pick capture does not eat sidebar, inspector, or chat overlay clicks', () => {
+test('pick capture does not eat inspector chrome, chat overlay, or ignored nodes', () => {
   assert.match(overlay, /function ignorePickCapture/)
-  assert.match(overlay, /\.app-side-bar/)
+  assert.doesNotMatch(overlay, /\[data-biu-ignore\], \.app-side-bar/)
   assert.doesNotMatch(overlay, /data-os-dock/)
   assert.match(overlay, /data-biu-ignore/)
   assert.match(overlay, /chat-overlay-panel/)
   assert.doesNotMatch(overlay, /\.app-rail/)
   assert.doesNotMatch(overlay, /\.session-inspector/)
+})
+
+test('sidebar list content can start a pick drag; chrome stays ignored', async () => {
+  const { ignorePickCapture } = await import('./overlay.tsx')
+  const bar = document.createElement('aside')
+  bar.className = 'app-side-bar'
+  const row = document.createElement('div')
+  row.setAttribute('data-biu-kind', 'session')
+  row.setAttribute('data-biu-id', 's1')
+  const head = document.createElement('div')
+  head.className = 'app-side-bar-head'
+  head.setAttribute('data-biu-ignore', '')
+  bar.append(head, row)
+  document.body.append(bar)
+  assert.equal(ignorePickCapture(row), false)
+  assert.equal(ignorePickCapture(head), true)
+  bar.remove()
 })
 
 test('close button inside the chat overlay is not captured while picking', async () => {

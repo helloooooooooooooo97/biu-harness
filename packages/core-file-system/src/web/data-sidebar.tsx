@@ -748,7 +748,7 @@ export const DataSidebar = memo(function DataSidebar({
       className="app-side-bar fsdb-views flex min-h-0 flex-col overflow-hidden border-r border-(--dsw-border) bg-(--dsw-sidebar)"
       aria-label="数据"
     >
-      <div className="app-side-bar-head app-side-bar-head-brand">
+      <div className="app-side-bar-head app-side-bar-head-brand" data-biu-ignore>
         <SidebarBrandLockup />
         <button
           type="button"
